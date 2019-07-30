@@ -10,27 +10,27 @@ name = "bifrost-node"
 path = "src/main.rs"
 
 [dependencies]
-derive_more = "0.14.0"
+cli = { package = "node-cli", path = "cli" }
 futures = "0.1"
 ctrlc = { version = "3.0", features = ["termination"] }
-log = "0.4"
-tokio = "0.1"
-exit-future = "0.1"
-parking_lot = "0.8.0"
-parity-codec = "4.1.1"
-trie-root = "0.14.0"
-sr-io = { git = "https://github.com/paritytech/substrate" }
-substrate-cli = { git = "https://github.com/paritytech/substrate" }
-primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate" }
-substrate-executor = { git = "https://github.com/paritytech/substrate" }
-substrate-service = { git = "https://github.com/paritytech/substrate" }
-inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate" }
-transaction-pool = { package = "substrate-transaction-pool", git = "https://github.com/paritytech/substrate" }
-network = { package = "substrate-network", git = "https://github.com/paritytech/substrate" }
-consensus = { package = "substrate-consensus-aura", git = "https://github.com/paritytech/substrate" }
-substrate-client = { git = "https://github.com/paritytech/substrate" }
-basic-authorship = { package = "substrate-basic-authorship", git = "https://github.com/paritytech/substrate" }
-node-runtime = { path = "runtime" }
 
 [build-dependencies]
 vergen = "3"
+
+[workspace]
+members = [
+	"cli",
+	"executor",
+	"primitives",
+	"rpc-client",
+	"runtime",
+]
+exclude = [
+	"runtime/wasm",
+]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[profile.release]
+panic = "unwind"

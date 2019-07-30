@@ -14,16 +14,34 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Bifrost Node CLI library.
+//! Bifrost Node CLI
 
 #![warn(missing_docs)]
-#![warn(unused_extern_crates)]
 
-mod chain_spec;
-mod service;
-mod cli;
+use cli::VersionInfo;
+use futures::sync::oneshot;
+use futures::{future, Future};
 
-pub use substrate_cli::{VersionInfo, IntoExit, error};
+use std::cell::RefCell;
+
+// handles ctrl-c
+struct Exit;
+impl cli::IntoExit for Exit {
+	type Exit = future::MapErr<oneshot::Receiver<()>, fn(oneshot::Canceled) -> ()>;
+	fn into_exit(self) -> Self::Exit {
+		// can't use signal directly here because CtrlC takes only `Fn`.
+		let (exit_send, exit) = oneshot::channel();
+
+		let exit_send_cell = RefCell::new(Some(exit_send));
+		ctrlc::set_handler(move || {
+			if let Some(exit_send) = exit_send_cell.try_borrow_mut().expect("signal handler not reentrant; qed").take() {
+				exit_send.send(()).expect("Error sending exit notification");
+			}
+		}).expect("Error setting Ctrl-C handler");
+
+		exit.map_err(drop)
+	}
+}
 
 fn main() {
 	let version = VersionInfo {
@@ -36,7 +54,7 @@ fn main() {
 		support_url: "https://github.com/bifrost-codes/bifrost/issues/new",
 	};
 
-	if let Err(e) = cli::run(::std::env::args(), cli::Exit, version) {
+	if let Err(e) = cli::run(::std::env::args(), Exit, version) {
 		eprintln!("Error starting the node: {}\n\n{:?}", e, e);
 		std::process::exit(1)
 	}
