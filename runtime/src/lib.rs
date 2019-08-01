@@ -26,7 +26,7 @@ use support::{
 };
 use primitives::u32_trait::{_1, _2, _3, _4};
 use node_primitives::{
-	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index,
+	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, AssetId,
 	Moment, Signature,
 };
 use babe::{AuthorityId as BabeId};
@@ -393,6 +393,12 @@ impl finality_tracker::Trait for Runtime {
 	type ReportLatency = ReportLatency;
 }
 
+impl brml_assets::Trait for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -417,6 +423,8 @@ construct_runtime!(
 		Contracts: contracts,
 		Sudo: sudo,
 		ImOnline: im_online::{default, ValidateUnsigned},
+		// Modules from brml
+		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 	}
 );
 

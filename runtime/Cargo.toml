@@ -40,6 +40,7 @@ node-primitives = { path = "../primitives", default-features = false }
 rustc-hex = { version = "2.0", optional = true }
 serde = { version = "1.0", optional = true }
 substrate-keyring = { git = "https://github.com/paritytech/substrate", optional = true }
+brml-assets = { path = "../brml/assets", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2", git = "https://github.com/paritytech/substrate" }
@@ -83,4 +84,5 @@ std = [
 	"substrate-keyring",
 	"offchain-primitives/std",
 	"im-online/std",
+	"brml-assets/std",
 ]

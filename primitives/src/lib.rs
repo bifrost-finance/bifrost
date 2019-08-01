@@ -38,6 +38,9 @@ pub type AccountId = <Signature as Verify>::Signer;
 /// never know...
 pub type AccountIndex = u32;
 
+/// An index to an asset
+pub type AssetId = u32;
+
 /// Balance of an account.
 pub type Balance = u128;
 
