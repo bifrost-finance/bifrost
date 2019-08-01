@@ -18,17 +18,17 @@
 
 #![cfg(test)]
 
-use srml_support::{impl_outer_origin, parameter_types};
+use srml_support::{impl_outer_origin, impl_outer_event, parameter_types};
 use substrate_primitives::{H256, Blake2Hasher};
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
-use crate::{Trait, Module};
+use super::*;
 
 impl_outer_origin! {
-	pub enum Origin for Runtime {}
+	pub enum Origin for Test {}
 }
 
 #[derive(Clone, Eq, PartialEq)]
-pub struct Runtime;
+pub struct Test;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -37,7 +37,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 
-impl system::Trait for Runtime {
+impl system::Trait for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -47,21 +47,32 @@ impl system::Trait for Runtime {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type WeightMultiplierUpdate = ();
-	type Event = ();
+	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type MaximumBlockLength = MaximumBlockLength;
 }
 
-impl Trait for Runtime {
-	type Event = ();
+impl Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
+	type Event = TestEvent;
 }
 
-pub type Assets = Module<Runtime>;
+mod assets {
+	pub use crate::Event;
+}
+
+impl_outer_event! {
+	pub enum TestEvent for Test {
+		assets<T>,
+	}
+}
+
+pub type Assets = Module<Test>;
+pub type System = system::Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-	system::GenesisConfig::default().build_storage::<Runtime>().unwrap().0.into()
+	system::GenesisConfig::default().build_storage::<Test>().unwrap().0.into()
 }

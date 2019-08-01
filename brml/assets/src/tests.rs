@@ -18,10 +18,11 @@
 
 #![cfg(test)]
 
-use crate::mock::{Assets, Origin, new_test_ext};
+use super::*;
+use crate::mock::{Assets, Origin, System, TestEvent, new_test_ext};
 use runtime_io::with_externalities;
 use srml_support::{assert_ok, assert_noop};
-use crate::{Token};
+use system::{EventRecord, Phase};
 
 #[test]
 fn create_asset_should_work() {
@@ -33,6 +34,18 @@ fn create_asset_should_work() {
 			precision: 8,
 			total_supply: 0,
 		});
+
+		assert_eq!(System::events(), vec![
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Created(0, Token {
+					symbol: vec![0x12, 0x34],
+					precision: 8,
+					total_supply: 0,
+				})),
+				topics: vec![],
+			}
+		]);
 	});
 }
 
@@ -64,6 +77,33 @@ fn issuing_asset_units_to_issuer_should_work() {
 			total_supply: 60000,
 		});
 		assert_eq!(Assets::balances((0, 2)), 50000);
+
+		assert_eq!(System::events(), vec![
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Created(0, Token {
+					symbol: vec![0x12, 0x34],
+					precision: 8,
+					total_supply: 0,
+				})),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Issued(0, 1, 10000)),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Issued(0, 2, 20000)),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Issued(0, 2, 30000)),
+				topics: vec![],
+			}
+		]);
 	});
 }
 
@@ -88,6 +128,28 @@ fn transferring_amount_above_available_balance_should_work() {
 		});
 		assert_eq!(Assets::balances((0, 1)), 9000);
 		assert_eq!(Assets::balances((0, 2)), 1000);
+
+		assert_eq!(System::events(), vec![
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Created(0, Token {
+					symbol: vec![0x12, 0x34],
+					precision: 8,
+					total_supply: 0,
+				})),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Issued(0, 1, 10000)),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Transferred(0, 1, 2, 1000)),
+				topics: vec![],
+			}
+		]);
 	});
 }
 
@@ -121,6 +183,28 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 			total_supply: 9000,
 		});
 		assert_eq!(Assets::balances((0, 1)), 9000);
+
+		assert_eq!(System::events(), vec![
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Created(0, Token {
+					symbol: vec![0x12, 0x34],
+					precision: 8,
+					total_supply: 0,
+				})),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Issued(0, 1, 10000)),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Destroyed(0, 1, 1000)),
+				topics: vec![],
+			}
+		]);
 	});
 }
 
