@@ -23,6 +23,9 @@ use srml_support::{StorageValue, StorageMap, Parameter, decl_module, decl_event,
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
 
+mod mock;
+mod tests;
+
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 pub struct Token<Balance> {
 	symbol: Vec<u8>,
@@ -106,6 +109,8 @@ decl_module! {
 			#[compact] amount: T::Balance)
 		{
 			let _origin = ensure_root(origin)?;
+
+			ensure!(<Tokens<T>>::exists(&id), "asset should be created first");
 
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), "issue amount should be non-zero");
