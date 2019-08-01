@@ -24,7 +24,7 @@ substrate-service = { git = "https://github.com/paritytech/substrate" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/paritytech/substrate" }
 network = { package = "substrate-network", git = "https://github.com/paritytech/substrate" }
 babe = { package = "substrate-consensus-babe", git = "https://github.com/paritytech/substrate" }
-babe_primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/paritytech/substrate" }
+babe-primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/paritytech/substrate" }
 grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/paritytech/substrate" }
 grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/paritytech/substrate" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
@@ -41,7 +41,6 @@ finality_tracker = { package = "srml-finality-tracker", git = "https://github.co
 contracts = { package = "srml-contracts", git = "https://github.com/paritytech/substrate" }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate" }
 balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
-support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
 babe = { package = "substrate-consensus-babe", git = "https://github.com/paritytech/substrate", features = ["test-helpers"] }
