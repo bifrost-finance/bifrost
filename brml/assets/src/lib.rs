@@ -19,8 +19,7 @@
 
 use rstd::prelude::*;
 use parity_codec::{Encode, Decode};
-
-use support::{StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage, ensure};
+use srml_support::{StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage, ensure};
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
 
@@ -63,7 +62,7 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		Balances: map (T::AssetId, T::AccountId) => T::Balance;
+		Balances get(balances): map (T::AssetId, T::AccountId) => T::Balance;
 		/// The next asset identifier up for grabs.
 		NextAssetId get(next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
@@ -158,8 +157,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn asset_transfer(asset_id: T::AssetId, from: T::AccountId, to: T::AccountId, amount: T::Balance) {
-		<Balances<T>>::mutate((asset_id, from), |balance| *balance += amount);
-		<Balances<T>>::mutate((asset_id, to), |balance| *balance -= amount);
+		<Balances<T>>::mutate((asset_id, from), |balance| *balance -= amount);
+		<Balances<T>>::mutate((asset_id, to), |balance| *balance += amount);
 	}
 
 	fn asset_destroy(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {

@@ -5,14 +5,11 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-log = "0.4"
 parity-codec = { version = "4.1.1", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
+srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
-timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
-runtime_io = { package = "sr-io", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }
@@ -22,9 +19,7 @@ default = ["std"]
 std = [
 	"parity-codec/std",
 	"sr-primitives/std",
-	"support/std",
+	"srml-support/std",
 	"system/std",
-	"timestamp/std",
 	"rstd/std",
-	"runtime_io/std",
 ]
