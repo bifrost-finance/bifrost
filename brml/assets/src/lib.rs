@@ -33,16 +33,32 @@ pub struct Token<Balance> {
 	total_supply: Balance,
 }
 
+#[derive(Encode, Decode, Default, Eq, PartialEq, Debug, Clone, Copy)]
+pub struct BalanceDuration<BlockNumber, SettlementId, Duration> {
+	/// current settlement index
+	index: SettlementId,
+	/// the block number recorded last time
+	last_calculate_block: BlockNumber,
+	/// Duration of balance, value = balance * (now_block - last_calculate_block)
+	value: Duration,
+}
+
 /// The module configuration trait.
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::BlockNumber>;
 
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// Settlement id
+	type SettlementId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The value that represent the duration of balance.
+	type Duration: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance>;
 }
 
 decl_event!(
@@ -70,6 +86,14 @@ decl_storage! {
 		NextAssetId get(next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
 		Tokens get(token_details): map T::AssetId => Token<T::Balance>;
+		/// Records for asset clearing corresponding to an account id
+		ClearingAssets get(clearing_assets): map (T::AssetId, T::AccountId, T::SettlementId)
+			=> BalanceDuration<T::BlockNumber, T::SettlementId, T::Duration>;
+		/// Records for token clearing corresponding to an asset id
+		ClearingTokens get(clearing_tokens): map (T::AssetId, T::SettlementId)
+			=> BalanceDuration<T::BlockNumber, T::SettlementId, T::Duration>;
+		/// The next settlement identifier up for grabs.
+		NextSettlementId get(next_settlement_id): T::SettlementId;
 	}
 }
 
@@ -157,17 +181,53 @@ decl_module! {
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 	fn asset_issue(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
+		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
+		let curr_stl_id: T::SettlementId = Self::next_settlement_id();
+
+		Self::asset_clearing(asset_id, target.clone(), curr_stl_id, now_block, amount);
 		<Balances<T>>::mutate((asset_id, target), |balance| *balance += amount);
+
+		Self::token_clearing(asset_id, curr_stl_id, now_block, amount);
 		<Tokens<T>>::mutate(asset_id, |token| token.total_supply += amount);
 	}
 
 	fn asset_transfer(asset_id: T::AssetId, from: T::AccountId, to: T::AccountId, amount: T::Balance) {
+		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
+		let curr_stl_id: T::SettlementId = Self::next_settlement_id();
+
+		Self::asset_clearing(asset_id, from.clone(), curr_stl_id, now_block, amount);
 		<Balances<T>>::mutate((asset_id, from), |balance| *balance -= amount);
+
+		Self::asset_clearing(asset_id, to.clone(), curr_stl_id, now_block, amount);
 		<Balances<T>>::mutate((asset_id, to), |balance| *balance += amount);
 	}
 
 	fn asset_destroy(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
+		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
+		let curr_stl_id: T::SettlementId = Self::next_settlement_id();
+
+		Self::asset_clearing(asset_id, target.clone(), curr_stl_id, now_block, amount);
 		<Balances<T>>::mutate((asset_id, target), |balance| *balance -= amount);
+
+		Self::token_clearing(asset_id, curr_stl_id, now_block, amount);
 		<Tokens<T>>::mutate(asset_id, |token| token.total_supply -= amount);
+	}
+
+	fn asset_clearing(asset_id: T::AssetId, target: T::AccountId, curr_stl_id: T::SettlementId,
+		now_block: T::BlockNumber, amount: T::Balance)
+	{
+		<ClearingAssets<T>>::mutate((asset_id, target, curr_stl_id), |clearing_asset| {
+			let blocks = now_block - clearing_asset.last_calculate_block;
+			clearing_asset.value += (amount * blocks.into()).into();
+		});
+	}
+
+	fn token_clearing(asset_id: T::AssetId, curr_stl_id: T::SettlementId,
+		now_block: T::BlockNumber, amount: T::Balance)
+	{
+		<ClearingTokens<T>>::mutate((asset_id, curr_stl_id), |clearing_token| {
+			let blocks = now_block - clearing_token.last_calculate_block;
+			clearing_token.value += (amount * blocks.into()).into();
+		});
 	}
 }

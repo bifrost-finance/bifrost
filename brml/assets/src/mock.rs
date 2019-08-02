@@ -57,6 +57,8 @@ impl system::Trait for Test {
 impl Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
+	type Duration = u128;
+	type SettlementId = u32;
 	type Event = TestEvent;
 }
 
