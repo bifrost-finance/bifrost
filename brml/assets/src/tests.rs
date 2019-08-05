@@ -23,6 +23,9 @@ use crate::mock::{Assets, Origin, System, TestEvent, new_test_ext};
 use runtime_io::with_externalities;
 use srml_support::{assert_ok, assert_noop};
 use system::{EventRecord, Phase};
+use sr_primitives::traits::OnInitialize;
+
+const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 
 #[test]
 fn create_asset_should_work() {
@@ -343,6 +346,62 @@ fn destroy_asset_clearing_should_work() {
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
 			index: 0,
 			last_calculate_block: 200,
+			last_calculate_balance: 8500,
+			value: 10000 * (100 - 1) + 9000 * (200 - 100),
+		});
+	});
+}
+
+#[test]
+fn new_settlement_should_work() {
+	with_externalities(&mut new_test_ext(), || {
+		Assets::on_initialize(0);
+		assert_eq!(Assets::next_settlement_id(), 1);
+
+		Assets::on_initialize(SETTLEMENT_PERIOD);
+		assert_eq!(Assets::next_settlement_id(), 2);
+
+		Assets::on_initialize(SETTLEMENT_PERIOD * 2);
+		assert_eq!(Assets::next_settlement_id(), 3);
+	});
+}
+
+#[test]
+fn destroy_asset_clearing_should_work() {
+	with_externalities(&mut new_test_ext(), || {
+		Assets::on_initialize(0);
+
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 1,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+
+		System::set_block_number(100);
+		assert_ok!(Assets::destroy(Origin::signed(1), 0, 1000));
+		assert_eq!(Assets::clearing_assets((0, 1, Assets::current_settlement_id())),
+			BalanceDuration {
+				index: 0,
+				last_calculate_block: 100,
+				last_calculate_balance: 9000,
+				value: 10000 * (100 - 1),
+			}
+		);
+
+		System::set_block_number(SETTLEMENT_PERIOD + 100);
+		Assets::on_initialize(SETTLEMENT_PERIOD);
+		let curr_stl_id = Assets::current_settlement_id();
+		assert_eq!(curr_stl_id, 1);
+		assert_eq!(Assets::next_settlement_id(), 2);
+		//		System::set_block_number(200);
+		assert_ok!(Assets::destroy(Origin::signed(1), 0, 500));
+		assert_eq!(Assets::clearing_assets((0, 1, curr_stl_id)), BalanceDuration {
+			index: 1,
+			last_calculate_block: SETTLEMENT_PERIOD + 100,
 			last_calculate_balance: 8500,
 			value: 10000 * (100 - 1) + 9000 * (200 - 100),
 		});

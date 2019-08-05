@@ -21,7 +21,8 @@ use rstd::prelude::*;
 use parity_codec::{Encode, Decode};
 use srml_support::{StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage, ensure};
 use srml_support::traits::Get;
-use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup, SaturatedConversion};
+use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup,
+	SaturatedConversion, Saturating};
 use system::{ensure_signed, ensure_root};
 
 mod mock;
@@ -193,16 +194,20 @@ decl_module! {
 		}
 
 		fn on_finalize(_n: T::BlockNumber) {
-			Self::clearing();
+			Self::settlement();
 		}
 	}
 }
 
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
+	fn current_settlement_id() -> T::SettlementId {
+		return Self::next_settlement_id().saturating_sub(1.into());
+	}
+
 	fn asset_issue(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
 		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
-		let curr_stl_id: T::SettlementId = Self::next_settlement_id();
+		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let target_asset = (asset_id, target.clone());
 		let target_balance = <Balances<T>>::mutate(&target_asset,
@@ -216,7 +221,7 @@ impl<T: Trait> Module<T> {
 
 	fn asset_transfer(asset_id: T::AssetId, from: T::AccountId, to: T::AccountId, amount: T::Balance) {
 		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
-		let curr_stl_id: T::SettlementId = Self::next_settlement_id();
+		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let from_asset = (asset_id, from.clone());
 		let from_balance = <Balances<T>>::mutate(&from_asset,
@@ -231,7 +236,7 @@ impl<T: Trait> Module<T> {
 
 	fn asset_destroy(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
 		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
-		let curr_stl_id: T::SettlementId = Self::next_settlement_id();
+		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let target_asset = (asset_id, target.clone());
 		let target_balance =<Balances<T>>::mutate(&target_asset,
@@ -260,10 +265,10 @@ impl<T: Trait> Module<T> {
 			let start_block = (stl_index * stl_period).saturated_into::<T::BlockNumber>();
 			let blocks = now_block - start_block;
 			let mut last_balance: T::Balance = 0.into();
-			if curr_stl_id > One::one() {
-				let last_index = (asset_id, target.clone(), curr_stl_id - One::one());
-				if <ClearingAssets<T>>::exists(&last_index) {
-					let prev_clr_assets = <ClearingAssets<T>>::get(&last_index);
+			if curr_stl_id > Zero::zero() {
+				let prev_index = (asset_id, target.clone(), curr_stl_id - One::one());
+				if <ClearingAssets<T>>::exists(&prev_index) {
+					let prev_clr_assets = <ClearingAssets<T>>::get(&prev_index);
 					last_balance = prev_clr_assets.last_calculate_balance;
 				}
 			}
@@ -293,10 +298,10 @@ impl<T: Trait> Module<T> {
 			let start_block = (stl_index * stl_period).saturated_into::<T::BlockNumber>();
 			let blocks = now_block - start_block;
 			let mut last_balance: T::Balance = 0.into();
-			if curr_stl_id > One::one() {
-				let last_index = (asset_id, curr_stl_id - One::one());
-				if <ClearingTokens<T>>::exists(&last_index) {
-					let prev_clr_assets = <ClearingTokens<T>>::get(&last_index);
+			if curr_stl_id > Zero::zero() {
+				let prev_index = (asset_id, curr_stl_id - One::one());
+				if <ClearingTokens<T>>::exists(&prev_index) {
+					let prev_clr_assets = <ClearingTokens<T>>::get(&prev_index);
 					last_balance = prev_clr_assets.last_calculate_balance;
 				}
 			}
@@ -309,7 +314,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn clearing() {
+	fn settlement() {
 
 	}
 }
