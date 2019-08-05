@@ -54,11 +54,16 @@ impl system::Trait for Test {
 	type MaximumBlockLength = MaximumBlockLength;
 }
 
+parameter_types! {
+	pub const SettlementPeriod: u64 = 24 * 60 * 10;
+}
+
 impl Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Duration = u128;
 	type SettlementId = u32;
+	type SettlementPeriod = SettlementPeriod;
 	type Event = TestEvent;
 }
 
