@@ -35,12 +35,29 @@ fn create_asset_should_work() {
 			total_supply: 0,
 		});
 
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x56, 0x68, 0x90], 4));
+		assert_eq!(Assets::next_asset_id(), 2);
+		assert_eq!(Assets::token_details(1), Token {
+			symbol: vec![0x56, 0x68, 0x90],
+			precision: 4,
+			total_supply: 0,
+		});
+
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
 				event: TestEvent::assets(RawEvent::Created(0, Token {
 					symbol: vec![0x12, 0x34],
 					precision: 8,
+					total_supply: 0,
+				})),
+				topics: vec![],
+			},
+			EventRecord {
+				phase: Phase::ApplyExtrinsic(0),
+				event: TestEvent::assets(RawEvent::Created(1, Token {
+					symbol: vec![0x56, 0x68, 0x90],
+					precision: 4,
 					total_supply: 0,
 				})),
 				topics: vec![],
@@ -215,5 +232,119 @@ fn destroying_asset_balance_with_zero_balance_should_not_work() {
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 100));
 		assert_noop!(Assets::destroy(Origin::signed(1), 0, 200),
 			"amount should be less than or equal to origin balance");
+	});
+}
+
+#[test]
+fn issuing_asset_clearing_should_work() {
+	with_externalities(&mut new_test_ext(), || {
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 1,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+		assert_eq!(Assets::clearing_tokens((0, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 1,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+
+		System::set_block_number(100);
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 20000));
+		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 100,
+			last_calculate_balance: 20000,
+			value: 0,
+		});
+		assert_eq!(Assets::clearing_tokens((0, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 100,
+			last_calculate_balance: 30000,
+			value: 10000 * (100 - 1),
+		});
+
+		System::set_block_number(200);
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 30000));
+		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 200,
+			last_calculate_balance: 50000,
+			value: 20000 * (200 - 100),
+		});
+		assert_eq!(Assets::clearing_tokens((0, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 200,
+			last_calculate_balance: 60000,
+			value: 10000 * (100 - 1) + 30000 * (200 - 100),
+		});
+	});
+}
+
+#[test]
+fn transfer_asset_clearing_should_work() {
+	with_externalities(&mut new_test_ext(), || {
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 1,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+
+		System::set_block_number(100);
+		assert_ok!(Assets::transfer(Origin::signed(1), 0, 2, 1000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 100,
+			last_calculate_balance: 9000,
+			value: 10000 * (100 - 1),
+		});
+		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 100,
+			last_calculate_balance: 1000,
+			value: 0,
+		});
+	});
+}
+
+#[test]
+fn destroy_asset_clearing_should_work() {
+	with_externalities(&mut new_test_ext(), || {
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 1,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+
+		System::set_block_number(100);
+		assert_ok!(Assets::destroy(Origin::signed(1), 0, 1000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 100,
+			last_calculate_balance: 9000,
+			value: 10000 * (100 - 1),
+		});
+
+		System::set_block_number(200);
+		assert_ok!(Assets::destroy(Origin::signed(1), 0, 500));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			index: 0,
+			last_calculate_block: 200,
+			last_calculate_balance: 8500,
+			value: 10000 * (100 - 1) + 9000 * (200 - 100),
+		});
 	});
 }
