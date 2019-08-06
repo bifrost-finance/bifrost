@@ -245,13 +245,11 @@ fn issuing_asset_clearing_should_work() {
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 1,
 			last_calculate_balance: 10000,
 			value: 0,
 		});
 		assert_eq!(Assets::clearing_tokens((0, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 1,
 			last_calculate_balance: 10000,
 			value: 0,
@@ -260,13 +258,11 @@ fn issuing_asset_clearing_should_work() {
 		System::set_block_number(100);
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 20000));
 		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 100,
 			last_calculate_balance: 20000,
 			value: 0,
 		});
 		assert_eq!(Assets::clearing_tokens((0, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 100,
 			last_calculate_balance: 30000,
 			value: 10000 * (100 - 1),
@@ -275,13 +271,11 @@ fn issuing_asset_clearing_should_work() {
 		System::set_block_number(200);
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 30000));
 		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 200,
 			last_calculate_balance: 50000,
 			value: 20000 * (200 - 100),
 		});
 		assert_eq!(Assets::clearing_tokens((0, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 200,
 			last_calculate_balance: 60000,
 			value: 10000 * (100 - 1) + 30000 * (200 - 100),
@@ -296,7 +290,6 @@ fn transfer_asset_clearing_should_work() {
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 1,
 			last_calculate_balance: 10000,
 			value: 0,
@@ -305,13 +298,11 @@ fn transfer_asset_clearing_should_work() {
 		System::set_block_number(100);
 		assert_ok!(Assets::transfer(Origin::signed(1), 0, 2, 1000));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 100,
 			last_calculate_balance: 9000,
 			value: 10000 * (100 - 1),
 		});
 		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 100,
 			last_calculate_balance: 1000,
 			value: 0,
@@ -326,7 +317,6 @@ fn destroy_asset_clearing_should_work() {
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 1,
 			last_calculate_balance: 10000,
 			value: 0,
@@ -335,7 +325,6 @@ fn destroy_asset_clearing_should_work() {
 		System::set_block_number(100);
 		assert_ok!(Assets::destroy(Origin::signed(1), 0, 1000));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 100,
 			last_calculate_balance: 9000,
 			value: 10000 * (100 - 1),
@@ -344,7 +333,6 @@ fn destroy_asset_clearing_should_work() {
 		System::set_block_number(200);
 		assert_ok!(Assets::destroy(Origin::signed(1), 0, 500));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 200,
 			last_calculate_balance: 8500,
 			value: 10000 * (100 - 1) + 9000 * (200 - 100),
@@ -367,7 +355,7 @@ fn new_settlement_should_work() {
 }
 
 #[test]
-fn destroy_asset_clearing_should_work() {
+fn destroy_clearing_record_should_work() {
 	with_externalities(&mut new_test_ext(), || {
 		Assets::on_initialize(0);
 
@@ -375,7 +363,6 @@ fn destroy_asset_clearing_should_work() {
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
 		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
-			index: 0,
 			last_calculate_block: 1,
 			last_calculate_balance: 10000,
 			value: 0,
@@ -385,7 +372,6 @@ fn destroy_asset_clearing_should_work() {
 		assert_ok!(Assets::destroy(Origin::signed(1), 0, 1000));
 		assert_eq!(Assets::clearing_assets((0, 1, Assets::current_settlement_id())),
 			BalanceDuration {
-				index: 0,
 				last_calculate_block: 100,
 				last_calculate_balance: 9000,
 				value: 10000 * (100 - 1),
@@ -400,10 +386,9 @@ fn destroy_asset_clearing_should_work() {
 		//		System::set_block_number(200);
 		assert_ok!(Assets::destroy(Origin::signed(1), 0, 500));
 		assert_eq!(Assets::clearing_assets((0, 1, curr_stl_id)), BalanceDuration {
-			index: 1,
 			last_calculate_block: SETTLEMENT_PERIOD + 100,
 			last_calculate_balance: 8500,
-			value: 10000 * (100 - 1) + 9000 * (200 - 100),
+			value: 9000 * 100,
 		});
 	});
 }

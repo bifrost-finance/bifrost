@@ -36,9 +36,7 @@ pub struct Token<Balance> {
 }
 
 #[derive(Encode, Decode, Default, Eq, PartialEq, Debug, Clone, Copy)]
-pub struct BalanceDuration<BlockNumber, Balance, SettlementId, Duration> {
-	/// current settlement index
-	index: SettlementId,
+pub struct BalanceDuration<BlockNumber, Balance, Duration> {
 	/// the block number recorded last time
 	last_calculate_block: BlockNumber,
 	/// the balance recorded last time
@@ -95,10 +93,10 @@ decl_storage! {
 		Tokens get(token_details): map T::AssetId => Token<T::Balance>;
 		/// Records for asset clearing corresponding to an account id
 		ClearingAssets get(clearing_assets): map (T::AssetId, T::AccountId, T::SettlementId)
-			=> BalanceDuration<T::BlockNumber, T::Balance, T::SettlementId, T::Duration>;
+			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// Records for token clearing corresponding to an asset id
 		ClearingTokens get(clearing_tokens): map (T::AssetId, T::SettlementId)
-			=> BalanceDuration<T::BlockNumber, T::Balance, T::SettlementId, T::Duration>;
+			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// The next settlement identifier up for grabs.
 		NextSettlementId get(next_settlement_id): T::SettlementId;
 	}
@@ -273,7 +271,6 @@ impl<T: Trait> Module<T> {
 				}
 			}
 			<ClearingAssets<T>>::insert(&index, BalanceDuration {
-				index: curr_stl_id,
 				last_calculate_block: now_block,
 				last_calculate_balance: curr_amount,
 				value: (last_balance * blocks.into()).into(),
@@ -306,7 +303,6 @@ impl<T: Trait> Module<T> {
 				}
 			}
 			<ClearingTokens<T>>::insert(&index, BalanceDuration {
-				index: curr_stl_id,
 				last_calculate_block: now_block,
 				last_calculate_balance: curr_amount,
 				value: (last_balance * blocks.into()).into(),
