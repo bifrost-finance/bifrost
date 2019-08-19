@@ -19,7 +19,8 @@
 
 use rstd::prelude::*;
 use parity_codec::{Encode, Decode};
-use srml_support::{StorageValue, StorageMap, Parameter, decl_module, decl_event, decl_storage, ensure};
+use srml_support::{StorageValue, StorageMap, EnumerableStorageMap, Parameter,
+	decl_module, decl_event, decl_storage, ensure};
 use srml_support::traits::Get;
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup,
 	SaturatedConversion, Saturating};
@@ -41,8 +42,44 @@ pub struct BalanceDuration<BlockNumber, Balance, Duration> {
 	last_calculate_block: BlockNumber,
 	/// the balance recorded last time
 	last_calculate_balance: Balance,
-	/// Duration of balance, value = balance * (now_block - last_calculate_block)
+	/// Duration of balance, value = balance * (last_block - last_calculate_block)
 	value: Duration,
+}
+
+impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Duration> where
+	BlockNumber: Copy + SimpleArithmetic,
+	Balance: Copy + SimpleArithmetic + From<BlockNumber>,
+	Duration: Copy + SimpleArithmetic + From<Balance>,
+{
+	fn new<SettlementId, SettlementPeriod>(
+		stl_id: SettlementId,
+		last_block: BlockNumber,
+		prev_amount: Balance,
+		curr_amount: Balance
+	) -> Self
+		where
+			SettlementId: Copy + SimpleArithmetic,
+			SettlementPeriod: Get<BlockNumber>,
+	{
+		let stl_index = stl_id.saturated_into::<u64>();
+		let stl_period = SettlementPeriod::get().saturated_into::<u64>();
+		let start_block: BlockNumber = (stl_index * stl_period).saturated_into::<BlockNumber>();
+		let blocks: BlockNumber = last_block - start_block;
+		let value: Duration = (prev_amount * blocks.into()).into();
+
+		Self {
+			last_calculate_block: last_block,
+			last_calculate_balance: curr_amount,
+			value,
+		}
+	}
+
+	fn update(&mut self, last_block: BlockNumber, curr_amount: Balance) {
+		let blocks = last_block - self.last_calculate_block;
+		self.value += (self.last_calculate_balance * blocks.into()).into();
+		self.last_calculate_block = last_block;
+		self.last_calculate_balance = curr_amount;
+	}
 }
 
 /// The module configuration trait.
@@ -57,7 +94,7 @@ pub trait Trait: system::Trait {
 	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	/// Settlement id
-	type SettlementId: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type SettlementId: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::BlockNumber>;
 
 	/// How often (in blocks) new settlement are started.
 	type SettlementPeriod: Get<Self::BlockNumber>;
@@ -92,13 +129,17 @@ decl_storage! {
 		/// Details of the token corresponding to an asset id.
 		Tokens get(token_details): map T::AssetId => Token<T::Balance>;
 		/// Records for asset clearing corresponding to an account id
-		ClearingAssets get(clearing_assets): map (T::AssetId, T::AccountId, T::SettlementId)
+		ClearingAssets get(clearing_assets): linked_map (T::AssetId, T::AccountId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// Records for token clearing corresponding to an asset id
-		ClearingTokens get(clearing_tokens): map (T::AssetId, T::SettlementId)
+		ClearingTokens get(clearing_tokens): linked_map (T::AssetId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// The next settlement identifier up for grabs.
 		NextSettlementId get(next_settlement_id): T::SettlementId;
+//		/// Records for settlements
+//		Settlements get(settlements): map (T::AssetId, T::SettlementId)
+////			=> Settlement<T::Balance, T::BlockNumber>;
+//			=> SettlementStatus<T::Balance, T::BlockNumber>;
 	}
 }
 
@@ -185,14 +226,11 @@ decl_module! {
 		}
 
 		fn on_initialize(n: T::BlockNumber) {
-			if (n % T::SettlementPeriod::get()).is_zero() {
-				// new settlement
-				<NextSettlementId<T>>::mutate(|id| *id += One::one());
-			}
+			Self::new_settlement(n);
 		}
 
-		fn on_finalize(_n: T::BlockNumber) {
-			Self::settlement();
+		fn on_finalize(n: T::BlockNumber) {
+			Self::settlement(n);
 		}
 	}
 }
@@ -203,114 +241,152 @@ impl<T: Trait> Module<T> {
 		return Self::next_settlement_id().saturating_sub(1.into());
 	}
 
-	fn asset_issue(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
+	fn asset_issue(
+		asset_id: T::AssetId,
+		target: T::AccountId,
+		amount: T::Balance
+	) {
 		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let target_asset = (asset_id, target.clone());
+		let prev_target_balance = <Balances<T>>::get(&target_asset);
 		let target_balance = <Balances<T>>::mutate(&target_asset,
 			|balance| { *balance += amount; *balance });
-		Self::asset_clearing(asset_id, target.clone(), curr_stl_id, now_block, target_balance);
+		Self::asset_clearing(asset_id, target.clone(), curr_stl_id, now_block, prev_target_balance, target_balance);
 
+		let prev_token = <Tokens<T>>::get(asset_id);
 		let total_supply = <Tokens<T>>::mutate(asset_id,
 			|token| { token.total_supply += amount; token.total_supply });
-		Self::token_clearing(asset_id, curr_stl_id, now_block, total_supply);
+		Self::token_clearing(asset_id, curr_stl_id, now_block, prev_token.total_supply, total_supply);
 	}
 
-	fn asset_transfer(asset_id: T::AssetId, from: T::AccountId, to: T::AccountId, amount: T::Balance) {
+	fn asset_transfer(
+		asset_id: T::AssetId,
+		from: T::AccountId,
+		to: T::AccountId,
+		amount: T::Balance
+	) {
 		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let from_asset = (asset_id, from.clone());
+		let prev_from_balance = <Balances<T>>::get(&from_asset);
 		let from_balance = <Balances<T>>::mutate(&from_asset,
 			|balance| { *balance -= amount; *balance });
-		Self::asset_clearing(asset_id, from.clone(), curr_stl_id, now_block, from_balance);
+		Self::asset_clearing(asset_id, from.clone(), curr_stl_id, now_block, prev_from_balance, from_balance);
 
 		let to_asset = (asset_id, to.clone());
+		let prev_to_balance = <Balances<T>>::get(&to_asset);
 		let to_balance = <Balances<T>>::mutate(&to_asset,
 			|balance| { *balance += amount; *balance });
-		Self::asset_clearing(asset_id, to.clone(), curr_stl_id, now_block, to_balance);
+		Self::asset_clearing(asset_id, to.clone(), curr_stl_id, now_block, prev_to_balance, to_balance);
 	}
 
-	fn asset_destroy(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
+	fn asset_destroy(
+		asset_id: T::AssetId,
+		target: T::AccountId,
+		amount: T::Balance
+	) {
 		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let target_asset = (asset_id, target.clone());
+		let prev_target_balance = <Balances<T>>::get(&target_asset);
 		let target_balance =<Balances<T>>::mutate(&target_asset,
 			|balance| { *balance -= amount; *balance });
-		Self::asset_clearing(asset_id, target.clone(), curr_stl_id, now_block, target_balance);
+		Self::asset_clearing(asset_id, target.clone(), curr_stl_id, now_block, prev_target_balance, target_balance);
 
+		let prev_token = <Tokens<T>>::get(&asset_id);
 		let total_supply = <Tokens<T>>::mutate(asset_id,
 			|token| { token.total_supply -= amount; token.total_supply });
-		Self::token_clearing(asset_id, curr_stl_id, now_block, total_supply);
+		Self::token_clearing(asset_id, curr_stl_id, now_block, prev_token.total_supply, total_supply);
 	}
 
-	fn asset_clearing(asset_id: T::AssetId, target: T::AccountId, curr_stl_id: T::SettlementId,
-		now_block: T::BlockNumber, curr_amount: T::Balance)
-	{
+	fn asset_clearing(
+		asset_id: T::AssetId,
+		target: T::AccountId,
+		curr_stl_id: T::SettlementId,
+		last_block: T::BlockNumber,
+		prev_amount: T::Balance,
+		curr_amount: T::Balance
+	) {
 		let index = (asset_id, target.clone(), curr_stl_id);
 		if <ClearingAssets<T>>::exists(&index) {
 			<ClearingAssets<T>>::mutate(&index, |clearing_asset| {
-				let blocks = now_block - clearing_asset.last_calculate_block;
-				clearing_asset.value += (clearing_asset.last_calculate_balance * blocks.into()).into();
-				clearing_asset.last_calculate_block = now_block;
-				clearing_asset.last_calculate_balance = curr_amount;
+				clearing_asset.update(last_block, curr_amount);
 			});
 		} else {
-			let stl_index = curr_stl_id.saturated_into::<u64>();
-			let stl_period = T::SettlementPeriod::get().saturated_into::<u64>();
-			let start_block = (stl_index * stl_period).saturated_into::<T::BlockNumber>();
-			let blocks = now_block - start_block;
-			let mut last_balance: T::Balance = 0.into();
-			if curr_stl_id > Zero::zero() {
-				let prev_index = (asset_id, target.clone(), curr_stl_id - One::one());
-				if <ClearingAssets<T>>::exists(&prev_index) {
-					let prev_clr_assets = <ClearingAssets<T>>::get(&prev_index);
-					last_balance = prev_clr_assets.last_calculate_balance;
-				}
-			}
-			<ClearingAssets<T>>::insert(&index, BalanceDuration {
-				last_calculate_block: now_block,
-				last_calculate_balance: curr_amount,
-				value: (last_balance * blocks.into()).into(),
-			});
+			let balance_duration = BalanceDuration::new::<_, T::SettlementPeriod>(
+				curr_stl_id,
+				last_block,
+				prev_amount,
+				curr_amount
+			);
+			<ClearingAssets<T>>::insert(&index, balance_duration);
 		}
 	}
 
-	fn token_clearing(asset_id: T::AssetId, curr_stl_id: T::SettlementId,
-		now_block: T::BlockNumber, curr_amount: T::Balance)
-	{
+	fn token_clearing(
+		asset_id: T::AssetId,
+		curr_stl_id: T::SettlementId,
+		last_block: T::BlockNumber,
+		prev_amount: T::Balance,
+		curr_amount: T::Balance
+	) {
 		let index = (asset_id, curr_stl_id);
 		if <ClearingTokens<T>>::exists(&index) {
 			<ClearingTokens<T>>::mutate(&index, |clearing_token| {
-				let blocks = now_block - clearing_token.last_calculate_block;
-				clearing_token.value += (clearing_token.last_calculate_balance * blocks.into()).into();
-				clearing_token.last_calculate_block = now_block;
-				clearing_token.last_calculate_balance = curr_amount;
+				clearing_token.update(last_block, curr_amount);
 			});
 		} else {
-			let stl_index = curr_stl_id.saturated_into::<u64>();
-			let stl_period = T::SettlementPeriod::get().saturated_into::<u64>();
-			let start_block = (stl_index * stl_period).saturated_into::<T::BlockNumber>();
-			let blocks = now_block - start_block;
-			let mut last_balance: T::Balance = 0.into();
-			if curr_stl_id > Zero::zero() {
-				let prev_index = (asset_id, curr_stl_id - One::one());
-				if <ClearingTokens<T>>::exists(&prev_index) {
-					let prev_clr_assets = <ClearingTokens<T>>::get(&prev_index);
-					last_balance = prev_clr_assets.last_calculate_balance;
-				}
-			}
-			<ClearingTokens<T>>::insert(&index, BalanceDuration {
-				last_calculate_block: now_block,
-				last_calculate_balance: curr_amount,
-				value: (last_balance * blocks.into()).into(),
-			});
+			let balance_duration = BalanceDuration::new::<_, T::SettlementPeriod>(
+				curr_stl_id,
+				last_block,
+				prev_amount,
+				curr_amount
+			);
+			<ClearingTokens<T>>::insert(&index, balance_duration);
 		}
 	}
 
-	fn settlement() {
+	fn new_settlement(now_block: T::BlockNumber) {
+		if (now_block % T::SettlementPeriod::get()).is_zero() {
+			<NextSettlementId<T>>::mutate(|id| *id += One::one());
+		}
+	}
 
+	fn settlement(_now_block: T::BlockNumber) {
+		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
+		let stl_blocks = T::SettlementPeriod::get();
+
+		// update token's BalanceDuration
+		for ((asset_id, stl_id), clearing_token) in <ClearingTokens<T>>::enumerate()
+			.filter(|((_, stl_id), _)| *stl_id < curr_stl_id)
+		{
+			let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
+			let token = <Tokens<T>>::get(asset_id);
+			Self::token_clearing(asset_id, stl_id, last_block, token.total_supply, token.total_supply);
+		}
+
+		for (index, clearing_asset) in <ClearingAssets<T>>::enumerate()
+			.filter(|((_, _, stl_id), _)| *stl_id < curr_stl_id)
+		{
+			let (asset_id, target, stl_id) = index.clone();
+
+			// calculate account balance duration
+			let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
+			let amount = <Balances<T>>::get((asset_id, target.clone()));
+			Self::asset_clearing(asset_id, target.clone(), stl_id, last_block, amount, amount);
+
+			// transfer to Balance, and remove clearing_asset record
+			let clearing_asset = <ClearingAssets<T>>::take(&index);
+			let amount = clearing_asset.last_calculate_balance;
+			Self::asset_issue(asset_id, target.clone(), amount);
+		}
+
+		for (index, clearing_asset) in <ClearingAssets<T>>::enumerate() {
+			<ClearingAssets<T>>::remove(index);
+		}
 	}
 }

@@ -117,8 +117,8 @@ impl system::Trait for Runtime {
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = Indices;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	type WeightMultiplierUpdate = WeightMultiplierUpdateHandler;
+	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
@@ -155,10 +155,10 @@ impl balances::Trait for Runtime {
 	type Balance = Balance;
 	type OnFreeBalanceZero = ((Staking, Contracts), Session);
 	type OnNewAccount = Indices;
-	type Event = Event;
 	type TransactionPayment = DealWithFees;
-	type DustRemoval = ();
 	type TransferPayment = ();
+	type DustRemoval = ();
+	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
 	type TransferFee = TransferFee;
 	type CreationFee = CreationFee;
@@ -206,13 +206,13 @@ impl_opaque_keys! {
 // should be easy, since OneSessionHandler trait provides the `Key` as an associated type. #2858
 
 impl session::Trait for Runtime {
-	type OnSessionEnding = Staking;
-	type SessionHandler = SessionHandlers;
-	type ShouldEndSession = Babe;
 	type Event = Event;
-	type Keys = SessionKeys;
 	type ValidatorId = AccountId;
 	type ValidatorIdOf = staking::StashOf<Self>;
+	type ShouldEndSession = Babe;
+	type OnSessionEnding = Staking;
+	type SessionHandler = SessionHandlers;
+	type Keys = SessionKeys;
 	type SelectInitialValidators = Staking;
 }
 
@@ -255,12 +255,12 @@ impl democracy::Trait for Runtime {
 	type EnactmentPeriod = EnactmentPeriod;
 	type LaunchPeriod = LaunchPeriod;
 	type VotingPeriod = VotingPeriod;
-	type EmergencyVotingPeriod = EmergencyVotingPeriod;
 	type MinimumDeposit = MinimumDeposit;
 	type ExternalOrigin = collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilInstance>;
 	type ExternalMajorityOrigin = collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>;
 	type ExternalPushOrigin = collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalInstance>;
 	type EmergencyOrigin = collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilInstance>;
+	type EmergencyVotingPeriod = EmergencyVotingPeriod;
 	type CancellationOrigin = collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilInstance>;
 	type VetoOrigin = collective::EnsureMember<AccountId, CouncilInstance>;
 	type CooloffPeriod = CooloffPeriod;
@@ -370,11 +370,11 @@ impl sudo::Trait for Runtime {
 }
 
 impl im_online::Trait for Runtime {
-	type AuthorityId = BabeId;
-	type Call = Call;
 	type Event = Event;
-	type SessionsPerEra = SessionsPerEra;
+	type Call = Call;
 	type UncheckedExtrinsic = UncheckedExtrinsic;
+	type AuthorityId = BabeId;
+	type SessionsPerEra = SessionsPerEra;
 	type IsValidAuthorityId = Babe;
 }
 
@@ -393,10 +393,20 @@ impl finality_tracker::Trait for Runtime {
 	type ReportLatency = ReportLatency;
 }
 
+type Duration = u128;
+type SettlementId = u32;
+
+parameter_types! {
+	pub const SettlementPeriod: BlockNumber = 1 * DAYS;
+}
+
 impl brml_assets::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
+	type SettlementId = SettlementId;
+	type SettlementPeriod = SettlementPeriod;
+	type Duration = Duration;
 }
 
 construct_runtime!(

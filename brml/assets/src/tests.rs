@@ -24,6 +24,7 @@ use runtime_io::with_externalities;
 use srml_support::{assert_ok, assert_noop};
 use system::{EventRecord, Phase};
 use sr_primitives::traits::OnInitialize;
+use sr_primitives::traits::OnFinalize;
 
 const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 
@@ -390,5 +391,43 @@ fn destroy_clearing_record_should_work() {
 			last_calculate_balance: 8500,
 			value: 9000 * 100,
 		});
+	});
+}
+
+#[test]
+fn enumerate_should_work() {
+	with_externalities(&mut new_test_ext(), || {
+		Assets::on_initialize(0);
+
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_eq!(Assets::clearing_assets((0, 1, 0)), BalanceDuration {
+			last_calculate_block: 1,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 5000));
+		assert_eq!(Assets::clearing_assets((0, 2, 0)), BalanceDuration {
+			last_calculate_block: 1,
+			last_calculate_balance: 5000,
+			value: 0,
+		});
+		Assets::on_finalize(0);
+
+
+		const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
+		System::set_block_number(SETTLEMENT_PERIOD);
+		Assets::on_initialize(SETTLEMENT_PERIOD);
+
+		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 5000));
+		assert_eq!(Assets::clearing_assets((0, 2, 1)), BalanceDuration {
+			last_calculate_block: 14400,
+			last_calculate_balance: 10000,
+			value: 0,
+		});
+
+		Assets::on_finalize(SETTLEMENT_PERIOD);
 	});
 }

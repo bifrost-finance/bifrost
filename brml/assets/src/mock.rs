@@ -45,13 +45,13 @@ impl system::Trait for Test {
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type WeightMultiplierUpdate = ();
+	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type MaximumBlockLength = MaximumBlockLength;
+	type AvailableBlockRatio = AvailableBlockRatio;
 }
 
 parameter_types! {
@@ -59,12 +59,12 @@ parameter_types! {
 }
 
 impl Trait for Test {
+	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type Duration = u128;
 	type SettlementId = u32;
 	type SettlementPeriod = SettlementPeriod;
-	type Event = TestEvent;
+	type Duration = u128;
 }
 
 mod assets {
