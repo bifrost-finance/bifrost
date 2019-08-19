@@ -39,10 +39,10 @@ pub struct Token<Balance> {
 #[derive(Encode, Decode, Default, Eq, PartialEq, Debug, Clone, Copy)]
 pub struct BalanceDuration<BlockNumber, Balance, Duration> {
 	/// the block number recorded last time
-	last_calculate_block: BlockNumber,
+	last_block: BlockNumber,
 	/// the balance recorded last time
-	last_calculate_balance: Balance,
-	/// Duration of balance, value = balance * (last_block - last_calculate_block)
+	last_balance: Balance,
+	/// Duration of balance, value = balance * (last_block - start_block)
 	value: Duration,
 }
 
@@ -68,17 +68,17 @@ impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Durat
 		let value: Duration = (prev_amount * blocks.into()).into();
 
 		Self {
-			last_calculate_block: last_block,
-			last_calculate_balance: curr_amount,
+			last_block,
+			last_balance: curr_amount,
 			value,
 		}
 	}
 
 	fn update(&mut self, last_block: BlockNumber, curr_amount: Balance) {
-		let blocks = last_block - self.last_calculate_block;
-		self.value += (self.last_calculate_balance * blocks.into()).into();
-		self.last_calculate_block = last_block;
-		self.last_calculate_balance = curr_amount;
+		let blocks = last_block - self.last_block;
+		self.value += (self.last_balance * blocks.into()).into();
+		self.last_block = last_block;
+		self.last_balance = curr_amount;
 	}
 }
 
@@ -360,7 +360,7 @@ impl<T: Trait> Module<T> {
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 		let stl_blocks = T::SettlementPeriod::get();
 
-		// update token's BalanceDuration
+		// Update token's BalanceDuration
 		for ((asset_id, stl_id), clearing_token) in <ClearingTokens<T>>::enumerate()
 			.filter(|((_, stl_id), _)| *stl_id < curr_stl_id)
 		{
@@ -374,14 +374,14 @@ impl<T: Trait> Module<T> {
 		{
 			let (asset_id, target, stl_id) = index.clone();
 
-			// calculate account balance duration
+			// Calculate account balance duration
 			let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
 			let amount = <Balances<T>>::get((asset_id, target.clone()));
 			Self::asset_clearing(asset_id, target.clone(), stl_id, last_block, amount, amount);
 
-			// transfer to Balance, and remove clearing_asset record
+			// Transfer to Balance, and remove clearing_asset record
 			let clearing_asset = <ClearingAssets<T>>::take(&index);
-			let amount = clearing_asset.last_calculate_balance;
+			let amount = clearing_asset.last_balance;
 			Self::asset_issue(asset_id, target.clone(), amount);
 		}
 
