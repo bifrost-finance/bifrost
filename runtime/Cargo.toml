@@ -8,11 +8,12 @@ build = "build.rs"
 [dependencies]
 integer-sqrt = { version = "0.1.2" }
 safe-mix = { version = "1.0", default-features = false }
-parity-codec = { version = "4.1.1", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
 client = { package = "substrate-client", git = "https://github.com/paritytech/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-staking-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 offchain-primitives = { package = "substrate-offchain-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
 version = { package = "sr-version", git = "https://github.com/paritytech/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
@@ -29,6 +30,7 @@ executive = { package = "srml-executive", git = "https://github.com/paritytech/s
 finality-tracker = { package = "srml-finality-tracker", git = "https://github.com/paritytech/substrate", default-features = false }
 grandpa = { package = "srml-grandpa", git = "https://github.com/paritytech/substrate", default-features = false }
 indices = { package = "srml-indices", git = "https://github.com/paritytech/substrate", default-features = false }
+membership = { package = "srml-membership", git = "https://github.com/paritytech/substrate", default-features = false }
 session = { package = "srml-session", git = "https://github.com/paritytech/substrate", default-features = false, features = ["historical"] }
 staking = { package = "srml-staking", git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
@@ -36,10 +38,12 @@ timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/s
 treasury = { package = "srml-treasury", git = "https://github.com/paritytech/substrate", default-features = false }
 sudo = { package = "srml-sudo", git = "https://github.com/paritytech/substrate", default-features = false }
 im-online = { package = "srml-im-online", git = "https://github.com/paritytech/substrate", default-features = false }
+offences = { package = "srml-offences", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../primitives", default-features = false }
 rustc-hex = { version = "2.0", optional = true }
 serde = { version = "1.0", optional = true }
 substrate-keyring = { git = "https://github.com/paritytech/substrate", optional = true }
+substrate-session = { git = "https://github.com/paritytech/substrate", default-features = false }
 brml-assets = { path = "../brml/assets", default-features = false }
 
 [build-dependencies]
@@ -51,38 +55,42 @@ no_std = [
 	"contracts/core",
 ]
 std = [
-	"parity-codec/std",
-	"primitives/std",
-	"rstd/std",
-	"sr-primitives/std",
-	"support/std",
 	"authorship/std",
-	"babe/std",
 	"babe-primitives/std",
-	"consensus-primitives/std",
+	"babe/std",
 	"balances/std",
-	"contracts/std",
+	"client/std",
+	"codec/std",
 	"collective/std",
+	"consensus-primitives/std",
+	"contracts/std",
 	"democracy/std",
 	"elections/std",
 	"executive/std",
 	"finality-tracker/std",
 	"grandpa/std",
+	"im-online/std",
 	"indices/std",
+	"membership/std",
+	"node-primitives/std",
+	"offchain-primitives/std",
+	"offences/std",
+	"primitives/std",
+	"rstd/std",
+	"rustc-hex",
+	"safe-mix/std",
+	"serde",
 	"session/std",
+	"sr-primitives/std",
+	"sr-staking-primitives/std",
 	"staking/std",
+	"substrate-keyring",
+	"substrate-session/std",
+	"sudo/std",
+	"support/std",
 	"system/std",
 	"timestamp/std",
 	"treasury/std",
-	"sudo/std",
 	"version/std",
-	"node-primitives/std",
-	"serde",
-	"safe-mix/std",
-	"client/std",
-	"rustc-hex",
-	"substrate-keyring",
-	"offchain-primitives/std",
-	"im-online/std",
 	"brml-assets/std",
 ]

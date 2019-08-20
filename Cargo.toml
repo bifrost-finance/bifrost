@@ -22,14 +22,17 @@ members = [
 	"cli",
 	"executor",
 	"primitives",
+	"rpc",
 	"rpc-client",
 	"runtime",
+	"testing",
 ]
 exclude = [
 	"runtime/wasm",
 ]
 
 [badges]
+travis-ci = { repository = "bifrost-codes/bifrost", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [profile.release]

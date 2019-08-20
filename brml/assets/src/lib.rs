@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use rstd::prelude::*;
-use parity_codec::{Encode, Decode};
+use codec::{Encode, Decode};
 use srml_support::{StorageValue, StorageMap, EnumerableStorageMap, Parameter,
 	decl_module, decl_event, decl_storage, ensure};
 use srml_support::traits::Get;
@@ -360,7 +360,7 @@ impl<T: Trait> Module<T> {
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 		let stl_blocks = T::SettlementPeriod::get();
 
-		// Update token's BalanceDuration
+		// Update token's balance duration
 		for ((asset_id, stl_id), clearing_token) in <ClearingTokens<T>>::enumerate()
 			.filter(|((_, stl_id), _)| *stl_id < curr_stl_id)
 		{

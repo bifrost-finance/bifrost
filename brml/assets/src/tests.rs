@@ -416,7 +416,6 @@ fn enumerate_should_work() {
 		});
 		Assets::on_finalize(0);
 
-
 		const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 		System::set_block_number(SETTLEMENT_PERIOD);
 		Assets::on_initialize(SETTLEMENT_PERIOD);
