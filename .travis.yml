@@ -7,7 +7,7 @@ cache: cargo
 
 branches:
   only:
-  - develop
+  - master
 
 env:
   global:
