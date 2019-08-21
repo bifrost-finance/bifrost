@@ -10,15 +10,18 @@ log = "0.4"
 tokio = "0.1.7"
 futures = "0.1"
 exit-future = "0.1"
+jsonrpc-core = "13.0.0"
 cli = { package = "substrate-cli", git = "https://github.com/paritytech/substrate" }
-parity-codec = { version = "4.1.1" }
+codec = { package = "parity-scale-codec", version = "1.0.0" }
 sr-io = { git = "https://github.com/paritytech/substrate" }
 client = { package = "substrate-client", git = "https://github.com/paritytech/substrate" }
 primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate" }
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate" }
 node-runtime = { path = "../runtime" }
+node-rpc = { path = "../rpc" }
 node-primitives = { path = "../primitives" }
 hex-literal = "0.2"
+substrate-rpc = { package = "substrate-rpc", git = "https://github.com/paritytech/substrate" }
 substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
 substrate-service = { git = "https://github.com/paritytech/substrate" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/paritytech/substrate" }
@@ -29,7 +32,6 @@ grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/pa
 grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/paritytech/substrate" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
 node-executor = { path = "../executor" }
-substrate-keystore = { git = "https://github.com/paritytech/substrate" }
 substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/paritytech/substrate" }
 structopt = "0.2"
 transaction-factory = { git = "https://github.com/paritytech/substrate" }
@@ -41,12 +43,16 @@ finality_tracker = { package = "srml-finality-tracker", git = "https://github.co
 contracts = { package = "srml-contracts", git = "https://github.com/paritytech/substrate" }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate" }
 balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
+support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
+im_online = { package = "srml-im-online", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
+keystore = { package = "substrate-keystore", git = "https://github.com/paritytech/substrate" }
 babe = { package = "substrate-consensus-babe", git = "https://github.com/paritytech/substrate", features = ["test-helpers"] }
 consensus-common = { package = "substrate-consensus-common", git = "https://github.com/paritytech/substrate" }
 service-test = { package = "substrate-service-test", git = "https://github.com/paritytech/substrate" }
 futures03 = { package = "futures-preview", version = "0.3.0-alpha.17" }
+tempfile = "3.1"
 
 [build-dependencies]
 cli = { package = "substrate-cli", git = "https://github.com/paritytech/substrate" }

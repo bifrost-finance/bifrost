@@ -39,25 +39,34 @@ parameter_types! {
 
 impl system::Trait for Test {
 	type Origin = Origin;
+	type Call = ();
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type WeightMultiplierUpdate = ();
+	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type MaximumBlockLength = MaximumBlockLength;
+	type AvailableBlockRatio = AvailableBlockRatio;
+	type Version = ();
+}
+
+parameter_types! {
+	pub const SettlementPeriod: u64 = 24 * 60 * 10;
 }
 
 impl Trait for Test {
+	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type Event = TestEvent;
+	type SettlementId = u32;
+	type SettlementPeriod = SettlementPeriod;
+	type Duration = u128;
 }
 
 mod assets {
@@ -74,5 +83,5 @@ pub type Assets = Module<Test>;
 pub type System = system::Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().0.into()
+	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
