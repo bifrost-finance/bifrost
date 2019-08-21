@@ -10,6 +10,7 @@ sr-primitives = { git = "https://github.com/paritytech/substrate", default-featu
 srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
+node-primitives = { path = "../../primitives", default-features = false }
 
 [dev-dependencies]
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }
@@ -23,4 +24,5 @@ std = [
 	"srml-support/std",
 	"system/std",
 	"rstd/std",
+	"node-primitives/std",
 ]
