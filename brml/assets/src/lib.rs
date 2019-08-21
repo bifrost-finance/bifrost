@@ -84,7 +84,7 @@ decl_module! {
 
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
-		fn create(origin, symbol: Vec<u8>, precision: u16) {
+		pub fn create(origin, symbol: Vec<u8>, precision: u16) {
 			let _origin = ensure_root(origin)?;
 
 			ensure!(symbol.len() <= 32, "token symbol cannot exceed 32 bytes");
@@ -108,7 +108,7 @@ decl_module! {
 		}
 
 		/// Issue any amount of fungible assets.
-		fn issue(origin,
+		pub fn issue(origin,
 			#[compact] id: T::AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance)
@@ -126,7 +126,7 @@ decl_module! {
 		}
 
 		/// Move some assets from one holder to another.
-		fn transfer(origin,
+		pub fn transfer(origin,
 			#[compact] id: T::AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance)
@@ -145,7 +145,7 @@ decl_module! {
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
-		fn destroy(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance) {
+		pub fn destroy(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 			let origin_account = (id, origin.clone());
 
