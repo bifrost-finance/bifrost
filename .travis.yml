@@ -3,7 +3,10 @@
 sudo: true
 language: minimal
 
-cache: cargo
+cache:
+  cargo: true
+  directories:
+    - $HOME/bifrost/target/release/wbuild/target/wasm32-unknown-unknown/release
 
 branches:
   only:
