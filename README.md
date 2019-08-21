@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bifrost-codes/bifrost.svg?branch=master)](https://travis-ci.org/bifrost-codes/bifrost)
+
 # Bifrost Node
 
 A parachain focused on building bridges of chains which based on PoS consensus.
