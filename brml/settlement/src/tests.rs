@@ -21,8 +21,7 @@
 use super::*;
 use crate::mock::{Assets, Settlement, Origin, System, new_test_ext};
 use runtime_io::with_externalities;
-use srml_support::{assert_ok, assert_noop};
-use system::{EventRecord, Phase};
+use srml_support::{assert_ok};
 use sr_primitives::traits::OnInitialize;
 use sr_primitives::traits::OnFinalize;
 

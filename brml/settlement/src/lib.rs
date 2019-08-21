@@ -77,7 +77,7 @@ impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Durat
 /// The module configuration trait.
 pub trait Trait: system::Trait + brml_assets::Trait {
 	/// The overarching event type.
-//	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// Settlement id
 	type SettlementId: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::BlockNumber>;
@@ -119,7 +119,7 @@ decl_module! {
 		/// How often (in blocks) new settlement are started.
 		const SettlementPeriod: T::BlockNumber = T::SettlementPeriod::get();
 
-//		fn deposit_event<T>() = default;
+		fn deposit_event<T>() = default;
 
 		fn on_initialize(now_block: T::BlockNumber) {
 			// check if need to begin a new settlement
@@ -196,7 +196,8 @@ impl<T: Trait> Module<T> {
 			*id += One::one();
 			*id
 		});
-//		Self::deposit_event(RawEvent::NewSettlement(new_stl_id));
+
+		Self::deposit_event(RawEvent::NewSettlement(new_stl_id));
 	}
 
 	fn settlement(_now_block: T::BlockNumber) {

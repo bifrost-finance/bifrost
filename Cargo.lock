@@ -281,6 +281,22 @@ dependencies = [
 name = "brml-assets"
 version = "0.1.0"
 dependencies = [
+ "node-primitives 0.1.0",
+ "parity-scale-codec 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-io 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sr-std 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "srml-support 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "srml-system 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "substrate-primitives 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
+name = "brml-settlement"
+version = "0.1.0"
+dependencies = [
+ "brml-assets 0.1.0",
+ "node-primitives 0.1.0",
  "parity-scale-codec 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sr-primitives 2.0.0 (git+https://github.com/paritytech/substrate)",
@@ -2274,6 +2290,7 @@ name = "node-runtime"
 version = "0.1.0"
 dependencies = [
  "brml-assets 0.1.0",
+ "brml-settlement 0.1.0",
  "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives 0.1.0",
  "parity-scale-codec 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
