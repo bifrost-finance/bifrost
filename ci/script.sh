@@ -21,7 +21,8 @@ case $TARGET in
 		sudo apt-get install -y cmake pkg-config libssl-dev
 
 		./scripts/init.sh
-		cargo test --all --release --locked "$@"
+		cargo check
+#		cargo test --all --release --locked "$@"
 		;;
 
 	"wasm")
