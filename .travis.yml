@@ -3,14 +3,7 @@
 sudo: true
 language: minimal
 
-cache:
-  cargo: true
-  directories:
-    - $HOME/.cargo
-    - $HOME/bifrost/target/release/wbuild/target/wasm32-unknown-unknown/release
-
-before_cache:
-  - rm -rf $HOME/.cargo/registry
+cache: cargo
 
 branches:
   only:
