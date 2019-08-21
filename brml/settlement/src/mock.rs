@@ -18,7 +18,7 @@
 
 #![cfg(test)]
 
-use srml_support::{impl_outer_origin, impl_outer_event, parameter_types};
+use srml_support::{impl_outer_origin, parameter_types};
 use substrate_primitives::{H256, Blake2Hasher};
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
@@ -68,6 +68,7 @@ parameter_types! {
 }
 
 impl Trait for Test {
+	type Event = ();
 	type SettlementId = u32;
 	type SettlementPeriod = SettlementPeriod;
 	type Duration = u128;
