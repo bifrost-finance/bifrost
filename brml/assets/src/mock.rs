@@ -64,9 +64,7 @@ impl Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type SettlementId = u32;
-	type SettlementPeriod = SettlementPeriod;
-	type Duration = u128;
+	type ClearingHandler = ();
 }
 
 mod assets {
