@@ -39,6 +39,7 @@ parameter_types! {
 
 impl system::Trait for Test {
 	type Origin = Origin;
+	type Call = ();
 	type Index = u64;
 	type BlockNumber = u64;
 	type Hash = H256;
@@ -52,6 +53,7 @@ impl system::Trait for Test {
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
+	type Version = ();
 }
 
 parameter_types! {
@@ -81,5 +83,5 @@ pub type Assets = Module<Test>;
 pub type System = system::Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().0.into()
+	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
