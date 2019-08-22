@@ -18,7 +18,7 @@
 
 #![cfg(test)]
 
-use srml_support::{impl_outer_origin, impl_outer_event, parameter_types};
+use srml_support::{impl_outer_origin, parameter_types};
 use substrate_primitives::{H256, Blake2Hasher};
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
@@ -48,7 +48,7 @@ impl system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type WeightMultiplierUpdate = ();
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -56,28 +56,27 @@ impl system::Trait for Test {
 	type Version = ();
 }
 
+impl brml_assets::Trait for Test {
+	type Event = ();
+	type Balance = u64;
+	type AssetId = u32;
+	type ClearingHandler = Settlement;
+}
+
 parameter_types! {
 	pub const SettlementPeriod: u64 = 24 * 60 * 10;
 }
 
 impl Trait for Test {
-	type Event = TestEvent;
-	type Balance = u64;
-	type AssetId = u32;
-	type ClearingHandler = ();
+	type Event = ();
+	type SettlementId = u32;
+	type SettlementPeriod = SettlementPeriod;
+	type Duration = u128;
+	type AssetIssue = Assets;
 }
 
-mod assets {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		assets<T>,
-	}
-}
-
-pub type Assets = Module<Test>;
+pub type Settlement = Module<Test>;
+pub type Assets = brml_assets::Module<Test>;
 pub type System = system::Module<Test>;
 
 pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {

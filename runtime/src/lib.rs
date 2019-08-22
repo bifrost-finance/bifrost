@@ -433,9 +433,15 @@ impl brml_assets::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
+	type ClearingHandler = Settlement;
+}
+
+impl brml_settlement::Trait for Runtime {
+	type Event = Event;
 	type SettlementId = SettlementId;
 	type SettlementPeriod = SettlementPeriod;
 	type Duration = Duration;
+	type AssetIssue = Assets;
 }
 
 construct_runtime!(
@@ -466,6 +472,7 @@ construct_runtime!(
 		Offences: offences::{Module, Call, Storage, Event},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
+		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 	}
 );
 

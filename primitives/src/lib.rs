@@ -21,7 +21,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sr_primitives::{
-	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature
+	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature,
 };
 
 /// An index to a block.
@@ -76,4 +76,35 @@ client::decl_runtime_apis! {
 		/// Get current account nonce of given `AccountId`.
 		fn account_nonce(account: AccountId) -> Index;
 	}
+}
+
+/// Clearing handler for assets change
+pub trait ClearingHandler<AssetId, AccountId, BlockNumber, Balance> {
+	/// Clearing for assets change
+	fn asset_clearing(
+		asset_id: AssetId,
+		target: AccountId,
+		last_block: BlockNumber,
+		prev_amount: Balance,
+		curr_amount: Balance,
+	);
+
+	/// Clearing for token change
+	fn token_clearing(
+		asset_id: AssetId,
+		last_block: BlockNumber,
+		prev_amount: Balance,
+		curr_amount: Balance,
+	);
+}
+
+impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
+	fn asset_clearing(_: A, _: AC, _: BN, _: B, _: B) {}
+	fn token_clearing(_: A, _: BN, _: B, _: B) {}
+}
+
+/// Asset issue handler
+pub trait AssetIssue<AssetId, AccountId, Balance> {
+	/// Asset issue handler
+	fn asset_issue(asset_id: AssetId, target: AccountId, amount: Balance);
 }
