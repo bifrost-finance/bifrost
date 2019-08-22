@@ -72,6 +72,7 @@ impl Trait for Test {
 	type SettlementId = u32;
 	type SettlementPeriod = SettlementPeriod;
 	type Duration = u128;
+	type AssetIssue = Assets;
 }
 
 pub type Settlement = Module<Test>;

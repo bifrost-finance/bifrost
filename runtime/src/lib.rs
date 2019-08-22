@@ -441,6 +441,7 @@ impl brml_settlement::Trait for Runtime {
 	type SettlementId = SettlementId;
 	type SettlementPeriod = SettlementPeriod;
 	type Duration = Duration;
+	type AssetIssue = Assets;
 }
 
 construct_runtime!(

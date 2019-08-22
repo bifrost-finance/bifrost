@@ -23,7 +23,7 @@ use srml_support::{StorageValue, StorageMap, Parameter,
 	decl_module, decl_event, decl_storage, ensure};
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
-use node_primitives::ClearingHandler;
+use node_primitives::{ClearingHandler, AssetIssue};
 
 mod mock;
 mod tests;
@@ -46,6 +46,7 @@ pub trait Trait: system::Trait {
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
 
+	/// Clearing handler for assets change
 	type ClearingHandler: ClearingHandler<Self::AssetId, Self::AccountId, Self::BlockNumber, Self::Balance>;
 }
 
@@ -156,6 +157,12 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::Destroyed(id, origin, amount));
 		}
+	}
+}
+
+impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+	fn asset_issue(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
+		Self::asset_issue(asset_id, target, amount);
 	}
 }
 

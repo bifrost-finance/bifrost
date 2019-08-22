@@ -23,7 +23,7 @@ use srml_support::{StorageValue, StorageMap, EnumerableStorageMap, Parameter,
 	decl_module, decl_event, decl_storage};
 use srml_support::traits::Get;
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, SaturatedConversion, Saturating};
-use node_primitives::ClearingHandler;
+use node_primitives::{ClearingHandler, AssetIssue};
 
 mod mock;
 mod tests;
@@ -87,6 +87,9 @@ pub trait Trait: system::Trait + brml_assets::Trait {
 
 	/// The value that represent the duration of balance.
 	type Duration: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance>;
+
+	// Assets issue handler
+	type AssetIssue: AssetIssue<Self::AssetId, Self::AccountId, Self::Balance>;
 }
 
 decl_event!(
@@ -207,30 +210,26 @@ impl<T: Trait> Module<T> {
 		// Update token's balance duration
 		for ((asset_id, stl_id), _clearing_token) in <ClearingTokens<T>>::enumerate()
 			.filter(|((_, stl_id), _)| *stl_id < curr_stl_id)
-			{
-				let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
-				let token = <brml_assets::Tokens<T>>::get(asset_id);
-				Self::token_clearing(asset_id, last_block, token.total_supply, token.total_supply);
-			}
+		{
+			let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
+			let token = <brml_assets::Tokens<T>>::get(asset_id);
+			Self::token_clearing(asset_id, last_block, token.total_supply, token.total_supply);
+		}
 
 		for (index, _clearing_asset) in <ClearingAssets<T>>::enumerate()
 			.filter(|((_, _, stl_id), _)| *stl_id < curr_stl_id)
-			{
-				let (asset_id, target, stl_id) = index.clone();
+		{
+			let (asset_id, target, stl_id) = index.clone();
 
-				// Calculate account balance duration
-				let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
-				let amount = <brml_assets::Balances<T>>::get((asset_id, target.clone()));
-				Self::asset_clearing(asset_id, target.clone(), last_block, amount, amount);
+			// Calculate account balance duration
+			let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
+			let amount = <brml_assets::Balances<T>>::get((asset_id, target.clone()));
+			Self::asset_clearing(asset_id, target.clone(), last_block, amount, amount);
 
-				// Transfer to Balance, and remove clearing_asset record
-				let clearing_asset = <ClearingAssets<T>>::take(&index);
-				let amount = clearing_asset.last_balance;
-//                Self::asset_issue(asset_id, target.clone(), amount);
-			}
-
-//        for (index, _clearing_asset) in <ClearingAssets<T>>::enumerate() {
-//            <ClearingAssets<T>>::remove(index);
-//        }
+			// Transfer to Balance, and remove clearing_asset record
+			let clearing_asset = <ClearingAssets<T>>::take(&index);
+			let amount = clearing_asset.last_balance;
+			T::AssetIssue::asset_issue(asset_id, target.clone(), amount);
+		}
 	}
 }
