@@ -1,0 +1,20 @@
+[package]
+name = "brml-bridge"
+version = "0.1.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
+srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
+
+[dev-dependencies]
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"srml-support/std",
+	"system/std",
+]

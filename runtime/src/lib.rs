@@ -444,6 +444,10 @@ impl brml_settlement::Trait for Runtime {
 	type AssetIssue = Assets;
 }
 
+impl brml_bridge::Trait for Runtime {
+	type Event = Event;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -473,6 +477,7 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
+		Bridge: brml_bridge::{Module, Call, Storage, Event},
 	}
 );
 
