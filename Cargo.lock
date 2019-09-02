@@ -292,6 +292,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-bridge"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "srml-support 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "srml-system 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
 name = "brml-settlement"
 version = "0.1.0"
 dependencies = [
@@ -2290,6 +2299,7 @@ name = "node-runtime"
 version = "0.1.0"
 dependencies = [
  "brml-assets 0.1.0",
+ "brml-bridge 0.1.0",
  "brml-settlement 0.1.0",
  "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives 0.1.0",

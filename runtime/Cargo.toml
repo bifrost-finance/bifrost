@@ -46,6 +46,7 @@ substrate-keyring = { git = "https://github.com/paritytech/substrate", optional 
 substrate-session = { git = "https://github.com/paritytech/substrate", default-features = false }
 brml-assets = { path = "../brml/assets", default-features = false }
 brml-settlement = { path = "../brml/settlement", default-features = false }
+brml-bridge = { path = "../brml/bridge", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2", git = "https://github.com/paritytech/substrate" }
@@ -95,4 +96,5 @@ std = [
 	"version/std",
 	"brml-assets/std",
 	"brml-settlement/std",
+	"brml-bridge/std",
 ]
