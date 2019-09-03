@@ -39,7 +39,7 @@ use sr_primitives::{ApplyResult, impl_opaque_keys, generic, create_runtime_str, 
 use sr_primitives::transaction_validity::TransactionValidity;
 use sr_primitives::weights::Weight;
 use sr_primitives::traits::{
-	BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup,
+	self, BlakeTwo256, Block as BlockT, DigestFor, NumberFor, StaticLookup, SaturatedConversion,
 };
 use version::RuntimeVersion;
 use elections::VoteIndex;
@@ -47,8 +47,8 @@ use elections::VoteIndex;
 use version::NativeVersion;
 use primitives::OpaqueMetadata;
 use grandpa::{AuthorityId as GrandpaId, AuthorityWeight as GrandpaWeight};
-use im_online::{AuthorityId as ImOnlineId};
-use finality_tracker::{DEFAULT_REPORT_LATENCY, DEFAULT_WINDOW_SIZE};
+use im_online::sr25519::{AuthorityId as ImOnlineId};
+use system::offchain::TransactionSubmitter;
 
 #[cfg(any(feature = "std", test))]
 pub use sr_primitives::BuildStorage;
@@ -237,8 +237,8 @@ impl staking::Trait for Runtime {
 	type CurrencyToVote = CurrencyToVoteHandler;
 	type OnRewardMinted = Treasury;
 	type Event = Event;
-	type Slash = ();
-	type Reward = ();
+	type Slash = Treasury; // send the slashed funds to the treasury.
+	type Reward = (); // rewards are minted from the void
 	type SessionsPerEra = SessionsPerEra;
 	type BondingDuration = BondingDuration;
 	type SessionInterface = Self;
@@ -393,10 +393,13 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
+type SubmitTransaction = TransactionSubmitter<ImOnlineId, Runtime, UncheckedExtrinsic>;
+
 impl im_online::Trait for Runtime {
+	type AuthorityId = ImOnlineId;
 	type Call = Call;
 	type Event = Event;
-	type UncheckedExtrinsic = UncheckedExtrinsic;
+	type SubmitTransaction = SubmitTransaction;
 	type ReportUnresponsiveness = Offences;
 	type CurrentElectedSet = staking::CurrentElectedStashAccounts<Runtime>;
 }
@@ -407,19 +410,48 @@ impl offences::Trait for Runtime {
 	type OnOffenceHandler = Staking;
 }
 
+impl authority_discovery::Trait for Runtime {}
+
 impl grandpa::Trait for Runtime {
 	type Event = Event;
 }
 
 parameter_types! {
-	pub const WindowSize: BlockNumber = DEFAULT_WINDOW_SIZE.into();
-	pub const ReportLatency: BlockNumber = DEFAULT_REPORT_LATENCY.into();
+	pub const WindowSize: BlockNumber = 101;
+	pub const ReportLatency: BlockNumber = 1000;
 }
 
 impl finality_tracker::Trait for Runtime {
 	type OnFinalizationStalled = Grandpa;
 	type WindowSize = WindowSize;
 	type ReportLatency = ReportLatency;
+}
+
+impl system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for Runtime {
+	type Signature = Signature;
+
+	fn create_transaction<F: system::offchain::Signer<AccountId, Self::Signature>>(
+		call: Call,
+		account: AccountId,
+		index: Index,
+	) -> Option<(Call, <UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload)> {
+		let period = 1 << 8;
+		let current_block = System::block_number().saturated_into::<u64>();
+		let tip = 0;
+		let extra: SignedExtra = (
+			system::CheckVersion::<Runtime>::new(),
+			system::CheckGenesis::<Runtime>::new(),
+			system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			system::CheckNonce::<Runtime>::from(index),
+			system::CheckWeight::<Runtime>::new(),
+			balances::TakeFees::<Runtime>::from(tip),
+		);
+		let raw_payload = SignedPayload::new(call, extra).ok()?;
+		let signature = F::sign(account.clone(), &raw_payload)?;
+		let address = Indices::unlookup(account);
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (address, signature, extra)))
+	}
 }
 
 type Duration = u128;
@@ -472,7 +504,8 @@ construct_runtime!(
 		Treasury: treasury::{Module, Call, Storage, Event<T>},
 		Contracts: contracts,
 		Sudo: sudo,
-		ImOnline: im_online::{Module, Call, Storage, Event, ValidateUnsigned, Config},
+		ImOnline: im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+		AuthorityDiscovery: authority_discovery::{Module, Call, Config<T>},
 		Offences: offences::{Module, Call, Storage, Event},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
@@ -502,6 +535,8 @@ pub type SignedExtra = (
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
+/// The payload being signed in transactions.
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
@@ -590,7 +625,7 @@ impl_runtime_apis! {
 			babe_primitives::BabeConfiguration {
 				median_required_blocks: 1000,
 				slot_duration: Babe::slot_duration(),
-				c: (278, 1000),
+				c: PRIMARY_PROBABILITY,
 			}
 		}
 
@@ -606,15 +641,26 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl node_primitives::AccountNonceApi<Block> for Runtime {
-		fn account_nonce(account: AccountId) -> Index {
-			System::account_nonce(account)
+	impl authority_discovery_primitives::AuthorityDiscoveryApi<Block, ImOnlineId> for Runtime {
+		fn authority_id() -> Option<ImOnlineId> {
+			AuthorityDiscovery::authority_id()
+		}
+		fn authorities() -> Vec<ImOnlineId> {
+			AuthorityDiscovery::authorities()
+		}
+
+		fn sign(payload: Vec<u8>, authority_id: ImOnlineId) -> Option<Vec<u8>> {
+			AuthorityDiscovery::sign(payload, authority_id)
+		}
+
+		fn verify(payload: Vec<u8>, signature: Vec<u8>, public_key: ImOnlineId) -> bool {
+			AuthorityDiscovery::verify(payload, signature, public_key)
 		}
 	}
 
-	impl consensus_primitives::ConsensusApi<Block, babe_primitives::AuthorityId> for Runtime {
-		fn authorities() -> Vec<babe_primitives::AuthorityId> {
-			Babe::authorities().into_iter().map(|(a, _)| a).collect()
+	impl node_primitives::AccountNonceApi<Block> for Runtime {
+		fn account_nonce(account: AccountId) -> Index {
+			System::account_nonce(account)
 		}
 	}
 
@@ -623,5 +669,30 @@ impl_runtime_apis! {
 			let seed = seed.as_ref().map(|s| rstd::str::from_utf8(&s).expect("Seed is an utf8 string"));
 			SessionKeys::generate(seed)
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use sr_primitives::app_crypto::RuntimeAppPublic;
+	use system::offchain::SubmitSignedTransaction;
+
+	fn is_submit_signed_transaction<T, Signer>(_arg: T) where
+		T: SubmitSignedTransaction<
+			Runtime,
+			Call,
+			Extrinsic=UncheckedExtrinsic,
+			CreateTransaction=Runtime,
+			Signer=Signer,
+		>,
+		Signer: RuntimeAppPublic + From<AccountId>,
+		Signer::Signature: Into<Signature>,
+	{}
+
+	#[test]
+	fn validate_bounds() {
+		let x = SubmitTransaction::default();
+		is_submit_signed_transaction(x);
 	}
 }

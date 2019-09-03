@@ -19,7 +19,7 @@
 
 use rstd::prelude::*;
 use codec::{Encode, Decode};
-use srml_support::{StorageValue, StorageMap, EnumerableStorageMap, Parameter,
+use srml_support::{StorageValue, StorageMap, StorageLinkedMap, Parameter,
 	decl_module, decl_event, decl_storage};
 use srml_support::traits::Get;
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, SaturatedConversion, Saturating};
@@ -122,7 +122,7 @@ decl_module! {
 		/// How often (in blocks) new settlement are started.
 		const SettlementPeriod: T::BlockNumber = T::SettlementPeriod::get();
 
-		fn deposit_event<T>() = default;
+		fn deposit_event() = default;
 
 		fn on_initialize(now_block: T::BlockNumber) {
 			// check if need to begin a new settlement

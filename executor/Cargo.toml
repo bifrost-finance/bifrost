@@ -18,12 +18,10 @@ node-runtime = { path = "../runtime" }
 [dev-dependencies]
 node-testing = { path = "../testing" }
 test-client = { package = "substrate-test-client", git = "https://github.com/paritytech/substrate" }
-keyring = { package = "substrate-keyring", git = "https://github.com/paritytech/substrate" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
 runtime_support = { package = "srml-support", git = "https://github.com/paritytech/substrate" }
 balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
 session = { package = "srml-session", git = "https://github.com/paritytech/substrate" }
-staking = { package = "srml-staking", git = "https://github.com/paritytech/substrate" }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate" }
 timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate" }
 treasury = { package = "srml-treasury", git = "https://github.com/paritytech/substrate" }
