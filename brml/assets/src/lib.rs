@@ -81,7 +81,7 @@ decl_storage! {
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 
-		fn deposit_event<T>() = default;
+		fn deposit_event() = default;
 
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.

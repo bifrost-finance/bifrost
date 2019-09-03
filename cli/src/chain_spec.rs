@@ -19,10 +19,9 @@
 use primitives::{Pair, Public, crypto::UncheckedInto};
 pub use node_primitives::{AccountId, Balance};
 use node_runtime::{
-	BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig, DemocracyConfig,
-	ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig,
-	SessionConfig, SessionKeys, StakerStatus, StakingConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, WASM_BINARY,
+	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig, DemocracyConfig,
+	ElectionsConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, StakerStatus,
+	StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
 };
 use node_runtime::constants::{time::*, currency::*};
 pub use node_runtime::GenesisConfig;
@@ -31,7 +30,7 @@ use hex_literal::hex;
 use substrate_telemetry::TelemetryEndpoints;
 use grandpa_primitives::{AuthorityId as GrandpaId};
 use babe_primitives::{AuthorityId as BabeId};
-use im_online::AuthorityId as ImOnlineId;
+use im_online::sr25519::{AuthorityId as ImOnlineId};
 use sr_primitives::Perbill;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -171,6 +170,9 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 		im_online: Some(ImOnlineConfig {
 			keys: vec![],
 		}),
+		authority_discovery: Some(AuthorityDiscoveryConfig{
+			keys: vec![],
+		}),
 		grandpa: Some(GrandpaConfig {
 			authorities: vec![],
 		}),
@@ -302,6 +304,9 @@ pub fn testnet_genesis(
 		im_online: Some(ImOnlineConfig {
 			keys: vec![],
 		}),
+		authority_discovery: Some(AuthorityDiscoveryConfig{
+			keys: vec![],
+		}),
 		grandpa: Some(GrandpaConfig {
 			authorities: vec![],
 		}),
@@ -345,8 +350,8 @@ pub fn local_testnet_config() -> ChainSpec {
 #[cfg(test)]
 pub(crate) mod tests {
 	use super::*;
+	use crate::service::{new_full, new_light};
 	use service_test;
-	use crate::service::Factory;
 
 	fn local_testnet_genesis_instant_single() -> GenesisConfig {
 		testnet_genesis(
@@ -390,6 +395,10 @@ pub(crate) mod tests {
 	#[test]
 	#[ignore]
 	fn test_connectivity() {
-		service_test::connectivity::<Factory>(integration_test_config_with_two_authorities());
+		service_test::connectivity(
+			integration_test_config_with_two_authorities(),
+			|config| new_full(config),
+			|config| new_light(config),
+		);
 	}
 }

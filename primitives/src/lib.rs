@@ -21,7 +21,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sr_primitives::{
-	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature,
+	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature
 };
 
 /// An index to a block.
