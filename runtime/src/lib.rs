@@ -478,6 +478,7 @@ impl brml_settlement::Trait for Runtime {
 
 impl brml_bridge::Trait for Runtime {
 	type Event = Event;
+	type AssetIssue = Assets;
 }
 
 construct_runtime!(

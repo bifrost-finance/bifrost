@@ -22,8 +22,11 @@ use core::result;
 use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, InherentData, MakeFatalError};
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
+use node_primitives::AssetIssue;
 use rstd::prelude::*;
+use sr_primitives::traits::StaticLookup;
 use srml_support::{decl_module, decl_event, decl_storage, StorageValue};
+use substrate_primitives::offchain::{HttpRequestStatus, Duration, Timestamp, HttpError};
 use system::{ensure_signed, ensure_none};
 
 
@@ -66,7 +69,7 @@ impl Transaction {
 		self.signatures.len() >= self.threshold as usize
 	}
 
-	fn reach_timestamp(&self) -> bool { true }
+	fn reach_timestamp(&self, t: Timestamp) -> bool { true }
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
@@ -90,9 +93,12 @@ pub struct Bank {
 }
 
 /// The module configuration trait.
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + brml_assets::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+
+	// Assets issue handler
+	type AssetIssue: AssetIssue<Self::AssetId, Self::AccountId, Self::Balance>;
 }
 
 decl_event!(
@@ -181,7 +187,10 @@ impl<T: Trait> ProvideInherent for Module<T> {
 impl<T: Trait> Module<T> {
 
 	fn offchain() {
+		let now_time = sr_io::timestamp();
+		Self::receive_confirm_tx_send(now_time);
 
+		Self::send_tx_finish(now_time);
 	}
 
 	/// Verify transaction from bridge relayer by validator
@@ -191,27 +200,78 @@ impl<T: Trait> Module<T> {
 
 	/// Map transaction from bridge relayer
 	fn relay_tx_map() {
-
+		let asset_id: T::AssetId = T::AssetId::default();
+		let amount: T::Balance = T::Balance::default();
+//		let target: <T::Lookup as StaticLookup>::Source = T::AccountId::default();
+//		let target = T::Lookup::lookup(target).unwrap();
+		let target = T::AccountId::default();
+		T::AssetIssue::asset_issue(asset_id, target.clone(), amount);
 	}
 
 	/// Receive and map transaction from backing blockchain
 	fn receive_tx() {
+		// Check if the relay transaction is verified
+		match Self::relay_tx_verify() {
+			Ok(_) => {
+				// Relay transaction from backing blockchain
+				Self::relay_tx_map();
 
+				// Generate receive confirmation transaction for blockchain
+				Self::receive_confirm_tx_gen();
+
+				Self::deposit_event(Event::BridgeTxMapping);
+			},
+			Err(_) => {}
+		}
 	}
 
 	/// Generate receiving confirm transaction
 	fn receive_confirm_tx_gen() {
+		// Generate transaction
+		let tx = Transaction::new();
 
+		// Record transaction
+		UnsignedReceiveConfirms::append([tx].into_iter());
 	}
 
 	/// Sign the receiving confirm transaction by validator
 	fn receive_confirm_tx_sign() {
+		let tx_vec = Self::unsigned_recv_cfms();
+		let tx_vec = tx_vec.into_iter().filter_map(|item| {
+			// Sign the transaction
+			// Check if signature threshold is reached to submit transaction to backing blockchain
+			match item.reach_threshold() {
+				true => {
+					match SignedReceiveConfirms::append([item.clone()].into_iter()) {
+						Ok(_) => None,
+						Err(_) => Some(item),
+					}
+				},
+				false => Some(item),
+			}
+		}).collect::<Vec<_>>();
 
+		UnsignedReceiveConfirms::put(tx_vec);
 	}
 
 	/// Send receiving confirm transaction
-	fn receive_confirm_tx_send() {
+	fn receive_confirm_tx_send(t: Timestamp) {
+		let tx_vec = Self::signed_recv_cfms();
+		let tx_vec = tx_vec.into_iter().filter_map(|item| {
+			// Check if time is reached to submit transaction to backing blockchain
+			match item.reach_timestamp(t) {
+				true => Some(item),
+				false => None,
+			}
+		}).collect::<Vec<_>>();
 
+		for tx in tx_vec {
+			// Generate http request
+		}
+
+		// Send http request
+		// Handler http response
+		// Update data
 	}
 
 	/// Generate sending transaction
@@ -222,11 +282,26 @@ impl<T: Trait> Module<T> {
 
 	/// Sign the sending transaction by validator
 	fn send_tx_sign() {
+		let tx_vec = Self::unsigned_sends();
+		let tx_vec = tx_vec.into_iter().filter_map(|item| {
+			// Sign the transaction
+			// Check if signature threshold is reached to submit transaction to backing blockchain
+			match item.reach_threshold() {
+				true => {
+					match SignedSends::append([item.clone()].into_iter()) {
+						Ok(_) => None,
+						Err(_) => Some(item),
+					}
+				},
+				false => Some(item),
+			}
+		}).collect::<Vec<_>>();
 
+		UnsignedSends::put(tx_vec);
 	}
 
 	/// Send transaction finish
-	fn send_tx_finish() {
+	fn send_tx_finish(t: Timestamp) {
 
 	}
 }
