@@ -17,8 +17,77 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use srml_support::{decl_module, decl_event, decl_storage};
+use codec::{Encode, Decode};
+use core::result;
+use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, InherentData, MakeFatalError};
+#[cfg(feature = "std")]
+use inherents::ProvideInherentData;
+use rstd::prelude::*;
+use srml_support::{decl_module, decl_event, decl_storage, StorageValue};
 use system::{ensure_signed, ensure_none};
+
+
+/// The identifier for the `bridge` inherent.
+pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"bridge01";
+
+type TransactionSignature = Vec<u8>;
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+pub enum TransactionStatus {
+	Generated,
+	Signed,
+	Sent,
+	GenerateError,
+	SignError,
+	SendError,
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+pub struct Transaction {
+	tx: Vec<u8>,
+	direction: BridgeTransactionDirection,
+	signatures: Vec<TransactionSignature>,
+	status: TransactionStatus,
+	threshold: u32,
+}
+
+impl Transaction {
+	fn new() -> Self {
+		Self {
+			tx: Default::default(),
+			direction: BridgeTransactionDirection::In,
+			signatures: Default::default(),
+			status: TransactionStatus::Generated,
+			threshold: 5,
+		}
+	}
+
+	fn reach_threshold(&self) -> bool {
+		self.signatures.len() >= self.threshold as usize
+	}
+
+	fn reach_timestamp(&self) -> bool { true }
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+pub enum BridgeTransactionDirection {
+	In,
+	Out,
+}
+
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+pub struct BridgeTransaction {
+	direction: BridgeTransactionDirection,
+	transaction: Vec<u8>,
+	signatures: Vec<TransactionSignature>
+}
+
+#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+pub struct Bank {
+	account: Vec<u8>,
+	authorities: Vec<Vec<u8>>,
+	threshold: u32,
+}
 
 /// The module configuration trait.
 pub trait Trait: system::Trait {
@@ -28,13 +97,32 @@ pub trait Trait: system::Trait {
 
 decl_event!(
 	pub enum Event {
+		BridgeTxMapping,
 
+		BridgeTxReceived,
+
+		BridgeTxReceiveConfirmed,
+
+		BridgeTxSent,
 	}
 );
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Bridge {
 
+		NextBankId get(next_bank_id): u32;
+
+		Banks get(banks): map u32 => Bank;
+
+		BridgeTxs get(bridge_txs): Vec<BridgeTransaction>;
+
+		UnsignedReceiveConfirms get(unsigned_recv_cfms): Vec<Transaction>;
+
+		SignedReceiveConfirms get(signed_recv_cfms): Vec<Transaction>;
+
+		UnsignedSends get(unsigned_sends): Vec<Transaction>;
+
+		SignedSends get(signed_sends): Vec<Transaction>;
 	}
 }
 
@@ -43,71 +131,101 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		/// Receive and map transaction from backing blockchain
-		fn receive_tx(origin) {
+		fn handle(origin) {
 			ensure_none(origin)?;
 
-			Self::relay_tx_verify();
+			Self::receive_tx();
 
-			Self::relay_tx_map();
+			Self::send_tx_sign();
 
-			Self::receive_confirm_tx_gen();
-		}
-
-		/// Sign for the receiving confirm transaction
-		fn receive_confirm_tx_sign(origin) {
-			let _origin = ensure_signed(origin)?;
-		}
-
-		/// generate sending transaction
-		fn send_tx_gen(origin) {
-			let _origin = ensure_signed(origin)?;
-		}
-
-		/// Sign for the sending transaction
-		fn send_tx_sign(origin) {
-			ensure_none(origin)?;
-		}
-
-		fn on_initialize(_now_block: T::BlockNumber) {
-
-		}
-
-		fn on_finalize(_now_block: T::BlockNumber) {
-
+			Self::receive_confirm_tx_sign();
 		}
 
 		// Runs after every block.
 		fn offchain_worker(_now_block: T::BlockNumber) {
-
+			Self::offchain();
 		}
+	}
+}
+
+#[cfg(feature = "std")]
+pub struct InherentDataProvider;
+
+#[cfg(feature = "std")]
+impl ProvideInherentData for InherentDataProvider {
+	fn inherent_identifier(&self) -> &'static InherentIdentifier {
+		&INHERENT_IDENTIFIER
+	}
+
+	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), RuntimeString> {
+		let data = 1;
+		inherent_data.put_data(INHERENT_IDENTIFIER, &data)
+	}
+
+	fn error_to_string(&self, error: &[u8]) -> Option<String> {
+		None
+	}
+}
+
+impl<T: Trait> ProvideInherent for Module<T> {
+	type Call = Call<T>;
+	type Error = MakeFatalError<RuntimeString>;
+	const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
+
+	fn create_inherent(_data: &InherentData) -> Option<Self::Call> {
+		Some(Call::handle())
 	}
 }
 
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 
-	/// verify transaction from bridge relayer
-	fn relay_tx_verify() {
+	fn offchain() {
 
 	}
 
-	/// map transaction from bridge relayer
+	/// Verify transaction from bridge relayer by validator
+	fn relay_tx_verify() -> result::Result<(), ()> {
+		Ok(())
+	}
+
+	/// Map transaction from bridge relayer
 	fn relay_tx_map() {
 
 	}
 
-	/// generate receiving confirm transaction
+	/// Receive and map transaction from backing blockchain
+	fn receive_tx() {
+
+	}
+
+	/// Generate receiving confirm transaction
 	fn receive_confirm_tx_gen() {
 
 	}
 
-	/// send receiving confirm transaction
+	/// Sign the receiving confirm transaction by validator
+	fn receive_confirm_tx_sign() {
+
+	}
+
+	/// Send receiving confirm transaction
 	fn receive_confirm_tx_send() {
 
 	}
 
-	/// send transaction finish
+	/// Generate sending transaction
+	pub fn send_tx_gen() {
+		let tx = Transaction::new();
+		UnsignedSends::append([tx].into_iter());
+	}
+
+	/// Sign the sending transaction by validator
+	fn send_tx_sign() {
+
+	}
+
+	/// Send transaction finish
 	fn send_tx_finish() {
 
 	}
