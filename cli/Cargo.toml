@@ -10,7 +10,7 @@ log = "0.4"
 tokio = "0.1.7"
 futures = "0.1"
 exit-future = "0.1"
-jsonrpc-core = "13.1.0"
+jsonrpc-core = "13.2.0"
 cli = { package = "substrate-cli", git = "https://github.com/paritytech/substrate" }
 codec = { package = "parity-scale-codec", version = "1.0.0" }
 sr-io = { git = "https://github.com/paritytech/substrate" }
@@ -45,14 +45,15 @@ system = { package = "srml-system", git = "https://github.com/paritytech/substra
 balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
 support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
 im_online = { package = "srml-im-online", git = "https://github.com/paritytech/substrate", default-features = false }
-authority-discovery = { package = "srml-authority-discovery", git = "https://github.com/paritytech/substrate", default-features = false }
+sr-authority-discovery = { package = "srml-authority-discovery", git = "https://github.com/paritytech/substrate", default-features = false }
+authority-discovery = { package = "substrate-authority-discovery", git = "https://github.com/paritytech/substrate" }
 
 [dev-dependencies]
 keystore = { package = "substrate-keystore", git = "https://github.com/paritytech/substrate" }
 babe = { package = "substrate-consensus-babe", git = "https://github.com/paritytech/substrate", features = ["test-helpers"] }
 consensus-common = { package = "substrate-consensus-common", git = "https://github.com/paritytech/substrate" }
 service-test = { package = "substrate-service-test", git = "https://github.com/paritytech/substrate" }
-futures03 = { package = "futures-preview", version = "0.3.0-alpha.17" }
+futures03 = { package = "futures-preview", version = "=0.3.0-alpha.17" }
 tempfile = "3.1"
 
 [build-dependencies]
