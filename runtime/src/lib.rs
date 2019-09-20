@@ -481,6 +481,12 @@ impl brml_bridge::Trait for Runtime {
 	type AssetIssue = Assets;
 }
 
+impl brml_exchange::ExchangeTrait for Runtime {
+	type Event = Event;
+	type ExchangeRate = u64;
+	type RatePerBlock = u64;
+}
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -512,6 +518,7 @@ construct_runtime!(
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 		Bridge: brml_bridge::{Module, Call, Storage, Event},
+		Exchange: brml_exchange::{Module, Call, Storage, Event},
 	}
 );
 

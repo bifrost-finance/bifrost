@@ -29,6 +29,7 @@ members = [
 	"brml/assets",
 	"brml/settlement",
 	"brml/bridge",
+	"brml/exchange",
 ]
 exclude = [
 	"runtime/wasm",
