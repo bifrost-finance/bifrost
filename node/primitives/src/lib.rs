@@ -143,6 +143,21 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 
 /// Asset issue handler
 pub trait AssetIssue<AssetId, AccountId, Balance> {
-	/// Asset issue handler
+	/// Asset issue
 	fn asset_issue(asset_id: AssetId, target: AccountId, amount: Balance);
+}
+
+impl<A, AC, B> AssetIssue<A, AC, B> for () {
+	fn asset_issue(_: A, _: AC, _: B) {}
+}
+
+
+/// Asset redeem handler
+pub trait AssetRedeem<AssetId, AccountId, Balance> {
+	/// Asset redeem
+	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance);
+}
+
+impl<A, AC, B> AssetRedeem<A, AC, B> for () {
+	fn asset_redeem(_: A, _: AC, _: B) {}
 }
