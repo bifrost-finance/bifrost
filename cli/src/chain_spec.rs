@@ -265,7 +265,7 @@ pub fn testnet_genesis(
 			minimum_validator_count: 1,
 			validator_count: 5,
 			stakers: initial_authorities.iter().map(|x| {
-				(x.0.clone(), x.1.clone(), x.2.clone(), STASH, StakerStatus::Validator)
+				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			slash_reward_fraction: Perbill::from_percent(10),
