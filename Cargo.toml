@@ -7,10 +7,10 @@ edition = "2018"
 
 [[bin]]
 name = "bifrost-node"
-path = "src/main.rs"
+path = "node/src/main.rs"
 
 [dependencies]
-cli = { package = "node-cli", path = "cli" }
+cli = { package = "node-cli", path = "node/cli" }
 futures = "0.1"
 ctrlc = { version = "3.0", features = ["termination"] }
 
@@ -19,19 +19,16 @@ vergen = "3"
 
 [workspace]
 members = [
-	"cli",
-	"executor",
-	"primitives",
-	"rpc",
-	"rpc-client",
-	"runtime",
-	"testing",
 	"brml/assets",
 	"brml/settlement",
 	"brml/bridge",
-]
-exclude = [
-	"runtime/wasm",
+	"node/cli",
+	"node/executor",
+	"node/primitives",
+	"node/rpc",
+	"node/rpc-client",
+	"node/runtime",
+	"node/testing",
 ]
 
 [badges]

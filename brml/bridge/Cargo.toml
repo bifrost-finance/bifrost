@@ -8,7 +8,7 @@ edition = "2018"
 brml-assets = { path = "../assets", default-features = false }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false }
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
-node-primitives = { path = "../../primitives", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
