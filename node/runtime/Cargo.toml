@@ -48,9 +48,9 @@ system = { package = "srml-system", git = "https://github.com/paritytech/substra
 timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate", default-features = false }
 treasury = { package = "srml-treasury", git = "https://github.com/paritytech/substrate", default-features = false }
 
-brml-assets = { path = "../brml/assets", default-features = false }
-brml-settlement = { path = "../brml/settlement", default-features = false }
-brml-bridge = { path = "../brml/bridge", default-features = false }
+brml-assets = { path = "../../brml/assets", default-features = false }
+brml-settlement = { path = "../../brml/settlement", default-features = false }
+brml-bridge = { path = "../../brml/bridge", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2", git = "https://github.com/paritytech/substrate" }
