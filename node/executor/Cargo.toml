@@ -21,6 +21,7 @@ test-client = { package = "substrate-test-client", git = "https://github.com/par
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
 runtime_support = { package = "srml-support", git = "https://github.com/paritytech/substrate" }
 balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
+transaction-payment = { package = "srml-transaction-payment", git = "https://github.com/paritytech/substrate" }
 session = { package = "srml-session", git = "https://github.com/paritytech/substrate" }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate" }
 timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate" }
@@ -28,7 +29,7 @@ treasury = { package = "srml-treasury", git = "https://github.com/paritytech/sub
 contracts = { package = "srml-contracts", git = "https://github.com/paritytech/substrate" }
 grandpa = { package = "srml-grandpa", git = "https://github.com/paritytech/substrate" }
 indices = { package = "srml-indices", git = "https://github.com/paritytech/substrate" }
-wabt = "~0.7.4"
+wabt = "0.9.2"
 
 [features]
 benchmarks = []

@@ -10,7 +10,7 @@ codec = { package = "parity-scale-codec", version = "1.0.0", default-features = 
 integer-sqrt = { version = "0.1.2" }
 rustc-hex = { version = "2.0", optional = true }
 safe-mix = { version = "1.0", default-features = false }
-serde = { version = "1.0", optional = true }
+serde = { version = "1.0.101", optional = true }
 
 authority-discovery-primitives = { package = "substrate-authority-discovery-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
 babe-primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
@@ -31,6 +31,7 @@ babe = { package = "srml-babe", git = "https://github.com/paritytech/substrate",
 balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate", default-features = false }
 collective = { package = "srml-collective", git = "https://github.com/paritytech/substrate", default-features = false }
 contracts = { package = "srml-contracts", git = "https://github.com/paritytech/substrate", default-features = false }
+contracts-rpc-runtime-api = { package = "srml-contracts-rpc-runtime-api", git = "https://github.com/paritytech/substrate", default-features = false }
 democracy = { package = "srml-democracy", git = "https://github.com/paritytech/substrate", default-features = false }
 elections = { package = "srml-elections", git = "https://github.com/paritytech/substrate", default-features = false }
 executive = { package = "srml-executive", git = "https://github.com/paritytech/substrate", default-features = false }
@@ -40,13 +41,18 @@ im-online = { package = "srml-im-online", git = "https://github.com/paritytech/s
 indices = { package = "srml-indices", git = "https://github.com/paritytech/substrate", default-features = false }
 membership = { package = "srml-membership", git = "https://github.com/paritytech/substrate", default-features = false }
 offences = { package = "srml-offences", git = "https://github.com/paritytech/substrate", default-features = false }
+randomness-collective-flip = { package = "srml-randomness-collective-flip", git = "https://github.com/paritytech/substrate", default-features = false }
 session = { package = "srml-session", git = "https://github.com/paritytech/substrate", default-features = false, features = ["historical"] }
 staking = { package = "srml-staking", git = "https://github.com/paritytech/substrate", default-features = false }
+srml-staking-reward-curve = { git = "https://github.com/paritytech/substrate" }
 sudo = { package = "srml-sudo", git = "https://github.com/paritytech/substrate", default-features = false }
 support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
+system-rpc-runtime-api = { package = "srml-system-rpc-runtime-api", git = "https://github.com/paritytech/substrate", default-features = false }
 timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate", default-features = false }
 treasury = { package = "srml-treasury", git = "https://github.com/paritytech/substrate", default-features = false }
+utility = { package = "srml-utility", git = "https://github.com/paritytech/substrate", default-features = false }
+transaction-payment = { package = "srml-transaction-payment", git = "https://github.com/paritytech/substrate", default-features = false }
 
 brml-assets = { path = "../../brml/assets", default-features = false }
 brml-settlement = { path = "../../brml/settlement", default-features = false }
@@ -68,6 +74,7 @@ std = [
 	"codec/std",
 	"collective/std",
 	"contracts/std",
+	"contracts-rpc-runtime-api/std",
 	"democracy/std",
 	"elections/std",
 	"executive/std",
@@ -80,6 +87,7 @@ std = [
 	"offchain-primitives/std",
 	"offences/std",
 	"primitives/std",
+	"randomness-collective-flip/std",
 	"rstd/std",
 	"rustc-hex",
 	"safe-mix/std",
@@ -93,8 +101,11 @@ std = [
 	"sudo/std",
 	"support/std",
 	"system/std",
+	"system-rpc-runtime-api/std",
 	"timestamp/std",
 	"treasury/std",
+	"utility/std",
+	"transaction-payment/std",
 	"version/std",
 	"brml-assets/std",
 	"brml-settlement/std",
