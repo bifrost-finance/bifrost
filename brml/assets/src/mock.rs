@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 
+use brml_bridge;
 use srml_support::{impl_outer_origin, impl_outer_event, parameter_types};
 use substrate_primitives::{H256, Blake2Hasher};
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
@@ -65,6 +66,7 @@ impl Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type ClearingHandler = ();
+	type AssetRedeem = ();
 }
 
 mod assets {

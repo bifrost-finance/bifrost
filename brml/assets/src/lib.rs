@@ -23,7 +23,7 @@ use srml_support::{StorageValue, StorageMap, Parameter,
 	decl_module, decl_event, decl_storage, ensure};
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
-use node_primitives::{ClearingHandler, AssetIssue};
+use node_primitives::{ClearingHandler, AssetIssue, AssetRedeem};
 
 mod mock;
 mod tests;
@@ -48,6 +48,9 @@ pub trait Trait: system::Trait {
 
 	/// Clearing handler for assets change
 	type ClearingHandler: ClearingHandler<Self::AssetId, Self::AccountId, Self::BlockNumber, Self::Balance>;
+
+	/// Handler for asset redeem
+	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 }
 
 decl_event!(
@@ -156,6 +159,19 @@ decl_module! {
 			Self::asset_destroy(id, origin.clone(), amount);
 
 			Self::deposit_event(RawEvent::Destroyed(id, origin, amount));
+		}
+
+		pub fn redeem(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance) {
+			let origin = ensure_signed(origin)?;
+
+			let origin_account = (id, origin.clone());
+
+			let balance = <Balances<T>>::get(&origin_account);
+			ensure!(amount <= balance , "amount should be less than or equal to origin balance");
+
+			T::AssetRedeem::asset_redeem(id, origin.clone(), amount);
+
+			Self::asset_destroy(id, origin.clone(), amount);
 		}
 	}
 }
