@@ -478,6 +478,7 @@ impl brml_assets::Trait for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type ClearingHandler = Settlement;
+	type AssetRedeem = Bridge;
 }
 
 impl brml_settlement::Trait for Runtime {
@@ -488,9 +489,15 @@ impl brml_settlement::Trait for Runtime {
 	type AssetIssue = Assets;
 }
 
+type BridgeSubmitTransaction = TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
+
 impl brml_bridge::Trait for Runtime {
 	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
 	type AssetIssue = Assets;
+	type Call = Call;
+	type SubmitTransaction = BridgeSubmitTransaction;
 }
 
 construct_runtime!(
@@ -523,7 +530,7 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
-		Bridge: brml_bridge::{Module, Call, Storage, Event},
+		Bridge: brml_bridge::{Module, Call, Storage, Event, ValidateUnsigned},
 	}
 );
 
