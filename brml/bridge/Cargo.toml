@@ -16,8 +16,15 @@ srml-support = { git = "https://github.com/paritytech/substrate", default-featur
 substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
 
+#keyring = { package = "substrate-keyring", git = "https://github.com/paritytech/substrate", optional = true }
+
+eos-keys = { path = "/Users/edwin/liebi/polkadot/rust-eos/keys", optional = true }
+eos-primitives = { path = "/Users/edwin/liebi/polkadot/rust-eos/primitives", optional = true }
+eos-rpc = { path = "/Users/edwin/liebi/polkadot/rust-eos/rpc", optional = true }
+
 [dev-dependencies]
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-offchain = { git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
@@ -32,4 +39,9 @@ std = [
 	"srml-support/std",
 	"substrate-primitives/std",
 	"system/std",
+
+	"eos-keys/std",
+	"eos-primitives/std",
+	"eos-rpc/std",
+#	"keyring",
 ]

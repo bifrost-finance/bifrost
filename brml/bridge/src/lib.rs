@@ -183,6 +183,12 @@ impl<T: Trait> ProvideInherent for Module<T> {
 	}
 }
 
+impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
+		Self::send_tx_gen();
+	}
+}
+
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 
