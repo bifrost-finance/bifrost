@@ -17,73 +17,29 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Encode, Decode};
+mod transaction;
+mod mock;
+mod tests;
+
 use core::result;
-use inherents::{RuntimeString, InherentIdentifier, ProvideInherent, InherentData, MakeFatalError};
+
+use codec::{Decode, Encode};
+use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
-use node_primitives::AssetIssue;
 use rstd::prelude::*;
-use sr_primitives::traits::StaticLookup;
-use srml_support::{decl_module, decl_event, decl_storage, StorageValue};
-use substrate_primitives::offchain::{HttpRequestStatus, Duration, Timestamp, HttpError};
-use system::{ensure_signed, ensure_none};
+use sr_primitives::traits::{Member, SimpleArithmetic};
+use sr_primitives::transaction_validity::{TransactionValidity, UnknownTransaction};
+use srml_support::{decl_event, decl_module, decl_storage, Parameter};
+use substrate_primitives::offchain::Timestamp;
+use system::{ensure_none, ensure_root, ensure_signed};
+use system::offchain::SubmitUnsignedTransaction;
 
+use node_primitives::{AssetIssue, AssetRedeem};
+use transaction::*;
 
 /// The identifier for the `bridge` inherent.
 pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"bridge01";
-
-type TransactionSignature = Vec<u8>;
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub enum TransactionStatus {
-	Generated,
-	Signed,
-	Sent,
-	GenerateError,
-	SignError,
-	SendError,
-}
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct Transaction {
-	tx: Vec<u8>,
-	direction: BridgeTransactionDirection,
-	signatures: Vec<TransactionSignature>,
-	status: TransactionStatus,
-	threshold: u32,
-}
-
-impl Transaction {
-	fn new() -> Self {
-		Self {
-			tx: Default::default(),
-			direction: BridgeTransactionDirection::In,
-			signatures: Default::default(),
-			status: TransactionStatus::Generated,
-			threshold: 5,
-		}
-	}
-
-	fn reach_threshold(&self) -> bool {
-		self.signatures.len() >= self.threshold as usize
-	}
-
-	fn reach_timestamp(&self, t: Timestamp) -> bool { true }
-}
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub enum BridgeTransactionDirection {
-	In,
-	Out,
-}
-
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct BridgeTransaction {
-	direction: BridgeTransactionDirection,
-	transaction: Vec<u8>,
-	signatures: Vec<TransactionSignature>
-}
 
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 pub struct Bank {
@@ -93,12 +49,24 @@ pub struct Bank {
 }
 
 /// The module configuration trait.
-pub trait Trait: system::Trait + brml_assets::Trait {
+pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
 
-	// Assets issue handler
+	/// The units in which we record balances.
+	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The arithmetic type of asset identifier.
+	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// Assets issue handler
 	type AssetIssue: AssetIssue<Self::AssetId, Self::AccountId, Self::Balance>;
+
+	/// A dispatchable call type.
+	type Call: From<Call<Self>>;
+
+	/// A transaction submitter.
+	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 decl_event!(
@@ -123,13 +91,13 @@ decl_storage! {
 
 		BridgeTxs get(bridge_txs): Vec<BridgeTransaction>;
 
-		UnsignedReceiveConfirms get(unsigned_recv_cfms): Vec<Transaction>;
+		UnsignedReceiveConfirms get(unsigned_recv_cfms): Vec<TransactionOut>;
 
-		SignedReceiveConfirms get(signed_recv_cfms): Vec<Transaction>;
+		SignedReceiveConfirms get(signed_recv_cfms): Vec<TransactionOut>;
 
-		UnsignedSends get(unsigned_sends): Vec<Transaction>;
+		UnsignedSends get(unsigned_sends): Vec<TransactionOut>;
 
-		SignedSends get(signed_sends): Vec<Transaction>;
+		SignedSends get(signed_sends): Vec<TransactionOut>;
 	}
 }
 
@@ -226,7 +194,7 @@ impl<T: Trait> Module<T> {
 				// Generate receive confirmation transaction for blockchain
 				Self::receive_confirm_tx_gen();
 
-				Self::deposit_event(Event::BridgeTxMapping);
+				Self::deposit_event(Event::BridgeTxMapped);
 			},
 			Err(_) => {}
 		}
@@ -235,7 +203,7 @@ impl<T: Trait> Module<T> {
 	/// Generate receiving confirm transaction
 	fn receive_confirm_tx_gen() {
 		// Generate transaction
-		let tx = Transaction::new();
+		let tx = TransactionOut::new();
 
 		// Record transaction
 		UnsignedReceiveConfirms::append([tx].into_iter());
@@ -243,7 +211,7 @@ impl<T: Trait> Module<T> {
 
 	/// Sign the receiving confirm transaction by validator
 	fn receive_confirm_tx_sign() {
-		let tx_vec = Self::unsigned_recv_cfms();
+		let tx_vec: Vec<TransactionOut> = Self::unsigned_recv_cfms();
 		let tx_vec = tx_vec.into_iter().filter_map(|item| {
 			// Sign the transaction
 			// Check if signature threshold is reached to submit transaction to backing blockchain
@@ -263,7 +231,7 @@ impl<T: Trait> Module<T> {
 
 	/// Send receiving confirm transaction
 	fn receive_confirm_tx_send(t: Timestamp) {
-		let tx_vec = Self::signed_recv_cfms();
+		let tx_vec: Vec<TransactionOut> = Self::signed_recv_cfms();
 		let tx_vec = tx_vec.into_iter().filter_map(|item| {
 			// Check if time is reached to submit transaction to backing blockchain
 			match item.reach_timestamp(t) {
@@ -283,13 +251,13 @@ impl<T: Trait> Module<T> {
 
 	/// Generate sending transaction
 	pub fn send_tx_gen() {
-		let tx = Transaction::new();
+		let tx = TransactionOut::new();
 		UnsignedSends::append([tx].into_iter());
 	}
 
 	/// Sign the sending transaction by validator
 	fn send_tx_sign() {
-		let tx_vec = Self::unsigned_sends();
+		let tx_vec: Vec<TransactionOut> = Self::unsigned_sends();
 		let tx_vec = tx_vec.into_iter().filter_map(|item| {
 			// Sign the transaction
 			// Check if signature threshold is reached to submit transaction to backing blockchain
@@ -310,5 +278,16 @@ impl<T: Trait> Module<T> {
 	/// Send transaction finish
 	fn send_tx_finish(t: Timestamp) {
 
+	}
+}
+
+impl<T: Trait> srml_support::unsigned::ValidateUnsigned for Module<T> {
+	type Call = Call<T>;
+
+	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+		match call {
+			Call::send_tx_update() => Ok(Default::default()),
+			_ => UnknownTransaction::NoUnsignedValidator.into(),
+		}
 	}
 }
