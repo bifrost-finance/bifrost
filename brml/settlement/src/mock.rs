@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use srml_support::{impl_outer_origin, parameter_types};
-use substrate_primitives::{H256, Blake2Hasher};
+use substrate_primitives::H256;
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
@@ -46,7 +46,6 @@ impl system::Trait for Test {
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type WeightMultiplierUpdate = ();
 	type Header = Header;
 	type Event = ();
 	type BlockHashCount = BlockHashCount;
@@ -61,6 +60,7 @@ impl brml_assets::Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type ClearingHandler = Settlement;
+	type AssetRedeem = ();
 }
 
 parameter_types! {
@@ -79,6 +79,6 @@ pub type Settlement = Module<Test>;
 pub type Assets = brml_assets::Module<Test>;
 pub type System = system::Module<Test>;
 
-pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+pub fn new_test_ext() -> runtime_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
