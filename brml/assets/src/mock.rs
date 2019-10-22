@@ -18,9 +18,8 @@
 
 #![cfg(test)]
 
-use brml_bridge;
 use srml_support::{impl_outer_origin, impl_outer_event, parameter_types};
-use substrate_primitives::{H256, Blake2Hasher};
+use substrate_primitives::H256;
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
@@ -47,7 +46,6 @@ impl system::Trait for Test {
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type WeightMultiplierUpdate = ();
 	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
@@ -82,6 +80,6 @@ impl_outer_event! {
 pub type Assets = Module<Test>;
 pub type System = system::Module<Test>;
 
-pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+pub fn new_test_ext() -> runtime_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
