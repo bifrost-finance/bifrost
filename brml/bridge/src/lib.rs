@@ -103,12 +103,13 @@ pub trait Trait: system::Trait + brml_assets::Trait {
 
 decl_event!(
 	pub enum Event {
-		BridgeTxMapping,
-
+		/// Transaction from another blockchain was mapped.
+		BridgeTxMapped,
+		/// Transaction from another blockchain was received.
 		BridgeTxReceived,
-
+		/// Transaction received from another blockchain was confirmed.
 		BridgeTxReceiveConfirmed,
-
+		/// Transaction to another blockchain was sent.
 		BridgeTxSent,
 	}
 );
