@@ -20,7 +20,6 @@
 
 use super::*;
 use crate::mock::{Assets, Settlement, Origin, System, new_test_ext};
-use runtime_io::with_externalities;
 use srml_support::{assert_ok};
 use sr_primitives::traits::OnInitialize;
 use sr_primitives::traits::OnFinalize;
@@ -29,7 +28,7 @@ const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 
 #[test]
 fn issuing_asset_clearing_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
@@ -74,7 +73,7 @@ fn issuing_asset_clearing_should_work() {
 
 #[test]
 fn transfer_asset_clearing_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
@@ -101,7 +100,7 @@ fn transfer_asset_clearing_should_work() {
 
 #[test]
 fn destroy_asset_clearing_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
@@ -131,7 +130,7 @@ fn destroy_asset_clearing_should_work() {
 
 #[test]
 fn new_settlement_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		Settlement::on_initialize(0);
 		assert_eq!(Settlement::next_settlement_id(), 1);
 
@@ -145,7 +144,7 @@ fn new_settlement_should_work() {
 
 #[test]
 fn destroy_clearing_record_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		Settlement::on_initialize(0);
 
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
@@ -184,7 +183,7 @@ fn destroy_clearing_record_should_work() {
 
 #[test]
 fn enumerate_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		Settlement::on_initialize(0);
 
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
