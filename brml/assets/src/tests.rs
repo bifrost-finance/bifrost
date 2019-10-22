@@ -20,13 +20,12 @@
 
 use super::*;
 use crate::mock::{Assets, Origin, System, TestEvent, new_test_ext};
-use runtime_io::with_externalities;
 use srml_support::{assert_ok, assert_noop};
 use system::{EventRecord, Phase};
 
 #[test]
 fn create_asset_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_eq!(Assets::next_asset_id(), 1);
 		assert_eq!(Assets::token_details(0), Token {
@@ -68,7 +67,7 @@ fn create_asset_should_work() {
 
 #[test]
 fn issuing_asset_units_to_issuer_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
@@ -126,14 +125,14 @@ fn issuing_asset_units_to_issuer_should_work() {
 
 #[test]
 fn issuing_before_creating_should_now_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_noop!(Assets::issue(Origin::ROOT, 0, 1, 10000), "asset should be created first");
 	});
 }
 
 #[test]
 fn transferring_amount_above_available_balance_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
 
@@ -172,7 +171,7 @@ fn transferring_amount_above_available_balance_should_work() {
 
 #[test]
 fn transferring_amount_less_than_available_balance_should_not_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_noop!(Assets::transfer(Origin::signed(1), 0, 1, 1000),
 			"origin account balance must be greater than or equal to the transfer amount");
@@ -181,7 +180,7 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 
 #[test]
 fn transferring_less_than_one_unit_should_not_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_noop!(Assets::transfer(Origin::signed(1), 0, 1, 0),
 			"transfer amount should be non-zero");
@@ -190,7 +189,7 @@ fn transferring_less_than_one_unit_should_not_work() {
 
 #[test]
 fn destroying_asset_balance_with_positive_balance_should_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
 		assert_ok!(Assets::destroy(Origin::signed(1), 0, 1000));
@@ -227,7 +226,7 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 
 #[test]
 fn destroying_asset_balance_with_zero_balance_should_not_work() {
-	with_externalities(&mut new_test_ext(), || {
+	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 100));
 		assert_noop!(Assets::destroy(Origin::signed(1), 0, 200),

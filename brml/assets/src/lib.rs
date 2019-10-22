@@ -19,8 +19,7 @@
 
 use rstd::prelude::*;
 use codec::{Encode, Decode};
-use srml_support::{StorageValue, StorageMap, Parameter,
-	decl_module, decl_event, decl_storage, ensure};
+use srml_support::{Parameter, decl_module, decl_event, decl_storage, ensure};
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
 use node_primitives::{ClearingHandler, AssetIssue, AssetRedeem};
