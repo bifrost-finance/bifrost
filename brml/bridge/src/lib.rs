@@ -106,10 +106,30 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		fn relay_tx(origin, amount: T::Balance) {
+			let origin = ensure_signed(origin)?;
+
+			Self::receive_tx(origin, amount);
+		}
+
+		fn relay_tx_confirmed(origin) {
+			let _origin = ensure_root(origin)?;
+		}
+
+		fn relay_back_confirmed(origin) {
+			let _origin = ensure_root(origin)?;
+		}
+
+		fn send_tx_update(origin) {
+			ensure_none(origin)?;
+
+			UnsignedSends::kill();
+		}
+
 		fn handle(origin) {
 			ensure_none(origin)?;
 
-			Self::receive_tx();
+//			Self::receive_tx();
 
 			Self::send_tx_sign();
 
@@ -162,10 +182,27 @@ impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 impl<T: Trait> Module<T> {
 
 	fn offchain() {
-		let now_time = sr_io::timestamp();
-		Self::receive_confirm_tx_send(now_time);
+		#[cfg(feature = "std")]
+		Self::do_unsigned_recv_tx();
 
-		Self::send_tx_finish(now_time);
+//		let now_time = sr_io::timestamp();
+//		Self::receive_confirm_tx_send(now_time);
+
+//		Self::send_tx_finish(now_time);
+	}
+
+	#[cfg(feature = "std")]
+	fn do_unsigned_recv_tx() {
+		let count = UnsignedSends::decode_len().unwrap_or(0) as u32;
+		if count > 0 {
+			let sends = UnsignedSends::get();
+			for send in sends {
+				TransactionOut::generate_unsigned_recv_tx();
+			}
+
+			let call = Call::send_tx_update();
+			T::SubmitTransaction::submit_unsigned(call).map_err(|_| ());
+		}
 	}
 
 	/// Verify transaction from bridge relayer by validator
@@ -174,22 +211,18 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Map transaction from bridge relayer
-	fn relay_tx_map() {
-		let asset_id: T::AssetId = T::AssetId::default();
-		let amount: T::Balance = T::Balance::default();
-//		let target: <T::Lookup as StaticLookup>::Source = T::AccountId::default();
-//		let target = T::Lookup::lookup(target).unwrap();
-		let target = T::AccountId::default();
+	fn relay_tx_map(target: T::AccountId, amount: T::Balance) {
+		let asset_id: T::AssetId = 0.into();
 		T::AssetIssue::asset_issue(asset_id, target.clone(), amount);
 	}
 
 	/// Receive and map transaction from backing blockchain
-	fn receive_tx() {
+	fn receive_tx(target: T::AccountId, amount: T::Balance) {
 		// Check if the relay transaction is verified
 		match Self::relay_tx_verify() {
 			Ok(_) => {
 				// Relay transaction from backing blockchain
-				Self::relay_tx_map();
+				Self::relay_tx_map(target, amount);
 
 				// Generate receive confirmation transaction for blockchain
 				Self::receive_confirm_tx_gen();
