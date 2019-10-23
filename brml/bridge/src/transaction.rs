@@ -4,9 +4,11 @@ use substrate_primitives::offchain::Timestamp;
 #[cfg(feature = "std")]
 use std::time::{SystemTime, Duration, UNIX_EPOCH};
 #[cfg(feature = "std")]
-use eos_primitives::{Transaction, TimePointSec, TransactionHeader, PermissionLevel, ActionTransfer, Action};
+use eos_primitives::{Transaction, TimePointSec, TransactionHeader, PermissionLevel, ActionTransfer, Action, Asset, Symbol, AccountName};
 #[cfg(feature = "std")]
 use eos_rpc::{HyperClient, GetInfo, GetBlock, PushTransaction, get_info, get_block, push_transaction};
+#[cfg(feature = "std")]
+use std::str::FromStr;
 
 pub type TransactionSignature = Vec<u8>;
 
@@ -65,6 +67,9 @@ pub struct TransactionOut {
 	pub signatures: SignatureCollection,
 	/// Status of transaction
 	status: TransactionStatus,
+
+	pub amount: u64,
+	pub to_name: Vec<u8>,
 }
 
 impl TransactionOut {
@@ -73,6 +78,8 @@ impl TransactionOut {
 			raw: vec![],
 			signatures: Default::default(),
 			status: TransactionStatus::Generated,
+			amount: 0,
+			to_name: vec![],
 		}
 	}
 
@@ -84,7 +91,7 @@ impl TransactionOut {
 
 	// 生成`交易接收确认`交易
 	#[cfg(feature = "std")]
-	pub fn generate_unsigned_recv_tx() -> Self {
+	pub fn generate_unsigned_recv_tx(&self) -> Self {
 		// import private key
 		let sk = eos_keys::secret::SecretKey::from_wif("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3");
 		assert!(sk.is_ok());
@@ -117,12 +124,19 @@ impl TransactionOut {
 			"alice",
 			"active"
 		).ok().unwrap();
-		let action_transfer = ActionTransfer::from_str(
-			"alice",
-			"bob",
-			"1.0000 EOS",
-			"a memo"
-		).ok().unwrap();
+
+		let to_name = match std::str::from_utf8(&self.to_name) {
+			Ok(v) => v,
+			Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+		};
+		let from = AccountName::from_str("alice").unwrap();
+		let to = AccountName::from_str(to_name).unwrap();
+		let amount = Asset {
+			amount: self.amount as i64,
+			symbol: Symbol::from_str("4,EOS").unwrap(),
+		};
+		let memo = "a memo";
+		let action_transfer = ActionTransfer::new(from, to, amount, memo.to_string());
 		let action = Action::from_str(
 			"eosio.token",
 			"transfer",
