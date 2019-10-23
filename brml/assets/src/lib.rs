@@ -72,11 +72,11 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub Balances get(balances): map (T::AssetId, T::AccountId) => T::Balance;
+		pub Balances get(fn balances): map (T::AssetId, T::AccountId) => T::Balance;
 		/// The next asset identifier up for grabs.
-		NextAssetId get(next_asset_id): T::AssetId;
+		NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
-		pub Tokens get(token_details): map T::AssetId => Token<T::Balance>;
+		pub Tokens get(fn token_details): map T::AssetId => Token<T::Balance>;
 	}
 }
 
