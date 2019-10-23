@@ -160,7 +160,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Destroyed(id, origin, amount));
 		}
 
-		pub fn redeem(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance) {
+		pub fn redeem(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance, to_name: Vec<u8>) {
 			let origin = ensure_signed(origin)?;
 
 			let origin_account = (id, origin.clone());
@@ -168,7 +168,7 @@ decl_module! {
 			let balance = <Balances<T>>::get(&origin_account);
 			ensure!(amount <= balance , "amount should be less than or equal to origin balance");
 
-			T::AssetRedeem::asset_redeem(id, origin.clone(), amount);
+			T::AssetRedeem::asset_redeem(id, origin.clone(), amount, to_name);
 
 			Self::asset_destroy(id, origin.clone(), amount);
 		}

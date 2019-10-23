@@ -20,6 +20,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use rstd::prelude::*;
 use sr_primitives::{
 	generic, traits::{Verify, BlakeTwo256}, OpaqueExtrinsic, AnySignature
 };
@@ -109,9 +110,9 @@ impl<A, AC, B> AssetIssue<A, AC, B> for () {
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance);
+	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance, to_name: Vec<u8>);
 }
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-	fn asset_redeem(_: A, _: AC, _: B) {}
+	fn asset_redeem(_: A, _: AC, _: B, _: Vec<u8>) {}
 }

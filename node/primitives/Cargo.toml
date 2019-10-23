@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
@@ -16,5 +17,6 @@ pretty_assertions = "0.6.1"
 default = ["std"]
 std = [
 	"primitives/std",
+	"rstd/std",
 	"sr-primitives/std",
 ]

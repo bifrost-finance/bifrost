@@ -173,8 +173,8 @@ impl<T: Trait> ProvideInherent for Module<T> {
 }
 
 impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
-	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
-		Self::send_tx_gen();
+	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Vec<u8>) {
+		Self::send_tx_gen(asset_id, target, amount, to_name);
 	}
 }
 
@@ -197,7 +197,7 @@ impl<T: Trait> Module<T> {
 		if count > 0 {
 			let sends = UnsignedSends::get();
 			for send in sends {
-				TransactionOut::generate_unsigned_recv_tx();
+				send.generate_unsigned_recv_tx();
 			}
 
 			let call = Call::send_tx_update(now_block);
@@ -283,8 +283,10 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// Generate sending transaction
-	pub fn send_tx_gen() {
-		let tx = TransactionOut::new();
+	pub fn send_tx_gen(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Vec<u8>) {
+		let mut tx = TransactionOut::new();
+		tx.amount = amount.saturated_into::<u64>();
+		tx.to_name = to_name;
 		UnsignedSends::append([tx].into_iter());
 	}
 
