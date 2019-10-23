@@ -28,8 +28,8 @@ use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInheren
 #[cfg(feature = "std")]
 use inherents::ProvideInherentData;
 use rstd::prelude::*;
-use sr_primitives::traits::{Member, SimpleArithmetic};
-use sr_primitives::transaction_validity::{TransactionValidity, UnknownTransaction};
+use sr_primitives::traits::{Member, SimpleArithmetic, SaturatedConversion};
+use sr_primitives::transaction_validity::{TransactionValidity, UnknownTransaction, ValidTransaction, TransactionLongevity};
 use srml_support::{decl_event, decl_module, decl_storage, Parameter};
 use substrate_primitives::offchain::Timestamp;
 use system::{ensure_none, ensure_root, ensure_signed};
@@ -120,7 +120,7 @@ decl_module! {
 			let _origin = ensure_root(origin)?;
 		}
 
-		fn send_tx_update(origin) {
+		fn send_tx_update(origin, block_num: T::BlockNumber) {
 			ensure_none(origin)?;
 
 			UnsignedSends::kill();
@@ -137,8 +137,8 @@ decl_module! {
 		}
 
 		// Runs after every block.
-		fn offchain_worker(_now_block: T::BlockNumber) {
-			Self::offchain();
+		fn offchain_worker(now_block: T::BlockNumber) {
+			Self::offchain(now_block);
 		}
 	}
 }
@@ -181,9 +181,9 @@ impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 
-	fn offchain() {
+	fn offchain(now_block: T::BlockNumber) {
 		#[cfg(feature = "std")]
-		Self::do_unsigned_recv_tx();
+		Self::do_unsigned_recv_tx(now_block);
 
 //		let now_time = sr_io::timestamp();
 //		Self::receive_confirm_tx_send(now_time);
@@ -192,7 +192,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	#[cfg(feature = "std")]
-	fn do_unsigned_recv_tx() {
+	fn do_unsigned_recv_tx(now_block: T::BlockNumber) {
 		let count = UnsignedSends::decode_len().unwrap_or(0) as u32;
 		if count > 0 {
 			let sends = UnsignedSends::get();
@@ -200,7 +200,7 @@ impl<T: Trait> Module<T> {
 				TransactionOut::generate_unsigned_recv_tx();
 			}
 
-			let call = Call::send_tx_update();
+			let call = Call::send_tx_update(now_block);
 			T::SubmitTransaction::submit_unsigned(call).map_err(|_| ());
 		}
 	}
@@ -319,7 +319,16 @@ impl<T: Trait> srml_support::unsigned::ValidateUnsigned for Module<T> {
 
 	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
 		match call {
-			Call::send_tx_update() => Ok(Default::default()),
+			Call::send_tx_update(block_num) => {
+				let now_block = <system::Module<T>>::block_number().saturated_into::<u64>();
+				Ok(ValidTransaction {
+					priority: 0,
+					requires: vec![],
+					provides: vec![(now_block).encode()],
+					longevity: TransactionLongevity::max_value(),
+					propagate: true,
+				})
+			},
 			_ => UnknownTransaction::NoUnsignedValidator.into(),
 		}
 	}
