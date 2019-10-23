@@ -85,19 +85,19 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Bridge {
 
-		NextBankId get(next_bank_id): u32;
+		NextBankId get(fn next_bank_id): u32;
 
-		Banks get(banks): map u32 => Bank;
+		Banks get(fn banks): map u32 => Bank;
 
-		BridgeTxs get(bridge_txs): Vec<BridgeTransaction>;
+		BridgeTxs get(fn bridge_txs): Vec<BridgeTransaction>;
 
-		UnsignedReceiveConfirms get(unsigned_recv_cfms): Vec<TransactionOut>;
+		UnsignedReceiveConfirms get(fn unsigned_recv_cfms): Vec<TransactionOut>;
 
-		SignedReceiveConfirms get(signed_recv_cfms): Vec<TransactionOut>;
+		SignedReceiveConfirms get(fn signed_recv_cfms): Vec<TransactionOut>;
 
-		UnsignedSends get(unsigned_sends): Vec<TransactionOut>;
+		UnsignedSends get(fn unsigned_sends): Vec<TransactionOut>;
 
-		SignedSends get(signed_sends): Vec<TransactionOut>;
+		SignedSends get(fn signed_sends): Vec<TransactionOut>;
 	}
 }
 

@@ -102,13 +102,13 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Settlement {
 		/// Records for asset clearing corresponding to an account id
-		ClearingAssets get(clearing_assets): linked_map (T::AssetId, T::AccountId, T::SettlementId)
+		ClearingAssets get(fn clearing_assets): linked_map (T::AssetId, T::AccountId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// Records for token clearing corresponding to an asset id
-		ClearingTokens get(clearing_tokens): linked_map (T::AssetId, T::SettlementId)
+		ClearingTokens get(fn clearing_tokens): linked_map (T::AssetId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// The next settlement identifier up for grabs.
-		NextSettlementId get(next_settlement_id): T::SettlementId;
+		NextSettlementId get(fn next_settlement_id): T::SettlementId;
 //		/// Records for settlements
 //		Settlements get(settlements): map (T::AssetId, T::SettlementId)
 ////			=> Settlement<T::Balance, T::BlockNumber>;
