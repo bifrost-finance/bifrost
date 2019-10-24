@@ -33,8 +33,8 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as ExchangeStore {
-		ExchangeRate get(get_exchange_rate): u64 = 1;
-		RatePerBlock get(get_rate_per_block): u64 = 0;
+		ExchangeRate get(fn get_exchange_rate): u64 = 1;
+		RatePerBlock get(fn get_rate_per_block): u64 = 0;
 	}
 }
 

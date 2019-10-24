@@ -17,19 +17,12 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod transaction;
-mod mock;
-mod tests;
-
 use core::result;
 
 use codec::{Decode, Encode};
-use inherents::{InherentData, InherentIdentifier, MakeFatalError, ProvideInherent, RuntimeString};
-#[cfg(feature = "std")]
-use inherents::ProvideInherentData;
 use rstd::prelude::*;
-use sr_primitives::traits::{Member, SimpleArithmetic, SaturatedConversion};
-use sr_primitives::transaction_validity::{TransactionValidity, UnknownTransaction, ValidTransaction, TransactionLongevity};
+use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
+use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
 use srml_support::{decl_event, decl_module, decl_storage, Parameter};
 use substrate_primitives::offchain::Timestamp;
 use system::{ensure_none, ensure_root, ensure_signed};
@@ -38,8 +31,9 @@ use system::offchain::SubmitUnsignedTransaction;
 use node_primitives::{AssetIssue, AssetRedeem};
 use transaction::*;
 
-/// The identifier for the `bridge` inherent.
-pub const INHERENT_IDENTIFIER: InherentIdentifier = *b"bridge01";
+mod transaction;
+mod mock;
+mod tests;
 
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 pub struct Bank {
@@ -106,10 +100,10 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		fn relay_tx(origin, amount: T::Balance) {
-			let origin = ensure_signed(origin)?;
+		fn relay_tx(origin, target: T::AccountId, amount: T::Balance) {
+			let _origin = ensure_root(origin)?;
 
-			Self::receive_tx(origin, amount);
+			Self::receive_tx(target, amount);
 		}
 
 		fn relay_tx_confirmed(origin) {
@@ -143,34 +137,6 @@ decl_module! {
 	}
 }
 
-#[cfg(feature = "std")]
-pub struct InherentDataProvider;
-
-#[cfg(feature = "std")]
-impl ProvideInherentData for InherentDataProvider {
-	fn inherent_identifier(&self) -> &'static InherentIdentifier {
-		&INHERENT_IDENTIFIER
-	}
-
-	fn provide_inherent_data(&self, inherent_data: &mut InherentData) -> Result<(), RuntimeString> {
-		let data = 1;
-		inherent_data.put_data(INHERENT_IDENTIFIER, &data)
-	}
-
-	fn error_to_string(&self, error: &[u8]) -> Option<String> {
-		None
-	}
-}
-
-impl<T: Trait> ProvideInherent for Module<T> {
-	type Call = Call<T>;
-	type Error = MakeFatalError<RuntimeString>;
-	const INHERENT_IDENTIFIER: InherentIdentifier = INHERENT_IDENTIFIER;
-
-	fn create_inherent(_data: &InherentData) -> Option<Self::Call> {
-		Some(Call::handle())
-	}
-}
 
 impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Vec<u8>) {
