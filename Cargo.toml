@@ -20,6 +20,8 @@ vergen = "3"
 [workspace]
 members = [
 	"brml/assets",
+	"brml/bridge",
+	"brml/exchange",
 	"brml/settlement",
 	"brml/bridge",
 	"node/cli",

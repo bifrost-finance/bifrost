@@ -1,0 +1,28 @@
+[package]
+name = "brml-exchange"
+version = "0.1.0"
+authors = ["Jamie Deng <djptux@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
+system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
+
+[dev-dependencies]
+substrate-primitives = { git = "https://github.com/paritytech/substrate" }
+runtime-io = { package = "sr-io", git = "https://github.com/paritytech/substrate" }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"sr-primitives/std",
+	"srml-support/std",
+	"system/std",
+	"rstd/std",
+	"node-primitives/std",
+]
