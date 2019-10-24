@@ -313,9 +313,9 @@ name = "brml-bridge"
 version = "0.1.0"
 dependencies = [
  "brml-assets 0.1.0",
- "eos-keys 0.1.0",
- "eos-primitives 0.1.0",
- "eos-rpc 0.1.0",
+ "eos-keys 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
+ "eos-primitives 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
+ "eos-rpc 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
  "node-primitives 0.1.0",
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sr-io 2.0.0 (git+https://github.com/paritytech/substrate)",
@@ -790,6 +790,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "eos-keys"
 version = "0.1.0"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
 dependencies = [
  "bitcoin_hashes 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -801,11 +802,12 @@ dependencies = [
 [[package]]
 name = "eos-primitives"
 version = "0.1.0"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
 dependencies = [
  "bitcoin_hashes 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "eos-keys 0.1.0",
- "eosio-core-derive 0.2.1",
+ "eos-keys 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
+ "eosio-core-derive 0.2.1 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-big-array 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -814,13 +816,14 @@ dependencies = [
 [[package]]
 name = "eos-rpc"
 version = "0.1.0"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
 dependencies = [
- "eos-primitives 0.1.0",
+ "eos-primitives 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.12.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper-tls 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "rpc_codegen 0.1.0",
+ "rpc_codegen 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -829,6 +832,7 @@ dependencies = [
 [[package]]
 name = "eosio-core-derive"
 version = "0.2.1"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3357,6 +3361,7 @@ dependencies = [
 [[package]]
 name = "rpc_codegen"
 version = "0.1.0"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5703,7 +5708,7 @@ name = "twox-hash"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rand 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6272,6 +6277,10 @@ dependencies = [
 "checksum env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "aafcde04e90a5226a6443b7aabdb016ba2f8307c847d524724bd9b346dd1a2d3"
 "checksum env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "44533bbbb3bb3c1fa17d9f2e4e38bbbaf8396ba82193c4cb1b6445d711445d36"
 "checksum environmental 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "34f8467a0284de039e6bd0e25c14519538462ba5beb548bb1f03e645097837a8"
+"checksum eos-keys 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)" = "<none>"
+"checksum eos-primitives 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)" = "<none>"
+"checksum eos-rpc 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)" = "<none>"
+"checksum eosio-core-derive 0.2.1 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)" = "<none>"
 "checksum erased-serde 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "3beee4bc16478a1b26f2e80ad819a52d24745e292f521a63c16eea5f74b7eb60"
 "checksum exit-future 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "d8013f441e38e31c670e7f34ec8f1d5d3a2bd9d303c1ff83976ca886005e8f48"
 "checksum failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "795bd83d3abeb9220f257e597aa0080a508b27533824adf336529648f6abf7e2"
@@ -6506,6 +6515,7 @@ dependencies = [
 "checksum ring 0.14.6 (registry+https://github.com/rust-lang/crates.io-index)" = "426bc186e3e95cac1e4a4be125a4aca7e84c2d616ffc02244eef36e2a60a093c"
 "checksum rocksdb 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f1651697fefd273bfb4fd69466cc2a9d20de557a0213b97233b22b5e95924b5e"
 "checksum rpassword 4.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f072d931f11a96546efd97642e1e75e807345aced86b947f9239102f262d0fcd"
+"checksum rpc_codegen 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)" = "<none>"
 "checksum rustc-demangle 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)" = "4c691c0e608126e00913e33f0ccf3727d5fc84573623b8d65b2df340b5201783"
 "checksum rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "403bb3a286107a04825a5f82e1270acc1e14028d3d554d7a1e08914549575ab8"
 "checksum rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
