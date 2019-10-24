@@ -23,7 +23,6 @@ members = [
 	"brml/bridge",
 	"brml/exchange",
 	"brml/settlement",
-	"brml/bridge",
 	"node/cli",
 	"node/executor",
 	"node/primitives",
