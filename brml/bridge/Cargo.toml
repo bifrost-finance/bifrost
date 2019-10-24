@@ -7,6 +7,9 @@ edition = "2018"
 [dependencies]
 brml-assets = { path = "../assets", default-features = false }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+eos-keys = { path = "/Users/edwin/liebi/polkadot/rust-eos/keys", optional = true }
+eos-primitives = { path = "/Users/edwin/liebi/polkadot/rust-eos/primitives", optional = true }
+eos-rpc = { path = "/Users/edwin/liebi/polkadot/rust-eos/rpc", optional = true }
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
@@ -15,12 +18,6 @@ sr-primitives = { git = "https://github.com/paritytech/substrate", default-featu
 srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
-
-#keyring = { package = "substrate-keyring", git = "https://github.com/paritytech/substrate", optional = true }
-
-eos-keys = { path = "/Users/edwin/liebi/polkadot/rust-eos/keys", optional = true }
-eos-primitives = { path = "/Users/edwin/liebi/polkadot/rust-eos/primitives", optional = true }
-eos-rpc = { path = "/Users/edwin/liebi/polkadot/rust-eos/rpc", optional = true }
 
 [dev-dependencies]
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
@@ -31,6 +28,9 @@ default = ["std"]
 std = [
 	"brml-assets/std",
 	"codec/std",
+	"eos-keys/std",
+	"eos-primitives/std",
+	"eos-rpc/std",
 	"inherents/std",
 	"node-primitives/std",
 	"rstd/std",
@@ -39,9 +39,4 @@ std = [
 	"srml-support/std",
 	"substrate-primitives/std",
 	"system/std",
-
-	"eos-keys/std",
-	"eos-primitives/std",
-	"eos-rpc/std",
-#	"keyring",
 ]
