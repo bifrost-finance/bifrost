@@ -2,9 +2,7 @@ use codec::{Encode, Decode};
 use rstd::prelude::*;
 use substrate_primitives::offchain::Timestamp;
 #[cfg(feature = "std")]
-use std::time::{SystemTime, Duration, UNIX_EPOCH};
-#[cfg(feature = "std")]
-use eos_primitives::{Transaction, TimePointSec, TransactionHeader, PermissionLevel, ActionTransfer, Action, Asset, Symbol, AccountName};
+use eos_primitives::{Transaction, PermissionLevel, ActionTransfer, Action, Asset, Symbol, AccountName};
 #[cfg(feature = "std")]
 use eos_rpc::{HyperClient, GetInfo, GetBlock, PushTransaction, get_info, get_block, push_transaction};
 #[cfg(feature = "std")]
@@ -112,14 +110,7 @@ impl TransactionOut {
 		let ref_block_num = (block.block_num & 0xffff) as u16;
 		let ref_block_prefix = block.ref_block_prefix as u32;
 
-		let start = SystemTime::now().checked_add(Duration::from_secs(600)).unwrap();
-		let since_the_epoch = start
-			.duration_since(UNIX_EPOCH)
-			.expect("Time went backwards");
-
 		// Construct action
-		let expiration = TimePointSec::from_unix_seconds(since_the_epoch.as_secs() as u32);
-		let trx_header = TransactionHeader::new(expiration, ref_block_num, ref_block_prefix);
 		let permission_level = PermissionLevel::from_str(
 			"alice",
 			"active"
@@ -146,7 +137,7 @@ impl TransactionOut {
 		let actions = vec![action];
 
 		// Construct transaction
-		let trx = Transaction::new(trx_header, actions);
+		let trx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
 		let signed_trx = trx.sign(sk, chain_id).ok().unwrap();
 		let response = push_transaction(signed_trx).fetch(&hyper_client);
 		let res: PushTransaction = response.unwrap();
