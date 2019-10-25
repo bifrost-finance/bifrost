@@ -2461,6 +2461,7 @@ version = "0.1.0"
 dependencies = [
  "brml-assets 0.1.0",
  "brml-bridge 0.1.0",
+ "brml-exchange 0.1.0",
  "brml-settlement 0.1.0",
  "integer-sqrt 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-primitives 0.1.0",
