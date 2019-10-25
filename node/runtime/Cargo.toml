@@ -55,9 +55,9 @@ utility = { package = "srml-utility", git = "https://github.com/paritytech/subst
 transaction-payment = { package = "srml-transaction-payment", git = "https://github.com/paritytech/substrate", default-features = false }
 
 brml-assets = { path = "../../brml/assets", default-features = false }
-brml-settlement = { path = "../../brml/settlement", default-features = false }
 brml-bridge = { path = "../../brml/bridge", default-features = false }
 brml-exchange = { path = "../../brml/exchange", default-features = false }
+brml-settlement = { path = "../../brml/settlement", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { package = "substrate-wasm-builder-runner", version = "1.0.2", git = "https://github.com/paritytech/substrate" }
@@ -109,6 +109,7 @@ std = [
 	"transaction-payment/std",
 	"version/std",
 	"brml-assets/std",
-	"brml-settlement/std",
 	"brml-bridge/std",
+	"brml-exchange/std",
+	"brml-settlement/std",
 ]
