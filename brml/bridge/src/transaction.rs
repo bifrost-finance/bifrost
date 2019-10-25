@@ -2,7 +2,7 @@ use codec::{Encode, Decode};
 use rstd::prelude::*;
 use substrate_primitives::offchain::Timestamp;
 #[cfg(feature = "std")]
-use eos_primitives::{Transaction, PermissionLevel, ActionTransfer, Action, Asset, Symbol, AccountName};
+use eos_primitives::{Transaction, PermissionLevel, Action, Asset, Symbol};
 #[cfg(feature = "std")]
 use eos_rpc::{HyperClient, GetInfo, GetBlock, PushTransaction, get_info, get_block, push_transaction};
 #[cfg(feature = "std")]
@@ -116,24 +116,17 @@ impl TransactionOut {
 			"active"
 		).ok().unwrap();
 
-		let to_name = match std::str::from_utf8(&self.to_name) {
+		let to = match std::str::from_utf8(&self.to_name) {
 			Ok(v) => v,
 			Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
 		};
-		let from = AccountName::from_str("alice").unwrap();
-		let to = AccountName::from_str(to_name).unwrap();
 		let amount = Asset {
 			amount: self.amount as i64,
 			symbol: Symbol::from_str("4,EOS").unwrap(),
 		};
 		let memo = "a memo";
-		let action_transfer = ActionTransfer::new(from, to, amount, memo.to_string());
-		let action = Action::from_str(
-			"eosio.token",
-			"transfer",
-			vec![permission_level],
-			action_transfer
-		).ok().unwrap();
+		let action = Action::transfer("alice", to, amount.to_string().as_ref(), memo).ok().unwrap();
+
 		let actions = vec![action];
 
 		// Construct transaction

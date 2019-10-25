@@ -790,7 +790,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "eos-keys"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#c09680a1289c64ec3d5bb28ce3cc42d0cf7853d2"
 dependencies = [
  "bitcoin_hashes 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -802,7 +802,7 @@ dependencies = [
 [[package]]
 name = "eos-primitives"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#c09680a1289c64ec3d5bb28ce3cc42d0cf7853d2"
 dependencies = [
  "bitcoin_hashes 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -816,7 +816,7 @@ dependencies = [
 [[package]]
 name = "eos-rpc"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#c09680a1289c64ec3d5bb28ce3cc42d0cf7853d2"
 dependencies = [
  "eos-primitives 0.1.0 (git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -832,7 +832,7 @@ dependencies = [
 [[package]]
 name = "eosio-core-derive"
 version = "0.2.1"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#c09680a1289c64ec3d5bb28ce3cc42d0cf7853d2"
 dependencies = [
  "proc-macro2 0.4.30 (registry+https://github.com/rust-lang/crates.io-index)",
  "quote 0.6.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3362,7 +3362,7 @@ dependencies = [
 [[package]]
 name = "rpc_codegen"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#90ba7cfae784bc0a0c1218e275450a9fc4baa0d5"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#c09680a1289c64ec3d5bb28ce3cc42d0cf7853d2"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
