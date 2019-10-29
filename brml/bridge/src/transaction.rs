@@ -121,8 +121,9 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 			Ok(v) => v,
 			Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
 		};
+		let eos_symbol = Symbol::from_str("4,EOS").unwrap();
 		let amount = Asset {
-			amount: self.amount.saturated_into::<u64>() as i64,
+			amount: (self.amount.saturated_into::<u128>() / (10u128.pow(12 - eos_symbol.precision() as u32))) as i64,
 			symbol: Symbol::from_str("4,EOS").unwrap(),
 		};
 		let memo = "a memo";
