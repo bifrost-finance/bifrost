@@ -7,6 +7,7 @@ use eos_primitives::{Transaction, PermissionLevel, Action, Asset, Symbol};
 use eos_rpc::{HyperClient, GetInfo, GetBlock, PushTransaction, get_info, get_block, push_transaction};
 #[cfg(feature = "std")]
 use std::str::FromStr;
+use sr_primitives::traits::{SimpleArithmetic, SaturatedConversion};
 
 pub type TransactionSignature = Vec<u8>;
 
@@ -57,26 +58,26 @@ impl TransactionIn {
 	}
 }
 
-
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct TransactionOut {
+pub struct TransactionOut<Balance> {
 	/// Transaction raw data for signing
 	raw: Vec<u8>,
 	pub signatures: SignatureCollection,
 	/// Status of transaction
 	status: TransactionStatus,
 
-	pub amount: u64,
+	pub amount: Balance,
 	pub to_name: Vec<u8>,
 }
 
-impl TransactionOut {
+impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default + Copy
+{
 	pub fn new() -> Self {
 		Self {
 			raw: vec![],
 			signatures: Default::default(),
 			status: TransactionStatus::Generated,
-			amount: 0,
+			amount: Default::default(),
 			to_name: vec![],
 		}
 	}
@@ -121,7 +122,7 @@ impl TransactionOut {
 			Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
 		};
 		let amount = Asset {
-			amount: self.amount as i64,
+			amount: self.amount.saturated_into::<u64>() as i64,
 			symbol: Symbol::from_str("4,EOS").unwrap(),
 		};
 		let memo = "a memo";
@@ -150,14 +151,4 @@ pub struct BridgeTransaction {
 	direction: BridgeDirection,
 	transaction: Vec<u8>,
 	signatures: Vec<TransactionSignature>
-}
-
-#[cfg(test)]
-mod tests {
-	use crate::transaction::TransactionOut;
-
-	#[test]
-	fn recv_tx_should_work() {
-		TransactionOut::generate_unsigned_recv_tx();
-	}
 }
