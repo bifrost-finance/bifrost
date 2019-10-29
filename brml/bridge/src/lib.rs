@@ -85,13 +85,13 @@ decl_storage! {
 
 		BridgeTxs get(fn bridge_txs): Vec<BridgeTransaction>;
 
-		UnsignedReceiveConfirms get(fn unsigned_recv_cfms): Vec<TransactionOut>;
+		UnsignedReceiveConfirms get(fn unsigned_recv_cfms): Vec<TransactionOut<T::Balance>>;
 
-		SignedReceiveConfirms get(fn signed_recv_cfms): Vec<TransactionOut>;
+		SignedReceiveConfirms get(fn signed_recv_cfms): Vec<TransactionOut<T::Balance>>;
 
-		UnsignedSends get(fn unsigned_sends): Vec<TransactionOut>;
+		UnsignedSends get(fn unsigned_sends): Vec<TransactionOut<T::Balance>>;
 
-		SignedSends get(fn signed_sends): Vec<TransactionOut>;
+		SignedSends get(fn signed_sends): Vec<TransactionOut<T::Balance>>;
 	}
 }
 
@@ -117,7 +117,7 @@ decl_module! {
 		fn send_tx_update(origin, block_num: T::BlockNumber) {
 			ensure_none(origin)?;
 
-			UnsignedSends::kill();
+			<UnsignedSends<T>>::kill();
 		}
 
 		fn handle(origin) {
@@ -159,9 +159,9 @@ impl<T: Trait> Module<T> {
 
 	#[cfg(feature = "std")]
 	fn do_unsigned_recv_tx(now_block: T::BlockNumber) {
-		let count = UnsignedSends::decode_len().unwrap_or(0) as u32;
+		let count = <UnsignedSends<T>>::decode_len().unwrap_or(0) as u32;
 		if count > 0 {
-			let sends = UnsignedSends::get();
+			let sends = <UnsignedSends<T>>::get();
 			for send in sends {
 				send.generate_unsigned_recv_tx();
 			}
@@ -176,19 +176,14 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	/// Map transaction from bridge relayer
-	fn relay_tx_map(target: T::AccountId, amount: T::Balance) {
-		let asset_id: T::AssetId = 0.into();
-		T::AssetIssue::asset_issue(asset_id, target.clone(), amount);
-	}
-
 	/// Receive and map transaction from backing blockchain
 	fn receive_tx(target: T::AccountId, amount: T::Balance) {
 		// Check if the relay transaction is verified
 		match Self::relay_tx_verify() {
 			Ok(_) => {
-				// Relay transaction from backing blockchain
-				Self::relay_tx_map(target, amount);
+				let asset_id: T::AssetId = 0.into();
+				// Map transaction from bridge relayer
+				T::AssetIssue::asset_issue(asset_id, target.clone(), amount);
 
 				// Generate receive confirmation transaction for blockchain
 				Self::receive_confirm_tx_gen();
@@ -202,21 +197,21 @@ impl<T: Trait> Module<T> {
 	/// Generate receiving confirm transaction
 	fn receive_confirm_tx_gen() {
 		// Generate transaction
-		let tx = TransactionOut::new();
+		let tx = <TransactionOut<T::Balance>>::new();
 
 		// Record transaction
-		UnsignedReceiveConfirms::append([tx].into_iter());
+		<UnsignedReceiveConfirms<T>>::append([tx].into_iter());
 	}
 
 	/// Sign the receiving confirm transaction by validator
 	fn receive_confirm_tx_sign() {
-		let tx_vec: Vec<TransactionOut> = Self::unsigned_recv_cfms();
+		let tx_vec: Vec<TransactionOut<T::Balance>> = Self::unsigned_recv_cfms();
 		let tx_vec = tx_vec.into_iter().filter_map(|item| {
 			// Sign the transaction
 			// Check if signature threshold is reached to submit transaction to backing blockchain
 			match item.reach_threshold() {
 				true => {
-					match SignedReceiveConfirms::append([item.clone()].into_iter()) {
+					match <SignedReceiveConfirms<T>>::append([item.clone()].into_iter()) {
 						Ok(_) => None,
 						Err(_) => Some(item),
 					}
@@ -225,12 +220,12 @@ impl<T: Trait> Module<T> {
 			}
 		}).collect::<Vec<_>>();
 
-		UnsignedReceiveConfirms::put(tx_vec);
+		<UnsignedReceiveConfirms<T>>::put(tx_vec);
 	}
 
 	/// Send receiving confirm transaction
 	fn receive_confirm_tx_send(t: Timestamp) {
-		let tx_vec: Vec<TransactionOut> = Self::signed_recv_cfms();
+		let tx_vec: Vec<TransactionOut<T::Balance>> = Self::signed_recv_cfms();
 		let tx_vec = tx_vec.into_iter().filter_map(|item| {
 			// Check if time is reached to submit transaction to backing blockchain
 			match item.reach_timestamp(t) {
@@ -250,21 +245,21 @@ impl<T: Trait> Module<T> {
 
 	/// Generate sending transaction
 	pub fn send_tx_gen(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Vec<u8>) {
-		let mut tx = TransactionOut::new();
-		tx.amount = amount.saturated_into::<u64>();
-		tx.to_name = to_name;
-		UnsignedSends::append([tx].into_iter());
+		let mut tx = <TransactionOut<T::Balance>>::new();
+		tx.amount = amount.clone();
+		tx.to_name = to_name.clone();
+		<UnsignedSends<T>>::append([tx].into_iter());
 	}
 
 	/// Sign the sending transaction by validator
 	fn send_tx_sign() {
-		let tx_vec: Vec<TransactionOut> = Self::unsigned_sends();
+		let tx_vec: Vec<TransactionOut<T::Balance>> = Self::unsigned_sends();
 		let tx_vec = tx_vec.into_iter().filter_map(|item| {
 			// Sign the transaction
 			// Check if signature threshold is reached to submit transaction to backing blockchain
 			match item.reach_threshold() {
 				true => {
-					match SignedSends::append([item.clone()].into_iter()) {
+					match <SignedSends<T>>::append([item.clone()].into_iter()) {
 						Ok(_) => None,
 						Err(_) => Some(item),
 					}
@@ -273,7 +268,7 @@ impl<T: Trait> Module<T> {
 			}
 		}).collect::<Vec<_>>();
 
-		UnsignedSends::put(tx_vec);
+		<UnsignedSends<T>>::put(tx_vec);
 	}
 
 	/// Send transaction finish
