@@ -90,24 +90,24 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 
 	// 生成`交易接收确认`交易
 	#[cfg(feature = "std")]
-	pub fn generate_unsigned_recv_tx(&self) -> Self {
+	pub fn generate_unsigned_recv_tx(&self) -> Result<Self, crate::Error> {
 		// import private key
 		let sk = eos_keys::secret::SecretKey::from_wif("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3");
 		assert!(sk.is_ok());
-		let sk = sk.unwrap();
+		let sk = sk.map_err(crate::Error::SecretKeyError)?;
 
 		let node: &'static str = "http://47.101.139.226:8888/";
 		let hyper_client = HyperClient::new(node);
 
 		// fetch info
-		let response = get_info().fetch(&hyper_client);
-		let info: GetInfo = response.unwrap();
+		let info: GetInfo = get_info().fetch(&hyper_client)
+			.map_err(|_| crate::Error::HttpResponseError)?;
 		let chain_id = info.chain_id;
 		let head_block_id = info.head_block_id;
 
 		// fetch block
-		let response = get_block(head_block_id).fetch(&hyper_client);
-		let block: GetBlock = response.unwrap();
+		let block: GetBlock = get_block(head_block_id).fetch(&hyper_client)
+			.map_err(|_| crate::Error::HttpResponseError)?;
 		let ref_block_num = (block.block_num & 0xffff) as u16;
 		let ref_block_prefix = block.ref_block_prefix as u32;
 
@@ -115,29 +115,29 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 		let permission_level = PermissionLevel::from_str(
 			"alice",
 			"active"
-		).ok().unwrap();
+		).map_err(crate::Error::EosPrimitivesError)?;
 
 		let to = match std::str::from_utf8(&self.to_name) {
 			Ok(v) => v,
 			Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
 		};
-		let eos_symbol = Symbol::from_str("4,EOS").unwrap();
+		let eos_symbol = Symbol::from_str("4,EOS").map_err(crate::Error::ParseSymbolError)?;
 		let amount = Asset {
 			amount: (self.amount.saturated_into::<u128>() / (10u128.pow(12 - eos_symbol.precision() as u32))) as i64,
-			symbol: Symbol::from_str("4,EOS").unwrap(),
+			symbol: Symbol::from_str("4,EOS").map_err(crate::Error::ParseSymbolError)?,
 		};
 		let memo = "a memo";
-		let action = Action::transfer("alice", to, amount.to_string().as_ref(), memo).ok().unwrap();
+		let action = Action::transfer("alice", to, amount.to_string().as_ref(), memo)
+			.map_err(crate::Error::EosPrimitivesError)?;
 
 		let actions = vec![action];
 
 		// Construct transaction
 		let trx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
-		let signed_trx = trx.sign(sk, chain_id).ok().unwrap();
-		let response = push_transaction(signed_trx).fetch(&hyper_client);
-		let res: PushTransaction = response.unwrap();
+		let signed_trx = trx.sign(sk, chain_id).map_err(crate::Error::EosPrimitivesError)?;
+		let res = push_transaction(signed_trx).fetch(&hyper_client);
 
-		TransactionOut::new()
+		Ok(TransactionOut::new())
 	}
 }
 

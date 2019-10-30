@@ -42,6 +42,19 @@ pub struct Bank {
 	threshold: u32,
 }
 
+#[cfg(feature = "std")]
+#[derive(Debug)]
+pub enum Error {
+	EosPrimitivesError(eos_primitives::Error),
+	// Todo, failure::Error isn't compatible with std error,
+	// it's difficult to convert failure::Error to std error.
+	// after drop failure lib in eos_rpc, change this variant.
+	//	HttpResponseError(eos_rpc::Error),
+	HttpResponseError,
+	ParseSymbolError(eos_primitives::symbol::ParseSymbolError),
+	SecretKeyError(eos_keys::error::Error),
+}
+
 /// The module configuration trait.
 pub trait Trait: system::Trait {
 	/// The overarching event type.
