@@ -117,15 +117,11 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 			"active"
 		).map_err(crate::Error::EosPrimitivesError)?;
 
-		let to = match std::str::from_utf8(&self.to_name) {
-			Ok(v) => v,
-			Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-		};
-		let eos_symbol = Symbol::from_str("4,EOS")
-			.map_err(|err| crate::Error::EosPrimitivesError(eos_primitives::Error::ParseSymbolError(err)))?;
+		let to = core::str::from_utf8(&self.to_name).map_err(crate::Error::ParseUtf8Error)?;
+		let eos_symbol = Symbol::from_str("4,EOS").map_err(crate::Error::from)?;
 		let amount = Asset {
 			amount: (self.amount.saturated_into::<u128>() / (10u128.pow(12 - eos_symbol.precision() as u32))) as i64,
-			symbol: Symbol::from_str("4,EOS").map_err(|err| crate::Error::EosPrimitivesError(eos_primitives::Error::ParseSymbolError(err)))?,
+			symbol: Symbol::from_str("4,EOS").map_err(crate::Error::from)?,
 		};
 		let memo = "a memo";
 		let action = Action::transfer("alice", to, amount.to_string().as_ref(), memo)
