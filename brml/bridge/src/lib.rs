@@ -51,7 +51,6 @@ pub enum Error {
 	// after drop failure lib in eos_rpc, change this variant.
 	//	HttpResponseError(eos_rpc::Error),
 	HttpResponseError,
-	ParseSymbolError(eos_primitives::symbol::ParseSymbolError),
 	SecretKeyError(eos_keys::error::Error),
 }
 
