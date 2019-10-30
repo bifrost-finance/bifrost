@@ -51,7 +51,15 @@ pub enum Error {
 	// after drop failure lib in eos_rpc, change this variant.
 	//	HttpResponseError(eos_rpc::Error),
 	HttpResponseError,
+	ParseUtf8Error(core::str::Utf8Error),
 	SecretKeyError(eos_keys::error::Error),
+}
+
+#[cfg(feature = "std")]
+impl core::convert::From<eos_primitives::symbol::ParseSymbolError> for Error {
+	fn from(err: eos_primitives::symbol::ParseSymbolError) -> Self {
+		Self::EosPrimitivesError(eos_primitives::Error::ParseSymbolError(err))
+	}
 }
 
 /// The module configuration trait.
