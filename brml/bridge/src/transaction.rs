@@ -101,13 +101,13 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 
 		// fetch info
 		let info: GetInfo = get_info().fetch(&hyper_client)
-			.map_err(|_| crate::Error::HttpResponseError)?;
+			.map_err(crate::Error::HttpResponseError)?;
 		let chain_id = info.chain_id;
 		let head_block_id = info.head_block_id;
 
 		// fetch block
 		let block: GetBlock = get_block(head_block_id).fetch(&hyper_client)
-			.map_err(|_| crate::Error::HttpResponseError)?;
+			.map_err(crate::Error::HttpResponseError)?;
 		let ref_block_num = (block.block_num & 0xffff) as u16;
 		let ref_block_prefix = block.ref_block_prefix as u32;
 
@@ -132,7 +132,8 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 		// Construct transaction
 		let trx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
 		let signed_trx = trx.sign(sk, chain_id).map_err(crate::Error::EosPrimitivesError)?;
-		let res = push_transaction(signed_trx).fetch(&hyper_client);
+		let res: PushTransaction = push_transaction(signed_trx).fetch(&hyper_client)
+            .map_err(crate::Error::HttpResponseError)?;
 
 		Ok(TransactionOut::new())
 	}
