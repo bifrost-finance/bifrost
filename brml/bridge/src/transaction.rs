@@ -4,7 +4,7 @@ use substrate_primitives::offchain::Timestamp;
 #[cfg(feature = "std")]
 use eos_primitives::{Transaction, PermissionLevel, Action, Asset, Symbol};
 #[cfg(feature = "std")]
-use eos_rpc::{HyperClient, GetInfo, GetBlock, get_info, get_block, push_transaction};
+use eos_rpc::{HyperClient, GetInfo, GetBlock, get_info, get_block, push_transaction, PushTransaction};
 #[cfg(feature = "std")]
 use std::str::FromStr;
 use sr_primitives::traits::{SimpleArithmetic, SaturatedConversion};
