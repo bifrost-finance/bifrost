@@ -16,10 +16,9 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
-
 use core::result;
-
 use codec::{Decode, Encode};
+use node_primitives::{AssetIssue, AssetRedeem};
 use rstd::prelude::*;
 use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
 use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
@@ -28,7 +27,6 @@ use substrate_primitives::offchain::Timestamp;
 use system::{ensure_none, ensure_root, ensure_signed};
 use system::offchain::SubmitUnsignedTransaction;
 
-use node_primitives::{AssetIssue, AssetRedeem};
 use transaction::*;
 
 mod transaction;
@@ -46,11 +44,7 @@ pub struct Bank {
 #[derive(Debug)]
 pub enum Error {
 	EosPrimitivesError(eos_primitives::Error),
-	// Todo, failure::Error isn't compatible with std error,
-	// it's difficult to convert failure::Error to std error.
-	// after drop failure lib in eos_rpc, change this variant.
-	//	HttpResponseError(eos_rpc::Error),
-	HttpResponseError,
+	HttpResponseError(eos_rpc::Error),
 	ParseUtf8Error(core::str::Utf8Error),
 	SecretKeyError(eos_keys::error::Error),
 }
