@@ -4,7 +4,7 @@ use substrate_primitives::offchain::Timestamp;
 #[cfg(feature = "std")]
 use eos_primitives::{Transaction, PermissionLevel, Action, Asset, Symbol};
 #[cfg(feature = "std")]
-use eos_rpc::{HyperClient, GetInfo, GetBlock, PushTransaction, get_info, get_block, push_transaction};
+use eos_rpc::{HyperClient, GetInfo, GetBlock, get_info, get_block, push_transaction};
 #[cfg(feature = "std")]
 use std::str::FromStr;
 use sr_primitives::traits::{SimpleArithmetic, SaturatedConversion};
@@ -121,7 +121,7 @@ impl<Balance> TransactionOut<Balance> where Balance: SimpleArithmetic + Default 
 		let eos_symbol = Symbol::from_str("4,EOS").map_err(crate::Error::from)?;
 		let amount = Asset {
 			amount: (self.amount.saturated_into::<u128>() / (10u128.pow(12 - eos_symbol.precision() as u32))) as i64,
-			symbol: Symbol::from_str("4,EOS").map_err(crate::Error::from)?,
+			symbol: eos_symbol,
 		};
 		let memo = "a memo";
 		let action = Action::transfer("alice", to, amount.to_string().as_ref(), memo)

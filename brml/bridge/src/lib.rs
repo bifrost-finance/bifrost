@@ -183,6 +183,7 @@ impl<T: Trait> Module<T> {
 		if count > 0 {
 			let sends = <UnsignedSends<T>>::get();
 			for send in sends {
+				// TODO handler result
 				send.generate_unsigned_recv_tx();
 			}
 
