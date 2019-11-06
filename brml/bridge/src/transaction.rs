@@ -2,7 +2,7 @@ use codec::{Encode, Decode};
 use rstd::prelude::*;
 use substrate_primitives::offchain::Timestamp;
 #[cfg(feature = "std")]
-use eos_primitives::{Transaction, PermissionLevel, Action, Asset, Symbol};
+use eos_chain::{Transaction, PermissionLevel, Action, Asset, Symbol};
 #[cfg(feature = "std")]
 use eos_rpc::{HyperClient, GetInfo, GetBlock, get_info, get_block, push_transaction, PushTransaction};
 #[cfg(feature = "std")]
