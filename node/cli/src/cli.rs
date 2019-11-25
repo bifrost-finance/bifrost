@@ -107,12 +107,12 @@ pub fn run<I, T, E>(args: I, exit: E, version: substrate_cli::VersionInfo) -> er
 {
 	type Config<A, B> = Configuration<(), A, B>;
 
-	match parse_and_prepare::<CustomSubcommands, NoCustom, _>(&version, "substrate-node", args) {
+	match parse_and_prepare::<CustomSubcommands, NoCustom, _>(&version, "bifrost-node", args) {
 		ParseAndPrepare::Run(cmd) => cmd.run(load_spec, exit,
 		|exit, _cli_args, _custom_args, config: Config<_, _>| {
 			info!("{}", version.name);
 			info!("  version {}", config.full_version());
-			info!("  by Parity Technologies, 2017-2019");
+			info!("  by Liebi Technologies, 2019");
 			info!("Chain specification: {}", config.chain_spec.name());
 			info!("Node name: {}", config.name);
 			info!("Roles: {}", display_role(&config));
