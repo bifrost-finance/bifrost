@@ -25,15 +25,20 @@ use codec::{Encode, Decode};
 use keyring::sr25519::Keyring;
 use node_runtime::{
 	Call, CheckedExtrinsic, UncheckedExtrinsic, SignedExtra, BalancesCall, ExistentialDeposit,
-	MinimumPeriod,
+	MinimumPeriod
 };
+use node_primitives::Signature;
 use primitives::{sr25519, crypto::Pair};
-use sr_primitives::{generic::Era, traits::{Block as BlockT, Header as HeaderT, SignedExtension}};
+use sr_primitives::{
+	generic::Era, traits::{Block as BlockT, Header as HeaderT, SignedExtension, Verify, IdentifyAccount}
+};
 use transaction_factory::RuntimeAdapter;
 use transaction_factory::modes::Mode;
 use inherents::InherentData;
-use timestamp;
-use finality_tracker;
+use sp_timestamp;
+use sp_finality_tracker;
+
+type AccountPublic = <Signature as Verify>::Signer;
 
 pub struct FactoryState<N> {
 	block_no: N,
@@ -155,9 +160,9 @@ impl RuntimeAdapter for FactoryState<Number> {
 		let timestamp = (self.block_no as u64 + 1) * MinimumPeriod::get();
 
 		let mut inherent = InherentData::new();
-		inherent.put_data(timestamp::INHERENT_IDENTIFIER, &timestamp)
+		inherent.put_data(sp_timestamp::INHERENT_IDENTIFIER, &timestamp)
 			.expect("Failed putting timestamp inherent");
-		inherent.put_data(finality_tracker::INHERENT_IDENTIFIER, &self.block_no)
+		inherent.put_data(sp_finality_tracker::INHERENT_IDENTIFIER, &self.block_no)
 			.expect("Failed putting finalized number inherent");
 		inherent
 	}
@@ -167,7 +172,7 @@ impl RuntimeAdapter for FactoryState<Number> {
 	}
 
 	fn master_account_id() -> Self::AccountId {
-		Keyring::Alice.pair().public()
+		Keyring::Alice.to_account_id()
 	}
 
 	fn master_account_secret() -> Self::Secret {
@@ -177,7 +182,7 @@ impl RuntimeAdapter for FactoryState<Number> {
 	/// Generates a random `AccountId` from `seed`.
 	fn gen_random_account_id(seed: &Self::Number) -> Self::AccountId {
 		let pair: sr25519::Pair = sr25519::Pair::from_seed(&gen_seed_bytes(*seed));
-		pair.public().into()
+		AccountPublic::from(pair.public()).into_account()
 	}
 
 	/// Generates a random `Secret` from `seed`.
@@ -242,7 +247,7 @@ fn sign<RA: RuntimeAdapter>(
 			let payload = (xt.function, extra.clone(), additional_signed);
 			let signature = payload.using_encoded(|b| {
 				if b.len() > 256 {
-					key.sign(&sr_io::blake2_256(b))
+					key.sign(&runtime_io::hashing::blake2_256(b))
 				} else {
 					key.sign(b)
 				}

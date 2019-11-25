@@ -5,26 +5,26 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
+balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate" }
 client = { package = "substrate-client", git = "https://github.com/paritytech/substrate" }
-contracts = { package = "srml-contracts", git = "https://github.com/paritytech/substrate" }
-grandpa = { package = "srml-grandpa", git = "https://github.com/paritytech/substrate" }
-indices = { package = "srml-indices", git = "https://github.com/paritytech/substrate" }
+codec = { package = "parity-scale-codec", version = "1.0.0" }
+contracts = { package = "pallet-contracts", git = "https://github.com/paritytech/substrate" }
+grandpa = { package = "pallet-grandpa", git = "https://github.com/paritytech/substrate" }
+indices = { package = "pallet-indices", git = "https://github.com/paritytech/substrate" }
 keyring = { package = "substrate-keyring", git = "https://github.com/paritytech/substrate" }
 node-executor = { path = "../executor" }
 node-primitives = { path = "../primitives" }
 node-runtime = { path = "../runtime" }
-codec = { package = "parity-scale-codec", version = "1.0.0" }
 primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate" }
-sr-io = { git = "https://github.com/paritytech/substrate" }
+runtime-io = { package = "sr-io", git = "https://github.com/paritytech/substrate" }
+runtime_support = { package = "frame-support", git = "https://github.com/paritytech/substrate" }
+session = { package = "pallet-session", git = "https://github.com/paritytech/substrate" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
-runtime_support = { package = "srml-support", git = "https://github.com/paritytech/substrate" }
-session = { package = "srml-session", git = "https://github.com/paritytech/substrate" }
-staking = { package = "srml-staking", git = "https://github.com/paritytech/substrate" }
+staking = { package = "pallet-staking", git = "https://github.com/paritytech/substrate" }
 substrate-executor = { git = "https://github.com/paritytech/substrate" }
-system = { package = "srml-system", git = "https://github.com/paritytech/substrate" }
+system = { package = "frame-system", git = "https://github.com/paritytech/substrate" }
 test-client = { package = "substrate-test-client", git = "https://github.com/paritytech/substrate" }
-timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate" }
-treasury = { package = "srml-treasury", git = "https://github.com/paritytech/substrate" }
-transaction-payment = { package = "srml-transaction-payment", git = "https://github.com/paritytech/substrate" }
+timestamp = { package = "pallet-timestamp", git = "https://github.com/paritytech/substrate" }
+transaction-payment = { package = "pallet-transaction-payment", git = "https://github.com/paritytech/substrate" }
+treasury = { package = "pallet-treasury", git = "https://github.com/paritytech/substrate" }
 wabt = "0.9.2"

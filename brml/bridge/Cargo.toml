@@ -15,9 +15,9 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false }
 substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
+system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
@@ -36,7 +36,7 @@ std = [
 	"rstd/std",
 	"sr-io/std",
 	"sr-primitives/std",
-	"srml-support/std",
+	"frame-support/std",
 	"substrate-primitives/std",
 	"system/std",
 ]

@@ -1,22 +1,3 @@
-[package]
-name = "bifrost"
-version = "0.1.0"
-authors = ["Edwin Wang <lark930@gmail.com>"]
-build = "build.rs"
-edition = "2018"
-
-[[bin]]
-name = "bifrost-node"
-path = "node/src/main.rs"
-
-[dependencies]
-cli = { package = "node-cli", path = "node/cli" }
-futures = "0.1"
-ctrlc = { version = "3.0", features = ["termination"] }
-
-[build-dependencies]
-vergen = "3"
-
 [workspace]
 members = [
 	"brml/assets",
@@ -31,10 +12,6 @@ members = [
 	"node/runtime",
 	"node/testing",
 ]
-
-[badges]
-travis-ci = { repository = "bifrost-codes/bifrost", branch = "master" }
-maintenance = { status = "actively-developed" }
 
 [profile.release]
 panic = "unwind"

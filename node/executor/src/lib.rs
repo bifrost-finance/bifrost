@@ -17,10 +17,6 @@
 //! A `CodeExecutor` specialization which uses natively compiled runtime when the wasm to be
 //! executed is equivalent to the natively compiled code.
 
-#![cfg_attr(feature = "benchmarks", feature(test))]
-
-#[cfg(feature = "benchmarks")] extern crate test;
-
 pub use substrate_executor::NativeExecutor;
 use substrate_executor::native_executor_instance;
 
@@ -39,7 +35,9 @@ mod tests {
 	use {balances, contracts, indices, system, timestamp};
 	use codec::{Encode, Decode, Joiner};
 	use runtime_support::{
-		Hashable, StorageValue, StorageMap, traits::Currency,
+		Hashable, StorageValue, StorageMap,
+		traits::Currency,
+		weights::{GetDispatchInfo, DispatchInfo, DispatchClass},
 	};
 	use state_machine::TestExternalities as CoreTestExternalities;
 	use primitives::{
@@ -47,9 +45,8 @@ mod tests {
 		traits::{CodeExecutor, Externalities}, storage::well_known_keys,
 	};
 	use sr_primitives::{
-		Fixed64,
-		traits::{Header as HeaderT, Hash as HashT, Convert}, ApplyResult,
-		transaction_validity::InvalidTransaction, weights::GetDispatchInfo,
+		Fixed64, traits::{Header as HeaderT, Hash as HashT, Convert}, ApplyExtrinsicResult,
+		transaction_validity::InvalidTransaction,
 	};
 	use contracts::ContractAddressFor;
 	use substrate_executor::{NativeExecutor, WasmExecutionMethod};
@@ -57,8 +54,9 @@ mod tests {
 	use node_runtime::{
 		Header, Block, UncheckedExtrinsic, CheckedExtrinsic, Call, Runtime, Balances, BuildStorage,
 		System, TransactionPayment, Event, TransferFee, TransactionBaseFee, TransactionByteFee,
-		constants::currency::*, impls::WeightToFee,
+		WeightFeeCoefficient, constants::currency::*,
 	};
+	use node_runtime::impls::LinearWeightToFee;
 	use node_primitives::{Balance, Hash, BlockNumber};
 	use node_testing::keyring::*;
 	use wabt;
@@ -175,7 +173,7 @@ mod tests {
 			true,
 			None,
 		).0.unwrap();
-		let r = ApplyResult::decode(&mut &v.as_encoded()[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &v.as_encoded()[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -211,7 +209,7 @@ mod tests {
 			true,
 			None,
 		).0.unwrap();
-		let r = ApplyResult::decode(&mut &v.as_encoded()[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &v.as_encoded()[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -468,7 +466,14 @@ mod tests {
 			let events = vec![
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(0),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 10000, class: DispatchClass::Operational }
+					)),
+					topics: vec![],
+				},
+				EventRecord {
+					phase: Phase::ApplyExtrinsic(1),
+					event: Event::treasury(treasury::RawEvent::Deposit(1984800000000)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -477,13 +482,15 @@ mod tests {
 						alice().into(),
 						bob().into(),
 						69 * DOLLARS,
-						1 * CENTS
+						1 * CENTS,
 					)),
 					topics: vec![],
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(1),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal }
+					)),
 					topics: vec![],
 				},
 			];
@@ -501,8 +508,6 @@ mod tests {
 		).0.unwrap();
 
 		t.execute_with(|| {
-			// NOTE: fees differ slightly in tests that execute more than one block due to the
-			// weight update. Hence, using `assert_eq_error_rate`.
 			assert_eq!(
 				Balances::total_balance(&alice()),
 				alice_last_known_balance - 10 * DOLLARS - transfer_fee(&xt(), fm),
@@ -514,7 +519,14 @@ mod tests {
 			let events = vec![
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(0),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 10000, class: DispatchClass::Operational }
+					)),
+					topics: vec![],
+				},
+				EventRecord {
+					phase: Phase::ApplyExtrinsic(1),
+					event: Event::treasury(treasury::RawEvent::Deposit(1984780231392)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -531,7 +543,14 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(1),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal }
+					)),
+					topics: vec![],
+				},
+				EventRecord {
+					phase: Phase::ApplyExtrinsic(2),
+					event: Event::treasury(treasury::RawEvent::Deposit(1984780231392)),
 					topics: vec![],
 				},
 				EventRecord {
@@ -548,7 +567,9 @@ mod tests {
 				},
 				EventRecord {
 					phase: Phase::ApplyExtrinsic(2),
-					event: Event::system(system::Event::ExtrinsicSuccess),
+					event: Event::system(system::Event::ExtrinsicSuccess(
+						DispatchInfo { weight: 1000000, class: DispatchClass::Normal }
+					)),
 					topics: vec![],
 				},
 			];
@@ -833,7 +854,7 @@ mod tests {
 			false,
 			None,
 		).0.unwrap().into_encoded();
-		let r = ApplyResult::decode(&mut &r[..]).unwrap();
+		let r = ApplyExtrinsicResult::decode(&mut &r[..]).unwrap();
 		assert_eq!(r, Err(InvalidTransaction::Payment.into()));
 	}
 
@@ -866,7 +887,7 @@ mod tests {
 			false,
 			None,
 		).0.unwrap().into_encoded();
-		ApplyResult::decode(&mut &r[..])
+		ApplyExtrinsicResult::decode(&mut &r[..])
 			.unwrap()
 			.expect("Extrinsic could be applied")
 			.expect("Extrinsic did not fail");
@@ -1069,7 +1090,7 @@ mod tests {
 			balance_alice -= length_fee;
 
 			let weight = default_transfer_call().get_dispatch_info().weight;
-			let weight_fee = WeightToFee::convert(weight);
+			let weight_fee = LinearWeightToFee::<WeightFeeCoefficient>::convert(weight);
 
 			// we know that weight to fee multiplier is effect-less in block 1.
 			assert_eq!(weight_fee as Balance, MILLICENTS);
@@ -1209,23 +1230,6 @@ mod tests {
 			nonce += 1;
 			time += 10;
 			block_number += 1;
-		}
-	}
-
-	#[cfg(feature = "benchmarks")]
-	mod benches {
-		use super::*;
-		use test::Bencher;
-
-		#[bench]
-		fn wasm_execute_block(b: &mut Bencher) {
-			let (block1, block2) = blocks();
-
-			b.iter(|| {
-				let mut t = new_test_ext(COMPACT_CODE, false);
-				WasmExecutor::new().call(&mut t, "Core_execute_block", &block1.0).unwrap();
-				WasmExecutor::new().call(&mut t, "Core_execute_block", &block2.0).unwrap();
-			});
 		}
 	}
 }

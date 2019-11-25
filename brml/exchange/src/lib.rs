@@ -22,12 +22,14 @@ mod tests;
 
 use system::ensure_root;
 use sr_primitives::traits::{Member, SimpleArithmetic};
-use srml_support::{StorageValue, Parameter, decl_module, decl_event, decl_storage};
+use frame_support::{Parameter, decl_module, decl_event, decl_storage};
 
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+
 	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy;
+
 	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy;
 }
 
@@ -40,12 +42,12 @@ decl_storage! {
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		pub fn set_rate(origin, rate: u64) {
+		pub fn set_rate_per_block(origin, rate: u64) {
 			let _sender = ensure_root(origin)?;
 			<RatePerBlock>::put(rate);
 		}
 
-		pub fn set_exchange(origin, exchange: u64) {
+		pub fn set_exchange_rate(origin, exchange: u64) {
 			let _sender = ensure_root(origin)?;
 			<ExchangeRate>::put(exchange);
 		}

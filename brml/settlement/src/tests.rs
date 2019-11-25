@@ -20,7 +20,7 @@
 
 use super::*;
 use crate::mock::{Assets, Settlement, Origin, System, new_test_ext};
-use srml_support::{assert_ok};
+use frame_support::{assert_ok};
 use sr_primitives::traits::OnInitialize;
 use sr_primitives::traits::OnFinalize;
 

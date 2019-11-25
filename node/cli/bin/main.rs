@@ -18,16 +18,16 @@
 
 #![warn(missing_docs)]
 
-use cli::VersionInfo;
-use futures::sync::oneshot;
-use futures::{future, Future};
+use futures::channel::oneshot;
+use futures::{future, FutureExt};
+use substrate_cli::VersionInfo;
 
 use std::cell::RefCell;
 
 // handles ctrl-c
 struct Exit;
-impl cli::IntoExit for Exit {
-	type Exit = future::MapErr<oneshot::Receiver<()>, fn(oneshot::Canceled) -> ()>;
+impl substrate_cli::IntoExit for Exit {
+	type Exit = future::Map<oneshot::Receiver<()>, fn(Result<(), oneshot::Canceled>) -> ()>;
 	fn into_exit(self) -> Self::Exit {
 		// can't use signal directly here because CtrlC takes only `Fn`.
 		let (exit_send, exit) = oneshot::channel();
@@ -39,11 +39,11 @@ impl cli::IntoExit for Exit {
 			}
 		}).expect("Error setting Ctrl-C handler");
 
-		exit.map_err(drop)
+		exit.map(|_| ())
 	}
 }
 
-fn main() {
+fn main() -> Result<(), substrate_cli::error::Error> {
 	let version = VersionInfo {
 		name: "Liebi Bifrost",
 		commit: env!("VERGEN_SHA_SHORT"),
@@ -54,8 +54,5 @@ fn main() {
 		support_url: "https://github.com/bifrost-codes/bifrost/issues/new",
 	};
 
-	if let Err(e) = cli::run(::std::env::args(), Exit, version) {
-		eprintln!("Fatal error: {}\n\n{:?}", e, e);
-		std::process::exit(1)
-	}
+	node_cli::run(std::env::args(), Exit, version)
 }
