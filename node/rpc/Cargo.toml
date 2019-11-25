@@ -6,9 +6,11 @@ edition = "2018"
 
 [dependencies]
 client = { package = "substrate-client", git = "https://github.com/paritytech/substrate" }
-jsonrpc-core = "13.2.0"
+jsonrpc-core = "14.0.3"
 node-primitives = { path = "../primitives" }
+node-runtime = { path = "../runtime" }
 sr-primitives = { git = "https://github.com/paritytech/substrate" }
-srml-contracts-rpc = { git = "https://github.com/paritytech/substrate" }
-srml-system-rpc = { git = "https://github.com/paritytech/substrate" }
+pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate" }
+frame-system-rpc = { git = "https://github.com/paritytech/substrate" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/paritytech/substrate" }

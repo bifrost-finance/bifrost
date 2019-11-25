@@ -5,62 +5,127 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 build = "build.rs"
 edition = "2018"
 
+[[bin]]
+name = "bifrost-node"
+path = "bin/main.rs"
+required-features = ["cli"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-log = "0.4.8"
-tokio = "0.1.22"
-futures = "0.1.29"
-exit-future = "0.1.4"
-jsonrpc-core = "13.2.0"
-cli = { package = "substrate-cli", git = "https://github.com/paritytech/substrate" }
-codec = { package = "parity-scale-codec", version = "1.0.0" }
-sr-io = { git = "https://github.com/paritytech/substrate" }
-client = { package = "substrate-client", git = "https://github.com/paritytech/substrate" }
-primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate" }
-inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate" }
-node-runtime = { path = "../runtime" }
-node-rpc = { path = "../rpc" }
-node-primitives = { path = "../primitives" }
+# third-party dependencies
+codec = { package = "parity-scale-codec", version = "1.0.6" }
+serde = { version = "1.0.102", features = [ "derive" ] }
+futures01 = { package = "futures", version = "0.1.29" }
+futures = { version = "0.3.1", features = ["compat"] }
 hex-literal = "0.2.1"
-substrate-rpc = { package = "substrate-rpc", git = "https://github.com/paritytech/substrate" }
-substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
-substrate-service = { git = "https://github.com/paritytech/substrate" }
+jsonrpc-core = "14.0.3"
+log = "0.4.8"
+rand = "0.7.2"
+structopt = "0.3.3"
+
+# primitives
+authority-discovery-primitives = { package = "substrate-authority-discovery-primitives", git = "https://github.com/paritytech/substrate"}
+babe-primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/paritytech/substrate" }
+grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/paritytech/substrate" }
+primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate" }
+sr-primitives = { git = "https://github.com/paritytech/substrate" }
+sp-timestamp = { git = "https://github.com/paritytech/substrate", default-features = false }
+
+# core dependencies
+runtime-io = { package = "sr-io", git = "https://github.com/paritytech/substrate" }
+client-api = { package = "substrate-client-api", git = "https://github.com/paritytech/substrate" }
+client = { package = "substrate-client", git = "https://github.com/paritytech/substrate" }
+inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate" }
 chain-spec = { package = "substrate-chain-spec", git = "https://github.com/paritytech/substrate" }
 transaction_pool = { package = "substrate-transaction-pool", git = "https://github.com/paritytech/substrate" }
 network = { package = "substrate-network", git = "https://github.com/paritytech/substrate" }
 babe = { package = "substrate-consensus-babe", git = "https://github.com/paritytech/substrate" }
-babe-primitives = { package = "substrate-consensus-babe-primitives", git = "https://github.com/paritytech/substrate" }
 grandpa = { package = "substrate-finality-grandpa", git = "https://github.com/paritytech/substrate" }
-grandpa_primitives = { package = "substrate-finality-grandpa-primitives", git = "https://github.com/paritytech/substrate" }
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
-node-executor = { path = "../executor" }
-substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/paritytech/substrate" }
-structopt = "0.3.3"
-transaction-factory = { git = "https://github.com/paritytech/substrate" }
 keyring = { package = "substrate-keyring", git = "https://github.com/paritytech/substrate" }
-indices = { package = "srml-indices", git = "https://github.com/paritytech/substrate" }
-timestamp = { package = "srml-timestamp", git = "https://github.com/paritytech/substrate", default-features = false }
-rand = "0.7.2"
-finality_tracker = { package = "srml-finality-tracker", git = "https://github.com/paritytech/substrate", default-features = false }
-contracts = { package = "srml-contracts", git = "https://github.com/paritytech/substrate" }
-system = { package = "srml-system", git = "https://github.com/paritytech/substrate" }
-balances = { package = "srml-balances", git = "https://github.com/paritytech/substrate" }
-transaction-payment = { package = "srml-transaction-payment", git = "https://github.com/paritytech/substrate" }
-support = { package = "srml-support", git = "https://github.com/paritytech/substrate", default-features = false }
-im_online = { package = "srml-im-online", git = "https://github.com/paritytech/substrate", default-features = false }
-sr-authority-discovery = { package = "srml-authority-discovery", git = "https://github.com/paritytech/substrate", default-features = false }
-authority-discovery = { package = "substrate-authority-discovery", git = "https://github.com/paritytech/substrate" }
-serde = { version = "1.0.101", features = [ "derive" ] }
-client_db = { package = "substrate-client-db", git = "https://github.com/paritytech/substrate", features = ["kvdb-rocksdb"] }
+client_db = { package = "substrate-client-db", git = "https://github.com/paritytech/substrate", default-features = false }
 offchain = { package = "substrate-offchain", git = "https://github.com/paritytech/substrate" }
+substrate-rpc = { package = "substrate-rpc", git = "https://github.com/paritytech/substrate" }
+substrate-basic-authorship = { git = "https://github.com/paritytech/substrate" }
+substrate-service = { git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-telemetry = { package = "substrate-telemetry", git = "https://github.com/paritytech/substrate" }
+authority-discovery = { package = "substrate-authority-discovery", git = "https://github.com/paritytech/substrate"}
+
+# frame dependencies
+indices = { package = "pallet-indices", git = "https://github.com/paritytech/substrate" }
+timestamp = { package = "pallet-timestamp", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-finality-tracker = { git = "https://github.com/paritytech/substrate", default-features = false }
+contracts = { package = "pallet-contracts", git = "https://github.com/paritytech/substrate" }
+system = { package = "frame-system", git = "https://github.com/paritytech/substrate" }
+balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate" }
+transaction-payment = { package = "pallet-transaction-payment", git = "https://github.com/paritytech/substrate" }
+support = { package = "frame-support", git = "https://github.com/paritytech/substrate", default-features = false }
+im_online = { package = "pallet-im-online", git = "https://github.com/paritytech/substrate", default-features = false }
+sr-authority-discovery = { package = "pallet-authority-discovery", git = "https://github.com/paritytech/substrate"}
+
+# node-specific dependencies
+node-runtime = { path = "../runtime" }
+node-rpc = { path = "../rpc" }
+node-primitives = { path = "../primitives" }
+node-executor = { path = "../executor" }
+
+# CLI-specific dependencies
+tokio = { version = "0.1.22", optional = true }
+substrate-cli = { git = "https://github.com/paritytech/substrate", optional = true }
+transaction-factory = { git = "https://github.com/paritytech/substrate", optional = true }
+ctrlc = { version = "3.1.3", features = ["termination"], optional = true }
+
+# WASM-specific dependencies
+libp2p = { version = "0.13.0", default-features = false, optional = true }
+clear_on_drop = { version = "0.2.3", features = ["no_cc"], optional = true }	# Imported just for the `no_cc` feature
+console_error_panic_hook = { version = "0.1.1", optional = true }
+console_log = { version = "0.1.2", optional = true }
+js-sys = { version = "0.3.22", optional = true }
+wasm-bindgen = { version = "0.2.45", optional = true }
+wasm-bindgen-futures = { version = "0.3.22", optional = true }
+kvdb-memorydb = { git = "https://github.com/paritytech/parity-common", rev="03a2ba08f47f4af4219280e660a1ea92cb8896bd", optional = true }
+rand6 = { package = "rand", version = "0.6", features = ["wasm-bindgen"], optional = true }	# Imported just for the `wasm-bindgen` feature
 
 [dev-dependencies]
 keystore = { package = "substrate-keystore", git = "https://github.com/paritytech/substrate" }
 babe = { package = "substrate-consensus-babe", git = "https://github.com/paritytech/substrate", features = ["test-helpers"] }
 consensus-common = { package = "substrate-consensus-common", git = "https://github.com/paritytech/substrate" }
 service-test = { package = "substrate-service-test", git = "https://github.com/paritytech/substrate" }
-futures03 = { package = "futures-preview", version = "0.3.0-alpha.19" }
+futures = "0.3.1"
 tempfile = "3.1.0"
 
 [build-dependencies]
-cli = { package = "substrate-cli", git = "https://github.com/paritytech/substrate" }
+substrate-cli = { package = "substrate-cli", git = "https://github.com/paritytech/substrate" }
+build-script-utils = { package = "substrate-build-script-utils", git = "https://github.com/paritytech/substrate" }
 structopt = "0.3.3"
+vergen = "3.0.4"
+
+[features]
+default = ["cli"]
+browser = [
+	"clear_on_drop",
+	"console_error_panic_hook",
+	"console_log",
+	"js-sys",
+	"libp2p",
+	"wasm-bindgen",
+	"wasm-bindgen-futures",
+	"kvdb-memorydb",
+	"rand/wasm-bindgen",
+	"rand6"
+]
+cli = [
+	"substrate-cli",
+	"transaction-factory",
+	"tokio",
+	"ctrlc",
+	"substrate-service/rocksdb",
+	"node-executor/wasmi-errno",
+]
+wasmtime = [
+	"cli",
+	"node-executor/wasmtime",
+	"substrate-cli/wasmtime",
+	"substrate-service/wasmtime",
+]

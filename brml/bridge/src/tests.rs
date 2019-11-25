@@ -24,7 +24,7 @@ use sr_primitives::traits::OffchainWorker;
 use sr_primitives::traits::OnFinalize;
 use substrate_offchain::testing::TestOffchainExt;
 use substrate_primitives::offchain::{OpaquePeerId, OffchainExt};
-use srml_support::{assert_ok};
+use frame_support::{assert_ok};
 
 #[test]
 fn relay_tx_should_work() {

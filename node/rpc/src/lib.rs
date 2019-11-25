@@ -19,7 +19,7 @@
 //! Since `substrate` core functionality makes no assumptions
 //! about the modules used inside the runtime, so do
 //! RPC methods defined in `substrate-rpc` crate.
-//! It means that `core/rpc` can't have any methods that
+//! It means that `client/rpc` can't have any methods that
 //! need some strong assumptions about the particular runtime.
 //!
 //! The RPCs available in this crate however can make some assumptions
@@ -32,6 +32,7 @@
 use std::sync::Arc;
 
 use node_primitives::{Block, AccountId, Index, Balance};
+use node_runtime::UncheckedExtrinsic;
 use sr_primitives::traits::ProvideRuntimeApi;
 use transaction_pool::txpool::{ChainApi, Pool};
 
@@ -40,20 +41,25 @@ pub fn create<C, P, M>(client: Arc<C>, pool: Arc<Pool<P>>) -> jsonrpc_core::IoHa
 	C: ProvideRuntimeApi,
 	C: client::blockchain::HeaderBackend<Block>,
 	C: Send + Sync + 'static,
-	C::Api: srml_system_rpc::AccountNonceApi<Block, AccountId, Index>,
-	C::Api: srml_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
+	C::Api: frame_system_rpc::AccountNonceApi<Block, AccountId, Index>,
+	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	P: ChainApi + Sync + Send + 'static,
 	M: jsonrpc_core::Metadata + Default,
 {
-	use srml_system_rpc::{System, SystemApi};
-	use srml_contracts_rpc::{Contracts, ContractsApi};
+	use frame_system_rpc::{System, SystemApi};
+	use pallet_contracts_rpc::{Contracts, ContractsApi};
+	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
 	io.extend_with(
 		SystemApi::to_delegate(System::new(client.clone(), pool))
 	);
 	io.extend_with(
-		ContractsApi::to_delegate(Contracts::new(client))
+		ContractsApi::to_delegate(Contracts::new(client.clone()))
+	);
+	io.extend_with(
+		TransactionPaymentApi::to_delegate(TransactionPayment::new(client))
 	);
 	io
 }

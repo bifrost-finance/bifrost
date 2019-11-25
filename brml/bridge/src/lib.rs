@@ -22,7 +22,7 @@ use node_primitives::{AssetIssue, AssetRedeem};
 use rstd::prelude::*;
 use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
 use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
-use srml_support::{decl_event, decl_module, decl_storage, Parameter};
+use frame_support::{decl_event, decl_module, decl_storage, Parameter};
 use substrate_primitives::offchain::Timestamp;
 use system::{ensure_none, ensure_root, ensure_signed};
 use system::offchain::SubmitUnsignedTransaction;
@@ -292,7 +292,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> srml_support::unsigned::ValidateUnsigned for Module<T> {
+impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {

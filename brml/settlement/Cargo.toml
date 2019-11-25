@@ -7,8 +7,8 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-srml-support = { git = "https://github.com/paritytech/substrate", default-features = false }
-system = { package = "srml-system", git = "https://github.com/paritytech/substrate", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", default-features = false }
+system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 brml-assets = { path = "../assets", default-features = false }
@@ -22,7 +22,7 @@ default = ["std"]
 std = [
 	"codec/std",
 	"sr-primitives/std",
-	"srml-support/std",
+	"frame-support/std",
 	"system/std",
 	"rstd/std",
     "node-primitives/std",

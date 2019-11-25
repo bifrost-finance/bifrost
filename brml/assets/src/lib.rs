@@ -19,7 +19,7 @@
 
 use rstd::prelude::*;
 use codec::{Encode, Decode};
-use srml_support::{Parameter, decl_module, decl_event, decl_storage, ensure};
+use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure};
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
 use node_primitives::{ClearingHandler, AssetIssue, AssetRedeem};
@@ -66,6 +66,10 @@ decl_event!(
 		Transferred(AssetId, AccountId, AccountId, Balance),
 		/// Some assets were destroyed.
 		Destroyed(AssetId, AccountId, Balance),
+		/// Bind Asset with AccountId
+		AccountAssetCreated(AccountId, AssetId),
+		/// Bind Asset with AccountId
+		AccountAssetDestroy(AccountId, AssetId),
 	}
 );
 
@@ -77,6 +81,8 @@ decl_storage! {
 		NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
 		pub Tokens get(fn token_details): map T::AssetId => Token<T::Balance>;
+		/// A collection of asset which an account owned
+		pub AccountAssets get(fn account_assets): map T::AccountId => Vec<T::AssetId>;
 	}
 }
 
