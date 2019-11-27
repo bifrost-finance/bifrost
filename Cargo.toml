@@ -4,6 +4,7 @@ members = [
 	"brml/bridge",
 	"brml/exchange",
 	"brml/settlement",
+	"brml/bridge-eos",
 	"node/cli",
 	"node/executor",
 	"node/primitives",
