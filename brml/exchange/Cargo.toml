@@ -11,6 +11,7 @@ frame-support = { git = "https://github.com/paritytech/substrate", default-featu
 system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
 substrate-primitives = { git = "https://github.com/paritytech/substrate" }

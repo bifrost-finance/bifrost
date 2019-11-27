@@ -22,8 +22,7 @@ use super::*;
 use crate::mock::*;
 use sr_primitives::traits::OffchainWorker;
 use sr_primitives::traits::OnFinalize;
-use substrate_offchain::testing::TestOffchainExt;
-use substrate_primitives::offchain::{OpaquePeerId, OffchainExt};
+use substrate_primitives::offchain::{OpaquePeerId, OffchainExt, testing::TestOffchainExt};
 use frame_support::{assert_ok};
 
 #[test]

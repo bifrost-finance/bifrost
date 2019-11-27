@@ -15,19 +15,14 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
 mod mock;
-#[cfg(test)]
 mod tests;
 
 use system::ensure_root;
 use sr_primitives::traits::{Member, SimpleArithmetic};
 use frame_support::{Parameter, decl_module, decl_event, decl_storage};
 
-
 pub trait Trait: system::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
-
 	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy;
@@ -60,7 +55,3 @@ decl_module! {
 		}
 	}
 }
-
-decl_event!(
-	pub enum Event {}
-);

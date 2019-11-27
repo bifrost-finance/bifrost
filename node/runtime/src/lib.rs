@@ -537,7 +537,6 @@ impl brml_bridge::Trait for Runtime {
 }
 
 impl brml_exchange::Trait for Runtime {
-	type Event = Event;
 	type ExchangeRate = u64;
 	type RatePerBlock = u64;
 }
@@ -579,7 +578,8 @@ construct_runtime!(
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 		Bridge: brml_bridge::{Module, Call, Storage, Event, ValidateUnsigned},
-		Exchange: brml_exchange::{Module, Call, Storage, Event},
+		Exchange: brml_exchange::{Module, Call, Storage},
+		BridgeEOS: bridge_eos::{Module, Call, Storage, Event},
 	}
 );
 

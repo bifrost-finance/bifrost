@@ -23,12 +23,12 @@ use substrate_primitives::H256;
 use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
+#[derive(Clone, Eq, PartialEq)]
+pub struct Test;
+
 impl_outer_origin! {
 	pub enum Origin for Test {}
 }
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -47,7 +47,7 @@ impl system::Trait for Test {
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -59,25 +59,15 @@ parameter_types! {
 	pub const SettlementPeriod: u64 = 24 * 60 * 10;
 }
 
-impl Trait for Test {
-	type Event = TestEvent;
+impl crate::Trait for Test {
 	type ExchangeRate = u64;
 	type RatePerBlock = u64;
 }
 
-pub type Assets = Module<Test>;
-//pub type System = system::Module<Test>;
+pub type ExchangeTestModule = crate::Module<Test>;
+pub type System = system::Module<Test>;
 
-mod assets {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		assets,
-	}
-}
-
-pub fn new_test_ext() -> runtime_io::TestExternalities {
+pub(crate) fn new_test_ext() -> runtime_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
+
