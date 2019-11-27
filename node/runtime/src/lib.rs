@@ -541,6 +541,10 @@ impl brml_exchange::Trait for Runtime {
 	type RatePerBlock = u64;
 }
 
+impl bridge_eos::Trait for Runtime {
+	type Event = Event;
+}
+
 // bifrost rumtine time end
 
 construct_runtime!(

@@ -1,0 +1,37 @@
+[package]
+name = "bridge-eos"
+version = "0.1.0"
+authors = ["Dengjianping <djptux@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1", default-features = false }
+inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
+rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
+sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
+sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+support = { package = "frame-support", git = "https://github.com/paritytech/substrate", default-features = false }
+substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
+
+[dev-dependencies]
+sr-primitives = { git = "https://github.com/paritytech/substrate" }
+substrate-offchain = { git = "https://github.com/paritytech/substrate" }
+serde_json = { version = "1.0", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"eos-chain/std",
+	"inherents/std",
+	"node-primitives/std",
+	"rstd/std",
+	"sr-io/std",
+	"sr-primitives/std",
+	"support/std",
+	"substrate-primitives/std",
+	"system/std",
+]
