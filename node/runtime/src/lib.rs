@@ -541,7 +541,7 @@ impl brml_exchange::Trait for Runtime {
 	type RatePerBlock = u64;
 }
 
-impl bridge_eos::Trait for Runtime {
+impl brml_bridge_eos::Trait for Runtime {
 	type Event = Event;
 }
 
@@ -583,7 +583,7 @@ construct_runtime!(
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 		Bridge: brml_bridge::{Module, Call, Storage, Event, ValidateUnsigned},
 		Exchange: brml_exchange::{Module, Call, Storage},
-		BridgeEOS: bridge_eos::{Module, Call, Storage, Event},
+		BridgeEOS: brml_bridge_eos::{Module, Call, Storage, Event},
 	}
 );
 
