@@ -89,7 +89,6 @@ fn verify_block_header_signature_should_succeed() {
 		<BridgeEOSTestModule as Store>::ProducerSchedules::insert(ps.version, ps.producers);
 
 		let block_time = BlockTimestamp::from(TimePointSec::from_unix_seconds(1542994962));
-		dbg!(&block_time.to_string());
 
 		let block_header = BlockHeader::new(
 			block_time,
@@ -108,14 +107,10 @@ fn verify_block_header_signature_should_succeed() {
 			producer_signature: Signature::from_str("SIG_K1_K1t32qBPbyMdWyMfSRQ8z4TwFMpDUxgCHw8oQCexepdyZkCUUGyqS9WQBQpTp1bJ9PgES1uWJB8kJjW4HDY63PzdTqTaAo").unwrap(),
 		};
 
-		let s = hex::encode(&signed_block_header.to_serialize_data());
-		dbg!(s);
-
-
-		let mroot: Checksum256 = Checksum256::from("bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a");
-
-		dbg!(BridgeEOSTestModule::verify_block_header_signature(&signed_block_header, &mroot));
-//		assert!(BridgeEOSTestModule::verify_block_header_signature(&signed_block_header, &mroot).is_ok());
+		let mroot: Checksum256 = "bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a".into();
+		let pending_schedule_hash: Checksum256 = "4204d5ca327bae53aac3b5405e356172d2b2dd42c2f609f4f970e41d0d3dcae1".into();
+		let result = BridgeEOSTestModule::verify_block_header_signature(&signed_block_header, &mroot, &pending_schedule_hash);
+		assert!(result.is_ok());
 	});
 }
 

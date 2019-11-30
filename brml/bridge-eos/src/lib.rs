@@ -79,7 +79,8 @@ decl_module! {
 			init_merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
 			block_merkle_roots: Vec<Checksum256>,
-			block_ids_list: Vec<Vec<Checksum256>>
+			block_ids_list: Vec<Vec<Checksum256>>,
+			pending_schedule_hashs: Vec<Checksum256>
 		) {
 			let _ = ensure_root(origin)?;
 
@@ -94,7 +95,7 @@ decl_module! {
 			ensure!(ps.version == latest_schedule_version + 1, "This is a wrong new producer lists due to wrong schedule version.");
 
 			#[cfg(feature = "std")]
-			ensure!(Self::verify_block_headers(init_merkle, block_headers, block_merkle_roots, block_ids_list).is_ok(), "Failed to verify block.");
+			ensure!(Self::verify_block_headers(init_merkle, block_headers, block_merkle_roots, block_ids_list, pending_schedule_hashs).is_ok(), "Failed to verify block.");
 
 			ProducerSchedules::insert(ps.version, ps.producers);
 			LatestScheduleVersion::put(ps.version);
@@ -128,14 +129,16 @@ impl<T: Trait> Module<T> {
 		mut init_merkle: IncrementalMerkle,
 		block_headers: Vec<SignedBlockHeader>,
 		block_merkle_roots: Vec<Checksum256>,
-		block_ids_list: Vec<Vec<Checksum256>>
+		block_ids_list: Vec<Vec<Checksum256>>,
+		pending_schedule_hashs: Vec<Checksum256>
 	) -> Result<(), Error> {
 		ensure!(block_headers.len() == 16, Error::LengthNotEqual(16, block_headers.len()));
 		ensure!(block_merkle_roots.len() == 16, Error::LengthNotEqual(16, block_merkle_roots.len()));
 		ensure!(block_ids_list.len() == 15, Error::LengthNotEqual(15, block_ids_list.len()));
 
 		for (index, (block_header, expected_mroot)) in block_headers.iter().zip(block_merkle_roots.iter()).enumerate() {
-			Self::verify_block_header_signature(block_header, expected_mroot)?;
+			let pending_schedule_hash = pending_schedule_hashs[index];
+			Self::verify_block_header_signature(block_header, expected_mroot, &pending_schedule_hash)?;
 
 			let block_ids = block_ids_list.get(index).unwrap();
 			Self::verify_block_header_merkle_root(&mut init_merkle, &block_header, &block_ids, &expected_mroot)?;
@@ -146,24 +149,19 @@ impl<T: Trait> Module<T> {
 	#[cfg(feature = "std")]
 	fn verify_block_header_signature(
 		block_header: &SignedBlockHeader,
-		expected_mroot: &Checksum256
+		expected_mroot: &Checksum256,
+		pending_schedule_hash: &Checksum256,
 	) -> Result<(), Error> {
 		let schedule_version = block_header.block_header.schedule_version;
 		let producers = ProducerSchedules::get(schedule_version - 1);
-		dbg!(&producers.len());
 
 //		let ps = ProducerSchedule::new(schedule_version, producers);
 		let ps = generate_current_producers_list();
-		let ps_hash = ps.schedule_hash().map_err(|_| Error::ScheduleHashError)?;
-		dbg!(&ps_hash.to_string());
 
 		let producer = block_header.block_header.producer;
-		dbg!(&producer.to_string());
 		let pk = ps.get_producer_key(producer);
-		dbg!(&pk.to_string());
 
-		block_header.verify(*expected_mroot, ps_hash, pk).map_err(|e| {
-			dbg!(&e);
+		block_header.verify(*expected_mroot, *pending_schedule_hash, pk).map_err(|e| {
 			Error::SignatureVerificationFailure
 		})?;
 		Ok(())
@@ -196,90 +194,94 @@ impl<T: Trait> Module<T> {
 pub fn generate_current_producers_list() -> ProducerSchedule {
 	let json = r#"
 		{
-        "version": 1,
-        "producers": [
-            {
-                "producer_name": "batinthedark",
-                "block_signing_key": "EOS6dwoM8XGMQn49LokUcLiony7JDkbHrsFDvh5svLvPDkXtvM7oR"
-            },
-            {
-                "producer_name": "bighornsheep",
-                "block_signing_key": "EOS5xfwWr4UumKm4PqUGnyCrFWYo6j5cLioNGg5yf4GgcTp2WcYxf"
-            },
-            {
-                "producer_name": "bigpolarbear",
-                "block_signing_key": "EOS6oZi9WjXUcLionUtSiKRa4iwCW5cT6oTzoWZdENXq1p2pq53Nv"
-            },
-            {
-                "producer_name": "clevermonkey",
-                "block_signing_key": "EOS5mp5wmRyL5RH2JUeEh3eoZxkJ2ZZJ9PVd1BcLioNuq4PRCZYxQ"
-            },
-            {
-                "producer_name": "funnyhamster",
-                "block_signing_key": "EOS7A9BoRetjpKtE3sqA6HRykRJ955MjQ5XdRmCLionVte2uERL8h"
-            },
-            {
-                "producer_name": "gorillapower",
-                "block_signing_key": "EOS8X5NCx1Xqa1xgQgBa9s6EK7M1SjGaDreAcLion4kDVLsjhQr9n"
-            },
-            {
-                "producer_name": "hippopotamus",
-                "block_signing_key": "EOS7qDcxm8YtAZUA3t9kxNGuzpCLioNnzpTRigi5Dwsfnszckobwc"
-            },
-            {
-                "producer_name": "hungryolddog",
-                "block_signing_key": "EOS6tw3AqqVUsCbchYRmxkPLqGct3vC63cEzKgVzLFcLionoY8YLQ"
-            },
-            {
-                "producer_name": "iliketurtles",
-                "block_signing_key": "EOS6itYvNZwhqS7cLion3xp3rLJNJAvKKegxeS7guvbBxG1XX5uwz"
-            },
-            {
-                "producer_name": "jumpingfrogs",
-                "block_signing_key": "EOS7oVWG413cLioNG7RU5Kv7NrPZovAdRSP6GZEG4LFUDWkgwNXHW"
-            },
-            {
-                "producer_name": "lioninjungle",
-                "block_signing_key": "EOS5BcLionmbgEtcmu7qY6XKWaE1q31qCQSsd89zXij7FDXQnKjwk"
-            },
-            {
-                "producer_name": "littlerabbit",
-                "block_signing_key": "EOS65orCLioNFkVT5uDF7J63bNUk97oF8T83iWfuvbSKWYUUq9EWd"
-            },
-            {
-                "producer_name": "proudrooster",
-                "block_signing_key": "EOS5qBd3T6nmLRsuACLion346Ue8UkCwvsoS5f3EDC1jwbrEiBDMX"
-            },
-            {
-                "producer_name": "pythoncolors",
-                "block_signing_key": "EOS8R7GB5CLionUEy8FgGksGAGtc2cbcQWgty3MTAgzJvGTmtqPLz"
-            },
-            {
-                "producer_name": "soaringeagle",
-                "block_signing_key": "EOS6iuBqJKqSK82QYCGuM96gduQpQG8xJsPDU1CLionPMGn2bT4Yn"
-            },
-            {
-                "producer_name": "spideronaweb",
-                "block_signing_key": "EOS6M4CYEDt3JDKS6nsxMnUcdCLioNcbyEzeAwZsQmDcoJCgaNHT8"
-            },
-            {
-                "producer_name": "ssssssssnake",
-                "block_signing_key": "EOS8SDhZ5CLioNLie9mb7kDu1gHfDXLwTvYBSxR1ccYSJERvutLqG"
-            },
-            {
-                "producer_name": "thebluewhale",
-                "block_signing_key": "EOS6Wfo1wwTPzzBVT8fe3jpz8vxCnf77YscLionBnw39iGzFWokZm"
-            },
-            {
-                "producer_name": "thesilentowl",
-                "block_signing_key": "EOS7y4hU89NJ658H1KmAdZ6A585bEVmSV8xBGJ3SbQM4Pt3pcLion"
-            },
-            {
-                "producer_name": "wealthyhorse",
-                "block_signing_key": "EOS5i1HrfxfHLRJqbExgRodhrZwp4dcLioNn4xZWCyhoBK6DNZgZt"
-            }
-        ]
-    }
+    "version": 2,
+    "producers": [
+        {
+            "producer_name": "batinthedark",
+            "block_signing_key": "EOS6dwoM8XGMQn49LokUcLiony7JDkbHrsFDvh5svLvPDkXtvM7oR"
+        },
+        {
+            "producer_name": "bighornsheep",
+            "block_signing_key": "EOS5xfwWr4UumKm4PqUGnyCrFWYo6j5cLioNGg5yf4GgcTp2WcYxf"
+        },
+        {
+            "producer_name": "bigpolarbear",
+            "block_signing_key": "EOS6oZi9WjXUcLionUtSiKRa4iwCW5cT6oTzoWZdENXq1p2pq53Nv"
+        },
+        {
+            "producer_name": "clevermonkey",
+            "block_signing_key": "EOS5mp5wmRyL5RH2JUeEh3eoZxkJ2ZZJ9PVd1BcLioNuq4PRCZYxQ"
+        },
+        {
+            "producer_name": "funnyhamster",
+            "block_signing_key": "EOS7A9BoRetjpKtE3sqA6HRykRJ955MjQ5XdRmCLionVte2uERL8h"
+        },
+        {
+            "producer_name": "gorillapower",
+            "block_signing_key": "EOS8X5NCx1Xqa1xgQgBa9s6EK7M1SjGaDreAcLion4kDVLsjhQr9n"
+        },
+        {
+            "producer_name": "hippopotamus",
+            "block_signing_key": "EOS7qDcxm8YtAZUA3t9kxNGuzpCLioNnzpTRigi5Dwsfnszckobwc"
+        },
+        {
+            "producer_name": "hungryolddog",
+            "block_signing_key": "EOS6tw3AqqVUsCbchYRmxkPLqGct3vC63cEzKgVzLFcLionoY8YLQ"
+        },
+        {
+            "producer_name": "iliketurtles",
+            "block_signing_key": "EOS6itYvNZwhqS7cLion3xp3rLJNJAvKKegxeS7guvbBxG1XX5uwz"
+        },
+        {
+            "producer_name": "jumpingfrogs",
+            "block_signing_key": "EOS7oVWG413cLioNG7RU5Kv7NrPZovAdRSP6GZEG4LFUDWkgwNXHW"
+        },
+        {
+            "producer_name": "lioninjungle",
+            "block_signing_key": "EOS5BcLionmbgEtcmu7qY6XKWaE1q31qCQSsd89zXij7FDXQnKjwk"
+        },
+        {
+            "producer_name": "littlerabbit",
+            "block_signing_key": "EOS65orCLioNFkVT5uDF7J63bNUk97oF8T83iWfuvbSKWYUUq9EWd"
+        },
+        {
+            "producer_name": "ohtigertiger",
+            "block_signing_key": "EOS7tigERwXDRuHsok212UDToxFS1joUhAxzvDUhRof8NjuvwtoHX"
+        },
+        {
+            "producer_name": "proudrooster",
+            "block_signing_key": "EOS5qBd3T6nmLRsuACLion346Ue8UkCwvsoS5f3EDC1jwbrEiBDMX"
+        },
+        {
+            "producer_name": "pythoncolors",
+            "block_signing_key": "EOS8R7GB5CLionUEy8FgGksGAGtc2cbcQWgty3MTAgzJvGTmtqPLz"
+        },
+        {
+            "producer_name": "soaringeagle",
+            "block_signing_key": "EOS6iuBqJKqSK82QYCGuM96gduQpQG8xJsPDU1CLionPMGn2bT4Yn"
+        },
+        {
+            "producer_name": "spideronaweb",
+            "block_signing_key": "EOS6M4CYEDt3JDKS6nsxMnUcdCLioNcbyEzeAwZsQmDcoJCgaNHT8"
+        },
+        {
+            "producer_name": "ssssssssnake",
+            "block_signing_key": "EOS8SDhZ5CLioNLie9mb7kDu1gHfDXLwTvYBSxR1ccYSJERvutLqG"
+        },
+        {
+            "producer_name": "thebluewhale",
+            "block_signing_key": "EOS6Wfo1wwTPzzBVT8fe3jpz8vxCnf77YscLionBnw39iGzFWokZm"
+        },
+        {
+            "producer_name": "thesilentowl",
+            "block_signing_key": "EOS7y4hU89NJ658H1KmAdZ6A585bEVmSV8xBGJ3SbQM4Pt3pcLion"
+        },
+        {
+            "producer_name": "wealthyhorse",
+            "block_signing_key": "EOS5i1HrfxfHLRJqbExgRodhrZwp4dcLioNn4xZWCyhoBK6DNZgZt"
+        }
+    ]
+}
 	"#;
 	let new_producers: Result<ProducerSchedule, _> = serde_json::from_str(&json);
 	assert!(new_producers.is_ok());
