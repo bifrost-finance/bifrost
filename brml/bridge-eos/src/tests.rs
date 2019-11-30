@@ -88,7 +88,7 @@ fn verify_block_header_signature_should_succeed() {
 		let ps = generate_current_producers_list();
 		<BridgeEOSTestModule as Store>::ProducerSchedules::insert(ps.version, ps.producers);
 
-		let block_time = BlockTimestamp::from(TimePointSec::from_unix_seconds(1542966162));
+		let block_time = BlockTimestamp::from(TimePointSec::from_unix_seconds(1542994962));
 		dbg!(&block_time.to_string());
 
 		let block_header = BlockHeader::new(
@@ -112,7 +112,7 @@ fn verify_block_header_signature_should_succeed() {
 		dbg!(s);
 
 
-		let mroot: Checksum256 = Checksum256::from("33cef09fe2565cb5ed2c18c389209897a226a4f8c47360d88cdc2dcc17a8cfc5");
+		let mroot: Checksum256 = Checksum256::from("bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a");
 
 		dbg!(BridgeEOSTestModule::verify_block_header_signature(&signed_block_header, &mroot));
 //		assert!(BridgeEOSTestModule::verify_block_header_signature(&signed_block_header, &mroot).is_ok());
