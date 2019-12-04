@@ -1183,7 +1183,7 @@ checksum = "34f8467a0284de039e6bd0e25c14519538462ba5beb548bb1f03e645097837a8"
 [[package]]
 name = "eos-chain"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#42150cea6b264fddd8c1d49cea39640fe8d3213d"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#83e9af3eed46b8e50a2dca70524b65b5929cc7a2"
 dependencies = [
  "bitcoin_hashes",
  "chrono",
@@ -1199,7 +1199,7 @@ dependencies = [
 [[package]]
 name = "eos-keys"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#42150cea6b264fddd8c1d49cea39640fe8d3213d"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#83e9af3eed46b8e50a2dca70524b65b5929cc7a2"
 dependencies = [
  "bitcoin_hashes",
  "byteorder 1.3.2",
@@ -1211,7 +1211,7 @@ dependencies = [
 [[package]]
 name = "eos-rpc"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#42150cea6b264fddd8c1d49cea39640fe8d3213d"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#83e9af3eed46b8e50a2dca70524b65b5929cc7a2"
 dependencies = [
  "eos-chain",
  "hex 0.4.0",
@@ -1226,7 +1226,7 @@ dependencies = [
 [[package]]
 name = "eosio-core-derive"
 version = "0.2.1"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#42150cea6b264fddd8c1d49cea39640fe8d3213d"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#83e9af3eed46b8e50a2dca70524b65b5929cc7a2"
 dependencies = [
  "proc-macro2 0.4.30",
  "quote 0.6.13",
@@ -4940,7 +4940,7 @@ dependencies = [
 [[package]]
 name = "rpc_codegen"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#42150cea6b264fddd8c1d49cea39640fe8d3213d"
+source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#83e9af3eed46b8e50a2dca70524b65b5929cc7a2"
 dependencies = [
  "proc-macro2 1.0.6",
  "quote 1.0.2",

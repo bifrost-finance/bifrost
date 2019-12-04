@@ -22,7 +22,6 @@ sr-primitives = { git = "https://github.com/paritytech/substrate" }
 substrate-offchain = { git = "https://github.com/paritytech/substrate" }
 hex = "0.4"
 
-
 [features]
 default = ["std"]
 std = [

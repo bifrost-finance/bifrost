@@ -16,7 +16,7 @@
 
 #![cfg(test)]
 
-use support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
+use support::{impl_outer_origin, impl_outer_event, parameter_types};
 use sr_primitives::{
 	Perbill,
 	testing::Header,
