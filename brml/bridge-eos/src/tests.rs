@@ -20,8 +20,8 @@ use crate::*;
 use crate::mock::{new_test_ext, run_to_block, BridgeEOSTestModule, Origin};
 use core::{convert::From, str::FromStr};
 use eos_chain::{
-	Checksum256, IncrementalMerkle,
-	ProducerSchedule, SignedBlockHeader,
+	Action, ActionReceipt, Checksum256,
+	IncrementalMerkle, ProducerSchedule, SignedBlockHeader
 };
 #[cfg(feature = "std")]
 use std::{
@@ -87,12 +87,12 @@ fn test_incremental_merkle() {
 	];
 
 	let mut merkle = IncrementalMerkle::new(node_count, active_nodes);
-	merkle.append(id);
+	let _ = merkle.append(id);
 	assert_eq!("bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a", merkle.get_root().to_string());
 
 	let id = "00002461b0e90b849fe37ff9514230b4f9fc4012d0394b7d2445fedef6a45807"; // 9313
 	let id = Checksum256::from(id);
-	merkle.append(id);
+	let _ = merkle.append(id);
 	assert_eq!("33cef09fe2565cb5ed2c18c389209897a226a4f8c47360d88cdc2dcc17a8cfc5", merkle.get_root().to_string());
 }
 
@@ -123,7 +123,7 @@ fn block_id_append_should_be_ok() {
 	];
 	let mut merkle = IncrementalMerkle::new(node_count, active_nodes);
 	for id in ids {
-		merkle.append(id);
+		let _ = merkle.append(id);
 	}
 	assert_eq!(merkle.get_root().to_string(), "fc30e3852df3ecde2314fa1bbd4372341d1c9b922f9f44ce04460fb209b263e4");
 }
@@ -235,6 +235,50 @@ fn change_schedule_should_work() {
 
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
 		assert!(BridgeEOSTestModule::change_schedule(Origin::ROOT, merkle, signed_blocks_headers, block_ids_list).is_ok());
+	});
+}
+
+#[test]
+fn verify_block_headers_action_merkle_should_be_ok() {
+	new_test_ext().execute_with(|| {
+		// read action merkle paths
+		let action_merkle_paths_json = "action_merkle_paths.json";
+		let action_merkle_paths_str = read_json_from_file(action_merkle_paths_json);
+		assert!(action_merkle_paths_str.is_ok());
+		let action_merkle_paths: Result<Vec<String>, _> = serde_json::from_str(&action_merkle_paths_str.unwrap());
+		assert!(action_merkle_paths.is_ok());
+		let action_merkle_paths = action_merkle_paths.unwrap();
+		let action_merkle_paths = {
+			let mut path: Vec<Checksum256> = Vec::with_capacity(action_merkle_paths.len());
+			for path_str in action_merkle_paths {
+				path.push(Checksum256::from_str(&path_str).unwrap());
+			}
+			path
+		};
+
+		// from block 10776
+		let actions_json = "actions_from_10776.json";
+		let actions_str = read_json_from_file(actions_json);
+		assert!(actions_str.is_ok());
+		let actions: Result<Vec<Action>, _> = serde_json::from_str(actions_str.as_ref().unwrap());
+		assert!(actions.is_ok());
+		let actions = actions.unwrap();
+
+		// get action receipts
+		let action_receipts_json = "action_receipts.json";
+		let action_receipts_str = read_json_from_file(action_receipts_json);
+		let action_receipts: Result<Vec<ActionReceipt>, _> = serde_json::from_str(action_receipts_str.as_ref().unwrap());
+		assert!(action_receipts.is_ok());
+		let action_receipts = action_receipts.unwrap();
+
+		// get block header
+		let block_header_json = "prove_action_10776.json";
+		let signed_block_str = read_json_from_file(block_header_json);
+		let signed_block: Result<SignedBlockHeader, _> = serde_json::from_str(signed_block_str.as_ref().unwrap());
+		assert!(signed_block.is_ok());
+		let signed_block_header = signed_block.unwrap();
+
+		assert!(BridgeEOSTestModule::verify_block_headers_action_merkle(Origin::ROOT, signed_block_header, actions, action_merkle_paths, action_receipts).is_ok());
 	});
 }
 

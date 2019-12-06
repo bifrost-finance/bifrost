@@ -16,7 +16,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use eos_chain::{Action, Checksum256, IncrementalMerkle, ProducerKey, ProducerSchedule, SignedBlockHeader};
+use eos_chain::{
+	Action, ActionReceipt, Checksum256, IncrementalMerkle, merkle,
+	ProducerKey, ProducerSchedule, SignedBlockHeader, Digest,
+};
 use rstd::prelude::Vec;
 use support::{decl_module, decl_storage, decl_event, ensure};
 use system::ensure_root;
@@ -33,6 +36,8 @@ pub enum Error {
 	IncreMerkleError,
 	ScheduleHashError,
 	GetBlockIdFailure,
+	CalculateMerkleError,
+	EmptyActionMerklePaths,
 }
 
 pub type VersionId = u32;
@@ -109,22 +114,33 @@ decl_module! {
 			Self::deposit_event(Event::ChangeSchedule(pending_schedule_version, ps.version));
 		}
 
-		fn prove_action(
+		fn verify_block_headers_action_merkle(
 			origin,
-			block: SignedBlockHeader,
-			block_merkle_root: Checksum256,
-			block_merkle_paths: Vec<Checksum256>,
-			action: Action,
-			action_merkle_paths: Vec<Checksum256>
+			block_header: SignedBlockHeader,
+			actions: Vec<Action>,
+			action_merkle_paths: Vec<Checksum256>,
+			action_reciepts: Vec<ActionReceipt>
 		) {
 			let _ = ensure_root(origin)?;
 
-			//	1. verify signature of block header
-			//	2. verify block header is irreversible block
-			//	3. verify action
-			//	4. trigger event
-			// TODO
-			unimplemented!("todo")
+			ensure!(
+				!actions.is_empty() &&
+				!action_reciepts.is_empty(),
+				"actions or action receipts cannot be empty."
+			);
+			ensure!(action_reciepts.len() > 0, "action receipts cannot be empty.");
+			ensure!(
+				action_merkle_paths.len() == action_reciepts.len(),
+				"the count of action merkle paths should be equal to action_reciepts."
+			);
+
+			#[cfg(feature = "std")]
+			ensure!(
+				Self::prove_action_merkle_root(&block_header, &actions, &action_merkle_paths, &action_reciepts).is_ok(),
+				"action merkle verification error"
+			);
+
+			Self::deposit_event(Event::ProveAction);
 		}
 	}
 }
@@ -134,7 +150,7 @@ impl<T: Trait> Module<T> {
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
 		block_headers: Vec<SignedBlockHeader>,
-		block_ids_list: Vec<Vec<Checksum256>>,
+		block_ids_list: Vec<Vec<Checksum256>>
 	) -> Result<(), Error> {
 		ensure!(block_headers.len() == 15, Error::LengthNotEqual(15, block_headers.len()));
 		ensure!(block_ids_list.len() == 15, Error::LengthNotEqual(15, block_ids_list.len()));
@@ -156,7 +172,7 @@ impl<T: Trait> Module<T> {
 	#[cfg(feature = "std")]
 	fn verify_block_header_signature(
 		block_header: &SignedBlockHeader,
-		expected_mroot: &Checksum256,
+		expected_mroot: &Checksum256
 	) -> Result<(), Error> {
 		let pending_schedule = match block_header.block_header.new_producers {
 			Some(ref schedule) => schedule.clone(),
@@ -190,5 +206,49 @@ impl<T: Trait> Module<T> {
 		// append previous block id
 		merkle.append(block_header.block_header.previous).map_err(|_| Error::IncreMerkleError)?;
 		Ok(())
+	}
+
+	#[cfg(feature = "std")]
+	fn prove_action_merkle_root(
+		block_header: &SignedBlockHeader,
+		actions: &[Action],
+		action_merkle_paths: &[Checksum256],
+		action_reciepts: &[ActionReceipt]
+	) -> Result<(), Error> {
+		if action_merkle_paths.is_empty() || action_merkle_paths.len() != action_reciepts.len() {
+			return Err(Error::MerkleRootVerificationFailure);
+		}
+
+		// compare action hash to act_digest in action receipt
+		for action in actions {
+			let action_hash = action.digest().map_err(|_| Error::CalculateMerkleError)?;
+			let mut equal = false;
+			for receipt in action_reciepts {
+				if action_hash == receipt.act_digest {
+					equal = true;
+					break;
+				}
+			}
+			if !equal { return Err(Error::MerkleRootVerificationFailure); }
+		}
+
+		// verify action hash with action receipts digest
+		let mut actual_action_merkle_paths = Vec::with_capacity(action_merkle_paths.len());
+		for receipt in action_reciepts.iter() {
+			let path = receipt.digest().map_err(|_| Error::CalculateMerkleError)?;
+			actual_action_merkle_paths.push(path);
+		}
+
+		// verify action merkle path
+		let actual_action_mroot = merkle(actual_action_merkle_paths.to_vec()).map_err(|_| Error::CalculateMerkleError)?;
+		let expected_action_mroot = merkle(action_merkle_paths.to_vec()).map_err(|_| Error::CalculateMerkleError)?;
+
+		match (
+			actual_action_mroot == expected_action_mroot,
+			actual_action_mroot == block_header.block_header.action_mroot
+		) {
+			(true, true) => Ok(()),
+			_ => Err(Error::MerkleRootVerificationFailure),
+		}
 	}
 }
