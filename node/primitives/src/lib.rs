@@ -109,11 +109,11 @@ impl<A, AC, B> AssetIssue<A, AC, B> for () {
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance, to_name: Vec<u8>);
+	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
 }
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-	fn asset_redeem(_: A, _: AC, _: B, _: Vec<u8>) {}
+	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
 #[derive(Clone, Encode, Decode)]
