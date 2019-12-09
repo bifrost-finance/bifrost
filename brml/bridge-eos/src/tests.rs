@@ -17,7 +17,7 @@
 #![cfg(test)]
 
 use crate::*;
-use crate::mock::{new_test_ext, run_to_block, BridgeEOSTestModule, Origin};
+use crate::mock::{new_test_ext, run_to_block, BridgeEos, Origin};
 use core::{convert::From, str::FromStr};
 use eos_chain::{
 	Action, ActionReceipt, Checksum256,
@@ -140,7 +140,7 @@ fn verify_block_header_signature_should_succeed() {
 		let signed_block_header = signed_blocks_headers.first().as_ref().unwrap().clone();
 
 		let mroot: Checksum256 = "bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a".into();
-		let result = BridgeEOSTestModule::verify_block_header_signature(&signed_block_header, &mroot);
+		let result = BridgeEos::verify_block_header_signature(&signed_block_header, &mroot);
 		assert!(result.is_ok());
 	});
 }
@@ -184,7 +184,7 @@ fn verify_block_headers_should_succeed() {
 		];
 
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
-		assert!(BridgeEOSTestModule::verify_block_headers(merkle, signed_blocks_headers, block_ids_list).is_ok());
+		assert!(BridgeEos::verify_block_headers(merkle, signed_blocks_headers, block_ids_list).is_ok());
 	});
 }
 
@@ -234,7 +234,7 @@ fn change_schedule_should_work() {
 		];
 
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
-		assert!(BridgeEOSTestModule::change_schedule(Origin::ROOT, merkle, signed_blocks_headers, block_ids_list).is_ok());
+		assert!(BridgeEos::change_schedule(Origin::ROOT, merkle, signed_blocks_headers, block_ids_list).is_ok());
 	});
 }
 
@@ -278,7 +278,7 @@ fn verify_block_headers_action_merkle_should_be_ok() {
 		assert!(signed_block.is_ok());
 		let signed_block_header = signed_block.unwrap();
 
-		assert!(BridgeEOSTestModule::verify_block_headers_action_merkle(Origin::ROOT, signed_block_header, actions, action_merkle_paths, action_receipts).is_ok());
+		assert!(BridgeEos::verify_block_headers_action_merkle(Origin::ROOT, signed_block_header, actions, action_merkle_paths, action_receipts).is_ok());
 	});
 }
 
