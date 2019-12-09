@@ -166,7 +166,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Destroyed(id, origin, amount));
 		}
 
-		pub fn redeem(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance, to_name: Vec<u8>) {
+		pub fn redeem(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance, to_name: Option<Vec<u8>>) {
 			let origin = ensure_signed(origin)?;
 
 			let origin_account = (id, origin.clone());
