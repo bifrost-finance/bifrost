@@ -5,6 +5,7 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+codec = { package = "parity-scale-codec", version = "1.0.6", default-features = false, features = ["derive"] }
 primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
 rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
 sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
@@ -16,6 +17,7 @@ pretty_assertions = "0.6.1"
 [features]
 default = ["std"]
 std = [
+    "codec/std",
 	"primitives/std",
 	"rstd/std",
 	"sr-primitives/std",
