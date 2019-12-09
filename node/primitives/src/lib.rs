@@ -20,9 +20,13 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Encode, Decode};
 use rstd::prelude::*;
 use sr_primitives::{
-	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
+	generic,
+	traits::{Verify, BlakeTwo256, IdentifyAccount, SaturatedConversion},
+	OpaqueExtrinsic,
+	MultiSignature
 };
 
 /// An index to a block.
@@ -102,7 +106,6 @@ impl<A, AC, B> AssetIssue<A, AC, B> for () {
 	fn asset_issue(_: A, _: AC, _: B) {}
 }
 
-
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
@@ -111,4 +114,65 @@ pub trait AssetRedeem<AssetId, AccountId, Balance> {
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 	fn asset_redeem(_: A, _: AC, _: B, _: Vec<u8>) {}
+}
+
+#[derive(Clone, Encode, Decode)]
+pub enum BlockchainType {
+	BIFROST,
+	EOS,
+}
+
+impl Default for BlockchainType {
+	fn default() -> Self {
+		BlockchainType::BIFROST
+	}
+}
+
+/// Symbol type of bridge asset
+#[derive(Clone, Default, Encode, Decode)]
+pub struct BridgeAssetSymbol<
+	Precision: Encode + Decode,
+	Symbol: Encode + Decode
+> {
+	blockchain: BlockchainType,
+	symbol: Symbol,
+	precision: Precision,
+}
+
+/// Bridge asset type
+#[derive(Clone, Default, Encode, Decode)]
+pub struct BridgeAssetBalance<
+	Precision: Encode + Decode,
+	Symbol: Encode + Decode,
+	Balance: SaturatedConversion
+> {
+	pub symbol: BridgeAssetSymbol<Precision, Symbol>,
+	pub amount: Balance,
+}
+
+/// Bridge asset from other blockchain to Bifrost
+pub trait BridgeAssetFrom<
+	AccountId,
+	Precision: Encode + Decode,
+	Symbol: Encode + Decode,
+	Balance: SaturatedConversion
+> {
+	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<Precision, Symbol, Balance>);
+}
+
+impl<A, P, S, B> BridgeAssetFrom<A, P, S, B> for () where P: Encode + Decode, S: Encode + Decode {
+	fn bridge_asset_from(_: A, _: BridgeAssetBalance<P, S, B>) {}
+}
+
+/// Bridge asset from Bifrost to other blockchain
+pub trait BridgeAssetTo<
+	Precision: Encode + Decode,
+	Symbol: Encode + Decode,
+	Balance
+> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Symbol, Balance>);
+}
+
+impl<P, S, B> BridgeAssetTo<P, S, B> for () where P: Encode + Decode, S: Encode + Decode {
+	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, S, B>) {}
 }
