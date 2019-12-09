@@ -16,13 +16,25 @@
 
 #![cfg(test)]
 
-use support::{impl_outer_origin, impl_outer_event, parameter_types};
+use support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
+use substrate_primitives::H256;
 use sr_primitives::{
 	Perbill,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize},
 };
-use substrate_primitives::H256;
+use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::{Header, TestXt}};
+use super::*;
+
+impl_outer_dispatch! {
+	pub enum Call for Test where origin: Origin {
+		bridge_eos::BridgeEos,
+	}
+}
+
+/// An extrinsic type used for tests.
+pub type Extrinsic = TestXt<Call, ()>;
+type SubmitTransaction = system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
@@ -68,19 +80,24 @@ impl system::Trait for Test {
 
 impl crate::Trait for Test {
 	type Event = TestEvent;
+	type Balance = u64;
+	type Symbol = Vec<u8>;
+	type BridgeAssetFrom = ();
+	type Call = Call;
+	type SubmitTransaction = SubmitTransaction;
 }
 
-pub type BridgeEOSTestModule = crate::Module<Test>;
+pub type BridgeEos = crate::Module<Test>;
 pub type System = system::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
-		BridgeEOSTestModule::on_finalize(System::block_number());
+		BridgeEos::on_finalize(System::block_number());
 		System::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
-		BridgeEOSTestModule::on_initialize(System::block_number());
+		BridgeEos::on_initialize(System::block_number());
 	}
 }
 

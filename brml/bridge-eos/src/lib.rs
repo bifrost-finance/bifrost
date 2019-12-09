@@ -16,14 +16,23 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use bridge;
+use codec::{Encode, Decode};
 use eos_chain::{
-	Action, ActionReceipt, Checksum256, IncrementalMerkle, merkle,
-	ProducerKey, ProducerSchedule, SignedBlockHeader, Digest,
+	Action, ActionReceipt, Asset, Checksum256, IncrementalMerkle, merkle,
+	ProducerKey, ProducerSchedule, SignedBlockHeader, Symbol, Digest,
 };
 use rstd::prelude::Vec;
-use support::{decl_module, decl_storage, decl_event, ensure};
+use support::{decl_error, decl_module, decl_storage, decl_event, ensure, Parameter};
 use system::ensure_root;
+use node_primitives::{BridgeAssetFrom, BridgeAssetTo, BridgeAssetBalance};
+use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
+use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
+use system::offchain::SubmitUnsignedTransaction;
+use transaction::TxOut;
+use core::str::FromStr;
 
+mod transaction;
 mod mock;
 mod tests;
 
@@ -44,6 +53,24 @@ pub type VersionId = u32;
 
 pub trait Trait: system::Trait {
 	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+
+	/// The units in which we record balances.
+	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record asset precision.
+	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record asset symbol.
+	type Symbol: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// Bridge asset from another blockchain.
+	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Symbol, Self::Balance>;
+
+	/// A dispatchable call type.
+	type Call: From<Call<Self>>;
+
+	/// A transaction submitter.
+	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 decl_event! {
@@ -60,6 +87,8 @@ decl_storage! {
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
 		PendingScheduleVersion: VersionId;
+
+		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::Balance>>;
 	}
 }
 
@@ -141,6 +170,12 @@ decl_module! {
 			);
 
 			Self::deposit_event(Event::ProveAction);
+		}
+
+		// Runs after every block.
+		fn offchain_worker(now_block: T::BlockNumber) {
+			#[cfg(feature = "std")]
+			Self::offchain(now_block);
 		}
 	}
 }
@@ -250,5 +285,64 @@ impl<T: Trait> Module<T> {
 			(true, true) => Ok(()),
 			_ => Err(Error::MerkleRootVerificationFailure),
 		}
+	}
+
+	fn tx_can_sign() -> bool {
+		unimplemented!();
+	}
+
+	fn tx_is_signed() -> bool {
+		unimplemented!();
+	}
+
+	/// generate transaction for transfer amount to
+	#[cfg(feature = "std")]
+	fn tx_transfer_to(
+		raw_to: Vec<u8>,
+		bridge_asset: BridgeAssetBalance<T::Precision, T::Symbol, T::Balance>
+	) -> Result<TxOut<T::Balance>, Error> {
+		let raw_from: Vec<u8> = Vec::new();
+//		let symbol = Symbol::from_str("4,EOS").map_err(Error::from)?;
+		let symbol = Symbol::from_str("4,EOS").unwrap();
+		let raw_amount = bridge_asset.amount;
+		let amount = Asset {
+			amount: (raw_amount.saturated_into::<u128>() / (10u128.pow(12 - symbol.precision() as u32))) as i64,
+			symbol,
+		};
+		let mut tx_out = TxOut::genrate_transfer(raw_from, raw_to, amount).unwrap();
+
+		if Self::tx_can_sign() && !Self::tx_is_signed() {
+			tx_out = tx_out.sign().unwrap();
+		}
+
+		<BridgeTxOuts<T>>::append([tx_out.clone()].into_iter());
+
+		Ok(tx_out)
+	}
+
+	fn send_tx_result() {
+		unimplemented!();
+	}
+
+	#[cfg(feature = "std")]
+	fn offchain(now_block: T::BlockNumber) {
+		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
+			for bto in bridge_tx_outs.iter_mut() {
+				if Self::tx_can_sign() && !Self::tx_is_signed() {
+					*bto = bto.sign().unwrap();
+				}
+
+				if bto.reach_threshold() {
+					*bto = bto.send().unwrap();
+				}
+			}
+		});
+	}
+}
+
+impl<T: Trait> BridgeAssetTo<T::Precision, T::Symbol, T::Balance> for Module<T> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Symbol, T::Balance>) {
+		#[cfg(feature = "std")]
+		Self::tx_transfer_to(target, bridge_asset);
 	}
 }
