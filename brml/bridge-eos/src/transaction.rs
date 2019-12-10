@@ -5,10 +5,8 @@ use substrate_primitives::offchain::Timestamp;
 use eos_chain::{Transaction, PermissionLevel, Action, Asset, Symbol, SignedTransaction, Read};
 #[cfg(feature = "std")]
 use eos_rpc::{HyperClient, GetInfo, GetBlock, get_info, get_block, push_transaction, PushTransaction};
-#[cfg(feature = "std")]
-use std::str::FromStr;
 use sr_primitives::traits::{SimpleArithmetic, SaturatedConversion};
-use eos_chain::SerializeData;
+use eos_chain::{SerializeData, Signature};
 use core::str::from_utf8;
 
 pub type TransactionSignature = Vec<u8>;
@@ -57,9 +55,11 @@ impl Default for MultiSig {
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct MultiSigTx<Balance> {
+	/// Chain id of Eos node that transaction will be sent
+	chain_id: Vec<u8>,
 	/// Transaction raw data for signing
 	raw_tx: Vec<u8>,
-    chain_id: Vec<u8>,
+	/// Signatures of transaction
 	multi_sig: MultiSig,
 	amount: Balance,
 	to_name: Vec<u8>,
@@ -67,12 +67,16 @@ pub struct MultiSigTx<Balance> {
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub enum TxOut<Balance> {
+	/// Generating and signing Eos multi-sig transaction
 	Pending(MultiSigTx<Balance>),
+	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
 	Processing {
 		tx_id: Vec<u8>,
 		multi_sig_tx: MultiSigTx<Balance>,
 	},
+	/// Eos multi-sig transaction processed successfully, so only save tx id
 	Success(Vec<u8>),
+	/// Eos multi-sig transaction processed failed
 	Fail {
 		tx_id: Vec<u8>,
 		reason: Vec<u8>,
@@ -136,28 +140,47 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 	}
 
 	#[cfg(feature = "std")]
-	pub fn sign(&self) -> Result<Self, Error> {
-		unimplemented!()
+	pub fn sign(&mut self) -> Result<Self, Error> {
+		// import private key
+		let sk = eos_keys::secret::SecretKey::from_wif("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
+			.map_err(Error::SecretKeyError)?;
+
+		match self {
+			TxOut::Pending(ref mut multi_sig_tx) => {
+				let chain_id = &multi_sig_tx.chain_id;
+				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?;
+				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosPrimitivesError)?;
+				let sig_hex_data = sig.to_serialize_data();
+				multi_sig_tx.multi_sig.signatures.push(sig_hex_data);
+
+				Ok(self.clone())
+			},
+			_ => Err(Error::InvalidTxOutType)
+		}
 	}
 
 	#[cfg(feature = "std")]
 	pub fn send(&self) -> Result<Self, Error> {
 		match self {
 			TxOut::Pending(ref multi_sig_tx) => {
-				// import private key
-				let sk = eos_keys::secret::SecretKey::from_wif("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
-					.map_err(Error::SecretKeyError)?;
-
 				let node: &'static str = "http://47.101.139.226:8888/";
 				let hyper_client = HyperClient::new(node);
 
+				let signatures = multi_sig_tx.multi_sig.signatures.iter()
+					.map(|sig|
+						Signature::read(&sig, &mut 0).map_err(Error::EosReadError)
+					)
+					.map(Result::unwrap)
+					.collect::<Vec<Signature>>();
+				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0)
+					.map_err(Error::EosReadError)?;
 				let signed_trx = SignedTransaction {
-					signatures: vec![],
-//					signatures: vec![multi_sig_tx.multi_sig.signatures.into()],
+					signatures,
 					context_free_data: vec![],
-					trx: Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?,
+					trx,
 				};
-				let push_tx: PushTransaction = push_transaction(signed_trx).fetch(&hyper_client).map_err(Error::HttpResponseError)?;
+				let push_tx: PushTransaction = push_transaction(signed_trx).fetch(&hyper_client)
+					.map_err(Error::HttpResponseError)?;
 				let tx_id = hex::decode(push_tx.transaction_id).map_err(Error::HexError)?;
 
 				Ok(TxOut::Processing {
