@@ -16,21 +16,19 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use bridge;
-use codec::{Encode, Decode};
-use eos_chain::{
-	Action, ActionReceipt, Asset, Checksum256, IncrementalMerkle, merkle,
-	ProducerKey, ProducerSchedule, SignedBlockHeader, Symbol, Digest,
-};
+use core::str::FromStr;
+
+use eos_chain::{Action, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, merkle, ProducerKey, ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode};
 use rstd::prelude::Vec;
-use support::{decl_error, decl_module, decl_storage, decl_event, ensure, Parameter};
-use system::ensure_root;
-use node_primitives::{BridgeAssetFrom, BridgeAssetTo, BridgeAssetBalance};
 use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
 use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
+use support::{decl_error, decl_event, decl_module, decl_storage, ensure, Parameter};
+use system::ensure_root;
 use system::offchain::SubmitUnsignedTransaction;
+
+use bridge;
+use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo};
 use transaction::TxOut;
-use core::str::FromStr;
 
 mod transaction;
 mod mock;
@@ -47,6 +45,8 @@ pub enum Error {
 	GetBlockIdFailure,
 	CalculateMerkleError,
 	EmptyActionMerklePaths,
+	EosChainError(eos_chain::Error),
+	TransactionError(transaction::Error),
 }
 
 pub type VersionId = u32;
@@ -61,7 +61,7 @@ pub trait Trait: system::Trait {
 	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	/// The units in which we record asset symbol.
-	type Symbol: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Symbol: Member + Parameter + SimpleArithmetic + Default + Copy + AsRef<str>;
 
 	/// Bridge asset from another blockchain.
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Symbol, Self::Balance>;
@@ -185,7 +185,7 @@ impl<T: Trait> Module<T> {
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
 		block_headers: Vec<SignedBlockHeader>,
-		block_ids_list: Vec<Vec<Checksum256>>
+		block_ids_list: Vec<Vec<Checksum256>>,
 	) -> Result<(), Error> {
 		ensure!(block_headers.len() == 15, Error::LengthNotEqual(15, block_headers.len()));
 		ensure!(block_ids_list.len() == 15, Error::LengthNotEqual(15, block_ids_list.len()));
@@ -207,7 +207,7 @@ impl<T: Trait> Module<T> {
 	#[cfg(feature = "std")]
 	fn verify_block_header_signature(
 		block_header: &SignedBlockHeader,
-		expected_mroot: &Checksum256
+		expected_mroot: &Checksum256,
 	) -> Result<(), Error> {
 		let pending_schedule = match block_header.block_header.new_producers {
 			Some(ref schedule) => schedule.clone(),
@@ -215,7 +215,7 @@ impl<T: Trait> Module<T> {
 				let pending_schedule_version = PendingScheduleVersion::get();
 				let producers = ProducerSchedules::get(pending_schedule_version).0;
 				ProducerSchedule::new(pending_schedule_version, producers)
-			},
+			}
 		};
 		let producer = block_header.block_header.producer;
 		let pk = pending_schedule.get_producer_key(producer);
@@ -232,7 +232,7 @@ impl<T: Trait> Module<T> {
 	fn calculate_block_header_merkle_root(
 		merkle: &mut IncrementalMerkle,
 		block_header: &SignedBlockHeader,
-		block_ids: &[Checksum256]
+		block_ids: &[Checksum256],
 	) -> Result<(), Error> {
 		for id in block_ids {
 			merkle.append(*id).map_err(|_| Error::IncreMerkleError)?;
@@ -248,7 +248,7 @@ impl<T: Trait> Module<T> {
 		block_header: &SignedBlockHeader,
 		actions: &[Action],
 		action_merkle_paths: &[Checksum256],
-		action_reciepts: &[ActionReceipt]
+		action_reciepts: &[ActionReceipt],
 	) -> Result<(), Error> {
 		if action_merkle_paths.is_empty() || action_merkle_paths.len() != action_reciepts.len() {
 			return Err(Error::MerkleRootVerificationFailure);
@@ -297,22 +297,23 @@ impl<T: Trait> Module<T> {
 
 	/// generate transaction for transfer amount to
 	#[cfg(feature = "std")]
-	fn tx_transfer_to(
+	fn tx_transfer_to<P, S, B>(
 		raw_to: Vec<u8>,
-		bridge_asset: BridgeAssetBalance<T::Precision, T::Symbol, T::Balance>
-	) -> Result<TxOut<T::Balance>, Error> {
+		bridge_asset: BridgeAssetBalance<P, S, B>,
+	) -> Result<TxOut<T::Balance>, Error>
+		where
+			P: SimpleArithmetic,
+			S: AsRef<str>,
+			B: SimpleArithmetic,
+	{
 		let raw_from: Vec<u8> = Vec::new();
-//		let symbol = Symbol::from_str("4,EOS").map_err(Error::from)?;
-		let symbol = Symbol::from_str("4,EOS").unwrap();
-		let raw_amount = bridge_asset.amount;
-		let amount = Asset {
-			amount: (raw_amount.saturated_into::<u128>() / (10u128.pow(12 - symbol.precision() as u32))) as i64,
-			symbol,
-		};
-		let mut tx_out = TxOut::genrate_transfer(raw_from, raw_to, amount).unwrap();
+
+		let amount = Self::convert_to_eos_asset::<P, S, B>(bridge_asset)?;
+		let mut tx_out = TxOut::genrate_transfer(raw_from, raw_to, amount)
+			.map_err(Error::TransactionError)?;
 
 		if Self::tx_can_sign() && !Self::tx_is_signed() {
-			tx_out = tx_out.sign().unwrap();
+			tx_out = tx_out.sign().map_err(Error::TransactionError)?;
 		}
 
 		<BridgeTxOuts<T>>::append([tx_out.clone()].into_iter());
@@ -337,6 +338,23 @@ impl<T: Trait> Module<T> {
 				}
 			}
 		});
+	}
+
+	fn convert_to_eos_asset<P, S, B>(
+		bridge_asset: BridgeAssetBalance<P, S, B>
+	) -> Result<Asset, Error>
+		where
+			P: SimpleArithmetic,
+			S: AsRef<str>,
+			B: SimpleArithmetic
+	{
+		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
+		let code = SymbolCode::from_str(bridge_asset.symbol.symbol.as_ref())
+			.map_err(|err| Error::EosChainError(err.into()))?;
+		let symbol = Symbol::new_with_code(precision, code);
+		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+
+		Ok(Asset::new(amount, symbol))
 	}
 }
 
