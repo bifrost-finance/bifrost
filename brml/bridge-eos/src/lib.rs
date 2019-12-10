@@ -19,7 +19,7 @@
 use bridge;
 use codec::{Encode, Decode};
 use eos_chain::{
-	Action, ActionReceipt, Asset, Checksum256, IncrementalMerkle, merkle,
+	Action, ActionReceipt, Asset, Checksum256, IncrementalMerkle, verify_proof,
 	ProducerKey, ProducerSchedule, SignedBlockHeader, Symbol, Digest,
 };
 use rstd::prelude::Vec;
@@ -143,30 +143,48 @@ decl_module! {
 			Self::deposit_event(Event::ChangeSchedule(pending_schedule_version, ps.version));
 		}
 
-		fn verify_block_headers_action_merkle(
+		fn prove_action(
 			origin,
-			block_header: SignedBlockHeader,
-			actions: Vec<Action>,
+			action: Action,
+			action_reciept: ActionReceipt,
 			action_merkle_paths: Vec<Checksum256>,
-			action_reciepts: Vec<ActionReceipt>
+			merkle: IncrementalMerkle,
+			block_headers: Vec<SignedBlockHeader>,
+			block_ids_list: Vec<Vec<Checksum256>>
 		) {
 			let _ = ensure_root(origin)?;
 
 			ensure!(
-				!actions.is_empty() &&
-				!action_reciepts.is_empty(),
-				"actions or action receipts cannot be empty."
+				!block_headers.is_empty(),
+				"The signed block headers cannot be empty."
 			);
-			ensure!(action_reciepts.len() > 0, "action receipts cannot be empty.");
 			ensure!(
-				action_merkle_paths.len() == action_reciepts.len(),
-				"the count of action merkle paths should be equal to action_reciepts."
+				block_ids_list.len() ==  block_headers.len(),
+				"The block ids list cannot be empty."
+			);
+
+			let action_hash = action.digest();
+			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
+			let action_hash = action_hash.unwrap();
+			ensure!(
+				action_hash == action_reciept.act_digest,
+				"current action hash isn't equal to act_digest from action_receipt."
+			);
+
+			let leaf = action_reciept.digest();
+			ensure!(leaf.is_ok(), "failed to calculate action digest.");
+			let leaf = leaf.unwrap();
+
+			let block_under_verification = &block_headers[0];
+			ensure!(
+				verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
+				"failed to prove action."
 			);
 
 			#[cfg(feature = "std")]
 			ensure!(
-				Self::prove_action_merkle_root(&block_header, &actions, &action_merkle_paths, &action_reciepts).is_ok(),
-				"action merkle verification error"
+				Self::verify_block_headers(merkle, block_headers, block_ids_list).is_ok(),
+				"Failed to verify blocks."
 			);
 
 			Self::deposit_event(Event::ProveAction);
@@ -241,50 +259,6 @@ impl<T: Trait> Module<T> {
 		// append previous block id
 		merkle.append(block_header.block_header.previous).map_err(|_| Error::IncreMerkleError)?;
 		Ok(())
-	}
-
-	#[cfg(feature = "std")]
-	fn prove_action_merkle_root(
-		block_header: &SignedBlockHeader,
-		actions: &[Action],
-		action_merkle_paths: &[Checksum256],
-		action_reciepts: &[ActionReceipt]
-	) -> Result<(), Error> {
-		if action_merkle_paths.is_empty() || action_merkle_paths.len() != action_reciepts.len() {
-			return Err(Error::MerkleRootVerificationFailure);
-		}
-
-		// compare action hash to act_digest in action receipt
-		for action in actions {
-			let action_hash = action.digest().map_err(|_| Error::CalculateMerkleError)?;
-			let mut equal = false;
-			for receipt in action_reciepts {
-				if action_hash == receipt.act_digest {
-					equal = true;
-					break;
-				}
-			}
-			if !equal { return Err(Error::MerkleRootVerificationFailure); }
-		}
-
-		// verify action hash with action receipts digest
-		let mut actual_action_merkle_paths = Vec::with_capacity(action_merkle_paths.len());
-		for receipt in action_reciepts.iter() {
-			let path = receipt.digest().map_err(|_| Error::CalculateMerkleError)?;
-			actual_action_merkle_paths.push(path);
-		}
-
-		// verify action merkle path
-		let actual_action_mroot = merkle(actual_action_merkle_paths.to_vec()).map_err(|_| Error::CalculateMerkleError)?;
-		let expected_action_mroot = merkle(action_merkle_paths.to_vec()).map_err(|_| Error::CalculateMerkleError)?;
-
-		match (
-			actual_action_mroot == expected_action_mroot,
-			actual_action_mroot == block_header.block_header.action_mroot
-		) {
-			(true, true) => Ok(()),
-			_ => Err(Error::MerkleRootVerificationFailure),
-		}
 	}
 
 	fn tx_can_sign() -> bool {
