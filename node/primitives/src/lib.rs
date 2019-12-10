@@ -130,49 +130,33 @@ impl Default for BlockchainType {
 
 /// Symbol type of bridge asset
 #[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetSymbol<
-	Precision: Encode + Decode,
-	Symbol: Encode + Decode
-> {
-	blockchain: BlockchainType,
-	symbol: Symbol,
-	precision: Precision,
+pub struct BridgeAssetSymbol<Precision, Symbol> {
+	pub blockchain: BlockchainType,
+	pub symbol: Symbol,
+	pub precision: Precision,
 }
 
 /// Bridge asset type
 #[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetBalance<
-	Precision: Encode + Decode,
-	Symbol: Encode + Decode,
-	Balance: SaturatedConversion
-> {
+pub struct BridgeAssetBalance<Precision, Symbol, Balance> {
 	pub symbol: BridgeAssetSymbol<Precision, Symbol>,
 	pub amount: Balance,
 }
 
 /// Bridge asset from other blockchain to Bifrost
-pub trait BridgeAssetFrom<
-	AccountId,
-	Precision: Encode + Decode,
-	Symbol: Encode + Decode,
-	Balance: SaturatedConversion
-> {
+pub trait BridgeAssetFrom<AccountId, Precision, Symbol, Balance> {
 	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<Precision, Symbol, Balance>);
 }
 
-impl<A, P, S, B> BridgeAssetFrom<A, P, S, B> for () where P: Encode + Decode, S: Encode + Decode {
+impl<A, P, S, B> BridgeAssetFrom<A, P, S, B> for () {
 	fn bridge_asset_from(_: A, _: BridgeAssetBalance<P, S, B>) {}
 }
 
 /// Bridge asset from Bifrost to other blockchain
-pub trait BridgeAssetTo<
-	Precision: Encode + Decode,
-	Symbol: Encode + Decode,
-	Balance
-> {
+pub trait BridgeAssetTo<Precision, Symbol, Balance> {
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Symbol, Balance>);
 }
 
-impl<P, S, B> BridgeAssetTo<P, S, B> for () where P: Encode + Decode, S: Encode + Decode {
+impl<P, S, B> BridgeAssetTo<P, S, B> for () {
 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, S, B>) {}
 }
