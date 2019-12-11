@@ -1,35 +1,17 @@
-use codec::{Encode, Decode};
-use rstd::prelude::*;
-use substrate_primitives::offchain::Timestamp;
-#[cfg(feature = "std")]
-use eos_chain::{Transaction, PermissionLevel, Action, Asset, Symbol, SignedTransaction, Read};
-#[cfg(feature = "std")]
-use eos_rpc::{HyperClient, GetInfo, GetBlock, get_info, get_block, push_transaction, PushTransaction};
-use sr_primitives::traits::{SimpleArithmetic, SaturatedConversion};
-use eos_chain::{SerializeData, Signature};
 use core::str::from_utf8;
 
+use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use eos_chain::{Action, Asset, PermissionLevel, Read, SignedTransaction, Transaction};
+use eos_chain::{SerializeData, Signature};
+#[cfg(feature = "std")]
+use eos_rpc::{get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction};
+use rstd::prelude::*;
+use sr_primitives::traits::SimpleArithmetic;
+
+use crate::Error;
+
 pub type TransactionSignature = Vec<u8>;
-
-#[cfg(feature = "std")]
-#[derive(Debug)]
-pub enum Error {
-	InvalidTxOutType,
-	EosPrimitivesError(eos_chain::Error),
-	EosReadError(eos_chain::bytes::ReadError),
-	EosSerializationDataError(eos_chain::Error),
-	HttpResponseError(eos_rpc::Error),
-	ParseUtf8Error(core::str::Utf8Error),
-	SecretKeyError(eos_keys::error::Error),
-	HexError(hex::FromHexError),
-}
-
-#[cfg(feature = "std")]
-impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
-	fn from(err: eos_chain::symbol::ParseSymbolError) -> Self {
-		Self::EosPrimitivesError(eos_chain::Error::ParseSymbolError(err))
-	}
-}
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct MultiSig {
@@ -96,34 +78,34 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 		let hyper_client = HyperClient::new(node);
 
 		// fetch info
-		let info: GetInfo = get_info().fetch(&hyper_client).map_err(Error::HttpResponseError)?;
+		let info: GetInfo = get_info().fetch(&hyper_client).map_err(Error::EosRpcError)?;
 		let chain_id: Vec<u8> = hex::decode(info.chain_id).map_err(Error::HexError)?;
 		let head_block_id = info.head_block_id;
 
 		// fetch block
-		let block: GetBlock = get_block(head_block_id).fetch(&hyper_client).map_err(Error::HttpResponseError)?;
+		let block: GetBlock = get_block(head_block_id).fetch(&hyper_client).map_err(Error::EosRpcError)?;
 		let ref_block_num = (block.block_num & 0xffff) as u16;
 		let ref_block_prefix = block.ref_block_prefix as u32;
 
-		let from = core::str::from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
-		let to = core::str::from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
+		let from = from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
+		let to = from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
 
 		// Construct action
 		let permission_level = PermissionLevel::from_str(
 			from,
 			"active",
-		).map_err(Error::EosPrimitivesError)?;
+		).map_err(Error::EosChainError)?;
 
 		let memo = "a memo";
 		let action = Action::transfer(from, to, amount.to_string().as_ref(), memo)
-			.map_err(Error::EosPrimitivesError)?;
+			.map_err(Error::EosChainError)?;
 
 		let actions = vec![action];
 
 		// Construct transaction
 		let tx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
 		let multi_sig_tx = MultiSigTx {
-			raw_tx: tx.to_serialize_data().map_err(self::Error::EosSerializationDataError)?,
+			raw_tx: tx.to_serialize_data().map_err(Error::EosChainError)?,
 			chain_id,
 			multi_sig: Default::default(),
 			amount: Default::default(),
@@ -144,14 +126,14 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 	pub fn sign(&mut self) -> Result<Self, Error> {
 		// import private key
 		let sk = eos_keys::secret::SecretKey::from_wif("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
-			.map_err(Error::SecretKeyError)?;
+			.map_err(Error::EosKeysError)?;
 
 		match self {
 			TxOut::Pending(ref mut multi_sig_tx) => {
 				let chain_id = &multi_sig_tx.chain_id;
 				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?;
-				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosPrimitivesError)?;
-				let sig_hex_data = sig.to_serialize_data().map_err(self::Error::EosSerializationDataError)?;
+				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosChainError)?;
+				let sig_hex_data = sig.to_serialize_data().map_err(Error::EosChainError)?;
 				multi_sig_tx.multi_sig.signatures.push(sig_hex_data);
 
 				Ok(self.clone())
@@ -181,7 +163,7 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 					trx,
 				};
 				let push_tx: PushTransaction = push_transaction(signed_trx).fetch(&hyper_client)
-					.map_err(Error::HttpResponseError)?;
+					.map_err(Error::EosRpcError)?;
 				let tx_id = hex::decode(push_tx.transaction_id).map_err(Error::HexError)?;
 
 				Ok(TxOut::Processing {
