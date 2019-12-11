@@ -48,6 +48,9 @@ pub type AssetId = u32;
 /// Balance of an account.
 pub type Balance = u128;
 
+/// Precision of symbol.
+pub type Precision = u32;
+
 /// Type used for expressing timestamp.
 pub type Moment = u64;
 
@@ -130,33 +133,33 @@ impl Default for BlockchainType {
 
 /// Symbol type of bridge asset
 #[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetSymbol<Precision, Symbol> {
+pub struct BridgeAssetSymbol<Precision> {
 	pub blockchain: BlockchainType,
-	pub symbol: Symbol,
+	pub symbol: Vec<u8>,
 	pub precision: Precision,
 }
 
 /// Bridge asset type
 #[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetBalance<Precision, Symbol, Balance> {
-	pub symbol: BridgeAssetSymbol<Precision, Symbol>,
+pub struct BridgeAssetBalance<Precision, Balance> {
+	pub symbol: BridgeAssetSymbol<Precision>,
 	pub amount: Balance,
 }
 
 /// Bridge asset from other blockchain to Bifrost
-pub trait BridgeAssetFrom<AccountId, Precision, Symbol, Balance> {
-	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<Precision, Symbol, Balance>);
+pub trait BridgeAssetFrom<AccountId, Precision, Balance> {
+	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<Precision, Balance>);
 }
 
-impl<A, P, S, B> BridgeAssetFrom<A, P, S, B> for () {
-	fn bridge_asset_from(_: A, _: BridgeAssetBalance<P, S, B>) {}
+impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
+	fn bridge_asset_from(_: A, _: BridgeAssetBalance<P, B>) {}
 }
 
 /// Bridge asset from Bifrost to other blockchain
-pub trait BridgeAssetTo<Precision, Symbol, Balance> {
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Symbol, Balance>);
+pub trait BridgeAssetTo<Precision, Balance> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Balance>);
 }
 
-impl<P, S, B> BridgeAssetTo<P, S, B> for () {
-	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, S, B>) {}
+impl<P, B> BridgeAssetTo<P, B> for () {
+	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, B>) {}
 }

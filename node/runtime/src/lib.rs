@@ -27,7 +27,7 @@ use support::{
 	traits::{SplitTwoWays, Currency, Randomness},
 };
 use primitives::u32_trait::{_1, _2, _3, _4};
-use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, AssetId};
+use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, AssetId, Precision};
 use sr_api::impl_runtime_apis;
 use sr_primitives::{Permill, Perbill, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str};
 use sr_primitives::curve::PiecewiseLinear;
@@ -532,8 +532,8 @@ impl brml_bridge::Trait for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type AssetIssue = Assets;
-	type Call = Call;
-	type SubmitTransaction = BridgeSubmitTransaction;
+	type Precision = Precision;
+	type BridgeAssetTo = BridgeEOS;
 }
 
 impl brml_exchange::Trait for Runtime {
@@ -543,6 +543,11 @@ impl brml_exchange::Trait for Runtime {
 
 impl brml_bridge_eos::Trait for Runtime {
 	type Event = Event;
+	type Balance = Balance;
+	type Precision = Precision;
+	type BridgeAssetFrom = Bridge;
+//	type Call = Call;
+//	type SubmitTransaction = BridgeSubmitTransaction;
 }
 
 // bifrost rumtine time end
@@ -581,7 +586,7 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
-		Bridge: brml_bridge::{Module, Call, Storage, Event, ValidateUnsigned},
+		Bridge: brml_bridge::{Module, Call, Storage, Event},
 		Exchange: brml_exchange::{Module, Call, Storage},
 		BridgeEOS: brml_bridge_eos::{Module, Call, Storage, Event},
 	}

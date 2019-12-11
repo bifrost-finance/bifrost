@@ -48,8 +48,20 @@ pub enum Error {
 	GetBlockIdFailure,
 	CalculateMerkleError,
 	EmptyActionMerklePaths,
+	InvalidTxOutType,
+	ParseUtf8Error(core::str::Utf8Error),
+	HexError(hex::FromHexError),
 	EosChainError(eos_chain::Error),
-	TransactionError(transaction::Error),
+	EosReadError(eos_chain::ReadError),
+	EosRpcError(eos_rpc::Error),
+	EosKeysError(eos_keys::error::Error),
+}
+
+#[cfg(feature = "std")]
+impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
+	fn from(err: eos_chain::symbol::ParseSymbolError) -> Self {
+		Self::EosChainError(eos_chain::Error::ParseSymbolError(err))
+	}
 }
 
 pub type VersionId = u32;
@@ -63,17 +75,14 @@ pub trait Trait: system::Trait {
 	/// The units in which we record asset precision.
 	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
 
-	/// The units in which we record asset symbol.
-	type Symbol: Member + Parameter + SimpleArithmetic + Default + Copy + AsRef<str>;
-
 	/// Bridge asset from another blockchain.
-	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Symbol, Self::Balance>;
+	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
 
-	/// A dispatchable call type.
-	type Call: From<Call<Self>>;
-
-	/// A transaction submitter.
-	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
+//	/// A dispatchable call type.
+//	type Call: From<Call<Self>>;
+//
+//	/// A transaction submitter.
+//	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 decl_event! {
@@ -274,23 +283,21 @@ impl<T: Trait> Module<T> {
 
 	/// generate transaction for transfer amount to
 	#[cfg(feature = "std")]
-	fn tx_transfer_to<P, S, B>(
+	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
-		bridge_asset: BridgeAssetBalance<P, S, B>,
+		bridge_asset: BridgeAssetBalance<P, B>,
 	) -> Result<TxOut<T::Balance>, Error>
 		where
 			P: SimpleArithmetic,
-			S: AsRef<str>,
 			B: SimpleArithmetic,
 	{
 		let raw_from: Vec<u8> = Vec::new();
 
-		let amount = Self::convert_to_eos_asset::<P, S, B>(bridge_asset)?;
-		let mut tx_out = TxOut::genrate_transfer(raw_from, raw_to, amount)
-			.map_err(Error::TransactionError)?;
+		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
+		let mut tx_out = TxOut::genrate_transfer(raw_from, raw_to, amount)?;
 
 		if Self::tx_can_sign() && !Self::tx_is_signed() {
-			tx_out = tx_out.sign().map_err(Error::TransactionError)?;
+			tx_out = tx_out.sign()?;
 		}
 
 		<BridgeTxOuts<T>>::append([tx_out.clone()].into_iter());
@@ -317,16 +324,16 @@ impl<T: Trait> Module<T> {
 		});
 	}
 
-	fn convert_to_eos_asset<P, S, B>(
-		bridge_asset: BridgeAssetBalance<P, S, B>
+	fn convert_to_eos_asset<P, B>(
+		bridge_asset: BridgeAssetBalance<P, B>
 	) -> Result<Asset, Error>
 		where
 			P: SimpleArithmetic,
-			S: AsRef<str>,
 			B: SimpleArithmetic
 	{
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
-		let code = SymbolCode::from_str(bridge_asset.symbol.symbol.as_ref())
+		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(Error::ParseUtf8Error)?;
+		let code = SymbolCode::from_str(symbol_str)
 			.map_err(|err| Error::EosChainError(err.into()))?;
 		let symbol = Symbol::new_with_code(precision, code);
 		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
@@ -335,8 +342,8 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetTo<T::Precision, T::Symbol, T::Balance> for Module<T> {
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Symbol, T::Balance>) {
+impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
 		#[cfg(feature = "std")]
 		Self::tx_transfer_to(target, bridge_asset);
 	}
