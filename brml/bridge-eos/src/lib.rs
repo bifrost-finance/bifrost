@@ -23,7 +23,7 @@ use eos_chain::{
 	Action, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
 	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, verify_proof
 };
-use rstd::prelude::Vec;
+use rstd::prelude::*;
 use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
 use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
 use support::{decl_error, decl_event, decl_module, decl_storage, ensure, Parameter};
@@ -96,7 +96,7 @@ decl_event! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as BridgeEOS {
+	trait Store for Module<T: Trait> as BridgeEos {
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
 		PendingScheduleVersion: VersionId;
