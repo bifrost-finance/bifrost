@@ -18,15 +18,16 @@
 
 use core::str::FromStr;
 
+use codec::Encode;
 use eos_chain::{
-	Action, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, verify_proof,
-	ProducerKey, ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode
+	Action, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
+	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, verify_proof
 };
 use rstd::prelude::Vec;
 use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
 use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
 use support::{decl_error, decl_event, decl_module, decl_storage, ensure, Parameter};
-use system::ensure_root;
+use system::{ensure_root, ensure_none};
 use system::offchain::SubmitUnsignedTransaction;
 
 use bridge;
@@ -78,11 +79,11 @@ pub trait Trait: system::Trait {
 	/// Bridge asset from another blockchain.
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
 
-//	/// A dispatchable call type.
-//	type Call: From<Call<Self>>;
-//
-//	/// A transaction submitter.
-//	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
+	/// A dispatchable call type.
+	type Call: From<Call<Self>>;
+
+	/// A transaction submitter.
+	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 decl_event! {
@@ -202,6 +203,11 @@ decl_module! {
 			Self::deposit_event(Event::ProveAction);
 		}
 
+		fn tx_result(origin, block_num: T::BlockNumber) {
+			ensure_none(origin)?;
+			// TODO implement this function
+		}
+
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
 			#[cfg(feature = "std")]
@@ -305,10 +311,6 @@ impl<T: Trait> Module<T> {
 		Ok(tx_out)
 	}
 
-	fn send_tx_result() {
-		unimplemented!();
-	}
-
 	#[cfg(feature = "std")]
 	fn offchain(now_block: T::BlockNumber) {
 		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
@@ -346,5 +348,26 @@ impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
 		#[cfg(feature = "std")]
 		Self::tx_transfer_to(target, bridge_asset);
+	}
+}
+
+#[allow(deprecated)]
+impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
+	type Call = Call<T>;
+
+	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+		match call {
+			Call::tx_result(block_num) => {
+				let now_block = <system::Module<T>>::block_number().saturated_into::<u64>();
+				Ok(ValidTransaction {
+					priority: 0,
+					requires: vec![],
+					provides: vec![(now_block).encode()],
+					longevity: TransactionLongevity::max_value(),
+					propagate: true,
+				})
+			},
+			_ => UnknownTransaction::NoUnsignedValidator.into(),
+		}
 	}
 }

@@ -546,8 +546,8 @@ impl brml_bridge_eos::Trait for Runtime {
 	type Balance = Balance;
 	type Precision = Precision;
 	type BridgeAssetFrom = Bridge;
-//	type Call = Call;
-//	type SubmitTransaction = BridgeSubmitTransaction;
+	type Call = Call;
+	type SubmitTransaction = BridgeSubmitTransaction;
 }
 
 // bifrost rumtine time end

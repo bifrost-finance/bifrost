@@ -16,15 +16,13 @@
 
 //! Low-level types used throughout the Bifrost code.
 
-#![warn(missing_docs)]
-
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Encode, Decode};
 use rstd::prelude::*;
 use sr_primitives::{
 	generic,
-	traits::{Verify, BlakeTwo256, IdentifyAccount, SaturatedConversion},
+	traits::{Verify, BlakeTwo256, IdentifyAccount},
 	OpaqueExtrinsic,
 	MultiSignature
 };
@@ -119,6 +117,7 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
+/// Blockchain types
 #[derive(Clone, Encode, Decode)]
 pub enum BlockchainType {
 	BIFROST,
