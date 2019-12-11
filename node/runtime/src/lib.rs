@@ -533,7 +533,7 @@ impl brml_bridge::Trait for Runtime {
 	type AssetId = AssetId;
 	type AssetIssue = Assets;
 	type Precision = Precision;
-	type BridgeAssetTo = BridgeEOS;
+	type BridgeAssetTo = BridgeEos;
 }
 
 impl brml_exchange::Trait for Runtime {
@@ -588,7 +588,7 @@ construct_runtime!(
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 		Bridge: brml_bridge::{Module, Call, Storage, Event},
 		Exchange: brml_exchange::{Module, Call, Storage},
-		BridgeEOS: brml_bridge_eos::{Module, Call, Storage, Event},
+		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event},
 	}
 );
 

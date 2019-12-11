@@ -20,7 +20,7 @@ mod tests;
 
 use system::ensure_root;
 use sr_primitives::traits::{Member, SimpleArithmetic};
-use frame_support::{Parameter, decl_module, decl_event, decl_storage};
+use frame_support::{Parameter, decl_module, decl_storage};
 
 pub trait Trait: system::Trait {
 	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy;
@@ -29,7 +29,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as ExchangeStore {
+	trait Store for Module<T: Trait> as Exchange {
 		ExchangeRate get(fn get_exchange_rate): u64 = 1;
 		RatePerBlock get(fn get_rate_per_block): u64 = 0;
 	}
