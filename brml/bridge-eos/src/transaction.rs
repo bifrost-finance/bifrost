@@ -17,6 +17,7 @@ pub enum Error {
 	InvalidTxOutType,
 	EosPrimitivesError(eos_chain::Error),
 	EosReadError(eos_chain::bytes::ReadError),
+	EosSerializationDataError(eos_chain::Error),
 	HttpResponseError(eos_rpc::Error),
 	ParseUtf8Error(core::str::Utf8Error),
 	SecretKeyError(eos_keys::error::Error),
@@ -122,7 +123,7 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 		// Construct transaction
 		let tx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
 		let multi_sig_tx = MultiSigTx {
-			raw_tx: tx.to_serialize_data(),
+			raw_tx: tx.to_serialize_data().map_err(self::Error::EosSerializationDataError)?,
 			chain_id,
 			multi_sig: Default::default(),
 			amount: Default::default(),
@@ -150,7 +151,7 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 				let chain_id = &multi_sig_tx.chain_id;
 				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?;
 				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosPrimitivesError)?;
-				let sig_hex_data = sig.to_serialize_data();
+				let sig_hex_data = sig.to_serialize_data().map_err(self::Error::EosSerializationDataError)?;
 				multi_sig_tx.multi_sig.signatures.push(sig_hex_data);
 
 				Ok(self.clone())
