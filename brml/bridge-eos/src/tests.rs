@@ -20,14 +20,14 @@ use crate::*;
 use crate::mock::{new_test_ext, run_to_block, BridgeEos, Origin};
 use core::{convert::From, str::FromStr};
 use eos_chain::{
-	Action, ActionReceipt, Checksum256, get_proof,
-	IncrementalMerkle, ProducerSchedule, SignedBlockHeader
+	Action, ActionTransfer, ActionReceipt, Checksum256, get_proof,
+	IncrementalMerkle, ProducerSchedule, SignedBlockHeader, Read
 };
 #[cfg(feature = "std")]
 use std::{
 	error::Error,
 	fs::File,
-	io::Read,
+	io::Read as StdRead,
 	path::Path,
 };
 

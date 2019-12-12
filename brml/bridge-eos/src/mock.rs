@@ -20,10 +20,9 @@ use support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, paramete
 use substrate_primitives::H256;
 use sr_primitives::{
 	Perbill,
-	testing::Header,
+	testing::{Header, TestXt},
 	traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize},
 };
-use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::{Header, TestXt}};
 use super::*;
 
 impl_outer_dispatch! {
@@ -81,7 +80,7 @@ impl system::Trait for Test {
 impl crate::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
-	type Symbol = Vec<u8>;
+	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type SubmitTransaction = SubmitTransaction;
