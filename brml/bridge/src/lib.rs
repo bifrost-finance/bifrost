@@ -18,13 +18,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{decl_event, decl_module, decl_storage, Parameter};
+use frame_support::{decl_event, decl_module, decl_storage, ensure, Parameter};
 use rstd::prelude::*;
-use sr_primitives::traits::{Member, SimpleArithmetic};
+use sr_primitives::traits::{Member, SimpleArithmetic, SaturatedConversion};
 use system::ensure_root;
 
-use brml_assets;
-use node_primitives::{AssetIssue, AssetRedeem, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol, BridgeAssetTo};
+use node_primitives::{
+	AssetCreate, AssetIssue, AssetRedeem, BlockchainType,
+	BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol, BridgeAssetTo
+};
 
 mod mock;
 mod tests;
@@ -39,13 +41,16 @@ pub struct Bank {
 /// The module configuration trait.
 pub trait Trait: system::Trait {
 	/// The overarching event type.
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// Assets create handler
+	type AssetCreate: AssetCreate<Self::AssetId, Self::Balance>;
 
 	/// Assets issue handler
 	type AssetIssue: AssetIssue<Self::AssetId, Self::AccountId, Self::Balance>;
@@ -58,7 +63,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_event!(
-	pub enum Event {
+	pub enum Event<T> where <T as Trait>::AssetId {
 		/// Transaction from another blockchain was mapped.
 		BridgeTxMapped,
 		/// Transaction from another blockchain was received.
@@ -67,6 +72,8 @@ decl_event!(
 		BridgeTxReceiveConfirmed,
 		/// Transaction to another blockchain was sent.
 		BridgeTxSent,
+		/// Bridge asset was created.
+		BridgeAssetCreated(AssetId),
 	}
 );
 
@@ -91,9 +98,25 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-//		fn bridge_asset_create(origin, symbol: Vec<u8>, precision: u16>) {
-//			unimplemented!();
-//		}
+		pub fn bridge_asset_create(
+			origin,
+			blockchain: BlockchainType,
+			symbol: Vec<u8>,
+			precision: T::Precision,
+		) {
+			ensure_root(origin)?;
+
+			ensure!(symbol.len() > 0, "token symbol must great then 0");
+			ensure!(symbol.len() <= 32, "token symbol cannot exceed 32 bytes");
+			ensure!(precision.saturated_into::<u16>() <= 16, "token precision cannot exceed 16");
+
+			let (asset_id, _) = T::AssetCreate::asset_create(symbol.clone(), precision.saturated_into::<u16>());
+			let asset_symbol = BridgeAssetSymbol::new(blockchain, symbol, precision);
+			<BridgeAssetIdToAsset<T>>::insert(asset_id, asset_symbol.clone());
+			<BridgeAssetToAssetId<T>>::insert(asset_symbol, asset_id);
+
+			Self::deposit_event(RawEvent::BridgeAssetCreated(asset_id));
+		}
 	}
 }
 

@@ -166,6 +166,16 @@ pub struct BridgeAssetSymbol<Precision> {
 	pub precision: Precision,
 }
 
+impl<Precision> BridgeAssetSymbol<Precision> {
+	pub fn new(blockchain: BlockchainType, symbol: Vec<u8>, precision: Precision) -> Self {
+		BridgeAssetSymbol {
+			blockchain,
+			symbol,
+			precision,
+		}
+	}
+}
+
 /// Bridge asset type
 #[derive(Clone, Default, Encode, Decode)]
 pub struct BridgeAssetBalance<Precision, Balance> {

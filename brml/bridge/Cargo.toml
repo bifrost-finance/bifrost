@@ -5,7 +5,6 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-brml-assets = { path = "../assets", default-features = false }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
@@ -23,7 +22,6 @@ substrate-offchain = { git = "https://github.com/paritytech/substrate" }
 [features]
 default = ["std"]
 std = [
-	"brml-assets/std",
 	"codec/std",
 	"inherents/std",
 	"node-primitives/std",
