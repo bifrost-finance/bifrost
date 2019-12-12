@@ -18,21 +18,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use rstd::prelude::*;
-use codec::{Encode, Decode};
 use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure};
 use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use system::{ensure_signed, ensure_root};
-use node_primitives::{ClearingHandler, AssetIssue, AssetRedeem};
+use node_primitives::{ClearingHandler, AssetCreate, AssetIssue, AssetRedeem, Token};
 
 mod mock;
 mod tests;
-
-#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
-pub struct Token<Balance> {
-	symbol: Vec<u8>,
-	precision: u16,
-	pub total_supply: Balance,
-}
 
 /// The module configuration trait.
 pub trait Trait: system::Trait {
@@ -96,22 +88,11 @@ decl_module! {
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) {
 			let _origin = ensure_root(origin)?;
 
+			ensure!(symbol.len() > 0, "token symbol must great then 0");
 			ensure!(symbol.len() <= 32, "token symbol cannot exceed 32 bytes");
 			ensure!(precision <= 16, "token precision cannot exceed 16");
 
-			let id = Self::next_asset_id();
-			<NextAssetId<T>>::mutate(|id| *id += One::one());
-
-			// Initial total supply is zero.
-			let total_supply: T::Balance = 0.into();
-
-			let token = Token {
-				symbol: symbol.clone(),
-				precision: precision.clone(),
-				total_supply: total_supply,
-			};
-
-			<Tokens<T>>::insert(id, token.clone());
+			let (id, token) = Self::asset_create(symbol, precision);
 
 			Self::deposit_event(RawEvent::Created(id, token));
 		}
@@ -181,6 +162,12 @@ decl_module! {
 	}
 }
 
+impl<T: Trait> AssetCreate<T::AssetId, T::Balance> for Module<T> {
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, Token<T::Balance>) {
+		Self::asset_create(symbol, precision)
+	}
+}
+
 impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	fn asset_issue(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
 		Self::asset_issue(asset_id, target, amount);
@@ -189,6 +176,22 @@ impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, Token<T::Balance>) {
+		let id = Self::next_asset_id();
+		<NextAssetId<T>>::mutate(|id| *id += One::one());
+
+		// Initial total supply is zero.
+		let total_supply: T::Balance = 0.into();
+
+		// Create token
+		let token = Token::new(symbol, precision, total_supply);
+
+		// Insert to storage
+		<Tokens<T>>::insert(id, token.clone());
+
+		(id, token)
+	}
+
 	fn asset_issue(
 		asset_id: T::AssetId,
 		target: T::AccountId,
