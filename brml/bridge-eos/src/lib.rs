@@ -20,8 +20,8 @@ use core::str::FromStr;
 
 use codec::Encode;
 use eos_chain::{
-	Action, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
-	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, verify_proof
+	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
+	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof
 };
 use rstd::prelude::*;
 use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
@@ -130,6 +130,11 @@ decl_module! {
 			Self::deposit_event(Event::InitSchedule(ps.version));
 		}
 
+		fn set_contract_accounts(origin, account: Vec<Vec<u8>>) {
+			let _ = ensure_root(origin)?;
+			BridgeContractAccounts::put(account);
+		}
+
 		fn change_schedule(
 			origin,
 			merkle: IncrementalMerkle,
@@ -207,6 +212,9 @@ decl_module! {
 			);
 
 			Self::deposit_event(Event::ProveAction);
+
+			// withdraw or deposit
+			Self::filter_account_by_action(&action);
 		}
 
 		fn tx_result(origin, block_num: T::BlockNumber) {
@@ -282,6 +290,27 @@ impl<T: Trait> Module<T> {
 
 		// append previous block id
 		merkle.append(block_header.block_header.previous).map_err(|_| Error::IncreMerkleError)?;
+		Ok(())
+	}
+
+	#[cfg(feature = "std")]
+	fn filter_account_by_action(action: &Action) -> Result<(), Error> {
+		let action_transfer = ActionTransfer::read(&action.data, &mut 0).map_err(|e| {
+			crate::Error::EosChainError(eos_chain::Error::BytesReadError(e))
+		})?;
+
+		let from = action_transfer.from.to_string().as_bytes().to_vec();
+		if BridgeContractAccounts::get().contains(&from) {
+			unimplemented!("withdraw");
+			return Ok(());
+		}
+
+		let to = action_transfer.to.to_string().as_bytes().to_vec();
+		if BridgeContractAccounts::get().contains(&to) {
+			unimplemented!("deposit");
+			return Ok(());
+		}
+
 		Ok(())
 	}
 
