@@ -97,11 +97,17 @@ decl_event! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as BridgeEos {
+		/// Eos producer list and hash which in specfic version id
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
+		/// Current pending schedule vesion
 		PendingScheduleVersion: VersionId;
 
+		/// Transaction sent to Eos blockchain
 		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::Balance>>;
+
+		/// Accounts where Eos bridge contract deployed
+		BridgeContractAccounts get(fn bridge_contract_accounts): Vec<Vec<u8>>;
 	}
 }
 
