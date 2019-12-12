@@ -408,7 +408,6 @@ dependencies = [
 name = "brml-bridge"
 version = "0.1.0"
 dependencies = [
- "brml-assets",
  "frame-support",
  "frame-system",
  "node-primitives",
