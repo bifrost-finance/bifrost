@@ -72,6 +72,24 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
+/// Token type
+#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+pub struct Token<Balance> {
+	pub symbol: Vec<u8>,
+	pub precision: u16,
+	pub total_supply: Balance,
+}
+
+impl<Balance> Token<Balance> {
+	pub fn new(symbol: Vec<u8>, precision: u16, total_supply: Balance) -> Self {
+		Self {
+			symbol,
+			precision,
+			total_supply,
+		}
+	}
+}
+
 /// Clearing handler for assets change
 pub trait ClearingHandler<AssetId, AccountId, BlockNumber, Balance> {
 	/// Clearing for assets change
@@ -97,6 +115,16 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 	fn token_clearing(_: A, _: BN, _: B, _: B) {}
 }
 
+/// Asset create handler
+pub trait AssetCreate<AssetId, Balance> {
+	/// Asset create
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> (AssetId, Token<Balance>);
+}
+
+impl<A: Default, B: Default> AssetCreate<A, B> for () {
+	fn asset_create(_: Vec<u8>, _: u16) -> (A, Token<B>) { Default::default() }
+}
+
 /// Asset issue handler
 pub trait AssetIssue<AssetId, AccountId, Balance> {
 	/// Asset issue
@@ -118,7 +146,7 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 }
 
 /// Blockchain types
-#[derive(Clone, Encode, Decode)]
+#[derive(PartialEq, Debug, Clone, Encode, Decode)]
 pub enum BlockchainType {
 	BIFROST,
 	EOS,
