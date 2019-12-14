@@ -27,7 +27,10 @@ use support::{
 	traits::{SplitTwoWays, Currency, Randomness},
 };
 use primitives::u32_trait::{_1, _2, _3, _4};
-use node_primitives::{AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature, AssetId, Precision};
+use node_primitives::{
+	AccountId, AccountIndex, Balance, BlockNumber, Hash, BridgeAssetTo,
+	Index, Moment, Signature, AssetId, AssetCreate, Precision
+};
 use sr_api::impl_runtime_apis;
 use sr_primitives::{Permill, Perbill, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str};
 use sr_primitives::curve::PiecewiseLinear;
@@ -531,9 +534,10 @@ impl brml_bridge::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
+	type AssetCreate = Assets; // Todo
 	type AssetIssue = Assets;
 	type Precision = Precision;
-	type BridgeAssetTo = BridgeEos;
+	type BridgeAssetTo = (); // Todo
 }
 
 impl brml_exchange::Trait for Runtime {
@@ -586,7 +590,7 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
-		Bridge: brml_bridge::{Module, Call, Storage, Event},
+		Bridge: brml_bridge::{Module, Call, Storage, Event<T>},
 		Exchange: brml_exchange::{Module, Call, Storage},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event},
 	}

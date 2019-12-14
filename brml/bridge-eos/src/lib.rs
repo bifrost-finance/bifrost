@@ -16,6 +16,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
+use alloc::string::ToString;
 use core::str::FromStr;
 
 use codec::Encode;
@@ -39,7 +42,6 @@ mod mock;
 mod tests;
 
 #[derive(Debug)]
-#[cfg(feature = "std")]
 pub enum Error {
 	LengthNotEqual(usize, usize), // (expected, actual)
 	SignatureVerificationFailure,
@@ -54,11 +56,12 @@ pub enum Error {
 	HexError(hex::FromHexError),
 	EosChainError(eos_chain::Error),
 	EosReadError(eos_chain::ReadError),
+	#[cfg(feature = "std")]
 	EosRpcError(eos_rpc::Error),
+	#[cfg(feature = "std")]
 	EosKeysError(eos_keys::error::Error),
 }
 
-#[cfg(feature = "std")]
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
 	fn from(err: eos_chain::symbol::ParseSymbolError) -> Self {
 		Self::EosChainError(eos_chain::Error::ParseSymbolError(err))
@@ -293,7 +296,6 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	#[cfg(feature = "std")]
 	fn filter_account_by_action(action: &Action) -> Result<(), Error> {
 		let action_transfer = ActionTransfer::read(&action.data, &mut 0).map_err(|e| {
 			crate::Error::EosChainError(eos_chain::Error::BytesReadError(e))
