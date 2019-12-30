@@ -100,6 +100,9 @@ decl_event! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as BridgeEos {
+		/// Config to enable/disable this runtime
+		BridgeEnable get(fn is_bridge_enable): bool = true;
+
 		/// Eos producer list and hash which in specfic version id
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
@@ -117,6 +120,18 @@ decl_storage! {
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
+
+		fn bridge_enable(origin) {
+			ensure_root(origin)?;
+
+			BridgeEnable::put(true);
+		}
+
+		fn bridge_disable(origin) {
+			ensure_root(origin)?;
+
+			BridgeEnable::put(false);
+		}
 
 		fn init_schedule(origin, ps: ProducerSchedule) {
 			let _ = ensure_root(origin)?;
@@ -146,6 +161,7 @@ decl_module! {
 		) {
 			let _ = ensure_root(origin)?;
 
+			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(!block_headers.is_empty(), "The signed block headers cannot be empty.");
 			ensure!(block_headers[0].block_header.new_producers.is_some(), "The producers list cannot be empty.");
 			ensure!(block_ids_list.len() ==  block_headers.len(), "The block ids list cannot be empty.");
@@ -181,6 +197,7 @@ decl_module! {
 		) {
 			let _ = ensure_root(origin)?;
 
+			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(
 				!block_headers.is_empty(),
 				"The signed block headers cannot be empty."
