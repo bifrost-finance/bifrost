@@ -26,12 +26,16 @@ use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
 	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof
 };
-use rstd::prelude::*;
-use sr_primitives::traits::{Member, SaturatedConversion, SimpleArithmetic};
-use sr_primitives::transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction};
+use sp_std::prelude::*;
+use sp_runtime::{
+	traits::{Member, SaturatedConversion, SimpleArithmetic},
+	transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction},
+};
 use support::{decl_error, decl_event, decl_module, decl_storage, ensure, Parameter};
-use system::{ensure_root, ensure_none};
-use system::offchain::SubmitUnsignedTransaction;
+use system::{
+	ensure_root, ensure_none,
+	offchain::SubmitUnsignedTransaction
+};
 
 use bridge;
 use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo};

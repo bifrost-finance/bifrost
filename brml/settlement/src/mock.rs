@@ -19,8 +19,7 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_origin, parameter_types};
-use substrate_primitives::H256;
-use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use sp_core::{H256, Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
 impl_outer_origin! {

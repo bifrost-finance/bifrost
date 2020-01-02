@@ -6,29 +6,26 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
-inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
+frame-support = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+inherents = { version = "2.0.0", package = "sp-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
-sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", default-features = false }
-substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
-system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-core = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-std = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+system = { version = "2.0.0", package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-offchain = { git = "https://github.com/paritytech/substrate" }
+substrate-offchain = { package = "sp-offchain", git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
 std = [
 	"codec/std",
+	"frame-support/std",
 	"inherents/std",
 	"node-primitives/std",
-	"rstd/std",
-	"sr-io/std",
-	"sr-primitives/std",
-	"frame-support/std",
-	"substrate-primitives/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-std/std",
 	"system/std",
 ]

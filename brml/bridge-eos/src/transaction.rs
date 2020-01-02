@@ -6,8 +6,8 @@ use eos_chain::{Action, Asset, PermissionLevel, Read, SignedTransaction, Transac
 use eos_chain::{SerializeData, Signature};
 #[cfg(feature = "std")]
 use eos_rpc::{get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction};
-use rstd::prelude::*;
-use sr_primitives::traits::SimpleArithmetic;
+use sp_runtime::traits::SimpleArithmetic;
+use sp_std::prelude::*;
 
 use crate::Error;
 

@@ -20,10 +20,11 @@
 
 use super::*;
 use crate::mock::*;
-use sr_primitives::traits::OffchainWorker;
-use sr_primitives::traits::OnFinalize;
-use substrate_primitives::offchain::{OpaquePeerId, OffchainExt, testing::TestOffchainExt};
-use frame_support::{assert_ok};
+use sp_core::{
+	offchain::{OpaquePeerId, OffchainExt, testing::TestOffchainExt},
+	traits::{OffchainWorker, OnFinalize},
+};
+use frame_support::assert_ok;
 
 #[test]
 fn relay_tx_should_work() {

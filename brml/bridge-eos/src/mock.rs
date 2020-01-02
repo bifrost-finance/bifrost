@@ -17,8 +17,8 @@
 #![cfg(test)]
 
 use support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
-use substrate_primitives::H256;
-use sr_primitives::{
+use sp_core::{
+	H256,
 	Perbill,
 	testing::{Header, TestXt},
 	traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize},

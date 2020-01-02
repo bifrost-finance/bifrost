@@ -11,19 +11,18 @@ eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-r
 eos-keys = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1", optional = true }
 eos-rpc = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1", optional = true }
 hex = { version = "0.4", default-features = false }
-inherents = { package = "substrate-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
+inherents = { version = "2.0.0", package = "sp-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
-sr-io = { git = "https://github.com/paritytech/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+sp-core = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-io = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-std = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 support = { package = "frame-support", git = "https://github.com/paritytech/substrate", default-features = false }
-substrate-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 serde_json = { version = "1.0", optional = true }
 
 [dev-dependencies]
-sr-primitives = { git = "https://github.com/paritytech/substrate" }
-substrate-offchain = { git = "https://github.com/paritytech/substrate" }
+substrate-offchain = { package = "sp-offchain", git = "https://github.com/paritytech/substrate" }
 hex = "0.4"
 
 [features]
@@ -37,11 +36,11 @@ std = [
 	"hex/std",
 	"inherents/std",
 	"node-primitives/std",
-	"rstd/std",
-	"sr-io/std",
-	"sr-primitives/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
 	"support/std",
-	"substrate-primitives/std",
 	"system/std",
 	"serde_json",
 ]
