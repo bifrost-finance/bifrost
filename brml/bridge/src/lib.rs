@@ -19,8 +19,8 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_event, decl_module, decl_storage, ensure, Parameter};
-use rstd::prelude::*;
-use sr_primitives::traits::{Member, SimpleArithmetic, SaturatedConversion};
+use sp_runtime::traits::{Member, SimpleArithmetic, SaturatedConversion};
+use sp_std::prelude::*;
 use system::ensure_root;
 
 use node_primitives::{

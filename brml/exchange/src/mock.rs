@@ -18,9 +18,8 @@
 
 #![cfg(test)]
 
+use sp_core::{H256, Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types};
-use substrate_primitives::H256;
-use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
 #[derive(Clone, Eq, PartialEq)]

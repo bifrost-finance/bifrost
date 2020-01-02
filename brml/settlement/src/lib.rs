@@ -17,12 +17,13 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use rstd::prelude::*;
+use sp_std::prelude::*;
 use codec::{Encode, Decode};
-use frame_support::{Parameter, decl_module, decl_event, decl_storage};
-use frame_support::traits::Get;
-use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, SaturatedConversion, Saturating};
 use node_primitives::{ClearingHandler, AssetIssue};
+use frame_support::{
+	Parameter, decl_module, decl_event, decl_storage, traits::Get
+};
+use sp_runtime::traits::{Member, SimpleArithmetic, One, Zero, SaturatedConversion, Saturating};
 
 mod mock;
 mod tests;

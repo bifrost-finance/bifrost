@@ -19,13 +19,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Encode, Decode};
-use rstd::prelude::*;
-use sr_primitives::{
-	generic,
-	traits::{Verify, BlakeTwo256, IdentifyAccount},
-	OpaqueExtrinsic,
-	MultiSignature
+use sp_runtime::{
+	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
+use sp_std::prelude::*;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -56,7 +53,7 @@ pub type Moment = u64;
 pub type Index = u32;
 
 /// A hash of some data used by the chain.
-pub type Hash = primitives::H256;
+pub type Hash = sp_core::H256;
 
 /// A timestamp: milliseconds since the unix epoch.
 /// `u64` is enough to represent a duration of half a billion years, when the

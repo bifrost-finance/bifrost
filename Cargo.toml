@@ -12,6 +12,7 @@ members = [
 	"node/rpc-client",
 	"node/runtime",
 	"node/testing",
+	"node/transaction-factory",
 ]
 
 [profile.release]

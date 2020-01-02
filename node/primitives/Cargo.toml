@@ -5,20 +5,20 @@ authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.0.6", default-features = false, features = ["derive"] }
-primitives = { package = "substrate-primitives", git = "https://github.com/paritytech/substrate", default-features = false }
-rstd = { package = "sr-std", git = "https://github.com/paritytech/substrate", default-features = false }
-sr-primitives = { git = "https://github.com/paritytech/substrate", default-features = false }
+codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+sp-core = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-runtime = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+sp-std = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 
 [dev-dependencies]
-substrate-serializer = { git = "https://github.com/paritytech/substrate" }
+sp-serializer = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 pretty_assertions = "0.6.1"
 
 [features]
 default = ["std"]
 std = [
     "codec/std",
-	"primitives/std",
-	"rstd/std",
-	"sr-primitives/std",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-std/std",
 ]

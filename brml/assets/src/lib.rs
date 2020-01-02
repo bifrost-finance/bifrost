@@ -17,9 +17,9 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use rstd::prelude::*;
 use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure};
-use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
+use sp_runtime::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
+use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{ClearingHandler, AssetCreate, AssetIssue, AssetRedeem, Token};
 

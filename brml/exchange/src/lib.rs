@@ -18,9 +18,9 @@
 mod mock;
 mod tests;
 
-use system::ensure_root;
-use sr_primitives::traits::{Member, SimpleArithmetic};
 use frame_support::{Parameter, decl_module, decl_storage};
+use sp_runtime::traits::{Member, SimpleArithmetic};
+use system::ensure_root;
 
 pub trait Trait: system::Trait {
 	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy;

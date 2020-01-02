@@ -20,9 +20,8 @@
 
 use super::*;
 use crate::mock::{Assets, Settlement, Origin, System, new_test_ext};
-use frame_support::{assert_ok};
-use sr_primitives::traits::OnInitialize;
-use sr_primitives::traits::OnFinalize;
+use frame_support::assert_ok;
+use sp_core::{traits::{OnInitialize, OnFinalize}};
 
 const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 
