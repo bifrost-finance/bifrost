@@ -22,7 +22,7 @@ use serde::{Serialize, Deserialize};
 use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, ContractsConfig, CouncilConfig, DemocracyConfig,
 	GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig, SudoConfig,
-	SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
+	SystemConfig, TechnicalCommitteeConfig, WASM_BINARY, BridgeEosConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -292,6 +292,9 @@ pub fn testnet_genesis(
 		}),
 		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
+		brml_bridge_eos: Some(BridgeEosConfig {
+			producer_schedule: eos_chain::ProducerSchedule::default(),
+		}),
 	}
 }
 

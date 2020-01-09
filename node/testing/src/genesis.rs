@@ -20,7 +20,7 @@ use crate::keyring::*;
 use sp_keyring::{Ed25519Keyring, Sr25519Keyring};
 use node_runtime::{
 	GenesisConfig, BalancesConfig, SessionConfig, StakingConfig, SystemConfig,
-	GrandpaConfig, IndicesConfig, ContractsConfig, WASM_BINARY,
+	GrandpaConfig, IndicesConfig, ContractsConfig, WASM_BINARY, BridgeEosConfig,
 };
 use node_runtime::constants::currency::*;
 use sp_core::ChangesTrieConfiguration;
@@ -96,5 +96,8 @@ pub fn config(support_changes_trie: bool, code: Option<&[u8]>) -> GenesisConfig 
 		pallet_membership_Instance1: Some(Default::default()),
 		pallet_sudo: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
+		brml_bridge_eos: Some(BridgeEosConfig {
+			producer_schedule: eos_chain::ProducerSchedule::default(),
+		}),
 	}
 }

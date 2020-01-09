@@ -110,6 +110,9 @@ decl_storage! {
 		/// Eos producer list and hash which in specfic version id
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
+		// Initialize a producer schedule while starting a node.
+		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
+
 		/// Current pending schedule vesion
 		PendingScheduleVersion: VersionId;
 
@@ -118,6 +121,16 @@ decl_storage! {
 
 		/// Accounts where Eos bridge contract deployed
 		BridgeContractAccounts get(fn bridge_contract_accounts): Vec<Vec<u8>>;
+	}
+	add_extra_genesis {
+		build(|config: &GenesisConfig| {
+			let ps_version = config.producer_schedule.version;
+			let producers = &config.producer_schedule.producers;
+			let schedule_hash = config.producer_schedule.schedule_hash();
+			assert!(schedule_hash.is_ok());
+			ProducerSchedules::insert(ps_version, (producers, schedule_hash.unwrap()));
+			PendingScheduleVersion::put(ps_version);
+		});
 	}
 }
 
@@ -193,7 +206,7 @@ decl_module! {
 		fn prove_action(
 			origin,
 			action: Action,
-			action_reciept: ActionReceipt,
+			action_receipt: ActionReceipt,
 			action_merkle_paths: Vec<Checksum256>,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
@@ -215,11 +228,11 @@ decl_module! {
 			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
 			let action_hash = action_hash.unwrap();
 			ensure!(
-				action_hash == action_reciept.act_digest,
+				action_hash == action_receipt.act_digest,
 				"current action hash isn't equal to act_digest from action_receipt."
 			);
 
-			let leaf = action_reciept.digest();
+			let leaf = action_receipt.digest();
 			ensure!(leaf.is_ok(), "failed to calculate action digest.");
 			let leaf = leaf.unwrap();
 
