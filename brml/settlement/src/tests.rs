@@ -18,10 +18,10 @@
 
 #![cfg(test)]
 
-use super::*;
 use crate::mock::{Assets, Settlement, Origin, System, new_test_ext};
 use frame_support::assert_ok;
-use sp_core::{traits::{OnInitialize, OnFinalize}};
+use sp_runtime::traits::{OnInitialize, OnFinalize};
+use super::*;
 
 const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 

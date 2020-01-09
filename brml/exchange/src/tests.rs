@@ -19,7 +19,7 @@
 
 use crate::mock::{ExchangeTestModule, Origin, new_test_ext};
 use frame_support::assert_ok;
-use sp_core::traits::OnFinalize;
+use sp_runtime::traits::OnFinalize;
 
 #[test]
 fn set_default_exchange_rate_should_work() {

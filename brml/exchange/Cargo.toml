@@ -14,7 +14,7 @@ sp-std = { version = "2.0.0", git = "https://github.com/paritytech/substrate", d
 system = { version = "2.0.0", package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
-runtime-io = { version = "2.0.0", package = "sp-io", git = "https://github.com/paritytech/substrate" }
+sp-io = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
