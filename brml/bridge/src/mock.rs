@@ -19,7 +19,8 @@
 #![cfg(test)]
 
 use frame_support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
-use sp_core::{H256, Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::{Header, TestXt}};
+use sp_core::H256;
+use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::{Header, TestXt}};
 use super::*;
 
 impl_outer_origin! {
@@ -57,6 +58,7 @@ impl system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
+	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -72,9 +74,10 @@ impl Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
+	type AssetCreate = ();
 	type AssetIssue = ();
-	type Call = Call;
-	type SubmitTransaction = SubmitTransaction;
+	type Precision = u32;
+	type BridgeAssetTo = ();
 }
 
 mod bridge {
@@ -83,14 +86,14 @@ mod bridge {
 
 impl_outer_event! {
 	pub enum TestEvent for Test {
-		bridge,
+		bridge<T>,
 	}
 }
 
 pub type Bridge = Module<Test>;
 pub type System = system::Module<Test>;
 
-pub fn new_test_ext() -> sr_io::TestExternalities {
+pub fn new_test_ext() -> sp_io::TestExternalities {
 	let t = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	t.into()
 }

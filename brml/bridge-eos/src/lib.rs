@@ -24,7 +24,7 @@ use core::str::FromStr;
 use codec::Encode;
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
-	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof
+	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, PublicKey, AccountName,
 };
 use sp_std::prelude::*;
 use sp_runtime::{
@@ -110,7 +110,7 @@ decl_storage! {
 		/// Eos producer list and hash which in specfic version id
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
-		// Initialize a producer schedule while starting a node.
+		/// Initialize a producer schedule while starting a node.
 		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
 
 		/// Current pending schedule vesion
@@ -170,6 +170,11 @@ decl_module! {
 			BridgeContractAccounts::put(account);
 		}
 
+		// 1. block_headers length must be 15.
+		// 2. the first block_header's new_producers cannot be none.
+		// 3. compare current schedules version with pending_schedules'.
+		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
+		// 5. save the new_producers list.
 		fn change_schedule(
 			origin,
 			merkle: IncrementalMerkle,
@@ -181,28 +186,38 @@ decl_module! {
 			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(!block_headers.is_empty(), "The signed block headers cannot be empty.");
 			ensure!(block_headers[0].block_header.new_producers.is_some(), "The producers list cannot be empty.");
-			ensure!(block_ids_list.len() ==  block_headers.len(), "The block ids list cannot be empty.");
+			ensure!(block_ids_list.len() == block_headers.len(), "The block ids list cannot be empty.");
+			ensure!(block_ids_list.len() == 15, "The length of signed block headers must be 15.");
+			ensure!(block_ids_list[0].is_empty(), "The first block ids must be empty.");
+			ensure!(block_ids_list[1].len() ==  10, "The rest of block ids length must be 10.");
 
-			let ps = block_headers[0].block_header.new_producers.as_ref().unwrap().clone(); // consider remove clone
+			let pending_schedule = block_headers[0].block_header.new_producers.as_ref().unwrap().clone(); // consider remove clone
 
 			ensure!(PendingScheduleVersion::exists(), "PendingScheduleVersion has not been initialized.");
 
-			let pending_schedule_version = PendingScheduleVersion::get();
-			ensure!(ProducerSchedules::exists(pending_schedule_version), "ProducerSchedule has not been initialized.");
+			let current_schedule_version = PendingScheduleVersion::get();
+			ensure!(ProducerSchedules::exists(current_schedule_version), "ProducerSchedule has not been initialized.");
 
-			ensure!(ps.version == pending_schedule_version + 1, "This is a wrong new producer lists due to wrong schedule version.");
+			ensure!(current_schedule_version + 1 == pending_schedule.version, "This is a wrong new producer lists due to wrong schedule version.");
 
-			let schedule_hash = ps.schedule_hash();
-			ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
-			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash.unwrap()));
-			PendingScheduleVersion::put(ps.version);
+			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
+			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
+			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
 
 			#[cfg(feature = "std")]
-			ensure!(Self::verify_block_headers(merkle, block_headers, block_ids_list).is_ok(), "Failed to verify block.");
+			ensure!(
+				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, block_headers, block_ids_list).is_ok(),
+				"Failed to verify block."
+			);
 
-			Self::deposit_event(Event::ChangeSchedule(pending_schedule_version, ps.version));
+			// if verification is successful, save the new producers schedule.
+			ProducerSchedules::insert(pending_schedule.version, (pending_schedule.producers, schedule_hash));
+			PendingScheduleVersion::put(pending_schedule.version);
+
+			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, pending_schedule.version));
 		}
 
+		// 1.
 		fn prove_action(
 			origin,
 			action: Action,
@@ -213,6 +228,10 @@ decl_module! {
 			block_ids_list: Vec<Vec<Checksum256>>
 		) {
 			let _ = ensure_root(origin)?;
+
+			// ensure action is what we want
+
+			// ensure current producers schedule list exists.
 
 			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(
@@ -242,9 +261,13 @@ decl_module! {
 				"failed to prove action."
 			);
 
+			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
+			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
+			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+
 			#[cfg(feature = "std")]
 			ensure!(
-				Self::verify_block_headers(merkle, block_headers, block_ids_list).is_ok(),
+				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, block_headers, block_ids_list).is_ok(),
 				"Failed to verify blocks."
 			);
 
@@ -271,6 +294,8 @@ impl<T: Trait> Module<T> {
 	#[cfg(feature = "std")]
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
+		schedule_hash: &Checksum256,
+		producer_schedule: &ProducerSchedule,
 		block_headers: Vec<SignedBlockHeader>,
 		block_ids_list: Vec<Vec<Checksum256>>,
 	) -> Result<(), Error> {
@@ -282,7 +307,7 @@ impl<T: Trait> Module<T> {
 			Self::calculate_block_header_merkle_root(&mut merkle, &block_header, &block_ids)?;
 
 			// verify block header signature
-			Self::verify_block_header_signature(block_header, &merkle.get_root())?;
+			Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root())?;
 
 			// append current block id
 			let block_id = block_header.id().map_err(|_| Error::GetBlockIdFailure)?;
@@ -293,25 +318,16 @@ impl<T: Trait> Module<T> {
 
 	#[cfg(feature = "std")]
 	fn verify_block_header_signature(
+		schedule_hash: &Checksum256,
+		producer_schedule: &ProducerSchedule,
 		block_header: &SignedBlockHeader,
 		expected_mroot: &Checksum256,
 	) -> Result<(), Error> {
-		let pending_schedule = match block_header.block_header.new_producers {
-			Some(ref schedule) => schedule.clone(),
-			None => {
-				let pending_schedule_version = PendingScheduleVersion::get();
-				let producers = ProducerSchedules::get(pending_schedule_version).0;
-				ProducerSchedule::new(pending_schedule_version, producers)
-			}
-		};
-		let producer = block_header.block_header.producer;
-		let pk = pending_schedule.get_producer_key(producer);
-
-		let pending_schedule_hash = ProducerSchedules::get(pending_schedule.version).1;
-
-		block_header.verify(*expected_mroot, pending_schedule_hash, pk).map_err(|_| {
+		let pk = producer_schedule.get_producer_key(block_header.block_header.producer);
+		block_header.verify(*expected_mroot, *schedule_hash, pk).map_err(|_| {
 			Error::SignatureVerificationFailure
 		})?;
+
 		Ok(())
 	}
 
@@ -328,6 +344,23 @@ impl<T: Trait> Module<T> {
 		// append previous block id
 		merkle.append(block_header.block_header.previous).map_err(|_| Error::IncreMerkleError)?;
 		Ok(())
+	}
+
+	fn get_schedule_hash_and_public_key(
+		new_producers: Option<&ProducerSchedule>
+	) -> Result<(Checksum256, ProducerSchedule), Error> {
+		let producer_schedule = match new_producers {
+			Some(producers) => producers.clone(),
+			None => {
+				let schedule_version = PendingScheduleVersion::get();
+				let producers = ProducerSchedules::get(schedule_version).0;
+				ProducerSchedule::new(schedule_version, producers)
+			}
+		};
+
+		let schedule_hash = producer_schedule.schedule_hash().map_err(|_| Error::ScheduleHashError)?;
+
+		Ok((schedule_hash, producer_schedule))
 	}
 
 	fn filter_account_by_action(action: &Action) -> Result<(), Error> {
@@ -418,7 +451,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
 		#[cfg(feature = "std")]
-		Self::tx_transfer_to(target, bridge_asset);
+			Self::tx_transfer_to(target, bridge_asset);
 	}
 }
 

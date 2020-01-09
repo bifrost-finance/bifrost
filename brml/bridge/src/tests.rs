@@ -17,35 +17,3 @@
 //! Tests for the module.
 
 #![cfg(test)]
-
-use super::*;
-use crate::mock::*;
-use sp_core::{
-	offchain::{OpaquePeerId, OffchainExt, testing::TestOffchainExt},
-	traits::{OffchainWorker, OnFinalize},
-};
-use frame_support::assert_ok;
-
-#[test]
-fn relay_tx_should_work() {
-	new_test_ext().execute_with(|| {
-		Bridge::relay_tx(Origin::signed(1), 100, 100);
-	});
-}
-
-#[test]
-fn send_tx_gen_should_work() {
-	let mut ext = new_test_ext();
-	let (offchain, state) = TestOffchainExt::new();
-	ext.register_extension(OffchainExt::new(offchain));
-
-	ext.execute_with(|| {
-		Bridge::send_tx_gen(0, 100, 123, b"testx".to_vec());
-		Bridge::send_tx_sign();
-		assert_eq!(<Bridge as Store>::UnsignedSends::decode_len().unwrap_or(0), 1);
-
-		assert_ok!(Bridge::send_tx_update(Origin::NONE, 10));
-
-		assert_eq!(<Bridge as Store>::UnsignedSends::decode_len().unwrap_or(0), 0);
-	});
-}

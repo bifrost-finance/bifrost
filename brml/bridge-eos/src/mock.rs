@@ -17,8 +17,8 @@
 #![cfg(test)]
 
 use support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
-use sp_core::{
-	H256,
+use sp_core::H256;
+use sp_runtime::{
 	Perbill,
 	testing::{Header, TestXt},
 	traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize},
@@ -70,6 +70,7 @@ impl system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
+	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -101,6 +102,6 @@ pub(crate) fn run_to_block(n: u64) {
 }
 
 // mockup runtime
-pub(crate) fn new_test_ext() -> sr_io::TestExternalities {
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

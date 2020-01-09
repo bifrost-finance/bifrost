@@ -139,8 +139,12 @@ fn verify_block_header_signature_should_succeed() {
 
 		let signed_block_header = signed_blocks_headers.first().as_ref().unwrap().clone();
 
+		let schedule_hash_and_producer_schedule = BridgeEos::get_schedule_hash_and_public_key(signed_blocks_headers[0].block_header.new_producers.as_ref());
+		assert!(schedule_hash_and_producer_schedule.is_ok());
+		let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+
 		let mroot: Checksum256 = "bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a".into();
-		let result = BridgeEos::verify_block_header_signature(&signed_block_header, &mroot);
+		let result = BridgeEos::verify_block_header_signature(&schedule_hash, &producer_schedule, &signed_block_header, &mroot);
 		assert!(result.is_ok());
 	});
 }
@@ -153,13 +157,6 @@ fn verify_block_headers_should_succeed() {
 		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
 		assert!(signed_blocks.is_ok());
 		let signed_blocks_headers = signed_blocks.unwrap();
-
-		let schedule = signed_blocks_headers.first().as_ref().unwrap().block_header.new_producers.as_ref().unwrap().clone();
-		let pending_schedule_hash = schedule.schedule_hash();
-		assert!(pending_schedule_hash.is_ok());
-
-		PendingScheduleVersion::put(schedule.version);
-		ProducerSchedules::insert(schedule.version, (&schedule.producers, pending_schedule_hash.unwrap()));
 
 		let ids_json = "block_ids_list.json";
 		let ids_str = read_json_from_file(ids_json).unwrap();
@@ -183,8 +180,12 @@ fn verify_block_headers_should_succeed() {
 			"4d723385cad26cf80c2db366f9666a3ef77679c098e07d1af48d523b64b1d460".into()
 		];
 
+		let schedule_hash_and_producer_schedule = BridgeEos::get_schedule_hash_and_public_key(signed_blocks_headers[0].block_header.new_producers.as_ref());
+		assert!(schedule_hash_and_producer_schedule.is_ok());
+		let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
-		assert!(BridgeEos::verify_block_headers(merkle, signed_blocks_headers, block_ids_list).is_ok());
+		assert!(BridgeEos::verify_block_headers(merkle, &schedule_hash, &producer_schedule, signed_blocks_headers, block_ids_list).is_ok());
 	});
 }
 
