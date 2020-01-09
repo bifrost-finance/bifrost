@@ -19,6 +19,7 @@ sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate
 sp-std = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 support = { package = "frame-support", git = "https://github.com/paritytech/substrate", default-features = false }
 system = { package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
+serde = { version = "1.0.101", optional = true }
 serde_json = { version = "1.0", optional = true }
 
 [dev-dependencies]
@@ -42,5 +43,6 @@ std = [
 	"sp-std/std",
 	"support/std",
 	"system/std",
+	"serde",
 	"serde_json",
 ]

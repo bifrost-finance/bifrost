@@ -613,7 +613,7 @@ construct_runtime!(
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 		Bridge: brml_bridge::{Module, Call, Storage, Event<T>},
 		Exchange: brml_exchange::{Module, Call, Storage},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event},
+		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, Config},
 	}
 );
 
