@@ -101,7 +101,7 @@ pub fn run<I, T, E>(args: I, exit: E, version: sc_cli::VersionInfo) -> error::Re
 		|exit, _cli_args, _custom_args, config: Config<_, _>| {
 			info!("{}", version.name);
 			info!("  version {}", config.full_version());
-			info!("  by Liebi Technologies, 2019");
+			info!("  by Liebi Technologies, 2019-2020");
 			info!("Chain specification: {}", config.chain_spec.name());
 			info!("Node name: {}", config.name);
 			info!("Roles: {}", display_role(&config));

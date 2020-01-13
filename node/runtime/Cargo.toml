@@ -31,6 +31,10 @@ sp-transaction-pool = { version = "2.0.0", default-features = false, git = "http
 sp-version = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 
 # frame dependencies
+frame-executive = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-support = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-authority-discovery = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-authorship = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-babe = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -40,7 +44,6 @@ pallet-contracts = { version = "2.0.0", default-features = false, git = "https:/
 pallet-contracts-rpc-runtime-api = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-elections-phragmen = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-executive = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-finality-tracker = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-grandpa = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-im-online = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -53,9 +56,6 @@ pallet-session = { version = "2.0.0", features = ["historical"], git = "https://
 pallet-staking = { version = "2.0.0", features = ["migrate"], git = "https://github.com/paritytech/substrate", default-features = false }
 pallet-staking-reward-curve = { version = "2.0.0",  git = "https://github.com/paritytech/substrate" }
 pallet-sudo = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-support = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-treasury = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-utility = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
