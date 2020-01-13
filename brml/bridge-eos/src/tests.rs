@@ -30,6 +30,12 @@ use std::{
 	io::Read as StdRead,
 	path::Path,
 };
+use sp_io::TestExternalities;
+use sp_core::offchain::{
+	OffchainExt,
+	testing,
+};
+use sp_runtime::offchain::http::{Request, Method};
 
 #[test]
 fn get_latest_schedule_version_shuold_work() {
@@ -185,7 +191,7 @@ fn verify_block_headers_should_succeed() {
 		let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
 
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
-		assert!(BridgeEos::verify_block_headers(merkle, &schedule_hash, &producer_schedule, signed_blocks_headers, block_ids_list).is_ok());
+		assert!(BridgeEos::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &signed_blocks_headers, block_ids_list).is_ok());
 	});
 }
 
