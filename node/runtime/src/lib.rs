@@ -22,7 +22,7 @@
 
 use sp_std::prelude::*;
 use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime, parameter_types, debug,
 	weights::Weight,
 	traits::{SplitTwoWays, Currency, Randomness},
 };
@@ -32,8 +32,9 @@ use node_primitives::{
 	BridgeAssetTo, AssetId, AssetCreate, Precision
 };
 use sp_api::impl_runtime_apis;
-use sp_runtime::{Permill, Perbill, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str};
-use sp_runtime::curve::PiecewiseLinear;
+use sp_runtime::{
+	Permill, Perbill, Percent, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str
+};use sp_runtime::curve::PiecewiseLinear;
 use sp_runtime::transaction_validity::TransactionValidity;
 use sp_runtime::traits::{
 	self, BlakeTwo256, Block as BlockT, NumberFor, StaticLookup, SaturatedConversion,
@@ -175,6 +176,7 @@ parameter_types! {
 impl pallet_balances::Trait for Runtime {
 	type Balance = Balance;
 	type OnFreeBalanceZero = ((Staking, Contracts), Session);
+	type OnReapAccount = System;
 	type OnNewAccount = Indices;
 	type Event = Event;
 	type DustRemoval = ();
@@ -379,6 +381,10 @@ parameter_types! {
 	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 1 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(50);
+	pub const TipCountdown: BlockNumber = 1 * DAYS;
+	pub const TipFindersFee: Percent = Percent::from_percent(20);
+	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
+	pub const TipReportDepositPerByte: Balance = 1 * CENTS;
 }
 
 impl pallet_treasury::Trait for Runtime {
@@ -391,6 +397,11 @@ impl pallet_treasury::Trait for Runtime {
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type SpendPeriod = SpendPeriod;
 	type Burn = Burn;
+	type Tippers = Elections;
+	type TipCountdown = TipCountdown;
+	type TipFindersFee = TipFindersFee;
+	type TipReportDepositBase = TipReportDepositBase;
+	type TipReportDepositPerByte = TipReportDepositPerByte;
 }
 
 parameter_types! {
@@ -439,7 +450,8 @@ impl pallet_sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
-type SubmitTransaction = TransactionSubmitter<ImOnlineId, Runtime, UncheckedExtrinsic>;
+/// A runtime transaction submitter.
+pub type SubmitTransaction = TransactionSubmitter<ImOnlineId, Runtime, UncheckedExtrinsic>;
 
 parameter_types! {
 	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
@@ -503,8 +515,16 @@ impl frame_system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for 
 		account: AccountId,
 		index: Index,
 	) -> Option<(Call, <UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload)> {
-		let period = 1 << 8;
-		let current_block = System::block_number().saturated_into::<u64>();
+		// take the biggest period possible.
+		let period = BlockHashCount::get()
+			.checked_next_power_of_two()
+			.map(|c| c / 2)
+			.unwrap_or(2) as u64;
+		let current_block = System::block_number()
+			.saturated_into::<u64>()
+			// The `System::block_number` is initialized with `n+1`,
+			// so the actual block number is `n`.
+			.saturating_sub(1);
 		let tip = 0;
 		let extra: SignedExtra = (
 			frame_system::CheckVersion::<Runtime>::new(),
@@ -515,7 +535,9 @@ impl frame_system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for 
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
 			Default::default(),
 		);
-		let raw_payload = SignedPayload::new(call, extra).ok()?;
+		let raw_payload = SignedPayload::new(call, extra).map_err(|e| {
+			debug::warn!("Unable to create signed payload: {:?}", e);
+		}).ok()?;
 		let signature = TSigner::sign(public, &raw_payload)?;
 		let address = Indices::unlookup(account);
 		let (call, extra, _) = raw_payload.deconstruct();
@@ -696,8 +718,8 @@ impl_runtime_apis! {
 	}
 
 	impl sp_offchain::OffchainWorkerApi<Block> for Runtime {
-		fn offchain_worker(number: NumberFor<Block>) {
-			Executive::offchain_worker(number)
+		fn offchain_worker(header: &<Block as BlockT>::Header) {
+			Executive::offchain_worker(header)
 		}
 	}
 
@@ -797,22 +819,29 @@ impl_runtime_apis! {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use frame_system::offchain::SubmitSignedTransaction;
-
-	fn is_submit_signed_transaction<T>(_arg: T) where
-		T: SubmitSignedTransaction<
-			Runtime,
-			Call,
-			Extrinsic=UncheckedExtrinsic,
-			CreateTransaction=Runtime,
-			Signer=ImOnlineId,
-		>,
-	{}
+	use frame_system::offchain::{SignAndSubmitTransaction, SubmitSignedTransaction};
 
 	#[test]
-	fn validate_bounds() {
-		let x = SubmitTransaction::default();
-		is_submit_signed_transaction(x);
+	fn validate_transaction_submitter_bounds() {
+		fn is_submit_signed_transaction<T>() where
+			T: SubmitSignedTransaction<
+				Runtime,
+				Call,
+			>,
+		{}
+
+		fn is_sign_and_submit_transaction<T>() where
+			T: SignAndSubmitTransaction<
+				Runtime,
+				Call,
+				Extrinsic=UncheckedExtrinsic,
+				CreateTransaction=Runtime,
+				Signer=ImOnlineId,
+			>,
+		{}
+
+		is_submit_signed_transaction::<SubmitTransaction>();
+		is_sign_and_submit_transaction::<SubmitTransaction>();
 	}
 
 	#[test]

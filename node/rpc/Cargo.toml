@@ -10,6 +10,7 @@ jsonrpc-core = "14.0.3"
 node-primitives = { path = "../primitives" }
 node-runtime = { path = "../runtime" }
 sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
+sp-api = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 pallet-contracts-rpc = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment-rpc = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 substrate-frame-rpc-system = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
