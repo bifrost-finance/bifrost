@@ -18,20 +18,21 @@
 
 extern crate alloc;
 
+use alloc::borrow::Cow;
 use alloc::string::ToString;
 use core::str::FromStr;
 
 use codec::Encode;
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
-	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, PublicKey, AccountName,
+	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
 };
 use sp_std::prelude::*;
 use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction},
 };
-use support::{decl_error, decl_event, decl_module, decl_storage, ensure, Parameter};
+use support::{decl_error, decl_event, decl_module, decl_storage, debug, ensure, Parameter};
 use system::{
 	ensure_root, ensure_none,
 	offchain::SubmitUnsignedTransaction
@@ -44,6 +45,13 @@ use transaction::TxOut;
 mod transaction;
 mod mock;
 mod tests;
+
+lazy_static::lazy_static! {
+	pub static ref ActionNames: [ActionName; 1] = {
+		let name = ActionName::from_str("transfer").unwrap();
+		[name]
+	};
+}
 
 #[derive(Debug)]
 pub enum Error {
@@ -125,11 +133,16 @@ decl_storage! {
 	add_extra_genesis {
 		build(|config: &GenesisConfig| {
 			let ps_version = config.producer_schedule.version;
-			let producers = &config.producer_schedule.producers;
-			let schedule_hash = config.producer_schedule.schedule_hash();
-			assert!(schedule_hash.is_ok());
-			ProducerSchedules::insert(ps_version, (producers, schedule_hash.unwrap()));
-			PendingScheduleVersion::put(ps_version);
+			if !ProducerSchedules::exists(ps_version) {
+				let producers = &config.producer_schedule.producers;
+				let schedule_hash = config.producer_schedule.schedule_hash();
+				assert!(schedule_hash.is_ok());
+				ProducerSchedules::insert(ps_version, (producers, schedule_hash.unwrap()));
+				PendingScheduleVersion::put(ps_version);
+				debug::info!("producer schedule has been intialized");
+			} else {
+				debug::info!("producer schedule cannot be intialized twice");
+			}
 		});
 	}
 }
@@ -191,7 +204,7 @@ decl_module! {
 			ensure!(block_ids_list[0].is_empty(), "The first block ids must be empty.");
 			ensure!(block_ids_list[1].len() ==  10, "The rest of block ids length must be 10.");
 
-			let pending_schedule = block_headers[0].block_header.new_producers.as_ref().unwrap().clone(); // consider remove clone
+			let pending_schedule = block_headers[0].block_header.new_producers.as_ref().unwrap();
 
 			ensure!(PendingScheduleVersion::exists(), "PendingScheduleVersion has not been initialized.");
 
@@ -206,12 +219,12 @@ decl_module! {
 
 			#[cfg(feature = "std")]
 			ensure!(
-				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, block_headers, block_ids_list).is_ok(),
+				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
 				"Failed to verify block."
 			);
 
 			// if verification is successful, save the new producers schedule.
-			ProducerSchedules::insert(pending_schedule.version, (pending_schedule.producers, schedule_hash));
+			ProducerSchedules::insert(pending_schedule.version, (&pending_schedule.producers, schedule_hash));
 			PendingScheduleVersion::put(pending_schedule.version);
 
 			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, pending_schedule.version));
@@ -230,8 +243,7 @@ decl_module! {
 			let _ = ensure_root(origin)?;
 
 			// ensure action is what we want
-
-			// ensure current producers schedule list exists.
+			ensure!(action.name == ActionNames[0], "This is an invalid action to Bifrost");
 
 			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(
@@ -267,7 +279,7 @@ decl_module! {
 
 			#[cfg(feature = "std")]
 			ensure!(
-				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, block_headers, block_ids_list).is_ok(),
+				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
 				"Failed to verify blocks."
 			);
 
@@ -296,7 +308,7 @@ impl<T: Trait> Module<T> {
 		mut merkle: IncrementalMerkle,
 		schedule_hash: &Checksum256,
 		producer_schedule: &ProducerSchedule,
-		block_headers: Vec<SignedBlockHeader>,
+		block_headers: &[SignedBlockHeader],
 		block_ids_list: Vec<Vec<Checksum256>>,
 	) -> Result<(), Error> {
 		ensure!(block_headers.len() == 15, Error::LengthNotEqual(15, block_headers.len()));
@@ -346,15 +358,16 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn get_schedule_hash_and_public_key(
-		new_producers: Option<&ProducerSchedule>
-	) -> Result<(Checksum256, ProducerSchedule), Error> {
+	fn get_schedule_hash_and_public_key<'a>(
+		new_producers: Option<&'a ProducerSchedule>
+	) -> Result<(Checksum256, Cow<'a, ProducerSchedule>), Error> {
 		let producer_schedule = match new_producers {
-			Some(producers) => producers.clone(),
+			Some(producers) => Cow::Borrowed(producers), // use Cow to avoid cloning
 			None => {
 				let schedule_version = PendingScheduleVersion::get();
 				let producers = ProducerSchedules::get(schedule_version).0;
-				ProducerSchedule::new(schedule_version, producers)
+				let ps = ProducerSchedule::new(schedule_version, producers);
+                Cow::Owned(ps)
 			}
 		};
 
@@ -363,20 +376,26 @@ impl<T: Trait> Module<T> {
 		Ok((schedule_hash, producer_schedule))
 	}
 
-	fn filter_account_by_action(action: &Action) -> Result<(), Error> {
-		let action_transfer = ActionTransfer::read(&action.data, &mut 0).map_err(|e| {
+	fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error> {
+		let action_transfer = ActionTransfer::read(&act.data, &mut 0).map_err(|e| {
 			crate::Error::EosChainError(eos_chain::Error::BytesReadError(e))
 		})?;
 
+		Ok(action_transfer)
+	}
+
+	fn filter_account_by_action(action: &Action) -> Result<(), Error> {
+		let action_transfer = Self::get_action_transfer_from_action(&action)?;
+
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccounts::get().contains(&from) {
-			unimplemented!("withdraw");
+			todo!("withdraw");
 			return Ok(());
 		}
 
 		let to = action_transfer.to.to_string().as_bytes().to_vec();
 		if BridgeContractAccounts::get().contains(&to) {
-			unimplemented!("deposit");
+			todo!("deposit");
 			return Ok(());
 		}
 
@@ -410,7 +429,7 @@ impl<T: Trait> Module<T> {
 			tx_out = tx_out.sign()?;
 		}
 
-		<BridgeTxOuts<T>>::append([tx_out.clone()].into_iter());
+		<BridgeTxOuts<T>>::append([&tx_out].into_iter());
 
 		Ok(tx_out)
 	}
@@ -451,7 +470,7 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
 		#[cfg(feature = "std")]
-			Self::tx_transfer_to(target, bridge_asset);
+		Self::tx_transfer_to(target, bridge_asset);
 	}
 }
 
