@@ -2,8 +2,11 @@ use core::str::from_utf8;
 
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
-use eos_chain::{Action, Asset, PermissionLevel, Read, SignedTransaction, Transaction};
-use eos_chain::{SerializeData, Signature};
+use eos_chain::{
+	Action, Asset, PermissionLevel, Read, SerializeData, SignedTransaction, Signature, Transaction
+};
+#[cfg(feature = "std")]
+use eos_keys::secret::SecretKey;
 #[cfg(feature = "std")]
 use eos_rpc::{get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction};
 use sp_runtime::traits::SimpleArithmetic;
@@ -69,13 +72,13 @@ pub enum TxOut<Balance> {
 
 impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 	#[cfg(feature = "std")]
-	pub fn genrate_transfer(
+	pub fn generate_transfer(
+		eos_node_url: &str,
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
 		amount: Asset
 	) -> Result<Self, Error> {
-		let node: &'static str = "http://47.101.139.226:8888/";
-		let hyper_client = HyperClient::new(node);
+		let hyper_client = HyperClient::new(eos_node_url);
 
 		// fetch info
 		let info: GetInfo = get_info().fetch(&hyper_client).map_err(Error::EosRpcError)?;
@@ -123,11 +126,7 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 	}
 
 	#[cfg(feature = "std")]
-	pub fn sign(&mut self) -> Result<Self, Error> {
-		// import private key
-		let sk = eos_keys::secret::SecretKey::from_wif("5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3")
-			.map_err(Error::EosKeysError)?;
-
+	pub fn sign(&mut self, sk: SecretKey) -> Result<Self, Error> {
 		match self {
 			TxOut::Pending(ref mut multi_sig_tx) => {
 				let chain_id = &multi_sig_tx.chain_id;
@@ -143,11 +142,10 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 	}
 
 	#[cfg(feature = "std")]
-	pub fn send(&self) -> Result<Self, Error> {
+	pub fn send(&self, eos_node_url: &str) -> Result<Self, Error> {
 		match self {
 			TxOut::Pending(ref multi_sig_tx) => {
-				let node: &'static str = "http://47.101.139.226:8888/";
-				let hyper_client = HyperClient::new(node);
+				let hyper_client = HyperClient::new(eos_node_url);
 
 				let signatures = multi_sig_tx.multi_sig.signatures.iter()
 					.map(|sig|
@@ -173,5 +171,38 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 			},
 			_ => Err(Error::InvalidTxOutType)
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use eos_chain::Symbol;
+	use sp_std::str::FromStr;
+
+	#[test]
+	fn tx_send_should_work() {
+		let eos_node_url: &'static str = "http://127.0.0.1:8888/";
+		let raw_from = vec![0x62, 0x69, 0x66, 0x72, 0x6F, 0x73, 0x74]; // bifrost
+		let raw_to = vec![0x61, 0x6C, 0x69, 0x63, 0x65]; // alice
+		let sym = Symbol::from_str("4,EOS").unwrap();
+		let asset = Asset::new(1i64, sym);
+
+		// generate tx
+		let tx_out = TxOut::<u128>::generate_transfer(eos_node_url, raw_from, raw_to, asset);
+		assert!(tx_out.is_ok());
+
+		// sign tx
+		let mut tx_out = tx_out.unwrap();
+		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
+		let tx_out= tx_out.sign(sk);
+		assert!(tx_out.is_ok());
+
+		// send tx
+		let mut tx_out = tx_out.unwrap();
+		let tx_out = tx_out.send(eos_node_url);
+		assert!(tx_out.is_ok());
+
+		dbg!(&tx_out.unwrap());
 	}
 }
