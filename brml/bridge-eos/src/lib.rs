@@ -27,6 +27,7 @@ use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
 	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
 };
+use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
@@ -420,13 +421,14 @@ impl<T: Trait> Module<T> {
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
+		let node_url: &str = "http://127.0.0.1:8888/";
+		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
 		let raw_from: Vec<u8> = Vec::new();
-
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
-		let mut tx_out = TxOut::genrate_transfer(raw_from, raw_to, amount)?;
+		let mut tx_out = TxOut::generate_transfer(node_url, raw_from, raw_to, amount)?;
 
 		if Self::tx_can_sign() && !Self::tx_is_signed() {
-			tx_out = tx_out.sign()?;
+			tx_out = tx_out.sign(sk)?;
 		}
 
 		<BridgeTxOuts<T>>::append([&tx_out].into_iter());
@@ -436,14 +438,22 @@ impl<T: Trait> Module<T> {
 
 	#[cfg(feature = "std")]
 	fn offchain(now_block: T::BlockNumber) {
+		// sign each transaction
+		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
 		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
 			for bto in bridge_tx_outs.iter_mut() {
 				if Self::tx_can_sign() && !Self::tx_is_signed() {
-					*bto = bto.sign().unwrap();
+					*bto = bto.sign(sk).unwrap();
 				}
+			}
+		});
 
+		// push each transaction to eos node
+		let node_url: &str = "http://127.0.0.1:8888/";
+		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
+			for bto in bridge_tx_outs.iter_mut() {
 				if bto.reach_threshold() {
-					*bto = bto.send().unwrap();
+					*bto = bto.send(node_url).unwrap();
 				}
 			}
 		});
