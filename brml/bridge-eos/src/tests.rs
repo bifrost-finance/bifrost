@@ -17,11 +17,11 @@
 #![cfg(test)]
 
 use crate::*;
-use crate::mock::{new_test_ext, run_to_block, BridgeEos, Origin};
+use crate::mock::*;
 use core::{convert::From, str::FromStr};
 use eos_chain::{
-	Action, ActionTransfer, ActionReceipt, Checksum256, get_proof,
-	IncrementalMerkle, ProducerSchedule, SignedBlockHeader, Read
+	Action, ActionReceipt, Checksum256, get_proof,
+	IncrementalMerkle, ProducerSchedule, SignedBlockHeader
 };
 #[cfg(feature = "std")]
 use std::{
@@ -30,15 +30,14 @@ use std::{
 	io::Read as StdRead,
 	path::Path,
 };
-use sp_io::TestExternalities;
 use sp_core::offchain::{
 	OffchainExt,
-	testing,
+	testing::TestOffchainExt,
 };
-use sp_runtime::offchain::http::{Request, Method};
+use node_primitives::{BridgeAssetSymbol, BlockchainType};
 
 #[test]
-fn get_latest_schedule_version_shuold_work() {
+fn get_latest_schedule_version_should_work() {
 	new_test_ext().execute_with(|| {
 		assert!(!PendingScheduleVersion::exists());
 		PendingScheduleVersion::put(3);
@@ -340,6 +339,35 @@ fn prove_action_should_be_ok() {
 		let action_receipt = action_receipt.unwrap();
 
 		assert!(BridgeEos::prove_action(Origin::ROOT, action, action_receipt, actual_merkle_paths, merkle, signed_blocks_headers, block_ids_list).is_ok());
+	});
+}
+
+#[test]
+fn bridge_eos_offchain_should_work() {
+	let mut ext = new_test_ext();
+	let (offchain, _state) = TestOffchainExt::new();
+	ext.register_extension(OffchainExt::new(offchain));
+
+	ext.execute_with(|| {
+		System::set_block_number(1);
+
+		let raw_to = vec![0x61, 0x6C, 0x69, 0x63, 0x65]; // alice
+		let raw_symbol = vec![0x45, 0x4f, 0x53]; // EOS
+		let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, 4u32);
+		let bridge_asset = BridgeAssetBalance {
+			symbol: asset_symbol.clone(),
+			amount: 1 * 10u64.pow(8),
+		};
+		BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset);
+		let bridge_asset = BridgeAssetBalance {
+			symbol: asset_symbol,
+			amount: 2 * 10u64.pow(8),
+		};
+		BridgeEos::bridge_asset_to(raw_to, bridge_asset);
+
+		BridgeEos::offchain(2);
+		BridgeEos::offchain(3);
+		BridgeEos::offchain(4);
 	});
 }
 

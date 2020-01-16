@@ -25,7 +25,7 @@ use core::str::FromStr;
 use codec::Encode;
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
-	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
+	ProducerSchedule, SignedBlockHeader, Symbol, Read, verify_proof, ActionName,
 };
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
@@ -33,13 +33,12 @@ use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction},
 };
-use support::{decl_error, decl_event, decl_module, decl_storage, debug, ensure, Parameter};
+use support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
 use system::{
 	ensure_root, ensure_none,
 	offchain::SubmitUnsignedTransaction
 };
 
-use bridge;
 use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo};
 use transaction::TxOut;
 
@@ -404,11 +403,13 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn tx_can_sign() -> bool {
-		unimplemented!();
+		// TODO
+		true
 	}
 
 	fn tx_is_signed() -> bool {
-		unimplemented!();
+		// TODO
+		false
 	}
 
 	/// generate transaction for transfer amount to
@@ -421,13 +422,14 @@ impl<T: Trait> Module<T> {
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
+		// TODO
 		let node_url: &str = "http://127.0.0.1:8888/";
 		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
-		let raw_from: Vec<u8> = Vec::new();
+		let raw_from = vec![0x62, 0x69, 0x66, 0x72, 0x6F, 0x73, 0x74]; // bifrost
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
 		let mut tx_out = TxOut::generate_transfer(node_url, raw_from, raw_to, amount)?;
 
-		if Self::tx_can_sign() && !Self::tx_is_signed() {
+		if Self::tx_can_sign() {
 			tx_out = tx_out.sign(sk)?;
 		}
 
@@ -439,19 +441,32 @@ impl<T: Trait> Module<T> {
 	#[cfg(feature = "std")]
 	fn offchain(now_block: T::BlockNumber) {
 		// sign each transaction
-		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
-		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
-			for bto in bridge_tx_outs.iter_mut() {
-				if Self::tx_can_sign() && !Self::tx_is_signed() {
-					*bto = bto.sign(sk).unwrap();
+		if Self::tx_can_sign() {
+			// TODO
+			let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
+			<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
+				for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
+					match bto_filter {
+						TxOut::Pending(_) => true,
+						_ => false,
+					}
+				}) {
+					if !bto.reach_threshold() && !Self::tx_is_signed() {
+						*bto = bto.sign(sk).unwrap();
+					}
 				}
-			}
-		});
+			});
+		}
 
 		// push each transaction to eos node
 		let node_url: &str = "http://127.0.0.1:8888/";
 		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
-			for bto in bridge_tx_outs.iter_mut() {
+			for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
+				match bto_filter {
+					TxOut::Pending(_) => true,
+					_ => false,
+				}
+			}) {
 				if bto.reach_threshold() {
 					*bto = bto.send(node_url).unwrap();
 				}
@@ -467,10 +482,10 @@ impl<T: Trait> Module<T> {
 			B: SimpleArithmetic
 	{
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
-		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(Error::ParseUtf8Error)?;
-		let code = SymbolCode::from_str(symbol_str)
+		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)
+			.map_err(Error::ParseUtf8Error)?;
+		let symbol = Symbol::from_str(format!("{},{}", precision, symbol_str).as_ref())
 			.map_err(|err| Error::EosChainError(err.into()))?;
-		let symbol = Symbol::new_with_code(precision, code);
 		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
 
 		Ok(Asset::new(amount, symbol))
