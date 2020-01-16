@@ -199,10 +199,8 @@ mod tests {
 		assert!(tx_out.is_ok());
 
 		// send tx
-		let mut tx_out = tx_out.unwrap();
+		let tx_out = tx_out.unwrap();
 		let tx_out = tx_out.send(eos_node_url);
 		assert!(tx_out.is_ok());
-
-		dbg!(&tx_out.unwrap());
 	}
 }
