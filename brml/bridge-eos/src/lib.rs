@@ -115,13 +115,13 @@ decl_storage! {
 		/// Config to enable/disable this runtime
 		BridgeEnable get(fn is_bridge_enable): bool = true;
 
-		/// Eos producer list and hash which in specfic version id
+		/// Eos producer list and hash which in specific version id
 		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
 
 		/// Initialize a producer schedule while starting a node.
 		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
 
-		/// Current pending schedule vesion
+		/// Current pending schedule version
 		PendingScheduleVersion: VersionId;
 
 		/// Transaction sent to Eos blockchain
