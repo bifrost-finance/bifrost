@@ -139,9 +139,9 @@ decl_storage! {
 				assert!(schedule_hash.is_ok());
 				ProducerSchedules::insert(ps_version, (producers, schedule_hash.unwrap()));
 				PendingScheduleVersion::put(ps_version);
-				debug::info!("producer schedule has been intialized");
+				debug::info!("producer schedule has been initialized");
 			} else {
-				debug::info!("producer schedule cannot be intialized twice");
+				debug::info!("producer schedule cannot be initialized twice");
 			}
 		});
 	}
