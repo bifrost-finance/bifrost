@@ -27,6 +27,7 @@ use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
 	ProducerSchedule, SignedBlockHeader, Symbol, Read, verify_proof, ActionName,
 };
+#[cfg(feature = "std")]
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_runtime::{
@@ -120,6 +121,10 @@ decl_storage! {
 
 		/// Initialize a producer schedule while starting a node.
 		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
+
+		/// Save all unique transactions
+		/// Every transaction has different action receipt, but can have the same action
+		BridgeActionReceipt: map ActionReceipt => Action;
 
 		/// Current pending schedule vesion
 		PendingScheduleVersion: VersionId;
@@ -242,6 +247,9 @@ decl_module! {
 		) {
 			let _ = ensure_root(origin)?;
 
+			// ensure this transaction is unique
+			ensure!(BridgeActionReceipt::exists(&action_receipt), "This is a duplicated transaction");
+
 			// ensure action is what we want
 			ensure!(action.name == ActionNames[0], "This is an invalid action to Bifrost");
 
@@ -283,6 +291,9 @@ decl_module! {
 				"Failed to verify blocks."
 			);
 
+			//
+			BridgeActionReceipt::insert(&action_receipt, &action);
+
 			Self::deposit_event(Event::ProveAction);
 
 			// withdraw or deposit
@@ -319,7 +330,8 @@ impl<T: Trait> Module<T> {
 			Self::calculate_block_header_merkle_root(&mut merkle, &block_header, &block_ids)?;
 
 			// verify block header signature
-			Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root())?;
+//			Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root())?;
+			dbg!(Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root()));
 
 			// append current block id
 			let block_id = block_header.id().map_err(|_| Error::GetBlockIdFailure)?;
@@ -484,7 +496,7 @@ impl<T: Trait> Module<T> {
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
 		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)
 			.map_err(Error::ParseUtf8Error)?;
-		let symbol = Symbol::from_str(format!("{},{}", precision, symbol_str).as_ref())
+		let symbol = Symbol::from_str(alloc::format!("{},{}", precision, symbol_str).as_ref())
 			.map_err(|err| Error::EosChainError(err.into()))?;
 		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
 
