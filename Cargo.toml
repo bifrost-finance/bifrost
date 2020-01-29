@@ -8,6 +8,7 @@ members = [
 	"bin/node/runtime",
 	"bin/node/testing",
 	"bin/node/transaction-factory",
+	"bin/utils/subkey",
 	"brml/assets",
 	"brml/bridge",
 	"brml/exchange",
