@@ -2292,9 +2292,9 @@ checksum = "e61c2da0d0f700c77d2d313dbf4f93e41d235fa12c6681fee06621036df4c2af"
 
 [[package]]
 name = "itertools"
-version = "0.8.0"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b8467d9c1cebe26feb08c640139247fac215782d35371ade9a2136ed6085358"
+checksum = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
 dependencies = [
  "either",
 ]
@@ -6859,6 +6859,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "subkey"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "derive_more",
+ "frame-system",
+ "futures 0.1.29",
+ "hex",
+ "hex-literal",
+ "hyper 0.12.35",
+ "itertools",
+ "jsonrpc-core-client",
+ "node-primitives",
+ "node-runtime",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "rand 0.7.3",
+ "rpassword",
+ "rustc-hex",
+ "sc-rpc",
+ "sp-core",
+ "sp-runtime",
+ "substrate-bip39",
+ "tiny-bip39",
+]
+
+[[package]]
 name = "substrate-bip39"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7558,7 +7586,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.6.5",
+ "rand 0.7.3",
 ]
 
 [[package]]
