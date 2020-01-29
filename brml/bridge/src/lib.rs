@@ -80,16 +80,16 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Bridge {
 		// Associate account id in Bifrost to account in other blockchain
-		BridgeAccountIdToAccount get(fn bridge_account): map T::AccountId => Vec<u8>;
+		BridgeAccountIdToAccount get(fn bridge_account): map hasher(blake2_256) T::AccountId => Vec<u8>;
 
 		// Associate asset id in Bifrost to asset symbol in other blockchain
-		BridgeAssetIdToAsset get(fn bridge_asset): map T::AssetId => BridgeAssetSymbol<T::Precision>;
+		BridgeAssetIdToAsset get(fn bridge_asset): map hasher(blake2_256) T::AssetId => BridgeAssetSymbol<T::Precision>;
 
 		// Associate account in other blockchain to account id in Bifrost
-		BridgeAccountToAccountId get(fn bridge_account_id): map Vec<u8> => T::AccountId ;
+		BridgeAccountToAccountId get(fn bridge_account_id): map hasher(blake2_256) Vec<u8> => T::AccountId ;
 
 		// Associate asset symbol in other blockchain to asset id in Bifrost
-		BridgeAssetToAssetId get(fn bridge_asset_id): map BridgeAssetSymbol<T::Precision> => T::AssetId;
+		BridgeAssetToAssetId get(fn bridge_asset_id): map hasher(blake2_256) BridgeAssetSymbol<T::Precision> => T::AssetId;
 	}
 }
 

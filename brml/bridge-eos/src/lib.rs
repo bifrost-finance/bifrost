@@ -27,6 +27,7 @@ use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
 	ProducerSchedule, SignedBlockHeader, Symbol, Read, verify_proof, ActionName,
 };
+#[cfg(feature = "std")]
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_runtime::{
@@ -116,7 +117,7 @@ decl_storage! {
 		BridgeEnable get(fn is_bridge_enable): bool = true;
 
 		/// Eos producer list and hash which in specific version id
-		ProducerSchedules: map VersionId => (Vec<ProducerKey>, Checksum256);
+		ProducerSchedules: map hasher(blake2_256) VersionId => (Vec<ProducerKey>, Checksum256);
 
 		/// Initialize a producer schedule while starting a node.
 		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
@@ -474,6 +475,7 @@ impl<T: Trait> Module<T> {
 		});
 	}
 
+	#[cfg(feature = "std")]
 	fn convert_to_eos_asset<P, B>(
 		bridge_asset: BridgeAssetBalance<P, B>
 	) -> Result<Asset, Error>

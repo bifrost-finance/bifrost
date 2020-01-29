@@ -1,3 +1,4 @@
+#[cfg(feature = "std")]
 use core::str::from_utf8;
 
 use codec::{Decode, Encode};
