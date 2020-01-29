@@ -64,9 +64,7 @@ macro_rules! new_full_start {
 			.with_transaction_pool(|config, client, _fetcher| {
 				let pool_api = sc_transaction_pool::FullChainApi::new(client.clone());
 				let pool = sc_transaction_pool::BasicPool::new(config, pool_api);
-				let maintainer = sc_transaction_pool::FullBasicPoolMaintainer::new(pool.pool().clone(), client);
-				let maintainable_pool = sp_transaction_pool::MaintainableTransactionPool::new(pool, maintainer);
-				Ok(maintainable_pool)
+				Ok(pool)
 			})?
 			.with_import_queue(|_config, client, mut select_chain, _transaction_pool| {
 				let select_chain = select_chain.take()
@@ -112,10 +110,7 @@ macro_rules! new_full_start {
 /// concrete types instead.
 macro_rules! new_full {
 	($config:expr, $with_startup_data: expr) => {{
-		use futures::{
-			stream::StreamExt,
-			future::{FutureExt, TryFutureExt},
-		};
+		use futures::prelude::*;
 		use sc_network::Event;
 
 		let (
@@ -151,7 +146,7 @@ macro_rules! new_full {
 		($with_startup_data)(&block_import, &babe_link);
 
 		if participates_in_consensus {
-			let proposer = sc_basic_authority::ProposerFactory {
+			let proposer = sc_basic_authorship::ProposerFactory {
 				client: service.client(),
 				transaction_pool: service.transaction_pool(),
 			};
@@ -191,9 +186,8 @@ macro_rules! new_full {
 				service.keystore(),
 				dht_event_stream,
 			);
-			let future01_authority_discovery = authority_discovery.map(|x| Ok(x)).compat();
 
-			service.spawn_task(future01_authority_discovery);
+			service.spawn_task(authority_discovery);
 		}
 
 		// if the node isn't actively participating in consensus then it doesn't
@@ -239,7 +233,9 @@ macro_rules! new_full {
 				};
 				// the GRANDPA voter task is considered infallible, i.e.
 				// if it fails we take down the service with it.
-				service.spawn_essential_task(grandpa::run_grandpa_voter(grandpa_config)?);
+				service.spawn_essential_task(
+					grandpa::run_grandpa_voter(grandpa_config)?
+				);
 			},
 			(_, true) => {
 				grandpa::setup_disabled_grandpa(
@@ -271,15 +267,9 @@ type ConcreteClient =
 #[allow(dead_code)]
 type ConcreteBackend = Backend<ConcreteBlock>;
 #[allow(dead_code)]
-type ConcreteTransactionPool = sp_transaction_pool::MaintainableTransactionPool<
-	sc_transaction_pool::BasicPool<
-		sc_transaction_pool::FullChainApi<ConcreteClient, ConcreteBlock>,
-		ConcreteBlock
-	>,
-	sc_transaction_pool::FullBasicPoolMaintainer<
-		ConcreteClient,
-		sc_transaction_pool::FullChainApi<ConcreteClient, Block>
-	>
+type ConcreteTransactionPool = sc_transaction_pool::BasicPool<
+	sc_transaction_pool::FullChainApi<ConcreteClient, ConcreteBlock>,
+	ConcreteBlock
 >;
 
 /// A specialized configuration object for setting up the node..
@@ -321,10 +311,10 @@ pub fn new_light<C: Send + Default + 'static>(config: NodeConfiguration<C>)
 			let fetcher = fetcher
 				.ok_or_else(|| "Trying to start light transaction pool without active fetcher")?;
 			let pool_api = sc_transaction_pool::LightChainApi::new(client.clone(), fetcher.clone());
-			let pool = sc_transaction_pool::BasicPool::new(config, pool_api);
-			let maintainer = sc_transaction_pool::LightBasicPoolMaintainer::with_defaults(pool.pool().clone(), client, fetcher);
-			let maintainable_pool = sp_transaction_pool::MaintainableTransactionPool::new(pool, maintainer);
-			Ok(maintainable_pool)
+			let pool = sc_transaction_pool::BasicPool::with_revalidation_type(
+				config, pool_api, sc_transaction_pool::RevalidationType::Light,
+			);
+			Ok(pool)
 		})?
 		.with_import_queue_and_fprb(|_config, client, backend, fetcher, _select_chain, _tx_pool| {
 			let fetch_checker = fetcher
@@ -508,7 +498,7 @@ mod tests {
 
 				let parent_id = BlockId::number(service.client().chain_info().best_number);
 				let parent_header = service.client().header(&parent_id).unwrap().unwrap();
-				let mut proposer_factory = sc_basic_authority::ProposerFactory {
+				let mut proposer_factory = sc_basic_authorship::ProposerFactory {
 					client: service.client(),
 					transaction_pool: service.transaction_pool(),
 				};
@@ -534,13 +524,15 @@ mod tests {
 
 				digest.push(<DigestItem as CompatibleDigestItem>::babe_pre_digest(babe_pre_digest));
 
-				let mut proposer = proposer_factory.init(&parent_header).unwrap();
-				let new_block = futures::executor::block_on(proposer.propose(
-					inherent_data,
-					digest,
-					std::time::Duration::from_secs(1),
-					RecordProof::Yes,
-				)).expect("Error making test block").block;
+				let new_block = futures::executor::block_on(async move {
+					let proposer = proposer_factory.init(&parent_header).await;
+					proposer.unwrap().propose(
+						inherent_data,
+						digest,
+						std::time::Duration::from_secs(1),
+						RecordProof::Yes,
+					).await
+				}).expect("Error making test block").block;
 
 				let (new_header, new_body) = new_block.deconstruct();
 				let pre_hash = new_header.hash();
@@ -562,7 +554,8 @@ mod tests {
 					storage_changes: None,
 					finalized: false,
 					auxiliary: Vec::new(),
-					fork_choice: ForkChoiceStrategy::LongestChain,
+					intermediates: Default::default(),
+					fork_choice: Some(ForkChoiceStrategy::LongestChain),
 					allow_missing_state: false,
 					import_existing: false,
 				};

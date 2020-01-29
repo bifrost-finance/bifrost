@@ -9,7 +9,6 @@ build = "build.rs"
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "1.0.6", default-features = false, features = ["derive"] }
 integer-sqrt = { version = "0.1.2" }
-safe-mix = { version = "1.0", default-features = false }
 rustc-hex = { version = "2.0", optional = true }
 serde = { version = "1.0.102", optional = true }
 
@@ -41,21 +40,23 @@ pallet-babe = { version = "2.0.0", default-features = false, git = "https://gith
 pallet-balances = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-collective = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-contracts = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-contracts-rpc-runtime-api = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-contracts-rpc-runtime-api = { version = "0.8.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-democracy = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-elections-phragmen = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-finality-tracker = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-grandpa = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-im-online = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-indices = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-identity = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-membership = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-nicks = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-offences = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-recovery = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-session = { version = "2.0.0", features = ["historical"], git = "https://github.com/paritytech/substrate", default-features = false }
 pallet-staking = { version = "2.0.0", features = ["migrate"], git = "https://github.com/paritytech/substrate", default-features = false }
 pallet-staking-reward-curve = { version = "2.0.0",  git = "https://github.com/paritytech/substrate" }
 pallet-sudo = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
+pallet-society = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-treasury = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-utility = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -97,7 +98,7 @@ std = [
 	"pallet-indices/std",
 	"sp-inherents/std",
 	"pallet-membership/std",
-	"pallet-nicks/std",
+	"pallet-identity/std",
 	"node-primitives/std",
 	"sp-offchain/std",
 	"pallet-offences/std",
@@ -105,7 +106,6 @@ std = [
 	"pallet-randomness-collective-flip/std",
 	"sp-std/std",
 	"rustc-hex",
-	"safe-mix/std",
 	"serde",
 	"pallet-session/std",
 	"sp-api/std",
@@ -125,6 +125,8 @@ std = [
 	"sp-transaction-pool/std",
 	"pallet-utility/std",
 	"sp-version/std",
+	"pallet-society/std",
+	"pallet-recovery/std",
 	"brml-assets/std",
 	"brml-bridge/std",
 	"brml-exchange/std",
