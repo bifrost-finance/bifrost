@@ -1,18 +1,18 @@
 [workspace]
 members = [
+	"bin/node/cli",
+	"bin/node/executor",
+	"bin/node/primitives",
+	"bin/node/rpc",
+	"bin/node/rpc-client",
+	"bin/node/runtime",
+	"bin/node/testing",
+	"bin/node/transaction-factory",
 	"brml/assets",
 	"brml/bridge",
 	"brml/exchange",
 	"brml/settlement",
 	"brml/bridge-eos",
-	"node/cli",
-	"node/executor",
-	"node/primitives",
-	"node/rpc",
-	"node/rpc-client",
-	"node/runtime",
-	"node/testing",
-	"node/transaction-factory",
 ]
 
 [profile.release]
