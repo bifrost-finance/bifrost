@@ -83,7 +83,7 @@ wasm-bindgen-futures = { version = "0.4.7", optional = true }
 browser-utils = { git = "https://github.com/paritytech/substrate", optional = true }
 
 # for initialize producer schedule
-brml-bridge-eos = { path = "../../brml/bridge-eos", default-features = false }
+brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
 eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1" }
 
 [dev-dependencies]

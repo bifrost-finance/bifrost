@@ -13,7 +13,7 @@ eos-rpc = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rus
 hex = { version = "0.4", default-features = false }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 inherents = { version = "2.0.0", package = "sp-inherents", git = "https://github.com/paritytech/substrate", default-features = false }
-node-primitives = { path = "../../node/primitives", default-features = false }
+node-primitives = { path = "../../bin/node/primitives", default-features = false }
 sp-core = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 sp-io = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
