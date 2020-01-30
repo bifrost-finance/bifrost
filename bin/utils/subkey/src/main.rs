@@ -26,6 +26,7 @@ use itertools::Itertools;
 use node_primitives::{Balance, Hash, Index, AccountId, Signature};
 use node_runtime::{BalancesCall, Call, Runtime, SignedPayload, UncheckedExtrinsic, VERSION};
 use sp_core::{
+	Bytes, offchain::StorageKind,
 	crypto::{set_default_ss58_version, Ss58AddressFormat, Ss58Codec},
 	ed25519, sr25519, ecdsa, Pair, Public, H256, hexdisplay::HexDisplay,
 };
@@ -241,6 +242,19 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 					<key-type> 'Key type, examples: \"gran\", or \"imon\" '
 					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
 				"),
+			SubCommand::with_name("localstorage-get")
+				.about("Get offchain local storage under given key")
+				.args_from_usage("
+					<key> 'Key name'
+					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
+				"),
+			SubCommand::with_name("localstorage-set")
+				.about("Set offchain local storage under given key")
+				.args_from_usage("
+					<key> 'Key name'
+					<value> 'Value to be set'
+					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
+				"),
 		])
 }
 
@@ -411,6 +425,26 @@ where
 				suri,
 				sp_core::Bytes(pair.public().as_ref().to_vec()),
 			);
+		}
+		("localstorage-get", Some(matches)) => {
+			let node_url = matches.value_of("node-url").unwrap_or("http://localhost:9933");
+			let rpc = rpc::RpcClient::new(node_url.to_string());
+			let key = matches.value_of("key").ok_or(Error::Static("Key is required"))?;
+
+			let prefix = StorageKind::PERSISTENT;
+			let key = Bytes(Vec::from(key));
+			rpc.get_offchain_storage(prefix, key);
+		}
+		("localstorage-set", Some(matches)) => {
+			let node_url = matches.value_of("node-url").unwrap_or("http://localhost:9933");
+			let rpc = rpc::RpcClient::new(node_url.to_string());
+			let key = matches.value_of("key").ok_or(Error::Static("Key is required"))?;
+			let value = matches.value_of("value").ok_or(Error::Static("Value is required"))?;
+
+			let prefix = StorageKind::PERSISTENT;
+			let key = Bytes(Vec::from(key));
+			let value = Bytes(Vec::from(value));
+			rpc.set_offchain_storage(prefix, key, value);
 		}
 		_ => print_usage(&matches),
 	}
