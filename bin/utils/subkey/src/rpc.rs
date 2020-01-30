@@ -19,9 +19,9 @@
 use futures::Future;
 use hyper::rt;
 use node_primitives::Hash;
-use sc_rpc::author::AuthorClient;
 use jsonrpc_core_client::transports::http;
-use sp_core::Bytes;
+use sc_rpc::{author::AuthorClient, offchain::OffchainClient};
+use sp_core::{Bytes, offchain::StorageKind};
 
 pub struct RpcClient { url: String }
 
@@ -43,6 +43,54 @@ impl RpcClient {
 				})
 				.map_err(|e| {
 					println!("Error inserting key: {:?}", e);
+				})
+		);
+	}
+
+	pub fn get_offchain_storage(
+		&self,
+		prefix: StorageKind,
+		key: Bytes,
+	) {
+		let url = self.url.clone();
+
+		rt::run(
+			http::connect(&url)
+				.and_then(move |client: OffchainClient| {
+					client.get_local_storage(prefix, key.clone()).map(move |ret| {
+						match ret {
+							Some(value) => println!(
+								"Value of key(0x{}) is 0x{}",
+								hex::encode(&*key),
+								hex::encode(&*value),
+							),
+							None => println!("Value of key(0x{}) not exists", hex::encode(&*key)),
+						}
+					})
+				})
+				.map_err(|e| {
+					println!("Error getting local storage: {:?}", e);
+				})
+		);
+	}
+
+	pub fn set_offchain_storage(
+		&self,
+		prefix: StorageKind,
+		key: Bytes,
+		value: Bytes,
+	) {
+		let url = self.url.clone();
+
+		rt::run(
+			http::connect(&url)
+				.and_then(move |client: OffchainClient| {
+					client.set_local_storage(prefix, key, value).map(|_| {
+						println!("Set local storage successfully");
+					})
+				})
+				.map_err(|e| {
+					println!("Error setting local storage: {:?}", e);
 				})
 		);
 	}
