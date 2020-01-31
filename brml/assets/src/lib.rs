@@ -1,4 +1,4 @@
-// Copyright 2019 Liebi Technologies.
+// Copyright 2019-2020 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -68,13 +68,13 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub Balances get(fn balances): map (T::AssetId, T::AccountId) => T::Balance;
+		pub Balances get(fn balances): map hasher(blake2_256) (T::AssetId, T::AccountId) => T::Balance;
 		/// The next asset identifier up for grabs.
 		NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
-		pub Tokens get(fn token_details): map T::AssetId => Token<T::Balance>;
+		pub Tokens get(fn token_details): map hasher(blake2_256) T::AssetId => Token<T::Balance>;
 		/// A collection of asset which an account owned
-		pub AccountAssets get(fn account_assets): map T::AccountId => Vec<T::AssetId>;
+		pub AccountAssets get(fn account_assets): map hasher(blake2_256) T::AccountId => Vec<T::AssetId>;
 	}
 }
 

@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
-node-primitives = { path = "../../node/primitives", default-features = false }
+node-primitives = { path = "../../bin/node/primitives", default-features = false }
 frame-support = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 sp-core = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }

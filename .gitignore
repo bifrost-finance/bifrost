@@ -2,7 +2,6 @@
 **/*.rs.bk
 *.swp
 .wasm-binaries
-node/runtime/wasm/target/
 **/._*
 .idea
 .vscode
