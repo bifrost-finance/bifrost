@@ -338,7 +338,10 @@ fn prove_action_should_be_ok() {
 		assert!(action_receipt.is_ok());
 		let action_receipt = action_receipt.unwrap();
 
-		assert!(BridgeEos::prove_action(Origin::ROOT, action, action_receipt, actual_merkle_paths, merkle, signed_blocks_headers, block_ids_list).is_ok());
+		assert!(BridgeEos::prove_action(Origin::ROOT, action.clone(), action_receipt.clone(), actual_merkle_paths, merkle, signed_blocks_headers, block_ids_list).is_ok());
+
+		// ensure action_receipt is saved after proved action
+		assert_eq!(BridgeActionReceipt::get(&action_receipt), action);
 	});
 }
 

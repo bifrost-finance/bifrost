@@ -122,6 +122,10 @@ decl_storage! {
 		/// Initialize a producer schedule while starting a node.
 		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
 
+		/// Save all unique transactions
+		/// Every transaction has different action receipt, but can have the same action
+		BridgeActionReceipt: map hasher(blake2_256) ActionReceipt => Action;
+
 		/// Current pending schedule version
 		PendingScheduleVersion: VersionId;
 
@@ -231,7 +235,6 @@ decl_module! {
 			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, pending_schedule.version));
 		}
 
-		// 1.
 		fn prove_action(
 			origin,
 			action: Action,
@@ -242,6 +245,9 @@ decl_module! {
 			block_ids_list: Vec<Vec<Checksum256>>
 		) {
 			let _ = ensure_root(origin)?;
+
+			// ensure this transaction is unique
+			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
 
 			// ensure action is what we want
 			ensure!(action.name == ActionNames[0], "This is an invalid action to Bifrost");
@@ -283,6 +289,9 @@ decl_module! {
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
 				"Failed to verify blocks."
 			);
+
+			// save proves for this transaction
+			BridgeActionReceipt::insert(&action_receipt, &action);
 
 			Self::deposit_event(Event::ProveAction);
 
