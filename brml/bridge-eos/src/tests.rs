@@ -1,4 +1,4 @@
-// Copyright 2019 Liebi Technologies.
+// Copyright 2019-2020 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -368,6 +368,14 @@ fn bridge_eos_offchain_should_work() {
 		BridgeEos::offchain(2);
 		BridgeEos::offchain(3);
 		BridgeEos::offchain(4);
+
+		let tx_outs = BridgeEos::bridge_tx_outs();
+		assert_eq!(tx_outs.iter().filter(|out| {
+			match out {
+				TxOut::Processing{ .. } => true,
+				_ => false,
+			}
+		}).count(), 2);
 	});
 }
 
