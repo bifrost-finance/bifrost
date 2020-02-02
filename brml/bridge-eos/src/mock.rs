@@ -103,5 +103,10 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	GenesisConfig {
+		producer_schedule: eos_chain::ProducerSchedule::default(),
+		bridge_contract_account: b"bifrost".to_vec(),
+	}.assimilate_storage(&mut t).unwrap();
+	t.into()
 }
