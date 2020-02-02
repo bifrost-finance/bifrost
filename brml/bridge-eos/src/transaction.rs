@@ -182,7 +182,7 @@ mod tests {
 	use sp_std::str::FromStr;
 
 	#[test]
-	fn tx_send_should_work() {
+	fn tx_send_with_multisig_should_work() {
 		let eos_node_url: &'static str = "http://127.0.0.1:8888/";
 		let raw_from = b"bifrost".to_vec();
 		let raw_to = b"alice".to_vec();
@@ -193,10 +193,16 @@ mod tests {
 		let tx_out = TxOut::<u128>::generate_transfer(eos_node_url, raw_from, raw_to, asset);
 		assert!(tx_out.is_ok());
 
-		// sign tx
+		// sign tx by account testa
 		let mut tx_out = tx_out.unwrap();
-		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
-		let tx_out= tx_out.sign(sk);
+		let sk = SecretKey::from_wif("5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr").unwrap();
+		let tx_out = tx_out.sign(sk);
+		assert!(tx_out.is_ok());
+
+		// sign tx by account testb
+		let mut tx_out = tx_out.unwrap();
+		let sk = SecretKey::from_wif("5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj").unwrap();
+		let tx_out = tx_out.sign(sk);
 		assert!(tx_out.is_ok());
 
 		// send tx
