@@ -354,8 +354,8 @@ fn bridge_eos_offchain_should_work() {
 	ext.execute_with(|| {
 		System::set_block_number(1);
 
-		let raw_to = vec![0x61, 0x6C, 0x69, 0x63, 0x65]; // alice
-		let raw_symbol = vec![0x45, 0x4f, 0x53]; // EOS
+		let raw_to = b"alice".to_vec();
+		let raw_symbol = b"EOS".to_vec();
 		let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, 4u32);
 		let bridge_asset = BridgeAssetBalance {
 			symbol: asset_symbol.clone(),

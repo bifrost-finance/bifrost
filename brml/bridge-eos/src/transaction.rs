@@ -184,8 +184,8 @@ mod tests {
 	#[test]
 	fn tx_send_should_work() {
 		let eos_node_url: &'static str = "http://127.0.0.1:8888/";
-		let raw_from = vec![0x62, 0x69, 0x66, 0x72, 0x6F, 0x73, 0x74]; // bifrost
-		let raw_to = vec![0x61, 0x6C, 0x69, 0x63, 0x65]; // alice
+		let raw_from = b"bifrost".to_vec();
+		let raw_to = b"alice".to_vec();
 		let sym = Symbol::from_str("4,EOS").unwrap();
 		let asset = Asset::new(1i64, sym);
 
