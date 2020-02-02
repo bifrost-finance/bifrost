@@ -135,11 +135,13 @@ decl_storage! {
 		/// Transaction sent to Eos blockchain
 		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::Balance>>;
 
-		/// Accounts where Eos bridge contract deployed
-		BridgeContractAccounts get(fn bridge_contract_accounts): Vec<Vec<u8>>;
+		/// Account where Eos bridge contract deployed
+		BridgeContractAccount get(fn bridge_contract_account) config(): Vec<u8>;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig| {
+			BridgeContractAccount::put(config.bridge_contract_account.clone());
+
 			let ps_version = config.producer_schedule.version;
 			if !ProducerSchedules::exists(ps_version) {
 				let producers = &config.producer_schedule.producers;
@@ -186,9 +188,9 @@ decl_module! {
 			Self::deposit_event(Event::InitSchedule(ps.version));
 		}
 
-		fn set_contract_accounts(origin, account: Vec<Vec<u8>>) {
+		fn set_contract_accounts(origin, account: Vec<u8>) {
 			let _ = ensure_root(origin)?;
-			BridgeContractAccounts::put(account);
+			BridgeContractAccount::put(account);
 		}
 
 		// 1. block_headers length must be 15.
@@ -401,13 +403,13 @@ impl<T: Trait> Module<T> {
 		let action_transfer = Self::get_action_transfer_from_action(&action)?;
 
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
-		if BridgeContractAccounts::get().contains(&from) {
+		if BridgeContractAccount::get() == from {
 			todo!("withdraw");
 			return Ok(());
 		}
 
 		let to = action_transfer.to.to_string().as_bytes().to_vec();
-		if BridgeContractAccounts::get().contains(&to) {
+		if BridgeContractAccount::get() == from {
 			todo!("deposit");
 			return Ok(());
 		}
@@ -445,7 +447,7 @@ impl<T: Trait> Module<T> {
 		let sk_str = parse_offchain_storage("EOS_KEY")?;
 		let sk = SecretKey::from_wif(&sk_str).unwrap();
 
-		let raw_from = vec![0x62, 0x69, 0x66, 0x72, 0x6F, 0x73, 0x74]; // bifrost
+		let raw_from = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
 		let mut tx_out = TxOut::generate_transfer(&node_url, raw_from, raw_to, amount)?;
 

@@ -302,6 +302,7 @@ pub fn testnet_genesis(
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			producer_schedule: eos_chain::ProducerSchedule::default(),
+			bridge_contract_account: b"bifrost".to_vec(),
 		}),
 	}
 }

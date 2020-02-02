@@ -382,6 +382,20 @@ fn bridge_eos_offchain_should_work() {
 	});
 }
 
+#[test]
+fn bridge_eos_genesis_config_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_eq!(BridgeContractAccount::get(), b"bifrost".to_vec());
+
+		let producer_schedule = eos_chain::ProducerSchedule::default();
+		let version = producer_schedule.clone().version;
+		let producers = producer_schedule.clone().producers;
+		let schedule_hash = producer_schedule.schedule_hash();
+		assert_eq!(PendingScheduleVersion::get(), version);
+		assert_eq!(ProducerSchedules::get(version), (producers, schedule_hash.unwrap()));
+	});
+}
+
 #[cfg(feature = "std")]
 fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Error>> {
 	let path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/test_data/")).join(json_name.as_ref());
