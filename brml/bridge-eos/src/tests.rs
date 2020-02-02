@@ -354,6 +354,9 @@ fn bridge_eos_offchain_should_work() {
 	ext.execute_with(|| {
 		System::set_block_number(1);
 
+		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_NODE_URL", b"http://127.0.0.1:8888/");
+		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr");
+
 		let raw_to = b"alice".to_vec();
 		let raw_symbol = b"EOS".to_vec();
 		let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, 4u32);
@@ -369,8 +372,6 @@ fn bridge_eos_offchain_should_work() {
 		BridgeEos::bridge_asset_to(raw_to, bridge_asset);
 
 		BridgeEos::offchain(2);
-		BridgeEos::offchain(3);
-		BridgeEos::offchain(4);
 
 		let tx_outs = BridgeEos::bridge_tx_outs();
 		assert_eq!(tx_outs.iter().filter(|out| {
