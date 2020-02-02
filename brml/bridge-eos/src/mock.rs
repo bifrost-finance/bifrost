@@ -106,7 +106,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	GenesisConfig {
 		producer_schedule: eos_chain::ProducerSchedule::default(),
-		bridge_contract_account: b"bifrost".to_vec(),
+		bridge_contract_account: (b"bifrost".to_vec(), 2),
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }
