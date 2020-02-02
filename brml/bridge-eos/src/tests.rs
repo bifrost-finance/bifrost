@@ -355,6 +355,8 @@ fn bridge_eos_offchain_should_work() {
 		System::set_block_number(1);
 
 		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_NODE_URL", b"http://127.0.0.1:8888/");
+
+		// EOS secret key of account testa
 		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr");
 
 		let raw_to = b"alice".to_vec();
@@ -365,11 +367,9 @@ fn bridge_eos_offchain_should_work() {
 			amount: 1 * 10u64.pow(8),
 		};
 		BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset);
-		let bridge_asset = BridgeAssetBalance {
-			symbol: asset_symbol,
-			amount: 2 * 10u64.pow(8),
-		};
-		BridgeEos::bridge_asset_to(raw_to, bridge_asset);
+
+		// EOS secret key of account testb
+		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj");
 
 		BridgeEos::offchain(2);
 
@@ -379,14 +379,14 @@ fn bridge_eos_offchain_should_work() {
 				TxOut::Processing{ .. } => true,
 				_ => false,
 			}
-		}).count(), 2);
+		}).count(), 1);
 	});
 }
 
 #[test]
 fn bridge_eos_genesis_config_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(BridgeContractAccount::get(), b"bifrost".to_vec());
+		assert_eq!(BridgeContractAccount::get(), (b"bifrost".to_vec(), 2));
 
 		let producer_schedule = eos_chain::ProducerSchedule::default();
 		let version = producer_schedule.clone().version;

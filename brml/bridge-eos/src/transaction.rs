@@ -10,7 +10,7 @@ use eos_chain::{
 use eos_keys::secret::SecretKey;
 #[cfg(feature = "std")]
 use eos_rpc::{get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction};
-use sp_runtime::traits::SimpleArithmetic;
+use sp_runtime::traits::{SaturatedConversion, SimpleArithmetic};
 use sp_std::prelude::*;
 
 use crate::Error;
@@ -26,6 +26,13 @@ pub struct MultiSig {
 }
 
 impl MultiSig {
+	pub fn new(threshold: u8) -> Self {
+		MultiSig {
+			signatures: Default::default(),
+			threshold,
+		}
+	}
+
 	pub fn reach_threshold(&self) -> bool {
 		self.signatures.len() >= self.threshold as usize
 	}
@@ -71,13 +78,14 @@ pub enum TxOut<Balance> {
 	},
 }
 
-impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
+impl<Balance> TxOut<Balance> where Balance: SaturatedConversion + SimpleArithmetic + Default + Copy {
 	#[cfg(feature = "std")]
 	pub fn generate_transfer(
 		eos_node_url: &str,
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
-		amount: Asset
+		amount: Asset,
+		threshold: u8,
 	) -> Result<Self, Error> {
 		let hyper_client = HyperClient::new(eos_node_url);
 
@@ -109,13 +117,12 @@ impl<Balance> TxOut<Balance> where Balance: SimpleArithmetic + Default + Copy {
 		// Construct transaction
 		let tx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
 		let multi_sig_tx = MultiSigTx {
-			raw_tx: tx.to_serialize_data().map_err(Error::EosChainError)?,
 			chain_id,
-			multi_sig: Default::default(),
-			amount: Default::default(),
-			to_name: vec![],
+			raw_tx: tx.to_serialize_data().map_err(Error::EosChainError)?,
+			multi_sig: MultiSig::new(threshold),
+			amount: Balance::saturated_from(amount.amount as u64),
+			to_name: raw_to,
 		};
-
 		Ok(TxOut::Pending(multi_sig_tx))
 	}
 
@@ -190,7 +197,7 @@ mod tests {
 		let asset = Asset::new(1i64, sym);
 
 		// generate tx
-		let tx_out = TxOut::<u128>::generate_transfer(eos_node_url, raw_from, raw_to, asset);
+		let tx_out = TxOut::<u128>::generate_transfer(eos_node_url, raw_from, raw_to, asset, 2);
 		assert!(tx_out.is_ok());
 
 		// sign tx by account testa

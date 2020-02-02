@@ -56,6 +56,9 @@ lazy_static::lazy_static! {
 	};
 }
 
+const EOS_NODE_URL: &[u8] = b"EOS_NODE_URL";
+const EOS_SECRET_KEY: &[u8] = b"EOS_SECRET_KEY";
+
 #[derive(Debug)]
 pub enum Error {
 	LengthNotEqual(usize, usize), // (expected, actual)
@@ -135,8 +138,8 @@ decl_storage! {
 		/// Transaction sent to Eos blockchain
 		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::Balance>>;
 
-		/// Account where Eos bridge contract deployed
-		BridgeContractAccount get(fn bridge_contract_account) config(): Vec<u8>;
+		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
+		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig| {
@@ -188,9 +191,9 @@ decl_module! {
 			Self::deposit_event(Event::InitSchedule(ps.version));
 		}
 
-		fn set_contract_accounts(origin, account: Vec<u8>) {
+		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
 			let _ = ensure_root(origin)?;
-			BridgeContractAccount::put(account);
+			BridgeContractAccount::put((account, threthold));
 		}
 
 		// 1. block_headers length must be 15.
@@ -403,13 +406,13 @@ impl<T: Trait> Module<T> {
 		let action_transfer = Self::get_action_transfer_from_action(&action)?;
 
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
-		if BridgeContractAccount::get() == from {
+		if BridgeContractAccount::get().0 == from {
 			todo!("withdraw");
 			return Ok(());
 		}
 
 		let to = action_transfer.to.to_string().as_bytes().to_vec();
-		if BridgeContractAccount::get() == from {
+		if BridgeContractAccount::get().0 == from {
 			todo!("deposit");
 			return Ok(());
 		}
@@ -437,21 +440,13 @@ impl<T: Trait> Module<T> {
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
-		let get_offchain_storage = |key: &str| {
-			let value = sp_io::offchain::local_storage_get(
-				StorageKind::PERSISTENT,
-				key.as_bytes(),
-			).ok_or(Error::NoLocalStorage)?;
-			String::from_utf8(value).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))
-		};
+		let node_url = Self::get_offchain_storage(EOS_NODE_URL)?;
+		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
+		let sk = SecretKey::from_wif(sk_str.as_str()).unwrap();
 
-		let node_url = get_offchain_storage("EOS_NODE_URL")?;
-		let sk_str = get_offchain_storage("EOS_SECRET_KEY")?;
-		let sk = SecretKey::from_wif(&sk_str).unwrap();
-
-		let raw_from = BridgeContractAccount::get();
+		let (raw_from, threshold) = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
-		let mut tx_out = TxOut::generate_transfer(&node_url, raw_from, raw_to, amount)?;
+		let mut tx_out = TxOut::generate_transfer(node_url.as_str(), raw_from, raw_to, amount, threshold)?;
 
 		if Self::tx_can_sign() {
 			tx_out = tx_out.sign(sk)?;
@@ -466,8 +461,8 @@ impl<T: Trait> Module<T> {
 	fn offchain(now_block: T::BlockNumber) {
 		// sign each transaction
 		if Self::tx_can_sign() {
-			// TODO
-			let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
+			let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY).unwrap();
+			let sk = SecretKey::from_wif(sk_str.as_str()).unwrap();
 			<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
 				for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
 					match bto_filter {
@@ -483,7 +478,7 @@ impl<T: Trait> Module<T> {
 		}
 
 		// push each transaction to eos node
-		let node_url: &str = "http://127.0.0.1:8888/";
+		let node_url = Self::get_offchain_storage(EOS_NODE_URL).unwrap();
 		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
 			for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
 				match bto_filter {
@@ -492,7 +487,7 @@ impl<T: Trait> Module<T> {
 				}
 			}) {
 				if bto.reach_threshold() {
-					*bto = bto.send(node_url).unwrap();
+					*bto = bto.send(node_url.as_str()).unwrap();
 				}
 			}
 		});
@@ -514,6 +509,14 @@ impl<T: Trait> Module<T> {
 		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
 
 		Ok(Asset::new(amount, symbol))
+	}
+
+	fn get_offchain_storage(key: &[u8]) -> Result<String, Error> {
+		let value = sp_io::offchain::local_storage_get(
+			StorageKind::PERSISTENT,
+			key,
+		).ok_or(Error::NoLocalStorage)?;
+		Ok(String::from_utf8(value).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))?)
 	}
 }
 
