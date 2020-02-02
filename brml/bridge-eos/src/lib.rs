@@ -19,6 +19,7 @@
 extern crate alloc;
 
 use alloc::borrow::Cow;
+use alloc::string::String;
 use alloc::string::ToString;
 use core::str::FromStr;
 
@@ -30,6 +31,7 @@ use eos_chain::{
 #[cfg(feature = "std")]
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
+use sp_core::offchain::StorageKind;
 use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction},
@@ -73,6 +75,7 @@ pub enum Error {
 	EosRpcError(eos_rpc::Error),
 	#[cfg(feature = "std")]
 	EosKeysError(eos_keys::error::Error),
+	NoLocalStorage,
 }
 
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
@@ -432,12 +435,19 @@ impl<T: Trait> Module<T> {
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
-		// TODO
-		let node_url: &str = "http://127.0.0.1:8888/";
-		let sk = SecretKey::from_wif("5HrPPFF2hq1X8ktBVfUVubeAmSaerRHwz2aGxGSUqvAuaNhR8a5").unwrap();
+		let parse_offchain_storage = |key: &str| {
+			let decode = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key.as_bytes()).ok_or(Error::NoLocalStorage)?;
+			let sigs_str = hex::decode(decode).map_err(Error::HexError)?;
+			String::from_utf8(sigs_str).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))
+		};
+
+		let node_url = parse_offchain_storage("EOS_NODE")?;
+		let sk_str = parse_offchain_storage("EOS_KEY")?;
+		let sk = SecretKey::from_wif(&sk_str).unwrap();
+
 		let raw_from = vec![0x62, 0x69, 0x66, 0x72, 0x6F, 0x73, 0x74]; // bifrost
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
-		let mut tx_out = TxOut::generate_transfer(node_url, raw_from, raw_to, amount)?;
+		let mut tx_out = TxOut::generate_transfer(&node_url, raw_from, raw_to, amount)?;
 
 		if Self::tx_can_sign() {
 			tx_out = tx_out.sign(sk)?;
