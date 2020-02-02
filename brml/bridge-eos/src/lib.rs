@@ -461,8 +461,28 @@ impl<T: Trait> Module<T> {
 	fn offchain(now_block: T::BlockNumber) {
 		// sign each transaction
 		if Self::tx_can_sign() {
-			let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY).unwrap();
-			let sk = SecretKey::from_wif(sk_str.as_str()).unwrap();
+			if let Ok(sk_str) = Self::get_offchain_storage(EOS_SECRET_KEY) {
+				if let Ok(sk) = SecretKey::from_wif(sk_str.as_str()) {
+					<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
+						for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
+							match bto_filter {
+								TxOut::Pending(_) => true,
+								_ => false,
+							}
+						}) {
+							if !bto.reach_threshold() && !Self::tx_is_signed() {
+								if let Ok(signed_bto) = bto.sign(sk) {
+									*bto = signed_bto;
+								}
+							}
+						}
+					});
+				}
+			}
+		}
+
+		// push each transaction to eos node
+		if let Ok(node_url) = Self::get_offchain_storage(EOS_NODE_URL) {
 			<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
 				for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
 					match bto_filter {
@@ -470,27 +490,14 @@ impl<T: Trait> Module<T> {
 						_ => false,
 					}
 				}) {
-					if !bto.reach_threshold() && !Self::tx_is_signed() {
-						*bto = bto.sign(sk).unwrap();
+					if bto.reach_threshold() {
+						if let Ok(sent_bto) = bto.send(node_url.as_str()) {
+							*bto = sent_bto;
+						}
 					}
 				}
 			});
 		}
-
-		// push each transaction to eos node
-		let node_url = Self::get_offchain_storage(EOS_NODE_URL).unwrap();
-		<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
-			for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
-				match bto_filter {
-					TxOut::Pending(_) => true,
-					_ => false,
-				}
-			}) {
-				if bto.reach_threshold() {
-					*bto = bto.send(node_url.as_str()).unwrap();
-				}
-			}
-		});
 	}
 
 	#[cfg(feature = "std")]
