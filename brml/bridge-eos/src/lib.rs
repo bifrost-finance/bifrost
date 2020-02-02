@@ -437,14 +437,16 @@ impl<T: Trait> Module<T> {
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
-		let parse_offchain_storage = |key: &str| {
-			let decode = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key.as_bytes()).ok_or(Error::NoLocalStorage)?;
-			let sigs_str = hex::decode(decode).map_err(Error::HexError)?;
-			String::from_utf8(sigs_str).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))
+		let get_offchain_storage = |key: &str| {
+			let value = sp_io::offchain::local_storage_get(
+				StorageKind::PERSISTENT,
+				key.as_bytes(),
+			).ok_or(Error::NoLocalStorage)?;
+			String::from_utf8(value).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))
 		};
 
-		let node_url = parse_offchain_storage("EOS_NODE")?;
-		let sk_str = parse_offchain_storage("EOS_KEY")?;
+		let node_url = get_offchain_storage("EOS_NODE_URL")?;
+		let sk_str = get_offchain_storage("EOS_SECRET_KEY")?;
 		let sk = SecretKey::from_wif(&sk_str).unwrap();
 
 		let raw_from = BridgeContractAccount::get();
