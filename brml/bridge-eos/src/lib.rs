@@ -34,7 +34,10 @@ use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
-	transaction_validity::{TransactionLongevity, TransactionValidity, UnknownTransaction, ValidTransaction},
+	transaction_validity::{
+		InvalidTransaction, TransactionLongevity, TransactionPriority,
+		TransactionValidity, ValidTransaction,
+	},
 };
 use support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
 use system::{
@@ -307,15 +310,32 @@ decl_module! {
 			Self::filter_account_by_action(&action);
 		}
 
-		fn tx_result(origin, block_num: T::BlockNumber) {
+		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::Balance>>) {
 			ensure_none(origin)?;
-			// TODO implement this function
+
+			<BridgeTxOuts<T>>::put(tx_list);
 		}
 
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
-			#[cfg(feature = "std")]
-			Self::offchain(now_block);
+			debug::RuntimeLogger::init();
+
+			// Only send messages if we are a potential validator.
+			if sp_io::offchain::is_validator() {
+				debug::info!(
+					target: "bridge-eos",
+					"Is validator at {:?}.",
+					now_block,
+				);
+				#[cfg(feature = "std")]
+				Self::offchain(now_block);
+			} else {
+				debug::info!(
+					target: "bridge-eos",
+					"Skipping send tx at {:?}. Not a validator.",
+					now_block,
+				)
+			}
 		}
 	}
 }
@@ -450,6 +470,11 @@ impl<T: Trait> Module<T> {
 
 		if Self::tx_can_sign() {
 			tx_out = tx_out.sign(sk)?;
+			debug::info!(
+				target: "bridge-eos",
+				"tx_out.sign {:?}",
+				tx_out.clone(),
+			);
 		}
 
 		<BridgeTxOuts<T>>::append([&tx_out].into_iter());
@@ -459,44 +484,82 @@ impl<T: Trait> Module<T> {
 
 	#[cfg(feature = "std")]
 	fn offchain(now_block: T::BlockNumber) {
+		let mut has_change = false;
+
+		let bridge_tx_outs = <BridgeTxOuts<T>>::get();
+
 		// sign each transaction
-		if Self::tx_can_sign() {
-			if let Ok(sk_str) = Self::get_offchain_storage(EOS_SECRET_KEY) {
-				if let Ok(sk) = SecretKey::from_wif(sk_str.as_str()) {
-					<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
-						for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
-							match bto_filter {
-								TxOut::Pending(_) => true,
-								_ => false,
-							}
-						}) {
-							if !bto.reach_threshold() && !Self::tx_is_signed() {
-								if let Ok(signed_bto) = bto.sign(sk) {
-									*bto = signed_bto;
+		let bridge_tx_outs = match (Self::tx_can_sign(), Self::get_offchain_storage(EOS_SECRET_KEY)) {
+			(true, Ok(sk_str)) => {
+				match SecretKey::from_wif(sk_str.as_str()) {
+					Ok(sk) => {
+						bridge_tx_outs
+							.into_iter()
+							.filter(|bto_filter| {
+								match bto_filter {
+									TxOut::Pending(_) => true,
+									_ => false,
 								}
-							}
-						}
-					});
+							})
+							.map(|mut bto| {
+								if !bto.reach_threshold() && !Self::tx_is_signed() {
+									if let Ok(signed_bto) = bto.sign(sk) {
+										has_change = true;
+										debug::info!(
+											target: "bridge-eos",
+											"bto.sign {:?}",
+											signed_bto.clone(),
+										);
+										return signed_bto;
+									}
+								}
+								bto
+							})
+							.collect::<Vec<_>>()
+					}
+					_ => bridge_tx_outs,
 				}
-			}
-		}
+			},
+			_ => bridge_tx_outs,
+		};
 
 		// push each transaction to eos node
-		if let Ok(node_url) = Self::get_offchain_storage(EOS_NODE_URL) {
-			<BridgeTxOuts<T>>::mutate(|bridge_tx_outs| {
-				for bto in bridge_tx_outs.iter_mut().filter(|bto_filter| {
-					match bto_filter {
-						TxOut::Pending(_) => true,
-						_ => false,
-					}
-				}) {
-					if bto.reach_threshold() {
-						if let Ok(sent_bto) = bto.send(node_url.as_str()) {
-							*bto = sent_bto;
+		let bridge_tx_outs = match Self::get_offchain_storage(EOS_NODE_URL) {
+			Ok(node_url) => {
+				bridge_tx_outs
+					.into_iter()
+					.filter(|bto_filter| {
+						match bto_filter {
+							TxOut::Pending(_) => true,
+							_ => false,
 						}
-					}
-				}
-			});
+					})
+					.map(|bto| {
+						if bto.reach_threshold() {
+							if let Ok(sent_bto) = bto.send(node_url.as_str()) {
+								has_change = true;
+								debug::info!(
+									target: "bridge-eos",
+									"bto.send {:?}",
+									sent_bto.clone(),
+								);
+								return sent_bto;
+							}
+						}
+						bto
+					})
+					.collect::<Vec<_>>()
+			},
+			_ => bridge_tx_outs,
+		};
+
+		if has_change {
+			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
+			debug::info!(
+				target: "bridge-eos",
+				"Call::bridge_tx_report {:?}",
+				bridge_tx_outs,
+			);
 		}
 	}
 
@@ -539,18 +602,17 @@ impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
-		match call {
-			Call::tx_result(block_num) => {
-				let now_block = <system::Module<T>>::block_number().saturated_into::<u64>();
-				Ok(ValidTransaction {
-					priority: 0,
-					requires: vec![],
-					provides: vec![(now_block).encode()],
-					longevity: TransactionLongevity::max_value(),
-					propagate: true,
-				})
-			},
-			_ => UnknownTransaction::NoUnsignedValidator.into(),
+		if let Call::bridge_tx_report(tx_list) = call {
+			let now_block = <system::Module<T>>::block_number().saturated_into::<u64>();
+			Ok(ValidTransaction {
+				priority: TransactionPriority::max_value(),
+				requires: vec![],
+				provides: vec![(now_block).encode()],
+				longevity: TransactionLongevity::max_value(),
+				propagate: true,
+			})
+		} else {
+			InvalidTransaction::Call.into()
 		}
 	}
 }

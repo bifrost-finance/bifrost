@@ -31,10 +31,11 @@ use std::{
 	path::Path,
 };
 use sp_core::offchain::{
-	OffchainExt,
-	testing::TestOffchainExt,
+	OffchainExt, TransactionPoolExt,
+	testing::{TestOffchainExt, TestTransactionPoolExt},
 };
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
+use support::{dispatch, assert_noop};
 
 #[test]
 fn get_latest_schedule_version_should_work() {
@@ -349,7 +350,9 @@ fn prove_action_should_be_ok() {
 fn bridge_eos_offchain_should_work() {
 	let mut ext = new_test_ext();
 	let (offchain, _state) = TestOffchainExt::new();
+	let (pool, pool_state) = TestTransactionPoolExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
+	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
 		System::set_block_number(1);
@@ -370,10 +373,18 @@ fn bridge_eos_offchain_should_work() {
 
 		// EOS secret key of account testb
 		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj");
-
+		System::set_block_number(2);
 		BridgeEos::offchain(2);
 
-		let tx_outs = BridgeEos::bridge_tx_outs();
+		use codec::Decode;
+		let transaction = pool_state.write().transactions.pop().unwrap();
+		assert_eq!(pool_state.read().transactions.len(), 1);
+		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
+		let tx_outs = match ex.1 {
+			crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
+			e => panic!("Unexpected call: {:?}", e),
+		};
+
 		assert_eq!(tx_outs.iter().filter(|out| {
 			match out {
 				TxOut::Processing{ .. } => true,
@@ -404,4 +415,20 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 	let mut json_str = String::new();
 	file.read_to_string(&mut json_str)?;
 	Ok(json_str)
+}
+
+fn bridge_tx_report(
+) -> dispatch::DispatchResult {
+	#[allow(deprecated)]
+	use support::unsigned::ValidateUnsigned;
+
+	let tx_outs = vec![TxOut::Success(vec![])];
+
+	#[allow(deprecated)]
+	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
+
+	BridgeEos::bridge_tx_report(
+		Origin::system(system::RawOrigin::None),
+		tx_outs,
+	)
 }
