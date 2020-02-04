@@ -139,7 +139,7 @@ decl_storage! {
 		PendingScheduleVersion: VersionId;
 
 		/// Transaction sent to Eos blockchain
-		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::Balance>>;
+		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut>;
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
@@ -310,10 +310,10 @@ decl_module! {
 			Self::filter_account_by_action(&action);
 		}
 
-		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::Balance>>) {
+		fn bridge_tx_report(origin, tx_list: Vec<TxOut>) {
 			ensure_none(origin)?;
 
-			<BridgeTxOuts<T>>::put(tx_list);
+			BridgeTxOuts::put(tx_list);
 		}
 
 		fn tx_out(origin, to: Vec<u8>, amount: u32) {
@@ -467,29 +467,15 @@ impl<T: Trait> Module<T> {
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
 		bridge_asset: BridgeAssetBalance<P, B>,
-	) -> Result<TxOut<T::Balance>, Error>
+	) -> Result<TxOut, Error>
 		where
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
-		let node_url = Self::get_offchain_storage(EOS_NODE_URL)?;
-		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
-		let sk = SecretKey::from_wif(sk_str.as_str()).unwrap();
-
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
-		let mut tx_out = TxOut::generate_transfer(node_url.as_str(), raw_from, raw_to, amount, threshold)?;
-
-		if Self::tx_can_sign() {
-			tx_out = tx_out.sign(sk)?;
-			debug::info!(
-				target: "bridge-eos",
-				"tx_out.sign {:?}",
-				tx_out.clone(),
-			);
-		}
-
-		<BridgeTxOuts<T>>::append([&tx_out].into_iter());
+		let tx_out = TxOut::init(raw_from, raw_to, amount, threshold)?;
+		BridgeTxOuts::append([&tx_out].into_iter());
 
 		Ok(tx_out)
 	}
@@ -498,72 +484,71 @@ impl<T: Trait> Module<T> {
 	fn offchain(now_block: T::BlockNumber) {
 		let mut has_change = false;
 
-		let bridge_tx_outs = <BridgeTxOuts<T>>::get();
+		let bridge_tx_outs = BridgeTxOuts::get();
 
-		// sign each transaction
-		let bridge_tx_outs = match (Self::tx_can_sign(), Self::get_offchain_storage(EOS_SECRET_KEY)) {
-			(true, Ok(sk_str)) => {
-				match SecretKey::from_wif(sk_str.as_str()) {
-					Ok(sk) => {
-						bridge_tx_outs
-							.into_iter()
-							.filter(|bto_filter| {
-								match bto_filter {
-									TxOut::Pending(_) => true,
-									_ => false,
-								}
-							})
-							.map(|mut bto| {
-								if !bto.reach_threshold() && !Self::tx_is_signed() {
-									if let Ok(signed_bto) = bto.sign(sk) {
-										has_change = true;
-										debug::info!(
-											target: "bridge-eos",
-											"bto.sign {:?}",
-											signed_bto.clone(),
-										);
-										return signed_bto;
-									}
-								}
-								bto
-							})
-							.collect::<Vec<_>>()
+		let node_url = Self::get_offchain_storage(EOS_NODE_URL);
+		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY);
+		if node_url.is_err() || sk_str.is_err() {
+			return;
+		}
+		let node_url = node_url.unwrap();
+		let sk = SecretKey::from_wif(sk_str.unwrap().as_str());
+		if sk.is_err() {
+			return;
+		}
+		let sk = sk.unwrap();
+
+		let bridge_tx_outs = bridge_tx_outs
+			.into_iter()
+			.map(|mut bto| {
+				match bto {
+					// generate raw transactions
+					TxOut::Initial(_) => {
+						if let Ok(generated_bto) = bto.generate(node_url.as_str()) {
+							has_change = true;
+							debug::info!(
+								target: "bridge-eos",
+								"bto.generate {:?}",
+								generated_bto.clone(),
+							);
+							dbg!("bto.generate");
+							generated_bto
+						} else {
+							bto
+						}
+					},
+					TxOut::Generated(_) => {
+						if let Ok(signed_bto) = bto.sign(sk) {
+							has_change = true;
+							debug::info!(
+								target: "bridge-eos",
+								"bto.sign {:?}",
+								signed_bto.clone(),
+							);
+							dbg!("bto.sign");
+							signed_bto
+						} else {
+							bto
+						}
+					},
+					TxOut::Signed(_) => {
+						if let Ok(sent_bto) = bto.send(node_url.as_str()) {
+							has_change = true;
+							debug::info!(
+								target: "bridge-eos",
+								"bto.send {:?}",
+								sent_bto.clone(),
+							);
+							dbg!("bto.send");
+							sent_bto
+						} else {
+							bto
+						}
 					}
-					_ => bridge_tx_outs,
+					_ => bto,
 				}
-			},
-			_ => bridge_tx_outs,
-		};
-
-		// push each transaction to eos node
-		let bridge_tx_outs = match Self::get_offchain_storage(EOS_NODE_URL) {
-			Ok(node_url) => {
-				bridge_tx_outs
-					.into_iter()
-					.filter(|bto_filter| {
-						match bto_filter {
-							TxOut::Pending(_) => true,
-							_ => false,
-						}
-					})
-					.map(|bto| {
-						if bto.reach_threshold() {
-							if let Ok(sent_bto) = bto.send(node_url.as_str()) {
-								has_change = true;
-								debug::info!(
-									target: "bridge-eos",
-									"bto.send {:?}",
-									sent_bto.clone(),
-								);
-								return sent_bto;
-							}
-						}
-						bto
-					})
-					.collect::<Vec<_>>()
-			},
-			_ => bridge_tx_outs,
-		};
+			})
+			.collect::<Vec<_>>();
 
 		if has_change {
 			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
