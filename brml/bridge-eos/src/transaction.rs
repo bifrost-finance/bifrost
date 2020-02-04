@@ -10,14 +10,13 @@ use eos_chain::{
 use eos_keys::secret::SecretKey;
 #[cfg(feature = "std")]
 use eos_rpc::{get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction};
-use sp_runtime::traits::{SaturatedConversion, SimpleArithmetic};
 use sp_std::prelude::*;
 
 use crate::Error;
 
 pub type TransactionSignature = Vec<u8>;
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub struct MultiSig {
 	/// Collection of signature of transaction
 	signatures: Vec<TransactionSignature>,
@@ -47,26 +46,30 @@ impl Default for MultiSig {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct MultiSigTx<Balance> {
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+pub struct MultiSigTx {
 	/// Chain id of Eos node that transaction will be sent
 	chain_id: Vec<u8>,
 	/// Transaction raw data for signing
 	raw_tx: Vec<u8>,
 	/// Signatures of transaction
 	multi_sig: MultiSig,
-	amount: Balance,
-	to_name: Vec<u8>,
+	#[cfg(feature = "std")]
+	action: Action,
 }
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub enum TxOut<Balance> {
-	/// Generating and signing Eos multi-sig transaction
-	Pending(MultiSigTx<Balance>),
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+pub enum TxOut {
+	/// Initial Eos multi-sig transaction
+	Initial(MultiSigTx),
+	/// Generated and signing Eos multi-sig transaction
+	Generated(MultiSigTx),
+	/// Signed Eos multi-sig transaction
+	Signed(MultiSigTx),
 	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
 	Processing {
 		tx_id: Vec<u8>,
-		multi_sig_tx: MultiSigTx<Balance>,
+		multi_sig_tx: MultiSigTx,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
 	Success(Vec<u8>),
@@ -74,31 +77,18 @@ pub enum TxOut<Balance> {
 	Fail {
 		tx_id: Vec<u8>,
 		reason: Vec<u8>,
-		tx: MultiSigTx<Balance>,
+		tx: MultiSigTx,
 	},
 }
 
-impl<Balance> TxOut<Balance> where Balance: SaturatedConversion + SimpleArithmetic + Default + Copy {
+impl TxOut {
 	#[cfg(feature = "std")]
-	pub fn generate_transfer(
-		eos_node_url: &str,
+	pub fn init(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
 		amount: Asset,
 		threshold: u8,
 	) -> Result<Self, Error> {
-		let hyper_client = HyperClient::new(eos_node_url);
-
-		// fetch info
-		let info: GetInfo = get_info().fetch(&hyper_client).map_err(Error::EosRpcError)?;
-		let chain_id: Vec<u8> = hex::decode(info.chain_id).map_err(Error::HexError)?;
-		let head_block_id = info.head_block_id;
-
-		// fetch block
-		let block: GetBlock = get_block(head_block_id).fetch(&hyper_client).map_err(Error::EosRpcError)?;
-		let ref_block_num = (block.block_num & 0xffff) as u16;
-		let ref_block_prefix = block.ref_block_prefix as u32;
-
 		let from = from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
 		let to = from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
 
@@ -112,47 +102,69 @@ impl<Balance> TxOut<Balance> where Balance: SaturatedConversion + SimpleArithmet
 		let action = Action::transfer(from, to, amount.to_string().as_ref(), memo)
 			.map_err(Error::EosChainError)?;
 
-		let actions = vec![action];
-
 		// Construct transaction
-		let tx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
 		let multi_sig_tx = MultiSigTx {
-			chain_id,
-			raw_tx: tx.to_serialize_data().map_err(Error::EosChainError)?,
+			chain_id: Default::default(),
+			raw_tx: Default::default(),
 			multi_sig: MultiSig::new(threshold),
-			amount: Balance::saturated_from(amount.amount as u64),
-			to_name: raw_to,
+			action,
 		};
-		Ok(TxOut::Pending(multi_sig_tx))
-	}
-
-	pub fn reach_threshold(&self) -> bool {
-		match self {
-			TxOut::Pending(multi_sig_tx) => multi_sig_tx.multi_sig.reach_threshold(),
-			_ => false,
-		}
+		Ok(TxOut::Initial(multi_sig_tx))
 	}
 
 	#[cfg(feature = "std")]
-	pub fn sign(&mut self, sk: SecretKey) -> Result<Self, Error> {
+	pub fn generate(&mut self, eos_node_url: &str) -> Result<TxOut, Error> {
 		match self {
-			TxOut::Pending(ref mut multi_sig_tx) => {
-				let chain_id = &multi_sig_tx.chain_id;
-				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?;
-				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosChainError)?;
-				let sig_hex_data = sig.to_serialize_data().map_err(Error::EosChainError)?;
-				multi_sig_tx.multi_sig.signatures.push(sig_hex_data);
+			TxOut::Initial(ref mut multi_sig_tx) => {
+				let hyper_client = HyperClient::new(eos_node_url);
 
-				Ok(self.clone())
+				// fetch info
+				let info: GetInfo = get_info().fetch(&hyper_client).map_err(Error::EosRpcError)?;
+				let chain_id: Vec<u8> = hex::decode(info.chain_id).map_err(Error::HexError)?;
+				let head_block_id = info.head_block_id;
+
+				// fetch block
+				let block: GetBlock = get_block(head_block_id).fetch(&hyper_client).map_err(Error::EosRpcError)?;
+				let ref_block_num = (block.block_num & 0xffff) as u16;
+				let ref_block_prefix = block.ref_block_prefix as u32;
+
+				let actions = vec![multi_sig_tx.action.clone()];
+
+				// Construct transaction
+				let tx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
+				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(Error::EosChainError)?;
+				multi_sig_tx.chain_id = chain_id;
+
+				Ok(TxOut::Generated(multi_sig_tx.to_owned()))
 			},
 			_ => Err(Error::InvalidTxOutType)
 		}
 	}
 
 	#[cfg(feature = "std")]
-	pub fn send(&self, eos_node_url: &str) -> Result<Self, Error> {
+	pub fn sign(&mut self, sk: SecretKey) -> Result<TxOut, Error> {
 		match self {
-			TxOut::Pending(ref multi_sig_tx) => {
+			TxOut::Generated(ref mut multi_sig_tx) => {
+				let chain_id = &multi_sig_tx.chain_id;
+				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?;
+				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosChainError)?;
+				let sig_hex_data = sig.to_serialize_data().map_err(Error::EosChainError)?;
+				multi_sig_tx.multi_sig.signatures.push(sig_hex_data);
+
+				if multi_sig_tx.multi_sig.reach_threshold() {
+					Ok(TxOut::Signed(multi_sig_tx.to_owned()))
+				} else {
+					Ok(TxOut::Generated(multi_sig_tx.to_owned()))
+				}
+			},
+			_ => Err(Error::InvalidTxOutType)
+		}
+	}
+
+	#[cfg(feature = "std")]
+	pub fn send(&self, eos_node_url: &str) -> Result<TxOut, Error> {
+		match self {
+			TxOut::Signed(ref multi_sig_tx) => {
 				let hyper_client = HyperClient::new(eos_node_url);
 
 				let signatures = multi_sig_tx.multi_sig.signatures.iter()
@@ -196,8 +208,13 @@ mod tests {
 		let sym = Symbol::from_str("4,EOS").unwrap();
 		let asset = Asset::new(1i64, sym);
 
-		// generate tx
-		let tx_out = TxOut::<u128>::generate_transfer(eos_node_url, raw_from, raw_to, asset, 2);
+		// init tx
+		let tx_out = TxOut::init(raw_from, raw_to, asset, 2);
+		assert!(tx_out.is_ok());
+
+		// generate Eos raw tx
+		let mut tx_out = tx_out.unwrap();
+		let tx_out = tx_out.generate(eos_node_url);
 		assert!(tx_out.is_ok());
 
 		// sign tx by account testa
