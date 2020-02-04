@@ -159,6 +159,11 @@ Go back to section **Create a dev wallet**'s tips to unlock the wallet.
 
 ## Testing
 
+### Configure Browser
+
+Go to [polkadot.js.org](https://polkadot.js.org/apps/#/settings/developer), Copy content data from the file ```developer_setting.json``` to **Deveoper** tab like this, and save it.
+![developer_setting](developer_setting.png)
+
 ### EOS to Bifrost
 
 Before you send a transaction to Bifrost, check **jim**'s balance.
@@ -187,4 +192,31 @@ Wait about 90 seconds for the transaction is verified. If all go well, you can s
 
 ### Bifrost to EOS
 
-- Todo
+By tool subkey to add related data to Bifrost.
+
+Add EOS node address info and EOS secret key to running Bifrost node.
+
+```
+# add eos node address
+$ ./target/release/subkey EOS_NODE_URL http://127.0.0.1:8888/
+
+# add eos node secret key(public key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV)
+$ ./target/release/subkey EOS_SECRET_KEY 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+```
+
+Send a transaction to EOS node.
+
+In present, we cannot trigger a transaction on [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), so we have to
+send a transaction by rpc, that will trigger a transaction from Bifrost node to EOS node.
+
+```
+# float conversion, 10000 in Bifrost equas to 1.0000 in EOS
+$ ./target/release/subkey send_transaction jim 10000
+```
+
+Check jim's balance in EOS node.
+
+```
+# should print 9901 EOS
+$ cleos cleos get currency balance eosio.token jim
+```
