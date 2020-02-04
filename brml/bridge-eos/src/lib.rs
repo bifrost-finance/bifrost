@@ -45,7 +45,7 @@ use system::{
 	offchain::SubmitUnsignedTransaction
 };
 
-use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo};
+use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType};
 use transaction::TxOut;
 
 mod transaction;
@@ -314,6 +314,18 @@ decl_module! {
 			ensure_none(origin)?;
 
 			<BridgeTxOuts<T>>::put(tx_list);
+		}
+
+		fn tx_out(origin, to: Vec<u8>, amount: u32) {
+			let _ = ensure_root(origin)?;
+
+			let raw_symbol = b"EOS".to_vec();
+			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, T::Precision::from(4u32));
+			let bridge_asset = BridgeAssetBalance { // 10000 bifrost equal 1 EOS
+				symbol: asset_symbol,
+				amount: T::Balance::from(amount)
+			};
+			Self::bridge_asset_to(to, bridge_asset);
 		}
 
 		// Runs after every block.
