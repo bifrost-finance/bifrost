@@ -260,6 +260,7 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 				.args_from_usage("
 					<account> 'Account name'
 					<balance> 'How much balance will be sent'
+					[ws-url] 'Node websocket endpoint, default \"127.0.0.1:9944\"'
 				"),
 		])
 }
@@ -453,7 +454,7 @@ where
 			rpc.set_offchain_storage(prefix, key, value);
 		}
 		("eos-transaction", Some(matches)) => {
-			let node_url = "http://localhost:9933";
+			let node_url = matches.value_of("ws-url").unwrap_or("127.0.0.1:9944");
 			let rpc = rpc::RpcClient::new(node_url.to_string());
 			let account = matches.value_of("account").ok_or(Error::Static("Account is required"))?;
 			let balance = matches.value_of("balance").ok_or(Error::Static("Balance is required"))?;
