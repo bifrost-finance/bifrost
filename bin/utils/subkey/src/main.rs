@@ -255,6 +255,12 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 					<value> 'Value to be set'
 					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
 				"),
+			SubCommand::with_name("eos-transaction")
+				.about("Send transaction to EOS node")
+				.args_from_usage("
+					<account> 'Account name'
+					<balance> 'How much balance will be sent'
+				"),
 		])
 }
 
@@ -445,6 +451,15 @@ where
 			let key = Bytes(Vec::from(key));
 			let value = Bytes(Vec::from(value));
 			rpc.set_offchain_storage(prefix, key, value);
+		}
+		("eos-transaction", Some(matches)) => {
+			let node_url = "http://localhost:9933";
+			let rpc = rpc::RpcClient::new(node_url.to_string());
+			let account = matches.value_of("account").ok_or(Error::Static("Account is required"))?;
+			let balance = matches.value_of("balance").ok_or(Error::Static("Balance is required"))?;
+			let balance = balance.parse::<u64>().expect("Please input a number");
+
+			rpc.eos_transaction(account, balance);
 		}
 		_ => print_usage(&matches),
 	}
