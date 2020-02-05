@@ -20,9 +20,11 @@ Start two Bifrost nodes.
 
 ```
 $ ./target/release/bifrost-node --base-path /tmp/alice \
---rpc-port 9944 \
+--rpc-port 4321 \
+--ws-port 9944 \
 --chain=local \
 --alice \
+--port 30333 \
 --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
 --telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator
@@ -30,7 +32,8 @@ $ ./target/release/bifrost-node --base-path /tmp/alice \
 
 ```
 $ ./target/release/bifrost-node --base-path /tmp/bob \
---rpc-port 9933 \
+--rpc-port 1234 \
+--ws-port 9933 \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
 --chain=local \
 --bob \
@@ -40,9 +43,6 @@ $ ./target/release/bifrost-node --base-path /tmp/bob \
 ```
 
 Ensure both node are producing blocks and synchronizing each other.
-
-**Tips**: 
-> Write down the bifrost node address for next step.
 
 ## EOS
 
@@ -92,7 +92,7 @@ $ make -j4
 
 The script: **start-producer.sh** && **start-relay.sh**.
 
-Modify the script and find out **BIN_DIR** and **BASE_DIR**, pointer to your EOS project.
+Modify the script and find out **BIN_DIR** and **BASE_DIR**, point to your EOS project.
 
 - Start block producer.
 This node producers blocks.
@@ -106,18 +106,7 @@ $ ./start-producer.sh
 This node is responsible for message sending like merkle root verification data, and surely synchronize blocks from block producers.
 You have to modify this shell script before start this service.
 
-Find this line, replace **127.0.0.1:9876** with that block producer's address here.
-```
---p2p-peer-address 127.0.0.1:9876
-```
-
-Replace it with bifrost address that you just start in step **Compile and run Bifrost node**
-```
-# --bifrost-node=127.0.0.1
---bifrost-node=[bifrost_ip_address]
-```
-
-start it.
+Start it.
 ```
 $ ./start-relay.sh
 ```
@@ -162,7 +151,6 @@ What the script will do:
 Modify the script.
 - Line 7, point to eos project.
 - Line 13, point to bifrost-eos-contracts project.
-- Replace all [block_producer_address] as block prodcuer address.
 
 Execute it.
 ```shell
@@ -189,22 +177,19 @@ Go to [polkadot.js.org](https://polkadot.js.org/apps/#/settings/developer), Copy
 
 ### EOS to Bifrost
 
-Before you send a transaction to Bifrost, check **jim**'s balance.
+Before you send a transaction to Bifrost, check **jim**'s and **bifrost**'s balance.
 
 ```
 # should print 10000.0000 EOS
-$ cleos -u [block_producer_address] cleos get currency balance eosio.token jim
+$ cleos get currency balance eosio.token jim
+
+# bifrost is contract account, should print nothing
+$ cleos get currency balance eosio.token bifrost
 ```
 
 Now send a transaction.
 ```
-$ cleos -u [block_producer_address] push action eosio.token transfer '["jim", "bifrost", "100.0000 EOS", "alice@bifrost:EOS"]' -p jim@active
-```
-
-Check **jim**'s account again.
-```
-# should print 9900.0000 EOS
-$ cleos -u [block_producer_address] get currency balance eosio.token jim
+$ cleos push action eosio.token transfer '["jim", "bifrost", "100.0000 EOS", "alice@bifrost:EOS"]' -p jim@active
 ```
 
 Go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), to check whether transaction is sent successfully to Bifrost or not.
@@ -212,6 +197,15 @@ Go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), to check whe
 Wait about 90 seconds for the transaction is verified. If all go well, you can see a event like the following screencapture.
 
 ![prove_action_event](prove_action_event.png)
+
+If you see that figure above, go check **jim**'s and **bifrost**'s balance again.
+```
+# should print 9900.0000 EOS
+$ cleos get currency balance eosio.token jim
+
+# should print 100.0000 EOS
+$ cleos get currency balance eosio.token bifrost
+```
 
 ### Bifrost to EOS
 
@@ -221,36 +215,36 @@ Before testing, you have to setup some nessary steps.
 
 Bifrost side:
 
-There're two Bifrost nodes that you start before, here you need add EOS node address info and EOS secret key
+There're two Bifrost nodes that you start in previous steps, here you need add EOS node address info and EOS secret key
 to both running Bifrost nodes by tool **subkey**.
 
 Add EOS info to one Bifrost node(port: 9944).
 
 ```
 # add eos node address where you start start eos service
-$ ./target/release/subkey EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:9944/ 
+$ ./target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:4321/ 
 
-# add eos node secret key(public key: EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV)
-$ ./target/release/subkey EOS_SECRET_KEY 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3 http://127.0.0.1:9944/
+# add account testa secret key to Bi
+$ ./target/release/subkey localstorage-set EOS_SECRET_KEY 5KDXMiphWpzETsNpp3eL3sjWAa4gMvMXCtMquT2PDpKtV1STbHp http://127.0.0.1:4321/
 ```
 
 Add EOS info to the other Bifrost node(port: 9933).
 
 ```
-$ ./target/release/subkey EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:9933/
+$ ./target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:1234/
 
-$ ./target/release/subkey EOS_SECRET_KEY 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3 http://127.0.0.1:9933/
+$ ./target/release/subkey localstorage-set EOS_SECRET_KEY 5JNV39rZLZWr5p1hdLXVVNvJsXpgZnzvTrcZYJggTPuv1GzChB6 http://127.0.0.1:1234/
 ```
 
 EOS side:
 
 ```
-$ cleos -u [block_producer_address] set account permission bifrost active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"testa","permission":"active"},"weight":1}, {"permission":{"actor":"testb","permission":"active"},"weight":1}, {"permission":{"actor":"testc","permission":"active"},"weight":1}, {"permission":{"actor":"testd","permission":"active"},"weight":1}]}' owner
+$ cleos set account permission bifrost active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"testa","permission":"active"},"weight":1}, {"permission":{"actor":"testb","permission":"active"},"weight":1}, {"permission":{"actor":"testc","permission":"active"},"weight":1}, {"permission":{"actor":"testd","permission":"active"},"weight":1}]}' owner
 ```
 
-After you set permission for account bifrost.
+After you set permission for account bifrost, try this command to verify the result.
 ```
-$ cleos -u [block_producer_address] get account bifrost
+$ cleos get account bifrost
 ```
 
 It should print some info like this.
@@ -263,17 +257,21 @@ permissions:
 
 Now, we can send a transaction to EOS node.
 
-In present, we cannot trigger a transaction on [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), so we have to
-send a transaction by rpc, that will trigger a transaction from Bifrost node to EOS node.
+In present, we cannot trigger a transaction on [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), but there's a temporary solution for it.
+
+The subkey has a sub-command that can send a transaction from bifrost node to EOS node.
 
 ```
 # float conversion, 10000 in Bifrost equas to 1.0000 in EOS
-$ ./target/release/subkey send_transaction jim 10000
+$ ./target/release/subkey send_transaction jim 10000 127.0.0.1:9944
 ```
 
-Check jim's balance in EOS node.
+Check jim's and bifrost's balance in EOS node if it runs without error.
 
 ```
 # should print 9901 EOS
-$ cleos -u [block_producer_address] get currency balance eosio.token jim
+$ cleos get currency balance eosio.token jim
+
+# should print 99 EOS
+$ cleos get currency balance eosio.token bifrost
 ```
