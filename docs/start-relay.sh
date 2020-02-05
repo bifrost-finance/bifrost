@@ -8,8 +8,8 @@ $BIN_DIR/bin/nodeos --plugin eosio::chain_api_plugin \
 --plugin eosio::http_plugin \
 --http-server-address=127.0.0.1:8889 \
 --p2p-listen-endpoint 127.0.0.1:9877 \
---p2p-peer-address 172.16.201.10:9876 \
+--p2p-peer-address 127.0.0.1:9876 \
 --config-dir $CONF_DIR \
 --data-dir $DATA_DIR -l $BASE_DIR/logging.json \
---bifrost-node=[bifrost_ip_address] \
+--bifrost-node=127.0.0.1:9944 \
 --bifrost-account=bifrost
