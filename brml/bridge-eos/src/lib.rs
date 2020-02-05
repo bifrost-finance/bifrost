@@ -167,16 +167,10 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
-		fn bridge_enable(origin) {
+		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
 
-			BridgeEnable::put(true);
-		}
-
-		fn bridge_disable(origin) {
-			ensure_root(origin)?;
-
-			BridgeEnable::put(false);
+			BridgeEnable::put(enable);
 		}
 
 		fn init_schedule(origin, ps: ProducerSchedule) {
