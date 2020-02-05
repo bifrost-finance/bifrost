@@ -61,9 +61,9 @@ parameter_types! {
 
 impl system::Trait for Test {
 	type Origin = Origin;
-	type Call = ();
 	type Index = u64;
 	type BlockNumber = u64;
+	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;

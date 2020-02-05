@@ -371,10 +371,13 @@ fn bridge_eos_offchain_should_work() {
 		};
 		BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset);
 
+		run_to_block(2);
+		BridgeEos::offchain(2);
+
 		// EOS secret key of account testb
 		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj");
-		System::set_block_number(2);
-		BridgeEos::offchain(2);
+		run_to_block(3);
+		BridgeEos::offchain(3);
 
 		use codec::Decode;
 		let transaction = pool_state.write().transactions.pop().unwrap();

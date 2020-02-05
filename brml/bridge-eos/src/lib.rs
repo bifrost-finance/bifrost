@@ -498,8 +498,7 @@ impl<T: Trait> Module<T> {
 		}
 		let sk = sk.unwrap();
 
-		let bridge_tx_outs = bridge_tx_outs
-			.into_iter()
+		let bridge_tx_outs = bridge_tx_outs.into_iter()
 			.map(|mut bto| {
 				match bto {
 					// generate raw transactions
@@ -517,6 +516,11 @@ impl<T: Trait> Module<T> {
 							bto
 						}
 					},
+					_ => bto,
+				}
+			}).collect::<Vec<_>>().into_iter()
+			.map(|mut bto| {
+				match bto {
 					TxOut::Generated(_) => {
 						if let Ok(signed_bto) = bto.sign(sk) {
 							has_change = true;
@@ -531,6 +535,11 @@ impl<T: Trait> Module<T> {
 							bto
 						}
 					},
+					_ => bto,
+				}
+			}).collect::<Vec<_>>().into_iter()
+			.map(|bto| {
+				match bto {
 					TxOut::Signed(_) => {
 						if let Ok(sent_bto) = bto.send(node_url.as_str()) {
 							has_change = true;
@@ -544,11 +553,10 @@ impl<T: Trait> Module<T> {
 						} else {
 							bto
 						}
-					}
+					},
 					_ => bto,
 				}
-			})
-			.collect::<Vec<_>>();
+			}).collect::<Vec<_>>();
 
 		if has_change {
 			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
