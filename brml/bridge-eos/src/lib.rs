@@ -551,7 +551,6 @@ impl<T: Trait> Module<T> {
 			}).collect::<Vec<_>>();
 
 		if has_change {
-			BridgeTxOuts::put(bridge_tx_outs.clone());
 			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
 			debug::info!(
 				target: "bridge-eos",
