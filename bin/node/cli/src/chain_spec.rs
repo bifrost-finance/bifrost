@@ -303,6 +303,7 @@ pub fn testnet_genesis(
 		brml_bridge_eos: Some(BridgeEosConfig {
 			producer_schedule: eos_chain::ProducerSchedule::default(),
 			bridge_contract_account: (b"bifrost".to_vec(), 2),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		}),
 	}
 }
