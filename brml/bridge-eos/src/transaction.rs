@@ -216,11 +216,11 @@ mod tests {
 		let raw_to = b"alice".to_vec();
 		let sym = Symbol::from_str("4,EOS").unwrap();
 		let asset = Asset::new(1i64, sym);
-		let account_id_1= 1u32;
-		let account_id_2= 1u32;
+		let account_id_1= 1u64;
+		let account_id_2= 2u64;
 
 		// init tx
-		let tx_out = TxOut::<u32>::init(raw_from, raw_to, asset, 2);
+		let tx_out = TxOut::<u64>::init(raw_from, raw_to, asset, 2);
 		assert!(tx_out.is_ok());
 
 		// generate Eos raw tx
