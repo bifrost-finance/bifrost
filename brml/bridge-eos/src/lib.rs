@@ -317,14 +317,14 @@ decl_module! {
 			BridgeTxOuts::<T>::put(tx_list);
 		}
 
-		fn tx_out(origin, to: Vec<u8>, amount: u32) {
+		fn tx_out(origin, to: Vec<u8>, amount: T::Balance) {
 			let _ = ensure_root(origin)?;
 
 			let raw_symbol = b"EOS".to_vec();
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, T::Precision::from(4u32));
-			let bridge_asset = BridgeAssetBalance { // 10000 bifrost equal 1 EOS
+			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
-				amount: T::Balance::from(amount)
+				amount
 			};
 			Self::bridge_asset_to(to, bridge_asset);
 		}
@@ -551,6 +551,7 @@ impl<T: Trait> Module<T> {
 			}).collect::<Vec<_>>();
 
 		if has_change {
+			BridgeTxOuts::<T>::put(bridge_tx_outs.clone());
 			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
 			debug::info!(
 				target: "bridge-eos",
