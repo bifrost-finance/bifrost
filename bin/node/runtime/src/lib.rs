@@ -617,8 +617,6 @@ impl brml_settlement::Trait for Runtime {
 	type AssetIssue = Assets;
 }
 
-type BridgeSubmitTransaction = TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
-
 impl brml_bridge::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -633,6 +631,8 @@ impl brml_exchange::Trait for Runtime {
 	type ExchangeRate = u64;
 	type RatePerBlock = u64;
 }
+
+type BridgeSubmitTransaction = TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
 
 impl brml_bridge_eos::Trait for Runtime {
 	type Event = Event;
@@ -683,7 +683,7 @@ construct_runtime!(
 		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
 		Bridge: brml_bridge::{Module, Call, Storage, Event<T>},
 		Exchange: brml_exchange::{Module, Call, Storage},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config},
+		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 	}
 );
 

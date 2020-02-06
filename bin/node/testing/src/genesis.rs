@@ -104,6 +104,7 @@ pub fn config(support_changes_trie: bool, code: Option<&[u8]>) -> GenesisConfig 
 		brml_bridge_eos: Some(BridgeEosConfig {
 			producer_schedule: eos_chain::ProducerSchedule::default(),
 			bridge_contract_account: (b"bifrost".to_vec(), 2),
+			notary_keys: vec![alice(), bob()],
 		}),
 	}
 }

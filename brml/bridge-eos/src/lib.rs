@@ -36,11 +36,12 @@ use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
-		TransactionValidity, ValidTransaction,
+		TransactionValidity, ValidTransaction, TransactionValidityError
 	},
 };
-use support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
-use system::{
+use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
+use frame_system::{
+	self as system,
 	ensure_root, ensure_none,
 	offchain::SubmitUnsignedTransaction
 };
@@ -73,6 +74,7 @@ pub enum Error {
 	CalculateMerkleError,
 	EmptyActionMerklePaths,
 	InvalidTxOutType,
+	AlreadySignedByAuthor,
 	ParseUtf8Error(core::str::Utf8Error),
 	HexError(hex::FromHexError),
 	EosChainError(eos_chain::Error),
@@ -92,8 +94,8 @@ impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
 
 pub type VersionId = u32;
 
-pub trait Trait: system::Trait {
-	type Event: From<Event> + Into<<Self as system::Trait>::Event>;
+pub trait Trait: pallet_authorship::Trait {
+	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
@@ -122,6 +124,9 @@ decl_event! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as BridgeEos {
+		/// The current set of notary keys that may send bridge transactions to Eos chain.
+		NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
+
 		/// Config to enable/disable this runtime
 		BridgeEnable get(fn is_bridge_enable): bool = true;
 
@@ -139,14 +144,16 @@ decl_storage! {
 		PendingScheduleVersion: VersionId;
 
 		/// Transaction sent to Eos blockchain
-		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut>;
+		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::AccountId>>;
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
 	}
 	add_extra_genesis {
-		build(|config: &GenesisConfig| {
+		build(|config: &GenesisConfig<T>| {
 			BridgeContractAccount::put(config.bridge_contract_account.clone());
+
+			NotaryKeys::<T>::put(config.notary_keys.clone());
 
 			let ps_version = config.producer_schedule.version;
 			if !ProducerSchedules::exists(ps_version) {
@@ -304,10 +311,10 @@ decl_module! {
 			Self::filter_account_by_action(&action);
 		}
 
-		fn bridge_tx_report(origin, tx_list: Vec<TxOut>) {
+		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) {
 			ensure_none(origin)?;
 
-			BridgeTxOuts::put(tx_list);
+			BridgeTxOuts::<T>::put(tx_list);
 		}
 
 		fn tx_out(origin, to: Vec<u8>, amount: u32) {
@@ -446,30 +453,20 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn tx_can_sign() -> bool {
-		// TODO
-		true
-	}
-
-	fn tx_is_signed() -> bool {
-		// TODO
-		false
-	}
-
 	/// generate transaction for transfer amount to
 	#[cfg(feature = "std")]
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
 		bridge_asset: BridgeAssetBalance<P, B>,
-	) -> Result<TxOut, Error>
+	) -> Result<TxOut<T::AccountId>, Error>
 		where
 			P: SimpleArithmetic,
 			B: SimpleArithmetic,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
-		let tx_out = TxOut::init(raw_from, raw_to, amount, threshold)?;
-		BridgeTxOuts::append([&tx_out].into_iter());
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold)?;
+		BridgeTxOuts::<T>::append([&tx_out].into_iter());
 
 		Ok(tx_out)
 	}
@@ -478,7 +475,7 @@ impl<T: Trait> Module<T> {
 	fn offchain(now_block: T::BlockNumber) {
 		let mut has_change = false;
 
-		let bridge_tx_outs = BridgeTxOuts::get();
+		let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
 		let node_url = Self::get_offchain_storage(EOS_NODE_URL);
 		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY);
@@ -493,11 +490,11 @@ impl<T: Trait> Module<T> {
 		let sk = sk.unwrap();
 
 		let bridge_tx_outs = bridge_tx_outs.into_iter()
-			.map(|mut bto| {
+			.map(|bto| {
 				match bto {
 					// generate raw transactions
-					TxOut::Initial(_) => {
-						if let Ok(generated_bto) = bto.generate(node_url.as_str()) {
+					TxOut::<T::AccountId>::Initial(_) => {
+						if let Ok(generated_bto) = bto.clone().generate(node_url.as_str()) {
 							has_change = true;
 							debug::info!(
 								target: "bridge-eos",
@@ -513,10 +510,11 @@ impl<T: Trait> Module<T> {
 					_ => bto,
 				}
 			}).collect::<Vec<_>>().into_iter()
-			.map(|mut bto| {
+			.map(|bto| {
 				match bto {
-					TxOut::Generated(_) => {
-						if let Ok(signed_bto) = bto.sign(sk) {
+					TxOut::<T::AccountId>::Generated(_) => {
+						let author = <pallet_authorship::Module<T>>::author();
+						if let Ok(signed_bto) = bto.clone().sign(sk, author) {
 							has_change = true;
 							debug::info!(
 								target: "bridge-eos",
@@ -534,8 +532,8 @@ impl<T: Trait> Module<T> {
 			}).collect::<Vec<_>>().into_iter()
 			.map(|bto| {
 				match bto {
-					TxOut::Signed(_) => {
-						if let Ok(sent_bto) = bto.send(node_url.as_str()) {
+					TxOut::<T::AccountId>::Signed(_) => {
+						if let Ok(sent_bto) = bto.clone().send(node_url.as_str()) {
 							has_change = true;
 							debug::info!(
 								target: "bridge-eos",
@@ -597,12 +595,12 @@ impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
 }
 
 #[allow(deprecated)]
-impl<T: Trait> support::unsigned::ValidateUnsigned for Module<T> {
+impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
-		if let Call::bridge_tx_report(tx_list) = call {
-			let now_block = <system::Module<T>>::block_number().saturated_into::<u64>();
+		if let Call::bridge_tx_report(_tx_list) = call {
+			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
 			Ok(ValidTransaction {
 				priority: TransactionPriority::max_value(),
 				requires: vec![],

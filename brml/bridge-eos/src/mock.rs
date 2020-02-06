@@ -16,7 +16,7 @@
 
 #![cfg(test)]
 
-use support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
+use frame_support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
 use sp_core::H256;
 use sp_runtime::{
 	Perbill,
@@ -33,7 +33,7 @@ impl_outer_dispatch! {
 
 /// An extrinsic type used for tests.
 pub type Extrinsic = TestXt<Call, ()>;
-type SubmitTransaction = system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
+type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
@@ -57,9 +57,10 @@ parameter_types! {
 	pub const MaximumBlockWeight: u32 = 4 * 1024 * 1024;
 	pub const MaximumBlockLength: u32 = 4 * 1024 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
+	pub const UncleGenerations: u32 = 5;
 }
 
-impl system::Trait for Test {
+impl frame_system::Trait for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -78,6 +79,13 @@ impl system::Trait for Test {
 	type Version = ();
 }
 
+impl pallet_authorship::Trait for Test {
+	type FindAuthor = ();
+	type UncleGenerations = UncleGenerations;
+	type FilterUncle = ();
+	type EventHandler = ();
+}
+
 impl crate::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
@@ -88,7 +96,7 @@ impl crate::Trait for Test {
 }
 
 pub type BridgeEos = crate::Module<Test>;
-pub type System = system::Module<Test>;
+pub type System = frame_system::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
@@ -103,10 +111,11 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	GenesisConfig {
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	GenesisConfig::<Test> {
 		producer_schedule: eos_chain::ProducerSchedule::default(),
 		bridge_contract_account: (b"bifrost".to_vec(), 2),
+		notary_keys: vec![],
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }

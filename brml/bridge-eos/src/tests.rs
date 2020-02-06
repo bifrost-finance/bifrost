@@ -35,7 +35,7 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 };
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
-use support::{dispatch, assert_noop};
+use frame_support::dispatch;
 
 #[test]
 fn get_latest_schedule_version_should_work() {
@@ -423,7 +423,7 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 fn bridge_tx_report(
 ) -> dispatch::DispatchResult {
 	#[allow(deprecated)]
-	use support::unsigned::ValidateUnsigned;
+	use frame_support::unsigned::ValidateUnsigned;
 
 	let tx_outs = vec![TxOut::Success(vec![])];
 
@@ -431,7 +431,7 @@ fn bridge_tx_report(
 	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
 
 	BridgeEos::bridge_tx_report(
-		Origin::system(system::RawOrigin::None),
+		Origin::system(frame_system::RawOrigin::None),
 		tx_outs,
 	)
 }
