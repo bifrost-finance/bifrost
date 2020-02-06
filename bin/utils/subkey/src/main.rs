@@ -458,7 +458,7 @@ where
 			let rpc = rpc::RpcClient::new(node_url.to_string());
 			let account = matches.value_of("account").ok_or(Error::Static("Account is required"))?;
 			let balance = matches.value_of("balance").ok_or(Error::Static("Balance is required"))?;
-			let balance = balance.parse::<u64>().expect("Please input a number");
+			let balance = balance.parse::<u128>().expect("Please input a number");
 
 			rpc.eos_transaction(account, balance);
 		}

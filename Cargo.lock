@@ -6937,8 +6937,9 @@ dependencies = [
 [[package]]
 name = "substrate-rpc-client"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/substrate-rpc-client.git?branch=develop#868c8364fa2dd2bfa55393e48f9922ae9f80260c"
+source = "git+https://github.com/bifrost-codes/substrate-rpc-client.git?branch=develop#19053e65f54eb3cd41ef9fb44bc3bd31ac68d582"
 dependencies = [
+ "env_logger 0.7.1",
  "frame-metadata",
  "hex",
  "log 0.4.8",

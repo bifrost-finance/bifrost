@@ -27,7 +27,7 @@ $ ./target/release/bifrost-node --base-path /tmp/alice \
 --port 30333 \
 --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
 --telemetry-url ws://telemetry.polkadot.io:1024 \
---validator
+--validator --execution Native
 ```
 
 ```
@@ -39,7 +39,7 @@ $ ./target/release/bifrost-node --base-path /tmp/bob \
 --bob \
 --port 30334 \
 --telemetry-url ws://telemetry.polkadot.io:1024 \
---validator
+--validator --execution Native
 ```
 
 Ensure both node are producing blocks and synchronizing each other.
@@ -218,7 +218,7 @@ Bifrost side:
 There're two Bifrost nodes that you start in previous steps, here you need add EOS node address info and EOS secret key
 to both running Bifrost nodes by tool **subkey**.
 
-Add EOS info to one Bifrost node(port: 9944).
+Add EOS info to one Bifrost node(port: 4321).
 
 ```
 # add eos node address where you start start eos service
@@ -228,7 +228,7 @@ $ ./target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ h
 $ ./target/release/subkey localstorage-set EOS_SECRET_KEY 5KDXMiphWpzETsNpp3eL3sjWAa4gMvMXCtMquT2PDpKtV1STbHp http://127.0.0.1:4321/
 ```
 
-Add EOS info to the other Bifrost node(port: 9933).
+Add EOS info to the other Bifrost node(port: 1234).
 
 ```
 $ ./target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:1234/
@@ -262,8 +262,8 @@ In present, we cannot trigger a transaction on [polkadot.js.org](https://polkado
 The subkey has a sub-command that can send a transaction from bifrost node to EOS node.
 
 ```
-# float conversion, 10000 in Bifrost equas to 1.0000 in EOS
-$ ./target/release/subkey send_transaction jim 10000 127.0.0.1:9944
+# 127.0.0.1:9944 is a bifrost node websocket address 
+$ ./target/release/subkey send_transaction jim 1 127.0.0.1:9944
 ```
 
 Check jim's and bifrost's balance in EOS node if it runs without error.
