@@ -16,7 +16,11 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
+use codec::Decode;
+use frame_support::{
+	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, ConsensusEngineId,
+	traits::FindAuthor,
+};
 use sp_core::H256;
 use sp_runtime::{
 	Perbill,
@@ -79,8 +83,27 @@ impl frame_system::Trait for Test {
 	type Version = ();
 }
 
+
+pub const TEST_ID: ConsensusEngineId = [1, 2, 3, 4];
+
+pub struct AuthorGiven;
+
+impl FindAuthor<u64> for AuthorGiven {
+	fn find_author<'a, I>(digests: I) -> Option<u64>
+		where I: 'a + IntoIterator<Item=(ConsensusEngineId, &'a [u8])>
+	{
+		for (id, data) in digests {
+			if id == TEST_ID {
+				return u64::decode(&mut &data[..]).ok();
+			}
+		}
+
+		None
+	}
+}
+
 impl pallet_authorship::Trait for Test {
-	type FindAuthor = ();
+	type FindAuthor = AuthorGiven;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
 	type EventHandler = ();
@@ -96,6 +119,7 @@ impl crate::Trait for Test {
 }
 
 pub type BridgeEos = crate::Module<Test>;
+pub type Authorship = pallet_authorship::Module<Test>;
 pub type System = frame_system::Module<Test>;
 
 // simulate block production
@@ -115,7 +139,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	GenesisConfig::<Test> {
 		producer_schedule: eos_chain::ProducerSchedule::default(),
 		bridge_contract_account: (b"bifrost".to_vec(), 2),
-		notary_keys: vec![],
+		notary_keys: vec![1u64, 2u64],
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }

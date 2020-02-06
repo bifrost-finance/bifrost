@@ -30,10 +30,13 @@ use std::{
 	io::Read as StdRead,
 	path::Path,
 };
+use sp_core::H256;
 use sp_core::offchain::{
 	OffchainExt, TransactionPoolExt,
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 };
+use sp_runtime::traits::Header as HeaderT;
+use sp_runtime::{generic::DigestItem, testing::Header};
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
 use frame_support::dispatch;
 
@@ -356,7 +359,6 @@ fn bridge_eos_offchain_should_work() {
 
 	ext.execute_with(|| {
 		System::set_block_number(1);
-
 		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_NODE_URL", b"http://127.0.0.1:8888/");
 
 		// EOS secret key of account testa
@@ -370,14 +372,13 @@ fn bridge_eos_offchain_should_work() {
 			amount: 1 * 10u64.pow(8),
 		};
 		BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset);
-
-		run_to_block(2);
-		BridgeEos::offchain(2);
+		BridgeEos::offchain(1);
 
 		// EOS secret key of account testb
 		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj");
-		run_to_block(3);
-		BridgeEos::offchain(3);
+
+		rotate_author(2);
+		BridgeEos::offchain(2);
 
 		use codec::Decode;
 		let transaction = pool_state.write().transactions.pop().unwrap();
@@ -420,8 +421,7 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 	Ok(json_str)
 }
 
-fn bridge_tx_report(
-) -> dispatch::DispatchResult {
+fn bridge_tx_report() -> dispatch::DispatchResult {
 	#[allow(deprecated)]
 	use frame_support::unsigned::ValidateUnsigned;
 
@@ -434,4 +434,42 @@ fn bridge_tx_report(
 		Origin::system(frame_system::RawOrigin::None),
 		tx_outs,
 	)
+}
+
+fn seal_header(mut header: Header, author: u64) -> Header {
+	{
+		let digest = header.digest_mut();
+		digest.logs.push(DigestItem::PreRuntime(TEST_ID, author.encode()));
+		digest.logs.push(DigestItem::Seal(TEST_ID, author.encode()));
+	}
+
+	header
+}
+
+fn create_header(number: u64, parent_hash: H256, state_root: H256) -> Header {
+	Header::new(
+		number,
+		Default::default(),
+		state_root,
+		parent_hash,
+		Default::default(),
+	)
+}
+
+fn rotate_author(author: u64) {
+	let mut header = seal_header(
+		create_header(1, Default::default(), [1; 32].into()),
+		author,
+	);
+
+	header.digest_mut().pop(); // pop the seal off.
+	System::initialize(
+		&1,
+		&Default::default(),
+		&Default::default(),
+		header.digest(),
+		Default::default(),
+	);
+
+	assert_eq!(Authorship::author(), author);
 }
