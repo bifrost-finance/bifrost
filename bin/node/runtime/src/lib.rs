@@ -48,6 +48,7 @@ use sp_core::OpaqueMetadata;
 use pallet_grandpa::AuthorityList as GrandpaAuthorityList;
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
+use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use pallet_contracts_rpc_runtime_api::ContractExecResult;
@@ -632,9 +633,10 @@ impl brml_exchange::Trait for Runtime {
 	type RatePerBlock = u64;
 }
 
-type BridgeSubmitTransaction = TransactionSubmitter<(), Runtime, UncheckedExtrinsic>;
+type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
 
 impl brml_bridge_eos::Trait for Runtime {
+	type AuthorityId = BridgeEosId;
 	type Event = Event;
 	type Balance = Balance;
 	type Precision = Precision;

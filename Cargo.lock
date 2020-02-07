@@ -449,6 +449,7 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "serde_json",
+ "sp-application-crypto",
  "sp-core",
  "sp-io",
  "sp-offchain",
