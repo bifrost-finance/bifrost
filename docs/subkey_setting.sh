@@ -1,3 +1,6 @@
+../target/release/subkey insert //Alice//stash acco http://127.0.0.1:4321/
+../target/release/subkey insert //Bob//stash acco http://127.0.0.1:1234/
+
 # EOS node address
 ../target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:1234
 ../target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:4321
