@@ -1,4 +1,4 @@
-![web3_foundation_grants_badge_black](./docs/web3 foundation_grants_badge_black.svg)
+![web3_foundation_grants_badge_black](docs/web3 foundation_grants_badge_black.svg)
 
 [![Build Status](https://travis-ci.org/bifrost-codes/bifrost.svg?branch=master)](https://travis-ci.org/bifrost-codes/bifrost)
 
