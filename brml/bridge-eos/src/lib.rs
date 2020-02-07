@@ -65,6 +65,17 @@ pub mod sr25519 {
 	mod app_sr25519 {
 		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, sr25519};
 		app_crypto!(sr25519, ACCOUNT);
+
+		impl From<sp_runtime::AccountId32> for Public {
+			fn from(acct: sp_runtime::AccountId32) -> Self {
+				let mut data =  [0u8;32];
+				let acct_data: &[u8;32] = acct.as_ref();
+				for (index, val) in acct_data.iter().enumerate() {
+					data[index] = *val;
+				}
+				Self(sp_core::sr25519::Public(data))
+			}
+		}
 	}
 
 	/// An bridge-eos keypair using sr25519 as its crypto.
