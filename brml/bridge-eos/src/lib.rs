@@ -48,16 +48,51 @@ use frame_system::{
 
 use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType};
 use transaction::TxOut;
+use sp_application_crypto::RuntimeAppPublic;
 
 mod transaction;
 mod mock;
 mod tests;
 
 lazy_static::lazy_static! {
-	pub static ref ActionNames: [ActionName; 1] = {
+	pub static ref ACTION_NAMES: [ActionName; 1] = {
 		let name = ActionName::from_str("transfer").unwrap();
 		[name]
 	};
+}
+
+pub mod sr25519 {
+	mod app_sr25519 {
+		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, sr25519};
+		app_crypto!(sr25519, ACCOUNT);
+	}
+
+	/// An bridge-eos keypair using sr25519 as its crypto.
+	#[cfg(feature = "std")]
+	pub type AuthorityPair = app_sr25519::Pair;
+
+	/// An bridge-eos signature using sr25519 as its crypto.
+	pub type AuthoritySignature = app_sr25519::Signature;
+
+	/// An bridge-eos identifier using sr25519 as its crypto.
+	pub type AuthorityId = app_sr25519::Public;
+}
+
+pub mod ed25519 {
+	mod app_ed25519 {
+		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, ed25519};
+		app_crypto!(ed25519, ACCOUNT);
+	}
+
+	/// An bridge-eos keypair using ed25519 as its crypto.
+	#[cfg(feature = "std")]
+	pub type AuthorityPair = app_ed25519::Pair;
+
+	/// An bridge-eos signature using ed25519 as its crypto.
+	pub type AuthoritySignature = app_ed25519::Signature;
+
+	/// An bridge-eos identifier using ed25519 as its crypto.
+	pub type AuthorityId = app_ed25519::Public;
 }
 
 const EOS_NODE_URL: &[u8] = b"EOS_NODE_URL";
@@ -95,6 +130,10 @@ impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
 pub type VersionId = u32;
 
 pub trait Trait: pallet_authorship::Trait {
+	/// The identifier type for an authority.
+	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
+		+ From<<Self as frame_system::Trait>::AccountId>;
+
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// The units in which we record balances.
@@ -262,7 +301,7 @@ decl_module! {
 			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
 
 			// ensure action is what we want
-			ensure!(action.name == ActionNames[0], "This is an invalid action to Bifrost");
+			ensure!(action.name == ACTION_NAMES[0], "This is an invalid action to Bifrost");
 
 			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(
@@ -472,7 +511,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	#[cfg(feature = "std")]
-	fn offchain(now_block: T::BlockNumber) {
+	fn offchain(_now_block: T::BlockNumber) {
 		let mut has_change = false;
 
 		let bridge_tx_outs = BridgeTxOuts::<T>::get();
@@ -514,18 +553,22 @@ impl<T: Trait> Module<T> {
 				match bto {
 					TxOut::<T::AccountId>::Generated(_) => {
 						let author = <pallet_authorship::Module<T>>::author();
-						if let Ok(signed_bto) = bto.clone().sign(sk, author) {
-							has_change = true;
-							debug::info!(
-								target: "bridge-eos",
-								"bto.sign {:?}",
-								signed_bto.clone(),
-							);
-							dbg!("bto.sign");
-							signed_bto
-						} else {
-							bto
+						let mut ret = bto.clone();
+						if let Some(_) = Self::local_authority_keys()
+							.find(|key| *key == author.clone().into())
+						{
+							if let Ok(signed_bto) = bto.sign(sk, author) {
+								has_change = true;
+								debug::info!(
+									target: "bridge-eos",
+									"bto.sign {:?}",
+									signed_bto.clone(),
+								);
+								dbg!("bto.sign");
+								ret = signed_bto;
+							}
 						}
+						ret
 					},
 					_ => bto,
 				}
@@ -585,6 +628,20 @@ impl<T: Trait> Module<T> {
 			key,
 		).ok_or(Error::NoLocalStorage)?;
 		Ok(String::from_utf8(value).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))?)
+	}
+
+	fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
+		let authorities = NotaryKeys::<T>::get();
+		let mut local_keys = T::AuthorityId::all();
+		local_keys.sort();
+
+		authorities.into_iter()
+			.enumerate()
+			.filter_map(move |(index, authority)| {
+				local_keys.binary_search(&authority.into())
+					.ok()
+					.map(|location| local_keys[location].clone())
+			})
 	}
 }
 

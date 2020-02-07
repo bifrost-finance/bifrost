@@ -24,7 +24,7 @@ use frame_support::{
 use sp_core::H256;
 use sp_runtime::{
 	Perbill,
-	testing::{Header, TestXt},
+	testing::{Header, TestXt, UintAuthorityId},
 	traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize},
 };
 use super::*;
@@ -110,6 +110,7 @@ impl pallet_authorship::Trait for Test {
 }
 
 impl crate::Trait for Test {
+	type AuthorityId = UintAuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
 	type Precision = u32;
