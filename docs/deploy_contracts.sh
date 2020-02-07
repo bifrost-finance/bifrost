@@ -25,4 +25,4 @@ cleos push action eosio.token create '{"issuer":"eosio", "maximum_supply":"10000
 cleos push action eosio.token issue '["jim", "10000.0000 EOS", "memo"]' -p eosio@active
 
 # register token just created
-cleos -u http://[block_producer_address]:8888 push action bifrost regtoken '["eosio.token", "4,EOS", "10000.0000 EOS", "1.0000 EOS", "1000.0000 EOS", "10000.0000 EOS", "1"]' -p bifrost@active
+cleos push action bifrost regtoken '["eosio.token", "4,EOS", "10000.0000 EOS", "1.0000 EOS", "1000.0000 EOS", "10000.0000 EOS", "1"]' -p bifrost@active

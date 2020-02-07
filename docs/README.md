@@ -1,5 +1,5 @@
 ## All related repotories
-- [bifrost](https://github.com/bifrost-codes/bifrost) (branch: ark-bridge-module)
+- [bifrost](https://github.com/bifrost-codes/bifrost) (branch: master)
 - [bifrost-eos-relay](https://github.com/bifrost-codes/bifrost-eos-relay) (branch: bridge-plugin)
 - [bifrost-eos-contracts](https://github.com/bifrost-codes/bifrost-eos-contracts) (branch: master)
 - [rust-eos](https://github.com/bifrost-codes/rust-eos) (branch: use-rust-secp256k1)
@@ -14,10 +14,11 @@ $ git checkout ark-bridge-module
 $ cargo build --release
 ```
 
-### 2. Run
+### 2. Run nodes
 
 Start two Bifrost nodes.
 
+Alice node: 
 ```
 $ ./target/release/bifrost-node --base-path /tmp/alice \
 --rpc-port 4321 \
@@ -30,6 +31,7 @@ $ ./target/release/bifrost-node --base-path /tmp/alice \
 --validator --execution Native
 ```
 
+Bob node:
 ```
 $ ./target/release/bifrost-node --base-path /tmp/bob \
 --rpc-port 1234 \
@@ -53,16 +55,17 @@ Follow the instructions to install [eosio](https://developers.eos.io/eosio-home/
 
 ### 2. Create a dev wallet
 
-- Follow the instructions to create wallet [Create Development Wallet](https://developers.eos.io/eosio-home/docs/wallets).
-
-
 **Tips**: 
-> for the step 1, use the following command in case you forget the passoword
+> While you're creating wallet, use the following command in case you forget the passoword
 ```
+# do not use cleos wallet create --to-console
 $ cleos wallet create --to-file
 ```
 
-> The wallet folder will created under ```~/eosio-wallet```. If you forget the password to unclock the wallet, use the commands.
+- Follow the instructions to create wallet [Create Development Wallet](https://developers.eos.io/eosio-home/docs/wallets).
+
+
+> The wallet folder will created under ```~/eosio-wallet```. If you forget the password but you have to unclock the wallet, use the following commands.
 ```
 $ cat ~/eosio-wallet/default.pass # that will show the password
 $ cleos wallet unlock # prompt you input the password
@@ -209,7 +212,7 @@ $ cleos get currency balance eosio.token bifrost
 
 ### Bifrost to EOS
 
-Before testing, you have to setup some nessary steps.
+Before testing, you have to setup some necessary steps.
 
 - Multisignature Configuration
 
@@ -218,22 +221,9 @@ Bifrost side:
 There're two Bifrost nodes that you start in previous steps, here you need add EOS node address info and EOS secret key
 to both running Bifrost nodes by tool **subkey**.
 
-Add EOS info to one Bifrost node(port: 4321).
-
+Execute the script. This script will add necessary data to alice node and bob node.
 ```
-# add eos node address where you start start eos service
-$ ./target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:4321/ 
-
-# add account testa secret key to Bi
-$ ./target/release/subkey localstorage-set EOS_SECRET_KEY 5KDXMiphWpzETsNpp3eL3sjWAa4gMvMXCtMquT2PDpKtV1STbHp http://127.0.0.1:4321/
-```
-
-Add EOS info to the other Bifrost node(port: 1234).
-
-```
-$ ./target/release/subkey localstorage-set EOS_NODE_URL http://127.0.0.1:8888/ http://127.0.0.1:1234/
-
-$ ./target/release/subkey localstorage-set EOS_SECRET_KEY 5JNV39rZLZWr5p1hdLXVVNvJsXpgZnzvTrcZYJggTPuv1GzChB6 http://127.0.0.1:1234/
+$ ./subkey_setting.sh
 ```
 
 EOS side:
@@ -254,6 +244,8 @@ permissions:
      owner     1:    1 EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
         active     2:    1 testa@active, 1 testb@active, 1 testc@active, 1 testd@active
 ```
+
+- Send transaction
 
 Now, we can send a transaction to EOS node.
 
