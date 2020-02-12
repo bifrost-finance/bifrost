@@ -50,8 +50,7 @@
   },
   "UnsignedInt": "u32",
   "SignedBlockHeader": {
-    "block_header": "BlockHeader",
-    "producer_signature": "Signature"
+    "block_header": "BlockHeader"
   },
   "BlockHeader": {
     "timestamp": "BlockTimestamp",
@@ -63,10 +62,6 @@
     "schedule_version": "u32",
     "new_producers": "Option<ProducerSchedule>",
     "header_extensions": "Vec<Extension>"
-  },
-  "Signature": {
-    "type_": "UnsignedInt",
-    "data": "[u8;65]"
   },
   "BlockTimestamp": "(u32)",
   "Extension": "(u16, Vec<u8>)",
@@ -81,5 +76,6 @@
   },
   "FlatMap": {
     "map": "Vec<(ActionName, u64)>"
-  }
+  },
+  "TxOut": {}
 }

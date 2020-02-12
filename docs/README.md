@@ -86,7 +86,7 @@ $ cleos wallet unlock # prompt you input the password
 $ git clone -b bridge-plugin https://github.com/bifrost-codes/eos
 $ git submodule update --init --recursive
 $ cd eos/
-$ make build && cd build
+$ mkdir build && cd build
 $ cmake ..
 $ make -j4
 ```
@@ -135,7 +135,7 @@ $ ./build/bin/nodeos --delete-all-blocks --delete-state-history --delete-relay-h
 ```
 $ git clone https://github.com/bifrost-codes/bifrost-eos-contracts
 $ cd bifrost-eos-contracts
-$ make build && cd build
+$ mkdir build && cd build
 $ cmake ..
 $ make -j4
 ```
@@ -249,21 +249,15 @@ permissions:
 
 Now, we can send a transaction to EOS node.
 
-In present, we cannot trigger a transaction on [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), but there's a temporary solution for it.
-
-The subkey has a sub-command that can send a transaction from bifrost node to EOS node.
-
-```
-# 127.0.0.1:9944 is a bifrost node websocket address 
-$ ./target/release/subkey send_transaction jim 1 127.0.0.1:9944
-```
+Follow the picture to send a transaction to EOS node( "jim" to hex: "0x6a696d").
+![send_transaction](transaction_to_eos.png)
 
 Check jim's and bifrost's balance in EOS node if it runs without error.
 
 ```
-# should print 9901 EOS
+# should print 9910 EOS
 $ cleos get currency balance eosio.token jim
 
-# should print 99 EOS
+# should print 90 EOS
 $ cleos get currency balance eosio.token bifrost
 ```
