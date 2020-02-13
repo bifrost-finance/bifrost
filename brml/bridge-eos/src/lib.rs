@@ -21,7 +21,7 @@ extern crate alloc;
 use alloc::borrow::Cow;
 use alloc::string::String;
 use alloc::string::ToString;
-use core::str::FromStr;
+use core::{ops::Div, str::FromStr};
 
 use codec::Encode;
 use eos_chain::{
@@ -46,7 +46,7 @@ use frame_system::{
 	offchain::SubmitUnsignedTransaction
 };
 
-use node_primitives::{BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType};
+use node_primitives::{AssetCreate, AssetIssue, AssetRedeem, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType};
 use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -130,6 +130,7 @@ pub enum Error {
 	#[cfg(feature = "std")]
 	EosKeysError(eos_keys::error::Error),
 	NoLocalStorage,
+	InvalidAccountId,
 }
 
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
@@ -140,7 +141,7 @@ impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
 
 pub type VersionId = u32;
 
-pub trait Trait: pallet_authorship::Trait {
+pub trait Trait: pallet_authorship::Trait + assets::Trait {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
 		+ From<<Self as frame_system::Trait>::AccountId>;
@@ -154,7 +155,7 @@ pub trait Trait: pallet_authorship::Trait {
 	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	/// Bridge asset from another blockchain.
-	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
+	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, <Self as assets::Trait>::Balance>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -169,6 +170,8 @@ decl_event! {
 		ChangeSchedule(VersionId, VersionId), // ChangeSchedule(from, to)
 		ProveAction,
 		RelayBlock,
+		TransactionFail,
+		TransactionSuccess,
 	}
 }
 
@@ -299,6 +302,7 @@ decl_module! {
 
 		fn prove_action(
 			origin,
+			target: T::AccountId,
 			action: Action,
 			action_receipt: ActionReceipt,
 			action_merkle_paths: Vec<Checksum256>,
@@ -323,6 +327,13 @@ decl_module! {
 				block_ids_list.len() ==  block_headers.len(),
 				"The block ids list cannot be empty."
 			);
+
+			// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{memo}
+			let act_transfer = Self::get_action_transfer_from_action(&action);
+			ensure!(act_transfer.is_ok(), "Cannot read transfer action from data.");
+			let act_transfer = act_transfer.unwrap();
+			let split_memo = act_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
+			ensure!(split_memo.len() == 2 || split_memo.len() == 3, "This is an invalid memo");
 
 			let action_hash = action.digest();
 			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
@@ -358,7 +369,7 @@ decl_module! {
 			Self::deposit_event(Event::ProveAction);
 
 			// withdraw or deposit
-			Self::filter_account_by_action(&action);
+			Self::filter_account_by_action(target, &act_transfer);
 		}
 
 		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) {
@@ -367,16 +378,27 @@ decl_module! {
 			BridgeTxOuts::<T>::put(tx_list);
 		}
 
-		fn tx_out(origin, to: Vec<u8>, amount: T::Balance) {
-			let _ = ensure_root(origin)?;
+		fn asset_redeem(origin, to: Vec<u8>, amount: <T as assets::Trait>::Balance, id: T::AssetId) {
+			let origin = system::ensure_signed(origin)?;
+			let origin_account = (id, origin.clone());
+			let eos_amount = amount.clone();
+
+			let balance = <assets::Balances<T>>::get(origin_account);
+			let amount = amount.div(<T as assets::Trait>::Balance::from(10u32.pow(8)));
+			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
 			let raw_symbol = b"EOS".to_vec();
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, T::Precision::from(4u32));
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
-				amount
+				amount: eos_amount
 			};
-			Self::bridge_asset_to(to, bridge_asset);
+			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
+				assets::Module::<T>::asset_redeem(id, origin, amount, None);
+				Self::deposit_event(Event::TransactionSuccess);
+			} else {
+				Self::deposit_event(Event::TransactionFail);
+			}
 		}
 
 		// Runs after every block.
@@ -485,8 +507,10 @@ impl<T: Trait> Module<T> {
 		Ok(action_transfer)
 	}
 
-	fn filter_account_by_action(action: &Action) -> Result<(), Error> {
-		let action_transfer = Self::get_action_transfer_from_action(&action)?;
+	fn filter_account_by_action(target: T::AccountId, action_transfer: &ActionTransfer) -> Result<(), Error> {
+		let amount = <T as assets::Trait>::Balance::from(action_transfer.quantity.amount as u32);
+		let (id, _) = assets::Module::<T>::asset_create(vec![0u8], 4);
+		assets::Module::<T>::asset_issue(id, target, amount);
 
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == from {
@@ -501,6 +525,16 @@ impl<T: Trait> Module<T> {
 		}
 
 		Ok(())
+	}
+
+	/// check receiver account format
+	/// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
+	fn receiver_is_ss58(receiver: &str) -> Result<bool, Error> {
+		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| crate::Error::InvalidAccountId)?;
+
+		Ok(
+			decoded_ss58.len() == 35 && decoded_ss58.first() == Some(&42) // and checmsum need to be calculated?
+		)
 	}
 
 	/// generate transaction for transfer amount to
@@ -523,7 +557,8 @@ impl<T: Trait> Module<T> {
 
 	#[cfg(feature = "std")]
 	fn offchain(_now_block: T::BlockNumber) {
-		let mut has_change = false;
+		//  avoid borrow checker issue if use has_change: bool
+		let has_change = core::cell::Cell::new(false);
 
 		let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
@@ -545,11 +580,11 @@ impl<T: Trait> Module<T> {
 					// generate raw transactions
 					TxOut::<T::AccountId>::Initial(_) => {
 						if let Ok(generated_bto) = bto.clone().generate(node_url.as_str()) {
-							has_change = true;
+							has_change.set(true);
 							debug::info!(
 								target: "bridge-eos",
 								"bto.generate {:?}",
-								generated_bto.clone(),
+								generated_bto,
 							);
 							dbg!("bto.generate");
 							generated_bto
@@ -559,7 +594,7 @@ impl<T: Trait> Module<T> {
 					},
 					_ => bto,
 				}
-			}).collect::<Vec<_>>().into_iter()
+			})
 			.map(|bto| {
 				match bto {
 					TxOut::<T::AccountId>::Generated(_) => {
@@ -569,11 +604,11 @@ impl<T: Trait> Module<T> {
 							.find(|key| *key == author.clone().into())
 						{
 							if let Ok(signed_bto) = bto.sign(sk, author) {
-								has_change = true;
+								has_change.set(true);
 								debug::info!(
 									target: "bridge-eos",
 									"bto.sign {:?}",
-									signed_bto.clone(),
+									signed_bto,
 								);
 								dbg!("bto.sign");
 								ret = signed_bto;
@@ -583,28 +618,33 @@ impl<T: Trait> Module<T> {
 					},
 					_ => bto,
 				}
-			}).collect::<Vec<_>>().into_iter()
+			})
 			.map(|bto| {
 				match bto {
 					TxOut::<T::AccountId>::Signed(_) => {
-						if let Ok(sent_bto) = bto.clone().send(node_url.as_str()) {
-							has_change = true;
-							debug::info!(
-								target: "bridge-eos",
-								"bto.send {:?}",
-								sent_bto.clone(),
-							);
-							dbg!("bto.send");
-							sent_bto
-						} else {
-							bto
+						match bto.clone().send(node_url.as_str()) {
+							Ok(sent_bto) => {
+								has_change.set(true);
+								debug::info!(
+									target: "bridge-eos",
+									"bto.send {:?}",
+									sent_bto,
+								);
+								dbg!("bto.send");
+								sent_bto
+							}
+							Err(e) => {
+								debug::info!("error while sending: {:?}", e);
+								bto
+							}
 						}
 					},
 					_ => bto,
 				}
 			}).collect::<Vec<_>>();
 
-		if has_change {
+		if has_change.get() {
+			#[cfg(test)] // for testing
 			BridgeTxOuts::<T>::put(bridge_tx_outs.clone());
 			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
 			debug::info!(
@@ -656,10 +696,13 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
+impl<T: Trait> BridgeAssetTo<T::Precision, <T as assets::Trait>::Balance> for Module<T> {
+	type Error = crate::Error;
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, <T as assets::Trait>::Balance>) -> Result<(), Self::Error> {
 		#[cfg(feature = "std")]
-		Self::tx_transfer_to(target, bridge_asset);
+		let _ = Self::tx_transfer_to(target, bridge_asset)?;
+
+		Ok(())
 	}
 }
 

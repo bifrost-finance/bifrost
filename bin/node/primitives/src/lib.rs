@@ -191,9 +191,11 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 
 /// Bridge asset from Bifrost to other blockchain
 pub trait BridgeAssetTo<Precision, Balance> {
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Balance>);
+	type Error;
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Balance>) -> Result<(), Self::Error>;
 }
 
 impl<P, B> BridgeAssetTo<P, B> for () {
-	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, B>) {}
+	type Error = core::convert::Infallible;
+	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, B>) -> Result<(), Self::Error> { Ok(()) }
 }
