@@ -118,7 +118,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 	}
 
 	#[cfg(feature = "std")]
-	pub fn generate(self, eos_node_url: &str) -> Result<TxOut<AccountId>, Error> {
+	pub fn generate(self, eos_node_url: &str) -> Result<Self, Error> {
 		match self {
 			TxOut::Initial(mut multi_sig_tx) => {
 				let hyper_client = HyperClient::new(eos_node_url);
@@ -147,7 +147,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 	}
 
 	#[cfg(feature = "std")]
-	pub fn sign(self, sk: SecretKey, author: AccountId) -> Result<TxOut<AccountId>, Error> {
+	pub fn sign(self, sk: SecretKey, author: AccountId) -> Result<Self, Error> {
 		match self {
 			TxOut::Generated(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {

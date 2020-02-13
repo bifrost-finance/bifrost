@@ -174,6 +174,12 @@ impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	}
 }
 
+impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Option<Vec<u8>>) {
+		Self::asset_destroy(asset_id, target, amount);
+	}
+}
+
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, Token<T::Balance>) {

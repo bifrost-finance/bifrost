@@ -49,6 +49,7 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		bridge_eos,
+		assets<T>,
 	}
 }
 
@@ -117,6 +118,14 @@ impl crate::Trait for Test {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type SubmitTransaction = SubmitTransaction;
+}
+
+impl assets::Trait for Test {
+	type Event = TestEvent;
+	type Balance = u64;
+	type AssetId = u32;
+	type ClearingHandler = ();
+	type AssetRedeem = ();
 }
 
 pub type BridgeEos = crate::Module<Test>;

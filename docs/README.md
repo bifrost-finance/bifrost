@@ -201,6 +201,10 @@ Wait about 90 seconds for the transaction is verified. If all go well, you can s
 
 ![prove_action_event](prove_action_event.png)
 
+If that event happens, Alice's assets will be created, the amount is 1000000(due to EOS precision), go to check Alice's assets that just created.
+
+![assets_creation](assets_creation.png)
+
 If you see that figure above, go check **jim**'s and **bifrost**'s balance again.
 ```
 # should print 9900.0000 EOS
@@ -251,6 +255,8 @@ Now, we can send a transaction to EOS node.
 
 Follow the picture to send a transaction to EOS node( "jim" to hex: "0x6a696d").
 ![send_transaction](transaction_to_eos.png)
+
+Surely you can go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics) to check Alice's assets change or not
 
 Check jim's and bifrost's balance in EOS node if it runs without error.
 

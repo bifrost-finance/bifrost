@@ -5,7 +5,9 @@ authors = ["Dengjianping <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+assets = { package = "brml-assets", path = "../assets", default-features = false }
 bridge = { package = "brml-bridge", path = "../bridge", default-features = false }
+bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1", default-features = false }
 eos-keys = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1", optional = true }
@@ -30,6 +32,7 @@ substrate-offchain = { package = "sp-offchain", git = "https://github.com/parity
 [features]
 default = ["std"]
 std = [
+    "assets/std",
 	"bridge/std",
 	"codec/std",
 	"eos-chain/std",

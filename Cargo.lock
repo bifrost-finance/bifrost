@@ -436,7 +436,9 @@ dependencies = [
 name = "brml-bridge-eos"
 version = "0.1.0"
 dependencies = [
+ "brml-assets",
  "brml-bridge",
+ "bs58 0.3.0",
  "eos-chain",
  "eos-keys",
  "eos-rpc",
