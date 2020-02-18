@@ -1,12 +1,10 @@
-#[cfg(feature = "std")]
+use alloc::string::ToString;
 use core::str::from_utf8;
 
 use codec::{Decode, Encode};
-#[cfg(feature = "std")]
 use eos_chain::{
 	Action, Asset, Read, SerializeData, SignedTransaction, Signature, Transaction
 };
-#[cfg(feature = "std")]
 use eos_keys::secret::SecretKey;
 #[cfg(feature = "std")]
 use eos_rpc::{
@@ -64,7 +62,6 @@ pub struct MultiSigTx<AccountId> {
 	raw_tx: Vec<u8>,
 	/// Signatures of transaction
 	multi_sig: MultiSig<AccountId>,
-	#[cfg(feature = "std")]
 	action: Action,
 }
 
@@ -92,7 +89,6 @@ pub enum TxOut<AccountId> {
 }
 
 impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
-	#[cfg(feature = "std")]
 	pub fn init(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
@@ -146,7 +142,6 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		}
 	}
 
-	#[cfg(feature = "std")]
 	pub fn sign(self, sk: SecretKey, author: AccountId) -> Result<Self, Error> {
 		match self {
 			TxOut::Generated(mut multi_sig_tx) => {
