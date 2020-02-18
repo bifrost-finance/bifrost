@@ -1,6 +1,5 @@
 use alloc::string::ToString;
 use core::str::from_utf8;
-
 use codec::{Decode, Encode};
 use eos_chain::{
 	Action, Asset, Read, SerializeData, SignedTransaction, Signature, Transaction
