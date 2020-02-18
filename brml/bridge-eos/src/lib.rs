@@ -19,11 +19,12 @@
 extern crate alloc;
 
 use alloc::borrow::Cow;
+use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use core::{convert::TryFrom, ops::Div, str::FromStr};
 
-use codec::Encode;
+use codec::{Decode, Encode};
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
 	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
@@ -32,7 +33,7 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-	traits::{Member, SaturatedConversion, SimpleArithmetic},
+	traits::{Member, SaturatedConversion, SimpleArithmetic, StaticLookup},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction, TransactionValidityError
@@ -330,7 +331,14 @@ decl_module! {
 			ensure!(act_transfer.is_ok(), "Cannot read transfer action from data.");
 			let act_transfer = act_transfer.unwrap();
 			let split_memo = act_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
-			ensure!(split_memo.len() == 2 || split_memo.len() == 3, "This is an invalid memo");
+			ensure!(split_memo.len() == 2 || split_memo.len() == 3, "This is an invalid memo.");
+
+			// get account
+			// let account_data = Self::get_account_data("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"); // bob
+			// ensure!(account_data.is_ok(), "This is an invalid account.");
+			// let account = Self::find_account(account_data.unwrap());
+			// ensure!(account.is_ok(), "Cannot find this account in bifrost.");
+			// let target = account.unwrap();
 
 			let action_hash = action.digest();
 			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
@@ -521,12 +529,20 @@ impl<T: Trait> Module<T> {
 
 	/// check receiver account format
 	/// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
-	fn receiver_is_ss58(receiver: &str) -> Result<bool, Error> {
+	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error> {
 		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| crate::Error::InvalidAccountId)?;
 
-		Ok(
-			decoded_ss58.len() == 35 && decoded_ss58.first() == Some(&42) // and checmsum need to be calculated?
-		)
+		if decoded_ss58.len() == 35 && decoded_ss58.first() == Some(&42) {
+			let mut data = [0u8; 32];
+			data.copy_from_slice(&decoded_ss58[1..33]);
+			Ok(data)
+		} else {
+			Err(Error::InvalidAccountId)
+		}
+	}
+
+	fn find_account(data: [u8; 32]) -> Result<T::AccountId, Error> {
+		T::AccountId::decode(&mut &data[..]).map_err(|_| Error::InvalidAccountId)
 	}
 
 	/// generate transaction for transfer amount to
