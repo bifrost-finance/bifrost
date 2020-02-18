@@ -1226,7 +1226,7 @@ checksum = "516aa8d7a71cb00a1c4146f0798549b93d083d4f189b3ced8f3de6b8f11ee6c4"
 [[package]]
 name = "eos-chain"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#3d23d2a81ec02c78380e7af15b059238eed0a768"
+source = "git+https://github.com/bifrost-codes/rust-eos#a574084aeb91d8e0812b7d770f8e6057b59ce17a"
 dependencies = [
  "bitcoin_hashes",
  "chrono",
@@ -1241,19 +1241,19 @@ dependencies = [
 [[package]]
 name = "eos-keys"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#3d23d2a81ec02c78380e7af15b059238eed0a768"
+source = "git+https://github.com/bifrost-codes/rust-eos#a574084aeb91d8e0812b7d770f8e6057b59ce17a"
 dependencies = [
  "bitcoin_hashes",
  "byteorder 1.3.2",
- "rand 0.6.5",
- "rustc-hex",
- "secp256k1",
+ "hex",
+ "libsecp256k1 0.3.5",
+ "rand 0.7.3",
 ]
 
 [[package]]
 name = "eos-rpc"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#3d23d2a81ec02c78380e7af15b059238eed0a768"
+source = "git+https://github.com/bifrost-codes/rust-eos#a574084aeb91d8e0812b7d770f8e6057b59ce17a"
 dependencies = [
  "eos-chain",
  "hex",
@@ -1268,7 +1268,7 @@ dependencies = [
 [[package]]
 name = "eosio-core-derive"
 version = "0.2.1"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#3d23d2a81ec02c78380e7af15b059238eed0a768"
+source = "git+https://github.com/bifrost-codes/rust-eos#a574084aeb91d8e0812b7d770f8e6057b59ce17a"
 dependencies = [
  "proc-macro2 1.0.6",
  "quote 1.0.2",
@@ -2608,7 +2608,7 @@ dependencies = [
  "futures 0.3.1",
  "futures-timer 2.0.2",
  "lazy_static",
- "libsecp256k1",
+ "libsecp256k1 0.3.4",
  "log 0.4.8",
  "multistream-select",
  "parity-multiaddr 0.7.0",
@@ -2976,6 +2976,21 @@ name = "libsecp256k1"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df6edf84fd62aad1c93932b39324eaeda3912c1d26bc18dfaee6293848e49a50"
+dependencies = [
+ "arrayref",
+ "crunchy",
+ "digest",
+ "hmac-drbg",
+ "rand 0.7.3",
+ "sha2",
+ "subtle 2.2.1",
+ "typenum",
+]
+
+[[package]]
+name = "libsecp256k1"
+version = "0.3.5"
+source = "git+https://github.com/bifrost-codes/libsecp256k1.git#0ed98d8d094dfb34d9666143ff4090463cc9d174"
 dependencies = [
  "arrayref",
  "crunchy",
@@ -5111,7 +5126,7 @@ dependencies = [
 [[package]]
 name = "rpc_codegen"
 version = "0.1.0"
-source = "git+https://github.com/bifrost-codes/rust-eos?branch=use-rust-secp256k1#3d23d2a81ec02c78380e7af15b059238eed0a768"
+source = "git+https://github.com/bifrost-codes/rust-eos#a574084aeb91d8e0812b7d770f8e6057b59ce17a"
 dependencies = [
  "proc-macro2 1.0.6",
  "quote 1.0.2",
@@ -5510,7 +5525,7 @@ source = "git+https://github.com/paritytech/substrate#8f4495886a98d4a867d3f3813a
 dependencies = [
  "derive_more",
  "lazy_static",
- "libsecp256k1",
+ "libsecp256k1 0.3.4",
  "log 0.4.8",
  "parity-scale-codec",
  "parity-wasm",
@@ -6018,15 +6033,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "secp256k1"
-version = "0.15.3"
-source = "git+https://github.com/bifrost-codes/rust-secp256k1#9c756f7e5227e2e11c3fdb6b506ea6220bf1409b"
-dependencies = [
- "cc",
- "rand 0.6.5",
-]
-
-[[package]]
 name = "security-framework"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6445,7 +6451,7 @@ dependencies = [
  "hex",
  "impl-serde",
  "lazy_static",
- "libsecp256k1",
+ "libsecp256k1 0.3.4",
  "log 0.4.8",
  "num-traits",
  "parity-scale-codec",
@@ -6531,7 +6537,7 @@ version = "2.0.0"
 source = "git+https://github.com/paritytech/substrate#8f4495886a98d4a867d3f3813a8bf4dc6bca3a3f"
 dependencies = [
  "hash-db",
- "libsecp256k1",
+ "libsecp256k1 0.3.4",
  "log 0.4.8",
  "parity-scale-codec",
  "sp-core",
@@ -7622,7 +7628,7 @@ version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bfd5b7557925ce778ff9b9ef90e3ade34c524b5ff10e239c69a42d546d2af56"
 dependencies = [
- "rand 0.7.3",
+ "rand 0.3.23",
 ]
 
 [[package]]

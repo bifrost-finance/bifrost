@@ -30,4 +30,4 @@ pallet-transaction-payment = { version = "2.0.0", git = "https://github.com/pari
 pallet-treasury = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 wabt = "0.9.2"
 
-eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", branch = "use-rust-secp256k1" }
+eos-chain = { git = "https://github.com/bifrost-codes/rust-eos" }

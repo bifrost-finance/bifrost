@@ -21,14 +21,13 @@ extern crate alloc;
 use alloc::borrow::Cow;
 use alloc::string::String;
 use alloc::string::ToString;
-use core::{ops::Div, str::FromStr};
+use core::{convert::TryFrom, ops::Div, str::FromStr};
 
 use codec::Encode;
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
-	ProducerSchedule, SignedBlockHeader, Symbol, Read, verify_proof, ActionName,
+	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
 };
-#[cfg(feature = "std")]
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
@@ -127,7 +126,6 @@ pub enum Error {
 	EosReadError(eos_chain::ReadError),
 	#[cfg(feature = "std")]
 	EosRpcError(eos_rpc::Error),
-	#[cfg(feature = "std")]
 	EosKeysError(eos_keys::error::Error),
 	NoLocalStorage,
 	InvalidAccountId,
@@ -287,7 +285,6 @@ decl_module! {
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
 
-			#[cfg(feature = "std")]
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
 				"Failed to verify block."
@@ -357,7 +354,6 @@ decl_module! {
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
 
-			#[cfg(feature = "std")]
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
 				"Failed to verify blocks."
@@ -412,7 +408,6 @@ decl_module! {
 					"Is validator at {:?}.",
 					now_block,
 				);
-				#[cfg(feature = "std")]
 				Self::offchain(now_block);
 			} else {
 				debug::info!(
@@ -426,7 +421,6 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-	#[cfg(feature = "std")]
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
 		schedule_hash: &Checksum256,
@@ -451,7 +445,6 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	#[cfg(feature = "std")]
 	fn verify_block_header_signature(
 		schedule_hash: &Checksum256,
 		producer_schedule: &ProducerSchedule,
@@ -466,7 +459,6 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	#[cfg(feature = "std")]
 	fn calculate_block_header_merkle_root(
 		merkle: &mut IncrementalMerkle,
 		block_header: &SignedBlockHeader,
@@ -538,7 +530,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// generate transaction for transfer amount to
-	#[cfg(feature = "std")]
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
 		bridge_asset: BridgeAssetBalance<P, B>,
@@ -555,7 +546,6 @@ impl<T: Trait> Module<T> {
 		Ok(tx_out)
 	}
 
-	#[cfg(feature = "std")]
 	fn offchain(_now_block: T::BlockNumber) {
 		//  avoid borrow checker issue if use has_change: bool
 		let has_change = core::cell::Cell::new(false);
@@ -578,6 +568,7 @@ impl<T: Trait> Module<T> {
 			.map(|bto| {
 				match bto {
 					// generate raw transactions
+					#[cfg(feature = "std")]
 					TxOut::<T::AccountId>::Initial(_) => {
 						if let Ok(generated_bto) = bto.clone().generate(node_url.as_str()) {
 							has_change.set(true);
@@ -586,6 +577,7 @@ impl<T: Trait> Module<T> {
 								"bto.generate {:?}",
 								generated_bto,
 							);
+							#[cfg(feature = "std")]
 							dbg!("bto.generate");
 							generated_bto
 						} else {
@@ -603,13 +595,14 @@ impl<T: Trait> Module<T> {
 						if let Some(_) = Self::local_authority_keys()
 							.find(|key| *key == author.clone().into())
 						{
-							if let Ok(signed_bto) = bto.sign(sk, author) {
+							if let Ok(signed_bto) = bto.sign(sk.clone(), author) {
 								has_change.set(true);
 								debug::info!(
 									target: "bridge-eos",
 									"bto.sign {:?}",
 									signed_bto,
 								);
+								#[cfg(feature = "std")]
 								dbg!("bto.sign");
 								ret = signed_bto;
 							}
@@ -621,6 +614,7 @@ impl<T: Trait> Module<T> {
 			})
 			.map(|bto| {
 				match bto {
+					#[cfg(feature = "std")]
 					TxOut::<T::AccountId>::Signed(_) => {
 						match bto.clone().send(node_url.as_str()) {
 							Ok(sent_bto) => {
@@ -630,6 +624,7 @@ impl<T: Trait> Module<T> {
 									"bto.send {:?}",
 									sent_bto,
 								);
+								#[cfg(feature = "std")]
 								dbg!("bto.send");
 								sent_bto
 							}
@@ -655,7 +650,6 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	#[cfg(feature = "std")]
 	fn convert_to_eos_asset<P, B>(
 		bridge_asset: BridgeAssetBalance<P, B>
 	) -> Result<Asset, Error>
@@ -666,8 +660,8 @@ impl<T: Trait> Module<T> {
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
 		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)
 			.map_err(Error::ParseUtf8Error)?;
-		let symbol = Symbol::from_str(format!("{},{}", precision, symbol_str).as_ref())
-			.map_err(|err| Error::EosChainError(err.into()))?;
+		let symbol_code = SymbolCode::try_from(symbol_str)?;
+		let symbol = Symbol::new_with_code(precision, symbol_code);
 		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
 
 		Ok(Asset::new(amount, symbol))
@@ -699,7 +693,6 @@ impl<T: Trait> Module<T> {
 impl<T: Trait> BridgeAssetTo<T::Precision, <T as assets::Trait>::Balance> for Module<T> {
 	type Error = crate::Error;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, <T as assets::Trait>::Balance>) -> Result<(), Self::Error> {
-		#[cfg(feature = "std")]
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
 		Ok(())
