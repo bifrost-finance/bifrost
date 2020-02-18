@@ -336,7 +336,7 @@ decl_module! {
 			// get account
 			// let account_data = Self::get_account_data("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"); // bob
 			// ensure!(account_data.is_ok(), "This is an invalid account.");
-			// let account = Self::find_account(account_data.unwrap());
+			// let account = Self::into_account(account_data.unwrap());
 			// ensure!(account.is_ok(), "Cannot find this account in bifrost.");
 			// let target = account.unwrap();
 
@@ -541,7 +541,7 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn find_account(data: [u8; 32]) -> Result<T::AccountId, Error> {
+	fn into_account(data: [u8; 32]) -> Result<T::AccountId, Error> {
 		T::AccountId::decode(&mut &data[..]).map_err(|_| Error::InvalidAccountId)
 	}
 
