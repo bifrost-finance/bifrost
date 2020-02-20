@@ -45,6 +45,10 @@ pub use browser::*;
 #[cfg(feature = "cli")]
 pub use cli::*;
 
+// replaced local crate node-primitives and node-rpc
+mod executor;
+mod rpc;
+
 /// The chain specification option.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ChainSpec {

@@ -94,14 +94,4 @@ impl RpcClient {
 				})
 		);
 	}
-
-	pub fn eos_transaction(
-		&self,
-		account: &str,
-		balance: u128,
-	) {
-		println!("Send balance {} to eos account {}", balance, account);
-		rpc_client::send_transaction(&self.url, account, balance * 1 * 10u128.pow(12));
-		println!("Go back to EOS to check {}'s balance.", account);
-	}
 }

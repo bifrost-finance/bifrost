@@ -1,13 +1,8 @@
 [workspace]
 members = [
 	"bin/node/cli",
-	"bin/node/executor",
 	"bin/node/primitives",
-	"bin/node/rpc",
-	"bin/node/rpc-client",
 	"bin/node/runtime",
-	"bin/node/testing",
-	"bin/node/transaction-factory",
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/bridge",
