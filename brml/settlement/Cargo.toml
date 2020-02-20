@@ -22,7 +22,7 @@ default = ["std"]
 std = [
 	"brml-assets/std",
 	"codec/std",
-    "node-primitives/std",
+	"node-primitives/std",
 	"frame-support/std",
 	"sp-core/std",
 	"sp-runtime/std",

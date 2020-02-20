@@ -414,12 +414,20 @@ fn bridge_eos_genesis_config_should_work() {
 
 #[test]
 fn chech_receiver_is_ss58_format() {
-	let key = "5CFK52zU59zUhC3s6mRobEJ3zm7JeXQZaS6ybvcuCDDhWwGG";
+	let alice_key = "5CFK52zU59zUhC3s6mRobEJ3zm7JeXQZaS6ybvcuCDDhWwGG";
+	let expected_alice = [
+		8u8, 22, 254, 6, 137, 50, 46, 38,
+		205, 42, 169, 192, 220, 203, 108, 68,
+		133, 19, 69, 233, 111, 150, 154, 232,
+		92, 143, 26, 236, 159, 180, 112, 61
+	];
 
-	let is_ss58 = BridgeEos::receiver_is_ss58(key);
-	assert!(is_ss58.is_ok());
-	let is_ss58 = is_ss58.unwrap();
-	assert!(is_ss58);
+	let data = BridgeEos::get_account_data(alice_key);
+	assert!(data.is_ok());
+	let data = data.unwrap();
+	assert_eq!(data, expected_alice);
+	let account_id = BridgeEos::into_account(data);
+	assert!(account_id.is_ok());
 }
 
 #[cfg(feature = "std")]

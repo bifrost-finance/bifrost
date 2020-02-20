@@ -23,7 +23,6 @@ use std::sync::Arc;
 use sc_consensus_babe;
 use sc_client::{self, LongestChain};
 use grandpa::{self, FinalityProofProvider as GrandpaFinalityProofProvider};
-use node_executor;
 use node_primitives::Block;
 use node_runtime::{GenesisConfig, RuntimeApi};
 use sc_service::{
@@ -36,7 +35,7 @@ use sc_service::{Service, NetworkStatus};
 use sc_client::{Client, LocalCallExecutor};
 use sc_client_db::Backend;
 use sp_runtime::traits::Block as BlockT;
-use node_executor::NativeExecutor;
+use crate::executor::NativeExecutor;
 use sc_network::NetworkService;
 use sc_offchain::OffchainWorkers;
 
@@ -56,7 +55,7 @@ macro_rules! new_full_start {
 		let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
 		let builder = sc_service::ServiceBuilder::new_full::<
-			node_primitives::Block, node_runtime::RuntimeApi, node_executor::Executor
+			node_primitives::Block, node_runtime::RuntimeApi, crate::executor::Executor
 		>($config)?
 			.with_select_chain(|_config, backend| {
 				Ok(sc_client::LongestChain::new(backend.clone()))
@@ -97,7 +96,7 @@ macro_rules! new_full_start {
 				Ok(import_queue)
 			})?
 			.with_rpc_extensions(|client, pool, _backend, fetcher, _remote_blockchain| -> Result<RpcExtension, _> {
-				Ok(node_rpc::create(client, pool, node_rpc::LightDeps::none(fetcher)))
+				Ok(crate::rpc::create(client, pool, crate::rpc::LightDeps::none(fetcher)))
 			})?;
 
 		(builder, import_setup, inherent_data_providers)
@@ -260,7 +259,7 @@ type ConcreteClient =
 	Client<
 		Backend<ConcreteBlock>,
 		LocalCallExecutor<Backend<ConcreteBlock>,
-		NativeExecutor<node_executor::Executor>>,
+		NativeExecutor<crate::executor::Executor>>,
 		ConcreteBlock,
 		node_runtime::RuntimeApi
 	>;
@@ -303,7 +302,7 @@ pub fn new_light<C: Send + Default + 'static>(config: NodeConfiguration<C>)
 	type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 	let inherent_data_providers = InherentDataProviders::new();
 
-	let service = ServiceBuilder::new_light::<Block, RuntimeApi, node_executor::Executor>(config)?
+	let service = ServiceBuilder::new_light::<Block, RuntimeApi, crate::executor::Executor>(config)?
 		.with_select_chain(|_config, backend| {
 			Ok(LongestChain::new(backend.clone()))
 		})?
@@ -360,8 +359,8 @@ pub fn new_light<C: Send + Default + 'static>(config: NodeConfiguration<C>)
 			let remote_blockchain = remote_blockchain
 				.ok_or_else(|| "Trying to start node RPC without active remote blockchain")?;
 
-			let light_deps = node_rpc::LightDeps { remote_blockchain, fetcher };
-			Ok(node_rpc::create(client, pool, Some(light_deps)))
+			let light_deps = crate::rpc::LightDeps { remote_blockchain, fetcher };
+			Ok(crate::rpc::create(client, pool, Some(light_deps)))
 		})?
 		.build()?;
 
