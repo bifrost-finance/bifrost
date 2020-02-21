@@ -36,7 +36,7 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 };
 use sp_runtime::traits::Header as HeaderT;
-use sp_runtime::{generic::DigestItem, testing::Header};
+use sp_runtime::{generic::DigestItem, testing::Header, offchain::http};
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
 use frame_support::dispatch;
 
@@ -428,6 +428,22 @@ fn chech_receiver_is_ss58_format() {
 	assert_eq!(data, expected_alice);
 	let account_id = BridgeEos::into_account(data);
 	assert!(account_id.is_ok());
+}
+
+#[test]
+fn offchain_http_get_info_should_work() {
+	let mut ext = new_test_ext();
+	let (offchain, _state) = TestOffchainExt::new();
+	ext.register_extension(OffchainExt::new(offchain));
+
+	let node = "http://127.0.0.1:8888/v1/chain/get_info";
+	ext.execute_with(|| {
+		System::set_block_number(1);
+
+		BridgeEos::get_eos_node_info(node);
+		System::set_block_number(2);
+		System::set_block_number(5);
+	});
 }
 
 #[cfg(feature = "std")]
