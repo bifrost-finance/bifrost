@@ -9,6 +9,7 @@ use eos_keys::secret::SecretKey;
 use eos_rpc::{
 	get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction
 };
+use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
 use crate::Error;
@@ -131,7 +132,8 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let actions = vec![multi_sig_tx.action.clone()];
 
 				// Construct transaction
-				let tx = Transaction::new(600, ref_block_num, ref_block_prefix, actions);
+				let expiration = (sp_io::offchain::timestamp().add(Duration::from_millis(600 * 1000)).unix_millis() as f64 / 1000.0) as u32;
+				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
 				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(Error::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
