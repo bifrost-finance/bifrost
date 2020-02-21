@@ -33,6 +33,7 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
+	offchain::http,
 	traits::{Member, SaturatedConversion, SimpleArithmetic, StaticLookup},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
@@ -409,6 +410,10 @@ decl_module! {
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
 
+			// let node_info = "http://127.0.0.1:8888/v1/chain/get_info";
+			// get eos node info
+//			Self::get_eos_node_info(node_info);
+
 			// Only send messages if we are a potential validator.
 			if sp_io::offchain::is_validator() {
 				debug::info!(
@@ -703,6 +708,33 @@ impl<T: Trait> Module<T> {
 					.ok()
 					.map(|location| local_keys[location].clone())
 			})
+	}
+
+	fn get_eos_node_info(node_api: &str) {
+		let pending = http::Request::get(node_api).send().unwrap();
+		let response = pending.wait();
+		debug::info!("response is: {:?}", response);
+
+		if response.is_ok() {
+			debug::warn!("no response received.");
+			return;
+		}
+
+		let body = response.unwrap().body();
+		let body_bytes = body.collect::<Vec<u8>>();
+		debug::info!("just body is: {:?}", body_bytes);
+
+		// still cannot use serde_json in no_std due to compilation issue
+//		let node_info: Result<serde_json::Value, _> = serde_json::from_slice(&body_bytes);
+//		dbg!(&node_info);
+	}
+
+	fn get_eos_block(node_api: &str) {
+		todo!();
+	}
+
+	fn push_transaction_to_eos(node_api: &str) {
+		todo!();
 	}
 }
 
