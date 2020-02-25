@@ -870,6 +870,17 @@ impl_runtime_apis! {
 			SessionKeys::decode_into_raw_public_keys(&encoded)
 		}
 	}
+
+	// impl asset rpc methods for runtime
+	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
+		fn asset_balances(id: AssetId, who: AccountId) -> u64 {
+			Assets::asset_balances(id, who)
+		}
+
+		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
+			Assets::asset_tokens(who)
+		}
+	}
 }
 
 #[cfg(test)]

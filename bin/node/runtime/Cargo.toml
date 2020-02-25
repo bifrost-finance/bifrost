@@ -64,6 +64,7 @@ pallet-transaction-payment = { version = "2.0.0", default-features = false, git 
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 
 brml-assets = { path = "../../../brml/assets", default-features = false }
+brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", default-features = false }
 brml-bridge = { path = "../../../brml/bridge", default-features = false }
 brml-exchange = { path = "../../../brml/exchange", default-features = false }
 brml-settlement = { path = "../../../brml/settlement", default-features = false }
@@ -128,6 +129,7 @@ std = [
 	"pallet-society/std",
 	"pallet-recovery/std",
 	"brml-assets/std",
+	"brml-assets-rpc-runtime-api/std",
 	"brml-bridge/std",
 	"brml-exchange/std",
 	"brml-settlement/std",

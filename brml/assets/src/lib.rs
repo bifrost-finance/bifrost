@@ -17,7 +17,8 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure};
+use core::convert::TryInto;
+use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure, debug};
 use sp_runtime::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
@@ -267,5 +268,24 @@ impl<T: Trait> Module<T> {
 			token.total_supply
 		});
 		T::ClearingHandler::token_clearing(asset_id, now_block, prev_token.total_supply, total_supply);
+	}
+
+	pub fn asset_balances(asset_id: T::AssetId, target: T::AccountId) -> u64 {
+		debug::info!("asset id: {:?}, account: {:?}", asset_id, target);
+		let origin_account = (asset_id, target);
+		let balance_u128 = <Balances<T>>::get(origin_account);
+
+		// balance type is u128, but serde cannot serialize u128.
+		// So I have to convert to u64, see this link
+		// https://github.com/paritytech/substrate/issues/4641
+		let balance_u64: u64 = balance_u128.try_into().unwrap_or(usize::max_value()) as u64;
+
+		balance_u64
+	}
+
+	pub fn asset_tokens(target: T::AccountId) -> Vec<T::AssetId> {
+		let all_tokens = <AccountAssets<T>>::get(target);
+
+		all_tokens
 	}
 }

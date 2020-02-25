@@ -5,6 +5,7 @@ members = [
 	"bin/node/runtime",
 	"bin/utils/subkey",
 	"brml/assets",
+	"brml/assets/rpc",
 	"brml/bridge",
 	"brml/exchange",
 	"brml/settlement",

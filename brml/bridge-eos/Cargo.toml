@@ -25,6 +25,7 @@ sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate
 sp-std = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 serde = { version = "1.0.101", optional = true }
 serde_json = { version = "1.0.48", default-features = false, features = ["alloc"] }
+lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", default-features = false, features = ["float"]}
 
 [dev-dependencies]
 substrate-offchain = { package = "sp-offchain", git = "https://github.com/paritytech/substrate" }

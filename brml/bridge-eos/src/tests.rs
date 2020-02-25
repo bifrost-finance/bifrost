@@ -446,6 +446,46 @@ fn offchain_http_get_info_should_work() {
 	});
 }
 
+#[test]
+fn use_lite_json_for_deserialization_should_be_ok() {
+	use lite_json::{parse_json, JsonObject, JsonValue, NumberValue};
+
+	let action_str = r#"
+		{
+			"account": "eosio.token",
+			"name": "transfer",
+			"authorization": [
+				{
+					"actor": "junglefaucet",
+					"permission": "active"
+				}
+			],
+			"data": {
+				"from": "junglefaucet",
+				"receiver": "megasuper333",
+				"stake_net_quantity": "1.0000 EOS",
+				"stake_cpu_quantity": "1.0000 EOS",
+				"transfer": 1
+			},
+			"hex_data": "9015d266a9c8a67e30c6b8aa6a6c989240420f000000000004454f5300000000134e657720425020526567697374726174696f6e"
+		}"#;
+	let json_obj = parse_json(action_str);
+	assert!(json_obj.is_ok());
+	let json_obj = json_obj.unwrap();
+
+	match json_obj {
+		JsonValue::Object(ref obj) => {
+			let act: &JsonObject = obj;
+			for a in act.iter() {
+				let u8_vec = a.0.iter().map(|c| *c as u8).collect::<Vec<_>>();
+				let key = unsafe { String::from_utf8_unchecked(u8_vec) };
+				dbg!(&key);
+			}
+		}
+		_ => (),
+	}
+}
+
 #[cfg(feature = "std")]
 fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Error>> {
 	let path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/test_data/")).join(json_name.as_ref());

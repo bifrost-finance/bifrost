@@ -31,7 +31,7 @@
 
 use std::sync::Arc;
 
-use node_primitives::{Block, AccountId, Index, Balance};
+use node_primitives::{AccountId, AssetId, Balance, Block, Index};
 use node_runtime::UncheckedExtrinsic;
 use sp_api::ProvideRuntimeApi;
 use sp_transaction_pool::TransactionPool;
@@ -68,6 +68,7 @@ pub fn create<C, P, M, F>(
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
+	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
 	F: sc_client::light::fetcher::Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
@@ -80,7 +81,7 @@ pub fn create<C, P, M, F>(
 
 	if let Some(LightDeps { remote_blockchain, fetcher }) = light_deps {
 		io.extend_with(
-			SystemApi::<AccountId, Index>::to_delegate(LightSystem::new(client, remote_blockchain, fetcher, pool))
+			SystemApi::<AccountId, Index>::to_delegate(LightSystem::new(client.clone(), remote_blockchain, fetcher, pool))
 		);
 	} else {
 		io.extend_with(
@@ -94,8 +95,14 @@ pub fn create<C, P, M, F>(
 			ContractsApi::to_delegate(Contracts::new(client.clone()))
 		);
 		io.extend_with(
-			TransactionPaymentApi::to_delegate(TransactionPayment::new(client))
+			TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone()))
 		);
 	}
+
+	// register brml-asset rpc handler
+	io.extend_with(
+		brml_assets_rpc::AssetsApi::to_delegate(brml_assets_rpc::Assets::new(client))
+	);
+
 	io
 }
