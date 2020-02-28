@@ -77,5 +77,10 @@
   "FlatMap": {
     "map": "Vec<(ActionName, u64)>"
   },
-  "TxOut": {}
+  "TxOut": {},
+  "ExchangeRate": "u64",
+  "RatePerBlock": "u64",
+  "TokenPool": "Balance",
+  "VTokenPool": "Balance",
+  "InVariantPool": "Balance"
 }

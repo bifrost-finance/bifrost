@@ -93,6 +93,7 @@ eos-chain = { git = "https://github.com/bifrost-codes/rust-eos" }
 
 # brml rpc crates
 brml-assets-rpc = { path = "../../../brml/assets/rpc" }
+brml-exchange-rpc = { path = "../../../brml/exchange/rpc" }
 
 [dev-dependencies]
 sc-keystore = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }

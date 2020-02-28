@@ -363,7 +363,6 @@ name = "brml-assets-rpc"
 version = "0.1.0"
 dependencies = [
  "brml-assets-rpc-runtime-api 0.1.0",
- "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -440,6 +439,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-exchange-rpc"
+version = "0.1.0"
+dependencies = [
+ "brml-exchange-rpc-runtime-api 0.1.0",
+ "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-api 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sp-blockchain 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
+name = "brml-exchange-rpc-runtime-api"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-api 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
 name = "brml-settlement"
 version = "0.1.0"
 dependencies = [
@@ -452,6 +473,20 @@ dependencies = [
  "sp-io 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
+name = "brml-swap"
+version = "0.1.0"
+dependencies = [
+ "brml-assets 0.1.0",
+ "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "node-primitives 0.1.0",
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-core 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sp-io 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
 ]
 
 [[package]]
@@ -2930,6 +2965,7 @@ version = "0.1.0"
 dependencies = [
  "brml-assets-rpc 0.1.0",
  "brml-bridge-eos 0.1.0",
+ "brml-exchange-rpc 0.1.0",
  "browser-utils 0.8.0 (git+https://github.com/paritytech/substrate)",
  "ctrlc 3.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "eos-chain 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
@@ -3016,7 +3052,9 @@ dependencies = [
  "brml-bridge 0.1.0",
  "brml-bridge-eos 0.1.0",
  "brml-exchange 0.1.0",
+ "brml-exchange-rpc-runtime-api 0.1.0",
  "brml-settlement 0.1.0",
+ "brml-swap 0.1.0",
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",

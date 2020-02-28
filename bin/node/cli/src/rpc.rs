@@ -31,7 +31,7 @@
 
 use std::sync::Arc;
 
-use node_primitives::{AccountId, AssetId, Balance, Block, Index};
+use node_primitives::{AccountId, AssetId, Balance, Block, ExchangeRate, Index};
 use node_runtime::UncheckedExtrinsic;
 use sp_api::ProvideRuntimeApi;
 use sp_transaction_pool::TransactionPool;
@@ -69,6 +69,7 @@ pub fn create<C, P, M, F>(
 	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
+	C::Api: brml_exchange_rpc::ExchangeRateRuntimeApi<Block, ExchangeRate>,
 	F: sc_client::light::fetcher::Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
@@ -101,7 +102,11 @@ pub fn create<C, P, M, F>(
 
 	// register brml-asset rpc handler
 	io.extend_with(
-		brml_assets_rpc::AssetsApi::to_delegate(brml_assets_rpc::Assets::new(client))
+		brml_assets_rpc::AssetsApi::to_delegate(brml_assets_rpc::Assets::new(client.clone()))
+	);
+	// register brml-exchange rpc handler
+	io.extend_with(
+		brml_exchange_rpc::ExchangeRateApi::to_delegate(brml_exchange_rpc::Exchange::new(client))
 	);
 
 	io
