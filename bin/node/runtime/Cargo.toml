@@ -67,8 +67,10 @@ brml-assets = { path = "../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", default-features = false }
 brml-bridge = { path = "../../../brml/bridge", default-features = false }
 brml-exchange = { path = "../../../brml/exchange", default-features = false }
+brml-exchange-rpc-runtime-api = { path = "../../../brml/exchange/rpc/runtime-api", default-features = false }
 brml-settlement = { path = "../../../brml/settlement", default-features = false }
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
+brml-swap = { path = "../../../brml/swap", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.4", package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate" }
@@ -132,6 +134,8 @@ std = [
 	"brml-assets-rpc-runtime-api/std",
 	"brml-bridge/std",
 	"brml-exchange/std",
+	"brml-exchange-rpc-runtime-api/std",
 	"brml-settlement/std",
 	"brml-bridge-eos/std",
+	"brml-swap/std",
 ]

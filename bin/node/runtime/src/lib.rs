@@ -645,6 +645,15 @@ impl brml_bridge_eos::Trait for Runtime {
 	type SubmitTransaction = BridgeSubmitTransaction;
 }
 
+impl brml_swap::Trait for Runtime {
+	type Fee = Balance;
+	type Event = Event;
+	type ExchangeRate = Balance;
+	type TokenPool = Balance;
+	type VTokenPool = Balance;
+	type InVariantPool = Balance;
+}
+
 // bifrost rumtine time end
 
 construct_runtime!(
@@ -686,6 +695,7 @@ construct_runtime!(
 		Bridge: brml_bridge::{Module, Call, Storage, Event<T>},
 		Exchange: brml_exchange::{Module, Call, Storage},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
+		Swap: brml_swap::{Module, Call, Storage, Event},
 	}
 );
 
@@ -879,6 +889,12 @@ impl_runtime_apis! {
 
 		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
 			Assets::asset_tokens(who)
+		}
+	}
+
+	impl brml_exchange_rpc_runtime_api::ExchangeRateApi<node_primitives::Block, node_primitives::ExchangeRate> for Runtime {
+		fn get_exchange_rate() -> node_primitives::ExchangeRate {
+			Exchange::get_exchange()
 		}
 	}
 }

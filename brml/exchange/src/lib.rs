@@ -19,39 +19,47 @@ mod mock;
 mod tests;
 
 use frame_support::{Parameter, decl_module, decl_storage};
-use sp_runtime::traits::{Member, SimpleArithmetic};
+use sp_runtime::traits::{Member, Saturating, SimpleArithmetic};
 use system::ensure_root;
 
 pub trait Trait: system::Trait {
-	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::RatePerBlock>;
 
 	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy;
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Exchange {
-		ExchangeRate get(fn get_exchange_rate): u64 = 1;
-		RatePerBlock get(fn get_rate_per_block): u64 = 0;
+		ExchangeRate get(fn get_exchange_rate): T::ExchangeRate = 1.into();
+		RatePerBlock get(fn get_rate_per_block): T::RatePerBlock = 0.into();
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		pub fn set_rate_per_block(origin, rate: u64) {
+		pub fn set_rate_per_block(origin, rate: T::RatePerBlock) {
 			let _sender = ensure_root(origin)?;
-			<RatePerBlock>::put(rate);
+			<RatePerBlock<T>>::put(rate);
 		}
 
-		pub fn set_exchange_rate(origin, exchange: u64) {
+		pub fn set_exchange_rate(origin, exchange: T::ExchangeRate) {
 			let _sender = ensure_root(origin)?;
-			<ExchangeRate>::put(exchange);
+			<ExchangeRate<T>>::put(exchange);
 		}
 
 		fn on_finalize() {
-			let rate_per_block = RatePerBlock::get();
-			<ExchangeRate>::mutate(|rate| {
-				*rate  = rate.saturating_sub(rate_per_block);
+			let rate_per_block = <RatePerBlock<T>>::get();
+			<ExchangeRate<T>>::mutate(|rate| {
+				*rate  = rate.saturating_sub(rate_per_block.into());
 			});
 		}
+	}
+}
+
+impl<T: Trait> Module<T> {
+	pub fn get_exchange() -> T::ExchangeRate {
+		let rate = <ExchangeRate<T>>::get();
+
+		rate
 	}
 }

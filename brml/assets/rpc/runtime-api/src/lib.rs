@@ -19,7 +19,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use codec::{Codec, Decode, Encode};
+use codec::Codec;
 use sp_api::decl_runtime_apis;
 
 /// Create assets runtime api for rpc call

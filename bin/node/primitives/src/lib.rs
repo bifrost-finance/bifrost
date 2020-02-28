@@ -40,6 +40,10 @@ pub type AccountIndex = u32;
 /// An index to an asset
 pub type AssetId = u32;
 
+/// Exchange type
+pub type ExchangeRate = u64;
+pub type RatePerBlock = u64;
+
 /// Balance of an account.
 pub type Balance = u128;
 

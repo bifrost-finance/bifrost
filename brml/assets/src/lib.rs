@@ -71,7 +71,7 @@ decl_storage! {
 		/// The number of units of assets held by any given asset ans given account.
 		pub Balances get(fn balances): map hasher(blake2_256) (T::AssetId, T::AccountId) => T::Balance;
 		/// The next asset identifier up for grabs.
-		NextAssetId get(fn next_asset_id): T::AssetId;
+		pub NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
 		pub Tokens get(fn token_details): map hasher(blake2_256) T::AssetId => Token<T::Balance>;
 		/// A collection of asset which an account owned
@@ -87,9 +87,9 @@ decl_module! {
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) {
-			let _origin = ensure_root(origin)?;
+			ensure_root(origin)?;
 
-			ensure!(symbol.len() > 0, "token symbol must great then 0");
+			ensure!(!symbol.is_empty(), "token symbol must great then 0");
 			ensure!(symbol.len() <= 32, "token symbol cannot exceed 32 bytes");
 			ensure!(precision <= 16, "token precision cannot exceed 16");
 
@@ -104,7 +104,7 @@ decl_module! {
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance)
 		{
-			let _origin = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			ensure!(<Tokens<T>>::exists(&id), "asset should be created first");
 
@@ -158,7 +158,7 @@ decl_module! {
 
 			T::AssetRedeem::asset_redeem(id, origin.clone(), amount, to_name);
 
-			Self::asset_destroy(id, origin.clone(), amount);
+			Self::asset_destroy(id, origin, amount);
 		}
 	}
 }
@@ -212,7 +212,7 @@ impl<T: Trait> Module<T> {
 			*balance += amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, target.clone(), now_block, prev_target_balance, target_balance);
+		T::ClearingHandler::asset_clearing(asset_id, target, now_block, prev_target_balance, target_balance);
 
 		let prev_token = <Tokens<T>>::get(asset_id);
 		let total_supply = <Tokens<T>>::mutate(asset_id, |token| {
@@ -236,7 +236,7 @@ impl<T: Trait> Module<T> {
 			*balance -= amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, from.clone(), now_block, prev_from_balance, from_balance);
+		T::ClearingHandler::asset_clearing(asset_id, from, now_block, prev_from_balance, from_balance);
 
 		let to_asset = (asset_id, to.clone());
 		let prev_to_balance = <Balances<T>>::get(&to_asset);
@@ -244,7 +244,7 @@ impl<T: Trait> Module<T> {
 			*balance += amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, to.clone(), now_block, prev_to_balance, to_balance);
+		T::ClearingHandler::asset_clearing(asset_id, to, now_block, prev_to_balance, to_balance);
 	}
 
 	fn asset_destroy(
@@ -260,7 +260,7 @@ impl<T: Trait> Module<T> {
 			*balance -= amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, target.clone(), now_block, prev_target_balance, target_balance);
+		T::ClearingHandler::asset_clearing(asset_id, target, now_block, prev_target_balance, target_balance);
 
 		let prev_token = <Tokens<T>>::get(&asset_id);
 		let total_supply = <Tokens<T>>::mutate(asset_id, |token| {
@@ -284,8 +284,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn asset_tokens(target: T::AccountId) -> Vec<T::AssetId> {
-		let all_tokens = <AccountAssets<T>>::get(target);
-
-		all_tokens
+		<AccountAssets<T>>::get(target)
 	}
 }

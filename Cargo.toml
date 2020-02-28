@@ -8,8 +8,10 @@ members = [
 	"brml/assets/rpc",
 	"brml/bridge",
 	"brml/exchange",
+	"brml/exchange/rpc",
 	"brml/settlement",
 	"brml/bridge-eos",
+	"brml/swap",
 ]
 
 [profile.release]
