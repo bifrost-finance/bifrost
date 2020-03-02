@@ -1,0 +1,16 @@
+[package]
+name = "brml-exchange-rpc-runtime-api"
+version = "0.1.0"
+authors = ["Dengjianping <djptux@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "1.0", default-features = false, features = ["derive"] }
+sp-api = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"sp-api/std",
+]
