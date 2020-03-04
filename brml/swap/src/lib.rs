@@ -22,7 +22,7 @@ mod tests;
 use core::convert::{From, Into};
 use frame_support::{decl_event, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::AssetRedeem;
+use node_primitives::{AssetRedeem, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic};
 
 pub trait Trait: assets::Trait {
@@ -125,15 +125,15 @@ decl_module! {
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exists.");
 
 			// check the balance
-			let token_balances = <assets::Balances<T>>::get((&token_id, &provider));
+			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &provider));
 			ensure!(token_balances >= token_pool, "amount should be less than or equal to origin balance");
 
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, &provider));
+			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &provider));
 			ensure!(vtoken_balances >= vtoken_pool, "amount should be less than or equal to origin balance");
 
 			// destroy balances from both tokens
-			assets::Module::<T>::asset_redeem(token_id, provider.clone(), token_pool, None);
-			assets::Module::<T>::asset_redeem(vtoken_id, provider, vtoken_pool, None);
+			assets::Module::<T>::asset_redeem(token_id, TokenType::Token, provider.clone(), token_pool, None);
+			assets::Module::<T>::asset_redeem(vtoken_id, TokenType::VToken, provider, vtoken_pool, None);
 
 			let x: T::InVariantPool = token_pool.into();
 			let y: T::InVariantPool = vtoken_pool.into();
@@ -167,12 +167,12 @@ decl_module! {
 			ensure!(current_token_pool * current_vtoken_pool == invariant, "this is an invalid invariant.");
 
 			// transfer
-			let to_asset = (&token_id, &provider);
+			let to_asset = (&token_id, TokenType::Token, &provider);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances += current_token_pool;
 			});
 
-			let to_asset = (&vtoken_id, &provider);
+			let to_asset = (&vtoken_id, TokenType::VToken, &provider);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances += current_vtoken_pool;
 			});
@@ -200,7 +200,7 @@ decl_module! {
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
 
 			// check there's enough balances for transaction
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, &sender));
+			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &sender));
 			ensure!(vtoken_balances >= vtoken_amount, "amount should be less than or equal to origin balance");
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
@@ -222,13 +222,13 @@ decl_module! {
 			ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
 			// vtoken transfer
-			let to_asset = (&token_id, &sender);
+			let to_asset = (&token_id, TokenType::Token, &sender);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances += tokens_buy;
 			});
 
 			// token decrease
-			let to_asset = (&vtoken_id, &sender);
+			let to_asset = (&vtoken_id, TokenType::VToken, &sender);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances -= vtoken_amount;
 			});
@@ -255,7 +255,7 @@ decl_module! {
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
 
 			// check there's enough balances for transaction
-			let token_balances = <assets::Balances<T>>::get((&token_id, &sender));
+			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &sender));
 			ensure!(token_balances >= token_amount, "amount should be less than or equal to origin balance");
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
@@ -277,12 +277,12 @@ decl_module! {
 			ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
 			// transfer
-			let to_asset = (&vtoken_id, &sender);
+			let to_asset = (&vtoken_id, TokenType::VToken, &sender);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances += vtokens_buy;
 			});
 
-			let to_asset = (&token_id, &sender);
+			let to_asset = (&token_id, TokenType::Token, &sender);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances -= token_amount;
 			});
@@ -308,7 +308,7 @@ decl_module! {
 			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id is doesn't exist.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
 
-			let token_balances = <assets::Balances<T>>::get((&token_id, &exchanger));
+			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &exchanger));
 			ensure!(token_balances >= token_amount, "amount should be less than or equal to origin balance");
 
 			// check exchange rate has been set
@@ -318,12 +318,12 @@ decl_module! {
 			let vtokens_buy = token_amount * rate.into();
 
 			// transfer
-			let to_asset = (&vtoken_id, &exchanger);
+			let to_asset = (&vtoken_id, TokenType::VToken, &exchanger);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances = balances.saturating_add(vtokens_buy);
 			});
 
-			let to_asset = (&token_id, &exchanger);
+			let to_asset = (&token_id, TokenType::Token, &exchanger);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances = balances.saturating_sub(token_amount);
 			});
@@ -343,7 +343,7 @@ decl_module! {
 			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id is doesn't exist.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
 
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, &exchanger));
+			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &exchanger));
 			ensure!(vtoken_balances >= vtoken_amount, "amount should be less than or equal to origin balance");
 
 			// check exchange rate has been set
@@ -353,12 +353,12 @@ decl_module! {
 			let tokens_buy = vtoken_amount / rate.into();
 
 			// transfer
-			let to_asset = (&token_id, &exchanger);
+			let to_asset = (&token_id, TokenType::Token, &exchanger);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances = balances.saturating_add(tokens_buy);
 			});
 
-			let to_asset = (&vtoken_id, &exchanger);
+			let to_asset = (&vtoken_id, TokenType::VToken, &exchanger);
 			<assets::Balances<T>>::mutate(to_asset, |balances| {
 				*balances = balances.saturating_sub(vtoken_amount);
 			});

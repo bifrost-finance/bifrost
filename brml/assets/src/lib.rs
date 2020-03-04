@@ -22,7 +22,9 @@ use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure, de
 use sp_runtime::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
-use node_primitives::{ClearingHandler, AssetCreate, AssetIssue, AssetRedeem, Token};
+use node_primitives::{
+	ClearingHandler, AssetCreate, AssetIssue, AssetRedeem, Token, TokenPair, TokenType
+};
 
 mod mock;
 mod tests;
@@ -38,9 +40,6 @@ pub trait Trait: system::Trait {
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
 
-	/// Clearing handler for assets change
-	type ClearingHandler: ClearingHandler<Self::AssetId, Self::AccountId, Self::BlockNumber, Self::Balance>;
-
 	/// Handler for asset redeem
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 }
@@ -52,13 +51,13 @@ decl_event!(
 			<T as Trait>::AssetId,
 	{
 		/// Some assets were created.
-		Created(AssetId, Token<Balance>),
+		Created(AssetId, TokenPair<Balance>),
 		/// Some assets were issued.
-		Issued(AssetId, AccountId, Balance),
+		Issued(AssetId, TokenType, AccountId, Balance),
 		/// Some assets were transferred.
-		Transferred(AssetId, AccountId, AccountId, Balance),
+		Transferred(AssetId, TokenType, AccountId, AccountId, Balance),
 		/// Some assets were destroyed.
-		Destroyed(AssetId, AccountId, Balance),
+		Destroyed(AssetId, TokenType, AccountId, Balance),
 		/// Bind Asset with AccountId
 		AccountAssetCreated(AccountId, AssetId),
 		/// Bind Asset with AccountId
@@ -69,11 +68,11 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub Balances get(fn balances): map hasher(blake2_256) (T::AssetId, T::AccountId) => T::Balance;
+		pub Balances get(fn balances): map hasher(blake2_256) (T::AssetId, TokenType, T::AccountId) => T::Balance;
 		/// The next asset identifier up for grabs.
 		pub NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
-		pub Tokens get(fn token_details): map hasher(blake2_256) T::AssetId => Token<T::Balance>;
+		pub Tokens get(fn token_details): map hasher(blake2_256) T::AssetId => TokenPair<T::Balance>;
 		/// A collection of asset which an account owned
 		pub AccountAssets get(fn account_assets): map hasher(blake2_256) T::AccountId => Vec<T::AssetId>;
 	}
@@ -93,17 +92,18 @@ decl_module! {
 			ensure!(symbol.len() <= 32, "token symbol cannot exceed 32 bytes");
 			ensure!(precision <= 16, "token precision cannot exceed 16");
 
-			let (id, token) = Self::asset_create(symbol, precision);
+			let (id, token_pair) = Self::asset_create(symbol, precision);
 
-			Self::deposit_event(RawEvent::Created(id, token));
+			Self::deposit_event(RawEvent::Created(id, token_pair));
 		}
 
 		/// Issue any amount of fungible assets.
 		pub fn issue(origin,
 			#[compact] id: T::AssetId,
+			token_type: TokenType,
 			target: <T::Lookup as StaticLookup>::Source,
-			#[compact] amount: T::Balance)
-		{
+			#[compact] amount: T::Balance,
+		) {
 			ensure_root(origin)?;
 
 			ensure!(<Tokens<T>>::exists(&id), "asset should be created first");
@@ -111,79 +111,92 @@ decl_module! {
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), "issue amount should be non-zero");
 
-			Self::asset_issue(id, target.clone(), amount);
+			Self::asset_issue(id, token_type, target.clone(), amount);
 
-			Self::deposit_event(RawEvent::Issued(id, target, amount));
+			Self::deposit_event(RawEvent::Issued(id, token_type, target, amount));
 		}
 
 		/// Move some assets from one holder to another.
 		pub fn transfer(origin,
 			#[compact] id: T::AssetId,
+			token_type: TokenType,
 			target: <T::Lookup as StaticLookup>::Source,
-			#[compact] amount: T::Balance)
-		{
+			#[compact] amount: T::Balance,
+		) {
 			let origin = ensure_signed(origin)?;
-			let origin_account = (id, origin.clone());
+			let origin_account = (id, token_type, origin.clone());
 			let origin_balance = <Balances<T>>::get(&origin_account);
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), "transfer amount should be non-zero");
 			ensure!(origin_balance >= amount,
 				"origin account balance must be greater than or equal to the transfer amount");
 
-			Self::asset_transfer(id, origin.clone(), target.clone(), amount);
+			Self::asset_transfer(id, token_type, origin.clone(), target.clone(), amount);
 
-			Self::deposit_event(RawEvent::Transferred(id, origin, target, amount));
+			Self::deposit_event(RawEvent::Transferred(id, token_type, origin, target, amount));
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
-		pub fn destroy(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance) {
+		pub fn destroy(
+			origin,
+			#[compact] id: T::AssetId,
+			token_type: TokenType,
+			#[compact] amount:
+			T::Balance,
+		) {
 			let origin = ensure_signed(origin)?;
-			let origin_account = (id, origin.clone());
+			let origin_account = (id, token_type, origin.clone());
 
 			let balance = <Balances<T>>::get(&origin_account);
 			ensure!(amount <= balance , "amount should be less than or equal to origin balance");
 
-			Self::asset_destroy(id, origin.clone(), amount);
+			Self::asset_destroy(id, token_type, origin.clone(), amount);
 
-			Self::deposit_event(RawEvent::Destroyed(id, origin, amount));
+			Self::deposit_event(RawEvent::Destroyed(id, token_type, origin, amount));
 		}
 
-		pub fn redeem(origin, #[compact] id: T::AssetId, #[compact] amount: T::Balance, to_name: Option<Vec<u8>>) {
+		pub fn redeem(
+			origin,
+			#[compact] id: T::AssetId,
+			token_type: TokenType,
+			#[compact] amount: T::Balance,
+			to_name: Option<Vec<u8>>,
+		) {
 			let origin = ensure_signed(origin)?;
 
-			let origin_account = (id, origin.clone());
+			let origin_account = (id, token_type, origin.clone());
 
 			let balance = <Balances<T>>::get(&origin_account);
 			ensure!(amount <= balance , "amount should be less than or equal to origin balance");
 
-			T::AssetRedeem::asset_redeem(id, origin.clone(), amount, to_name);
+			T::AssetRedeem::asset_redeem(id, token_type, origin.clone(), amount, to_name);
 
-			Self::asset_destroy(id, origin, amount);
+			Self::asset_destroy(id, token_type, origin, amount);
 		}
 	}
 }
 
 impl<T: Trait> AssetCreate<T::AssetId, T::Balance> for Module<T> {
-	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, Token<T::Balance>) {
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, TokenPair<T::Balance>) {
 		Self::asset_create(symbol, precision)
 	}
 }
 
 impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
-	fn asset_issue(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance) {
-		Self::asset_issue(asset_id, target, amount);
+	fn asset_issue(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId, amount: T::Balance) {
+		Self::asset_issue(asset_id, token_type, target, amount);
 	}
 }
 
 impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
-	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Option<Vec<u8>>) {
-		Self::asset_destroy(asset_id, target, amount);
+	fn asset_redeem(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId, amount: T::Balance, to_name: Option<Vec<u8>>) {
+		Self::asset_destroy(asset_id, token_type, target, amount);
 	}
 }
 
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
-	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, Token<T::Balance>) {
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, TokenPair<T::Balance>) {
 		let id = Self::next_asset_id();
 		<NextAssetId<T>>::mutate(|id| *id += One::one());
 
@@ -191,88 +204,91 @@ impl<T: Trait> Module<T> {
 		let total_supply: T::Balance = 0.into();
 
 		// Create token
-		let token = Token::new(symbol, precision, total_supply);
+		let token = Token::new(symbol.clone(), precision, total_supply);
+		let vtoken = Token::new(symbol, precision, total_supply);
+		let token_pair = TokenPair::new(token, vtoken);
 
 		// Insert to storage
-		<Tokens<T>>::insert(id, token.clone());
+		<Tokens<T>>::insert(id, token_pair.clone());
 
-		(id, token)
+		(id, token_pair)
 	}
 
 	fn asset_issue(
 		asset_id: T::AssetId,
+		token_type: TokenType,
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
-
-		let target_asset = (asset_id, target.clone());
-		let prev_target_balance = <Balances<T>>::get(&target_asset);
-		let target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
+		let target_asset = (asset_id, token_type, target.clone());
+		let _target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
 			*balance += amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, target, now_block, prev_target_balance, target_balance);
 
-		let prev_token = <Tokens<T>>::get(asset_id);
-		let total_supply = <Tokens<T>>::mutate(asset_id, |token| {
-			token.total_supply += amount;
-			token.total_supply
+		let _total_supply = <Tokens<T>>::mutate(asset_id, |token| {
+			match token_type {
+				TokenType::Token => {
+					token.token.total_supply += amount;
+					token.token.total_supply
+				},
+				TokenType::VToken => {
+					token.vtoken.total_supply += amount;
+					token.vtoken.total_supply
+				}
+			}
 		});
-		T::ClearingHandler::token_clearing(asset_id, now_block, prev_token.total_supply, total_supply);
 	}
 
 	fn asset_transfer(
 		asset_id: T::AssetId,
+		token_type: TokenType,
 		from: T::AccountId,
 		to: T::AccountId,
 		amount: T::Balance,
 	) {
-		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
-
-		let from_asset = (asset_id, from.clone());
-		let prev_from_balance = <Balances<T>>::get(&from_asset);
-		let from_balance = <Balances<T>>::mutate(&from_asset, |balance| {
+		let from_asset = (asset_id, token_type, from.clone());
+		let _from_balance = <Balances<T>>::mutate(&from_asset, |balance| {
 			*balance -= amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, from, now_block, prev_from_balance, from_balance);
 
-		let to_asset = (asset_id, to.clone());
-		let prev_to_balance = <Balances<T>>::get(&to_asset);
-		let to_balance = <Balances<T>>::mutate(&to_asset, |balance| {
+		let to_asset = (asset_id, token_type, to.clone());
+		let _to_balance = <Balances<T>>::mutate(&to_asset, |balance| {
 			*balance += amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, to, now_block, prev_to_balance, to_balance);
 	}
 
 	fn asset_destroy(
 		asset_id: T::AssetId,
+		token_type: TokenType,
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let now_block: T::BlockNumber = <system::Module<T>>::block_number();
-
-		let target_asset = (asset_id, target.clone());
-		let prev_target_balance = <Balances<T>>::get(&target_asset);
-		let target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
+		let target_asset = (asset_id, token_type, target.clone());
+		let _target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
 			*balance -= amount;
 			*balance
 		});
-		T::ClearingHandler::asset_clearing(asset_id, target, now_block, prev_target_balance, target_balance);
 
-		let prev_token = <Tokens<T>>::get(&asset_id);
-		let total_supply = <Tokens<T>>::mutate(asset_id, |token| {
-			token.total_supply -= amount;
-			token.total_supply
+		let _total_supply = <Tokens<T>>::mutate(asset_id, |token| {
+			match token_type {
+				TokenType::Token => {
+					token.token.total_supply -= amount;
+					token.token.total_supply
+				},
+				TokenType::VToken => {
+					token.vtoken.total_supply -= amount;
+					token.vtoken.total_supply
+				}
+			}
 		});
-		T::ClearingHandler::token_clearing(asset_id, now_block, prev_token.total_supply, total_supply);
 	}
 
-	pub fn asset_balances(asset_id: T::AssetId, target: T::AccountId) -> u64 {
+	pub fn asset_balances(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId) -> u64 {
 		debug::info!("asset id: {:?}, account: {:?}", asset_id, target);
-		let origin_account = (asset_id, target);
+		let origin_account = (asset_id, token_type, target);
 		let balance_u128 = <Balances<T>>::get(origin_account);
 
 		// balance type is u128, but serde cannot serialize u128.

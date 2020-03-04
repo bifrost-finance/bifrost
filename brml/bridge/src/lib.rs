@@ -135,7 +135,7 @@ impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 impl<T: Trait> BridgeAssetFrom<T::AccountId, T::Precision, T::Balance> for Module<T> {
 	fn bridge_asset_from(target: T::AccountId, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
 		let asset_id = <BridgeAssetToAssetId<T>>::get(bridge_asset.symbol);
-		T::AssetIssue::asset_issue(asset_id, target.clone(), bridge_asset.amount);
+		T::AssetIssue::asset_issue(asset_id, TokenType::VToken, target.clone(), bridge_asset.amount);
 	}
 }
 

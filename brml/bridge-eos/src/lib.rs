@@ -19,7 +19,6 @@
 extern crate alloc;
 
 use alloc::borrow::Cow;
-use alloc::format;
 use alloc::string::String;
 use alloc::string::ToString;
 use core::{convert::TryFrom, ops::Div, str::FromStr};
@@ -34,7 +33,7 @@ use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
 	offchain::http,
-	traits::{Member, SaturatedConversion, SimpleArithmetic, StaticLookup},
+	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction, TransactionValidityError
@@ -47,7 +46,10 @@ use frame_system::{
 	offchain::SubmitUnsignedTransaction
 };
 
-use node_primitives::{AssetCreate, AssetIssue, AssetRedeem, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType};
+use node_primitives::{
+	AssetCreate, AssetIssue, AssetRedeem, BridgeAssetBalance, BridgeAssetFrom,
+	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenType,
+};
 use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -385,7 +387,7 @@ decl_module! {
 
 		fn asset_redeem(origin, to: Vec<u8>, amount: <T as assets::Trait>::Balance, id: T::AssetId) {
 			let origin = system::ensure_signed(origin)?;
-			let origin_account = (id, origin.clone());
+			let origin_account = (id, TokenType::VToken, origin.clone());
 			let eos_amount = amount.clone();
 
 			let balance = <assets::Balances<T>>::get(origin_account);
@@ -399,7 +401,7 @@ decl_module! {
 				amount: eos_amount
 			};
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				assets::Module::<T>::asset_redeem(id, origin, amount, None);
+				assets::Module::<T>::asset_redeem(id, TokenType::VToken, origin, amount, None);
 				Self::deposit_event(Event::TransactionSuccess);
 			} else {
 				Self::deposit_event(Event::TransactionFail);
@@ -515,7 +517,7 @@ impl<T: Trait> Module<T> {
 	fn filter_account_by_action(target: T::AccountId, action_transfer: &ActionTransfer) -> Result<(), Error> {
 		let amount = <T as assets::Trait>::Balance::from(action_transfer.quantity.amount as u32);
 		let (id, _) = assets::Module::<T>::asset_create(vec![0u8], 4);
-		assets::Module::<T>::asset_issue(id, target, amount);
+		assets::Module::<T>::asset_issue(id, TokenType::VToken, target, amount);
 
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == from {
