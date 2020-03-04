@@ -411,6 +411,7 @@ dependencies = [
 name = "brml-exchange"
 version = "0.1.0"
 dependencies = [
+ "brml-assets 0.1.0",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
  "node-primitives 0.1.0",
@@ -418,7 +419,6 @@ dependencies = [
  "sp-core 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sp-io 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
 ]
 
 [[package]]

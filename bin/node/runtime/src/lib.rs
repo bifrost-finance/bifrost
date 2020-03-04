@@ -29,7 +29,7 @@ use frame_support::{
 use sp_core::u32_trait::{_1, _2, _3, _4};
 use node_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
-	BridgeAssetTo, AssetId, AssetCreate, Precision, TokenType,
+	BridgeAssetTo, AssetId, AssetCreate, Precision, TokenType, ExchangeRate, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -610,8 +610,9 @@ impl brml_assets::Trait for Runtime {
 }
 
 impl brml_exchange::Trait for Runtime {
-	type ExchangeRate = u64;
-	type RatePerBlock = u64;
+	type Event = Event;
+	type ExchangeRate = ExchangeRate;
+	type RatePerBlock = RatePerBlock;
 }
 
 type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
@@ -629,7 +630,6 @@ impl brml_bridge_eos::Trait for Runtime {
 impl brml_swap::Trait for Runtime {
 	type Fee = Balance;
 	type Event = Event;
-	type ExchangeRate = Balance;
 	type TokenPool = Balance;
 	type VTokenPool = Balance;
 	type InVariantPool = Balance;
@@ -672,7 +672,7 @@ construct_runtime!(
 		Recovery: pallet_recovery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
-		Exchange: brml_exchange::{Module, Call, Storage},
+		Exchange: brml_exchange::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
 	}
@@ -871,9 +871,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_exchange_rpc_runtime_api::ExchangeRateApi<node_primitives::Block, node_primitives::ExchangeRate> for Runtime {
-		fn get_exchange_rate() -> node_primitives::ExchangeRate {
-			Exchange::get_exchange()
+	impl brml_exchange_rpc_runtime_api::ExchangeRateApi<node_primitives::Block, AssetId, node_primitives::ExchangeRate> for Runtime {
+		fn get_exchange_rate(vtoken_id: AssetId) -> node_primitives::ExchangeRate {
+			Exchange::get_exchange(vtoken_id)
 		}
 	}
 }

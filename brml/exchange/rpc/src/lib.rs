@@ -41,25 +41,26 @@ impl<C, Block> Exchange<C, Block> {
 }
 
 #[rpc]
-pub trait ExchangeRateApi<BlockHash, ExchangeRate> {
+pub trait ExchangeRateApi<BlockHash, AssetId, ExchangeRate> {
 	/// rpc method for getting current exchange rate
 	#[rpc(name = "exchange_getExchange")]
-	fn get_exchange_rate(&self, at: Option<BlockHash>) -> JsonRpcResult<ExchangeRate>;
+	fn get_exchange_rate(&self, vtoken_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ExchangeRate>;
 }
 
-impl<C, Block, ExchangeRate> ExchangeRateApi<<Block as BlockT>::Hash, ExchangeRate>
+impl<C, Block, AssetId, ExchangeRate> ExchangeRateApi<<Block as BlockT>::Hash, AssetId, ExchangeRate>
 for Exchange<C, Block>
 	where
 		Block: BlockT,
 		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ExchangeRateRuntimeApi<Block, ExchangeRate>,
+		C::Api: ExchangeRateRuntimeApi<Block, AssetId, ExchangeRate>,
+		AssetId: Codec,
 		ExchangeRate: Codec,
 {
-	fn get_exchange_rate(&self, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ExchangeRate> {
+	fn get_exchange_rate(&self, vtoken_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ExchangeRate> {
 		let exchange_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		exchange_rpc_api.get_exchange_rate(&at).map_err(|e| RpcError {
+		exchange_rpc_api.get_exchange_rate(&at, vtoken_id).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
 			message: "Failed to get current exchange rate.".to_owned(),
 			data: Some(format!("{:?}", e).into()),

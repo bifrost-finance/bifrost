@@ -20,7 +20,7 @@
 
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types};
 use sp_core::H256;
-use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize}, testing::Header};
 use super::*;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -30,11 +30,29 @@ impl_outer_origin! {
 	pub enum Origin for Test {}
 }
 
+impl_outer_event! {
+	pub enum TestEvent for Test {
+		brml_exchange,
+		assets<T>,
+	}
+}
+
+mod brml_exchange {
+	pub use crate::Event;
+}
+
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: u32 = 1024;
 	pub const MaximumBlockLength: u32 = 2 * 1024;
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
+}
+
+impl assets::Trait for Test {
+	type Event = TestEvent;
+	type Balance = u64;
+	type AssetId = u32;
+	type AssetRedeem = ();
 }
 
 impl system::Trait for Test {
@@ -47,7 +65,7 @@ impl system::Trait for Test {
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = ();
+	type Event = TestEvent;
 	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
@@ -63,10 +81,21 @@ parameter_types! {
 impl crate::Trait for Test {
 	type ExchangeRate = u64;
 	type RatePerBlock = u64;
+	type Event = TestEvent;
 }
 
-pub type ExchangeTestModule = crate::Module<Test>;
+pub type Exchange = crate::Module<Test>;
 pub type System = system::Module<Test>;
+
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		Exchange::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Exchange::on_initialize(System::block_number());
+	}
+}
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()

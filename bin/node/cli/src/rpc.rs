@@ -69,7 +69,7 @@ pub fn create<C, P, M, F>(
 	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
-	C::Api: brml_exchange_rpc::ExchangeRateRuntimeApi<Block, ExchangeRate>,
+	C::Api: brml_exchange_rpc::ExchangeRateRuntimeApi<Block, AssetId, ExchangeRate>,
 	F: sc_client::light::fetcher::Fetcher<Block> + 'static,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
