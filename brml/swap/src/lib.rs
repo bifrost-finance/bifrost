@@ -26,9 +26,6 @@ use node_primitives::{AssetRedeem, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic};
 
 pub trait Trait: assets::Trait {
-	/// exchange rate
-	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + From<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance>;
-
 	/// fee
 	type Fee: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::TokenPool> + Into<Self::VTokenPool>;
 
@@ -45,22 +42,15 @@ decl_event! {
 	pub enum Event {
 		AddLiquiditySuccess,
 		RemoveLiquiditySuccess,
-		UpdateExchangeSuccess,
 		UpdateFeeSuccess,
 		VTokenToTokenSuccess,
 		SwapTokenToVTokenSuccess,
 		SwapVTokenToTokenSuccess,
-		ExchangeTokenToVTokenSuccess,
-		ExchangerVTokenToTokenSuccess,
 	}
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
-		/// exchange rate between two tokens
-		ExchangeRate: double_map hasher(blake2_256) <T as assets::Trait>::AssetId, hasher(twox_128) <T as assets::Trait>::AssetId
-			=> T::ExchangeRate;
-
 		/// fee
 		Fee: double_map hasher(blake2_256) <T as assets::Trait>::AssetId, hasher(twox_128) <T as assets::Trait>::AssetId
 			=> T::Fee;
@@ -92,21 +82,6 @@ decl_module! {
 			<Fee<T>>::insert(token_id, vtoken_id, fee);
 
 			Self::deposit_event(Event::UpdateFeeSuccess);
-		}
-
-		fn set_exchange(
-			origin,
-			token_id: <T as assets::Trait>::AssetId,
-			vtoken_id: <T as assets::Trait>::AssetId,
-			exchange_rate: T::ExchangeRate
-		) {
-			ensure_root(origin)?;
-
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id doesn't exist.");
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exist.");
-			<ExchangeRate<T>>::insert(token_id, vtoken_id, exchange_rate);
-
-			Self::deposit_event(Event::UpdateExchangeSuccess);
 		}
 
 		fn add_liquidity(
@@ -294,76 +269,6 @@ decl_module! {
 			});
 
 			Self::deposit_event(Event::SwapTokenToVTokenSuccess);
-		}
-
-		fn exchange_token_to_vtoken(
-			origin,
-			token_amount: T::Balance,
-			token_id: <T as assets::Trait>::AssetId,
-			vtoken_id: <T as assets::Trait>::AssetId
-		) {
-			let exchanger = ensure_signed(origin)?;
-
-			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id is doesn't exist.");
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
-
-			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &exchanger));
-			ensure!(token_balances >= token_amount, "amount should be less than or equal to origin balance");
-
-			// check exchange rate has been set
-			ensure!(<ExchangeRate<T>>::exists(token_id, vtoken_id), "exchange rate doesn't be set.");
-
-			let rate = <ExchangeRate<T>>::get(token_id, vtoken_id);
-			let vtokens_buy = token_amount * rate.into();
-
-			// transfer
-			let to_asset = (&vtoken_id, TokenType::VToken, &exchanger);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances = balances.saturating_add(vtokens_buy);
-			});
-
-			let to_asset = (&token_id, TokenType::Token, &exchanger);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances = balances.saturating_sub(token_amount);
-			});
-
-			Self::deposit_event(Event::ExchangeTokenToVTokenSuccess);
-		}
-
-		fn exchange_vtoken_to_token(
-			origin,
-			vtoken_amount: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId,
-			token_id: <T as assets::Trait>::AssetId
-		) {
-			let exchanger = ensure_signed(origin)?;
-
-			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id is doesn't exist.");
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
-
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &exchanger));
-			ensure!(vtoken_balances >= vtoken_amount, "amount should be less than or equal to origin balance");
-
-			// check exchange rate has been set
-			ensure!(<ExchangeRate<T>>::exists(token_id, vtoken_id), "exchange rate doesn't be set.");
-
-			let rate = <ExchangeRate<T>>::get(token_id, vtoken_id);
-			let tokens_buy = vtoken_amount / rate.into();
-
-			// transfer
-			let to_asset = (&token_id, TokenType::Token, &exchanger);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances = balances.saturating_add(tokens_buy);
-			});
-
-			let to_asset = (&vtoken_id, TokenType::VToken, &exchanger);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances = balances.saturating_sub(vtoken_amount);
-			});
-
-			Self::deposit_event(Event::ExchangerVTokenToTokenSuccess);
 		}
 	}
 }

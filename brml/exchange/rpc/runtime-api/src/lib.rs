@@ -22,10 +22,11 @@ use sp_api::decl_runtime_apis;
 #[allow(unused_doc_comments)]
 /// Create exchange runtime api for rpc call
 decl_runtime_apis! {
-	pub trait ExchangeRateApi<ExchangeRate> where
-		ExchangeRate: Codec,
+	pub trait ExchangeRateApi<AssetId, ExchangeRate> where
+		AssetId: Codec,
+		ExchangeRate: Codec
 	{
 		/// get current exchange rate
-		fn get_exchange_rate() -> ExchangeRate;
+		fn get_exchange_rate(token_id: AssetId) -> ExchangeRate;
 	}
 }

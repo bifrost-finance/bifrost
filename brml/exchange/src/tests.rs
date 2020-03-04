@@ -17,74 +17,113 @@
 //! Tests for the module.
 #![cfg(test)]
 
-use crate::mock::{ExchangeTestModule, Origin, new_test_ext};
+use crate::*;
+use crate::mock::*;
 use frame_support::assert_ok;
-use sp_runtime::traits::OnFinalize;
-
-#[test]
-fn set_default_exchange_rate_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 1);
-		assert_eq!(ExchangeTestModule::get_rate_per_block(), 0);
-	});
-}
-
-#[test]
-fn update_exhange_rate_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 1);
-		assert_eq!(ExchangeTestModule::get_rate_per_block(), 0);
-		// set a new rate and exchange
-		assert_ok!(ExchangeTestModule::set_rate_per_block(Origin::ROOT, 2));
-		assert_ok!(ExchangeTestModule::set_exchange_rate(Origin::ROOT, 10));
-		ExchangeTestModule::on_finalize(7);
-		assert_eq!(ExchangeTestModule::get_rate_per_block(), 2);
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 8);
-	});
-}
-
-#[test]
-fn update_rate_by_max_u64_should_error() {
-	new_test_ext().execute_with(|| {
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 1);
-		assert_eq!(ExchangeTestModule::get_rate_per_block(), 0);
-		// set max rate
-		assert_ok!(ExchangeTestModule::set_rate_per_block(Origin::ROOT, u64::max_value()));
-		ExchangeTestModule::on_finalize(9);
-		// because rate is set as max value, exchange should be zero due to overflow
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 0);
-	});
-}
+use node_primitives::TokenType;
 
 #[test]
 fn update_rate_multiple_times() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 1);
-		assert_eq!(ExchangeTestModule::get_rate_per_block(), 0);
-		// set rate and exchange
-		assert_ok!(ExchangeTestModule::set_rate_per_block(Origin::ROOT, 4));
-		assert_ok!(ExchangeTestModule::set_exchange_rate(Origin::ROOT, 20));
-		// calculate 3 times, 20 - 3 * 4
-		ExchangeTestModule::on_finalize(9);
-		ExchangeTestModule::on_finalize(9);
-		ExchangeTestModule::on_finalize(9);
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 8);
+		// issue a vtoken
+		let vtoken = vec![0x12, 0x34];
+		let precise = 4;
+		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
+		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
+
+		let exchange_rate = 20;
+		assert_ok!(Exchange::set_exchange_rate(Origin::ROOT, vtoken_id, exchange_rate));
+		let update_rate = 2;
+		assert_ok!(Exchange::set_rate_per_block(Origin::ROOT, vtoken_id, update_rate));
+
+		let change_times = 3;
+		run_to_block(change_times + 1);
+		// 20 - 2 * 3 = 14
+		assert_eq!(Exchange::exchange_rate(vtoken_id).1, exchange_rate - update_rate * change_times);
 	});
 }
 
 #[test]
 fn update_rate_multiple_times_until_overflow() {
 	new_test_ext().execute_with(|| {
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 1);
-		assert_eq!(ExchangeTestModule::get_rate_per_block(), 0);
-		// set rate and exchange
-		assert_ok!(ExchangeTestModule::set_rate_per_block(Origin::ROOT, 4));
-		assert_ok!(ExchangeTestModule::set_exchange_rate(Origin::ROOT, 12));
-		// calculate 3 times, 12 - 4 * 4
-		ExchangeTestModule::on_finalize(9);
-		ExchangeTestModule::on_finalize(9);
-		ExchangeTestModule::on_finalize(9);
-		ExchangeTestModule::on_finalize(9);
-		assert_eq!(ExchangeTestModule::get_exchange_rate(), 0);
+		// issue a vtoken
+		let vtoken = vec![0x12, 0x34];
+		let precise = 4;
+		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
+		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
+
+		let exchange_rate = 20;
+		assert_ok!(Exchange::set_exchange_rate(Origin::ROOT, vtoken_id, exchange_rate));
+		let update_rate = 2;
+		assert_ok!(Exchange::set_rate_per_block(Origin::ROOT, vtoken_id, update_rate));
+
+		let change_times = 3;
+		run_to_block(change_times + 20);
+		// 20 - 2 * 3 = 14
+		assert_eq!(Exchange::exchange_rate(vtoken_id).1, 0);
+	});
+}
+
+#[test]
+fn exchange_token_to_vtoken_should_be_ok() {
+	new_test_ext().execute_with(|| {
+		run_to_block(2);
+
+		let bob = 1u64;
+
+		// issue a vtoken
+		let vtoken = vec![0x12, 0x34];
+		let precise = 4;
+		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
+		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
+		let token_id = vtoken_id;
+
+		// issue vtoken and token to bob
+		let bob_vtoken_issued = 60;
+		let bob_token_issued = 20;
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::VToken, bob, bob_vtoken_issued)); // 60 vtokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::Token, bob, bob_token_issued)); // 20 tokens to bob
+
+		// set exchange rate, token => vtoken, 1token equals to 2vtoken
+		let rate = 2;
+		assert_ok!(Exchange::set_exchange_rate(Origin::ROOT, vtoken_id, rate));
+
+		// exchange
+		let bob_token_exchange = 10;
+		assert_ok!(Exchange::exchange_token_to_vtoken(Origin::signed(bob), bob_token_exchange, vtoken_id));
+		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::Token, bob)), bob_token_issued - bob_token_exchange); // check bob's token change
+		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::VToken, bob)), bob_vtoken_issued + bob_token_exchange * rate); // check bob's token change
+	});
+}
+
+#[test]
+fn exchange_vtoken_to_token_should_be_ok() {
+	new_test_ext().execute_with(|| {
+		run_to_block(2);
+
+		let bob = 1u64;
+
+		// issue a vtoken
+		let vtoken = vec![0x12, 0x34];
+		let precise = 4;
+		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
+		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
+		let token_id = vtoken_id;
+
+		// issue vtoken and token to bob
+		let bob_vtoken_issued = 60;
+		let bob_token_issued = 20;
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::VToken, bob, bob_vtoken_issued)); // 60 vtokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::Token, bob, bob_token_issued)); // 20 tokens to bob
+
+		// set exchange rate, token => vtoken, 1token equals to 2vtoken
+		let rate = 2;
+		assert_ok!(Exchange::set_exchange_rate(Origin::ROOT, vtoken_id, rate));
+
+		// exchange
+		let bob_vtoken_exchange = 10;
+		assert_ok!(Exchange::exchange_vtoken_to_token(Origin::signed(bob), bob_vtoken_exchange, vtoken_id));
+		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::VToken, bob)), bob_vtoken_issued - bob_vtoken_exchange); // check bob's token change
+		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::Token, bob)), bob_token_issued + bob_vtoken_exchange / rate); // check bob's token change
 	});
 }

@@ -79,7 +79,6 @@ impl frame_system::Trait for Test {
 impl crate::Trait for Test {
 	type Fee = u64;
 	type Event = Event;
-	type ExchangeRate = u64;
 	type TokenPool = u64;
 	type VTokenPool = u64;
 	type InVariantPool = u64;
