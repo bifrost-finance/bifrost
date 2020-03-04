@@ -381,27 +381,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-bridge"
-version = "0.1.0"
-dependencies = [
- "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
- "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
- "node-primitives 0.1.0",
- "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-inherents 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-offchain 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
-]
-
-[[package]]
 name = "brml-bridge-eos"
 version = "0.1.0"
 dependencies = [
  "brml-assets 0.1.0",
- "brml-bridge 0.1.0",
  "bs58 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "eos-chain 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
  "eos-keys 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
@@ -458,21 +441,6 @@ version = "0.1.0"
 dependencies = [
  "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0 (git+https://github.com/paritytech/substrate)",
-]
-
-[[package]]
-name = "brml-settlement"
-version = "0.1.0"
-dependencies = [
- "brml-assets 0.1.0",
- "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
- "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
- "node-primitives 0.1.0",
- "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-io 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
 ]
 
 [[package]]
@@ -3049,11 +3017,9 @@ version = "0.1.0"
 dependencies = [
  "brml-assets 0.1.0",
  "brml-assets-rpc-runtime-api 0.1.0",
- "brml-bridge 0.1.0",
  "brml-bridge-eos 0.1.0",
  "brml-exchange 0.1.0",
  "brml-exchange-rpc-runtime-api 0.1.0",
- "brml-settlement 0.1.0",
  "brml-swap 0.1.0",
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",

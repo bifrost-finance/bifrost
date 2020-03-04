@@ -73,6 +73,28 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
+#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
+pub enum TokenType {
+	Token,
+	VToken,
+}
+
+/// Token pair to bond token and vtoken
+#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+pub struct TokenPair<Balance> {
+	pub token: Token<Balance>,
+	pub vtoken: Token<Balance>,
+}
+
+impl<Balance> TokenPair<Balance> {
+	pub fn new(token: Token<Balance>, vtoken: Token<Balance>) -> Self {
+		Self {
+			token,
+			vtoken,
+		}
+	}
+}
+
 /// Token type
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 pub struct Token<Balance> {
@@ -119,31 +141,31 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 /// Asset create handler
 pub trait AssetCreate<AssetId, Balance> {
 	/// Asset create
-	fn asset_create(symbol: Vec<u8>, precision: u16) -> (AssetId, Token<Balance>);
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> (AssetId, TokenPair<Balance>);
 }
 
 impl<A: Default, B: Default> AssetCreate<A, B> for () {
-	fn asset_create(_: Vec<u8>, _: u16) -> (A, Token<B>) { Default::default() }
+	fn asset_create(_: Vec<u8>, _: u16) -> (A, TokenPair<B>) { Default::default() }
 }
 
 /// Asset issue handler
 pub trait AssetIssue<AssetId, AccountId, Balance> {
 	/// Asset issue
-	fn asset_issue(asset_id: AssetId, target: AccountId, amount: Balance);
+	fn asset_issue(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
 }
 
 impl<A, AC, B> AssetIssue<A, AC, B> for () {
-	fn asset_issue(_: A, _: AC, _: B) {}
+	fn asset_issue(_: A, _: TokenType, _: AC, _: B) {}
 }
 
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
+	fn asset_redeem(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
 }
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
+	fn asset_redeem(_: A, _: TokenType, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
 /// Blockchain types

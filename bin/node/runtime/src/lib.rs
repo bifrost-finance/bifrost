@@ -29,7 +29,7 @@ use frame_support::{
 use sp_core::u32_trait::{_1, _2, _3, _4};
 use node_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
-	BridgeAssetTo, AssetId, AssetCreate, Precision
+	BridgeAssetTo, AssetId, AssetCreate, Precision, TokenType,
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -606,26 +606,7 @@ impl brml_assets::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type ClearingHandler = Settlement;
-	type AssetRedeem = Bridge;
-}
-
-impl brml_settlement::Trait for Runtime {
-	type Event = Event;
-	type SettlementId = SettlementId;
-	type SettlementPeriod = SettlementPeriod;
-	type Duration = Duration;
-	type AssetIssue = Assets;
-}
-
-impl brml_bridge::Trait for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type AssetCreate = Assets; // Todo
-	type AssetIssue = Assets;
-	type Precision = Precision;
-	type BridgeAssetTo = (); // Todo
+	type AssetRedeem = ();
 }
 
 impl brml_exchange::Trait for Runtime {
@@ -640,7 +621,7 @@ impl brml_bridge_eos::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Precision = Precision;
-	type BridgeAssetFrom = Bridge;
+	type BridgeAssetFrom = ();
 	type Call = Call;
 	type SubmitTransaction = BridgeSubmitTransaction;
 }
@@ -691,8 +672,6 @@ construct_runtime!(
 		Recovery: pallet_recovery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>},
-		Settlement: brml_settlement::{Module, Call, Storage, Event<T>},
-		Bridge: brml_bridge::{Module, Call, Storage, Event<T>},
 		Exchange: brml_exchange::{Module, Call, Storage},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
@@ -884,7 +863,7 @@ impl_runtime_apis! {
 	// impl asset rpc methods for runtime
 	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
 		fn asset_balances(id: AssetId, who: AccountId) -> u64 {
-			Assets::asset_balances(id, who)
+			Assets::asset_balances(id, TokenType::VToken, who)
 		}
 
 		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
