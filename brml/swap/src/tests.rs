@@ -21,6 +21,7 @@
 use crate::*;
 use crate::mock::*;
 use frame_support::assert_ok;
+use node_primitives::TokenType;
 
 #[test]
 fn swap_vtoken_to_token_should_be_ok() {
@@ -30,43 +31,41 @@ fn swap_vtoken_to_token_should_be_ok() {
 		let alice = 1u64;
 		let bob = 2u64;
 
-		// issue a token to alice
-		let token = vec![0x12, 0x34];
-		let precise = 4;
-		let token_amount = 30;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, token, precise));
-		let token_id = <assets::NextAssetId<Test>>::get() - 1;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, alice, token_amount));
-
 		// issue a vtoken to alice
-		let vtoken = vec![0x56, 0x78];
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
+		let vtoken = vec![0x12, 0x34];
+		let precise = 4;
 		let vtoken_amount = 50;
+		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
 		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, alice, vtoken_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, TokenType::VToken, alice, vtoken_amount));
 
-		// issue vtoken to bob
+		// issue a token balances to alice
+		let token_amount = 30;
+		let token_id = vtoken_id;
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::Token, alice, token_amount));
+
+		// issue vtoken balances to bob
 		let bob_vtoken_amount = 10;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, bob, bob_vtoken_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, TokenType::VToken, bob, bob_vtoken_amount));
 
 		// set exchange rate
 		let fee = 2;
-		assert_ok!(Swap::set_fee(Origin::ROOT, token_id, vtoken_id, fee));
+		assert_ok!(Swap::set_fee(Origin::ROOT, vtoken_id, fee));
 		assert_eq!(<Fee<Test>>::get(token_id, vtoken_id), fee);
 
-		// add pool
+		// alice provide the transaction pool
 		let token_pool = 20;
 		let vtoken_pool = 20;
-		assert_ok!(Swap::add_liquidity(Origin::ROOT, alice, token_id, token_pool, vtoken_id, vtoken_pool));
-		assert_eq!(<assets::Balances<Test>>::get((token_id, alice)), token_amount - token_pool);
-		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, alice)), vtoken_amount - vtoken_pool);
+		assert_ok!(Swap::add_liquidity(Origin::ROOT, alice, token_pool, vtoken_id, vtoken_pool));
+		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::Token, alice)), token_amount - token_pool);
+		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::VToken, alice)), vtoken_amount - vtoken_pool);
 		assert_eq!(<InVariant<Test>>::get(token_id, vtoken_id), (token_pool, vtoken_pool, token_pool * vtoken_pool));
 
 		// swap
 		let bob_vtoken_out = 5;
-		assert_ok!(Swap::swap_vtoken_to_token(Origin::signed(bob), bob_vtoken_out, vtoken_id, token_id));
-		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, bob)), bob_vtoken_amount - bob_vtoken_out); // check bob's vtoken change
-		assert_eq!(<assets::Balances<Test>>::get((token_id, bob)), 4); // check bob get token amount
+		assert_ok!(Swap::swap_vtoken_to_token(Origin::signed(bob), bob_vtoken_out, vtoken_id));
+		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::VToken, bob)), bob_vtoken_amount - bob_vtoken_out); // check bob's vtoken change
+		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::Token, bob)), 4); // check bob get token amount
 		assert_eq!(<InVariant<Test>>::get(token_id, vtoken_id), (16, 25, token_pool * vtoken_pool)); // check pool change
 	});
 }
@@ -79,43 +78,42 @@ fn swap_token_to_vtoken_should_be_ok() {
 		let alice = 1u64;
 		let bob = 2u64;
 
-		// issue a token to alice
-		let token = vec![0x12, 0x34];
-		let precise = 4;
-		let token_amount = 30;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, token, precise));
-		let token_id = <assets::NextAssetId<Test>>::get() - 1;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, alice, token_amount));
-
 		// issue a vtoken to alice
-		let vtoken = vec![0x56, 0x78];
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
+		let vtoken = vec![0x12, 0x34];
+		let precise = 4;
 		let vtoken_amount = 50;
+		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken, precise));
 		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, alice, vtoken_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, TokenType::VToken, alice, vtoken_amount));
 
-		// issue token to bob
+		// issue a token balances to alice
+		let token_id = vtoken_id;
+		let token_amount = 30;
+		let token_id = vtoken_id;
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::Token, alice, token_amount));
+
+		// issue token balances to bob
 		let bob_token_amount = 20;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, bob, bob_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::Token, bob, bob_token_amount));
 
-		// set fee
+		// set exchange rate
 		let fee = 2;
-		assert_ok!(Swap::set_fee(Origin::ROOT, token_id, vtoken_id, fee));
+		assert_ok!(Swap::set_fee(Origin::ROOT, vtoken_id, fee));
 		assert_eq!(<Fee<Test>>::get(token_id, vtoken_id), fee);
 
 		// add pool
 		let token_pool = 20;
 		let vtoken_pool = 30;
-		assert_ok!(Swap::add_liquidity(Origin::ROOT, alice, token_id, token_pool, vtoken_id, vtoken_pool));
-		assert_eq!(<assets::Balances<Test>>::get((token_id, alice)), token_amount - token_pool);
-		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, alice)), vtoken_amount - vtoken_pool);
+		assert_ok!(Swap::add_liquidity(Origin::ROOT, alice, token_pool, vtoken_id, vtoken_pool));
+		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::Token, alice)), token_amount - token_pool);
+		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::VToken, alice)), vtoken_amount - vtoken_pool);
 		assert_eq!(<InVariant<Test>>::get(token_id, vtoken_id), (token_pool, vtoken_pool, token_pool * vtoken_pool));
 
 		// swap
 		let bob_token_out = 10;
-		assert_ok!(Swap::swap_token_to_vtoken(Origin::signed(bob), bob_token_out, token_id, vtoken_id));
-		assert_eq!(<assets::Balances<Test>>::get((token_id, bob)), bob_token_amount - bob_token_out); // check bob's token change
-		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, bob)), 10); // check bob get vtoken amount
+		assert_ok!(Swap::swap_token_to_vtoken(Origin::signed(bob), bob_token_out, vtoken_id));
+		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::Token, bob)), bob_token_amount - bob_token_out); // check bob's token change
+		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::VToken, bob)), 10); // check bob get vtoken amount
 		assert_eq!(<InVariant<Test>>::get(token_id, vtoken_id), (30, 20, token_pool * vtoken_pool)); // check pool change
 	});
 }

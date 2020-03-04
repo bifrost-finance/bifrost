@@ -67,14 +67,13 @@ decl_module! {
 
 		fn set_fee(
 			origin,
-			token_id: <T as assets::Trait>::AssetId,
 			vtoken_id: <T as assets::Trait>::AssetId,
 			fee: T::Fee
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id doesn't exist.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exist.");
+			let token_id = vtoken_id;
 
 			ensure!(fee >= 0.into(), "fee cannot be less than 0.");
 			ensure!(fee <= 100.into(), "fee cannot be bigger than 100.");
@@ -87,7 +86,6 @@ decl_module! {
 		fn add_liquidity(
 			origin,
 			provider: T::AccountId,
-			token_id: <T as assets::Trait>::AssetId,
 			token_pool: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId,
 			vtoken_pool: T::Balance
@@ -96,8 +94,8 @@ decl_module! {
 			ensure_root(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id doesn't exists.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exists.");
+			let token_id = vtoken_id;
 
 			// check the balance
 			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &provider));
@@ -124,15 +122,14 @@ decl_module! {
 		fn remove_liquidity(
 			origin,
 			provider: T::AccountId,
-			token_id: <T as assets::Trait>::AssetId,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
 			// only root user has the privilidge to remove liquidity
 			ensure_root(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id doesn't exists.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exists.");
+			let token_id = vtoken_id;
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
 			let current_token_pool: T::Balance = invariant.0.into();
@@ -165,14 +162,13 @@ decl_module! {
 		fn swap_vtoken_to_token(
 			origin,
 			vtoken_amount: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId,
-			token_id: <T as assets::Trait>::AssetId
+			vtoken_id: <T as assets::Trait>::AssetId
 		) {
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id is doesn't exist.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
+			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
 			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &sender));
@@ -220,14 +216,13 @@ decl_module! {
 		fn swap_token_to_vtoken(
 			origin,
 			token_amount: T::Balance,
-			token_id: <T as assets::Trait>::AssetId,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(token_id), "this token id is doesn't exist.");
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
+			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
 			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &sender));
