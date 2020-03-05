@@ -82,5 +82,8 @@
   "RatePerBlock": "u64",
   "TokenPool": "Balance",
   "VTokenPool": "Balance",
-  "InVariantPool": "Balance"
+  "InVariantPool": "Balance",
+  "TokenType": {
+    "_enum": ["Token", "VToken"]
+  }
 }

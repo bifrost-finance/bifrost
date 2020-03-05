@@ -226,6 +226,15 @@ impl<T: Trait> Module<T> {
 			*balance
 		});
 
+		// save asset id for this account
+		if <AccountAssets<T>>::exists(&target) {
+			<AccountAssets<T>>::mutate(&target, |ids| {
+				ids.push(asset_id);
+			});
+		} else {
+			<AccountAssets<T>>::insert(&target, vec![asset_id]);
+		}
+
 		let _total_supply = <Tokens<T>>::mutate(asset_id, |token| {
 			match token_type {
 				TokenType::Token => {
@@ -247,13 +256,13 @@ impl<T: Trait> Module<T> {
 		to: T::AccountId,
 		amount: T::Balance,
 	) {
-		let from_asset = (asset_id, token_type, from.clone());
+		let from_asset = (asset_id, token_type, from);
 		let _from_balance = <Balances<T>>::mutate(&from_asset, |balance| {
 			*balance -= amount;
 			*balance
 		});
 
-		let to_asset = (asset_id, token_type, to.clone());
+		let to_asset = (asset_id, token_type, to);
 		let _to_balance = <Balances<T>>::mutate(&to_asset, |balance| {
 			*balance += amount;
 			*balance
@@ -266,7 +275,7 @@ impl<T: Trait> Module<T> {
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let target_asset = (asset_id, token_type, target.clone());
+		let target_asset = (asset_id, token_type, target);
 		let _target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
 			*balance -= amount;
 			*balance
@@ -297,6 +306,17 @@ impl<T: Trait> Module<T> {
 		let balance_u64: u64 = balance_u128.try_into().unwrap_or(usize::max_value()) as u64;
 
 		balance_u64
+	}
+
+	pub fn asset_id_exists(who: &T::AccountId, symbol: &[u8], precision: u16) -> Option<T::AssetId> {
+		let all_ids = <AccountAssets<T>>::get(who);
+		for id in all_ids {
+			let token = <Tokens<T>>::get(id);
+			if token.token.symbol.as_slice().eq(symbol) && token.token.precision.eq(&precision) {
+				return Some(id);
+			}
+		}
+		None
 	}
 
 	pub fn asset_tokens(target: T::AccountId) -> Vec<T::AssetId> {
