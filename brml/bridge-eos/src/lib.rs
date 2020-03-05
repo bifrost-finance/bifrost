@@ -133,6 +133,7 @@ pub enum Error {
 	EosKeysError(eos_keys::error::Error),
 	NoLocalStorage,
 	InvalidAccountId,
+	ConvertBalanceError,
 }
 
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
@@ -337,11 +338,11 @@ decl_module! {
 			ensure!(split_memo.len() == 2 || split_memo.len() == 3, "This is an invalid memo.");
 
 			// get account
-			// let account_data = Self::get_account_data("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"); // bob
-			// ensure!(account_data.is_ok(), "This is an invalid account.");
-			// let account = Self::into_account(account_data.unwrap());
-			// ensure!(account.is_ok(), "Cannot find this account in bifrost.");
-			// let target = account.unwrap();
+			let account_data = Self::get_account_data(split_memo[0]);
+			ensure!(account_data.is_ok(), "This is an invalid account.");
+			let account = Self::into_account(account_data.unwrap());
+			ensure!(account.is_ok(), "Cannot find this account in bifrost.");
+			let target = account.unwrap();
 
 			let action_hash = action.digest();
 			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
@@ -376,7 +377,7 @@ decl_module! {
 			Self::deposit_event(Event::ProveAction);
 
 			// withdraw or deposit
-			Self::filter_account_by_action(target, &act_transfer);
+			Self::map_assets_by_action(target, &act_transfer);
 		}
 
 		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) {
@@ -385,23 +386,29 @@ decl_module! {
 			BridgeTxOuts::<T>::put(tx_list);
 		}
 
-		fn asset_redeem(origin, to: Vec<u8>, amount: <T as assets::Trait>::Balance, id: T::AssetId) {
+		fn asset_redeem(origin, to: Vec<u8>, amount: <T as assets::Trait>::Balance, vtoken_id: T::AssetId) {
 			let origin = system::ensure_signed(origin)?;
-			let origin_account = (id, TokenType::VToken, origin.clone());
-			let eos_amount = amount.clone();
+			let origin_account = (vtoken_id, TokenType::VToken, &origin);
+			let eos_amount = amount;
+
+			// check vtoken id exist or not
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this token doesn't exist.");
+
+			let token = <assets::Tokens<T>>::get(vtoken_id).token;
+			let symbol_code = token.symbol;
+			let symbol_precise = token.precision;
 
 			let balance = <assets::Balances<T>>::get(origin_account);
-			let amount = amount.div(<T as assets::Trait>::Balance::from(10u32.pow(8)));
+			let amount = amount.div(<T as assets::Trait>::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
-			let raw_symbol = b"EOS".to_vec();
-			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, raw_symbol, T::Precision::from(4u32));
+			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
 				amount: eos_amount
 			};
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				assets::Module::<T>::asset_redeem(id, TokenType::VToken, origin, amount, None);
+				assets::Module::<T>::asset_redeem(vtoken_id, TokenType::VToken, origin, amount, None);
 				Self::deposit_event(Event::TransactionSuccess);
 			} else {
 				Self::deposit_event(Event::TransactionFail);
@@ -514,20 +521,40 @@ impl<T: Trait> Module<T> {
 		Ok(action_transfer)
 	}
 
-	fn filter_account_by_action(target: T::AccountId, action_transfer: &ActionTransfer) -> Result<(), Error> {
-		let amount = <T as assets::Trait>::Balance::from(action_transfer.quantity.amount as u32);
-		let (id, _) = assets::Module::<T>::asset_create(vec![0u8], 4);
-		assets::Module::<T>::asset_issue(id, TokenType::VToken, target, amount);
+	fn map_assets_by_action(target: T::AccountId, action_transfer: &ActionTransfer) -> Result<(), Error> {
+		let symbol = action_transfer.quantity.symbol;
+		let symbol_code = symbol.code().to_string().into_bytes();
+		let symbol_precise = symbol.precision();
 
+		let token_balances = action_transfer.quantity.amount as usize;
+		let vtoken_balances = <T as assets::Trait>::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
+
+		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
+		let vtoken_id = match assets::Module::<T>::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
+			Some(id) => id,
+			None => {
+				assets::Module::<T>::asset_create(symbol_code, symbol_precise.into()).0
+			}
+		};
+
+		// withdraw
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == from {
-			todo!("withdraw");
+			let origin_account = (vtoken_id, TokenType::VToken, &target);
+			let vtoken_balances = <assets::Balances<T>>::get(origin_account);
+			if vtoken_balances.lt(&vtoken_balances) {
+				debug::info!("origin account balance must be greater than or equal to the transfer amount.");
+				return Ok(())
+			}
+
+			assets::Module::<T>::asset_redeem(vtoken_id, TokenType::VToken, target, vtoken_balances, None);
 			return Ok(());
 		}
 
+		// deposit
 		let to = action_transfer.to.to_string().as_bytes().to_vec();
-		if BridgeContractAccount::get().0 == from {
-			todo!("deposit");
+		if BridgeContractAccount::get().0 == to {
+			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, target, vtoken_balances);
 			return Ok(());
 		}
 
