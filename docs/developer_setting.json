@@ -85,5 +85,9 @@
   "InVariantPool": "Balance",
   "TokenType": {
     "_enum": ["Token", "VToken"]
+  },
+  "TokenPair": {
+    "token": "Token",
+    "vtoken": "Token"
   }
 }

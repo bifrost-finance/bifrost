@@ -124,7 +124,6 @@ impl assets::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type ClearingHandler = ();
 	type AssetRedeem = ();
 }
 

@@ -214,7 +214,7 @@ impl<T: Trait> Module<T> {
 		(id, token_pair)
 	}
 
-	fn asset_issue(
+	pub fn asset_issue(
 		asset_id: T::AssetId,
 		token_type: TokenType,
 		target: T::AccountId,
@@ -269,7 +269,7 @@ impl<T: Trait> Module<T> {
 		});
 	}
 
-	fn asset_destroy(
+	pub fn asset_destroy(
 		asset_id: T::AssetId,
 		token_type: TokenType,
 		target: T::AccountId,

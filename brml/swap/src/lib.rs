@@ -138,16 +138,8 @@ decl_module! {
 
 			ensure!(current_token_pool * current_vtoken_pool == invariant, "this is an invalid invariant.");
 
-			// transfer
-			let to_asset = (&token_id, TokenType::Token, &provider);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances += current_token_pool;
-			});
-
-			let to_asset = (&vtoken_id, TokenType::VToken, &provider);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances += current_vtoken_pool;
-			});
+			assets::Module::<T>::asset_issue(token_id, TokenType::Token, provider.clone(), current_token_pool);
+			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, provider, current_vtoken_pool);
 
 			// update pool
 			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
@@ -190,24 +182,16 @@ decl_module! {
 			let new_token_pool = invariant / new_vtoken_pool;
 			let tokens_buy = current_token_pool - new_token_pool;
 
-			ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
+			// ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
-			// vtoken transfer
-			let to_asset = (&token_id, TokenType::Token, &sender);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances += tokens_buy;
-			});
-
-			// token decrease
-			let to_asset = (&vtoken_id, TokenType::VToken, &sender);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances -= vtoken_amount;
-			});
+			assets::Module::<T>::asset_destroy(vtoken_id, TokenType::VToken, sender.clone(), vtoken_amount);
+			assets::Module::<T>::asset_issue(token_id, TokenType::Token, sender, tokens_buy);
 
 			// update pool
 			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
 				invariant.0 = new_token_pool.into();
 				invariant.1 = new_vtoken_pool.into();
+				invariant.2 = (new_vtoken_pool * new_token_pool).into();
 			});
 
 			Self::deposit_event(Event::SwapVTokenToTokenSuccess);
@@ -244,23 +228,16 @@ decl_module! {
 			let new_vtoken_pool = invariant / new_token_pool;
 			let vtokens_buy = current_vtoken_pool - new_vtoken_pool;
 
-			ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
+			// ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
-			// transfer
-			let to_asset = (&vtoken_id, TokenType::VToken, &sender);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances += vtokens_buy;
-			});
-
-			let to_asset = (&token_id, TokenType::Token, &sender);
-			<assets::Balances<T>>::mutate(to_asset, |balances| {
-				*balances -= token_amount;
-			});
+			assets::Module::<T>::asset_destroy(token_id, TokenType::Token, sender.clone(), token_amount);
+			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, sender, vtokens_buy);
 
 			// update pool
 			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
 				invariant.0 = new_token_pool.into();
 				invariant.1 = new_vtoken_pool.into();
+				invariant.2 = (new_vtoken_pool * new_token_pool).into();
 			});
 
 			Self::deposit_event(Event::SwapTokenToVTokenSuccess);
