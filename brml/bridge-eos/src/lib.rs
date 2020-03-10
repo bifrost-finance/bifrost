@@ -386,7 +386,12 @@ decl_module! {
 			BridgeTxOuts::<T>::put(tx_list);
 		}
 
-		fn asset_redeem(origin, to: Vec<u8>, amount: <T as assets::Trait>::Balance, vtoken_id: T::AssetId) {
+		fn asset_redeem(
+			origin,
+			to: Vec<u8>,
+			#[compact] amount: <T as assets::Trait>::Balance,
+			vtoken_id: T::AssetId
+		) {
 			let origin = system::ensure_signed(origin)?;
 			let origin_account = (vtoken_id, TokenType::VToken, &origin);
 			let eos_amount = amount;
@@ -399,6 +404,7 @@ decl_module! {
 			let symbol_precise = token.precision;
 
 			let balance = <assets::Balances<T>>::get(origin_account);
+			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
 			let amount = amount.div(<T as assets::Trait>::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 

@@ -19,12 +19,10 @@
 
 use core::convert::TryInto;
 use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure, debug};
-use sp_runtime::traits::{Member, SimpleArithmetic, One, Zero, StaticLookup};
+use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
-use node_primitives::{
-	ClearingHandler, AssetCreate, AssetIssue, AssetRedeem, Token, TokenPair, TokenType
-};
+use node_primitives::{AssetCreate, AssetIssue, AssetRedeem, Token, TokenPair, TokenType};
 
 mod mock;
 mod tests;
@@ -141,8 +139,7 @@ decl_module! {
 			origin,
 			#[compact] id: T::AssetId,
 			token_type: TokenType,
-			#[compact] amount:
-			T::Balance,
+			#[compact] amount: T::Balance,
 		) {
 			let origin = ensure_signed(origin)?;
 			let origin_account = (id, token_type, origin.clone());
@@ -189,6 +186,7 @@ impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 }
 
 impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+	#[allow(unused_variables)]
 	fn asset_redeem(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId, amount: T::Balance, to_name: Option<Vec<u8>>) {
 		Self::asset_destroy(asset_id, token_type, target, amount);
 	}
@@ -221,9 +219,8 @@ impl<T: Trait> Module<T> {
 		amount: T::Balance,
 	) {
 		let target_asset = (asset_id, token_type, target.clone());
-		let _target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
-			*balance += amount;
-			*balance
+		<Balances<T>>::mutate(&target_asset, |balance| {
+			*balance = balance.saturating_add(amount);
 		});
 
 		// save asset id for this account
@@ -235,15 +232,13 @@ impl<T: Trait> Module<T> {
 			<AccountAssets<T>>::insert(&target, vec![asset_id]);
 		}
 
-		let _total_supply = <Tokens<T>>::mutate(asset_id, |token| {
+		<Tokens<T>>::mutate(asset_id, |token| {
 			match token_type {
 				TokenType::Token => {
-					token.token.total_supply += amount;
-					token.token.total_supply
+					token.token.total_supply = token.token.total_supply.saturating_add(amount);
 				},
 				TokenType::VToken => {
-					token.vtoken.total_supply += amount;
-					token.vtoken.total_supply
+					token.vtoken.total_supply = token.vtoken.total_supply.saturating_add(amount);
 				}
 			}
 		});
@@ -257,15 +252,13 @@ impl<T: Trait> Module<T> {
 		amount: T::Balance,
 	) {
 		let from_asset = (asset_id, token_type, from);
-		let _from_balance = <Balances<T>>::mutate(&from_asset, |balance| {
-			*balance -= amount;
-			*balance
+		<Balances<T>>::mutate(&from_asset, |balance| {
+			*balance = balance.saturating_sub(amount);
 		});
 
 		let to_asset = (asset_id, token_type, to);
-		let _to_balance = <Balances<T>>::mutate(&to_asset, |balance| {
-			*balance += amount;
-			*balance
+		<Balances<T>>::mutate(&to_asset, |balance| {
+			*balance = balance.saturating_add(amount);
 		});
 	}
 
@@ -276,20 +269,17 @@ impl<T: Trait> Module<T> {
 		amount: T::Balance,
 	) {
 		let target_asset = (asset_id, token_type, target);
-		let _target_balance = <Balances<T>>::mutate(&target_asset, |balance| {
-			*balance -= amount;
-			*balance
+		<Balances<T>>::mutate(&target_asset, |balance| {
+			*balance = balance.saturating_sub(amount);
 		});
 
-		let _total_supply = <Tokens<T>>::mutate(asset_id, |token| {
+		<Tokens<T>>::mutate(asset_id, |token| {
 			match token_type {
 				TokenType::Token => {
-					token.token.total_supply -= amount;
-					token.token.total_supply
+					token.token.total_supply = token.token.total_supply.saturating_sub(amount);
 				},
 				TokenType::VToken => {
-					token.vtoken.total_supply -= amount;
-					token.vtoken.total_supply
+					token.vtoken.total_supply = token.vtoken.total_supply.saturating_sub(amount);
 				}
 			}
 		});

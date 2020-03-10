@@ -21,7 +21,7 @@ mod tests;
 use frame_support::{Parameter, decl_event, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::TokenType;
-use sp_runtime::traits::{Member, Saturating, SimpleArithmetic};
+use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
 pub trait Trait: assets::Trait {
 	/// exchange rate
@@ -86,7 +86,7 @@ decl_module! {
 
 		fn exchange_token_to_vtoken(
 			origin,
-			token_amount: T::Balance,
+			#[compact] token_amount: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
 			let exchanger = ensure_signed(origin)?;
@@ -104,7 +104,8 @@ decl_module! {
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
 			ensure!(rate.0 == token_id, "token id must be equal.");
 
-			let vtokens_buy = token_amount * rate.1.into();
+			ensure!(!rate.1.is_zero(), "exchange rate cannot be zero.");
+			let vtokens_buy = token_amount.saturating_mul(rate.1.into());
 
 			// transfer
 			let to_vtoken_asset = (&vtoken_id, TokenType::VToken, &exchanger);
@@ -122,7 +123,7 @@ decl_module! {
 
 		fn exchange_vtoken_to_token(
 			origin,
-			vtoken_amount: T::Balance,
+			#[compact] vtoken_amount: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId,
 		) {
 			let exchanger = ensure_signed(origin)?;
@@ -140,6 +141,7 @@ decl_module! {
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
 			ensure!(rate.0 == token_id, "token id must be equal.");
 
+			ensure!(!rate.1.is_zero(), "exchange rate cannot be zero.");
 			let tokens_buy = vtoken_amount / rate.1.into();
 
 			// transfer
@@ -163,7 +165,7 @@ decl_module! {
 					continue;
 				}
 				<ExchangeRate<T>>::mutate(vtoken_id, |exchange_rate| {
-					exchange_rate.1  = exchange_rate.1.saturating_sub(rate_per_block.1.into());
+					exchange_rate.1 = exchange_rate.1.saturating_sub(rate_per_block.1.into());
 				});
 			}
 		}
