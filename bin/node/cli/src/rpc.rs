@@ -66,7 +66,6 @@ pub fn create<C, P, M, F>(
 	C: sc_client::blockchain::HeaderBackend<Block>,
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
-	C::Api: pallet_contracts_rpc::ContractsRuntimeApi<Block, AccountId, Balance>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
 	C::Api: brml_exchange_rpc::ExchangeRateRuntimeApi<Block, AssetId, ExchangeRate>,
@@ -75,7 +74,6 @@ pub fn create<C, P, M, F>(
 	M: jsonrpc_core::Metadata + Default,
 {
 	use substrate_frame_rpc_system::{FullSystem, LightSystem, SystemApi};
-	use pallet_contracts_rpc::{Contracts, ContractsApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 
 	let mut io = jsonrpc_core::IoHandler::default();
@@ -92,9 +90,6 @@ pub fn create<C, P, M, F>(
 		// Making synchronous calls in light client freezes the browser currently,
 		// more context: https://github.com/paritytech/substrate/pull/3480
 		// These RPCs should use an asynchronous caller instead.
-		io.extend_with(
-			ContractsApi::to_delegate(Contracts::new(client.clone()))
-		);
 		io.extend_with(
 			TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone()))
 		);
