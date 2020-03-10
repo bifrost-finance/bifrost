@@ -51,7 +51,6 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
-use pallet_contracts_rpc_runtime_api::ContractExecResult;
 use frame_system::offchain::TransactionSubmitter;
 use sp_inherents::{InherentData, CheckInherentsResult};
 
@@ -59,7 +58,6 @@ use sp_inherents::{InherentData, CheckInherentsResult};
 pub use sp_runtime::BuildStorage;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use pallet_balances::Call as BalancesCall;
-pub use pallet_contracts::Gas;
 pub use frame_support::StorageValue;
 pub use pallet_staking::StakerStatus;
 
@@ -177,7 +175,8 @@ parameter_types! {
 
 impl pallet_balances::Trait for Runtime {
 	type Balance = Balance;
-	type OnFreeBalanceZero = ((Staking, Contracts), Session);
+//	type OnFreeBalanceZero = ((Staking, ()), Session);
+	type OnFreeBalanceZero = (Staking, Session);
 	type OnReapAccount = (System, Recovery);
 	type OnNewAccount = Indices;
 	type Event = Event;
@@ -417,35 +416,6 @@ parameter_types! {
 	pub const SurchargeReward: Balance = 150 * DOLLARS;
 }
 
-impl pallet_contracts::Trait for Runtime {
-	type Currency = Balances;
-	type Time = Timestamp;
-	type Randomness = RandomnessCollectiveFlip;
-	type Call = Call;
-	type Event = Event;
-	type DetermineContractAddress = pallet_contracts::SimpleAddressDeterminator<Runtime>;
-	type ComputeDispatchFee = pallet_contracts::DefaultDispatchFeeComputor<Runtime>;
-	type TrieIdGenerator = pallet_contracts::TrieIdFromParentCounter<Runtime>;
-	type GasPayment = ();
-	type RentPayment = ();
-	type SignedClaimHandicap = pallet_contracts::DefaultSignedClaimHandicap;
-	type TombstoneDeposit = TombstoneDeposit;
-	type StorageSizeOffset = pallet_contracts::DefaultStorageSizeOffset;
-	type RentByteFee = RentByteFee;
-	type RentDepositOffset = RentDepositOffset;
-	type SurchargeReward = SurchargeReward;
-	type TransferFee = ContractTransferFee;
-	type CreationFee = ContractCreationFee;
-	type TransactionBaseFee = ContractTransactionBaseFee;
-	type TransactionByteFee = ContractTransactionByteFee;
-	type ContractFee = ContractFee;
-	type CallBaseFee = pallet_contracts::DefaultCallBaseFee;
-	type InstantiateBaseFee = pallet_contracts::DefaultInstantiateBaseFee;
-	type MaxDepth = pallet_contracts::DefaultMaxDepth;
-	type MaxValueSize = pallet_contracts::DefaultMaxValueSize;
-	type BlockGasLimit = pallet_contracts::DefaultBlockGasLimit;
-}
-
 impl pallet_sudo::Trait for Runtime {
 	type Event = Event;
 	type Proposal = Call;
@@ -537,7 +507,6 @@ impl frame_system::offchain::CreateTransaction<Runtime, UncheckedExtrinsic> for 
 			frame_system::CheckNonce::<Runtime>::from(index),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
-			Default::default(),
 		);
 		let raw_payload = SignedPayload::new(call, extra).map_err(|e| {
 			debug::warn!("Unable to create signed payload: {:?}", e);
@@ -661,7 +630,6 @@ construct_runtime!(
 		FinalityTracker: pallet_finality_tracker::{Module, Call, Inherent},
 		Grandpa: pallet_grandpa::{Module, Call, Storage, Config, Event},
 		Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
-		Contracts: pallet_contracts,
 		Sudo: pallet_sudo,
 		ImOnline: pallet_im_online::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		AuthorityDiscovery: pallet_authority_discovery::{Module, Call, Config},
@@ -696,7 +664,6 @@ pub type SignedExtra = (
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
 	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
-	pallet_contracts::CheckBlockGasLimit<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
@@ -795,46 +762,6 @@ impl_runtime_apis! {
 	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
 		fn account_nonce(account: AccountId) -> Index {
 			System::account_nonce(account)
-		}
-	}
-
-	impl pallet_contracts_rpc_runtime_api::ContractsApi<Block, AccountId, Balance> for Runtime {
-		fn call(
-			origin: AccountId,
-			dest: AccountId,
-			value: Balance,
-			gas_limit: u64,
-			input_data: Vec<u8>,
-		) -> ContractExecResult {
-			let exec_result = Contracts::bare_call(
-				origin,
-				dest.into(),
-				value,
-				gas_limit,
-				input_data,
-			);
-			match exec_result {
-				Ok(v) => ContractExecResult::Success {
-					status: v.status,
-					data: v.data,
-				},
-				Err(_) => ContractExecResult::Error,
-			}
-		}
-
-		fn get_storage(
-			address: AccountId,
-			key: [u8; 32],
-		) -> pallet_contracts_rpc_runtime_api::GetStorageResult {
-			Contracts::get_storage(address, key).map_err(|rpc_err| {
-				use pallet_contracts::GetStorageError;
-				use pallet_contracts_rpc_runtime_api::{GetStorageError as RpcGetStorageError};
-				/// Map the contract error into the RPC layer error.
-				match rpc_err {
-					GetStorageError::ContractDoesntExist => RpcGetStorageError::ContractDoesntExist,
-					GetStorageError::IsTombstone => RpcGetStorageError::IsTombstone,
-				}
-			})
 		}
 	}
 

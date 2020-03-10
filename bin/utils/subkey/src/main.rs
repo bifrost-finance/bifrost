@@ -628,7 +628,6 @@ fn create_extrinsic<C: Crypto>(
 			frame_system::CheckNonce::<Runtime>::from(i),
 			frame_system::CheckWeight::<Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(f),
-			Default::default(),
 		)
 	};
 	let raw_payload = SignedPayload::from_raw(
@@ -638,7 +637,6 @@ fn create_extrinsic<C: Crypto>(
 			VERSION.spec_version as u32,
 			genesis_hash,
 			genesis_hash,
-			(),
 			(),
 			(),
 			(),

@@ -25,8 +25,8 @@ use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
 pub trait Trait: assets::Trait {
 	/// exchange rate
-	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance>;
-	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance> + Into<Self::ExchangeRate>;
+	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance>;
+	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance> + Into<Self::ExchangeRate>;
 
 	/// event
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;

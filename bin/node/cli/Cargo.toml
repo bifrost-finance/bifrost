@@ -57,7 +57,6 @@ sc-authority-discovery = { version = "0.8",  git = "https://github.com/paritytec
 # frame dependencies
 pallet-indices = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 pallet-timestamp = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
-pallet-contracts = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 frame-system = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 pallet-balances = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
@@ -78,7 +77,6 @@ node-transaction-factory = { version = "0.8.0", git = "https://github.com/parity
 # new added after removed local node-rpc, node-primitives
 sc-executor = { version = "0.8", git = "https://github.com/paritytech/substrate" }
 sp-api = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
-pallet-contracts-rpc = { version = "0.8.0", git = "https://github.com/paritytech/substrate" }
 pallet-transaction-payment-rpc = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 substrate-frame-rpc-system = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 
