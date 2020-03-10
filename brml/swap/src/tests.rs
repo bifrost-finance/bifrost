@@ -87,7 +87,6 @@ fn swap_token_to_vtoken_should_be_ok() {
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vtoken_id, TokenType::VToken, alice, vtoken_amount));
 
 		// issue a token balances to alice
-		let token_id = vtoken_id;
 		let token_amount = 30;
 		let token_id = vtoken_id;
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, token_id, TokenType::Token, alice, token_amount));

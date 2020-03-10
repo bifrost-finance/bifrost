@@ -23,7 +23,7 @@ use core::convert::{From, Into};
 use frame_support::{decl_event, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetRedeem, TokenType};
-use sp_runtime::traits::{Member, Saturating, SimpleArithmetic};
+use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
 pub trait Trait: assets::Trait {
 	/// fee
@@ -71,6 +71,7 @@ decl_module! {
 			fee: T::Fee
 		) {
 			ensure_root(origin)?;
+			ensure!(!fee.is_zero(), "fee cannot be zero.");
 
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exist.");
 			let token_id = vtoken_id;
@@ -86,12 +87,13 @@ decl_module! {
 		fn add_liquidity(
 			origin,
 			provider: T::AccountId,
-			token_pool: T::Balance,
+			#[compact] token_pool: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId,
-			vtoken_pool: T::Balance
+			#[compact] vtoken_pool: T::Balance
 		) {
 			// only root user has the privilidge to add liquidity
 			ensure_root(origin)?;
+			ensure!(!vtoken_pool.is_zero() && !token_pool.is_zero(), "pool size cannot be zero.");
 
 			// check asset_id exist or not
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exists.");
@@ -110,7 +112,7 @@ decl_module! {
 
 			let x: T::InVariantPool = token_pool.into();
 			let y: T::InVariantPool = vtoken_pool.into();
-			let in_variant: T::InVariantPool = x * y;
+			let in_variant: T::InVariantPool = x.saturating_mul(y);
 			let x: T::TokenPool = token_pool.into();
 			let y: T::VTokenPool = vtoken_pool.into();
 
@@ -136,7 +138,7 @@ decl_module! {
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
-			ensure!(current_token_pool * current_vtoken_pool == invariant, "this is an invalid invariant.");
+			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, "this is an invalid invariant.");
 
 			assets::Module::<T>::asset_issue(token_id, TokenType::Token, provider.clone(), current_token_pool);
 			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, provider, current_vtoken_pool);
@@ -153,9 +155,10 @@ decl_module! {
 
 		fn swap_vtoken_to_token(
 			origin,
-			vtoken_amount: T::Balance,
+			#[compact] vtoken_amount: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
+			ensure!(!vtoken_amount.is_zero(), "vtoken amount cannot be zero.");
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
@@ -171,16 +174,17 @@ decl_module! {
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
-			ensure!(current_token_pool * current_vtoken_pool == invariant, "this is an invalid invariant.");
+			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, "this is an invalid invariant.");
 
 			// get fee for both tokens
 			// let fee = <Fee<T>>::get(&token_id, &vtoken_id).into();
 			// let fee_amount = vtoken_amount * fee.into();
 
 			let new_vtoken_pool = current_vtoken_pool + vtoken_amount;
+			ensure!(!new_vtoken_pool.is_zero(), "new vtoken pool cannot be zero.");
 			// let new_token_pool = invariant / (new_vtoken_pool - fee_amount.into());
 			let new_token_pool = invariant / new_vtoken_pool;
-			let tokens_buy = current_token_pool - new_token_pool;
+			let tokens_buy = current_token_pool.saturating_sub(new_token_pool);
 
 			// ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
@@ -191,7 +195,7 @@ decl_module! {
 			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
 				invariant.0 = new_token_pool.into();
 				invariant.1 = new_vtoken_pool.into();
-				invariant.2 = (new_vtoken_pool * new_token_pool).into();
+				invariant.2 = (new_vtoken_pool.saturating_mul(new_token_pool)).into();
 			});
 
 			Self::deposit_event(Event::SwapVTokenToTokenSuccess);
@@ -199,9 +203,10 @@ decl_module! {
 
 		fn swap_token_to_vtoken(
 			origin,
-			token_amount: T::Balance,
+			#[compact] token_amount: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
+			ensure!(!token_amount.is_zero(), "the token amount cannot be zero. transaction abort.");
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
@@ -217,16 +222,17 @@ decl_module! {
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
-			ensure!(current_token_pool * current_vtoken_pool == invariant, "this is an invalid invariant.");
+			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, "this is an invalid invariant.");
 
 			// get fee for both tokens
 			// let fee = <Fee<T>>::get(&token_id, &vtoken_id).into();
 
 			// let fee_amount = token_amount * fee.into();
 			let new_token_pool = current_token_pool + token_amount;
+			ensure!(!new_token_pool.is_zero(), "new token pool cannot be zero.");
 			// let new_vtoken_pool = invariant / (new_token_pool - fee_amount.into());
 			let new_vtoken_pool = invariant / new_token_pool;
-			let vtokens_buy = current_vtoken_pool - new_vtoken_pool;
+			let vtokens_buy = current_vtoken_pool.saturating_sub(new_vtoken_pool);
 
 			// ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
@@ -237,7 +243,7 @@ decl_module! {
 			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
 				invariant.0 = new_token_pool.into();
 				invariant.1 = new_vtoken_pool.into();
-				invariant.2 = (new_vtoken_pool * new_token_pool).into();
+				invariant.2 = (new_vtoken_pool.saturating_mul(new_token_pool)).into();
 			});
 
 			Self::deposit_event(Event::SwapTokenToVTokenSuccess);
