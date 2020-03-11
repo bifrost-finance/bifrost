@@ -604,6 +604,14 @@ impl brml_swap::Trait for Runtime {
 	type InVariantPool = Balance;
 }
 
+impl example::Trait for Runtime {
+	type Event = Event;
+}
+
+impl chainlink::Trait for Runtime {
+	type Event = Event;
+}
+
 // bifrost rumtine time end
 
 construct_runtime!(
@@ -643,6 +651,9 @@ construct_runtime!(
 		Exchange: brml_exchange::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
+		// chainlink
+		Chainlink: chainlink::{Module, Call, Storage, Event<T>},
+		Example: example::{Module, Call, Storage},
 	}
 );
 

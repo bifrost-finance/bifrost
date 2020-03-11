@@ -408,6 +408,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-example"
+version = "0.1.0"
+dependencies = [
+ "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "pallet-chainlink 2.0.0",
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
 name = "brml-exchange"
 version = "0.1.0"
 dependencies = [
@@ -3016,6 +3027,7 @@ dependencies = [
  "brml-assets 0.1.0",
  "brml-assets-rpc-runtime-api 0.1.0",
  "brml-bridge-eos 0.1.0",
+ "brml-example 0.1.0",
  "brml-exchange 0.1.0",
  "brml-exchange-rpc-runtime-api 0.1.0",
  "brml-swap 0.1.0",
@@ -3029,6 +3041,7 @@ dependencies = [
  "pallet-authorship 2.0.0 (git+https://github.com/paritytech/substrate)",
  "pallet-babe 2.0.0 (git+https://github.com/paritytech/substrate)",
  "pallet-balances 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "pallet-chainlink 2.0.0",
  "pallet-collective 2.0.0 (git+https://github.com/paritytech/substrate)",
  "pallet-democracy 2.0.0 (git+https://github.com/paritytech/substrate)",
  "pallet-elections-phragmen 2.0.0 (git+https://github.com/paritytech/substrate)",
@@ -3301,6 +3314,16 @@ dependencies = [
  "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
+name = "pallet-chainlink"
+version = "2.0.0"
+dependencies = [
+ "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "parity-scale-codec 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
 ]
 
