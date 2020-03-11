@@ -20,7 +20,7 @@ mod mock;
 mod tests;
 
 use core::convert::{From, Into};
-use frame_support::{decl_event, decl_module, decl_storage, ensure, Parameter};
+use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetRedeem, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
@@ -49,6 +49,25 @@ decl_event! {
 	}
 }
 
+decl_error! {
+	pub enum Error for Module<T: Trait> {
+		/// Asset id doesn't exist
+		TokenNotExist,
+		/// Amount of input should be less than or equal to origin balance
+		InvalidBalanceForTransaction,
+		/// Fee doesn't be set
+		FeeDoesNotSet,
+		/// This is an invalid fee
+		InvalidFee,
+		/// Vtoken id is not equal to token id
+		InvalidTokenPair,
+		/// Invalid pool size
+		InvalidPoolSize,
+		/// If token_pool * vtoken_pool != invariant
+		InvalidInvariantValue,
+	}
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
 		/// fee
@@ -63,6 +82,8 @@ decl_storage! {
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		type Error = Error<T>;
+
 		fn deposit_event() = default;
 
 		fn set_fee(
@@ -71,13 +92,13 @@ decl_module! {
 			fee: T::Fee
 		) {
 			ensure_root(origin)?;
-			ensure!(!fee.is_zero(), "fee cannot be zero.");
+			ensure!(!fee.is_zero(), Error::<T>::InvalidFee);
 
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
-			ensure!(fee >= 0.into(), "fee cannot be less than 0.");
-			ensure!(fee <= 100.into(), "fee cannot be bigger than 100.");
+			ensure!(fee >= 0.into(), Error::<T>::InvalidFee);
+			ensure!(fee <= 100.into(), Error::<T>::InvalidFee);
 
 			<Fee<T>>::insert(token_id, vtoken_id, fee);
 
@@ -93,18 +114,18 @@ decl_module! {
 		) {
 			// only root user has the privilidge to add liquidity
 			ensure_root(origin)?;
-			ensure!(!vtoken_pool.is_zero() && !token_pool.is_zero(), "pool size cannot be zero.");
+			ensure!(!vtoken_pool.is_zero() && !token_pool.is_zero(), Error::<T>::InvalidPoolSize);
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exists.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			// check the balance
 			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &provider));
-			ensure!(token_balances >= token_pool, "amount should be less than or equal to origin balance");
+			ensure!(token_balances >= token_pool, Error::<T>::InvalidBalanceForTransaction);
 
 			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &provider));
-			ensure!(vtoken_balances >= vtoken_pool, "amount should be less than or equal to origin balance");
+			ensure!(vtoken_balances >= vtoken_pool, Error::<T>::InvalidBalanceForTransaction);
 
 			// destroy balances from both tokens
 			assets::Module::<T>::asset_redeem(token_id, TokenType::Token, provider.clone(), token_pool, None);
@@ -130,7 +151,7 @@ decl_module! {
 			ensure_root(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exists.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
@@ -138,7 +159,7 @@ decl_module! {
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
-			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, "this is an invalid invariant.");
+			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, Error::<T>::InvalidInvariantValue);
 
 			assets::Module::<T>::asset_issue(token_id, TokenType::Token, provider.clone(), current_token_pool);
 			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, provider, current_vtoken_pool);
@@ -158,30 +179,30 @@ decl_module! {
 			#[compact] vtoken_amount: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
-			ensure!(!vtoken_amount.is_zero(), "vtoken amount cannot be zero.");
+			ensure!(!vtoken_amount.is_zero(), Error::<T>::InvalidBalanceForTransaction);
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
 			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &sender));
-			ensure!(vtoken_balances >= vtoken_amount, "amount should be less than or equal to origin balance");
+			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
 			let current_token_pool: T::Balance = invariant.0.into();
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
-			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, "this is an invalid invariant.");
+			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, Error::<T>::InvalidInvariantValue);
 
 			// get fee for both tokens
 			// let fee = <Fee<T>>::get(&token_id, &vtoken_id).into();
 			// let fee_amount = vtoken_amount * fee.into();
 
 			let new_vtoken_pool = current_vtoken_pool + vtoken_amount;
-			ensure!(!new_vtoken_pool.is_zero(), "new vtoken pool cannot be zero.");
+			ensure!(!new_vtoken_pool.is_zero(), Error::<T>::InvalidPoolSize);
 			// let new_token_pool = invariant / (new_vtoken_pool - fee_amount.into());
 			let new_token_pool = invariant / new_vtoken_pool;
 			let tokens_buy = current_token_pool.saturating_sub(new_token_pool);
@@ -206,30 +227,30 @@ decl_module! {
 			#[compact] token_amount: T::Balance,
 			vtoken_id: <T as assets::Trait>::AssetId
 		) {
-			ensure!(!token_amount.is_zero(), "the token amount cannot be zero. transaction abort.");
+			ensure!(!token_amount.is_zero(), Error::<T>::InvalidBalanceForTransaction);
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
 			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &sender));
-			ensure!(token_balances >= token_amount, "amount should be less than or equal to origin balance");
+			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
 			let current_token_pool: T::Balance = invariant.0.into();
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
-			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, "this is an invalid invariant.");
+			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, Error::<T>::InvalidInvariantValue);
 
 			// get fee for both tokens
 			// let fee = <Fee<T>>::get(&token_id, &vtoken_id).into();
 
 			// let fee_amount = token_amount * fee.into();
 			let new_token_pool = current_token_pool + token_amount;
-			ensure!(!new_token_pool.is_zero(), "new token pool cannot be zero.");
+			ensure!(!new_token_pool.is_zero(), Error::<T>::InvalidPoolSize);
 			// let new_vtoken_pool = invariant / (new_token_pool - fee_amount.into());
 			let new_vtoken_pool = invariant / new_token_pool;
 			let vtokens_buy = current_vtoken_pool.saturating_sub(new_vtoken_pool);

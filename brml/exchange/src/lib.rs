@@ -18,7 +18,7 @@
 mod mock;
 mod tests;
 
-use frame_support::{Parameter, decl_event, decl_module, decl_storage, ensure};
+use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::TokenType;
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
@@ -41,6 +41,21 @@ decl_event! {
 	}
 }
 
+decl_error! {
+	pub enum Error for Module<T: Trait> {
+		/// Asset id doesn't exist
+		TokenNotExist,
+		/// Amount of input should be less than or equal to origin balance
+		InvalidBalanceForTransaction,
+		/// Exchange rate doesn't be set
+		ExchangeRateDoesNotSet,
+		/// This is an invalid exchange rate
+		InvalidExchangeRate,
+		/// Vtoken id is not equal to token id
+		InvalidTokenPair,
+	}
+}
+
 decl_storage! {
 	trait Store for Module<T: Trait> as Exchange {
 		/// exchange rate between two tokens, vtoken => (token, exchange_rate)
@@ -52,6 +67,8 @@ decl_storage! {
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		type Error = Error<T>;
+
 		fn deposit_event() = default;
 
 		fn set_exchange_rate(
@@ -61,7 +78,7 @@ decl_module! {
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			<ExchangeRate<T>>::insert(vtoken_id, (token_id, exchange_rate));
@@ -76,7 +93,7 @@ decl_module! {
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			<RatePerBlock<T>>::insert(vtoken_id, (token_id, rate_per_block));
@@ -92,31 +109,24 @@ decl_module! {
 			let exchanger = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &exchanger));
-			ensure!(token_balances >= token_amount, "amount should be less than or equal to origin balance");
+			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
-			ensure!(<ExchangeRate<T>>::exists(vtoken_id), "exchange rate doesn't be set.");
+			ensure!(<ExchangeRate<T>>::exists(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
 
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
-			ensure!(rate.0 == token_id, "token id must be equal.");
+			ensure!(rate.0 == token_id, Error::<T>::InvalidTokenPair);
 
-			ensure!(!rate.1.is_zero(), "exchange rate cannot be zero.");
+			ensure!(!rate.1.is_zero(), Error::<T>::InvalidExchangeRate);
 			let vtokens_buy = token_amount.saturating_mul(rate.1.into());
 
-			// transfer
-			let to_vtoken_asset = (&vtoken_id, TokenType::VToken, &exchanger);
-			<assets::Balances<T>>::mutate(to_vtoken_asset, |balances| {
-				*balances = balances.saturating_add(vtokens_buy);
-			});
 
-			let to_token_asset = (&token_id, TokenType::Token, &exchanger);
-			<assets::Balances<T>>::mutate(to_token_asset, |balances| {
-				*balances = balances.saturating_sub(token_amount);
-			});
+			assets::Module::<T>::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
+			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, exchanger, vtokens_buy);
 
 			Self::deposit_event(Event::ExchangeTokenToVTokenSuccess);
 		}
@@ -129,31 +139,23 @@ decl_module! {
 			let exchanger = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this vtoken id is doesn't exist.");
+			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &exchanger));
-			ensure!(vtoken_balances >= vtoken_amount, "amount should be less than or equal to origin balance");
+			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
-			ensure!(<ExchangeRate<T>>::exists(vtoken_id), "exchange rate doesn't be set.");
+			ensure!(<ExchangeRate<T>>::exists(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
-			ensure!(rate.0 == token_id, "token id must be equal.");
+			ensure!(rate.0 == token_id, Error::<T>::InvalidTokenPair);
 
-			ensure!(!rate.1.is_zero(), "exchange rate cannot be zero.");
+			ensure!(!rate.1.is_zero(), Error::<T>::InvalidExchangeRate);
 			let tokens_buy = vtoken_amount / rate.1.into();
 
-			// transfer
-			let to_token_asset = (&token_id, TokenType::Token, &exchanger);
-			<assets::Balances<T>>::mutate(to_token_asset, |balances| {
-				*balances = balances.saturating_add(tokens_buy);
-			});
-
-			let to_vtoken_asset = (&vtoken_id, TokenType::VToken, &exchanger);
-			<assets::Balances<T>>::mutate(to_vtoken_asset, |balances| {
-				*balances = balances.saturating_sub(vtoken_amount);
-			});
+			assets::Module::<T>::asset_destroy(vtoken_id, TokenType::VToken, exchanger.clone(), vtoken_amount);
+			assets::Module::<T>::asset_issue(token_id, TokenType::Token, exchanger, tokens_buy);
 
 			Self::deposit_event(Event::ExchangerVTokenToTokenSuccess);
 		}

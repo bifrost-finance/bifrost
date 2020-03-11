@@ -78,6 +78,7 @@ impl_outer_event! {
 }
 
 pub type Assets = Module<Test>;
+pub type AssetsError = Error<Test>;
 pub type System = system::Module<Test>;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
