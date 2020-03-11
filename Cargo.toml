@@ -6,6 +6,8 @@ members = [
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
+	"brml/chainlink",
+	"brml/example",
 	"brml/exchange",
 	"brml/exchange/rpc",
 	"brml/bridge-eos",
