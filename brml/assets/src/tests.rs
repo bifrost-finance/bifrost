@@ -19,7 +19,7 @@
 #![cfg(test)]
 
 use super::*;
-use crate::mock::{Assets, Origin, System, TestEvent, new_test_ext};
+use crate::mock::*;
 use frame_support::{assert_ok, assert_noop};
 use system::{EventRecord, Phase};
 
@@ -123,8 +123,10 @@ fn issuing_asset_units_to_issuer_should_work() {
 #[test]
 fn issuing_before_creating_should_now_work() {
 	new_test_ext().execute_with(|| {
-		assert_noop!(Assets::issue(Origin::ROOT, 0, TokenType::Token, 1, 10000),
-		"asset should be created first");
+		assert_noop!(
+			Assets::issue(Origin::ROOT, 0, TokenType::Token, 1, 10000),
+			AssetsError::TokenNotExist
+		);
 	});
 }
 
@@ -175,7 +177,7 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_noop!(
 			Assets::transfer(Origin::signed(1), 0, TokenType::VToken, 1, 1000),
-			"origin account balance must be greater than or equal to the transfer amount"
+			AssetsError::InvalidBalanceForTransaction
 		);
 	});
 }
@@ -186,7 +188,7 @@ fn transferring_less_than_one_unit_should_not_work() {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_noop!(
 			Assets::transfer(Origin::signed(1), 0, TokenType::VToken, 1, 0),
-			"transfer amount should be non-zero"
+			AssetsError::ZeroAmountOfBalance
 		);
 	});
 }
@@ -237,7 +239,7 @@ fn destroying_asset_balance_with_zero_balance_should_not_work() {
 		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::VToken, 1, 100));
 		assert_noop!(
 			Assets::destroy(Origin::signed(1), 0, TokenType::VToken, 200),
-			"amount should be less than or equal to origin balance"
+			AssetsError::InvalidBalanceForTransaction
 		);
 	});
 }

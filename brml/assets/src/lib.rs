@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::convert::TryInto;
-use frame_support::{Parameter, decl_module, decl_event, decl_storage, ensure, debug};
+use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
@@ -42,7 +42,7 @@ pub trait Trait: system::Trait {
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 }
 
-decl_event!(
+decl_event! {
 	pub enum Event<T>
 		where <T as system::Trait>::AccountId,
 			<T as Trait>::Balance,
@@ -61,7 +61,30 @@ decl_event!(
 		/// Bind Asset with AccountId
 		AccountAssetDestroy(AccountId, AssetId),
 	}
-);
+}
+
+decl_error! {
+	pub enum Error for Module<T: Trait> {
+		/// Token symbol is too long
+		TokenSymbolTooLong,
+		/// if Vec<u8> is empty, meaning this symbol is empty string
+		EmptyTokenSymbol,
+		/// Precision too big or too small
+		InvalidPrecision,
+		/// Asset id doesn't exist
+		TokenNotExist,
+		/// Transaction cannot be made if he amount of balances are 0
+		ZeroAmountOfBalance,
+		/// Amount of input should be less than or equal to origin balance
+		InvalidBalanceForTransaction,
+		/// Exchange rate doesn't be set
+		ExchangeRateDoesNotSet,
+		/// This is an invalid exchange rate
+		InvalidExchangeRate,
+		/// Vtoken id is not equal to token id
+		InvalidTokenPair,
+	}
+}
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
@@ -78,6 +101,7 @@ decl_storage! {
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		type Error = Error<T>;
 
 		fn deposit_event() = default;
 
@@ -86,9 +110,9 @@ decl_module! {
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) {
 			ensure_root(origin)?;
 
-			ensure!(!symbol.is_empty(), "token symbol must great then 0");
-			ensure!(symbol.len() <= 32, "token symbol cannot exceed 32 bytes");
-			ensure!(precision <= 16, "token precision cannot exceed 16");
+			ensure!(!symbol.is_empty(), Error::<T>::EmptyTokenSymbol);
+			ensure!(symbol.len() <= 32, Error::<T>::TokenSymbolTooLong);
+			ensure!(precision <= 16, Error::<T>::InvalidPrecision);
 
 			let (id, token_pair) = Self::asset_create(symbol, precision);
 
@@ -104,10 +128,10 @@ decl_module! {
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<Tokens<T>>::exists(&id), "asset should be created first");
+			ensure!(<Tokens<T>>::exists(&id), Error::<T>::TokenNotExist);
 
 			let target = T::Lookup::lookup(target)?;
-			ensure!(!amount.is_zero(), "issue amount should be non-zero");
+			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 
 			Self::asset_issue(id, token_type, target.clone(), amount);
 
@@ -125,9 +149,9 @@ decl_module! {
 			let origin_account = (id, token_type, origin.clone());
 			let origin_balance = <Balances<T>>::get(&origin_account);
 			let target = T::Lookup::lookup(target)?;
-			ensure!(!amount.is_zero(), "transfer amount should be non-zero");
-			ensure!(origin_balance >= amount,
-				"origin account balance must be greater than or equal to the transfer amount");
+
+			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
+			ensure!(origin_balance >= amount, Error::<T>::InvalidBalanceForTransaction);
 
 			Self::asset_transfer(id, token_type, origin.clone(), target.clone(), amount);
 
@@ -145,7 +169,7 @@ decl_module! {
 			let origin_account = (id, token_type, origin.clone());
 
 			let balance = <Balances<T>>::get(&origin_account);
-			ensure!(amount <= balance , "amount should be less than or equal to origin balance");
+			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
 
 			Self::asset_destroy(id, token_type, origin.clone(), amount);
 
@@ -164,7 +188,7 @@ decl_module! {
 			let origin_account = (id, token_type, origin.clone());
 
 			let balance = <Balances<T>>::get(&origin_account);
-			ensure!(amount <= balance , "amount should be less than or equal to origin balance");
+			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
 
 			T::AssetRedeem::asset_redeem(id, token_type, origin.clone(), amount, to_name);
 
@@ -286,7 +310,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn asset_balances(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId) -> u64 {
-		debug::info!("asset id: {:?}, account: {:?}", asset_id, target);
 		let origin_account = (asset_id, token_type, target);
 		let balance_u128 = <Balances<T>>::get(origin_account);
 
