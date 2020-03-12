@@ -88,7 +88,12 @@ impl assets::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
+	type Price = u64;
+	type Cost = u64;
+	type Income = u64;
+	type Exchange = u64;
 	type AssetRedeem = ();
+	type FetchExchangeRate = ();
 }
 
 pub type Swap = crate::Module<Test>;

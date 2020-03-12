@@ -91,8 +91,8 @@ fn exchange_token_to_vtoken_should_be_ok() {
 		// exchange
 		let bob_token_exchange = 10;
 		assert_ok!(Exchange::exchange_token_to_vtoken(Origin::signed(bob), bob_token_exchange, vtoken_id));
-		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::Token, bob)), bob_token_issued - bob_token_exchange); // check bob's token change
-		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::VToken, bob)), bob_vtoken_issued + bob_token_exchange * rate); // check bob's token change
+		assert_eq!(<assets::AccountAssets<Test>>::get((token_id, TokenType::Token, bob)).balance, bob_token_issued - bob_token_exchange); // check bob's token change
+		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::VToken, bob)).balance, bob_vtoken_issued + bob_token_exchange * rate); // check bob's token change
 	});
 }
 
@@ -123,7 +123,7 @@ fn exchange_vtoken_to_token_should_be_ok() {
 		// exchange
 		let bob_vtoken_exchange = 10;
 		assert_ok!(Exchange::exchange_vtoken_to_token(Origin::signed(bob), bob_vtoken_exchange, vtoken_id));
-		assert_eq!(<assets::Balances<Test>>::get((token_id, TokenType::VToken, bob)), bob_vtoken_issued - bob_vtoken_exchange); // check bob's token change
-		assert_eq!(<assets::Balances<Test>>::get((vtoken_id, TokenType::Token, bob)), bob_token_issued + bob_vtoken_exchange / rate); // check bob's token change
+		assert_eq!(<assets::AccountAssets<Test>>::get((token_id, TokenType::VToken, bob)).balance, bob_vtoken_issued - bob_vtoken_exchange); // check bob's token change
+		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::Token, bob)).balance, bob_token_issued + bob_vtoken_exchange / rate); // check bob's token change
 	});
 }

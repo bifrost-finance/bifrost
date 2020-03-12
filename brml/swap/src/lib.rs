@@ -121,10 +121,10 @@ decl_module! {
 			let token_id = vtoken_id;
 
 			// check the balance
-			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &provider));
+			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &provider)).balance;
 			ensure!(token_balances >= token_pool, Error::<T>::InvalidBalanceForTransaction);
 
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &provider));
+			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &provider)).balance;
 			ensure!(vtoken_balances >= vtoken_pool, Error::<T>::InvalidBalanceForTransaction);
 
 			// destroy balances from both tokens
@@ -187,7 +187,7 @@ decl_module! {
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &sender));
+			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &sender)).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
@@ -235,7 +235,7 @@ decl_module! {
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
-			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &sender));
+			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &sender)).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);

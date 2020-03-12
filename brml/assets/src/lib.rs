@@ -22,7 +22,10 @@ use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
-use node_primitives::{AssetCreate, AssetIssue, AssetRedeem, Token, TokenPair, TokenType};
+use node_primitives::{
+	AccountAsset, AssetCreate, AssetIssue, AssetRedeem,
+	FetchExchangeRate, Token, TokenPair, TokenType,
+};
 
 mod mock;
 mod tests;
@@ -33,13 +36,28 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::BlockNumber>;
+	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::Exchange>;
+
+	/// The units in which we record prices.
+	type Price: Member + Parameter + SimpleArithmetic + Default + Copy + Zero;
+
+	/// The units in which we record exchange rate.
+	type Exchange: Member + Parameter + SimpleArithmetic + Default + Copy + Zero;
+
+	/// The units in which we record costs.
+	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::Balance>;
+
+	/// The units in which we record incomes.
+	type Income: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::Balance>;
 
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	/// Handler for asset redeem
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
+
+	/// Handler for fetch exchange rate from exchange runtime
+	type FetchExchangeRate: FetchExchangeRate<Self::AssetId, Self::Exchange>;
 }
 
 decl_event! {
@@ -89,13 +107,15 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub Balances get(fn balances): map hasher(blake2_256) (T::AssetId, TokenType, T::AccountId) => T::Balance;
+		pub AccountAssets get(fn account_assets): map hasher(blake2_256) (T::AssetId, TokenType, T::AccountId) => AccountAsset<T::Balance, T::Cost, T::Income>;
+		/// The number of units of prices held by any given asset.
+		pub Prices get(fn prices): map hasher(blake2_256) (T::AssetId, TokenType) => T::Price;
 		/// The next asset identifier up for grabs.
 		pub NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
 		pub Tokens get(fn token_details): map hasher(blake2_256) T::AssetId => TokenPair<T::Balance>;
 		/// A collection of asset which an account owned
-		pub AccountAssets get(fn account_assets): map hasher(blake2_256) T::AccountId => Vec<T::AssetId>;
+		pub AccountAssetIds get(fn account_asset_ids): map hasher(blake2_256) T::AccountId => Vec<T::AssetId>;
 	}
 }
 
@@ -147,7 +167,7 @@ decl_module! {
 		) {
 			let origin = ensure_signed(origin)?;
 			let origin_account = (id, token_type, origin.clone());
-			let origin_balance = <Balances<T>>::get(&origin_account);
+			let origin_balance = <AccountAssets<T>>::get(&origin_account).balance;
 			let target = T::Lookup::lookup(target)?;
 
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
@@ -168,7 +188,7 @@ decl_module! {
 			let origin = ensure_signed(origin)?;
 			let origin_account = (id, token_type, origin.clone());
 
-			let balance = <Balances<T>>::get(&origin_account);
+			let balance = <AccountAssets<T>>::get(&origin_account).balance;
 			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
 
 			Self::asset_destroy(id, token_type, origin.clone(), amount);
@@ -187,7 +207,7 @@ decl_module! {
 
 			let origin_account = (id, token_type, origin.clone());
 
-			let balance = <Balances<T>>::get(&origin_account);
+			let balance = <AccountAssets<T>>::get(&origin_account).balance;
 			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
 
 			T::AssetRedeem::asset_redeem(id, token_type, origin.clone(), amount, to_name);
@@ -242,18 +262,20 @@ impl<T: Trait> Module<T> {
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
+		let exchange_rate = T::FetchExchangeRate::fetch_exchange_rate(asset_id);
 		let target_asset = (asset_id, token_type, target.clone());
-		<Balances<T>>::mutate(&target_asset, |balance| {
-			*balance = balance.saturating_add(amount);
+		<AccountAssets<T>>::mutate(&target_asset, |asset| {
+			asset.balance = asset.balance.saturating_add(amount);
+			asset.cost = asset.cost.saturating_add(amount.saturating_mul(exchange_rate.into()).into());
 		});
 
 		// save asset id for this account
-		if <AccountAssets<T>>::exists(&target) {
-			<AccountAssets<T>>::mutate(&target, |ids| {
+		if <AccountAssetIds<T>>::exists(&target) {
+			<AccountAssetIds<T>>::mutate(&target, |ids| {
 				ids.push(asset_id);
 			});
 		} else {
-			<AccountAssets<T>>::insert(&target, vec![asset_id]);
+			<AccountAssetIds<T>>::insert(&target, vec![asset_id]);
 		}
 
 		<Tokens<T>>::mutate(asset_id, |token| {
@@ -276,13 +298,13 @@ impl<T: Trait> Module<T> {
 		amount: T::Balance,
 	) {
 		let from_asset = (asset_id, token_type, from);
-		<Balances<T>>::mutate(&from_asset, |balance| {
-			*balance = balance.saturating_sub(amount);
+		<AccountAssets<T>>::mutate(&from_asset, |asset| {
+			asset.balance = asset.balance.saturating_sub(amount);
 		});
 
 		let to_asset = (asset_id, token_type, to);
-		<Balances<T>>::mutate(&to_asset, |balance| {
-			*balance = balance.saturating_add(amount);
+		<AccountAssets<T>>::mutate(&to_asset, |asset| {
+			asset.balance = asset.balance.saturating_add(amount);
 		});
 	}
 
@@ -292,9 +314,11 @@ impl<T: Trait> Module<T> {
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
+		let exchange_rate = T::FetchExchangeRate::fetch_exchange_rate(asset_id);
 		let target_asset = (asset_id, token_type, target);
-		<Balances<T>>::mutate(&target_asset, |balance| {
-			*balance = balance.saturating_sub(amount);
+		<AccountAssets<T>>::mutate(&target_asset, |asset| {
+			asset.balance = asset.balance.saturating_sub(amount);
+			asset.income = asset.income.saturating_add(amount.saturating_mul(exchange_rate.into()).into());
 		});
 
 		<Tokens<T>>::mutate(asset_id, |token| {
@@ -311,7 +335,7 @@ impl<T: Trait> Module<T> {
 
 	pub fn asset_balances(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId) -> u64 {
 		let origin_account = (asset_id, token_type, target);
-		let balance_u128 = <Balances<T>>::get(origin_account);
+		let balance_u128 = <AccountAssets<T>>::get(origin_account).balance;
 
 		// balance type is u128, but serde cannot serialize u128.
 		// So I have to convert to u64, see this link
@@ -322,7 +346,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn asset_id_exists(who: &T::AccountId, symbol: &[u8], precision: u16) -> Option<T::AssetId> {
-		let all_ids = <AccountAssets<T>>::get(who);
+		let all_ids = <AccountAssetIds<T>>::get(who);
 		for id in all_ids {
 			let token = <Tokens<T>>::get(id);
 			if token.token.symbol.as_slice().eq(symbol) && token.token.precision.eq(&precision) {
@@ -333,6 +357,6 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub fn asset_tokens(target: T::AccountId) -> Vec<T::AssetId> {
-		<AccountAssets<T>>::get(target)
+		<AccountAssetIds<T>>::get(target)
 	}
 }

@@ -47,6 +47,15 @@ pub type RatePerBlock = u64;
 /// Balance of an account.
 pub type Balance = u128;
 
+/// Cost of an asset of an account.
+pub type Cost = u128;
+
+/// Income of an asset of an account.
+pub type Income = u128;
+
+/// Price of an asset .
+pub type Price = u64;
+
 /// Precision of symbol.
 pub type Precision = u32;
 
@@ -113,6 +122,13 @@ impl<Balance> Token<Balance> {
 	}
 }
 
+#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+pub struct AccountAsset<Balance, Cost, Income> {
+	pub balance: Balance,
+	pub cost: Cost,
+	pub income: Income,
+}
+
 /// Clearing handler for assets change
 pub trait ClearingHandler<AssetId, AccountId, BlockNumber, Balance> {
 	/// Clearing for assets change
@@ -166,6 +182,16 @@ pub trait AssetRedeem<AssetId, AccountId, Balance> {
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 	fn asset_redeem(_: A, _: TokenType, _: AC, _: B, _: Option<Vec<u8>>) {}
+}
+
+/// Fetch exchange rate handler
+pub trait FetchExchangeRate<AssetId, ExchangeRate> {
+	/// fetch exchange rate
+	fn fetch_exchange_rate(asset_id: AssetId) -> ExchangeRate;
+}
+
+impl<A, ER: Default> FetchExchangeRate<A, ER> for () {
+	fn fetch_exchange_rate(_: A) -> ER { Default::default() }
 }
 
 /// Blockchain types
