@@ -175,7 +175,6 @@ parameter_types! {
 
 impl pallet_balances::Trait for Runtime {
 	type Balance = Balance;
-//	type OnFreeBalanceZero = ((Staking, ()), Session);
 	type OnFreeBalanceZero = (Staking, Session);
 	type OnReapAccount = (System, Recovery);
 	type OnNewAccount = Indices;
@@ -652,7 +651,7 @@ construct_runtime!(
 		Society: pallet_society::{Module, Call, Storage, Event<T>, Config<T>},
 		Recovery: pallet_recovery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
-		Assets: brml_assets::{Module, Call, Storage, Event<T>},
+		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Exchange: brml_exchange::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},

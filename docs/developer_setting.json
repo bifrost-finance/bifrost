@@ -89,5 +89,13 @@
   "TokenPair": {
     "token": "Token",
     "vtoken": "Token"
+  },
+  "Cost": "u128",
+  "Income": "u128",
+  "Price": "u64",
+  "AccountAsset": {
+    "balance": "Balance",
+    "cost": "Cost",
+    "income": "Income"
   }
 }

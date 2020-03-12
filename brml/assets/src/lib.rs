@@ -30,6 +30,21 @@ use node_primitives::{
 mod mock;
 mod tests;
 
+lazy_static::lazy_static! {
+	pub static ref TOKEN_LIST: [Vec<u8>; 3] = {
+		let dot = b"DOT".to_vec();
+		let ksm = b"KSM".to_vec();
+		let eos = b"EOS".to_vec();
+		[dot, ksm, eos]
+	};
+	pub static ref VTOKEN_LIST: [Vec<u8>; 3] = {
+		let vdot = b"vDOT".to_vec();
+		let vksm = b"vKSM".to_vec();
+		let veos = b"vEOS".to_vec();
+		[vdot, vksm, veos]
+	};
+}
+
 /// The module configuration trait.
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -107,15 +122,35 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub AccountAssets get(fn account_assets): map hasher(blake2_256) (T::AssetId, TokenType, T::AccountId) => AccountAsset<T::Balance, T::Cost, T::Income>;
+		pub AccountAssets get(fn account_assets): map hasher(blake2_256) (T::AssetId, TokenType, T::AccountId)
+			=> AccountAsset<T::Balance, T::Cost, T::Income>;
 		/// The number of units of prices held by any given asset.
-		pub Prices get(fn prices): map hasher(blake2_256) (T::AssetId, TokenType) => T::Price;
+		pub Prices get(fn prices) config(): map hasher(blake2_256) (T::AssetId, TokenType) => T::Price;
 		/// The next asset identifier up for grabs.
-		pub NextAssetId get(fn next_asset_id): T::AssetId;
+		pub NextAssetId get(fn next_asset_id) config(): T::AssetId;
 		/// Details of the token corresponding to an asset id.
-		pub Tokens get(fn token_details): map hasher(blake2_256) T::AssetId => TokenPair<T::Balance>;
+		pub Tokens get(fn token_details) config(): map hasher(blake2_256) T::AssetId => TokenPair<T::Balance>;
 		/// A collection of asset which an account owned
 		pub AccountAssetIds get(fn account_asset_ids): map hasher(blake2_256) T::AccountId => Vec<T::AssetId>;
+	}
+	add_extra_genesis {
+		build(|config: &GenesisConfig<T>| {
+			// initialze three assets id for these tokens
+			<NextAssetId<T>>::put(config.next_asset_id);
+
+			let token_precision = [4, 4, 4];
+			let vtoken_precision = [8, 8, 8];
+			for i in 0..=2 {
+				// initialize token
+				let token = Token::new(TOKEN_LIST[i as usize].clone(), token_precision[i as usize], 0.into());
+				let vtoken = Token::new(VTOKEN_LIST[i as usize].clone(), vtoken_precision[i as usize], 0.into());
+				<Tokens<T>>::insert(T::AssetId::from(i), TokenPair::new(vtoken, token));
+
+				// initialize price
+				<Prices<T>>::insert((T::AssetId::from(i), TokenType::Token), T::Price::from(0u32));
+				<Prices<T>>::insert((T::AssetId::from(i), TokenType::VToken), T::Price::from(0u32));
+			}
+		});
 	}
 }
 
@@ -147,12 +182,10 @@ decl_module! {
 			#[compact] amount: T::Balance,
 		) {
 			ensure_root(origin)?;
-
 			ensure!(<Tokens<T>>::exists(&id), Error::<T>::TokenNotExist);
-
-			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 
+			let target = T::Lookup::lookup(target)?;
 			Self::asset_issue(id, token_type, target.clone(), amount);
 
 			Self::deposit_event(RawEvent::Issued(id, token_type, target, amount));
@@ -239,8 +272,16 @@ impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, TokenPair<T::Balance>) {
-		let id = Self::next_asset_id();
-		<NextAssetId<T>>::mutate(|id| *id += One::one());
+		let id = match symbol.as_slice() {
+			b"DOT" => 0.into(),
+			b"KSM" => 1.into(),
+			b"EOS" => 2.into(),
+			_ => {
+				let id = Self::next_asset_id();
+				<NextAssetId<T>>::mutate(|id| *id += One::one());
+				id
+			}
+		};
 
 		// Initial total supply is zero.
 		let total_supply: T::Balance = 0.into();
@@ -272,7 +313,9 @@ impl<T: Trait> Module<T> {
 		// save asset id for this account
 		if <AccountAssetIds<T>>::exists(&target) {
 			<AccountAssetIds<T>>::mutate(&target, |ids| {
-				ids.push(asset_id);
+				if !ids.contains(&asset_id) { // do not push a duplicated asset id to list
+					ids.push(asset_id);
+				}
 			});
 		} else {
 			<AccountAssetIds<T>>::insert(&target, vec![asset_id]);
@@ -302,10 +345,19 @@ impl<T: Trait> Module<T> {
 			asset.balance = asset.balance.saturating_sub(amount);
 		});
 
-		let to_asset = (asset_id, token_type, to);
-		<AccountAssets<T>>::mutate(&to_asset, |asset| {
+		let to_asset = (asset_id, token_type, &to);
+		<AccountAssets<T>>::mutate(to_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
 		});
+
+		// ensure this account relates to this asset id
+		if <AccountAssetIds<T>>::exists(&to) {
+			<AccountAssetIds<T>>::mutate(&to, |ids| {
+				if !ids.contains(&asset_id) { ids.push(asset_id); }
+			});
+		} else {
+			<AccountAssetIds<T>>::insert(&to, vec![asset_id]);
+		}
 	}
 
 	pub fn asset_destroy(

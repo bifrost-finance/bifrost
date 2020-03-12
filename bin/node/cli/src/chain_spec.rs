@@ -22,10 +22,10 @@ use serde::{Serialize, Deserialize};
 use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig,
 	GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
-	SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY, BridgeEosConfig,
+	SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY, AssetsConfig, BridgeEosConfig,
 };
-use node_runtime::Block;
-use node_runtime::constants::currency::*;
+use node_primitives::{Token, TokenPair};
+use node_runtime::{Block, constants::currency::*};
 use sc_service;
 use hex_literal::hex;
 use sc_telemetry::TelemetryEndpoints;
@@ -292,6 +292,11 @@ pub fn testnet_genesis(
 			members: endowed_accounts[0..3].to_vec(),
 			pot: 0,
 			max_members: 999,
+		}),
+		brml_assets: Some(AssetsConfig {
+			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			token_details: vec![],
+			prices: vec![],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			producer_schedule: eos_chain::ProducerSchedule::default(),
