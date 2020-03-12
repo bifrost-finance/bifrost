@@ -23,8 +23,7 @@ use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, One, Zero, Static
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetCreate, AssetIssue, AssetRedeem,
-	FetchExchangeRate, Token, TokenPair, TokenType,
+	AccountAsset, AssetRedeem, AssetTrait, FetchExchangeRate, Token, TokenPair, TokenType,
 };
 
 mod mock;
@@ -182,10 +181,12 @@ decl_module! {
 			#[compact] amount: T::Balance,
 		) {
 			ensure_root(origin)?;
+
 			ensure!(<Tokens<T>>::exists(&id), Error::<T>::TokenNotExist);
-			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 
 			let target = T::Lookup::lookup(target)?;
+			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
+
 			Self::asset_issue(id, token_type, target.clone(), amount);
 
 			Self::deposit_event(RawEvent::Issued(id, token_type, target, amount));
@@ -250,27 +251,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> AssetCreate<T::AssetId, T::Balance> for Module<T> {
-	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, TokenPair<T::Balance>) {
-		Self::asset_create(symbol, precision)
-	}
-}
-
-impl<T: Trait> AssetIssue<T::AssetId, T::AccountId, T::Balance> for Module<T> {
-	fn asset_issue(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId, amount: T::Balance) {
-		Self::asset_issue(asset_id, token_type, target, amount);
-	}
-}
-
-impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
-	#[allow(unused_variables)]
-	fn asset_redeem(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId, amount: T::Balance, to_name: Option<Vec<u8>>) {
-		Self::asset_destroy(asset_id, token_type, target, amount);
-	}
-}
-
-// The main implementation block for the module.
-impl<T: Trait> Module<T> {
+impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Income> for Module<T> {
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, TokenPair<T::Balance>) {
 		let id = match symbol.as_slice() {
 			b"DOT" => 0.into(),
@@ -297,7 +278,7 @@ impl<T: Trait> Module<T> {
 		(id, token_pair)
 	}
 
-	pub fn asset_issue(
+	fn asset_issue(
 		asset_id: T::AssetId,
 		token_type: TokenType,
 		target: T::AccountId,
@@ -333,34 +314,16 @@ impl<T: Trait> Module<T> {
 		});
 	}
 
-	fn asset_transfer(
+	fn asset_redeem(
 		asset_id: T::AssetId,
 		token_type: TokenType,
-		from: T::AccountId,
-		to: T::AccountId,
+		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let from_asset = (asset_id, token_type, from);
-		<AccountAssets<T>>::mutate(&from_asset, |asset| {
-			asset.balance = asset.balance.saturating_sub(amount);
-		});
-
-		let to_asset = (asset_id, token_type, &to);
-		<AccountAssets<T>>::mutate(to_asset, |asset| {
-			asset.balance = asset.balance.saturating_add(amount);
-		});
-
-		// ensure this account relates to this asset id
-		if <AccountAssetIds<T>>::exists(&to) {
-			<AccountAssetIds<T>>::mutate(&to, |ids| {
-				if !ids.contains(&asset_id) { ids.push(asset_id); }
-			});
-		} else {
-			<AccountAssetIds<T>>::insert(&to, vec![asset_id]);
-		}
+		Self::asset_destroy(asset_id, token_type, target, amount);
 	}
 
-	pub fn asset_destroy(
+	fn asset_destroy(
 		asset_id: T::AssetId,
 		token_type: TokenType,
 		target: T::AccountId,
@@ -385,6 +348,50 @@ impl<T: Trait> Module<T> {
 		});
 	}
 
+	fn asset_id_exists(who: &T::AccountId, symbol: &[u8], precision: u16) -> Option<T::AssetId> {
+		let all_ids = <AccountAssetIds<T>>::get(who);
+		for id in all_ids {
+			let token = <Tokens<T>>::get(id);
+			if token.token.symbol.as_slice().eq(symbol) && token.token.precision.eq(&precision) {
+				return Some(id);
+			}
+		}
+		None
+	}
+
+	fn token_exists(asset_id: T::AssetId) -> bool {
+		<Tokens<T>>::exists(&asset_id)
+	}
+
+	fn get_account_asset(
+		asset_id: &T::AssetId,
+		token_type: TokenType,
+		target: &T::AccountId,
+	) -> AccountAsset<T::Balance, T::Cost, T::Income> {
+		<AccountAssets<T>>::get((&asset_id, token_type, &target))
+	}
+}
+
+// The main implementation block for the module.
+impl<T: Trait> Module<T> {
+	fn asset_transfer(
+		asset_id: T::AssetId,
+		token_type: TokenType,
+		from: T::AccountId,
+		to: T::AccountId,
+		amount: T::Balance,
+	) {
+		let from_asset = (asset_id, token_type, from);
+		<AccountAssets<T>>::mutate(&from_asset, |asset| {
+			asset.balance = asset.balance.saturating_sub(amount);
+		});
+
+		let to_asset = (asset_id, token_type, to);
+		<AccountAssets<T>>::mutate(&to_asset, |asset| {
+			asset.balance = asset.balance.saturating_add(amount);
+		});
+	}
+
 	pub fn asset_balances(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId) -> u64 {
 		let origin_account = (asset_id, token_type, target);
 		let balance_u128 = <AccountAssets<T>>::get(origin_account).balance;
@@ -395,17 +402,6 @@ impl<T: Trait> Module<T> {
 		let balance_u64: u64 = balance_u128.try_into().unwrap_or(usize::max_value()) as u64;
 
 		balance_u64
-	}
-
-	pub fn asset_id_exists(who: &T::AccountId, symbol: &[u8], precision: u16) -> Option<T::AssetId> {
-		let all_ids = <AccountAssetIds<T>>::get(who);
-		for id in all_ids {
-			let token = <Tokens<T>>::get(id);
-			if token.token.symbol.as_slice().eq(symbol) && token.token.precision.eq(&precision) {
-				return Some(id);
-			}
-		}
-		None
 	}
 
 	pub fn asset_tokens(target: T::AccountId) -> Vec<T::AssetId> {

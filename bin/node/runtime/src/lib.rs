@@ -29,7 +29,7 @@ use frame_support::{
 use sp_core::u32_trait::{_1, _2, _3, _4};
 use node_primitives::{
 	AccountId, AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price, Signature,
-	BridgeAssetTo, AssetId, AssetCreate, Precision, TokenType, ExchangeRate, RatePerBlock
+	BridgeAssetTo, AssetId, Precision, TokenType, ExchangeRate, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -563,9 +563,6 @@ impl pallet_society::Trait for Runtime {
 
 // bifrost rumtine time
 
-type Duration = u128;
-type SettlementId = u32;
-
 parameter_types! {
 	pub const SettlementPeriod: BlockNumber = 1 * DAYS;
 }
@@ -586,6 +583,11 @@ impl brml_exchange::Trait for Runtime {
 	type Event = Event;
 	type ExchangeRate = ExchangeRate;
 	type RatePerBlock = RatePerBlock;
+	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
 }
 
 type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
@@ -598,6 +600,7 @@ impl brml_bridge_eos::Trait for Runtime {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type SubmitTransaction = BridgeSubmitTransaction;
+	type AssetTrait = Assets;
 }
 
 impl brml_swap::Trait for Runtime {
@@ -606,6 +609,7 @@ impl brml_swap::Trait for Runtime {
 	type TokenPool = Balance;
 	type VTokenPool = Balance;
 	type InVariantPool = Balance;
+	type AssetTrait = Assets;
 }
 
 impl example::Trait for Runtime {
