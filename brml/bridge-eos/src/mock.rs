@@ -118,18 +118,25 @@ impl crate::Trait for Test {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type SubmitTransaction = SubmitTransaction;
+	type AssetTrait = Assets;
 }
 
 impl assets::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
+	type Price = u64;
+	type Cost = u64;
+	type Income = u64;
+	type Exchange = u64;
 	type AssetRedeem = ();
+	type FetchExchangeRate = ();
 }
 
 pub type BridgeEos = crate::Module<Test>;
 pub type Authorship = pallet_authorship::Module<Test>;
 pub type System = frame_system::Module<Test>;
+pub type Assets = assets::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {

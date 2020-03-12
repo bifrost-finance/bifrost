@@ -29,10 +29,9 @@ decl_module! {
         }
 
         pub fn callback(origin, result: u128) -> DispatchResult {
-            let who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+            let _who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
             <Result>::put(result);
             Ok(())
         }
     }
 }
-
