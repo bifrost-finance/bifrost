@@ -36,7 +36,7 @@ use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
-		TransactionValidity, ValidTransaction, TransactionValidityError
+		TransactionValidity, ValidTransaction
 	},
 };
 use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
@@ -399,7 +399,7 @@ decl_module! {
 			let eos_amount = amount;
 
 			// check vtoken id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this token doesn't exist.");
+			ensure!(T::AssetTrait::token_exists(vtoken_id), "this token doesn't exist.");
 
 			let token = <assets::Tokens<T>>::get(vtoken_id).token;
 			let symbol_code = token.symbol;

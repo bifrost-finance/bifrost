@@ -22,7 +22,7 @@ mod tests;
 use core::convert::{From, Into};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, AssetRedeem, TokenType};
+use node_primitives::{AssetTrait, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
 pub trait Trait: assets::Trait {
@@ -96,7 +96,7 @@ decl_module! {
 			ensure_root(origin)?;
 			ensure!(!fee.is_zero(), Error::<T>::InvalidFee);
 
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			ensure!(fee >= 0.into(), Error::<T>::InvalidFee);
@@ -119,7 +119,7 @@ decl_module! {
 			ensure!(!vtoken_pool.is_zero() && !token_pool.is_zero(), Error::<T>::InvalidPoolSize);
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			// check the balance
@@ -153,7 +153,7 @@ decl_module! {
 			ensure_root(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
@@ -185,7 +185,7 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
@@ -233,7 +233,7 @@ decl_module! {
 			let sender = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction

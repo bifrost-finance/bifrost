@@ -80,7 +80,7 @@ decl_module! {
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			<ExchangeRate<T>>::insert(vtoken_id, (token_id, exchange_rate));
@@ -95,7 +95,7 @@ decl_module! {
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			<RatePerBlock<T>>::insert(vtoken_id, (token_id, rate_per_block));
@@ -111,7 +111,7 @@ decl_module! {
 			let exchanger = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &exchanger)).balance;
@@ -141,7 +141,7 @@ decl_module! {
 			let exchanger = ensure_signed(origin)?;
 
 			// check asset_id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &exchanger)).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
