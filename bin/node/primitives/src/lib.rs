@@ -83,6 +83,7 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub enum TokenType {
 	Token,
 	VToken,
@@ -90,6 +91,7 @@ pub enum TokenType {
 
 /// Token pair to bond token and vtoken
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct TokenPair<Balance> {
 	pub token: Token<Balance>,
 	pub vtoken: Token<Balance>,
@@ -106,6 +108,7 @@ impl<Balance> TokenPair<Balance> {
 
 /// Token type
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct Token<Balance> {
 	pub symbol: Vec<u8>,
 	pub precision: u16,
@@ -123,6 +126,7 @@ impl<Balance> Token<Balance> {
 }
 
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct AccountAsset<Balance, Cost, Income> {
 	pub balance: Balance,
 	pub cost: Cost,

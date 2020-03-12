@@ -59,9 +59,9 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Exchange {
 		/// exchange rate between two tokens, vtoken => (token, exchange_rate)
-		ExchangeRate get(fn exchange_rate): linked_map hasher(blake2_256) <T as assets::Trait>::AssetId => (<T as assets::Trait>::AssetId, T::ExchangeRate);
+		ExchangeRate get(fn exchange_rate): linked_map hasher(blake2_256) <T as assets::Trait>::AssetId => T::ExchangeRate;
 		/// change rate per block, vtoken => (token, rate_per_block)
-		RatePerBlock get(fn rate_per_block): linked_map hasher(blake2_256) <T as assets::Trait>::AssetId => (<T as assets::Trait>::AssetId, T::RatePerBlock);
+		RatePerBlock get(fn rate_per_block): linked_map hasher(blake2_256) <T as assets::Trait>::AssetId => T::RatePerBlock;
 	}
 }
 
@@ -79,9 +79,7 @@ decl_module! {
 			ensure_root(origin)?;
 
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
-
-			let token_id = vtoken_id; // token id is equal to vtoken id
-			<ExchangeRate<T>>::insert(vtoken_id, (token_id, exchange_rate));
+			<ExchangeRate<T>>::insert(vtoken_id, exchange_rate);
 
 			Self::deposit_event(Event::UpdateExchangeSuccess);
 		}
@@ -94,9 +92,7 @@ decl_module! {
 			ensure_root(origin)?;
 
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
-
-			let token_id = vtoken_id; // token id is equal to vtoken id
-			<RatePerBlock<T>>::insert(vtoken_id, (token_id, rate_per_block));
+			<RatePerBlock<T>>::insert(vtoken_id, rate_per_block);
 
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
@@ -119,10 +115,9 @@ decl_module! {
 			ensure!(<ExchangeRate<T>>::exists(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
 
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
-			ensure!(rate.0 == token_id, Error::<T>::InvalidTokenPair);
 
-			ensure!(!rate.1.is_zero(), Error::<T>::InvalidExchangeRate);
-			let vtokens_buy = token_amount.saturating_mul(rate.1.into());
+			ensure!(!rate.is_zero(), Error::<T>::InvalidExchangeRate);
+			let vtokens_buy = token_amount.saturating_mul(rate.into());
 
 			// transfer
 			assets::Module::<T>::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
@@ -149,10 +144,9 @@ decl_module! {
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
-			ensure!(rate.0 == token_id, Error::<T>::InvalidTokenPair);
 
-			ensure!(!rate.1.is_zero(), Error::<T>::InvalidExchangeRate);
-			let tokens_buy = vtoken_amount / rate.1.into();
+			ensure!(!rate.is_zero(), Error::<T>::InvalidExchangeRate);
+			let tokens_buy = vtoken_amount / rate.into();
 
 			assets::Module::<T>::asset_destroy(vtoken_id, TokenType::VToken, exchanger.clone(), vtoken_amount);
 			assets::Module::<T>::asset_issue(token_id, TokenType::Token, exchanger, tokens_buy);
@@ -161,13 +155,12 @@ decl_module! {
 		}
 
 		fn on_finalize() {
-			for rate_per_block in <RatePerBlock<T>>::iter() {
-				let vtoken_id = rate_per_block.0;
+			for (vtoken_id, rate_per_block) in <RatePerBlock<T>>::enumerate() {
 				if !<ExchangeRate<T>>::exists(vtoken_id) {
 					continue;
 				}
 				<ExchangeRate<T>>::mutate(vtoken_id, |exchange_rate| {
-					exchange_rate.1 = exchange_rate.1.saturating_sub(rate_per_block.1.into());
+					*exchange_rate = exchange_rate.saturating_sub(rate_per_block.into());
 				});
 			}
 		}
@@ -178,7 +171,7 @@ impl<T: Trait> Module<T> {
 	pub fn get_exchange(vtoken_id: <T as assets::Trait>::AssetId) -> T::ExchangeRate {
 		let rate = <ExchangeRate<T>>::get(vtoken_id);
 
-		rate.1
+		rate
 	}
 }
 
@@ -186,6 +179,6 @@ impl<T: Trait> FetchExchangeRate<T::AssetId, T::ExchangeRate> for Module<T> {
 	fn fetch_exchange_rate(asset_id: T::AssetId) -> T::ExchangeRate {
 		let rate = <ExchangeRate<T>>::get(asset_id);
 
-		rate.1
+		rate
 	}
 }

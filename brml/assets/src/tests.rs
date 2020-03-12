@@ -33,9 +33,11 @@ fn create_asset_should_work() {
 		};
 		let vtoken1 = token1.clone();
 		let token_pair1 = TokenPair::new(token1, vtoken1);
+
+		let id1 = Assets::next_asset_id();
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_eq!(Assets::next_asset_id(), 1);
-		assert_eq!(Assets::token_details(0), token_pair1);
+		assert_eq!(Assets::next_asset_id(), id1 + 1);
+		assert_eq!(Assets::token_details(id1), token_pair1);
 
 		let token2 = Token {
 			symbol: vec![0x56, 0x68, 0x90],
@@ -44,19 +46,21 @@ fn create_asset_should_work() {
 		};
 		let vtoken2 = token2.clone();
 		let token_pair2 = TokenPair::new(token2, vtoken2);
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x56, 0x68, 0x90], 4));
-		assert_eq!(Assets::next_asset_id(), 2);
-		assert_eq!(Assets::token_details(1), token_pair2);
+
+		let id2 = Assets::next_asset_id();
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x56, 0x68, 0x90], 4)); // take asset id 4
+		assert_eq!(Assets::next_asset_id(), id2 + 1);
+		assert_eq!(Assets::token_details(id2), token_pair2);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Created(0, token_pair1)),
+				event: TestEvent::assets(RawEvent::Created(id1, token_pair1)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Created(1, token_pair2)),
+				event: TestEvent::assets(RawEvent::Created(id2, token_pair2)),
 				topics: vec![],
 			}
 		]);
@@ -66,6 +70,7 @@ fn create_asset_should_work() {
 #[test]
 fn issuing_asset_units_to_issuer_should_work() {
 	new_test_ext().execute_with(|| {
+		let id = Assets::next_asset_id();
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 
 		let token = Token {
@@ -74,46 +79,49 @@ fn issuing_asset_units_to_issuer_should_work() {
 			total_supply: 0,
 		};
 		let token_pair = TokenPair::new(token.clone(), token.clone());
-		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::VToken, 1, 10000));
-		assert_eq!(Assets::token_details(0), TokenPair::new(
+		let alice = 1;
+
+		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::VToken, alice, 10000));
+		assert_eq!(Assets::token_details(id), TokenPair::new(
 			token.clone(),
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::account_assets((0, TokenType::VToken, 1)).balance, 10000);
+		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 10000);
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::Token, 2, 20000));
-		assert_eq!(Assets::token_details(0), TokenPair::new(
+		let bob = 2;
+		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::Token, bob, 20000));
+		assert_eq!(Assets::token_details(id), TokenPair::new(
 			Token { total_supply: 20000, ..token.clone() },
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::account_assets((0, TokenType::Token, 2)).balance, 20000);
+		assert_eq!(Assets::account_assets((id, TokenType::Token, bob)).balance, 20000);
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::Token, 2, 30000));
-		assert_eq!(Assets::token_details(0), TokenPair::new(
+		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::Token, bob, 30000));
+		assert_eq!(Assets::token_details(id), TokenPair::new(
 			Token { total_supply: 50000, ..token.clone() },
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::account_assets((0, TokenType::Token, 2)).balance, 50000);
+		assert_eq!(Assets::account_assets((id, TokenType::Token, bob)).balance, 50000);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Created(0, token_pair)),
+				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Issued(0, TokenType::VToken, 1, 10000)),
+				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Issued(0, TokenType::Token, 2, 20000)),
+				event: TestEvent::assets(RawEvent::Issued(id, TokenType::Token, bob, 20000)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Issued(0, TokenType::Token, 2, 30000)),
+				event: TestEvent::assets(RawEvent::Issued(id, TokenType::Token, bob, 30000)),
 				topics: vec![],
 			}
 		]);
@@ -139,32 +147,36 @@ fn transferring_amount_above_available_balance_should_work() {
 			total_supply: 0,
 		};
 		let token_pair = TokenPair::new(token.clone(), token.clone());
+		let alice = 1;
+		let bob = 2;
+		let id = Assets::next_asset_id();
 
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::VToken, 1, 10000));
+		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::VToken, alice, 10000));
 
-		assert_ok!(Assets::transfer(Origin::signed(1), 0, TokenType::VToken, 2, 1000));
-		assert_eq!(Assets::token_details(0), TokenPair::new(
+		assert_ok!(Assets::transfer(Origin::signed(alice), id, TokenType::VToken, bob, 1000));
+		assert_eq!(Assets::account_asset_ids(bob), vec![id]);
+		assert_eq!(Assets::token_details(id), TokenPair::new(
 			token.clone(),
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::account_assets((0, TokenType::VToken, 1)).balance, 9000);
-		assert_eq!(Assets::account_assets((0, TokenType::VToken, 2)).balance, 1000);
+		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 9000);
+		assert_eq!(Assets::account_assets((id, TokenType::VToken, bob)).balance, 1000);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Created(0, token_pair)),
+				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Issued(0, TokenType::VToken, 1, 10000)),
+				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Transferred(0, TokenType::VToken, 1, 2, 1000)),
+				event: TestEvent::assets(RawEvent::Transferred(id, TokenType::VToken, alice, bob, 1000)),
 				topics: vec![],
 			}
 		]);
@@ -203,29 +215,31 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 		};
 		let token_pair = TokenPair::new(token.clone(), token.clone());
 
+		let id = Assets::next_asset_id();
+		let alice = 1;
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::VToken, 1, 10000));
-		assert_ok!(Assets::destroy(Origin::signed(1), 0, TokenType::VToken, 1000));
-		assert_eq!(Assets::token_details(0), TokenPair::new(
+		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::VToken, alice, 10000));
+		assert_ok!(Assets::destroy(Origin::signed(alice), id, TokenType::VToken, 1000));
+		assert_eq!(Assets::token_details(id), TokenPair::new(
 			token.clone(),
 			Token { total_supply: 9000, ..token.clone() }
 		));
-		assert_eq!(Assets::account_assets((0, TokenType::VToken, 1)).balance, 9000);
+		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 9000);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Created(0, token_pair)),
+				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Issued(0, TokenType::VToken, 1, 10000)),
+				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
-				event: TestEvent::assets(RawEvent::Destroyed(0, TokenType::VToken, 1, 1000)),
+				event: TestEvent::assets(RawEvent::Destroyed(id, TokenType::VToken, alice, 1000)),
 				topics: vec![],
 			}
 		]);
@@ -236,7 +250,8 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 fn destroying_asset_balance_with_zero_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::VToken, 1, 100));
+		let id = Assets::next_asset_id();
+		assert_ok!(Assets::issue(Origin::ROOT, id - 1, TokenType::VToken, 1, 100));
 		assert_noop!(
 			Assets::destroy(Origin::signed(1), 0, TokenType::VToken, 200),
 			AssetsError::InvalidBalanceForTransaction

@@ -39,7 +39,7 @@ fn update_rate_multiple_times() {
 		let change_times = 3;
 		run_to_block(change_times + 1);
 		// 20 - 2 * 3 = 14
-		assert_eq!(Exchange::exchange_rate(vtoken_id).1, exchange_rate - update_rate * change_times);
+		assert_eq!(Exchange::exchange_rate(vtoken_id), exchange_rate - update_rate * change_times);
 	});
 }
 
@@ -60,7 +60,7 @@ fn update_rate_multiple_times_until_overflow() {
 		let change_times = 3;
 		run_to_block(change_times + 20);
 		// 20 - 2 * 3 = 14
-		assert_eq!(Exchange::exchange_rate(vtoken_id).1, 0);
+		assert_eq!(Exchange::exchange_rate(vtoken_id), 0);
 	});
 }
 
@@ -92,7 +92,7 @@ fn exchange_token_to_vtoken_should_be_ok() {
 		let bob_token_exchange = 10;
 		assert_ok!(Exchange::exchange_token_to_vtoken(Origin::signed(bob), bob_token_exchange, vtoken_id));
 		assert_eq!(<assets::AccountAssets<Test>>::get((token_id, TokenType::Token, bob)).balance, bob_token_issued - bob_token_exchange); // check bob's token change
-		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::VToken, bob)).balance, bob_vtoken_issued + bob_token_exchange * rate); // check bob's token change
+		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::VToken, bob)).balance, bob_vtoken_issued + bob_token_exchange * rate as u128); // check bob's token change
 	});
 }
 
@@ -124,6 +124,6 @@ fn exchange_vtoken_to_token_should_be_ok() {
 		let bob_vtoken_exchange = 10;
 		assert_ok!(Exchange::exchange_vtoken_to_token(Origin::signed(bob), bob_vtoken_exchange, vtoken_id));
 		assert_eq!(<assets::AccountAssets<Test>>::get((token_id, TokenType::VToken, bob)).balance, bob_vtoken_issued - bob_vtoken_exchange); // check bob's token change
-		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::Token, bob)).balance, bob_token_issued + bob_vtoken_exchange / rate); // check bob's token change
+		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::Token, bob)).balance, bob_token_issued + bob_vtoken_exchange / rate as u128); // check bob's token change
 	});
 }
