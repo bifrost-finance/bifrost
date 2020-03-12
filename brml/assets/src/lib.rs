@@ -216,7 +216,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Income> for Module<T> {
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> (T::AssetId, TokenPair<T::Balance>) {
 		let id = Self::next_asset_id();
 		<NextAssetId<T>>::mutate(|id| *id += One::one());
@@ -316,6 +316,14 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 
 	fn token_exists(asset_id: T::AssetId) -> bool {
 		<Tokens<T>>::exists(&asset_id)
+	}
+
+	fn get_account_asset(
+		asset_id: &T::AssetId,
+		token_type: TokenType,
+		target: &T::AccountId,
+	) -> AccountAsset<T::Balance, T::Cost, T::Income> {
+		<AccountAssets<T>>::get((&asset_id, token_type, &target))
 	}
 }
 

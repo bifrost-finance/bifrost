@@ -160,7 +160,7 @@ pub trait Trait: pallet_authorship::Trait + assets::Trait {
 	/// Bridge asset from another blockchain.
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, <Self as assets::Trait>::Balance>;
 
-	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance>;
+	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance, <Self as assets::Trait>::Cost, <Self as assets::Trait>::Income>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;

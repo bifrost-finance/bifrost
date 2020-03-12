@@ -34,7 +34,7 @@ pub trait Trait: assets::Trait {
 	type VTokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance>;
 	type InVariantPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance>;
 
-	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance>;
+	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance, <Self as assets::Trait>::Cost, <Self as assets::Trait>::Income>;
 
 	/// event
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;

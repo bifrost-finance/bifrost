@@ -585,6 +585,10 @@ impl brml_exchange::Trait for Runtime {
 	type ExchangeRate = ExchangeRate;
 	type RatePerBlock = RatePerBlock;
 	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
 }
 
 type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
