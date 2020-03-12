@@ -88,6 +88,10 @@ impl crate::Trait for Test {
 	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
+	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
 }
 
 pub type Exchange = crate::Module<Test>;

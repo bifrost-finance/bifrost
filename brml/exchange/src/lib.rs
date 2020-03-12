@@ -23,12 +23,24 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, FetchExchangeRate, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
-pub trait Trait: assets::Trait {
+pub trait Trait: frame_system::Trait {
 	/// exchange rate
-	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance>;
-	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance> + Into<Self::ExchangeRate>;
+	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::Balance>;
+	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::Balance> + Into<Self::ExchangeRate>;
 
-	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance>;
+	/// The arithmetic type of asset identifier.
+	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record balances.
+	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record costs.
+	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record incomes.
+	type Income: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
 	/// event
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
@@ -61,9 +73,9 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Exchange {
 		/// exchange rate between two tokens, vtoken => (token, exchange_rate)
-		ExchangeRate get(fn exchange_rate): linked_map hasher(blake2_256) <T as assets::Trait>::AssetId => (<T as assets::Trait>::AssetId, T::ExchangeRate);
+		ExchangeRate get(fn exchange_rate): linked_map hasher(blake2_256) T::AssetId => (T::AssetId, T::ExchangeRate);
 		/// change rate per block, vtoken => (token, rate_per_block)
-		RatePerBlock get(fn rate_per_block): linked_map hasher(blake2_256) <T as assets::Trait>::AssetId => (<T as assets::Trait>::AssetId, T::RatePerBlock);
+		RatePerBlock get(fn rate_per_block): linked_map hasher(blake2_256) T::AssetId => (T::AssetId, T::RatePerBlock);
 	}
 }
 
@@ -75,7 +87,7 @@ decl_module! {
 
 		fn set_exchange_rate(
 			origin,
-			vtoken_id: <T as assets::Trait>::AssetId,
+			vtoken_id: T::AssetId,
 			exchange_rate: T::ExchangeRate
 		) {
 			ensure_root(origin)?;
@@ -90,7 +102,7 @@ decl_module! {
 
 		fn set_rate_per_block(
 			origin,
-			vtoken_id: <T as assets::Trait>::AssetId,
+			vtoken_id: T::AssetId,
 			rate_per_block: T::RatePerBlock
 		) {
 			ensure_root(origin)?;
@@ -106,7 +118,7 @@ decl_module! {
 		fn exchange_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId
+			vtoken_id: T::AssetId
 		) {
 			let exchanger = ensure_signed(origin)?;
 
@@ -114,7 +126,7 @@ decl_module! {
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
-			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &exchanger)).balance;
+			let token_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::Token, &exchanger).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
@@ -136,14 +148,14 @@ decl_module! {
 		fn exchange_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId,
+			vtoken_id: T::AssetId,
 		) {
 			let exchanger = ensure_signed(origin)?;
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
-			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &exchanger)).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &exchanger).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
@@ -177,7 +189,7 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-	pub fn get_exchange(vtoken_id: <T as assets::Trait>::AssetId) -> T::ExchangeRate {
+	pub fn get_exchange(vtoken_id: T::AssetId) -> T::ExchangeRate {
 		let rate = <ExchangeRate<T>>::get(vtoken_id);
 
 		rate.1

@@ -154,7 +154,7 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 	fn token_clearing(_: A, _: BN, _: B, _: B) {}
 }
 
-pub trait AssetTrait<AssetId, AccountId, Balance> {
+pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> (AssetId, TokenPair<Balance>);
 
 	fn asset_issue(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
@@ -166,9 +166,13 @@ pub trait AssetTrait<AssetId, AccountId, Balance> {
 	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<AssetId>;
 
 	fn token_exists(asset_id: AssetId) -> bool;
+
+	fn get_account_asset(asset_id: &AssetId, token_type: TokenType, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
 }
 
-impl<AssetId: Default, AccountId, Balance: Default> AssetTrait<AssetId, AccountId, Balance> for () {
+impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
+	where AssetId: Default, AccountId: Default, Balance: Default, Cost: Default, Income: Default
+{
 	fn asset_create(_: Vec<u8>, _: u16) -> (AssetId, TokenPair<Balance>) { Default::default() }
 
 	fn asset_issue(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
@@ -180,6 +184,8 @@ impl<AssetId: Default, AccountId, Balance: Default> AssetTrait<AssetId, AccountI
 	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<AssetId> { Default::default() }
 
 	fn token_exists(_: AssetId) -> bool { Default::default() }
+
+	fn get_account_asset(_: &AssetId, _: TokenType, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
 }
 
 /// Asset redeem handler
