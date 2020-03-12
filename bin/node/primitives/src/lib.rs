@@ -164,6 +164,8 @@ pub trait AssetTrait<AssetId, AccountId, Balance> {
 	fn asset_destroy(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
 
 	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<AssetId>;
+
+	fn token_exists(asset_id: AssetId) -> bool;
 }
 
 impl<AssetId: Default, AccountId, Balance: Default> AssetTrait<AssetId, AccountId, Balance> for () {
@@ -175,7 +177,9 @@ impl<AssetId: Default, AccountId, Balance: Default> AssetTrait<AssetId, AccountI
 
 	fn asset_destroy(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
 
-	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<AssetId> { None }
+	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<AssetId> { Default::default() }
+
+	fn token_exists(_: AssetId) -> bool { Default::default() }
 }
 
 /// Asset redeem handler

@@ -313,6 +313,10 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 		}
 		None
 	}
+
+	fn token_exists(asset_id: T::AssetId) -> bool {
+		<Tokens<T>>::exists(&asset_id)
+	}
 }
 
 // The main implementation block for the module.
