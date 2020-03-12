@@ -28,7 +28,7 @@ use frame_support::{
 };
 use sp_core::u32_trait::{_1, _2, _3, _4};
 use node_primitives::{
-	AccountId, AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Signature,
+	AccountId, AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price, Signature,
 	BridgeAssetTo, AssetId, AssetCreate, Precision, TokenType, ExchangeRate, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
@@ -575,7 +575,12 @@ impl brml_assets::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
+	type Price = Price;
+	type Cost = Cost;
+	type Income = Income;
+	type Exchange = ExchangeRate;
 	type AssetRedeem = ();
+	type FetchExchangeRate = Exchange;
 }
 
 impl brml_exchange::Trait for Runtime {

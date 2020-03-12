@@ -79,21 +79,21 @@ fn issuing_asset_units_to_issuer_should_work() {
 			token.clone(),
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::balances((0, TokenType::VToken, 1)), 10000);
+		assert_eq!(Assets::account_assets((0, TokenType::VToken, 1)).balance, 10000);
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::Token, 2, 20000));
 		assert_eq!(Assets::token_details(0), TokenPair::new(
 			Token { total_supply: 20000, ..token.clone() },
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::balances((0, TokenType::Token, 2)), 20000);
+		assert_eq!(Assets::account_assets((0, TokenType::Token, 2)).balance, 20000);
 
 		assert_ok!(Assets::issue(Origin::ROOT, 0, TokenType::Token, 2, 30000));
 		assert_eq!(Assets::token_details(0), TokenPair::new(
 			Token { total_supply: 50000, ..token.clone() },
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::balances((0, TokenType::Token, 2)), 50000);
+		assert_eq!(Assets::account_assets((0, TokenType::Token, 2)).balance, 50000);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
@@ -148,8 +148,8 @@ fn transferring_amount_above_available_balance_should_work() {
 			token.clone(),
 			Token { total_supply: 10000, ..token.clone() }
 		));
-		assert_eq!(Assets::balances((0, TokenType::VToken, 1)), 9000);
-		assert_eq!(Assets::balances((0, TokenType::VToken, 2)), 1000);
+		assert_eq!(Assets::account_assets((0, TokenType::VToken, 1)).balance, 9000);
+		assert_eq!(Assets::account_assets((0, TokenType::VToken, 2)).balance, 1000);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
@@ -210,7 +210,7 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 			token.clone(),
 			Token { total_supply: 9000, ..token.clone() }
 		));
-		assert_eq!(Assets::balances((0, TokenType::VToken, 1)), 9000);
+		assert_eq!(Assets::account_assets((0, TokenType::VToken, 1)).balance, 9000);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {

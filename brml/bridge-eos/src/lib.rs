@@ -403,7 +403,7 @@ decl_module! {
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = <assets::Balances<T>>::get(origin_account);
+			let balance = <assets::AccountAssets<T>>::get(origin_account).balance;
 			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
 			let amount = amount.div(<T as assets::Trait>::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
@@ -547,7 +547,7 @@ impl<T: Trait> Module<T> {
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == from {
 			let origin_account = (vtoken_id, TokenType::VToken, &target);
-			let vtoken_balances = <assets::Balances<T>>::get(origin_account);
+			let vtoken_balances = <assets::AccountAssets<T>>::get(origin_account).balance;
 			if vtoken_balances.lt(&vtoken_balances) {
 				debug::info!("origin account balance must be greater than or equal to the transfer amount.");
 				return Ok(())

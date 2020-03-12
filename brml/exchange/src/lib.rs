@@ -20,7 +20,7 @@ mod tests;
 
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::TokenType;
+use node_primitives::{FetchExchangeRate, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
 pub trait Trait: assets::Trait {
@@ -112,7 +112,7 @@ decl_module! {
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
-			let token_balances = <assets::Balances<T>>::get((&token_id, TokenType::Token, &exchanger));
+			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &exchanger)).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
@@ -124,7 +124,7 @@ decl_module! {
 			ensure!(!rate.1.is_zero(), Error::<T>::InvalidExchangeRate);
 			let vtokens_buy = token_amount.saturating_mul(rate.1.into());
 
-
+			// transfer
 			assets::Module::<T>::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
 			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, exchanger, vtokens_buy);
 
@@ -141,7 +141,7 @@ decl_module! {
 			// check asset_id exist or not
 			ensure!(<assets::Tokens<T>>::exists(vtoken_id), Error::<T>::TokenNotExist);
 
-			let vtoken_balances = <assets::Balances<T>>::get((&vtoken_id, TokenType::VToken, &exchanger));
+			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &exchanger)).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
@@ -177,6 +177,14 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	pub fn get_exchange(vtoken_id: <T as assets::Trait>::AssetId) -> T::ExchangeRate {
 		let rate = <ExchangeRate<T>>::get(vtoken_id);
+
+		rate.1
+	}
+}
+
+impl<T: Trait> FetchExchangeRate<T::AssetId, T::ExchangeRate> for Module<T> {
+	fn fetch_exchange_rate(asset_id: T::AssetId) -> T::ExchangeRate {
+		let rate = <ExchangeRate<T>>::get(asset_id);
 
 		rate.1
 	}
