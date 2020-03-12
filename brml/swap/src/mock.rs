@@ -82,6 +82,7 @@ impl crate::Trait for Test {
 	type TokenPool = u64;
 	type VTokenPool = u64;
 	type InVariantPool = u64;
+	type AssetTrait = Assets;
 }
 
 impl assets::Trait for Test {
@@ -98,6 +99,7 @@ impl assets::Trait for Test {
 
 pub type Swap = crate::Module<Test>;
 pub type System = frame_system::Module<Test>;
+pub type Assets = assets::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {

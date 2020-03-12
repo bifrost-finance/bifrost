@@ -20,13 +20,15 @@ mod tests;
 
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{FetchExchangeRate, TokenType};
+use node_primitives::{AssetTrait, FetchExchangeRate, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
 pub trait Trait: assets::Trait {
 	/// exchange rate
 	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance>;
 	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance> + Into<Self::ExchangeRate>;
+
+	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance>;
 
 	/// event
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
@@ -125,8 +127,8 @@ decl_module! {
 			let vtokens_buy = token_amount.saturating_mul(rate.1.into());
 
 			// transfer
-			assets::Module::<T>::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
-			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, exchanger, vtokens_buy);
+			T::AssetTrait::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
+			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, exchanger, vtokens_buy);
 
 			Self::deposit_event(Event::ExchangeTokenToVTokenSuccess);
 		}
@@ -154,8 +156,8 @@ decl_module! {
 			ensure!(!rate.1.is_zero(), Error::<T>::InvalidExchangeRate);
 			let tokens_buy = vtoken_amount / rate.1.into();
 
-			assets::Module::<T>::asset_destroy(vtoken_id, TokenType::VToken, exchanger.clone(), vtoken_amount);
-			assets::Module::<T>::asset_issue(token_id, TokenType::Token, exchanger, tokens_buy);
+			T::AssetTrait::asset_destroy(vtoken_id, TokenType::VToken, exchanger.clone(), vtoken_amount);
+			T::AssetTrait::asset_issue(token_id, TokenType::Token, exchanger, tokens_buy);
 
 			Self::deposit_event(Event::ExchangerVTokenToTokenSuccess);
 		}
