@@ -158,24 +158,38 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 	fn token_clearing(_: A, _: BN, _: B, _: B) {}
 }
 
-/// Asset create handler
-pub trait AssetCreate<AssetId, Balance> {
-	/// Asset create
+pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> (AssetId, TokenPair<Balance>);
-}
 
-impl<A: Default, B: Default> AssetCreate<A, B> for () {
-	fn asset_create(_: Vec<u8>, _: u16) -> (A, TokenPair<B>) { Default::default() }
-}
-
-/// Asset issue handler
-pub trait AssetIssue<AssetId, AccountId, Balance> {
-	/// Asset issue
 	fn asset_issue(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
+
+	fn asset_redeem(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
+
+	fn asset_destroy(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
+
+	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<AssetId>;
+
+	fn token_exists(asset_id: AssetId) -> bool;
+
+	fn get_account_asset(asset_id: &AssetId, token_type: TokenType, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
 }
 
-impl<A, AC, B> AssetIssue<A, AC, B> for () {
-	fn asset_issue(_: A, _: TokenType, _: AC, _: B) {}
+impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
+	where AssetId: Default, AccountId: Default, Balance: Default, Cost: Default, Income: Default
+{
+	fn asset_create(_: Vec<u8>, _: u16) -> (AssetId, TokenPair<Balance>) { Default::default() }
+
+	fn asset_issue(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
+
+	fn asset_redeem(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
+
+	fn asset_destroy(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
+
+	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<AssetId> { Default::default() }
+
+	fn token_exists(_: AssetId) -> bool { Default::default() }
+
+	fn get_account_asset(_: &AssetId, _: TokenType, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
 }
 
 /// Asset redeem handler

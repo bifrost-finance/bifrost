@@ -36,7 +36,7 @@ use sp_runtime::{
 	traits::{Member, SaturatedConversion, SimpleArithmetic},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
-		TransactionValidity, ValidTransaction, TransactionValidityError
+		TransactionValidity, ValidTransaction
 	},
 };
 use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
@@ -47,7 +47,7 @@ use frame_system::{
 };
 
 use node_primitives::{
-	AssetCreate, AssetIssue, AssetRedeem, BridgeAssetBalance, BridgeAssetFrom,
+	AssetRedeem, AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
 	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenType,
 };
 use transaction::TxOut;
@@ -159,6 +159,8 @@ pub trait Trait: pallet_authorship::Trait + assets::Trait {
 
 	/// Bridge asset from another blockchain.
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, <Self as assets::Trait>::Balance>;
+
+	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance, <Self as assets::Trait>::Cost, <Self as assets::Trait>::Income>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -397,7 +399,7 @@ decl_module! {
 			let eos_amount = amount;
 
 			// check vtoken id exist or not
-			ensure!(<assets::Tokens<T>>::exists(vtoken_id), "this token doesn't exist.");
+			ensure!(T::AssetTrait::token_exists(vtoken_id), "this token doesn't exist.");
 
 			let token = <assets::Tokens<T>>::get(vtoken_id).token;
 			let symbol_code = token.symbol;
@@ -414,7 +416,7 @@ decl_module! {
 				amount: eos_amount
 			};
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				assets::Module::<T>::asset_redeem(vtoken_id, TokenType::VToken, origin, amount, None);
+				T::AssetTrait::asset_redeem(vtoken_id, TokenType::VToken, origin, amount);
 				Self::deposit_event(Event::TransactionSuccess);
 			} else {
 				Self::deposit_event(Event::TransactionFail);
@@ -536,10 +538,10 @@ impl<T: Trait> Module<T> {
 		let vtoken_balances = <T as assets::Trait>::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let vtoken_id = match assets::Module::<T>::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
+		let vtoken_id = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
 			Some(id) => id,
 			None => {
-				assets::Module::<T>::asset_create(symbol_code, symbol_precise.into()).0
+				T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).0
 			}
 		};
 
@@ -553,14 +555,14 @@ impl<T: Trait> Module<T> {
 				return Ok(())
 			}
 
-			assets::Module::<T>::asset_redeem(vtoken_id, TokenType::VToken, target, vtoken_balances, None);
+			T::AssetTrait::asset_redeem(vtoken_id, TokenType::VToken, target, vtoken_balances);
 			return Ok(());
 		}
 
 		// deposit
 		let to = action_transfer.to.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == to {
-			assets::Module::<T>::asset_issue(vtoken_id, TokenType::VToken, target, vtoken_balances);
+			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, target, vtoken_balances);
 			return Ok(());
 		}
 

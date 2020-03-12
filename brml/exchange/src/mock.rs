@@ -50,12 +50,12 @@ parameter_types! {
 
 impl assets::Trait for Test {
 	type Event = TestEvent;
-	type Balance = u128;
+	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u128;
-	type Income = u128;
-	type Exchange = u128;
+	type Cost = u64;
+	type Income = u64;
+	type Exchange = u64;
 	type AssetRedeem = ();
 	type FetchExchangeRate = ();
 }
@@ -87,10 +87,16 @@ impl crate::Trait for Test {
 	type ExchangeRate = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;
+	type AssetTrait = Assets;
+	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
 }
 
 pub type Exchange = crate::Module<Test>;
 pub type System = system::Module<Test>;
+pub type Assets = assets::Module<Test>;
 
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
