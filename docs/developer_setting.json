@@ -80,6 +80,7 @@
   "TxOut": {},
   "ExchangeRate": "u64",
   "RatePerBlock": "u64",
+  "Fee": "u64",
   "TokenPool": "Balance",
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
