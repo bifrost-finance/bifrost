@@ -5,7 +5,6 @@ authors = ["Dengjianping <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-assets = { package = "brml-assets", path = "../assets", default-features = false }
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", default-features = false }
@@ -27,12 +26,12 @@ serde_json = { version = "1.0.48", default-features = false, features = ["alloc"
 lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", default-features = false, features = ["float"]}
 
 [dev-dependencies]
+assets = { package = "brml-assets", path = "../assets" }
 substrate-offchain = { package = "sp-offchain", git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
 std = [
-    "assets/std",
 	"codec/std",
 	"eos-chain/std",
 	"eos-keys/std",

@@ -370,6 +370,10 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 	) -> AccountAsset<T::Balance, T::Cost, T::Income> {
 		<AccountAssets<T>>::get((&asset_id, token_type, &target))
 	}
+
+	fn get_token(asset_id: &T::AssetId) -> TokenPair<T::Balance> {
+		<Tokens<T>>::get(&asset_id)
+	}
 }
 
 // The main implementation block for the module.

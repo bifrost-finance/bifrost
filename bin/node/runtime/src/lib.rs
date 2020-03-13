@@ -596,6 +596,9 @@ impl brml_bridge_eos::Trait for Runtime {
 	type AuthorityId = BridgeEosId;
 	type Event = Event;
 	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
 	type Precision = Precision;
 	type BridgeAssetFrom = ();
 	type Call = Call;
