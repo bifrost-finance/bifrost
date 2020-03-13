@@ -47,7 +47,7 @@ use frame_system::{
 };
 
 use node_primitives::{
-	AssetRedeem, AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
+	AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
 	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenType,
 };
 use transaction::TxOut;
@@ -144,7 +144,7 @@ impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
 
 pub type VersionId = u32;
 
-pub trait Trait: pallet_authorship::Trait + assets::Trait {
+pub trait Trait: pallet_authorship::Trait {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
 		+ From<<Self as frame_system::Trait>::AccountId>;
@@ -154,13 +154,22 @@ pub trait Trait: pallet_authorship::Trait + assets::Trait {
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
 
+	/// The arithmetic type of asset identifier.
+	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record costs.
+	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record incomes.
+	type Income: Member + Parameter + SimpleArithmetic + Default + Copy;
+
 	/// The units in which we record asset precision.
 	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
 
 	/// Bridge asset from another blockchain.
-	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, <Self as assets::Trait>::Balance>;
+	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
 
-	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance, <Self as assets::Trait>::Cost, <Self as assets::Trait>::Income>;
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -391,23 +400,22 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			#[compact] amount: <T as assets::Trait>::Balance,
+			#[compact] amount: T::Balance,
 			vtoken_id: T::AssetId
 		) {
 			let origin = system::ensure_signed(origin)?;
-			let origin_account = (vtoken_id, TokenType::VToken, &origin);
 			let eos_amount = amount;
 
 			// check vtoken id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), "this token doesn't exist.");
 
-			let token = <assets::Tokens<T>>::get(vtoken_id).token;
+			let token = T::AssetTrait::get_token(&vtoken_id).token;
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = <assets::AccountAssets<T>>::get(origin_account).balance;
+			let balance = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &origin).balance;
 			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-			let amount = amount.div(<T as assets::Trait>::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
@@ -433,14 +441,14 @@ decl_module! {
 
 			// Only send messages if we are a potential validator.
 			if sp_io::offchain::is_validator() {
-				debug::info!(
+				debug::debug!(
 					target: "bridge-eos",
 					"Is validator at {:?}.",
 					now_block,
 				);
 				Self::offchain(now_block);
 			} else {
-				debug::info!(
+				debug::debug!(
 					target: "bridge-eos",
 					"Skipping send tx at {:?}. Not a validator.",
 					now_block,
@@ -535,7 +543,7 @@ impl<T: Trait> Module<T> {
 		let symbol_precise = symbol.precision();
 
 		let token_balances = action_transfer.quantity.amount as usize;
-		let vtoken_balances = <T as assets::Trait>::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
+		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
 		let vtoken_id = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
@@ -548,8 +556,7 @@ impl<T: Trait> Module<T> {
 		// withdraw
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == from {
-			let origin_account = (vtoken_id, TokenType::VToken, &target);
-			let vtoken_balances = <assets::AccountAssets<T>>::get(origin_account).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &target).balance;
 			if vtoken_balances.lt(&vtoken_balances) {
 				debug::info!("origin account balance must be greater than or equal to the transfer amount.");
 				return Ok(())
@@ -775,9 +782,9 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetTo<T::Precision, <T as assets::Trait>::Balance> for Module<T> {
+impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
 	type Error = crate::Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, <T as assets::Trait>::Balance>) -> Result<(), Self::Error> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) -> Result<(), Self::Error> {
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
 		Ok(())

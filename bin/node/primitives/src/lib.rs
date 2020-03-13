@@ -172,6 +172,8 @@ pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	fn token_exists(asset_id: AssetId) -> bool;
 
 	fn get_account_asset(asset_id: &AssetId, token_type: TokenType, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
+
+	fn get_token(asset_id: &AssetId) -> TokenPair<Balance>;
 }
 
 impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
@@ -190,6 +192,8 @@ impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, B
 	fn token_exists(_: AssetId) -> bool { Default::default() }
 
 	fn get_account_asset(_: &AssetId, _: TokenType, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
+
+	fn get_token(_: &AssetId) -> TokenPair<Balance> { Default::default() }
 }
 
 /// Asset redeem handler

@@ -114,6 +114,9 @@ impl crate::Trait for Test {
 	type AuthorityId = UintAuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
 	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
