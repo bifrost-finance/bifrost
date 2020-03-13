@@ -25,16 +25,28 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, TokenType};
 use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
 
-pub trait Trait: assets::Trait {
+pub trait Trait: frame_system::Trait {
 	/// fee
 	type Fee: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::TokenPool> + Into<Self::VTokenPool>;
 
 	/// pool size
-	type TokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + Into<<Self as assets::Trait>::Balance> + From<<Self as assets::Trait>::Balance>;
-	type VTokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance>;
-	type InVariantPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<<Self as assets::Trait>::Balance> + Into<<Self as assets::Trait>::Balance>;
+	type TokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::Balance> + From<Self::Balance>;
+	type VTokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance> + Into<Self::Balance>;
+	type InVariantPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance> + Into<Self::Balance>;
 
-	type AssetTrait: AssetTrait<<Self as assets::Trait>::AssetId, Self::AccountId, <Self as assets::Trait>::Balance, <Self as assets::Trait>::Cost, <Self as assets::Trait>::Income>;
+	/// The arithmetic type of asset identifier.
+	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record balances.
+	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record costs.
+	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	/// The units in which we record incomes.
+	type Income: Member + Parameter + SimpleArithmetic + Default + Copy;
+
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
 	/// event
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
@@ -73,10 +85,10 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
 		/// fee
-		Fee: map hasher(blake2_256) <T as assets::Trait>::AssetId => T::Fee;
+		Fee: map hasher(blake2_256) T::AssetId => T::Fee;
 
 		/// the value must meet the requirement: InVariantPool = TokenPool * VTokenPool
-		InVariant: map hasher(blake2_256) <T as assets::Trait>::AssetId => (T::TokenPool, T::VTokenPool, T::InVariantPool);
+		InVariant: map hasher(blake2_256) T::AssetId => (T::TokenPool, T::VTokenPool, T::InVariantPool);
 	}
 }
 
@@ -88,7 +100,7 @@ decl_module! {
 
 		fn set_fee(
 			origin,
-			vtoken_id: <T as assets::Trait>::AssetId,
+			vtoken_id: T::AssetId,
 			fee: T::Fee
 		) {
 			ensure_root(origin)?;
@@ -107,7 +119,7 @@ decl_module! {
 			origin,
 			provider: T::AccountId,
 			#[compact] token_pool: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId,
+			vtoken_id: T::AssetId,
 			#[compact] vtoken_pool: T::Balance
 		) {
 			// only root user has the privilidge to add liquidity
@@ -119,10 +131,10 @@ decl_module! {
 			let token_id = vtoken_id;
 
 			// check the balance
-			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &provider)).balance;
+			let token_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::Token, &provider).balance;
 			ensure!(token_balances >= token_pool, Error::<T>::InvalidBalanceForTransaction);
 
-			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &provider)).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &provider).balance;
 			ensure!(vtoken_balances >= vtoken_pool, Error::<T>::InvalidBalanceForTransaction);
 
 			// destroy balances from both tokens
@@ -143,7 +155,7 @@ decl_module! {
 		fn remove_liquidity(
 			origin,
 			provider: T::AccountId,
-			vtoken_id: <T as assets::Trait>::AssetId
+			vtoken_id: T::AssetId
 		) {
 			// only root user has the privilidge to remove liquidity
 			ensure_root(origin)?;
@@ -175,7 +187,7 @@ decl_module! {
 		fn swap_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId
+			vtoken_id: T::AssetId
 		) {
 			ensure!(!vtoken_amount.is_zero(), Error::<T>::InvalidBalanceForTransaction);
 			let sender = ensure_signed(origin)?;
@@ -184,7 +196,7 @@ decl_module! {
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 
 			// check there's enough balances for transaction
-			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &sender)).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &sender).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			let invariant = <InVariant<T>>::get(vtoken_id);
@@ -223,7 +235,7 @@ decl_module! {
 		fn swap_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
-			vtoken_id: <T as assets::Trait>::AssetId
+			vtoken_id: T::AssetId
 		) {
 			ensure!(!token_amount.is_zero(), Error::<T>::InvalidBalanceForTransaction);
 			let sender = ensure_signed(origin)?;
@@ -233,7 +245,7 @@ decl_module! {
 			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
-			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &sender)).balance;
+			let token_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::Token, &sender).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			let invariant = <InVariant<T>>::get(vtoken_id);

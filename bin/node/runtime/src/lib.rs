@@ -613,6 +613,10 @@ impl brml_swap::Trait for Runtime {
 	type VTokenPool = Balance;
 	type InVariantPool = Balance;
 	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
 }
 
 impl example::Trait for Runtime {
