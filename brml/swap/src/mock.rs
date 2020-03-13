@@ -83,6 +83,10 @@ impl crate::Trait for Test {
 	type VTokenPool = u64;
 	type InVariantPool = u64;
 	type AssetTrait = Assets;
+	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
 }
 
 impl assets::Trait for Test {

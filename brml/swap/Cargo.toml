@@ -5,7 +5,6 @@ authors = ["Dengjianping <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-assets = { package = "brml-assets", path = "../assets", default-features = false }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 frame-support = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 frame-system = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
@@ -13,13 +12,13 @@ node-primitives = { path = "../../bin/node/primitives", default-features = false
 sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
+assets = { package = "brml-assets", path = "../assets" }
 sp-core = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 sp-io = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
 std = [
-    "assets/std",
 	"codec/std",
 	"frame-support/std",
 	"frame-system/std",
