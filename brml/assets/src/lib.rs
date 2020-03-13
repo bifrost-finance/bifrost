@@ -143,7 +143,7 @@ decl_storage! {
 				// initialize token
 				let token = Token::new(TOKEN_LIST[i as usize].clone(), token_precision[i as usize], 0.into());
 				let vtoken = Token::new(VTOKEN_LIST[i as usize].clone(), vtoken_precision[i as usize], 0.into());
-				<Tokens<T>>::insert(T::AssetId::from(i), TokenPair::new(vtoken, token));
+				<Tokens<T>>::insert(T::AssetId::from(i), TokenPair::new(token, vtoken));
 
 				// initialize price
 				<Prices<T>>::insert((T::AssetId::from(i), TokenType::Token), T::Price::from(0u32));
@@ -386,10 +386,20 @@ impl<T: Trait> Module<T> {
 			asset.balance = asset.balance.saturating_sub(amount);
 		});
 
-		let to_asset = (asset_id, token_type, to);
-		<AccountAssets<T>>::mutate(&to_asset, |asset| {
+		let to_asset = (asset_id, token_type, &to);
+		<AccountAssets<T>>::mutate(to_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
 		});
+
+		// save asset id for this account
+		if <AccountAssetIds<T>>::exists(&to) {
+			<AccountAssetIds<T>>::mutate(&to, |ids| {
+				// do not push a duplicated asset id to list
+				if !ids.contains(&asset_id) { ids.push(asset_id); }
+			});
+		} else {
+			<AccountAssetIds<T>>::insert(&to, vec![asset_id]);
+		}
 	}
 
 	pub fn asset_balances(asset_id: T::AssetId, token_type: TokenType, target: T::AccountId) -> u64 {

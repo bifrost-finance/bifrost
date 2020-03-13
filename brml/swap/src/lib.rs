@@ -73,12 +73,10 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
 		/// fee
-		Fee: double_map hasher(blake2_256) <T as assets::Trait>::AssetId, hasher(twox_128) <T as assets::Trait>::AssetId
-			=> T::Fee;
+		Fee: map hasher(blake2_256) <T as assets::Trait>::AssetId => T::Fee;
 
 		/// the value must meet the requirement: InVariantPool = TokenPool * VTokenPool
-		InVariant: double_map hasher(blake2_256) <T as assets::Trait>::AssetId, hasher(twox_128) <T as assets::Trait>::AssetId
-			=> (T::TokenPool, T::VTokenPool, T::InVariantPool);
+		InVariant: map hasher(blake2_256) <T as assets::Trait>::AssetId => (T::TokenPool, T::VTokenPool, T::InVariantPool);
 	}
 }
 
@@ -97,12 +95,10 @@ decl_module! {
 			ensure!(!fee.is_zero(), Error::<T>::InvalidFee);
 
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
-			let token_id = vtoken_id;
-
 			ensure!(fee >= 0.into(), Error::<T>::InvalidFee);
 			ensure!(fee <= 100.into(), Error::<T>::InvalidFee);
 
-			<Fee<T>>::insert(token_id, vtoken_id, fee);
+			<Fee<T>>::insert(vtoken_id, fee);
 
 			Self::deposit_event(Event::UpdateFeeSuccess);
 		}
@@ -139,7 +135,7 @@ decl_module! {
 			let x: T::TokenPool = token_pool.into();
 			let y: T::VTokenPool = vtoken_pool.into();
 
-			<InVariant<T>>::insert(token_id, vtoken_id, (x, y, in_variant));
+			<InVariant<T>>::insert(vtoken_id, (x, y, in_variant));
 
 			Self::deposit_event(Event::AddLiquiditySuccess);
 		}
@@ -154,20 +150,20 @@ decl_module! {
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
-			let token_id = vtoken_id;
 
-			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
+			let invariant = <InVariant<T>>::get(vtoken_id);
 			let current_token_pool: T::Balance = invariant.0.into();
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
 
 			ensure!(current_token_pool.saturating_mul(current_vtoken_pool) == invariant, Error::<T>::InvalidInvariantValue);
 
+			let token_id = vtoken_id;
 			T::AssetTrait::asset_issue(token_id, TokenType::Token, provider.clone(), current_token_pool);
 			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, provider, current_vtoken_pool);
 
 			// update pool
-			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
+			InVariant::<T>::mutate(vtoken_id, |invariant| {
 				invariant.0 = Default::default();
 				invariant.1 = Default::default();
 				invariant.2 = Default::default();
@@ -186,13 +182,12 @@ decl_module! {
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
-			let token_id = vtoken_id;
 
 			// check there's enough balances for transaction
 			let vtoken_balances = <assets::AccountAssets<T>>::get((&vtoken_id, TokenType::VToken, &sender)).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
-			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
+			let invariant = <InVariant<T>>::get(vtoken_id);
 			let current_token_pool: T::Balance = invariant.0.into();
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
@@ -211,11 +206,12 @@ decl_module! {
 
 			// ensure!(new_vtoken_pool * new_token_pool == invariant, "this is an invalid invariant.");
 
+			let token_id = vtoken_id;
 			T::AssetTrait::asset_destroy(vtoken_id, TokenType::VToken, sender.clone(), vtoken_amount);
 			T::AssetTrait::asset_issue(token_id, TokenType::Token, sender, tokens_buy);
 
 			// update pool
-			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
+			InVariant::<T>::mutate(vtoken_id, |invariant| {
 				invariant.0 = new_token_pool.into();
 				invariant.1 = new_vtoken_pool.into();
 				invariant.2 = (new_vtoken_pool.saturating_mul(new_token_pool)).into();
@@ -240,7 +236,7 @@ decl_module! {
 			let token_balances = <assets::AccountAssets<T>>::get((&token_id, TokenType::Token, &sender)).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
-			let invariant = <InVariant<T>>::get(&token_id, &vtoken_id);
+			let invariant = <InVariant<T>>::get(vtoken_id);
 			let current_token_pool: T::Balance = invariant.0.into();
 			let current_vtoken_pool: T::Balance = invariant.1.into();
 			let invariant: T::Balance = invariant.2.into();
@@ -263,7 +259,7 @@ decl_module! {
 			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, sender, vtokens_buy);
 
 			// update pool
-			InVariant::<T>::mutate(&token_id, &vtoken_id, |invariant| {
+			InVariant::<T>::mutate(vtoken_id, |invariant| {
 				invariant.0 = new_token_pool.into();
 				invariant.1 = new_vtoken_pool.into();
 				invariant.2 = (new_vtoken_pool.saturating_mul(new_token_pool)).into();
