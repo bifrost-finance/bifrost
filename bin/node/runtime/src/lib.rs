@@ -619,8 +619,10 @@ impl brml_swap::Trait for Runtime {
 	type Income = Income;
 }
 
-impl example::Trait for Runtime {
+impl brml_oracle::Trait for Runtime {
 	type Event = Event;
+	type Price = Price;
+	type TokenPriceHandler = Assets;
 }
 
 impl chainlink::Trait for Runtime {
@@ -667,8 +669,8 @@ construct_runtime!(
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
 		// chainlink
+		Oracle: brml_oracle::{Module, Call, Storage},
 		Chainlink: chainlink::{Module, Call, Storage, Event<T>},
-		Example: example::{Module, Call, Storage},
 	}
 );
 

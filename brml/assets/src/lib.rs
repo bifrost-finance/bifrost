@@ -23,7 +23,7 @@ use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, One, Zero, Static
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetRedeem, AssetTrait, FetchExchangeRate, Token, TokenPair, TokenType,
+	AccountAsset, AssetRedeem, AssetTrait, FetchExchangeRate, Token, TokenPair, TokenPriceHandler, TokenType,
 };
 
 mod mock;
@@ -373,6 +373,15 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 
 	fn get_token(asset_id: &T::AssetId) -> TokenPair<T::Balance> {
 		<Tokens<T>>::get(&asset_id)
+	}
+}
+
+impl<T: Trait> TokenPriceHandler<T::Price> for Module<T> {
+	fn set_token_price(symbol: Vec<u8>, price: T::Price) {
+		match TOKEN_LIST.iter().position(|s| *s == symbol) {
+			Some(id) => <Prices<T>>::mutate((T::AssetId::from(id as u32), TokenType::Token), |p| *p = price),
+			_ => {},
+		}
 	}
 }
 
