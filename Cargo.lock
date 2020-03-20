@@ -410,17 +410,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-example"
-version = "0.1.0"
-dependencies = [
- "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
- "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
- "pallet-chainlink 2.0.0",
- "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
-]
-
-[[package]]
 name = "brml-exchange"
 version = "0.1.0"
 dependencies = [
@@ -454,6 +443,19 @@ version = "0.1.0"
 dependencies = [
  "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
+name = "brml-oracle"
+version = "0.1.0"
+dependencies = [
+ "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "frame-system 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "node-primitives 0.1.0",
+ "pallet-chainlink 2.0.0",
+ "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-runtime 2.0.0 (git+https://github.com/paritytech/substrate)",
+ "sp-std 2.0.0 (git+https://github.com/paritytech/substrate)",
 ]
 
 [[package]]
@@ -3030,9 +3032,9 @@ dependencies = [
  "brml-assets 0.1.0",
  "brml-assets-rpc-runtime-api 0.1.0",
  "brml-bridge-eos 0.1.0",
- "brml-example 0.1.0",
  "brml-exchange 0.1.0",
  "brml-exchange-rpc-runtime-api 0.1.0",
+ "brml-oracle 0.1.0",
  "brml-swap 0.1.0",
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate)",

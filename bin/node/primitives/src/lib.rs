@@ -53,7 +53,7 @@ pub type Cost = u128;
 /// Income of an asset of an account.
 pub type Income = u128;
 
-/// Price of an asset .
+/// Price of an asset.
 pub type Price = u64;
 
 /// Precision of symbol.
@@ -194,6 +194,14 @@ impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, B
 	fn get_account_asset(_: &AssetId, _: TokenType, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
 
 	fn get_token(_: &AssetId) -> TokenPair<Balance> { Default::default() }
+}
+
+pub trait TokenPriceHandler<Price> {
+	fn set_token_price(symbol: Vec<u8>, price: Price);
+}
+
+impl<Price> TokenPriceHandler<Price> for () {
+	fn set_token_price(_: Vec<u8>, _: Price) {}
 }
 
 /// Asset redeem handler

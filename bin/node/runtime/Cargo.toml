@@ -68,7 +68,7 @@ brml-exchange-rpc-runtime-api = { path = "../../../brml/exchange/rpc/runtime-api
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
 brml-swap = { path = "../../../brml/swap", default-features = false }
 chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
-example = { package = "brml-example", path = "../../../brml/example", default-features = false }
+brml-oracle = { path = "../../../brml/oracle", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.4", package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate" }
@@ -133,5 +133,5 @@ std = [
 	"brml-bridge-eos/std",
 	"brml-swap/std",
 	'chainlink/std',
-	'example/std',
+	'brml-oracle/std',
 ]
