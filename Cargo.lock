@@ -2944,7 +2944,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "brml-assets-rpc 0.1.0",
  "brml-bridge-eos 0.1.0",
@@ -2989,6 +2989,7 @@ dependencies = [
  "sc-telemetry 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sc-transaction-pool 2.0.0 (git+https://github.com/paritytech/substrate)",
  "serde 1.0.104 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.48 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sp-authority-discovery 2.0.0 (git+https://github.com/paritytech/substrate)",
  "sp-consensus 0.8.0 (git+https://github.com/paritytech/substrate)",
