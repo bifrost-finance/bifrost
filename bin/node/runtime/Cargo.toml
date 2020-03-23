@@ -54,7 +54,6 @@ pallet-recovery = { version = "2.0.0-alpha.4", default-features = false, git = "
 pallet-session = { version = "2.0.0-alpha.4", features = ["historical"], git = "https://github.com/paritytech/substrate", default-features = false }
 pallet-session-benchmarking = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false, optional = true }
 pallet-staking = { version = "2.0.0-alpha.4", features = ["migrate"], git = "https://github.com/paritytech/substrate", default-features = false }
-#pallet-staking = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
 pallet-staking-reward-curve = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate" }
 pallet-sudo = { version = "2.0.0-alpha.4", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-society = { version = "2.0.0-alpha.4", default-features = false, git = "https://github.com/paritytech/substrate" }
@@ -140,13 +139,4 @@ std = [
 	"brml-swap/std",
 	'chainlink/std',
 	'brml-oracle/std',
-]
-runtime-benchmarks = [
-	"frame-benchmarking",
-	"pallet-balances/runtime-benchmarks",
-	"pallet-identity/runtime-benchmarks",
-	"pallet-session-benchmarking",
-	"pallet-timestamp/runtime-benchmarks",
-	"pallet-vesting/runtime-benchmarks",
-	"pallet-staking/runtime-benchmarks",
 ]

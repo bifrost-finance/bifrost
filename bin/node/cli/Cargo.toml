@@ -73,7 +73,6 @@ node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
 sc-cli = { version = "0.8.0-alpha.4", optional = true, git = "https://github.com/paritytech/substrate" }
-frame-benchmarking-cli = { version = "2.0.0-alpha.4", optional = true, git = "https://github.com/paritytech/substrate" }
 node-transaction-factory = { version = "0.8.0-alpha.4", optional = true, git = "https://github.com/paritytech/substrate" }
 node-inspect = { optional = true, path = "../inspect" }
 
@@ -113,7 +112,6 @@ build-script-utils = { version = "2.0.0-alpha.4", package = "substrate-build-scr
 structopt = { version = "0.3.8", optional = true }
 node-transaction-factory = { version = "0.8.0-alpha.4", optional = true, git = "https://github.com/paritytech/substrate" }
 node-inspect = { optional = true, path = "../inspect" }
-frame-benchmarking-cli = { version = "2.0.0-alpha.4", optional = true, git = "https://github.com/paritytech/substrate" }
 
 [build-dependencies.sc-cli]
 version = "0.8.0-alpha.4"
@@ -136,7 +134,6 @@ cli = [
 	"node-inspect",
 	"node-transaction-factory",
 	"sc-cli",
-	"frame-benchmarking-cli",
 	"sc-service/rocksdb",
 	"structopt",
 	"vergen",
@@ -147,4 +144,3 @@ wasmtime = [
 	"sc-cli/wasmtime",
 	"sc-service/wasmtime",
 ]
-runtime-benchmarks = [ "node-runtime/runtime-benchmarks" ]
