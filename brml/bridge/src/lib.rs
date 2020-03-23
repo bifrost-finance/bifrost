@@ -19,7 +19,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{decl_event, decl_module, decl_storage, ensure, Parameter};
-use sp_runtime::traits::{Member, SimpleArithmetic, SaturatedConversion};
+use sp_runtime::traits::{Member, AtLeast32Bit, SaturatedConversion};
 use sp_std::prelude::*;
 use system::ensure_root;
 
@@ -44,10 +44,10 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// Assets create handler
 	type AssetCreate: AssetCreate<Self::AssetId, Self::Balance>;
@@ -56,7 +56,7 @@ pub trait Trait: system::Trait {
 	type AssetIssue: AssetIssue<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// The units in which we record asset precision.
-	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// Bridge asset to another blockchain.
 	type BridgeAssetTo: BridgeAssetTo<Self::Precision, Self::Balance>;
@@ -80,16 +80,16 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Bridge {
 		// Associate account id in Bifrost to account in other blockchain
-		BridgeAccountIdToAccount get(fn bridge_account): map hasher(blake2_256) T::AccountId => Vec<u8>;
+		BridgeAccountIdToAccount get(fn bridge_account): map hasher(blake2_128_concat) T::AccountId => Vec<u8>;
 
 		// Associate asset id in Bifrost to asset symbol in other blockchain
-		BridgeAssetIdToAsset get(fn bridge_asset): map hasher(blake2_256) T::AssetId => BridgeAssetSymbol<T::Precision>;
+		BridgeAssetIdToAsset get(fn bridge_asset): map hasher(blake2_128_concat) T::AssetId => BridgeAssetSymbol<T::Precision>;
 
 		// Associate account in other blockchain to account id in Bifrost
-		BridgeAccountToAccountId get(fn bridge_account_id): map hasher(blake2_256) Vec<u8> => T::AccountId ;
+		BridgeAccountToAccountId get(fn bridge_account_id): map hasher(blake2_128_concat) Vec<u8> => T::AccountId ;
 
 		// Associate asset symbol in other blockchain to asset id in Bifrost
-		BridgeAssetToAssetId get(fn bridge_asset_id): map hasher(blake2_256) BridgeAssetSymbol<T::Precision> => T::AssetId;
+		BridgeAssetToAssetId get(fn bridge_asset_id): map hasher(blake2_128_concat) BridgeAssetSymbol<T::Precision> => T::AssetId;
 	}
 }
 

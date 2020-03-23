@@ -33,7 +33,7 @@ use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
 	offchain::http,
-	traits::{Member, SaturatedConversion, SimpleArithmetic},
+	traits::{Member, SaturatedConversion, AtLeast32Bit},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction
@@ -152,19 +152,19 @@ pub trait Trait: pallet_authorship::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record costs.
-	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record incomes.
-	type Income: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record asset precision.
-	type Precision: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// Bridge asset from another blockchain.
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
@@ -198,14 +198,14 @@ decl_storage! {
 		BridgeEnable get(fn is_bridge_enable): bool = true;
 
 		/// Eos producer list and hash which in specific version id
-		ProducerSchedules: map hasher(blake2_256) VersionId => (Vec<ProducerKey>, Checksum256);
+		ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerKey>, Checksum256);
 
 		/// Initialize a producer schedule while starting a node.
 		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
 
 		/// Save all unique transactions
 		/// Every transaction has different action receipt, but can have the same action
-		BridgeActionReceipt: map hasher(blake2_256) ActionReceipt => Action;
+		BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
 
 		/// Current pending schedule version
 		PendingScheduleVersion: VersionId;
@@ -223,7 +223,7 @@ decl_storage! {
 			NotaryKeys::<T>::put(config.notary_keys.clone());
 
 			let ps_version = config.producer_schedule.version;
-			if !ProducerSchedules::exists(ps_version) {
+			if !ProducerSchedules::contains_key(ps_version) {
 				let producers = &config.producer_schedule.producers;
 				let schedule_hash = config.producer_schedule.schedule_hash();
 				assert!(schedule_hash.is_ok());
@@ -250,7 +250,7 @@ decl_module! {
 		fn init_schedule(origin, ps: ProducerSchedule) {
 			let _ = ensure_root(origin)?;
 
-			ensure!(!ProducerSchedules::exists(ps.version), "ProducerSchedule has been initialized.");
+			ensure!(!ProducerSchedules::contains_key(ps.version), "ProducerSchedule has been initialized.");
 			ensure!(!PendingScheduleVersion::exists(), "PendingScheduleVersion has been initialized.");
 			let schedule_hash = ps.schedule_hash();
 			ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
@@ -293,7 +293,7 @@ decl_module! {
 			ensure!(PendingScheduleVersion::exists(), "PendingScheduleVersion has not been initialized.");
 
 			let current_schedule_version = PendingScheduleVersion::get();
-			ensure!(ProducerSchedules::exists(current_schedule_version), "ProducerSchedule has not been initialized.");
+			ensure!(ProducerSchedules::contains_key(current_schedule_version), "ProducerSchedule has not been initialized.");
 
 			ensure!(current_schedule_version + 1 == pending_schedule.version, "This is a wrong new producer lists due to wrong schedule version.");
 
@@ -600,8 +600,8 @@ impl<T: Trait> Module<T> {
 		bridge_asset: BridgeAssetBalance<P, B>,
 	) -> Result<TxOut<T::AccountId>, Error>
 		where
-			P: SimpleArithmetic,
-			B: SimpleArithmetic,
+			P: AtLeast32Bit,
+			B: AtLeast32Bit,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
@@ -719,8 +719,8 @@ impl<T: Trait> Module<T> {
 		bridge_asset: BridgeAssetBalance<P, B>
 	) -> Result<Asset, Error>
 		where
-			P: SimpleArithmetic,
-			B: SimpleArithmetic
+			P: AtLeast32Bit,
+			B: AtLeast32Bit
 	{
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
 		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)

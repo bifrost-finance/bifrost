@@ -18,27 +18,27 @@
 mod mock;
 mod tests;
 
-use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure};
+use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, FetchExchangeRate, TokenType};
-use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
+use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
 
 pub trait Trait: frame_system::Trait {
 	/// exchange rate
-	type ExchangeRate: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::Balance>;
-	type RatePerBlock: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::Balance> + Into<Self::ExchangeRate>;
+	type ExchangeRate: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance>;
+	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::ExchangeRate>;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record costs.
-	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record incomes.
-	type Income: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
@@ -73,9 +73,9 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Exchange {
 		/// exchange rate between two tokens, vtoken => (token, exchange_rate)
-		ExchangeRate get(fn exchange_rate): linked_map hasher(blake2_256) T::AssetId => T::ExchangeRate;
+		ExchangeRate get(fn exchange_rate): map hasher(blake2_128_concat) T::AssetId => T::ExchangeRate;
 		/// change rate per block, vtoken => (token, rate_per_block)
-		RatePerBlock get(fn rate_per_block): linked_map hasher(blake2_256) T::AssetId => T::RatePerBlock;
+		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
 	}
 }
 
@@ -126,7 +126,7 @@ decl_module! {
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
-			ensure!(<ExchangeRate<T>>::exists(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
+			ensure!(<ExchangeRate<T>>::contains_key(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
 
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
 
@@ -154,7 +154,7 @@ decl_module! {
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check exchange rate has been set
-			ensure!(<ExchangeRate<T>>::exists(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
+			ensure!(<ExchangeRate<T>>::contains_key(vtoken_id), Error::<T>::ExchangeRateDoesNotSet);
 
 			let token_id = vtoken_id; // token id is equal to vtoken id
 			let rate = <ExchangeRate<T>>::get(vtoken_id);
@@ -169,8 +169,8 @@ decl_module! {
 		}
 
 		fn on_finalize() {
-			for (vtoken_id, rate_per_block) in <RatePerBlock<T>>::enumerate() {
-				if !<ExchangeRate<T>>::exists(vtoken_id) {
+			for (vtoken_id, rate_per_block) in <RatePerBlock<T>>::iter() {
+				if !<ExchangeRate<T>>::contains_key(vtoken_id) {
 					continue;
 				}
 				<ExchangeRate<T>>::mutate(vtoken_id, |exchange_rate| {

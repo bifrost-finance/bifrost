@@ -1,8 +1,10 @@
 [workspace]
 members = [
 	"bin/node/cli",
+	"bin/node/inspect",
 	"bin/node/primitives",
 	"bin/node/runtime",
+	"bin/utils/chain-spec-builder",
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",

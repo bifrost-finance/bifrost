@@ -14,21 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Bifrost Node CLI
+use std::env;
 
-#![warn(missing_docs)]
-
-fn main() -> sc_cli::Result<()> {
-	let version = sc_cli::VersionInfo {
-		name: "Liebi Bifrost",
-		commit: env!("VERGEN_SHA_SHORT"),
-		version: env!("CARGO_PKG_VERSION"),
-		executable_name: "bifrost",
-		author: "Liebi Technologies <bifrost@liebi.com>",
-		description: "Bifrost Parachain Node",
-		support_url: "https://github.com/bifrost-codes/bifrost/issues/new",
-		copyright_start_year: 2019,
-	};
-
-	node_cli::run(std::env::args(), version)
+fn main() {
+	if let Ok(profile) = env::var("PROFILE") {
+		println!("cargo:rustc-cfg=build_type=\"{}\"", profile);
+	}
 }

@@ -23,10 +23,11 @@ use clap::{App, ArgMatches, SubCommand};
 use codec::{Decode, Encode};
 use hex_literal::hex;
 use itertools::Itertools;
+use libp2p::identity::{ed25519 as libp2p_ed25519, PublicKey};
 use node_primitives::{Balance, Hash, Index, AccountId, Signature};
 use node_runtime::{BalancesCall, Call, Runtime, SignedPayload, UncheckedExtrinsic, VERSION};
+use serde_json::json;
 use sp_core::{
-	Bytes, offchain::StorageKind,
 	crypto::{set_default_ss58_version, Ss58AddressFormat, Ss58Codec},
 	ed25519, sr25519, ecdsa, Pair, Public, H256, hexdisplay::HexDisplay,
 };
@@ -37,6 +38,24 @@ use std::{
 
 mod rpc;
 mod vanity;
+
+enum OutputType {
+	Json,
+	Text,
+}
+
+impl<'a> TryFrom<&'a str> for OutputType {
+	type Error = ();
+
+	fn try_from(s: &'a str) -> Result<OutputType, ()> {
+		match s {
+			"json" => Ok(OutputType::Json),
+			"text" => Ok(OutputType::Text),
+			_ => Err(()),
+		}
+	}
+
+}
 
 trait Crypto: Sized {
 	type Pair: Pair<Public = Self::Public>;
@@ -56,52 +75,98 @@ trait Crypto: Sized {
 		uri: &str,
 		password: Option<&str>,
 		network_override: Option<Ss58AddressFormat>,
+		output: OutputType,
 	) where
 		<Self::Pair as Pair>::Public: PublicT,
 	{
 		if let Ok((pair, seed)) = Self::Pair::from_phrase(uri, password) {
 			let public_key = Self::public_from_pair(&pair);
-			println!("Secret phrase `{}` is account:\n  \
-				Secret seed:      {}\n  \
-				Public key (hex): {}\n  \
-				Account ID:       {}\n  \
-				SS58 Address:     {}",
-				uri,
-				format_seed::<Self>(seed),
-				format_public_key::<Self>(public_key.clone()),
-				format_account_id::<Self>(public_key),
-				Self::ss58_from_pair(&pair)
-			);
+
+			match output {
+				OutputType::Json => {
+					let json = json!({
+						"secretPhrase": uri,
+						"secretSeed": format_seed::<Self>(seed),
+						"publicKey": format_public_key::<Self>(public_key.clone()),
+						"accountId": format_account_id::<Self>(public_key),
+						"ss58Address": Self::ss58_from_pair(&pair),
+					});
+					println!("{}", serde_json::to_string_pretty(&json).expect("Json pretty print failed"));
+				},
+				OutputType::Text => {
+					println!("Secret phrase `{}` is account:\n  \
+						Secret seed:      {}\n  \
+						Public key (hex): {}\n  \
+						Account ID:       {}\n  \
+						SS58 Address:     {}",
+						uri,
+						format_seed::<Self>(seed),
+						format_public_key::<Self>(public_key.clone()),
+						format_account_id::<Self>(public_key),
+						Self::ss58_from_pair(&pair),
+					);
+				},
+			}
 		} else if let Ok((pair, seed)) = Self::Pair::from_string_with_seed(uri, password) {
 			let public_key = Self::public_from_pair(&pair);
-			println!("Secret Key URI `{}` is account:\n  \
-				Secret seed:      {}\n  \
-				Public key (hex): {}\n  \
-				Account ID:       {}\n  \
-				SS58 Address:     {}",
-				uri,
-				if let Some(seed) = seed { format_seed::<Self>(seed) } else { "n/a".into() },
-				format_public_key::<Self>(public_key.clone()),
-				format_account_id::<Self>(public_key),
-				Self::ss58_from_pair(&pair)
-			);
+
+			match output {
+				OutputType::Json => {
+					let json = json!({
+						"secretKeyUri": uri,
+						"secretSeed": if let Some(seed) = seed { format_seed::<Self>(seed) } else { "n/a".into() },
+						"publicKey": format_public_key::<Self>(public_key.clone()),
+						"accountId": format_account_id::<Self>(public_key),
+						"ss58Address": Self::ss58_from_pair(&pair),
+					});
+					println!("{}", serde_json::to_string_pretty(&json).expect("Json pretty print failed"));
+				},
+				OutputType::Text => {
+					println!("Secret Key URI `{}` is account:\n  \
+						Secret seed:      {}\n  \
+						Public key (hex): {}\n  \
+						Account ID:       {}\n  \
+						SS58 Address:     {}",
+						uri,
+						if let Some(seed) = seed { format_seed::<Self>(seed) } else { "n/a".into() },
+						format_public_key::<Self>(public_key.clone()),
+						format_account_id::<Self>(public_key),
+						Self::ss58_from_pair(&pair),
+					);
+				},
+			}
 		} else if let Ok((public_key, v)) =
 			<Self::Pair as Pair>::Public::from_string_with_version(uri)
 		{
 			let v = network_override.unwrap_or(v);
-			println!("Public Key URI `{}` is account:\n  \
-				Network ID/version: {}\n  \
-				Public key (hex):   {}\n  \
-				Account ID:         {}\n  \
-				SS58 Address:       {}",
-				uri,
-				String::from(v),
-				format_public_key::<Self>(public_key.clone()),
-				format_account_id::<Self>(public_key.clone()),
-				public_key.to_ss58check_with_version(v)
-			);
+
+			match output {
+				OutputType::Json => {
+					let json = json!({
+						"publicKeyUri": uri,
+						"networkId": String::from(v),
+						"publicKey": format_public_key::<Self>(public_key.clone()),
+						"accountId": format_account_id::<Self>(public_key.clone()),
+						"ss58Address": public_key.to_ss58check_with_version(v),
+					});
+					println!("{}", serde_json::to_string_pretty(&json).expect("Json pretty print failed"));
+				},
+				OutputType::Text => {
+					println!("Public Key URI `{}` is account:\n  \
+						Network ID/version: {}\n  \
+						Public key (hex):   {}\n  \
+						Account ID:         {}\n  \
+						SS58 Address:       {}",
+						uri,
+						String::from(v),
+						format_public_key::<Self>(public_key.clone()),
+						format_account_id::<Self>(public_key.clone()),
+						public_key.to_ss58check_with_version(v),
+					);
+				},
+			}
 		} else {
-			println!("Invalid phrase/URI given");
+			eprintln!("Invalid phrase/URI given");
 		}
 	}
 }
@@ -166,6 +231,7 @@ fn get_usage() -> String {
 		[network] -n, --network <network> 'Specify a network. One of {}. Default is {}'
 		[password] -p, --password <password> 'The password for the key'
 		--password-interactive 'You will be prompted for the password for the key.'
+		[output] -o, --output <output> 'Specify an output format. One of text, json. Default is text.'
 	", networks, default_network)
 }
 
@@ -182,6 +248,9 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 						'The number of words in the phrase to generate. One of 12 \
 						(default), 15, 18, 21 and 24.'
 				"),
+			SubCommand::with_name("generate-node-key")
+				.about("Generate a random node libp2p key, save it to file and print its peer ID")
+				.args_from_usage("[file] 'Name of file to save secret key to'"),
 			SubCommand::with_name("inspect")
 				.about("Gets a public key and a SS58 address from the provided Secret URI")
 				.args_from_usage("[uri] 'A Key URI to be inspected. May be a secret seed, \
@@ -210,7 +279,7 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 			SubCommand::with_name("transfer")
 				.about("Author and sign a Node pallet_balances::Transfer transaction with a given (secret) key")
 				.args_from_usage("
-					<genesis> -g, --genesis <genesis> 'The genesis hash or a recognised \
+					<genesis> -g, --genesis <genesis> 'The genesis hash or a recognized \
 											chain identifier (dev, elm, alex).'
 					<from> 'The signing secret key URI.'
 					<to> 'The destination account public key URI.'
@@ -240,19 +309,6 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 						If the value is a file, the file content is used as URI. \
 						If not given, you will be prompted for the URI.'
 					<key-type> 'Key type, examples: \"gran\", or \"imon\" '
-					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
-				"),
-			SubCommand::with_name("localstorage-get")
-				.about("Get offchain local storage under given key")
-				.args_from_usage("
-					<key> 'Key name'
-					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
-				"),
-			SubCommand::with_name("localstorage-set")
-				.about("Set offchain local storage under given key")
-				.args_from_usage("
-					<key> 'Key name'
-					<value> 'Value to be set'
 					[node-url] 'Node JSON-RPC endpoint, default \"http:://localhost:9933\"'
 				"),
 		])
@@ -343,13 +399,31 @@ where
 	if let Some(network) = maybe_network {
 		set_default_ss58_version(network);
 	}
+
+	let output: OutputType = match matches.value_of("output").map(TryInto::try_into) {
+		Some(Err(_)) => return Err(Error::Static("Invalid output name. See --help for available outputs.")),
+		Some(Ok(v)) => v,
+		None => OutputType::Text,
+	 };
+
 	match matches.subcommand() {
 		("generate", Some(matches)) => {
 			let mnemonic = generate_mnemonic(matches)?;
-			C::print_from_uri(mnemonic.phrase(), password, maybe_network);
+			C::print_from_uri(mnemonic.phrase(), password, maybe_network, output);
+		}
+		("generate-node-key", Some(matches)) => {
+			let file = matches.value_of("file").ok_or(Error::Static("Output file name is required"))?;
+
+			let keypair = libp2p_ed25519::Keypair::generate();
+			let secret = keypair.secret();
+			let peer_id = PublicKey::Ed25519(keypair.public()).into_peer_id();
+
+			fs::write(file, secret.as_ref())?;
+
+			println!("{}", peer_id);
 		}
 		("inspect", Some(matches)) => {
-			C::print_from_uri(&get_uri("uri", &matches)?, password, maybe_network);
+			C::print_from_uri(&get_uri("uri", &matches)?, password, maybe_network, output);
 		}
 		("sign", Some(matches)) => {
 			let suri = get_uri("suri", &matches)?;
@@ -378,7 +452,7 @@ where
 				.unwrap_or_default();
 			let result = vanity::generate_key::<C>(&desired)?;
 			let formated_seed = format_seed::<C>(result.seed);
-			C::print_from_uri(&formated_seed, None, maybe_network);
+			C::print_from_uri(&formated_seed, None, maybe_network, output);
 		}
 		("transfer", Some(matches)) => {
 			let signer = read_pair::<C>(matches.value_of("from"), password)?;
@@ -425,26 +499,6 @@ where
 				suri,
 				sp_core::Bytes(pair.public().as_ref().to_vec()),
 			);
-		}
-		("localstorage-get", Some(matches)) => {
-			let node_url = matches.value_of("node-url").unwrap_or("http://localhost:9933");
-			let rpc = rpc::RpcClient::new(node_url.to_string());
-			let key = matches.value_of("key").ok_or(Error::Static("Key is required"))?;
-
-			let prefix = StorageKind::PERSISTENT;
-			let key = Bytes(Vec::from(key));
-			rpc.get_offchain_storage(prefix, key);
-		}
-		("localstorage-set", Some(matches)) => {
-			let node_url = matches.value_of("node-url").unwrap_or("http://localhost:9933");
-			let rpc = rpc::RpcClient::new(node_url.to_string());
-			let key = matches.value_of("key").ok_or(Error::Static("Key is required"))?;
-			let value = matches.value_of("value").ok_or(Error::Static("Value is required"))?;
-
-			let prefix = StorageKind::PERSISTENT;
-			let key = Bytes(Vec::from(key));
-			let value = Bytes(Vec::from(value));
-			rpc.set_offchain_storage(prefix, key, value);
 		}
 		_ => print_usage(&matches),
 	}
@@ -517,7 +571,7 @@ fn read_genesis_hash(matches: &ArgMatches) -> Result<H256, Error> {
 		"elm" => hex!["10c08714a10c7da78f40a60f6f732cf0dba97acfb5e2035445b032386157d5c3"].into(),
 		"alex" => hex!["dcd1346701ca8396496e52aa2785b1748deb6db09551b72159dcb3e08991025b"].into(),
 		h => Decode::decode(&mut &decode_hex(h)?[..])
-			.expect("Invalid genesis hash or unrecognised chain identifier"),
+			.expect("Invalid genesis hash or unrecognized chain identifier"),
 	};
 	println!(
 		"Using a genesis hash of {}",

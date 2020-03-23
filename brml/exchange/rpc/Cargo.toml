@@ -1,7 +1,7 @@
 [package]
 name = "brml-exchange-rpc"
-version = "0.1.0"
-authors = ["Dengjianping <djptux@gmail.com>"]
+version = "0.2.2"
+authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
@@ -10,6 +10,6 @@ exchange-rpc-runtime-api = { package = "brml-exchange-rpc-runtime-api", path = "
 jsonrpc-core = "14.0.5"
 jsonrpc-core-client = "14.0.5"
 jsonrpc-derive = "14.0.5"
-sp-api = { version = "2.0.0", git = "https://github.com/paritytech/substrate" }
-sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate.git" }
-sp-blockchain = { version = "2.0.0", git = "https://github.com/paritytech/substrate.git" }
+sp-api = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate" }
+sp-runtime = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate.git" }
+sp-blockchain = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate.git" }
