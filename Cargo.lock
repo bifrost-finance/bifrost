@@ -2993,7 +2993,6 @@ dependencies = [
  "brml-bridge-eos 0.2.2",
  "brml-exchange-rpc 0.2.2",
  "eos-chain 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
- "frame-benchmarking-cli 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "futures 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3955,7 +3954,6 @@ dependencies = [
  "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-inherents 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
- "sp-io 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "sp-runtime 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "sp-std 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "sp-timestamp 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
@@ -4040,7 +4038,6 @@ version = "2.0.0-alpha.4"
 source = "git+https://github.com/paritytech/substrate#68e51d6e24862d499b5f042321cc87b172579e74"
 dependencies = [
  "enumflags2 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-benchmarking 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",

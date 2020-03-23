@@ -52,12 +52,6 @@ where
 
 			cmd.run(inspect)
 		},
-		Some(Subcommand::Benchmark(cmd)) => {
-			cmd.init(&version)?;
-			cmd.update_config(&mut config, load_spec, &version)?;
-
-			cmd.run::<node_runtime::Block, crate::executor::Executor>(config)
-		},
 		Some(Subcommand::Factory(cli_args)) => {
 			cli_args.shared_params.init(&version)?;
 			cli_args.shared_params.update_config(&mut config, load_spec, &version)?;
