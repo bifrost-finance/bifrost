@@ -19,7 +19,7 @@
 
 use core::convert::TryInto;
 use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure};
-use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, One, Zero, StaticLookup};
+use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{
@@ -50,22 +50,22 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::Exchange>;
+	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Exchange>;
 
 	/// The units in which we record prices.
-	type Price: Member + Parameter + SimpleArithmetic + Default + Copy + Zero;
+	type Price: Member + Parameter + Default + AtLeast32Bit + Copy + Zero;
 
 	/// The units in which we record exchange rate.
-	type Exchange: Member + Parameter + SimpleArithmetic + Default + Copy + Zero;
+	type Exchange: Member + Parameter + Default + AtLeast32Bit + Copy + Zero;
 
 	/// The units in which we record costs.
-	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::Balance>;
+	type Cost: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Balance>;
 
 	/// The units in which we record incomes.
-	type Income: Member + Parameter + SimpleArithmetic + Default + Copy + Zero + From<Self::Balance>;
+	type Income: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Balance>;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type AssetId: Member + Parameter + Default + AtLeast32Bit + Copy;
 
 	/// Handler for asset redeem
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
@@ -121,16 +121,16 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub AccountAssets get(fn account_assets): map hasher(blake2_256) (T::AssetId, TokenType, T::AccountId)
+		pub AccountAssets get(fn account_assets): map hasher(blake2_128_concat) (T::AssetId, TokenType, T::AccountId)
 			=> AccountAsset<T::Balance, T::Cost, T::Income>;
 		/// The number of units of prices held by any given asset.
-		pub Prices get(fn prices) config(): map hasher(blake2_256) (T::AssetId, TokenType) => T::Price;
+		pub Prices get(fn prices) config(): map hasher(blake2_128_concat) (T::AssetId, TokenType) => T::Price;
 		/// The next asset identifier up for grabs.
 		pub NextAssetId get(fn next_asset_id) config(): T::AssetId;
 		/// Details of the token corresponding to an asset id.
-		pub Tokens get(fn token_details) config(): map hasher(blake2_256) T::AssetId => TokenPair<T::Balance>;
+		pub Tokens get(fn token_details) config(): map hasher(blake2_128_concat) T::AssetId => TokenPair<T::Balance>;
 		/// A collection of asset which an account owned
-		pub AccountAssetIds get(fn account_asset_ids): map hasher(blake2_256) T::AccountId => Vec<T::AssetId>;
+		pub AccountAssetIds get(fn account_asset_ids): map hasher(blake2_128_concat) T::AccountId => Vec<T::AssetId>;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
@@ -182,7 +182,7 @@ decl_module! {
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<Tokens<T>>::exists(&id), Error::<T>::TokenNotExist);
+			ensure!(<Tokens<T>>::contains_key(&id), Error::<T>::TokenNotExist);
 
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
@@ -292,7 +292,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		});
 
 		// save asset id for this account
-		if <AccountAssetIds<T>>::exists(&target) {
+		if <AccountAssetIds<T>>::contains_key(&target) {
 			<AccountAssetIds<T>>::mutate(&target, |ids| {
 				if !ids.contains(&asset_id) { // do not push a duplicated asset id to list
 					ids.push(asset_id);
@@ -360,7 +360,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 	}
 
 	fn token_exists(asset_id: T::AssetId) -> bool {
-		<Tokens<T>>::exists(&asset_id)
+		<Tokens<T>>::contains_key(&asset_id)
 	}
 
 	fn get_account_asset(
@@ -405,7 +405,7 @@ impl<T: Trait> Module<T> {
 		});
 
 		// save asset id for this account
-		if <AccountAssetIds<T>>::exists(&to) {
+		if <AccountAssetIds<T>>::contains_key(&to) {
 			<AccountAssetIds<T>>::mutate(&to, |ids| {
 				// do not push a duplicated asset id to list
 				if !ids.contains(&asset_id) { ids.push(asset_id); }

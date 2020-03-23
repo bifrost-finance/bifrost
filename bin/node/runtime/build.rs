@@ -19,7 +19,10 @@ use wasm_builder_runner::WasmBuilder;
 fn main() {
 	WasmBuilder::new()
 		.with_current_project()
-		.with_wasm_builder_from_crates("1.0.9")
+		.with_wasm_builder_from_git(
+			"https://github.com/paritytech/substrate.git",
+			"68e51d6e24862d499b5f042321cc87b172579e74"
+		)
 		.export_heap_base()
 		.import_memory()
 		.build()

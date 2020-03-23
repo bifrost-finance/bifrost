@@ -22,7 +22,6 @@ use alloc::vec::Vec;
 use codec::Codec;
 use sp_api::decl_runtime_apis;
 
-/// Create assets runtime api for rpc call
 decl_runtime_apis! {
 	pub trait AssetsApi<AssetId, AccountId, Balance> where
 		AssetId: Codec,

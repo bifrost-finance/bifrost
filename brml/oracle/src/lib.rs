@@ -5,13 +5,13 @@ use system::ensure_signed;
 use chainlink::{Event, create_request_event_from_parameters};
 use sp_std::prelude::*;
 use node_primitives::TokenPriceHandler;
-use sp_runtime::traits::{Member, SimpleArithmetic, Zero, SaturatedConversion};
+use sp_runtime::traits::{Member, AtLeast32Bit, Zero, SaturatedConversion};
 
 pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record prices.
-	type Price: Member + Parameter + SimpleArithmetic + Default + Copy + Zero;
+	type Price: Member + Parameter + AtLeast32Bit + Default + Copy + Zero;
 
 	/// Handler for fetch token price
 	type TokenPriceHandler: TokenPriceHandler<Self::Price>;

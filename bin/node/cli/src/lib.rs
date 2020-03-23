@@ -27,7 +27,6 @@
 //! hasn't been tested.
 
 #![warn(missing_docs)]
-#![warn(unused_extern_crates)]
 
 pub mod chain_spec;
 
@@ -39,11 +38,15 @@ mod browser;
 mod cli;
 #[cfg(feature = "cli")]
 mod factory_impl;
+#[cfg(feature = "cli")]
+mod command;
 
 #[cfg(feature = "browser")]
 pub use browser::*;
 #[cfg(feature = "cli")]
 pub use cli::*;
+#[cfg(feature = "cli")]
+pub use command::*;
 
 // replaced local crate node-primitives and node-rpc
 mod executor;
@@ -84,9 +87,9 @@ impl ChainSpec {
 	}
 }
 
-fn load_spec(id: &str) -> Result<Option<chain_spec::ChainSpec>, String> {
+fn load_spec(id: &str) -> Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match ChainSpec::from(id) {
-		Some(spec) => Some(spec.load()?),
-		None => None,
+		Some(spec) => Box::new(spec.load()?),
+		None => Box::new(chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(id))?),
 	})
 }

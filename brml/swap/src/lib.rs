@@ -23,28 +23,28 @@ use core::convert::{From, Into};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, TokenType};
-use sp_runtime::traits::{Member, Saturating, SimpleArithmetic, Zero};
+use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 
 pub trait Trait: frame_system::Trait {
 	/// fee
-	type Fee: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::TokenPool> + Into<Self::VTokenPool>;
+	type Fee: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::TokenPool> + Into<Self::VTokenPool>;
 
 	/// pool size
-	type TokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::Balance> + From<Self::Balance>;
-	type VTokenPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance> + Into<Self::Balance>;
-	type InVariantPool: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance> + Into<Self::Balance>;
+	type TokenPool: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + From<Self::Balance>;
+	type VTokenPool: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::Balance> + Into<Self::Balance>;
+	type InVariantPool: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::Balance> + Into<Self::Balance>;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record costs.
-	type Cost: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record incomes.
-	type Income: Member + Parameter + SimpleArithmetic + Default + Copy;
+	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
@@ -85,10 +85,10 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
 		/// fee
-		Fee: map hasher(blake2_256) T::AssetId => T::Fee;
+		Fee: map hasher(blake2_128_concat) T::AssetId => T::Fee;
 
 		/// the value must meet the requirement: InVariantPool = TokenPool * VTokenPool
-		InVariant: map hasher(blake2_256) T::AssetId => (T::TokenPool, T::VTokenPool, T::InVariantPool);
+		InVariant: map hasher(blake2_128_concat) T::AssetId => (T::TokenPool, T::VTokenPool, T::InVariantPool);
 	}
 }
 

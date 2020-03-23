@@ -1,21 +1,21 @@
 [package]
 name = "brml-settlement"
-version = "0.1.0"
+version = "0.2.2"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 brml-assets = { path = "../assets", default-features = false }
-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.2.0", default-features = false, features = ["derive"] }
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
-frame-support = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
-sp-core = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
-sp-runtime = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
-sp-std = { version = "2.0.0", git = "https://github.com/paritytech/substrate", default-features = false }
-system = { version = "2.0.0", package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
+frame-support = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-core = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-runtime = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-std = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
+system = { version = "2.0.0-alpha.4", package = "frame-system", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
-runtime-io = { version = "2.0.0", package = "sp-io", git = "https://github.com/paritytech/substrate" }
+runtime-io = { version = "2.0.0-alpha.4", package = "sp-io", git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]
