@@ -48,6 +48,7 @@ impl_outer_origin! {
 
 impl_outer_event! {
 	pub enum TestEvent for Test {
+		system<T>,
 		bridge_eos,
 		assets<T>,
 	}
@@ -82,6 +83,10 @@ impl frame_system::Trait for Test {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type AccountData = ();
+	type MigrateAccount = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
 }
 
 
