@@ -54,7 +54,7 @@ fn get_latest_schedule_version_should_work() {
 #[test]
 fn get_producer_schedules_should_work() {
 	new_test_ext().execute_with(|| {
-		assert!(!ProducerSchedules::exists(0));
+		assert!(!ProducerSchedules::contains_key(0));
 
 		let json = "change_schedule_9313.json";
 		let signed_blocks_str = read_json_from_file(json);
@@ -70,7 +70,7 @@ fn get_producer_schedules_should_work() {
 		ProducerSchedules::insert(schedule.version, (&schedule.producers, pending_schedule_hash.as_ref().unwrap()));
 
 		run_to_block(100); // after 100 blocks are produced
-		assert!(ProducerSchedules::exists(schedule.version));
+		assert!(ProducerSchedules::contains_key(schedule.version));
 		let (producers_list, schedule_hash) = ProducerSchedules::get(schedule.version);
 		assert_eq!(producers_list, schedule.producers);
 		assert_eq!(pending_schedule_hash.unwrap(), schedule_hash);
@@ -384,7 +384,7 @@ fn bridge_eos_offchain_should_work() {
 		let transaction = pool_state.write().transactions.pop().unwrap();
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-		let tx_outs = match ex.1 {
+		let tx_outs = match ex.call {
 			crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
 			e => panic!("Unexpected call: {:?}", e),
 		};

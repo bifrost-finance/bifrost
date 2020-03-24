@@ -32,6 +32,7 @@ impl_outer_origin! {
 
 impl_outer_event! {
 	pub enum TestEvent for Test {
+		system<T>,
 		brml_exchange,
 		assets<T>,
 	}
@@ -77,6 +78,10 @@ impl system::Trait for Test {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type AccountData = ();
+	type MigrateAccount = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
 }
 
 parameter_types! {
