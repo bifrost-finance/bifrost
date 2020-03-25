@@ -9,7 +9,6 @@ bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
 eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", default-features = false }
 eos-keys = { git = "https://github.com/bifrost-codes/rust-eos", default-features = false }
-eos-rpc = { git = "https://github.com/bifrost-codes/rust-eos", optional = true }
 frame-support = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
 frame-system = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }
 hex = { version = "0.4", default-features = false }
@@ -35,7 +34,6 @@ std = [
 	"codec/std",
 	"eos-chain/std",
 	"eos-keys/std",
-	"eos-rpc/std",
 	"frame-support/std",
 	"frame-system/std",
 	"hex/std",
