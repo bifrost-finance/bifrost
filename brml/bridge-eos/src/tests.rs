@@ -436,7 +436,7 @@ fn offchain_http_get_info_should_work() {
 	let (offchain, _state) = TestOffchainExt::new();
 	ext.register_extension(OffchainExt::new(offchain));
 
-	let node = "http://127.0.0.1:8888/v1/chain/get_info";
+	let node = "https://eos.greymass.com/v1/chain/get_info";
 	ext.execute_with(|| {
 		System::set_block_number(1);
 
@@ -480,6 +480,54 @@ fn use_lite_json_for_deserialization_should_be_ok() {
 				let u8_vec = a.0.iter().map(|c| *c as u8).collect::<Vec<_>>();
 				let key = unsafe { String::from_utf8_unchecked(u8_vec) };
 				dbg!(&key);
+			}
+		}
+		_ => (),
+	}
+}
+
+#[test]
+fn test_get_info_for_deserialization_should_be_ok() {
+	use lite_json::{parse_json, JsonObject, JsonValue, NumberValue};
+
+	let get_info_json = r#"
+		{
+			"server_version": "cc752d7c",
+			"chain_id": "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906",
+			"head_block_num": 108149974,
+			"last_irreversible_block_num": 108149649,
+			"last_irreversible_block_id": "06723b916d6656e60a4836b08f5d041a719457b8a61fa10edf0f0cdc446df5f5",
+			"head_block_id": "06723cd64b5b3880d44fa51cc4e0d80aca9cedfe52335a2f0781ee544b5b71a9",
+			"head_block_time": "2020-03-03T02:40:45.000",
+			"head_block_producer": "hashfineosio",
+			"virtual_block_cpu_limit": 200000,
+			"virtual_block_net_limit": 1048576000,
+			"block_cpu_limit": 200000,
+			"block_net_limit": 1048576,
+			"server_version_string": "v2.0.0-rc3",
+			"fork_db_head_block_num": 108149974,
+			"fork_db_head_block_id": "06723cd64b5b3880d44fa51cc4e0d80aca9cedfe52335a2f0781ee544b5b71a9",
+			"server_full_version_string": "v2.0.0-rc3-cc752d7c7996587247db7373b89f6a8c683aa9fc"
+		}"#;
+	let json_obj = parse_json(get_info_json);
+	let get_info_json_obj = json_obj.unwrap();
+	match get_info_json_obj {
+		JsonValue::Object(ref obj) => {
+			let act: &JsonObject = obj;
+			for a in act.iter() {
+				let u8_vec = a.0.iter().map(|c| *c as u8).collect::<Vec<_>>();
+				let key = String::from_utf8(u8_vec).unwrap();
+				if key == "chain_id" {
+					let mut vec: Vec<u8> = vec![];
+					a.1.serialize_to(&mut vec,0,0);
+					let value = String::from_utf8(vec).unwrap();
+					dbg!(value);
+				} else if key == "head_block_id" {
+					let mut block_vec: Vec<u8> = vec![];
+					a.1.serialize_to(&mut block_vec,0,0);
+					let value = String::from_utf8(block_vec).unwrap();
+					dbg!(value);
+				};
 			}
 		}
 		_ => (),
