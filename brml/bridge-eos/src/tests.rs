@@ -36,7 +36,7 @@ use sp_core::offchain::{
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 };
 use sp_runtime::traits::Header as HeaderT;
-use sp_runtime::{generic::DigestItem, testing::Header, offchain::http};
+use sp_runtime::{generic::DigestItem, testing::Header};
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
 use frame_support::dispatch;
 
@@ -414,6 +414,7 @@ fn bridge_eos_genesis_config_should_work() {
 
 #[test]
 fn chech_receiver_is_ss58_format() {
+	// alice is substrate address
 	let alice_key = "5CFK52zU59zUhC3s6mRobEJ3zm7JeXQZaS6ybvcuCDDhWwGG";
 	let expected_alice = [
 		8u8, 22, 254, 6, 137, 50, 46, 38,
@@ -428,110 +429,23 @@ fn chech_receiver_is_ss58_format() {
 	assert_eq!(data, expected_alice);
 	let account_id = BridgeEos::into_account(data);
 	assert!(account_id.is_ok());
-}
 
-#[test]
-fn offchain_http_get_info_should_work() {
-	let mut ext = new_test_ext();
-	let (offchain, _state) = TestOffchainExt::new();
-	ext.register_extension(OffchainExt::new(offchain));
+	// this is a bifrost account address
+	const BIFROST_PREFIX: u8 = 6;
+	let bifrost_address = "gg2XUSNDsdmYR28YRVMZ7qeWqPpaKtG5PefahS4yKwshda2";
+	let decoded_ss58 = bs58::decode(bifrost_address).into_vec();
+	assert!(decoded_ss58.is_ok());
+	let decoded_ss58 = decoded_ss58.unwrap();
+	assert_eq!(decoded_ss58.len(), 35);
+	assert_eq!(decoded_ss58[0], BIFROST_PREFIX);
 
-	let node = "https://eos.greymass.com/v1/chain/get_info";
-	ext.execute_with(|| {
-		System::set_block_number(1);
-
-		BridgeEos::get_eos_node_info(node);
-		System::set_block_number(2);
-		System::set_block_number(5);
-	});
-}
-
-#[test]
-fn use_lite_json_for_deserialization_should_be_ok() {
-	use lite_json::{parse_json, JsonObject, JsonValue, NumberValue};
-
-	let action_str = r#"
-		{
-			"account": "eosio.token",
-			"name": "transfer",
-			"authorization": [
-				{
-					"actor": "junglefaucet",
-					"permission": "active"
-				}
-			],
-			"data": {
-				"from": "junglefaucet",
-				"receiver": "megasuper333",
-				"stake_net_quantity": "1.0000 EOS",
-				"stake_cpu_quantity": "1.0000 EOS",
-				"transfer": 1
-			},
-			"hex_data": "9015d266a9c8a67e30c6b8aa6a6c989240420f000000000004454f5300000000134e657720425020526567697374726174696f6e"
-		}"#;
-	let json_obj = parse_json(action_str);
-	assert!(json_obj.is_ok());
-	let json_obj = json_obj.unwrap();
-
-	match json_obj {
-		JsonValue::Object(ref obj) => {
-			let act: &JsonObject = obj;
-			for a in act.iter() {
-				let u8_vec = a.0.iter().map(|c| *c as u8).collect::<Vec<_>>();
-				let key = unsafe { String::from_utf8_unchecked(u8_vec) };
-				dbg!(&key);
-			}
-		}
-		_ => (),
-	}
-}
-
-#[test]
-fn test_get_info_for_deserialization_should_be_ok() {
-	use lite_json::{parse_json, JsonObject, JsonValue, NumberValue};
-
-	let get_info_json = r#"
-		{
-			"server_version": "cc752d7c",
-			"chain_id": "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906",
-			"head_block_num": 108149974,
-			"last_irreversible_block_num": 108149649,
-			"last_irreversible_block_id": "06723b916d6656e60a4836b08f5d041a719457b8a61fa10edf0f0cdc446df5f5",
-			"head_block_id": "06723cd64b5b3880d44fa51cc4e0d80aca9cedfe52335a2f0781ee544b5b71a9",
-			"head_block_time": "2020-03-03T02:40:45.000",
-			"head_block_producer": "hashfineosio",
-			"virtual_block_cpu_limit": 200000,
-			"virtual_block_net_limit": 1048576000,
-			"block_cpu_limit": 200000,
-			"block_net_limit": 1048576,
-			"server_version_string": "v2.0.0-rc3",
-			"fork_db_head_block_num": 108149974,
-			"fork_db_head_block_id": "06723cd64b5b3880d44fa51cc4e0d80aca9cedfe52335a2f0781ee544b5b71a9",
-			"server_full_version_string": "v2.0.0-rc3-cc752d7c7996587247db7373b89f6a8c683aa9fc"
-		}"#;
-	let json_obj = parse_json(get_info_json);
-	let get_info_json_obj = json_obj.unwrap();
-	match get_info_json_obj {
-		JsonValue::Object(ref obj) => {
-			let act: &JsonObject = obj;
-			for a in act.iter() {
-				let u8_vec = a.0.iter().map(|c| *c as u8).collect::<Vec<_>>();
-				let key = String::from_utf8(u8_vec).unwrap();
-				if key == "chain_id" {
-					let mut vec: Vec<u8> = vec![];
-					a.1.serialize_to(&mut vec,0,0);
-					let value = String::from_utf8(vec).unwrap();
-					dbg!(value);
-				} else if key == "head_block_id" {
-					let mut block_vec: Vec<u8> = vec![];
-					a.1.serialize_to(&mut block_vec,0,0);
-					let value = String::from_utf8(block_vec).unwrap();
-					dbg!(value);
-				};
-			}
-		}
-		_ => (),
-	}
+	// this is a centrifuge account address
+	let bifrost_address = "4bVs9EVoVRcx2BGcf66nMsv3Bw5WAwVLSzorZcUnLjLZebf7";
+	let decoded_ss58 = bs58::decode(bifrost_address).into_vec();
+	assert!(decoded_ss58.is_ok());
+	let decoded_ss58 = decoded_ss58.unwrap();
+	assert_eq!(decoded_ss58.len(), 35);
+	assert_ne!(decoded_ss58[0], BIFROST_PREFIX);
 }
 
 #[cfg(feature = "std")]

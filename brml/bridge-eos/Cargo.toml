@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
-codec = { package = "parity-scale-codec", version = "1.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.2.0", default-features = false, features = ["derive"] }
 eos-chain = { git = "https://github.com/bifrost-codes/rust-eos", default-features = false }
 eos-keys = { git = "https://github.com/bifrost-codes/rust-eos", default-features = false }
 frame-support = { version = "2.0.0-alpha.4", git = "https://github.com/paritytech/substrate", default-features = false }

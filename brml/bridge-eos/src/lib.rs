@@ -13,13 +13,9 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unreachable_code)]
-#![allow(unused_must_use)]
-#![allow(array_into_iter)]
-#![allow(unused_variables)]
+
 #![cfg_attr(not(feature = "std"), no_std)]
+#[macro_use]
 extern crate alloc;
 
 use alloc::borrow::Cow;
@@ -36,7 +32,6 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-	offchain::http,
 	traits::{Member, SaturatedConversion, AtLeast32Bit},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
@@ -56,7 +51,6 @@ use node_primitives::{
 };
 use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
-use lite_json::{parse_json, JsonValue, Serialize};
 
 mod transaction;
 mod mock;
@@ -137,7 +131,7 @@ pub enum Error {
 	NoLocalStorage,
 	InvalidAccountId,
 	ConvertBalanceError,
-	HttpRequestError(String),
+	EOSRpcError(String),
 }
 
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
@@ -148,7 +142,7 @@ impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
 
 impl core::convert::From<&str> for Error {
 	fn from(s: &str) -> Self {
-		Self::from(Error::HttpRequestError(s.into()))
+		Self::EOSRpcError(s.into())
 	}
 }
 
@@ -444,10 +438,6 @@ decl_module! {
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
-
-			// let node_info = "http://127.0.0.1:8888/v1/chain/get_info";
-			// get eos node info
-//			Self::get_eos_node_info(node_info);
 
 			// Only send messages if we are a potential validator.
 			if sp_io::offchain::is_validator() {
@@ -762,33 +752,6 @@ impl<T: Trait> Module<T> {
 					.ok()
 					.map(|location| local_keys[location].clone())
 			})
-	}
-
-	fn get_eos_node_info(node_api: &str) -> Result<Vec<u8>, &'static str> {
-		let pending = http::Request::post(node_api, vec![b" "])
-			.send()
-			.map_err(|_| "Error in waiting http response back")?;
-		let response = pending.wait()
-			.map_err(|_| "Error in waiting http response back")?;
-		debug::info!("node_ino response is: {:?}", response);
-
-		if response.code != 200 {
-			debug::warn!("Unexpected status code: {}.", response.code);
-			return Err("Non-200 status code returned from http request");
-		}
-		let body = response.body().collect::<Vec<u8>>();
-		debug::info!("just body is: {:?}", body);
-		let body_str = String::from_utf8(body).map_err(|_| "Error cannot convert to string")?;
-		let json_val = parse_json(body_str.as_str()).map_err(|_| "Error json conversion failed")?;
-		let arr = json_val.serialize();
-		Ok(arr)
-	}
-
-	fn get_eos_block(node_api: &str){
-	}
-
-	fn push_transaction_to_eos(node_api: &str) {
-
 	}
 }
 
