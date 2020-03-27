@@ -177,6 +177,18 @@ decl_module! {
 					*exchange_rate = exchange_rate.saturating_sub(rate_per_block.into());
 				});
 			}
+
+//			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &exchanger).balance;
+//			let benefit = 5;
+//			let epoch = 2000;
+//
+//			let curr_rate = <ExchangeRate<T>>::get(vtoken_id);
+//			let epoch_rate = (1 + benefit / vtoken_balances) * curr_rate;
+//
+//			let curr_blk_num = system::Module::<T>::block_number();
+//			let specified_exchange_rate = {
+//				curr_rate + ((epoch_rate - curr_rate) / epoch) * (curr_blk_num % epoch)
+//			};
 		}
 	}
 }
