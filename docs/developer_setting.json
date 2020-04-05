@@ -4,7 +4,6 @@
     "precision": "u16",
     "totalSupply": "u128"
   },
-  "SettlementId": "u64",
   "VersionId": "u32",
   "Action": {
     "account": "AccountName",
@@ -98,5 +97,8 @@
     "balance": "Balance",
     "cost": "Cost",
     "income": "Income"
-  }
+  },
+  "SpecIndex": "u32",
+  "RequestIdentifier": "u64",
+  "DataVersion": "u64"
 }
