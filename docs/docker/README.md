@@ -84,6 +84,11 @@ $ cleos wallet unlock # prompt you input the password
 ---
 
 ### 3. Run EOS nodes
+Pull image
+```
+$ docker pull bifrostnetwork/bifrost-eos-relay:w3_m1
+```
+
 start producer node
 ```
 $ docker run --name=producer -p 8888:8888 -p 9876:9876 bifrostnetwork/bifrost-eos-relay:w3_m1 --max-transaction-time=1000 \
