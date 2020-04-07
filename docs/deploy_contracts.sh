@@ -1,7 +1,7 @@
 cleos create account eosio eosio.token EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
 # create a account for transaction
-cleos create account eosio jim EOS5gQZcp6e89AgKPxtBC8DPiTSZ7NTuiip9YgycwYrdDRCpEwvTc
+cleos create account eosio jim EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
 # accounts for multisignature
 cleos create account eosio testa EOS53o1JSZsySAbdQ9LFgH7gx6Mw6eURJCXawoTEomSdcT6672ZTa # 5KDXMiphWpzETsNpp3eL3sjWAa4gMvMXCtMquT2PDpKtV1STbHp
