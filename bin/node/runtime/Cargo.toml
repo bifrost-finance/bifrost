@@ -69,7 +69,7 @@ brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", d
 brml-exchange = { path = "../../../brml/exchange", default-features = false }
 brml-exchange-rpc-runtime-api = { path = "../../../brml/exchange/rpc/runtime-api", default-features = false }
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
-brml-cert = { path = "../../../brml/cert", default-features = false }
+brml-voucher = { path = "../../../brml/voucher", default-features = false }
 brml-swap = { path = "../../../brml/swap", default-features = false }
 chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
 brml-oracle = { path = "../../../brml/oracle", default-features = false }
@@ -140,5 +140,5 @@ std = [
 	"brml-swap/std",
 	'chainlink/std',
 	'brml-oracle/std',
-	'brml-cert/std'
+	'brml-voucher/std',
 ]

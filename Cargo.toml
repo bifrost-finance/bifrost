@@ -14,7 +14,7 @@ members = [
 	"brml/exchange/rpc",
 	"brml/oracle",
 	"brml/swap",
-	"brml/cert",
+	"brml/voucher",
 ]
 
 [profile.release]

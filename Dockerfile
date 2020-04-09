@@ -40,7 +40,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 # ===== SECOND STAGE ======
 
 FROM ubuntu:18.04
-LABEL description="The second stage for configuring thr image."
+LABEL description="The second stage for configuring the image."
 ARG PROFILE=release
 
 RUN apt-get update && \
