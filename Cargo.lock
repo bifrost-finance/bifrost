@@ -427,22 +427,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-cert"
-version = "0.2.2"
-dependencies = [
- "frame-support 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
- "frame-system 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
- "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "node-primitives 0.2.2",
- "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.105 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-core 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
- "sp-io 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
- "sp-runtime 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
- "sp-std 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
-]
-
-[[package]]
 name = "brml-exchange"
 version = "0.2.2"
 dependencies = [
@@ -502,6 +486,16 @@ dependencies = [
  "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "sp-io 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
+ "sp-runtime 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
+]
+
+[[package]]
+name = "brml-voucher"
+version = "0.2.2"
+dependencies = [
+ "frame-support 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
+ "frame-system 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
+ "parity-scale-codec 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
 ]
 
@@ -3184,11 +3178,11 @@ dependencies = [
  "brml-assets 0.2.2",
  "brml-assets-rpc-runtime-api 0.2.2",
  "brml-bridge-eos 0.2.2",
- "brml-cert 0.2.2",
  "brml-exchange 0.2.2",
  "brml-exchange-rpc-runtime-api 0.2.2",
  "brml-oracle 0.2.2",
  "brml-swap 0.2.2",
+ "brml-voucher 0.2.2",
  "frame-benchmarking 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "frame-executive 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0-alpha.4 (git+https://github.com/paritytech/substrate)",

@@ -608,14 +608,10 @@ impl brml_assets::Trait for Runtime {
 	type FetchExchangeRate = Exchange;
 }
 
-impl brml_cert::Trait for Runtime {
+impl brml_voucher::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
-	type Exchange = ExchangeRate;
-	type Cost = Cost;
-	type Income = Income;
-	type Price = Price;
-	type AssetId = AssetId;
+	type Currency = Balances;
 }
 
 impl brml_exchange::Trait for Runtime {
@@ -708,7 +704,7 @@ construct_runtime!(
 		Exchange: brml_exchange::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
-		Cert: brml_cert::{Module, Call, Storage, Event<T>},
+		Voucher: brml_voucher::{Module, Call, Storage, Event<T>},
 		// chainlink
 		Oracle: brml_oracle::{Module, Call, Storage},
 		Chainlink: chainlink::{Module, Call, Storage, Event<T>},
