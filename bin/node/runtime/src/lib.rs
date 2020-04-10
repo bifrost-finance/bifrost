@@ -611,7 +611,6 @@ impl brml_assets::Trait for Runtime {
 impl brml_voucher::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
-	type Currency = Balances;
 }
 
 impl brml_exchange::Trait for Runtime {
