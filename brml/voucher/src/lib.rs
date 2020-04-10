@@ -16,32 +16,32 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{
-	traits::{Currency, ExistenceRequirement, WithdrawReason, WithdrawReasons}, decl_module, decl_event, decl_storage, ensure
-};
-use sp_runtime::traits::StaticLookup;
+use frame_support::{decl_module, decl_event, decl_storage, ensure, Parameter};
+use sp_runtime::traits::{AtLeast32Bit, Member, StaticLookup, Zero};
 use frame_system::{self as system, ensure_root};
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
-	/// inherit Currency trait
-	type Currency: Currency<Self::AccountId>;
-	/// Balance
-	type Balance: From<<Self::Currency as Currency<Self::AccountId>>::Balance>;
+	/// BNC Balance
+	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<u128> + Into<u128>;
 }
 
 decl_event! {
 	pub enum Event<T> where <T as system::Trait>::AccountId, <T as Trait>::Balance {
 		/// A event indicate user receives transaction.
-		Transferred(AccountId, Balance),
+		IssuedVoucher(AccountId, Balance),
 	}
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Voucher {
-		pub BalancesVoucher get(fn voucher): map hasher(blake2_128_concat) T::AccountId =>
-			<T::Currency as Currency<T::AccountId>>::Balance;
+		/// How much voucher you have
+		pub BalancesVoucher get(fn voucher): map hasher(blake2_128_concat) T::AccountId => T::Balance;
+		/// Total BNC in mainnet
+		TotalSuppliedBNC get(fn toal_bnc): T::Balance = T::Balance::from(80_000_000);
+		/// Current remaining BNC adds all others vouchers, equaling to TotalSuppliedBNC
+		RemainingBNC get(fn remaining_bnc): T::Balance = T::Balance::from(80_000_000);
 	}
 }
 
@@ -51,24 +51,19 @@ decl_module! {
 
 		pub fn issue_voucher(
 			origin,
-			source: T::AccountId,
 			dest: <T::Lookup as StaticLookup>::Source,
 			#[compact]
-			amount: <T::Currency as Currency<T::AccountId>>::Balance,
+			amount: T::Balance,
 		) {
 			ensure_root(origin)?;
 
-			let balance = <T::Currency as Currency<T::AccountId>>::free_balance(&source);
+			let balance = <RemainingBNC<T>>::get();
+			let amount = amount.into() / 10u128.pow(12);
+			let amount = T::Balance::from(amount as u32);
 			ensure!(balance >= amount, "the balance you transfer cannot bigger than all you have.");
 
 			// ensure this address added into bifrost node
 			let dest = T::Lookup::lookup(dest)?;
-
-			// create a reason mask
-			let mut reason = WithdrawReasons::none();
-			reason.set(WithdrawReason::Transfer);
-			// reduce balances from source account
-			<T::Currency as Currency<T::AccountId>>::withdraw(&source, amount, reason, ExistenceRequirement::AllowDeath)?;
 
 			// do not send balances for a account multiple times, just for one time
 			if <BalancesVoucher<T>>::contains_key(&dest) {
@@ -80,7 +75,12 @@ decl_module! {
 				<BalancesVoucher<T>>::insert(&dest, amount);
 			}
 
-			Self::deposit_event(RawEvent::Transferred(dest, T::Balance::from(amount)));
+			// reduce from total BNC
+			<RemainingBNC<T>>::mutate(|balance| {
+					*balance -= amount;
+			});
+
+			Self::deposit_event(RawEvent::IssuedVoucher(dest, amount));
 		}
 	}
 }
