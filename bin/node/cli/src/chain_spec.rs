@@ -538,7 +538,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		);
 		props.insert(
 			"tokenSymbol".to_owned(),
-			serde_json::value::to_value("BNC".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+			serde_json::value::to_value("ASG".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
 		);
 		Some(props)
 	};
