@@ -378,10 +378,7 @@ pub fn testnet_poc_genesis(
 				.map(|member| (member, STASH))
 				.collect(),
 		}),
-		pallet_collective_Instance1: Some(CouncilConfig {
-			members: initial_authorities.iter().map(|x| x.0.clone()).collect(),
-			phantom: Default::default(),
-		}),
+		pallet_collective_Instance1: Some(CouncilConfig::default()),
 		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
 			members: initial_authorities.iter().map(|x| x.0.clone()).collect(),
 			phantom: Default::default(),
@@ -571,7 +568,7 @@ pub fn local_testnet_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Bifrost POC-2 Testnet",
 		"bifrost_testnet",
-		ChainType::Local,
+		ChainType::Custom("POC".into()),
 		poc_config_genesis,
 		vec![],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
