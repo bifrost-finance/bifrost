@@ -20,7 +20,7 @@ mod mock;
 mod tests;
 
 use core::convert::{From, Into};
-use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
+use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter, weights::{SimpleDispatchInfo, Weight}};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, TokenType};
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
@@ -98,6 +98,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		#[weight = SimpleDispatchInfo::FixedNormal(500_000)]
 		fn set_fee(
 			origin,
 			vtoken_id: T::AssetId,
@@ -115,6 +116,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdateFeeSuccess);
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(500_000)]
 		fn add_liquidity(
 			origin,
 			provider: T::AccountId,
@@ -152,6 +154,7 @@ decl_module! {
 			Self::deposit_event(Event::AddLiquiditySuccess);
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(500_000)]
 		fn remove_liquidity(
 			origin,
 			provider: T::AccountId,
@@ -184,6 +187,7 @@ decl_module! {
 			Self::deposit_event(Event::RemoveLiquiditySuccess);
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(500_000)]
 		fn swap_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,
@@ -232,6 +236,7 @@ decl_module! {
 			Self::deposit_event(Event::SwapVTokenToTokenSuccess);
 		}
 
+		#[weight = SimpleDispatchInfo::FixedNormal(500_000)]
 		fn swap_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,

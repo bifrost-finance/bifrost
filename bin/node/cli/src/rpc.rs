@@ -31,7 +31,7 @@
 
 use std::{sync::Arc, fmt};
 
-use node_primitives::{AccountId, AssetId, Balance, Block, ExchangeRate, Index};
+use node_primitives::{AccountId, AssetId, Balance, Block, BlockNumber, ExchangeRate, Index};
 use node_runtime::UncheckedExtrinsic;
 use sp_api::ProvideRuntimeApi;
 use sp_transaction_pool::TransactionPool;
