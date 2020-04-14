@@ -161,6 +161,7 @@ decl_module! {
 
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) {
 			ensure_root(origin)?;
 
@@ -174,6 +175,7 @@ decl_module! {
 		}
 
 		/// Issue any amount of fungible assets.
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn issue(origin,
 			#[compact] id: T::AssetId,
 			token_type: TokenType,
@@ -193,6 +195,7 @@ decl_module! {
 		}
 
 		/// Move some assets from one holder to another.
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn transfer(origin,
 			#[compact] id: T::AssetId,
 			token_type: TokenType,
@@ -213,6 +216,7 @@ decl_module! {
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn destroy(
 			origin,
 			#[compact] id: T::AssetId,
@@ -230,6 +234,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Destroyed(id, token_type, origin, amount));
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn redeem(
 			origin,
 			#[compact] id: T::AssetId,

@@ -19,16 +19,5 @@
 #![warn(missing_docs)]
 
 fn main() -> sc_cli::Result<()> {
-	let version = sc_cli::VersionInfo {
-		name: "Liebi Bifrost",
-		commit: env!("VERGEN_SHA_SHORT"),
-		version: env!("CARGO_PKG_VERSION"),
-		executable_name: "bifrost",
-		author: "Liebi Technologies <bifrost@liebi.com>",
-		description: "Bifrost Parachain Node",
-		support_url: "https://github.com/bifrost-codes/bifrost/issues/new",
-		copyright_start_year: 2019,
-	};
-
-	node_cli::run(std::env::args(), version)
+	node_cli::run()
 }

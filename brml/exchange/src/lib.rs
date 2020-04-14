@@ -15,6 +15,10 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[macro_use]
+extern crate alloc;
+use alloc::vec::Vec;
+
 mod mock;
 mod tests;
 
@@ -76,6 +80,10 @@ decl_storage! {
 		ExchangeRate get(fn exchange_rate): map hasher(blake2_128_concat) T::AssetId => T::ExchangeRate;
 		/// change rate per block, vtoken => (token, rate_per_block)
 		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
+		/// collect referrer, exchanger => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
+		/// total_point = 1000 + 2000 + ...
+		/// referrer must be unique, so check it unique while a new referrer incoming
+		referrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId => (Vec<(T::AccountId, T::Balance)>, T::Balance);
 	}
 }
 
@@ -85,6 +93,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_exchange_rate(
 			origin,
 			vtoken_id: T::AssetId,
@@ -98,6 +107,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdateExchangeSuccess);
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_rate_per_block(
 			origin,
 			vtoken_id: T::AssetId,
@@ -111,10 +121,12 @@ decl_module! {
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn exchange_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
-			vtoken_id: T::AssetId
+			vtoken_id: T::AssetId,
+			referrer: Option<T::AccountId>
 		) {
 			let exchanger = ensure_signed(origin)?;
 
@@ -137,9 +149,33 @@ decl_module! {
 			T::AssetTrait::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
 			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, exchanger, vtokens_buy);
 
+			// save
+//			if let referrer = Some(referrer) {
+//				// first time to referrer
+//				if !<referrerChannels<T>>::contains_key(&exchanger) {
+//					let value = (vec![(referrer, vtokens_buy)], vtokens_buy);
+//					<referrerChannels<T>>::insert(&exchanger, value);
+//				} else {
+//					// existed, but new referrer incoming
+//					<referrerChannels<T>>::mutate(&exchanger, |points| {
+//						if points.0.iter().any(|point| point.0 == referrer) {
+//							point.0[1] += vtokens_buy;
+//						} else {
+//							let value = (vec![(referrer, vtokens_buy)], vtokens_buy);
+//							<referrerChannels<T>>::insert(&exchanger, value);
+//						}
+////						points.0.iter().find(|point| )
+//						points.1 += vtokens_buy;
+//					});
+//				}
+//			} else {
+//				();
+//			}
+
 			Self::deposit_event(Event::ExchangeTokenToVTokenSuccess);
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn exchange_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,

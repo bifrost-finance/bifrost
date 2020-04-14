@@ -35,7 +35,7 @@ use sp_runtime::{
 	traits::{Member, SaturatedConversion, AtLeast32Bit},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
-		TransactionValidity, ValidTransaction
+		TransactionValidity, ValidTransaction, TransactionSource
 	},
 };
 use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
@@ -245,12 +245,14 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
 
 			BridgeEnable::put(enable);
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn init_schedule(origin, ps: ProducerSchedule) {
 			let _ = ensure_root(origin)?;
 
@@ -266,6 +268,7 @@ decl_module! {
 			Self::deposit_event(Event::InitSchedule(ps.version));
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
 			let _ = ensure_root(origin)?;
 			BridgeContractAccount::put((account, threthold));
@@ -276,6 +279,7 @@ decl_module! {
 		// 3. compare current schedules version with pending_schedules'.
 		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
 		// 5. save the new_producers list.
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn change_schedule(
 			origin,
 			merkle: IncrementalMerkle,
@@ -317,6 +321,7 @@ decl_module! {
 			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, pending_schedule.version));
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn prove_action(
 			origin,
 			target: T::AccountId,
@@ -395,12 +400,14 @@ decl_module! {
 			Self::map_assets_by_action(target, &act_transfer);
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) {
 			ensure_none(origin)?;
 
 			BridgeTxOuts::<T>::put(tx_list);
 		}
 
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
@@ -768,7 +775,7 @@ impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
 impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
-	fn validate_unsigned(call: &Self::Call) -> TransactionValidity {
+	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		if let Call::bridge_tx_report(_tx_list) = call {
 			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
 			Ok(ValidTransaction {
