@@ -24,7 +24,7 @@ mod tests;
 
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, FetchExchangeRate, TokenType};
+use node_primitives::{AssetTrait, AssetSymbol, FetchExchangeRate, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
 
 pub trait Trait: frame_system::Trait {
@@ -96,10 +96,12 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_exchange_rate(
 			origin,
-			vtoken_id: T::AssetId,
+			vtoken_id: AssetSymbol,
 			exchange_rate: T::ExchangeRate
 		) {
 			ensure_root(origin)?;
+
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			<ExchangeRate<T>>::insert(vtoken_id, exchange_rate);
@@ -110,10 +112,12 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_rate_per_block(
 			origin,
-			vtoken_id: T::AssetId,
+			vtoken_id: AssetSymbol,
 			rate_per_block: T::RatePerBlock
 		) {
 			ensure_root(origin)?;
+
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			<RatePerBlock<T>>::insert(vtoken_id, rate_per_block);
@@ -125,10 +129,12 @@ decl_module! {
 		fn exchange_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
-			vtoken_id: T::AssetId,
+			vtoken_id: AssetSymbol,
 			referrer: Option<T::AccountId>
 		) {
 			let exchanger = ensure_signed(origin)?;
+
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
@@ -179,9 +185,11 @@ decl_module! {
 		fn exchange_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,
-			vtoken_id: T::AssetId,
+			vtoken_id: AssetSymbol,
 		) {
 			let exchanger = ensure_signed(origin)?;
+
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);

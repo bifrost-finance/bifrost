@@ -22,7 +22,7 @@ mod tests;
 use core::convert::{From, Into};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter, weights::{SimpleDispatchInfo, Weight}};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, TokenType};
+use node_primitives::{AssetTrait, AssetSymbol, TokenType};
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 
 pub trait Trait: frame_system::Trait {
@@ -101,11 +101,13 @@ decl_module! {
 		#[weight = SimpleDispatchInfo::FixedNormal(500_000)]
 		fn set_fee(
 			origin,
-			vtoken_id: T::AssetId,
+			vtoken_id: AssetSymbol,
 			fee: T::Fee
 		) {
 			ensure_root(origin)?;
 			ensure!(!fee.is_zero(), Error::<T>::InvalidFee);
+
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			ensure!(fee >= 0.into(), Error::<T>::InvalidFee);
@@ -121,13 +123,14 @@ decl_module! {
 			origin,
 			provider: T::AccountId,
 			#[compact] token_pool: T::Balance,
-			vtoken_id: T::AssetId,
+			vtoken_id: AssetSymbol,
 			#[compact] vtoken_pool: T::Balance
 		) {
 			// only root user has the privilidge to add liquidity
 			ensure_root(origin)?;
 			ensure!(!vtoken_pool.is_zero() && !token_pool.is_zero(), Error::<T>::InvalidPoolSize);
 
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
 			let token_id = vtoken_id;
@@ -158,10 +161,11 @@ decl_module! {
 		fn remove_liquidity(
 			origin,
 			provider: T::AccountId,
-			vtoken_id: T::AssetId
+			vtoken_id: AssetSymbol
 		) {
 			// only root user has the privilidge to remove liquidity
 			ensure_root(origin)?;
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
@@ -191,10 +195,11 @@ decl_module! {
 		fn swap_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,
-			vtoken_id: T::AssetId
+			vtoken_id: AssetSymbol
 		) {
 			ensure!(!vtoken_amount.is_zero(), Error::<T>::InvalidBalanceForTransaction);
 			let sender = ensure_signed(origin)?;
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
@@ -240,10 +245,11 @@ decl_module! {
 		fn swap_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
-			vtoken_id: T::AssetId
+			vtoken_id: AssetSymbol
 		) {
 			ensure!(!token_amount.is_zero(), Error::<T>::InvalidBalanceForTransaction);
 			let sender = ensure_signed(origin)?;
+			let vtoken_id = T::AssetId::from(vtoken_id as u32);
 
 			// check asset_id exist or not
 			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);

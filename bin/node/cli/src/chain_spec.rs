@@ -233,7 +233,7 @@ pub fn testnet_genesis(
 	});
 	let num_endowed_accounts = endowed_accounts.len();
 
-	const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
+	const ENDOWMENT: Balance = 10_000 * DOLLARS;
 	const STASH: Balance = 100 * DOLLARS;
 
 	GenesisConfig {
@@ -334,7 +334,7 @@ pub fn testnet_poc_genesis(
 ) -> GenesisConfig {
 	let num_endowed_accounts = endowed_accounts.len();
 
-	const ENDOWMENT: Balance = 10_000_000 * DOLLARS;
+	const ENDOWMENT: Balance = 10_000 * DOLLARS;
 	const STASH: Balance = 100 * DOLLARS;
 
 	GenesisConfig {
@@ -490,8 +490,8 @@ fn poc_config_genesis() -> GenesisConfig {
 
 	// generated with secret: subkey inspect "$secret"/fir
 	let root_key: AccountId = hex![
-		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
-		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+		// 5DU1gVL9GAWbDswdpAULxaQMVfBwPjseNrX21fp6wDDCHuGD
+		"3e02e15e036a8f5fe634f88bdd41cf6cb2fca4051546fbcd203a04431e016563"
 	].into();
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];

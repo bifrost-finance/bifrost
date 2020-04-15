@@ -18,14 +18,22 @@
 
 use core::convert::{TryFrom, TryInto};
 use frame_support::{decl_module, decl_event, decl_storage, ensure, Parameter};
-use sp_runtime::traits::{AtLeast32Bit, Member, StaticLookup, Zero};
+use sp_runtime::traits::{AtLeast32Bit, Member, MaybeSerializeDeserialize, StaticLookup, Zero};
 use frame_system::{self as system, ensure_root};
 
 pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	/// BNC Balance
-	type Balance: Member + Parameter + Default + From<u128> + AtLeast32Bit + Copy + Zero + Into<u128>;
+	type Balance: Member
+		+ Parameter
+		+ Default
+		+ From<u128>
+		+ AtLeast32Bit
+		+ MaybeSerializeDeserialize
+		+ Copy
+		+ Zero
+		+ Into<u128>;
 }
 
 decl_event! {

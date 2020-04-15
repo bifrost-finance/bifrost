@@ -14,28 +14,28 @@
 # You should have received a copy of the GNU General Public License
 # along with Bifrost.  If not, see <http:#www.gnu.org/licenses/>.
 
-#FROM ubuntu:18.04 as builder
-#LABEL description="The first stage for building a release bifrost-node binary."
-#
-#ARG PROFILE=release
-#WORKDIR /bifrost
-#
-#ENV DEBIAN_FRONTEND noninteractive
-#
-#COPY . /bifrost
-#
-#RUN apt-get update && \
-#	apt-get dist-upgrade -y && \
-#	apt-get install -y cmake pkg-config libssl-dev git clang curl apt-utils
-#
-#RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-#	export PATH="$PATH:$HOME/.cargo/bin" && \
-#	rustup toolchain install nightly && \
-#	rustup target add wasm32-unknown-unknown --toolchain nightly && \
-#	cargo install --git https://github.com/alexcrichton/wasm-gc && \
-#	rustup default nightly && \
-#	rustup default stable && \
-#	cargo build "--$PROFILE"
+FROM ubuntu:18.04 as builder
+LABEL description="The first stage for building a release bifrost-node binary."
+
+ARG PROFILE=release
+WORKDIR /bifrost
+
+ENV DEBIAN_FRONTEND noninteractive
+
+COPY . /bifrost
+
+RUN apt-get update && \
+	apt-get dist-upgrade -y && \
+	apt-get install -y cmake pkg-config libssl-dev git clang curl apt-utils
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
+	export PATH="$PATH:$HOME/.cargo/bin" && \
+	rustup toolchain install nightly && \
+	rustup target add wasm32-unknown-unknown --toolchain nightly && \
+	cargo install --git https://github.com/alexcrichton/wasm-gc && \
+	rustup default nightly && \
+	rustup default stable && \
+	cargo build "--$PROFILE"
 
 # ===== SECOND STAGE ======
 
@@ -52,14 +52,7 @@ RUN rm -rf /usr/share/*  && \
 	ln -s /root/.local/share/bifrost /data && \
 	useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost
 
-#COPY --from=builder /bifrost/target/$PROFILE/bifrost-node /usr/local/bin
-
-
-
-COPY bifrost-node /usr/local/bin
-COPY chain.json /usr/local/bin
-
-#RUN chmod +x /usr/local/bin/bifrost-node
+COPY --from=builder /bifrost/target/$PROFILE/bifrost-node /usr/local/bin
 
 # checks
 RUN ldd /usr/local/bin/bifrost-node && \

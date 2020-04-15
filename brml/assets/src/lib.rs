@@ -17,13 +17,14 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Encode, Decode};
 use core::convert::TryInto;
 use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure};
 use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup};
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetRedeem, AssetTrait, FetchExchangeRate, Token, TokenPair, TokenPriceHandler, TokenType,
+	AccountAsset, AssetRedeem, AssetTrait, AssetSymbol, FetchExchangeRate, Token, TokenPair, TokenPriceHandler, TokenType,
 };
 
 mod mock;
@@ -176,15 +177,17 @@ decl_module! {
 
 		/// Issue any amount of fungible assets.
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
-		pub fn issue(origin,
-			#[compact] id: T::AssetId,
+		pub fn issue(
+			origin,
+			id: AssetSymbol,
 			token_type: TokenType,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance,
 		) {
 			ensure_root(origin)?;
+			let id = T::AssetId::from(id as u32);
 
-			ensure!(<Tokens<T>>::contains_key(&id), Error::<T>::TokenNotExist);
+			ensure!(<Tokens<T>>::contains_key(id), Error::<T>::TokenNotExist);
 
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
@@ -196,13 +199,16 @@ decl_module! {
 
 		/// Move some assets from one holder to another.
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
-		pub fn transfer(origin,
-			#[compact] id: T::AssetId,
+		pub fn transfer(
+			origin,
+			id: AssetSymbol,
 			token_type: TokenType,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance,
 		) {
 			let origin = ensure_signed(origin)?;
+			let id = T::AssetId::from(id as u32);
+
 			let origin_account = (id, token_type, origin.clone());
 			let origin_balance = <AccountAssets<T>>::get(&origin_account).balance;
 			let target = T::Lookup::lookup(target)?;
@@ -219,11 +225,13 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn destroy(
 			origin,
-			#[compact] id: T::AssetId,
+			id: AssetSymbol,
 			token_type: TokenType,
 			#[compact] amount: T::Balance,
 		) {
 			let origin = ensure_signed(origin)?;
+
+			let id = T::AssetId::from(id as u32);
 			let origin_account = (id, token_type, origin.clone());
 
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
@@ -237,13 +245,14 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		pub fn redeem(
 			origin,
-			#[compact] id: T::AssetId,
+			id: AssetSymbol,
 			token_type: TokenType,
 			#[compact] amount: T::Balance,
 			to_name: Option<Vec<u8>>,
 		) {
 			let origin = ensure_signed(origin)?;
 
+			let id = T::AssetId::from(id as u32);
 			let origin_account = (id, token_type, origin.clone());
 
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
