@@ -100,5 +100,12 @@
   },
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",
-  "DataVersion": "u64"
+  "DataVersion": "u64",
+  "AssetSymbol": {
+    "_enum": [
+      "DOT",
+      "KSM",
+      "EOS"
+    ]
+  }
 }

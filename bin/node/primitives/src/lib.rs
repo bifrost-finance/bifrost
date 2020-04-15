@@ -89,6 +89,16 @@ pub enum TokenType {
 	VToken,
 }
 
+#[derive(Debug, Decode, Encode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
+pub enum AssetSymbol {
+	DOT = 0,
+	KSM,
+	EOS,
+}
+
+
 /// Token pair to bond token and vtoken
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
