@@ -16,6 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use core::convert::{TryFrom, TryInto};
 use frame_support::{decl_module, decl_event, decl_storage, ensure, Parameter};
 use sp_runtime::traits::{AtLeast32Bit, Member, StaticLookup, Zero};
 use frame_system::{self as system, ensure_root};
@@ -24,7 +25,7 @@ pub trait Trait: system::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 	/// BNC Balance
-	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<u128> + Into<u128>;
+	type Balance: Member + Parameter + Default + From<u128> + AtLeast32Bit + Copy + Zero + Into<u128>;
 }
 
 decl_event! {
@@ -39,9 +40,9 @@ decl_storage! {
 		/// How much voucher you have
 		pub BalancesVoucher get(fn voucher): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 		/// Total BNC in mainnet
-		TotalSuppliedBNC get(fn toal_bnc): T::Balance = T::Balance::from(80_000_000);
+		TotalSuppliedBNC get(fn toal_bnc): T::Balance = (80_000_000u128 * 10u128.pow(12)).try_into().map_err(|_| "failed to u128 conversion").unwrap();
 		/// Current remaining BNC adds all others vouchers, equaling to TotalSuppliedBNC
-		RemainingBNC get(fn remaining_bnc): T::Balance = T::Balance::from(80_000_000);
+		RemainingBNC get(fn remaining_bnc): T::Balance = (80_000_000u128 * 10u128.pow(12)).try_into().map_err(|_| "failed to u128 conversion").unwrap();
 	}
 }
 
@@ -59,8 +60,6 @@ decl_module! {
 			ensure_root(origin)?;
 
 			let balance = <RemainingBNC<T>>::get();
-			let amount = amount.into() / 10u128.pow(12);
-			let amount = T::Balance::from(amount as u32);
 			ensure!(balance >= amount, "the balance you transfer cannot bigger than all you have.");
 
 			// ensure this address added into bifrost node
