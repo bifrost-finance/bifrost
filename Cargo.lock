@@ -388,12 +388,12 @@ dependencies = [
 
 [[package]]
 name = "brml-assets"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "node-primitives 0.2.2",
+ "node-primitives 0.2.3",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -404,9 +404,9 @@ dependencies = [
 
 [[package]]
 name = "brml-assets-rpc"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
- "brml-assets-rpc-runtime-api 0.2.2",
+ "brml-assets-rpc-runtime-api 0.2.3",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -418,7 +418,7 @@ dependencies = [
 
 [[package]]
 name = "brml-assets-rpc-runtime-api"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -426,9 +426,9 @@ dependencies = [
 
 [[package]]
 name = "brml-bridge-eos"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
- "brml-assets 0.2.2",
+ "brml-assets 0.2.3",
  "bs58 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "eos-chain 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
  "eos-keys 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
@@ -437,7 +437,7 @@ dependencies = [
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lite-json 0.1.0 (git+https://github.com/xlc/lite-json)",
- "node-primitives 0.2.2",
+ "node-primitives 0.2.3",
  "pallet-authorship 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -452,12 +452,12 @@ dependencies = [
 
 [[package]]
 name = "brml-exchange"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
- "brml-assets 0.2.2",
+ "brml-assets 0.2.3",
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
- "node-primitives 0.2.2",
+ "node-primitives 0.2.3",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "sp-io 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -466,9 +466,9 @@ dependencies = [
 
 [[package]]
 name = "brml-exchange-rpc"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
- "brml-exchange-rpc-runtime-api 0.2.2",
+ "brml-exchange-rpc-runtime-api 0.2.3",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -480,7 +480,7 @@ dependencies = [
 
 [[package]]
 name = "brml-exchange-rpc-runtime-api"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-api 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -488,11 +488,11 @@ dependencies = [
 
 [[package]]
 name = "brml-oracle"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
- "node-primitives 0.2.2",
+ "node-primitives 0.2.3",
  "pallet-chainlink 2.0.0",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -501,12 +501,12 @@ dependencies = [
 
 [[package]]
 name = "brml-swap"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
- "brml-assets 0.2.2",
+ "brml-assets 0.2.3",
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
- "node-primitives 0.2.2",
+ "node-primitives 0.2.3",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "sp-io 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -515,7 +515,7 @@ dependencies = [
 
 [[package]]
 name = "brml-voucher"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -625,7 +625,7 @@ dependencies = [
 
 [[package]]
 name = "chain-spec-builder"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "ansi_term 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "node-cli 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -3038,12 +3038,12 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "assert_cmd 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "brml-assets-rpc 0.2.2",
- "brml-bridge-eos 0.2.2",
- "brml-exchange-rpc 0.2.2",
+ "brml-assets-rpc 0.2.3",
+ "brml-bridge-eos 0.2.3",
+ "brml-exchange-rpc 0.2.3",
  "eos-chain 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -3052,9 +3052,9 @@ dependencies = [
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "nix 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "node-inspect 0.2.2",
- "node-primitives 0.2.2",
- "node-runtime 0.2.2",
+ "node-inspect 0.2.3",
+ "node-primitives 0.2.3",
+ "node-runtime 0.2.3",
  "node-transaction-factory 0.8.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "pallet-authority-discovery 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "pallet-balances 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -3197,7 +3197,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "derive_more 0.99.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3230,7 +3230,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pretty_assertions 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3276,23 +3276,23 @@ dependencies = [
 
 [[package]]
 name = "node-runtime"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
- "brml-assets 0.2.2",
- "brml-assets-rpc-runtime-api 0.2.2",
- "brml-bridge-eos 0.2.2",
- "brml-exchange 0.2.2",
- "brml-exchange-rpc-runtime-api 0.2.2",
- "brml-oracle 0.2.2",
- "brml-swap 0.2.2",
- "brml-voucher 0.2.2",
+ "brml-assets 0.2.3",
+ "brml-assets-rpc-runtime-api 0.2.3",
+ "brml-bridge-eos 0.2.3",
+ "brml-exchange 0.2.3",
+ "brml-exchange-rpc-runtime-api 0.2.3",
+ "brml-oracle 0.2.3",
+ "brml-swap 0.2.3",
+ "brml-voucher 0.2.3",
  "frame-benchmarking 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-executive 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system-rpc-runtime-api 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "integer-sqrt 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "node-primitives 0.2.2",
+ "node-primitives 0.2.3",
  "pallet-authority-discovery 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "pallet-authorship 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "pallet-babe 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -6798,7 +6798,7 @@ dependencies = [
 
 [[package]]
 name = "subkey"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "derive_more 0.99.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6810,8 +6810,8 @@ dependencies = [
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libp2p 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "node-primitives 0.2.2",
- "node-runtime 0.2.2",
+ "node-primitives 0.2.3",
+ "node-runtime 0.2.3",
  "pallet-balances 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "pallet-transaction-payment 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

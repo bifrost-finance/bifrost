@@ -98,6 +98,17 @@ pub enum AssetSymbol {
 	EOS,
 }
 
+impl From<AssetId> for AssetSymbol {
+	fn from(id: AssetId) -> Self {
+		match id {
+			0 => Self::DOT,
+			1 => Self::KSM,
+			2 => Self::EOS,
+			_ => unimplemented!("This asset id is not sopported now.")
+		}
+	}
+}
+
 
 /// Token pair to bond token and vtoken
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]

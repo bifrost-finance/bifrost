@@ -18,7 +18,7 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types};
+use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}};
 use sp_core::H256;
 use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
@@ -55,7 +55,6 @@ impl system::Trait for Test {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type AccountData = ();
-	type MigrateAccount = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 }
@@ -90,6 +89,17 @@ impl_outer_event! {
 pub type Assets = Module<Test>;
 pub type AssetsError = Error<Test>;
 pub type System = system::Module<Test>;
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		Assets::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Assets::on_initialize(System::block_number());
+	}
+}
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
