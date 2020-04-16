@@ -35,6 +35,9 @@ fn create_asset_should_work() {
 		let token_pair1 = TokenPair::new(token1, vtoken1);
 
 		let id1 = Assets::next_asset_id();
+
+		System::set_block_number(1);
+
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_eq!(Assets::next_asset_id(), id1 + 1);
 		assert_eq!(Assets::token_details(id1), token_pair1);
@@ -52,16 +55,14 @@ fn create_asset_should_work() {
 		assert_eq!(Assets::next_asset_id(), id2 + 1);
 		assert_eq!(Assets::token_details(id2), token_pair2);
 
-		run_to_block(100);
-
 		assert_eq!(System::events(), vec![
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Created(id1, token_pair1)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Created(id2, token_pair2)),
 				topics: vec![],
 			}
@@ -73,6 +74,8 @@ fn create_asset_should_work() {
 fn issuing_asset_units_to_issuer_should_work() {
 	new_test_ext().execute_with(|| {
 		let id = Assets::next_asset_id();
+
+		System::set_block_number(1);
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 
 		let token = Token {
@@ -107,22 +110,22 @@ fn issuing_asset_units_to_issuer_should_work() {
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Issued(id, TokenType::Token, bob, 20000)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Issued(id, TokenType::Token, bob, 30000)),
 				topics: vec![],
 			}
@@ -153,6 +156,8 @@ fn transferring_amount_above_available_balance_should_work() {
 		let bob = 2;
 		let id = Assets::next_asset_id();
 
+		System::set_block_number(1);
+
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
 
@@ -167,17 +172,17 @@ fn transferring_amount_above_available_balance_should_work() {
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Transferred(id, TokenType::VToken, alice, bob, 1000)),
 				topics: vec![],
 			}
@@ -217,6 +222,8 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 		};
 		let token_pair = TokenPair::new(token.clone(), token.clone());
 
+		System::set_block_number(1);
+
 		let id = Assets::next_asset_id();
 		let alice = 1;
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
@@ -230,17 +237,17 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
 				topics: vec![],
 			},
 			EventRecord {
-				phase: Phase::ApplyExtrinsic(0),
+				phase: Phase::Initialization,
 				event: TestEvent::assets(RawEvent::Destroyed(id, TokenType::VToken, alice, 1000)),
 				topics: vec![],
 			}

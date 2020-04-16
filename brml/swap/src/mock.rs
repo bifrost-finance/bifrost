@@ -16,12 +16,14 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types};
+use frame_support::{
+	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}
+};
 use sp_core::H256;
 use sp_runtime::{
 	Perbill,
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, OnInitialize, OnFinalize},
+	traits::{BlakeTwo256, IdentityLookup},
 };
 use super::*;
 
@@ -76,7 +78,6 @@ impl frame_system::Trait for Test {
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type AccountData = ();
-	type MigrateAccount = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 }
