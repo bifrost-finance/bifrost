@@ -52,6 +52,8 @@ fn create_asset_should_work() {
 		assert_eq!(Assets::next_asset_id(), id2 + 1);
 		assert_eq!(Assets::token_details(id2), token_pair2);
 
+		run_to_block(100);
+
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::ApplyExtrinsic(0),
@@ -81,7 +83,7 @@ fn issuing_asset_units_to_issuer_should_work() {
 		let token_pair = TokenPair::new(token.clone(), token.clone());
 		let alice = 1;
 
-		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::VToken, alice, 10000));
+		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
 		assert_eq!(Assets::token_details(id), TokenPair::new(
 			token.clone(),
 			Token { total_supply: 10000, ..token.clone() }
@@ -89,14 +91,14 @@ fn issuing_asset_units_to_issuer_should_work() {
 		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 10000);
 
 		let bob = 2;
-		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::Token, bob, 20000));
+		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::Token, bob, 20000));
 		assert_eq!(Assets::token_details(id), TokenPair::new(
 			Token { total_supply: 20000, ..token.clone() },
 			Token { total_supply: 10000, ..token.clone() }
 		));
 		assert_eq!(Assets::account_assets((id, TokenType::Token, bob)).balance, 20000);
 
-		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::Token, bob, 30000));
+		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::Token, bob, 30000));
 		assert_eq!(Assets::token_details(id), TokenPair::new(
 			Token { total_supply: 50000, ..token.clone() },
 			Token { total_supply: 10000, ..token.clone() }
@@ -132,7 +134,7 @@ fn issuing_asset_units_to_issuer_should_work() {
 fn issuing_before_creating_should_now_work() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Assets::issue(Origin::ROOT, 0, TokenType::Token, 1, 10000),
+			Assets::issue(Origin::ROOT, 0.into(), TokenType::Token, 1, 10000),
 			AssetsError::TokenNotExist
 		);
 	});
@@ -152,9 +154,9 @@ fn transferring_amount_above_available_balance_should_work() {
 		let id = Assets::next_asset_id();
 
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::VToken, alice, 10000));
+		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
 
-		assert_ok!(Assets::transfer(Origin::signed(alice), id, TokenType::VToken, bob, 1000));
+		assert_ok!(Assets::transfer(Origin::signed(alice), id.into(), TokenType::VToken, bob, 1000));
 		assert_eq!(Assets::account_asset_ids(bob), vec![id]);
 		assert_eq!(Assets::token_details(id), TokenPair::new(
 			token.clone(),
@@ -188,7 +190,7 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_noop!(
-			Assets::transfer(Origin::signed(1), 0, TokenType::VToken, 1, 1000),
+			Assets::transfer(Origin::signed(1), 0.into(), TokenType::VToken, 1, 1000),
 			AssetsError::InvalidBalanceForTransaction
 		);
 	});
@@ -199,7 +201,7 @@ fn transferring_less_than_one_unit_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_noop!(
-			Assets::transfer(Origin::signed(1), 0, TokenType::VToken, 1, 0),
+			Assets::transfer(Origin::signed(1), 0.into(), TokenType::VToken, 1, 0),
 			AssetsError::ZeroAmountOfBalance
 		);
 	});
@@ -218,8 +220,8 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 		let id = Assets::next_asset_id();
 		let alice = 1;
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, id, TokenType::VToken, alice, 10000));
-		assert_ok!(Assets::destroy(Origin::signed(alice), id, TokenType::VToken, 1000));
+		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
+		assert_ok!(Assets::destroy(Origin::signed(alice), id.into(), TokenType::VToken, 1000));
 		assert_eq!(Assets::token_details(id), TokenPair::new(
 			token.clone(),
 			Token { total_supply: 9000, ..token.clone() }
@@ -251,9 +253,9 @@ fn destroying_asset_balance_with_zero_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		let id = Assets::next_asset_id();
-		assert_ok!(Assets::issue(Origin::ROOT, id - 1, TokenType::VToken, 1, 100));
+		assert_ok!(Assets::issue(Origin::ROOT, (id - 1).into(), TokenType::VToken, 1, 100));
 		assert_noop!(
-			Assets::destroy(Origin::signed(1), 0, TokenType::VToken, 200),
+			Assets::destroy(Origin::signed(1), 0.into(), TokenType::VToken, 200),
 			AssetsError::InvalidBalanceForTransaction
 		);
 	});

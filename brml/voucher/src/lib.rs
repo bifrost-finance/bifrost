@@ -40,6 +40,7 @@ decl_event! {
 	pub enum Event<T> where <T as system::Trait>::AccountId, <T as Trait>::Balance {
 		/// A event indicate user receives transaction.
 		IssuedVoucher(AccountId, Balance),
+		DestroyedVoucher(AccountId, Balance),
 	}
 }
 
@@ -89,6 +90,39 @@ decl_module! {
 			});
 
 			Self::deposit_event(RawEvent::IssuedVoucher(dest, amount));
+		}
+
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		pub fn destroy_voucher(
+			origin,
+			dest: <T::Lookup as StaticLookup>::Source,
+			#[compact]
+			amount: T::Balance,
+		) {
+			ensure_root(origin)?;
+
+			let balance = <RemainingBNC<T>>::get();
+			ensure!(balance >= amount, "you cannot destroy the balance that's bigger than all current user have.");
+
+			// ensure this address added into bifrost node
+			let dest = T::Lookup::lookup(dest)?;
+
+			// do not send balances for a account multiple times, just for one time
+			if <BalancesVoucher<T>>::contains_key(&dest) {
+				// desotry balances for this account
+				<BalancesVoucher<T>>::mutate(&dest, |balance| {
+					*balance -= amount;
+				});
+			} else {
+				();
+			}
+
+			// add back to total BNC
+			<RemainingBNC<T>>::mutate(|balance| {
+					*balance += amount;
+			});
+
+			Self::deposit_event(RawEvent::DestroyedVoucher(dest, amount));
 		}
 	}
 }
