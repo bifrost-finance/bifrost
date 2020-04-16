@@ -91,6 +91,7 @@ pub type AssetsError = Error<Test>;
 pub type System = system::Module<Test>;
 
 // simulate block production
+#[allow(dead_code)]
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
 		Assets::on_finalize(System::block_number());

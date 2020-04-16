@@ -17,7 +17,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Encode, Decode};
 use core::convert::TryInto;
 use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure};
 use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup};
