@@ -25,7 +25,7 @@ mod tests;
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
 use frame_support::traits::Get;
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertRate, TokenType};
+use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertRate, AssetReward, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
 
 pub trait Trait: frame_system::Trait {
@@ -275,25 +275,17 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn increase_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
-		if <Pool<T>>::contains_key(&token_id) {
-			<Pool<T>>::insert(token_id, ConvertPool::new(token_amount, vtoken_amount));
-		} else {
-			<Pool<T>>::mutate(token_id, |pool| {
-				pool.token_pool = pool.token_pool.saturating_add(token_amount);
-				pool.vtoken_pool = pool.vtoken_pool.saturating_add(vtoken_amount);
-			});
-		}
+		<Pool<T>>::mutate(token_id, |pool| {
+			pool.token_pool = pool.token_pool.saturating_add(token_amount);
+			pool.vtoken_pool = pool.vtoken_pool.saturating_add(vtoken_amount);
+		});
 	}
 
 	fn decrease_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
-		if <Pool<T>>::contains_key(&token_id) {
-			<Pool<T>>::insert(token_id, ConvertPool::new(token_amount, vtoken_amount));
-		} else {
-			<Pool<T>>::mutate(token_id, |pool| {
-				pool.token_pool = pool.token_pool.saturating_sub(token_amount);
-				pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
-			});
-		}
+		<Pool<T>>::mutate(token_id, |pool| {
+			pool.token_pool = pool.token_pool.saturating_sub(token_amount);
+			pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
+		});
 	}
 }
 
@@ -302,5 +294,18 @@ impl<T: Trait> FetchConvertRate<T::AssetId, T::ConvertRate> for Module<T> {
 		let rate = <ConvertRate<T>>::get(asset_id);
 
 		rate
+	}
+}
+
+impl<T: Trait> AssetReward<T::AssetId, T::Balance> for Module<T> {
+	fn set_asset_reward(token_id: T::AssetId, reward: T::Balance) -> Result<(), ()> {
+		if <Pool<T>>::contains_key(&token_id) {
+			<Pool<T>>::mutate(token_id, |pool| {
+				pool.pending_reward = pool.pending_reward.saturating_add(reward);
+			});
+			Ok(())
+		} else {
+			Err(())
+		}
 	}
 }
