@@ -68,8 +68,8 @@ pallet-vesting = { version = "2.0.0-alpha.5", default-features = false, git = "h
 
 brml-assets = { path = "../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", default-features = false }
-brml-exchange = { path = "../../../brml/exchange", default-features = false }
-brml-exchange-rpc-runtime-api = { path = "../../../brml/exchange/rpc/runtime-api", default-features = false }
+brml-convert = { path = "../../../brml/convert", default-features = false }
+brml-convert-rpc-runtime-api = { path = "../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
 brml-voucher = { path = "../../../brml/voucher", default-features = false }
 brml-swap = { path = "../../../brml/swap", default-features = false }
@@ -136,8 +136,8 @@ std = [
 	"pallet-vesting/std",
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
-	"brml-exchange/std",
-	"brml-exchange-rpc-runtime-api/std",
+	"brml-convert/std",
+	"brml-convert-rpc-runtime-api/std",
 	"brml-bridge-eos/std",
 	"brml-swap/std",
 	'chainlink/std',

@@ -30,7 +30,7 @@ use sp_core::u32_trait::{_1, _2, _3, _4};
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	BridgeAssetTo, AssetId, Precision, TokenType, ExchangeRate, RatePerBlock
+	BridgeAssetTo, AssetId, Precision, TokenType, ConvertRate, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -635,9 +635,9 @@ impl brml_assets::Trait for Runtime {
 	type Price = Price;
 	type Cost = Cost;
 	type Income = Income;
-	type Exchange = ExchangeRate;
+	type Convert = ConvertRate;
 	type AssetRedeem = ();
-	type FetchExchangeRate = Exchange;
+	type FetchConvertRate = Convert;
 }
 
 impl brml_voucher::Trait for Runtime {
@@ -645,9 +645,9 @@ impl brml_voucher::Trait for Runtime {
 	type Balance = Balance;
 }
 
-impl brml_exchange::Trait for Runtime {
+impl brml_convert::Trait for Runtime {
 	type Event = Event;
-	type ExchangeRate = ExchangeRate;
+	type ConvertRate = ConvertRate;
 	type RatePerBlock = RatePerBlock;
 	type AssetTrait = Assets;
 	type Balance = Balance;
@@ -733,7 +733,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Exchange: brml_exchange::{Module, Call, Storage, Event},
+		Convert: brml_convert::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>},
@@ -943,9 +943,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_exchange_rpc_runtime_api::ExchangeRateApi<node_primitives::Block, AssetId, node_primitives::ExchangeRate> for Runtime {
-		fn get_exchange_rate(vtoken_id: AssetId) -> node_primitives::ExchangeRate {
-			Exchange::get_exchange(vtoken_id)
+	impl brml_convert_rpc_runtime_api::ConvertRateApi<node_primitives::Block, AssetId, node_primitives::ConvertRate> for Runtime {
+		fn get_convert_rate(vtoken_id: AssetId) -> node_primitives::ConvertRate {
+			Convert::get_convert(vtoken_id)
 		}
 	}
 }

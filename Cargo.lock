@@ -451,7 +451,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-exchange"
+name = "brml-convert"
 version = "0.2.3"
 dependencies = [
  "brml-assets 0.2.3",
@@ -465,10 +465,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-exchange-rpc"
+name = "brml-convert-rpc"
 version = "0.2.3"
 dependencies = [
- "brml-exchange-rpc-runtime-api 0.2.3",
+ "brml-convert-rpc-runtime-api 0.2.3",
  "jsonrpc-core 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-core-client 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc-derive 14.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -479,7 +479,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-exchange-rpc-runtime-api"
+name = "brml-convert-rpc-runtime-api"
 version = "0.2.3"
 dependencies = [
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3043,7 +3043,7 @@ dependencies = [
  "assert_cmd 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "brml-assets-rpc 0.2.3",
  "brml-bridge-eos 0.2.3",
- "brml-exchange-rpc 0.2.3",
+ "brml-convert-rpc 0.2.3",
  "eos-chain 0.1.0 (git+https://github.com/bifrost-codes/rust-eos)",
  "frame-support 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-alpha.5 (git+https://github.com/paritytech/substrate)",
@@ -3281,8 +3281,8 @@ dependencies = [
  "brml-assets 0.2.3",
  "brml-assets-rpc-runtime-api 0.2.3",
  "brml-bridge-eos 0.2.3",
- "brml-exchange 0.2.3",
- "brml-exchange-rpc-runtime-api 0.2.3",
+ "brml-convert 0.2.3",
+ "brml-convert-rpc-runtime-api 0.2.3",
  "brml-oracle 0.2.3",
  "brml-swap 0.2.3",
  "brml-voucher 0.2.3",

@@ -40,8 +40,8 @@ pub type AccountIndex = u32;
 /// An index to an asset
 pub type AssetId = u32;
 
-/// Exchange type
-pub type ExchangeRate = u64;
+/// Convert type
+pub type ConvertRate = u64;
 pub type RatePerBlock = u64;
 
 /// Balance of an account.
@@ -235,14 +235,14 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 	fn asset_redeem(_: A, _: TokenType, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
-/// Fetch exchange rate handler
-pub trait FetchExchangeRate<AssetId, ExchangeRate> {
-	/// fetch exchange rate
-	fn fetch_exchange_rate(asset_id: AssetId) -> ExchangeRate;
+/// Fetch convert rate handler
+pub trait FetchConvertRate<AssetId, ConvertRate> {
+	/// fetch convert rate
+	fn fetch_convert_rate(asset_id: AssetId) -> ConvertRate;
 }
 
-impl<A, ER: Default> FetchExchangeRate<A, ER> for () {
-	fn fetch_exchange_rate(_: A) -> ER { Default::default() }
+impl<A, ER: Default> FetchConvertRate<A, ER> for () {
+	fn fetch_convert_rate(_: A) -> ER { Default::default() }
 }
 
 /// Blockchain types
