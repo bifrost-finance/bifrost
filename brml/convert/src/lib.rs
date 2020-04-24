@@ -23,8 +23,9 @@ mod mock;
 mod tests;
 
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
+use frame_support::traits::Get;
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, AssetSymbol, FetchConvertRate, TokenType};
+use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertRate, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
 
 pub trait Trait: frame_system::Trait {
@@ -36,7 +37,7 @@ pub trait Trait: frame_system::Trait {
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber> + Into<Self::ConvertRate>;
 
 	/// The units in which we record costs.
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
@@ -48,6 +49,8 @@ pub trait Trait: frame_system::Trait {
 
 	/// event
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+
+	type ConvertDuration: Get<Self::BlockNumber>;
 }
 
 decl_event! {
@@ -84,16 +87,16 @@ decl_storage! {
 		/// total_point = 1000 + 2000 + ...
 		/// referrer must be unique, so check it unique while a new referrer incoming
 		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId => (Vec<(T::AccountId, T::Balance)>, T::Balance);
-		/// A pool that hold the total amount of token converted to vtoken
-		TokenPool get(fn token_pool): map hasher(blake2_128_concat) T::AssetId => T::Balance;
-		/// A pool that hold the total amount of vtoken converted from token
-		VTokenPool get(fn vtoken_pool): map hasher(blake2_128_concat) T::AssetId => T::Balance;
+		/// Convert pool
+		Pool get(fn pool): map hasher(blake2_128_concat) T::AssetId => ConvertPool<T::Balance>;
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
+
+		const ConvertDuration: T::BlockNumber = T::ConvertDuration::get();
 
 		fn deposit_event() = default;
 
@@ -159,9 +162,7 @@ decl_module! {
 			T::AssetTrait::asset_destroy(token_id, TokenType::Token, converter.clone(), token_amount);
 			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, converter, vtokens_buy);
 
-			// increase token/vtoken pool
-			Self::increase_token_pool(token_id, token_amount);
-			Self::increase_vtoken_pool(vtoken_id, vtokens_buy);
+			Self::increase_pool(token_id, token_amount, vtokens_buy);
 
 			// save
 //			if let referrer = Some(referrer) {
@@ -217,21 +218,38 @@ decl_module! {
 			T::AssetTrait::asset_destroy(vtoken_id, TokenType::VToken, converter.clone(), vtoken_amount);
 			T::AssetTrait::asset_issue(token_id, TokenType::Token, converter, tokens_buy);
 
-			// decrease token/vtoken pool
-			Self::decrease_token_pool(token_id, tokens_buy);
-			Self::decrease_vtoken_pool(vtoken_id, vtoken_amount);
+			Self::decrease_pool(token_id, tokens_buy, vtoken_amount);
 
 			Self::deposit_event(Event::ConvertVTokenToTokenSuccess);
 		}
 
-		fn on_finalize() {
-			for (vtoken_id, rate_per_block) in <RatePerBlock<T>>::iter() {
-				if !<ConvertRate<T>>::contains_key(vtoken_id) {
-					continue;
-				}
-				<ConvertRate<T>>::mutate(vtoken_id, |convert_rate| {
-					*convert_rate = convert_rate.saturating_sub(rate_per_block.into());
+		fn on_finalize(block_number: T::BlockNumber) {
+			// calculate & update convert rate
+			for (token_id, convert_pool) in <Pool<T>>::iter() {
+				<Pool<T>>::mutate(token_id, |convert_pool| {
+					let current_reward = convert_pool.current_reward;
+					let reward_per_block = current_reward / block_number.into();
+					convert_pool.token_pool = convert_pool.token_pool.saturating_add(reward_per_block);
+
+					if convert_pool.token_pool != Zero::zero()
+						&& convert_pool.vtoken_pool != Zero::zero()
+					{
+						if <ConvertRate<T>>::contains_key(token_id) {
+							<ConvertRate<T>>::mutate(token_id, |convert_rate| {
+								*convert_rate = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
+							});
+						}
+					}
 				});
+			}
+
+			if block_number % T::ConvertDuration::get() == Zero::zero() {
+				// new convert round
+				for (token_id, _convert_pool) in <Pool<T>>::iter() {
+					<Pool<T>>::mutate(token_id, |convert_pool| {
+						convert_pool.new_round();
+					});
+				}
 			}
 
 //			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &converter).balance;
@@ -256,42 +274,24 @@ impl<T: Trait> Module<T> {
 		rate
 	}
 
-	fn increase_token_pool(token_id: T::AssetId, amount: T::Balance) {
-		if <TokenPool<T>>::contains_key(&token_id) {
-			<TokenPool<T>>::insert(token_id, amount);
+	fn increase_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
+		if <Pool<T>>::contains_key(&token_id) {
+			<Pool<T>>::insert(token_id, ConvertPool::new(token_amount, vtoken_amount));
 		} else {
-			<TokenPool<T>>::mutate(token_id, |pool| {
-				*pool = pool.saturating_add(amount);
+			<Pool<T>>::mutate(token_id, |pool| {
+				pool.token_pool = pool.token_pool.saturating_add(token_amount);
+				pool.vtoken_pool = pool.vtoken_pool.saturating_add(vtoken_amount);
 			});
 		}
 	}
 
-	fn increase_vtoken_pool(vtoken_id: T::AssetId, amount: T::Balance) {
-		if <VTokenPool<T>>::contains_key(&vtoken_id) {
-			<VTokenPool<T>>::insert(vtoken_id, amount);
+	fn decrease_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
+		if <Pool<T>>::contains_key(&token_id) {
+			<Pool<T>>::insert(token_id, ConvertPool::new(token_amount, vtoken_amount));
 		} else {
-			<VTokenPool<T>>::mutate(vtoken_id, |pool| {
-				*pool = pool.saturating_add(amount);
-			});
-		}
-	}
-
-	fn decrease_token_pool(token_id: T::AssetId, amount: T::Balance) {
-		if <TokenPool<T>>::contains_key(&token_id) {
-			<TokenPool<T>>::insert(token_id, amount);
-		} else {
-			<TokenPool<T>>::mutate(token_id, |pool| {
-				*pool = pool.saturating_sub(amount);
-			});
-		}
-	}
-
-	fn decrease_vtoken_pool(vtoken_id: T::AssetId, amount: T::Balance) {
-		if <VTokenPool<T>>::contains_key(&vtoken_id) {
-			<VTokenPool<T>>::insert(vtoken_id, amount);
-		} else {
-			<VTokenPool<T>>::mutate(vtoken_id, |pool| {
-				*pool = pool.saturating_sub(amount);
+			<Pool<T>>::mutate(token_id, |pool| {
+				pool.token_pool = pool.token_pool.saturating_sub(token_amount);
+				pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
 			});
 		}
 	}

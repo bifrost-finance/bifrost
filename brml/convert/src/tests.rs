@@ -93,6 +93,8 @@ fn convert_token_to_vtoken_should_be_ok() {
 		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), bob_token_convert, vtoken_id.into(), None));
 		assert_eq!(<assets::AccountAssets<Test>>::get((token_id, TokenType::Token, bob)).balance, bob_token_issued - bob_token_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::VToken, bob)).balance, bob_vtoken_issued + bob_token_convert * rate); // check bob's token change
+
+		assert_eq!(Convert::pool(token_id), ConvertPool::new(bob_token_convert, bob_token_convert * rate));
 	});
 }
 
@@ -125,5 +127,7 @@ fn convert_vtoken_to_token_should_be_ok() {
 		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(bob), bob_vtoken_convert, vtoken_id.into()));
 		assert_eq!(<assets::AccountAssets<Test>>::get((token_id, TokenType::VToken, bob)).balance, bob_vtoken_issued - bob_vtoken_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((vtoken_id, TokenType::Token, bob)).balance, bob_token_issued + bob_vtoken_convert / rate); // check bob's token change
+
+		assert_eq!(Convert::pool(token_id), ConvertPool::new(0, 0));
 	});
 }
