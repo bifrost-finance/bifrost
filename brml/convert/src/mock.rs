@@ -84,7 +84,7 @@ impl system::Trait for Test {
 }
 
 parameter_types! {
-	pub const SettlementPeriod: u64 = 24 * 60 * 10;
+	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
 impl crate::Trait for Test {
@@ -96,6 +96,7 @@ impl crate::Trait for Test {
 	type AssetId = u32;
 	type Cost = u64;
 	type Income = u64;
+	type ConvertDuration = ConvertDuration;
 }
 
 pub type Convert = crate::Module<Test>;

@@ -154,6 +154,34 @@ pub struct AccountAsset<Balance, Cost, Income> {
 	pub income: Income,
 }
 
+#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+pub struct ConvertPool<Balance> {
+	/// A pool that hold the total amount of token converted to vtoken
+	pub token_pool: Balance,
+	/// A pool that hold the total amount of vtoken converted from token
+	pub vtoken_pool: Balance,
+	/// Total reward for current convert duration
+	pub current_reward: Balance,
+	/// Total reward for next convert duration
+	pub pending_reward: Balance,
+}
+
+impl<Balance: Default + Copy> ConvertPool<Balance> {
+	pub fn new(token_amount: Balance, vtoken_amount: Balance) -> Self {
+		Self {
+			token_pool: token_amount,
+			vtoken_pool: vtoken_amount,
+			..Default::default()
+		}
+	}
+
+	pub fn new_round(&mut self) {
+		self.current_reward = self.pending_reward;
+		self.pending_reward = Default::default();
+	}
+}
+
 /// Clearing handler for assets change
 pub trait ClearingHandler<AssetId, AccountId, BlockNumber, Balance> {
 	/// Clearing for assets change
