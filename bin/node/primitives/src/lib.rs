@@ -330,3 +330,11 @@ impl<P, B> BridgeAssetTo<P, B> for () {
 	type Error = core::convert::Infallible;
 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, B>) -> Result<(), Self::Error> { Ok(()) }
 }
+
+pub trait AssetReward<AssetId, Balance> {
+	fn set_asset_reward(token_id: AssetId, reward: Balance) -> Result<(), ()>;
+}
+
+impl<A, B> AssetReward<A, B> for () {
+	fn set_asset_reward(_: A, _: B) -> Result<(), ()> { Ok(()) }
+}
