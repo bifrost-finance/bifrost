@@ -41,7 +41,7 @@ pub type AccountIndex = u32;
 pub type AssetId = u32;
 
 /// Convert type
-pub type ConvertRate = u64;
+pub type ConvertRate = u128;
 pub type RatePerBlock = u64;
 
 /// Balance of an account.

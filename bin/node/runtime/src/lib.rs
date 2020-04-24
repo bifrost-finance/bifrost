@@ -645,6 +645,10 @@ impl brml_voucher::Trait for Runtime {
 	type Balance = Balance;
 }
 
+parameter_types! {
+	pub const ConvertDuration: BlockNumber = 24 * 60 * MINUTES;
+}
+
 impl brml_convert::Trait for Runtime {
 	type Event = Event;
 	type ConvertRate = ConvertRate;
@@ -654,6 +658,7 @@ impl brml_convert::Trait for Runtime {
 	type AssetId = AssetId;
 	type Cost = Cost;
 	type Income = Income;
+	type ConvertDuration = ConvertDuration;
 }
 
 type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;

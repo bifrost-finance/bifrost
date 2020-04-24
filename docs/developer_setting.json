@@ -77,7 +77,7 @@
     "map": "Vec<(ActionName, u64)>"
   },
   "TxOut": {},
-  "ConvertRate": "u64",
+  "ConvertRate": "u128",
   "RatePerBlock": "u64",
   "Fee": "u64",
   "TokenPool": "Balance",
