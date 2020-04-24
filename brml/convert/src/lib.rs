@@ -83,7 +83,7 @@ decl_storage! {
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
 		/// referrer must be unique, so check it unique while a new referrer incoming
-		referrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId => (Vec<(T::AccountId, T::Balance)>, T::Balance);
+		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId => (Vec<(T::AccountId, T::Balance)>, T::Balance);
 		/// A pool that hold the total amount of token converted to vtoken
 		TokenPool get(fn token_pool): map hasher(blake2_128_concat) T::AssetId => T::Balance;
 		/// A pool that hold the total amount of vtoken converted from token
@@ -166,17 +166,17 @@ decl_module! {
 			// save
 //			if let referrer = Some(referrer) {
 //				// first time to referrer
-//				if !<referrerChannels<T>>::contains_key(&converter) {
+//				if !<ReferrerChannels<T>>::contains_key(&converter) {
 //					let value = (vec![(referrer, vtokens_buy)], vtokens_buy);
-//					<referrerChannels<T>>::insert(&converter, value);
+//					<ReferrerChannels<T>>::insert(&converter, value);
 //				} else {
 //					// existed, but new referrer incoming
-//					<referrerChannels<T>>::mutate(&converter, |points| {
+//					<ReferrerChannels<T>>::mutate(&converter, |points| {
 //						if points.0.iter().any(|point| point.0 == referrer) {
 //							point.0[1] += vtokens_buy;
 //						} else {
 //							let value = (vec![(referrer, vtokens_buy)], vtokens_buy);
-//							<referrerChannels<T>>::insert(&converter, value);
+//							<ReferrerChannels<T>>::insert(&converter, value);
 //						}
 ////						points.0.iter().find(|point| )
 //						points.1 += vtokens_buy;
