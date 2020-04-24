@@ -84,6 +84,10 @@ decl_storage! {
 		/// total_point = 1000 + 2000 + ...
 		/// referrer must be unique, so check it unique while a new referrer incoming
 		referrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId => (Vec<(T::AccountId, T::Balance)>, T::Balance);
+		/// A pool that hold the total amount of token converted to vtoken
+		TokenPool get(fn token_pool): map hasher(blake2_128_concat) T::AssetId => T::Balance;
+		/// A pool that hold the total amount of vtoken converted from token
+		VTokenPool get(fn vtoken_pool): map hasher(blake2_128_concat) T::AssetId => T::Balance;
 	}
 }
 
@@ -155,6 +159,10 @@ decl_module! {
 			T::AssetTrait::asset_destroy(token_id, TokenType::Token, exchanger.clone(), token_amount);
 			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, exchanger, vtokens_buy);
 
+			// increase token/vtoken pool
+			Self::increase_token_pool(token_id, token_amount);
+			Self::increase_vtoken_pool(vtoken_id, vtokens_buy);
+
 			// save
 //			if let referrer = Some(referrer) {
 //				// first time to referrer
@@ -209,6 +217,10 @@ decl_module! {
 			T::AssetTrait::asset_destroy(vtoken_id, TokenType::VToken, exchanger.clone(), vtoken_amount);
 			T::AssetTrait::asset_issue(token_id, TokenType::Token, exchanger, tokens_buy);
 
+			// decrease token/vtoken pool
+			Self::decrease_token_pool(token_id, tokens_buy);
+			Self::decrease_vtoken_pool(vtoken_id, vtoken_amount);
+
 			Self::deposit_event(Event::ExchangerVTokenToTokenSuccess);
 		}
 
@@ -242,6 +254,46 @@ impl<T: Trait> Module<T> {
 		let rate = <ExchangeRate<T>>::get(vtoken_id);
 
 		rate
+	}
+
+	fn increase_token_pool(token_id: T::AssetId, amount: T::Balance) {
+		if <TokenPool<T>>::contains_key(&token_id) {
+			<TokenPool<T>>::insert(token_id, amount);
+		} else {
+			<TokenPool<T>>::mutate(token_id, |pool| {
+				*pool = pool.saturating_add(amount);
+			});
+		}
+	}
+
+	fn increase_vtoken_pool(vtoken_id: T::AssetId, amount: T::Balance) {
+		if <VTokenPool<T>>::contains_key(&vtoken_id) {
+			<VTokenPool<T>>::insert(vtoken_id, amount);
+		} else {
+			<VTokenPool<T>>::mutate(vtoken_id, |pool| {
+				*pool = pool.saturating_add(amount);
+			});
+		}
+	}
+
+	fn decrease_token_pool(token_id: T::AssetId, amount: T::Balance) {
+		if <TokenPool<T>>::contains_key(&token_id) {
+			<TokenPool<T>>::insert(token_id, amount);
+		} else {
+			<TokenPool<T>>::mutate(token_id, |pool| {
+				*pool = pool.saturating_sub(amount);
+			});
+		}
+	}
+
+	fn decrease_vtoken_pool(vtoken_id: T::AssetId, amount: T::Balance) {
+		if <VTokenPool<T>>::contains_key(&vtoken_id) {
+			<VTokenPool<T>>::insert(vtoken_id, amount);
+		} else {
+			<VTokenPool<T>>::mutate(vtoken_id, |pool| {
+				*pool = pool.saturating_sub(amount);
+			});
+		}
 	}
 }
 
