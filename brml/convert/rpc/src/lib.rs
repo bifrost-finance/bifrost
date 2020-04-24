@@ -22,16 +22,16 @@ use std::marker::PhantomData;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-pub use self::gen_client::Client as ExchangeClient;
-pub use exchange_rpc_runtime_api::{self as runtime_api, ExchangeRateApi as ExchangeRateRuntimeApi};
+pub use self::gen_client::Client as ConvertClient;
+pub use convert_rpc_runtime_api::{self as runtime_api, ConvertRateApi as ConvertRateRuntimeApi};
 
 #[derive(Clone, Debug)]
-pub struct Exchange<C, Block> {
+pub struct Convert<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>
 }
 
-impl<C, Block> Exchange<C, Block> {
+impl<C, Block> Convert<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -41,28 +41,28 @@ impl<C, Block> Exchange<C, Block> {
 }
 
 #[rpc]
-pub trait ExchangeRateApi<BlockHash, AssetId, ExchangeRate> {
-	/// rpc method for getting current exchange rate
-	#[rpc(name = "exchange_getExchange")]
-	fn get_exchange_rate(&self, vtoken_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ExchangeRate>;
+pub trait ConvertRateApi<BlockHash, AssetId, ConvertRate> {
+	/// rpc method for getting current convert rate
+	#[rpc(name = "convert_getConvert")]
+	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ConvertRate>;
 }
 
-impl<C, Block, AssetId, ExchangeRate> ExchangeRateApi<<Block as BlockT>::Hash, AssetId, ExchangeRate>
-for Exchange<C, Block>
+impl<C, Block, AssetId, ConvertRate> ConvertRateApi<<Block as BlockT>::Hash, AssetId, ConvertRate>
+for Convert<C, Block>
 	where
 		Block: BlockT,
 		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ExchangeRateRuntimeApi<Block, AssetId, ExchangeRate>,
+		C::Api: ConvertRateRuntimeApi<Block, AssetId, ConvertRate>,
 		AssetId: Codec,
-		ExchangeRate: Codec,
+		ConvertRate: Codec,
 {
-	fn get_exchange_rate(&self, vtoken_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ExchangeRate> {
-		let exchange_rpc_api = self.client.runtime_api();
+	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertRate> {
+		let convert_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		exchange_rpc_api.get_exchange_rate(&at, vtoken_id).map_err(|e| RpcError {
+		convert_rpc_api.get_convert_rate(&at, vtoken_id).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
-			message: "Failed to get current exchange rate.".to_owned(),
+			message: "Failed to get current convert rate.".to_owned(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}

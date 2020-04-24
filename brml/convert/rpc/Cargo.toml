@@ -1,12 +1,12 @@
 [package]
-name = "brml-exchange-rpc"
+name = "brml-convert-rpc"
 version = "0.2.3"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.1", default-features = false, features = ["derive"] }
-exchange-rpc-runtime-api = { package = "brml-exchange-rpc-runtime-api", path = "./runtime-api" }
+convert-rpc-runtime-api = { package = "brml-convert-rpc-runtime-api", path = "./runtime-api" }
 jsonrpc-core = "14.0.5"
 jsonrpc-core-client = "14.0.5"
 jsonrpc-derive = "14.0.5"

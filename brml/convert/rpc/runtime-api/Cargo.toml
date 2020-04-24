@@ -1,5 +1,5 @@
 [package]
-name = "brml-exchange-rpc-runtime-api"
+name = "brml-convert-rpc-runtime-api"
 version = "0.2.3"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"

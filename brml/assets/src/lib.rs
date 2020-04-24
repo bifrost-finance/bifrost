@@ -23,7 +23,7 @@ use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLook
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetRedeem, AssetTrait, AssetSymbol, FetchExchangeRate, Token, TokenPair, TokenPriceHandler, TokenType,
+	AccountAsset, AssetRedeem, AssetTrait, AssetSymbol, FetchConvertRate, Token, TokenPair, TokenPriceHandler, TokenType,
 };
 
 mod mock;
@@ -50,13 +50,13 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Exchange>;
+	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Convert>;
 
 	/// The units in which we record prices.
 	type Price: Member + Parameter + Default + AtLeast32Bit + Copy + Zero;
 
-	/// The units in which we record exchange rate.
-	type Exchange: Member + Parameter + Default + AtLeast32Bit + Copy + Zero;
+	/// The units in which we record convert rate.
+	type Convert: Member + Parameter + Default + AtLeast32Bit + Copy + Zero;
 
 	/// The units in which we record costs.
 	type Cost: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Balance>;
@@ -70,8 +70,8 @@ pub trait Trait: system::Trait {
 	/// Handler for asset redeem
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 
-	/// Handler for fetch exchange rate from exchange runtime
-	type FetchExchangeRate: FetchExchangeRate<Self::AssetId, Self::Exchange>;
+	/// Handler for fetch convert rate from convert runtime
+	type FetchConvertRate: FetchConvertRate<Self::AssetId, Self::Convert>;
 }
 
 decl_event! {
@@ -109,10 +109,10 @@ decl_error! {
 		ZeroAmountOfBalance,
 		/// Amount of input should be less than or equal to origin balance
 		InvalidBalanceForTransaction,
-		/// Exchange rate doesn't be set
-		ExchangeRateDoesNotSet,
-		/// This is an invalid exchange rate
-		InvalidExchangeRate,
+		/// Convert rate doesn't be set
+		ConvertRateDoesNotSet,
+		/// This is an invalid convert rate
+		InvalidConvertRate,
 		/// Vtoken id is not equal to token id
 		InvalidTokenPair,
 	}
@@ -297,11 +297,11 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let exchange_rate = T::FetchExchangeRate::fetch_exchange_rate(asset_id);
+		let convert_rate = T::FetchConvertRate::fetch_convert_rate(asset_id);
 		let target_asset = (asset_id, token_type, target.clone());
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
-			asset.cost = asset.cost.saturating_add(amount.saturating_mul(exchange_rate.into()).into());
+			asset.cost = asset.cost.saturating_add(amount.saturating_mul(convert_rate.into()).into());
 		});
 
 		// save asset id for this account
@@ -342,11 +342,11 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let exchange_rate = T::FetchExchangeRate::fetch_exchange_rate(asset_id);
+		let convert_rate = T::FetchConvertRate::fetch_convert_rate(asset_id);
 		let target_asset = (asset_id, token_type, target);
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
-			asset.income = asset.income.saturating_add(amount.saturating_mul(exchange_rate.into()).into());
+			asset.income = asset.income.saturating_add(amount.saturating_mul(convert_rate.into()).into());
 		});
 
 		<Tokens<T>>::mutate(asset_id, |token| {

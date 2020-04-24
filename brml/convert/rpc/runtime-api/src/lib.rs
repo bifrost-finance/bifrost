@@ -20,13 +20,13 @@ use codec::Codec;
 use sp_api::decl_runtime_apis;
 
 #[allow(unused_doc_comments)]
-/// Create exchange runtime api for rpc call
+/// Create convert runtime api for rpc call
 decl_runtime_apis! {
-	pub trait ExchangeRateApi<AssetId, ExchangeRate> where
+	pub trait ConvertRateApi<AssetId, ConvertRate> where
 		AssetId: Codec,
-		ExchangeRate: Codec
+		ConvertRate: Codec
 	{
-		/// get current exchange rate
-		fn get_exchange_rate(token_id: AssetId) -> ExchangeRate;
+		/// get current convert rate
+		fn get_convert_rate(token_id: AssetId) -> ConvertRate;
 	}
 }

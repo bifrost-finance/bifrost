@@ -33,12 +33,12 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_exchange,
+		brml_convert,
 		assets<T>,
 	}
 }
 
-mod brml_exchange {
+mod brml_convert {
 	pub use crate::Event;
 }
 
@@ -56,9 +56,9 @@ impl assets::Trait for Test {
 	type Price = u64;
 	type Cost = u64;
 	type Income = u64;
-	type Exchange = u64;
+	type Convert = u64;
 	type AssetRedeem = ();
-	type FetchExchangeRate = ();
+	type FetchConvertRate = ();
 }
 
 impl system::Trait for Test {
@@ -88,7 +88,7 @@ parameter_types! {
 }
 
 impl crate::Trait for Test {
-	type ExchangeRate = u64;
+	type ConvertRate = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
@@ -98,17 +98,17 @@ impl crate::Trait for Test {
 	type Income = u64;
 }
 
-pub type Exchange = crate::Module<Test>;
+pub type Convert = crate::Module<Test>;
 pub type System = system::Module<Test>;
 pub type Assets = assets::Module<Test>;
 
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
-		Exchange::on_finalize(System::block_number());
+		Convert::on_finalize(System::block_number());
 		System::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
-		Exchange::on_initialize(System::block_number());
+		Convert::on_initialize(System::block_number());
 	}
 }
 
