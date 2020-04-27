@@ -19,8 +19,7 @@
 extern crate alloc;
 
 use alloc::borrow::Cow;
-use alloc::string::String;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use core::{convert::TryFrom, ops::Div, str::FromStr};
 
 use codec::{Decode, Encode};
@@ -132,6 +131,7 @@ pub enum Error {
 	InvalidAccountId,
 	ConvertBalanceError,
 	EOSRpcError(String),
+	OtherErrors(String),
 }
 
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
@@ -324,7 +324,6 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn prove_action(
 			origin,
-			target: T::AccountId,
 			action: Action,
 			action_receipt: ActionReceipt,
 			action_merkle_paths: Vec<Checksum256>,
@@ -397,7 +396,7 @@ decl_module! {
 			Self::deposit_event(Event::ProveAction);
 
 			// withdraw or deposit
-			Self::map_assets_by_action(target, &act_transfer);
+			ensure!(Self::map_assets_by_action(target, &act_transfer).is_ok(), "Failed to map asset to transfer");
 		}
 
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
@@ -411,20 +410,21 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			#[compact] amount: T::Balance,
-			vtoken_id: T::AssetId
+			#[compact] amount: T::Balance
 		) {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
 
-			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(vtoken_id), "this token doesn't exist.");
+			let token_id = T::AssetId::from(2);
 
-			let token = T::AssetTrait::get_token(&vtoken_id).token;
+			// check vtoken id exist or not
+			ensure!(T::AssetTrait::token_exists(token_id), "this token doesn't exist.");
+
+			let token = T::AssetTrait::get_token(&token_id).token;
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &origin).balance;
+			let balance = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &origin).balance;
 			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
 			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
@@ -435,9 +435,11 @@ decl_module! {
 				amount: eos_amount
 			};
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				T::AssetTrait::asset_redeem(vtoken_id, TokenType::VToken, origin, amount);
+				T::AssetTrait::asset_redeem(token_id, TokenType::VToken, origin, amount);
+				debug::info!("sent transaction to EOS node.");
 				Self::deposit_event(Event::TransactionSuccess);
 			} else {
+				debug::warn!("failed to send transaction to EOS node.");
 				Self::deposit_event(Event::TransactionFail);
 			}
 		}
@@ -448,18 +450,10 @@ decl_module! {
 
 			// Only send messages if we are a potential validator.
 			if sp_io::offchain::is_validator() {
-				debug::debug!(
-					target: "bridge-eos",
-					"Is validator at {:?}.",
-					now_block,
-				);
+				debug::info!(target: "bridge-eos", "Is validator at {:?}.", now_block);
 				Self::offchain(now_block);
 			} else {
-				debug::debug!(
-					target: "bridge-eos",
-					"Skipping send tx at {:?}. Not a validator.",
-					now_block,
-				)
+				debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
 			}
 		}
 	}
@@ -613,7 +607,7 @@ impl<T: Trait> Module<T> {
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
 		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold)?;
-		BridgeTxOuts::<T>::append([&tx_out].into_iter());
+		BridgeTxOuts::<T>::append([&tx_out].iter()).map_err(|e| Error::OtherErrors(e.to_string()))?;
 
 		Ok(tx_out)
 	}
@@ -640,20 +634,18 @@ impl<T: Trait> Module<T> {
 			.map(|bto| {
 				match bto {
 					// generate raw transactions
-					#[cfg(feature = "std")]
 					TxOut::<T::AccountId>::Initial(_) => {
-						if let Ok(generated_bto) = bto.clone().generate(node_url.as_str()) {
-							has_change.set(true);
-							debug::info!(
-								target: "bridge-eos",
-								"bto.generate {:?}",
-								generated_bto,
-							);
-							#[cfg(feature = "std")]
-							dbg!("bto.generate");
-							generated_bto
-						} else {
-							bto
+						match bto.clone().generate(node_url.as_str()) {
+							Ok(generated_bto) => {
+								has_change.set(true);
+								debug::info!(target: "bridge-eos", "bto.generate {:?}",generated_bto);
+								debug::info!("bto.generate");
+								generated_bto
+							}
+							Err(e) => {
+								debug::info!("failed to get latest block due to: {:?}", e);
+								bto
+							}
 						}
 					},
 					_ => bto,
@@ -667,16 +659,14 @@ impl<T: Trait> Module<T> {
 						if let Some(_) = Self::local_authority_keys()
 							.find(|key| *key == author.clone().into())
 						{
-							if let Ok(signed_bto) = bto.sign(sk.clone(), author) {
-								has_change.set(true);
-								debug::info!(
-									target: "bridge-eos",
-									"bto.sign {:?}",
-									signed_bto,
-								);
-								#[cfg(feature = "std")]
-								dbg!("bto.sign");
-								ret = signed_bto;
+							match bto.sign(sk.clone(), author) {
+								Ok(signed_bto) => {
+									has_change.set(true);
+									debug::info!(target: "bridge-eos", "bto.sign {:?}", signed_bto);
+									debug::info!("bto.sign with: {:?}", sk.to_string());
+									ret = signed_bto;
+								}
+								Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
 							}
 						}
 						ret
@@ -686,22 +676,16 @@ impl<T: Trait> Module<T> {
 			})
 			.map(|bto| {
 				match bto {
-					#[cfg(feature = "std")]
 					TxOut::<T::AccountId>::Signed(_) => {
 						match bto.clone().send(node_url.as_str()) {
 							Ok(sent_bto) => {
 								has_change.set(true);
-								debug::info!(
-									target: "bridge-eos",
-									"bto.send {:?}",
-									sent_bto,
-								);
-								#[cfg(feature = "std")]
-								dbg!("bto.send");
+								debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
+								debug::info!("bto.send");
 								sent_bto
 							}
 							Err(e) => {
-								debug::info!("error while sending: {:?}", e);
+								debug::warn!("error happened while pushing transaction: {:?}", e);
 								bto
 							}
 						}
@@ -713,12 +697,10 @@ impl<T: Trait> Module<T> {
 		if has_change.get() {
 			#[cfg(test)] // for testing
 			BridgeTxOuts::<T>::put(bridge_tx_outs.clone());
-			T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())).unwrap();
-			debug::info!(
-				target: "bridge-eos",
-				"Call::bridge_tx_report {:?}",
-				bridge_tx_outs,
-			);
+			match T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())) {
+				Ok(_) => debug::info!(target: "bridge-eos", "Call::bridge_tx_report {:?}", bridge_tx_outs),
+				Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
+			}
 		}
 	}
 
@@ -754,7 +736,7 @@ impl<T: Trait> Module<T> {
 
 		authorities.into_iter()
 			.enumerate()
-			.filter_map(move |(index, authority)| {
+			.filter_map(move |(_, authority)| {
 				local_keys.binary_search(&authority.into())
 					.ok()
 					.map(|location| local_keys[location].clone())

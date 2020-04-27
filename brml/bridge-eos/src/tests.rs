@@ -342,7 +342,7 @@ fn prove_action_should_be_ok() {
 		assert!(action_receipt.is_ok());
 		let action_receipt = action_receipt.unwrap();
 
-		assert!(BridgeEos::prove_action(Origin::ROOT, 0, action.clone(), action_receipt.clone(), actual_merkle_paths, merkle, signed_blocks_headers, block_ids_list).is_ok());
+		assert!(BridgeEos::prove_action(Origin::ROOT, action.clone(), action_receipt.clone(), actual_merkle_paths, merkle, signed_blocks_headers, block_ids_list).is_ok());
 
 		// ensure action_receipt is saved after proved action
 		assert_eq!(BridgeActionReceipt::get(&action_receipt), action);
@@ -371,7 +371,7 @@ fn bridge_eos_offchain_should_work() {
 			symbol: asset_symbol.clone(),
 			amount: 1 * 10u64.pow(8),
 		};
-		BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset);
+		assert!(BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset).is_ok());
 		BridgeEos::offchain(1);
 
 		// EOS secret key of account testb
@@ -457,6 +457,7 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 	Ok(json_str)
 }
 
+#[allow(dead_code)]
 fn bridge_tx_report() -> dispatch::DispatchResult {
 	#[allow(deprecated)]
 	use frame_support::unsigned::ValidateUnsigned;
@@ -508,4 +509,160 @@ fn rotate_author(author: u64) {
 	);
 
 	assert_eq!(Authorship::author(), author);
+}
+
+#[test]
+fn lite_json_deserialize_push_transaction() {
+	let trx_response = r#"
+	{
+		"transaction_id": "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6",
+		"processed": {
+			"id": "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6",
+			"block_num": 11665607,
+			"block_time": "2020-04-27T08:09:26.500",
+			"producer_block_id": null,
+			"receipt": {
+				"status": "executed",
+				"cpu_usage_us": 197,
+				"net_usage_words": 17
+			},
+			"elapsed": 197,
+			"net_usage": 136,
+			"scheduled": false,
+			"action_traces": [{
+				"action_ordinal": 1,
+				"creator_action_ordinal": 0,
+				"closest_unnotified_ancestor_action_ordinal": 0,
+				"receipt": {
+					"receiver": "eosio.token",
+					"act_digest": "955dfd6bd4edc99af285b853927ea8d3a244aec2d30d7c7a2adefb8f6e518510",
+					"global_sequence": 15255106,
+					"recv_sequence": 821754,
+					"auth_sequence": [
+						["bifrostcross", 50]
+					],
+					"code_sequence": 1,
+					"abi_sequence": 1
+				},
+				"receiver": "eosio.token",
+				"act": {
+					"account": "eosio.token",
+					"name": "transfer",
+					"authorization": [{
+						"actor": "bifrostcross",
+						"permission": "active"
+					}],
+					"data": {
+						"from": "bifrostcross",
+						"to": "bifrostliebi",
+						"quantity": "1.0000 EOS",
+						"memo": "a memo"
+					},
+					"hex_data": "8031bd28637a973be08e7231637a973b102700000000000004454f53000000000661206d656d6f"
+				},
+				"context_free": false,
+				"elapsed": 55,
+				"console": "",
+				"trx_id": "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6",
+				"block_num": 11665607,
+				"block_time": "2020-04-27T08:09:26.500",
+				"producer_block_id": null,
+				"account_ram_deltas": [],
+				"except": null,
+				"error_code": null,
+				"inline_traces": [{
+					"action_ordinal": 2,
+					"creator_action_ordinal": 1,
+					"closest_unnotified_ancestor_action_ordinal": 1,
+					"receipt": {
+						"receiver": "bifrostcross",
+						"act_digest": "955dfd6bd4edc99af285b853927ea8d3a244aec2d30d7c7a2adefb8f6e518510",
+						"global_sequence": 15255107,
+						"recv_sequence": 21,
+						"auth_sequence": [
+							["bifrostcross", 51]
+						],
+						"code_sequence": 1,
+						"abi_sequence": 1
+					},
+					"receiver": "bifrostcross",
+					"act": {
+						"account": "eosio.token",
+						"name": "transfer",
+						"authorization": [{
+							"actor": "bifrostcross",
+							"permission": "active"
+						}],
+						"data": {
+							"from": "bifrostcross",
+							"to": "bifrostliebi",
+							"quantity": "1.0000 EOS",
+							"memo": "a memo"
+						},
+						"hex_data": "8031bd28637a973be08e7231637a973b102700000000000004454f53000000000661206d656d6f"
+					},
+					"context_free": false,
+					"elapsed": 22,
+					"console": "",
+					"trx_id": "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6",
+					"block_num": 11665607,
+					"block_time": "2020-04-27T08:09:26.500",
+					"producer_block_id": null,
+					"account_ram_deltas": [],
+					"except": null,
+					"error_code": null,
+					"inline_traces": []
+				}, {
+					"action_ordinal": 3,
+					"creator_action_ordinal": 1,
+					"closest_unnotified_ancestor_action_ordinal": 1,
+					"receipt": {
+						"receiver": "bifrostliebi",
+						"act_digest": "955dfd6bd4edc99af285b853927ea8d3a244aec2d30d7c7a2adefb8f6e518510",
+						"global_sequence": 15255108,
+						"recv_sequence": 28,
+						"auth_sequence": [
+							["bifrostcross", 52]
+						],
+						"code_sequence": 1,
+						"abi_sequence": 1
+					},
+					"receiver": "bifrostliebi",
+					"act": {
+						"account": "eosio.token",
+						"name": "transfer",
+						"authorization": [{
+							"actor": "bifrostcross",
+							"permission": "active"
+						}],
+						"data": {
+							"from": "bifrostcross",
+							"to": "bifrostliebi",
+							"quantity": "1.0000 EOS",
+							"memo": "a memo"
+						},
+						"hex_data": "8031bd28637a973be08e7231637a973b102700000000000004454f53000000000661206d656d6f"
+					},
+					"context_free": false,
+					"elapsed": 3,
+					"console": "",
+					"trx_id": "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6",
+					"block_num": 11665607,
+					"block_time": "2020-04-27T08:09:26.500",
+					"producer_block_id": null,
+					"account_ram_deltas": [],
+					"except": null,
+					"error_code": null,
+					"inline_traces": []
+				}]
+			}],
+			"account_ram_delta": null,
+			"except": null,
+			"error_code": null
+		}
+	}
+	"#;
+	let trx_id = transaction::eos_rpc::get_transaction_id(trx_response);
+	assert!(trx_id.is_ok());
+	assert_eq!(trx_id.unwrap(), "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6");
 }
