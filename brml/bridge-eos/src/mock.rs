@@ -137,7 +137,7 @@ impl assets::Trait for Test {
 	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
-	type FetchConvertRate = ();
+	type FetchConvertPrice = ();
 }
 
 pub type BridgeEos = crate::Module<Test>;

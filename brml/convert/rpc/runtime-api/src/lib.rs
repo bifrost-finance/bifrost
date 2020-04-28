@@ -22,11 +22,11 @@ use sp_api::decl_runtime_apis;
 #[allow(unused_doc_comments)]
 /// Create convert runtime api for rpc call
 decl_runtime_apis! {
-	pub trait ConvertRateApi<AssetId, ConvertRate> where
+	pub trait ConvertPriceApi<AssetId, ConvertPrice> where
 		AssetId: Codec,
-		ConvertRate: Codec
+		ConvertPrice: Codec
 	{
 		/// get current convert rate
-		fn get_convert_rate(token_id: AssetId) -> ConvertRate;
+		fn get_convert_rate(token_id: AssetId) -> ConvertPrice;
 	}
 }

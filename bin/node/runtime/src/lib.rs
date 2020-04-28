@@ -30,7 +30,7 @@ use sp_core::u32_trait::{_1, _2, _3, _4};
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	BridgeAssetTo, AssetId, Precision, TokenType, ConvertRate, RatePerBlock
+	BridgeAssetTo, AssetId, Precision, TokenType, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -635,9 +635,9 @@ impl brml_assets::Trait for Runtime {
 	type Price = Price;
 	type Cost = Cost;
 	type Income = Income;
-	type Convert = ConvertRate;
+	type Convert = ConvertPrice;
 	type AssetRedeem = ();
-	type FetchConvertRate = Convert;
+	type FetchConvertPrice = Convert;
 }
 
 impl brml_voucher::Trait for Runtime {
@@ -651,7 +651,7 @@ parameter_types! {
 
 impl brml_convert::Trait for Runtime {
 	type Event = Event;
-	type ConvertRate = ConvertRate;
+	type ConvertPrice = ConvertPrice;
 	type RatePerBlock = RatePerBlock;
 	type AssetTrait = Assets;
 	type Balance = Balance;
@@ -948,8 +948,8 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertRateApi<node_primitives::Block, AssetId, node_primitives::ConvertRate> for Runtime {
-		fn get_convert_rate(vtoken_id: AssetId) -> node_primitives::ConvertRate {
+	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
+		fn get_convert_rate(vtoken_id: AssetId) -> node_primitives::ConvertPrice {
 			Convert::get_convert(vtoken_id)
 		}
 	}

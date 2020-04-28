@@ -31,7 +31,7 @@
 
 use std::{sync::Arc, fmt};
 
-use node_primitives::{AccountId, AssetId, Balance, Block, ConvertRate, Index};
+use node_primitives::{AccountId, AssetId, Balance, Block, ConvertPrice, Index};
 use node_runtime::UncheckedExtrinsic;
 use sp_api::ProvideRuntimeApi;
 use sp_transaction_pool::TransactionPool;
@@ -87,7 +87,7 @@ pub fn create_full<C, P, M, SC>(
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
 	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
-	C::Api: brml_convert_rpc::ConvertRateRuntimeApi<Block, AssetId, ConvertRate>,
+	C::Api: brml_convert_rpc::ConvertRateRuntimeApi<Block, AssetId, ConvertPrice>,
 	C::Api: BabeApi<Block>,
 	<C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
 	P: TransactionPool + 'static,
@@ -131,7 +131,7 @@ pub fn create_full<C, P, M, SC>(
 	);
 	// register brml-convert rpc handler
 	io.extend_with(
-		brml_convert_rpc::ConvertRateApi::to_delegate(brml_convert_rpc::Convert::new(client))
+		brml_convert_rpc::ConvertPriceApi::to_delegate(brml_convert_rpc::Convert::new(client))
 	);
 
 	io

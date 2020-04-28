@@ -58,7 +58,7 @@ impl assets::Trait for Test {
 	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
-	type FetchConvertRate = ();
+	type FetchConvertPrice = ();
 }
 
 impl system::Trait for Test {
@@ -88,7 +88,7 @@ parameter_types! {
 }
 
 impl crate::Trait for Test {
-	type ConvertRate = u64;
+	type ConvertPrice = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;

@@ -72,7 +72,7 @@ impl Trait for Test {
 	type Income = u128;
 	type Convert = u128;
 	type AssetRedeem = ();
-	type FetchConvertRate = ();
+	type FetchConvertPrice = ();
 }
 
 mod assets {

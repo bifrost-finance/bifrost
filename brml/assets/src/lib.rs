@@ -23,7 +23,7 @@ use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLook
 use sp_std::prelude::*;
 use system::{ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetRedeem, AssetTrait, AssetSymbol, FetchConvertRate, Token, TokenPair, TokenPriceHandler, TokenType,
+	AccountAsset, AssetRedeem, AssetTrait, AssetSymbol, FetchConvertPrice, Token, TokenPair, TokenPriceHandler, TokenType,
 };
 
 mod mock;
@@ -71,7 +71,7 @@ pub trait Trait: system::Trait {
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// Handler for fetch convert rate from convert runtime
-	type FetchConvertRate: FetchConvertRate<Self::AssetId, Self::Convert>;
+	type FetchConvertPrice: FetchConvertPrice<Self::AssetId, Self::Convert>;
 }
 
 decl_event! {
@@ -297,7 +297,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertRate::fetch_convert_rate(asset_id);
+		let convert_rate = T::FetchConvertPrice::fetch_convert_rate(asset_id);
 		let target_asset = (asset_id, token_type, target.clone());
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
@@ -342,7 +342,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertRate::fetch_convert_rate(asset_id);
+		let convert_rate = T::FetchConvertPrice::fetch_convert_rate(asset_id);
 		let target_asset = (asset_id, token_type, target);
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);

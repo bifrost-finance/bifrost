@@ -23,7 +23,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 pub use self::gen_client::Client as ConvertClient;
-pub use convert_rpc_runtime_api::{self as runtime_api, ConvertRateApi as ConvertRateRuntimeApi};
+pub use convert_rpc_runtime_api::{self as runtime_api, ConvertPriceApi as ConvertRateRuntimeApi};
 
 #[derive(Clone, Debug)]
 pub struct Convert<C, Block> {
@@ -41,22 +41,22 @@ impl<C, Block> Convert<C, Block> {
 }
 
 #[rpc]
-pub trait ConvertRateApi<BlockHash, AssetId, ConvertRate> {
+pub trait ConvertPriceApi<BlockHash, AssetId, ConvertPrice> {
 	/// rpc method for getting current convert rate
 	#[rpc(name = "convert_getConvert")]
-	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ConvertRate>;
+	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
 }
 
-impl<C, Block, AssetId, ConvertRate> ConvertRateApi<<Block as BlockT>::Hash, AssetId, ConvertRate>
+impl<C, Block, AssetId, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, AssetId, ConvertPrice>
 for Convert<C, Block>
 	where
 		Block: BlockT,
 		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ConvertRateRuntimeApi<Block, AssetId, ConvertRate>,
+		C::Api: ConvertRateRuntimeApi<Block, AssetId, ConvertPrice>,
 		AssetId: Codec,
-		ConvertRate: Codec,
+		ConvertPrice: Codec,
 {
-	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertRate> {
+	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
 		let convert_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
