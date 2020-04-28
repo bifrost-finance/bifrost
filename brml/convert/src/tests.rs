@@ -20,7 +20,7 @@
 use crate::*;
 use crate::mock::*;
 use frame_support::assert_ok;
-use node_primitives::TokenType;
+use node_primitives::{ConvertPool, TokenType};
 
 #[test]
 fn update_rate_multiple_times() {
@@ -47,20 +47,32 @@ fn update_rate_multiple_times() {
 fn update_rate_multiple_times_until_overflow() {
 	new_test_ext().execute_with(|| {
 		// issue a vtoken
+		run_to_block(1);
 		let vtoken = vec![0x12, 0x34];
 		let precise = 4;
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vtoken.into(), precise));
-		let vtoken_id = <assets::NextAssetId<Test>>::get() - 1;
+		run_to_block(2);
+		let token_id = <assets::NextAssetId<Test>>::get() - 1;
 
 		let convert_rate = 20;
-		assert_ok!(Convert::set_convert_rate(Origin::ROOT, vtoken_id.into(), convert_rate));
+		assert_ok!(Convert::set_convert_rate(Origin::ROOT, token_id.into(), convert_rate));
+		run_to_block(3);
 		let update_rate = 2;
-		assert_ok!(Convert::set_rate_per_block(Origin::ROOT, vtoken_id.into(), update_rate));
+		assert_ok!(Convert::set_rate_per_block(Origin::ROOT, token_id.into(), update_rate));
+		run_to_block(4);
+
+		let token_amount = 100u64;
+		let vtoken_amount = 50u64;
+		let pool = ConvertPool::new(token_amount, vtoken_amount);
+
+		<Pool<Test>>::insert(token_id, pool);
 
 		let change_times = 3;
-		run_to_block(change_times + 20);
+		run_to_block(5);
+		run_to_block(6);
+		run_to_block(7);
 		// 20 - 2 * 3 = 14
-		assert_eq!(Convert::convert_rate(vtoken_id), 0);
+		assert_eq!(Convert::convert_rate(token_id), 0);
 	});
 }
 

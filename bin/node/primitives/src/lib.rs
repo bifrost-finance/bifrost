@@ -41,7 +41,7 @@ pub type AccountIndex = u32;
 pub type AssetId = u32;
 
 /// Convert type
-pub type ConvertRate = u128;
+pub type ConvertPrice = u128;
 pub type RatePerBlock = u64;
 
 /// Balance of an account.
@@ -264,12 +264,12 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 }
 
 /// Fetch convert rate handler
-pub trait FetchConvertRate<AssetId, ConvertRate> {
+pub trait FetchConvertPrice<AssetId, ConvertPrice> {
 	/// fetch convert rate
-	fn fetch_convert_rate(asset_id: AssetId) -> ConvertRate;
+	fn fetch_convert_rate(asset_id: AssetId) -> ConvertPrice;
 }
 
-impl<A, ER: Default> FetchConvertRate<A, ER> for () {
+impl<A, ER: Default> FetchConvertPrice<A, ER> for () {
 	fn fetch_convert_rate(_: A) -> ER { Default::default() }
 }
 

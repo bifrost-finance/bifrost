@@ -20,11 +20,7 @@ use frame_support::{
 	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}
 };
 use sp_core::H256;
-use sp_runtime::{
-	Perbill,
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
-};
+use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
 
 impl_outer_dispatch! {
@@ -104,7 +100,7 @@ impl assets::Trait for Test {
 	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
-	type FetchConvertRate = ();
+	type FetchConvertPrice = ();
 }
 
 pub type Swap = crate::Module<Test>;

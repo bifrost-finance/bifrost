@@ -15,7 +15,6 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
 extern crate alloc;
 use alloc::vec::Vec;
 
@@ -25,19 +24,19 @@ mod tests;
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
 use frame_support::traits::Get;
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertRate, AssetReward, TokenType};
+use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertPrice, AssetReward, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
 
 pub trait Trait: frame_system::Trait {
 	/// convert rate
-	type ConvertRate: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance>;
-	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::ConvertRate>;
+	type ConvertPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance>;
+	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::ConvertPrice>;
 
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber> + Into<Self::ConvertRate>;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber> + Into<Self::ConvertPrice>;
 
 	/// The units in which we record costs.
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
@@ -69,9 +68,9 @@ decl_error! {
 		/// Amount of input should be less than or equal to origin balance
 		InvalidBalanceForTransaction,
 		/// Convert rate doesn't be set
-		ConvertRateDoesNotSet,
+		ConvertPriceDoesNotSet,
 		/// This is an invalid convert rate
-		InvalidConvertRate,
+		InvalidConvertPrice,
 		/// Vtoken id is not equal to token id
 		InvalidTokenPair,
 	}
@@ -80,13 +79,14 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Convert {
 		/// convert rate between two tokens, vtoken => (token, convert_rate)
-		ConvertRate get(fn convert_rate): map hasher(blake2_128_concat) T::AssetId => T::ConvertRate;
+		ConvertPrice get(fn convert_rate): map hasher(blake2_128_concat) T::AssetId => T::ConvertPrice;
 		/// change rate per block, vtoken => (token, rate_per_block)
 		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
 		/// referrer must be unique, so check it unique while a new referrer incoming
-		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId => (Vec<(T::AccountId, T::Balance)>, T::Balance);
+		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId =>
+			(Vec<(T::AccountId, T::Balance)>, T::Balance);
 		/// Convert pool
 		Pool get(fn pool): map hasher(blake2_128_concat) T::AssetId => ConvertPool<T::Balance>;
 	}
@@ -103,15 +103,15 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_convert_rate(
 			origin,
-			vtoken_id: AssetSymbol,
-			convert_rate: T::ConvertRate
+			token_symbol: AssetSymbol,
+			convert_rate: T::ConvertPrice
 		) {
 			ensure_root(origin)?;
 
-			let vtoken_id = T::AssetId::from(vtoken_id as u32);
+			let token_id = T::AssetId::from(token_symbol as u32);
 
-			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
-			<ConvertRate<T>>::insert(vtoken_id, convert_rate);
+			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
+			<ConvertPrice<T>>::insert(token_id, convert_rate);
 
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
@@ -119,15 +119,15 @@ decl_module! {
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_rate_per_block(
 			origin,
-			vtoken_id: AssetSymbol,
+			token_symbol: AssetSymbol,
 			rate_per_block: T::RatePerBlock
 		) {
 			ensure_root(origin)?;
 
-			let vtoken_id = T::AssetId::from(vtoken_id as u32);
+			let token_id = T::AssetId::from(token_symbol as u32);
 
-			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
-			<RatePerBlock<T>>::insert(vtoken_id, rate_per_block);
+			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
+			<RatePerBlock<T>>::insert(token_id, rate_per_block);
 
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
@@ -136,31 +136,30 @@ decl_module! {
 		fn convert_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
-			vtoken_id: AssetSymbol,
+			token_symbol: AssetSymbol,
 			referrer: Option<T::AccountId>
 		) {
 			let converter = ensure_signed(origin)?;
 
-			let vtoken_id = T::AssetId::from(vtoken_id as u32);
+			let token_id = T::AssetId::from(token_symbol as u32);
 
 			// check asset_id exist or not
-			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
 
-			let token_id = vtoken_id; // token id is equal to vtoken id
 			let token_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::Token, &converter).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check convert rate has been set
-			ensure!(<ConvertRate<T>>::contains_key(vtoken_id), Error::<T>::ConvertRateDoesNotSet);
+			ensure!(<ConvertPrice<T>>::contains_key(token_id), Error::<T>::ConvertPriceDoesNotSet);
 
-			let rate = <ConvertRate<T>>::get(vtoken_id);
+			let rate = <ConvertPrice<T>>::get(token_id);
 
-			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertRate);
+			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertPrice);
 			let vtokens_buy = token_amount.saturating_mul(rate.into());
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_id, TokenType::Token, converter.clone(), token_amount);
-			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, converter, vtokens_buy);
+			T::AssetTrait::asset_issue(token_id, TokenType::VToken, converter, vtokens_buy);
 
 			Self::increase_pool(token_id, token_amount, vtokens_buy);
 
@@ -194,28 +193,27 @@ decl_module! {
 		fn convert_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,
-			vtoken_id: AssetSymbol,
+			token_symbol: AssetSymbol,
 		) {
 			let converter = ensure_signed(origin)?;
 
-			let vtoken_id = T::AssetId::from(vtoken_id as u32);
+			let token_id = T::AssetId::from(token_symbol as u32);
 
 			// check asset_id exist or not
-			ensure!(T::AssetTrait::token_exists(vtoken_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
 
-			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &converter).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &converter).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// check convert rate has been set
-			ensure!(<ConvertRate<T>>::contains_key(vtoken_id), Error::<T>::ConvertRateDoesNotSet);
+			ensure!(<ConvertPrice<T>>::contains_key(token_id), Error::<T>::ConvertPriceDoesNotSet);
 
-			let token_id = vtoken_id; // token id is equal to vtoken id
-			let rate = <ConvertRate<T>>::get(vtoken_id);
+			let rate = <ConvertPrice<T>>::get(token_id);
 
-			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertRate);
+			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertPrice);
 			let tokens_buy = vtoken_amount / rate.into();
 
-			T::AssetTrait::asset_destroy(vtoken_id, TokenType::VToken, converter.clone(), vtoken_amount);
+			T::AssetTrait::asset_destroy(token_id, TokenType::VToken, converter.clone(), vtoken_amount);
 			T::AssetTrait::asset_issue(token_id, TokenType::Token, converter, tokens_buy);
 
 			Self::decrease_pool(token_id, tokens_buy, vtoken_amount);
@@ -234,8 +232,8 @@ decl_module! {
 					if convert_pool.token_pool != Zero::zero()
 						&& convert_pool.vtoken_pool != Zero::zero()
 					{
-						if <ConvertRate<T>>::contains_key(token_id) {
-							<ConvertRate<T>>::mutate(token_id, |convert_rate| {
+						if <ConvertPrice<T>>::contains_key(token_id) {
+							<ConvertPrice<T>>::mutate(token_id, |convert_rate| {
 								*convert_rate = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
 							});
 						}
@@ -256,7 +254,7 @@ decl_module! {
 //			let benefit = 5;
 //			let epoch = 2000;
 //
-//			let curr_rate = <ConvertRate<T>>::get(vtoken_id);
+//			let curr_rate = <ConvertPrice<T>>::get(vtoken_id);
 //			let epoch_rate = (1 + benefit / vtoken_balances) * curr_rate;
 //
 //			let curr_blk_num = system::Module::<T>::block_number();
@@ -268,10 +266,8 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-	pub fn get_convert(vtoken_id: T::AssetId) -> T::ConvertRate {
-		let rate = <ConvertRate<T>>::get(vtoken_id);
-
-		rate
+	pub fn get_convert(token_id: T::AssetId) -> T::ConvertPrice {
+		<ConvertPrice<T>>::get(token_id)
 	}
 
 	fn increase_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
@@ -289,9 +285,9 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> FetchConvertRate<T::AssetId, T::ConvertRate> for Module<T> {
-	fn fetch_convert_rate(asset_id: T::AssetId) -> T::ConvertRate {
-		let rate = <ConvertRate<T>>::get(asset_id);
+impl<T: Trait> FetchConvertPrice<T::AssetId, T::ConvertPrice> for Module<T> {
+	fn fetch_convert_rate(asset_id: T::AssetId) -> T::ConvertPrice {
+		let rate = <ConvertPrice<T>>::get(asset_id);
 
 		rate
 	}
