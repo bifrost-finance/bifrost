@@ -226,7 +226,7 @@ decl_module! {
 			for (token_id, convert_pool) in <Pool<T>>::iter() {
 				<Pool<T>>::mutate(token_id, |convert_pool| {
 					let current_reward = convert_pool.current_reward;
-					let reward_per_block = current_reward / block_number.into();
+					let reward_per_block = current_reward / T::ConvertDuration::get().into();
 					convert_pool.token_pool = convert_pool.token_pool.saturating_add(reward_per_block);
 
 					if convert_pool.token_pool != Zero::zero()
