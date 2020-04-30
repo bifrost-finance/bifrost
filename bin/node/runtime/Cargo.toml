@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 build = "build.rs"

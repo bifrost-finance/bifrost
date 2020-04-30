@@ -566,13 +566,13 @@ pub fn local_testnet_config() -> ChainSpec {
 	let protocol_id = Some("bifrostpoc2");
 
 	ChainSpec::from_genesis(
-		"Bifrost POC-2 Testnet",
+		"Bifrost Asgard Testnet",
 		"bifrost_testnet",
-		ChainType::Custom("POC".into()),
+		ChainType::Custom("Asgard Testnet".into()),
 		poc_config_genesis,
 		vec![],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-			.expect("POC telemetry url is valid; qed")),
+			.expect("Asgard Testnet telemetry url is valid; qed")),
 		protocol_id,
 		properties,
 		Default::default(),

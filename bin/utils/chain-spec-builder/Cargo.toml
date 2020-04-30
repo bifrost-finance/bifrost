@@ -1,6 +1,6 @@
 [package]
 name = "chain-spec-builder"
-version = "0.2.3"
+version = "0.3.0"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 build = "build.rs"
