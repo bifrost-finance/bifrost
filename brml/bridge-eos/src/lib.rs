@@ -253,8 +253,22 @@ decl_module! {
 		}
 
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		fn save_producer_schedule(origin, ps: ProducerSchedule) {
+			ensure_root(origin)?;
+
+			let schedule_hash = ps.schedule_hash();
+			ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
+
+			// calculate schedule hash just one time, instead of calculating it multiple times.
+			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash.unwrap()));
+			PendingScheduleVersion::put(ps.version);
+
+			Self::deposit_event(Event::InitSchedule(ps.version));
+		}
+
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn init_schedule(origin, ps: ProducerSchedule) {
-			let _ = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			ensure!(!ProducerSchedules::contains_key(ps.version), "ProducerSchedule has been initialized.");
 			ensure!(!PendingScheduleVersion::exists(), "PendingScheduleVersion has been initialized.");
@@ -270,7 +284,7 @@ decl_module! {
 
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
 		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
-			let _ = ensure_root(origin)?;
+			ensure_root(origin)?;
 			BridgeContractAccount::put((account, threthold));
 		}
 
@@ -286,7 +300,7 @@ decl_module! {
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>
 		) {
-			let _ = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			ensure!(BridgeEnable::get(), "This call is not enable now!");
 			ensure!(!block_headers.is_empty(), "The signed block headers cannot be empty.");
@@ -296,16 +310,13 @@ decl_module! {
 			ensure!(block_ids_list[0].is_empty(), "The first block ids must be empty.");
 			ensure!(block_ids_list[1].len() ==  10, "The rest of block ids length must be 10.");
 
-			let pending_schedule = block_headers[0].block_header.new_producers.as_ref().unwrap();
+			let pending_schedule = block_headers[0].block_header.new_producers.as_ref();
 
 			ensure!(PendingScheduleVersion::exists(), "PendingScheduleVersion has not been initialized.");
 
 			let current_schedule_version = PendingScheduleVersion::get();
-			ensure!(ProducerSchedules::contains_key(current_schedule_version), "ProducerSchedule has not been initialized.");
 
-			ensure!(current_schedule_version + 1 == pending_schedule.version, "This is a wrong new producer lists due to wrong schedule version.");
-
-			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
+			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(pending_schedule);
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
 
@@ -315,10 +326,10 @@ decl_module! {
 			);
 
 			// if verification is successful, save the new producers schedule.
-			ProducerSchedules::insert(pending_schedule.version, (&pending_schedule.producers, schedule_hash));
-			PendingScheduleVersion::put(pending_schedule.version);
+			ProducerSchedules::insert(producer_schedule.version, (&producer_schedule.producers, schedule_hash));
+			PendingScheduleVersion::put(producer_schedule.version);
 
-			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, pending_schedule.version));
+			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, producer_schedule.version));
 		}
 
 		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
@@ -331,7 +342,7 @@ decl_module! {
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>
 		) {
-			let _ = ensure_root(origin)?;
+			ensure_root(origin)?;
 
 			// ensure this transaction is unique
 			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
