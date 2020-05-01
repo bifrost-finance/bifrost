@@ -128,7 +128,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to equal spec_version. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 6,
+	spec_version: 7,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 };
@@ -741,7 +741,7 @@ construct_runtime!(
 		Convert: brml_convert::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
-		Voucher: brml_voucher::{Module, Call, Storage, Event<T>},
+		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		// chainlink
 		Oracle: brml_oracle::{Module, Call, Storage},
 		Chainlink: chainlink::{Module, Call, Storage, Event<T>},

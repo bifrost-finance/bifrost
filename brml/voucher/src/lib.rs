@@ -16,8 +16,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
+use alloc::collections::btree_map::BTreeMap;
 use core::convert::TryInto;
-use frame_support::{decl_module, decl_event, decl_storage, decl_error, ensure, Parameter, IterableStorageMap};
+use frame_support::{decl_module, decl_event, decl_storage, decl_error, debug, ensure, Parameter, IterableStorageMap};
 use sp_runtime::traits::{AtLeast32Bit, Member, MaybeSerializeDeserialize, StaticLookup, Zero};
 use frame_system::{self as system, ensure_root};
 
@@ -54,11 +57,23 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Voucher {
 		/// How much voucher you have
-		pub BalancesVoucher get(fn voucher): map hasher(blake2_128_concat) T::AccountId => T::Balance;
+		pub BalancesVoucher get(fn voucher) config(): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 		/// Total BNC in mainnet
 		TotalSuppliedBNC get(fn toal_bnc): T::Balance = (80_000_000u128 * 10u128.pow(12)).try_into().map_err(|_| "failed to u128 conversion").unwrap();
 		/// Current remaining BNC adds all others vouchers, equaling to TotalSuppliedBNC
 		RemainingBNC get(fn remaining_bnc): T::Balance = (80_000_000u128 * 10u128.pow(12)).try_into().map_err(|_| "failed to u128 conversion").unwrap();
+	}
+	add_extra_genesis {
+		build(|config: &GenesisConfig<T>| {
+			// initialize all vouchers for each register
+			let mut total = 0.into();
+			for (who, balance) in &config.voucher {
+				<BalancesVoucher<T>>::insert(who, balance);
+				total += *balance;
+			}
+			let left = <TotalSuppliedBNC<T>>::get() - total;
+			<RemainingBNC<T>>::put(left);
+		});
 	}
 }
 
@@ -153,6 +168,31 @@ decl_module! {
 			}
 
 			Self::deposit_event(RawEvent::DestroyedVoucher(dest, amount));
+		}
+
+		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		pub fn export_all_vouchers(origin) {
+			ensure_root(origin)?;
+
+			let mut vouchers = BTreeMap::new();
+			for (who, balance) in <BalancesVoucher<T>>::iter() {
+				vouchers.insert(who, balance);
+			}
+			#[cfg(feature = "std")]
+			{
+				use std::io::prelude::*;
+				if let Ok(ref current_path) = std::env::current_dir() {
+					let vouchers_path = std::path::Path::join(current_path, "all_vouchers.json");
+					match (std::fs::File::create(vouchers_path), serde_json::to_vec(&vouchers)) {
+						(Ok(ref mut file), Ok(ref bytes)) => {
+							if !file.write_all(&bytes[..]).is_ok() {
+								debug::warn!("failed to export all vouchers");
+							}
+						}
+						_ => debug::warn!("failed to export all vouchers"),
+					}
+				}
+			}
 		}
 	}
 }
