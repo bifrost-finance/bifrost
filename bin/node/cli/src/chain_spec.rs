@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig,
+	AssetsConfig, BridgeEosConfig, VoucherConfig,
 };
 use node_runtime::{Block, constants::currency::*};
 use sc_service::ChainType;
@@ -322,11 +322,18 @@ pub fn testnet_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		}),
+		brml_voucher: {
+			if let Some(vouchers) = initialize_all_vouchers() {
+				Some(VoucherConfig { voucher: vouchers })
+			} else {
+				None
+			}
+		},
 	}
 }
 
-/// Helper function to create GenesisConfig for poc test
-pub fn testnet_poc_genesis(
+/// Helper function to create GenesisConfig for asgard test
+pub fn testnet_asgard_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
@@ -416,11 +423,34 @@ pub fn testnet_poc_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		}),
+		brml_voucher: {
+			if let Some(vouchers) = initialize_all_vouchers() {
+				Some(VoucherConfig { voucher: vouchers })
+			} else {
+				None
+			}
+		},
 	}
 }
 
-/// Configure genesis for poc test
-fn poc_config_genesis() -> GenesisConfig {
+fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>> {
+	use std::collections::HashMap;
+	let path = std::path::Path::join(
+		&std::env::current_dir().ok()?,
+		"all_vouchers.json"
+	);
+	let mut vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = Vec::new();
+	if !path.exists() { return None; }
+
+	let file = std::fs::File::open(path).ok()?;
+	let reader = std::io::BufReader::new(file);
+
+	let vouchers: HashMap<node_primitives::AccountId, node_primitives::Balance> = serde_json::from_reader(reader).ok()?;
+	Some(vouchers.iter().map(|(who, balance)| (who.clone(), *balance)).collect())
+}
+
+/// Configure genesis for asgard test
+fn asgard_config_genesis() -> GenesisConfig {
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
 		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
 		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
@@ -496,7 +526,7 @@ fn poc_config_genesis() -> GenesisConfig {
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
-	testnet_poc_genesis(
+	testnet_asgard_genesis(
 		initial_authorities,
 		root_key,
 		endowed_accounts,
@@ -544,7 +574,7 @@ fn local_testnet_genesis() -> GenesisConfig {
 }
 
 /// Local testnet config (multivalidator Alice + Bob)
-/// Adapt local test as poc test, create chain spec use the command: birost-node build-spec --chain=local > chain.json
+/// Adapt local test as asgard test, create chain spec use the command: birost-node build-spec --chain=local > chain.json
 pub fn local_testnet_config() -> ChainSpec {
 	let properties = {
 		let mut props = serde_json::Map::new();
@@ -563,13 +593,13 @@ pub fn local_testnet_config() -> ChainSpec {
 		);
 		Some(props)
 	};
-	let protocol_id = Some("bifrostpoc2");
+	let protocol_id = Some("bifrost asgard");
 
 	ChainSpec::from_genesis(
 		"Bifrost Asgard Testnet",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
-		poc_config_genesis,
+		asgard_config_genesis,
 		vec![],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
