@@ -25,7 +25,8 @@ use node_runtime::{
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
 	AssetsConfig, BridgeEosConfig, VoucherConfig,
 };
-use node_runtime::{Block, constants::currency::*};
+use node_runtime::Block;
+use node_runtime::constants::currency::*;
 use sc_service::ChainType;
 use hex_literal::hex;
 use sc_telemetry::TelemetryEndpoints;
@@ -50,9 +51,9 @@ const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 #[serde(rename_all = "camelCase")]
 pub struct Extensions {
 	/// Block numbers with known hashes.
-	pub fork_blocks: sc_client::ForkBlocks<Block>,
+	pub fork_blocks: sc_client_api::ForkBlocks<Block>,
 	/// Known bad block hashes.
-	pub bad_blocks: sc_client::BadBlocks<Block>,
+	pub bad_blocks: sc_client_api::BadBlocks<Block>,
 }
 
 /// Specialized `ChainSpec`.
@@ -593,7 +594,7 @@ pub fn local_testnet_config() -> ChainSpec {
 		);
 		Some(props)
 	};
-	let protocol_id = Some("bifrost asgard");
+	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
 		"Bifrost Asgard Testnet",

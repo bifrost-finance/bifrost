@@ -20,6 +20,7 @@ extern crate alloc;
 
 use alloc::collections::btree_map::BTreeMap;
 use core::convert::TryInto;
+use frame_support::traits::{Get};
 use frame_support::{decl_module, decl_event, decl_storage, decl_error, debug, ensure, Parameter, IterableStorageMap};
 use sp_runtime::traits::{AtLeast32Bit, Member, MaybeSerializeDeserialize, StaticLookup, Zero};
 use frame_system::{self as system, ensure_root};
@@ -83,7 +84,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn issue_voucher(
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
@@ -116,7 +117,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::IssuedVoucher(dest, amount));
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().writes(1)]
 		fn intialize_all_voucher(origin) {
 			ensure_root(origin)?;
 
@@ -132,7 +133,7 @@ decl_module! {
 			}
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().writes(1)]
 		pub fn destroy_voucher(
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
@@ -170,7 +171,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::DestroyedVoucher(dest, amount));
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn export_all_vouchers(origin) {
 			ensure_root(origin)?;
 

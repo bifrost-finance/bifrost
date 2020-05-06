@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::convert::TryInto;
+use frame_support::traits::{Get};
 use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure};
 use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup};
 use sp_std::prelude::*;
@@ -161,7 +162,7 @@ decl_module! {
 
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().writes(1)]
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) {
 			ensure_root(origin)?;
 
@@ -175,7 +176,7 @@ decl_module! {
 		}
 
 		/// Issue any amount of fungible assets.
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn issue(
 			origin,
 			id: AssetSymbol,
@@ -197,7 +198,7 @@ decl_module! {
 		}
 
 		/// Move some assets from one holder to another.
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn transfer(
 			origin,
 			id: AssetSymbol,
@@ -221,7 +222,7 @@ decl_module! {
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn destroy(
 			origin,
 			id: AssetSymbol,
@@ -241,7 +242,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Destroyed(id, token_type, origin, amount));
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn redeem(
 			origin,
 			id: AssetSymbol,
