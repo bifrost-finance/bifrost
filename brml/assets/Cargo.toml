@@ -6,17 +6,17 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
-frame-support = { version = "2.0.0-alpha.5", git = "https://github.com/paritytech/substrate", default-features = false }
+frame-support = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
-serde = { version = "1.0.101", optional = true }
-sp-core = { version = "2.0.0-alpha.5",  git = "https://github.com/paritytech/substrate", default-features = false }
-sp-runtime = { version = "2.0.0-alpha.5", git = "https://github.com/paritytech/substrate", default-features = false }
-sp-std = { version = "2.0.0-alpha.5", git = "https://github.com/paritytech/substrate", default-features = false }
-system = { package = "frame-system", version = "2.0.0-alpha.5", git = "https://github.com/paritytech/substrate", default-features = false }
+serde = { version = "1.0.106", optional = true }
+sp-core = { version = "2.0.0-dev",  git = "https://github.com/paritytech/substrate", default-features = false }
+sp-runtime = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
+sp-std = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
+system = { package = "frame-system", version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
 
 [dev-dependencies]
-sp-io = { version = "2.0.0-alpha.5", git = "https://github.com/paritytech/substrate" }
+sp-io = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
 
 [features]
 default = ["std"]

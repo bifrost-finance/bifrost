@@ -17,7 +17,6 @@
 use crate::chain_spec::ChainSpec;
 use log::info;
 use wasm_bindgen::prelude::*;
-use sc_service::Configuration;
 use browser_utils::{
 	Client,
 	browser_configuration, set_console_error_panic_hook, init_console_log,
@@ -43,7 +42,7 @@ async fn start_inner(chain_spec: String, log_level: String) -> Result<Client, Bo
 	info!("Bifrost browser node");
 	info!("✌️  version {}", config.impl_version);
 	info!("❤️  by Liebi Technologies, 2019-2020");
-	info!("📋  Chain specification: {}", config.chain_spec.name());
+	info!("📋 Chain specification: {}", config.chain_spec.name());
 	info!("🏷  Node name: {}", config.network.node_name);
 	info!("👤 Role: {:?}", config.role);
 

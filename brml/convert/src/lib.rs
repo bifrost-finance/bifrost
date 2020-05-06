@@ -21,8 +21,8 @@ use alloc::vec::Vec;
 mod mock;
 mod tests;
 
-use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
 use frame_support::traits::Get;
+use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertPrice, AssetReward, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
@@ -100,7 +100,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_convert_rate(
 			origin,
 			token_symbol: AssetSymbol,
@@ -116,7 +116,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_rate_per_block(
 			origin,
 			token_symbol: AssetSymbol,
@@ -132,7 +132,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn convert_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
@@ -189,7 +189,7 @@ decl_module! {
 			Self::deposit_event(Event::ConvertTokenToVTokenSuccess);
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn convert_vtoken_to_token(
 			origin,
 			#[compact] vtoken_amount: T::Balance,

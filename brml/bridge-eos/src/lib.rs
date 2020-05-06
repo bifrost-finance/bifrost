@@ -37,11 +37,12 @@ use sp_runtime::{
 		TransactionValidity, ValidTransaction, TransactionSource
 	},
 };
-use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter};
+use frame_support::traits::{Get};
+use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter, dispatch::DispatchResult};
 use frame_system::{
 	self as system,
 	ensure_root, ensure_none,
-	offchain::SubmitUnsignedTransaction
+	offchain::{SubmitTransaction, CreateSignedTransaction}
 };
 
 use node_primitives::{
@@ -63,7 +64,7 @@ lazy_static::lazy_static! {
 }
 
 pub mod sr25519 {
-	mod app_sr25519 {
+	pub mod app_sr25519 {
 		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, sr25519};
 		app_crypto!(sr25519, ACCOUNT);
 
@@ -148,7 +149,7 @@ impl core::convert::From<&str> for Error {
 
 pub type VersionId = u32;
 
-pub trait Trait: pallet_authorship::Trait {
+pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
 		+ From<<Self as frame_system::Trait>::AccountId>;
@@ -177,9 +178,6 @@ pub trait Trait: pallet_authorship::Trait {
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
-
-	/// A transaction submitter.
-	type SubmitTransaction: SubmitUnsignedTransaction<Self, <Self as Trait>::Call>;
 }
 
 decl_event! {
@@ -245,14 +243,14 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().writes(1)]
 		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
 
 			BridgeEnable::put(enable);
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 2)]
 		fn save_producer_schedule(origin, ps: ProducerSchedule) {
 			ensure_root(origin)?;
 
@@ -266,7 +264,7 @@ decl_module! {
 			Self::deposit_event(Event::InitSchedule(ps.version));
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn init_schedule(origin, ps: ProducerSchedule) {
 			ensure_root(origin)?;
 
@@ -282,7 +280,7 @@ decl_module! {
 			Self::deposit_event(Event::InitSchedule(ps.version));
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().writes(1)]
 		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
 			ensure_root(origin)?;
 			BridgeContractAccount::put((account, threthold));
@@ -293,7 +291,7 @@ decl_module! {
 		// 3. compare current schedules version with pending_schedules'.
 		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
 		// 5. save the new_producers list.
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn change_schedule(
 			origin,
 			merkle: IncrementalMerkle,
@@ -332,7 +330,7 @@ decl_module! {
 			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, producer_schedule.version));
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn prove_action(
 			origin,
 			action: Action,
@@ -395,6 +393,7 @@ decl_module! {
 			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+			// let schedule_hash = Checksum256::from_str("cedd80489dcc2133068079b1d1c47f0c43f084f56ea6e02c2961841c93a0d2ba").unwrap();
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
@@ -410,14 +409,16 @@ decl_module! {
 			ensure!(Self::map_assets_by_action(target, &act_transfer).is_ok(), "Failed to map asset to transfer");
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
-		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) {
+		#[weight = T::DbWeight::get().writes(1)]
+		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
 			ensure_none(origin)?;
 
 			BridgeTxOuts::<T>::put(tx_list);
+
+			Ok(())
 		}
 
-		#[weight = frame_support::weights::SimpleDispatchInfo::default()]
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
@@ -618,7 +619,7 @@ impl<T: Trait> Module<T> {
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
 		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold)?;
-		BridgeTxOuts::<T>::append([&tx_out].iter()).map_err(|e| Error::OtherErrors(e.to_string()))?;
+		BridgeTxOuts::<T>::append(&tx_out);//.map_err(|e| Error::OtherErrors(e.to_string()))?;
 
 		Ok(tx_out)
 	}
@@ -708,7 +709,8 @@ impl<T: Trait> Module<T> {
 		if has_change.get() {
 			#[cfg(test)] // for testing
 			BridgeTxOuts::<T>::put(bridge_tx_outs.clone());
-			match T::SubmitTransaction::submit_unsigned(Call::bridge_tx_report(bridge_tx_outs.clone())) {
+			let call = Call::bridge_tx_report(bridge_tx_outs.clone());
+			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
 				Ok(_) => debug::info!(target: "bridge-eos", "Call::bridge_tx_report {:?}", bridge_tx_outs),
 				Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
 			}

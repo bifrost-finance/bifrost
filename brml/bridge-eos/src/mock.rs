@@ -21,12 +21,14 @@ use frame_support::{
 	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, ConsensusEngineId,
 	traits::{OnInitialize, OnFinalize, FindAuthor}
 };
-use sp_core::H256;
+//use node_primitives::{AccountId, Signature};
+use sp_core::{H256, sr25519::Signature};
 use sp_runtime::{
 	Perbill,
-	testing::{Header, TestXt, UintAuthorityId},
-	traits::{BlakeTwo256, IdentityLookup},
+	testing::{Header, TestXt, TestSignature, UintAuthorityId},
+	traits::{BlakeTwo256, IdentityLookup, Extrinsic as ExtrinsicT, Verify, IdentifyAccount},
 };
+use frame_system::offchain::{SubmitTransaction, CreateSignedTransaction};
 use super::*;
 
 impl_outer_dispatch! {
@@ -37,9 +39,10 @@ impl_outer_dispatch! {
 
 /// An extrinsic type used for tests.
 pub type Extrinsic = TestXt<Call, ()>;
-type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
+//type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
+type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Encode, Decode)]
 pub struct Test;
 
 impl_outer_origin! {
@@ -73,7 +76,7 @@ impl frame_system::Trait for Test {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = sp_core::sr25519::Public;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
@@ -86,14 +89,17 @@ impl frame_system::Trait for Test {
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
+	type DbWeight = ();
+	type BlockExecutionWeight = ();
+	type ExtrinsicBaseWeight = ();
 }
 
 
 pub const TEST_ID: ConsensusEngineId = [1, 2, 3, 4];
 
-pub struct AuthorGiven;
+//pub struct TestAuthorityId;
 
-impl FindAuthor<u64> for AuthorGiven {
+impl FindAuthor<u64> for TestAuthorityId {
 	fn find_author<'a, I>(digests: I) -> Option<u64>
 		where I: 'a + IntoIterator<Item=(ConsensusEngineId, &'a [u8])>
 	{
@@ -108,14 +114,54 @@ impl FindAuthor<u64> for AuthorGiven {
 }
 
 impl pallet_authorship::Trait for Test {
-	type FindAuthor = AuthorGiven;
+	type FindAuthor = TestAuthorityId;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
 	type EventHandler = ();
 }
 
+impl frame_system::offchain::SigningTypes for Test {
+	type Public = <Signature as Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test where
+	Call: From<LocalCall>,
+{
+	type Extrinsic = Extrinsic;
+	type OverarchingCall = Call;
+}
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test where
+	Call: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: Call,
+		_public: <Signature as Verify>::Signer,
+		_account: AccountId,
+		nonce: u64,
+	) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
+		Some((call, (nonce, ())))
+	}
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Encode, Decode, PartialOrd, Ord)]
+//pub struct TestAuthId;
+//impl frame_system::offchain::AppCrypto<<Signature as Verify>::Signer, Signature> for TestAuthId {
+//	type RuntimeAppPublic = sp_runtime::app_crypto::RuntimeAppPublic;
+//	type GenericSignature = sp_core::sr25519::Signature;
+//	type GenericPublic = sp_core::sr25519::Public;
+//}
+
+pub struct TestAuthorityId;
+impl frame_system::offchain::AppCrypto<<Signature as Verify>::Signer, Signature> for TestAuthorityId {
+	type RuntimeAppPublic = crate::sr25519::app_sr25519::Public;
+	type GenericSignature = sp_core::sr25519::Signature;
+	type GenericPublic = sp_core::sr25519::Public;
+}
+
 impl crate::Trait for Test {
-	type AuthorityId = UintAuthorityId;
+	type AuthorityId = TestAuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
@@ -124,7 +170,7 @@ impl crate::Trait for Test {
 	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
-	type SubmitTransaction = SubmitTransaction;
+	//	type SubmitTransaction = SubmitTransaction;
 	type AssetTrait = Assets;
 }
 
