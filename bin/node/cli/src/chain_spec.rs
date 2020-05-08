@@ -435,19 +435,39 @@ pub fn testnet_asgard_genesis(
 }
 
 fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>> {
-	use std::collections::HashMap;
+	use std::collections::HashSet;
+
 	let path = std::path::Path::join(
 		&std::env::current_dir().ok()?,
-		"all_vouchers.json"
+		"bnc_vouchers.json"
 	);
-	let mut vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = Vec::new();
-	if !path.exists() { return None; }
 
+	if !path.exists() { return None; }
 	let file = std::fs::File::open(path).ok()?;
 	let reader = std::io::BufReader::new(file);
 
-	let vouchers: HashMap<node_primitives::AccountId, node_primitives::Balance> = serde_json::from_reader(reader).ok()?;
-	Some(vouchers.iter().map(|(who, balance)| (who.clone(), *balance)).collect())
+	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
+	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
+		dbg!(&v.0);
+		let decoded_ss58 = bs58::decode(&v.0).into_vec().expect("decode account id failure");
+		let mut data = [0u8; 32];
+		data.copy_from_slice(&decoded_ss58[1..33]);
+		(node_primitives::AccountId::from(data), v.1.parse().expect("Balance is invalid."))
+	}).collect();
+
+	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
+	let mut final_vouchers = Vec::new();
+	for i in set.iter() {
+		let mut sum = 0;
+		for j in vouchers.iter() {
+			if *i == j.0 {
+				sum += j.1;
+			}
+		}
+		final_vouchers.push((i.clone(), sum));
+	}
+
+	Some(final_vouchers)
 }
 
 /// Configure genesis for asgard test

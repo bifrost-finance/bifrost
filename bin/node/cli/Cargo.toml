@@ -101,6 +101,7 @@ eos-chain = { git = "https://github.com/bifrost-codes/rust-eos" }
 # brml rpc crates
 brml-assets-rpc = { path = "../../../brml/assets/rpc" }
 brml-convert-rpc = { path = "../../../brml/convert/rpc" }
+bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.8.0-dev", optional = true, git = "https://github.com/paritytech/substrate", features = [ "wasmtime" ] }

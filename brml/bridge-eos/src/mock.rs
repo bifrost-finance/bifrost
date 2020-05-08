@@ -76,7 +76,7 @@ impl frame_system::Trait for Test {
 	type Call = Call;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = sp_core::sr25519::Public;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
@@ -97,9 +97,9 @@ impl frame_system::Trait for Test {
 
 pub const TEST_ID: ConsensusEngineId = [1, 2, 3, 4];
 
-//pub struct TestAuthorityId;
+pub struct AuthorGiven;
 
-impl FindAuthor<u64> for TestAuthorityId {
+impl FindAuthor<u64> for AuthorGiven {
 	fn find_author<'a, I>(digests: I) -> Option<u64>
 		where I: 'a + IntoIterator<Item=(ConsensusEngineId, &'a [u8])>
 	{
@@ -114,14 +114,14 @@ impl FindAuthor<u64> for TestAuthorityId {
 }
 
 impl pallet_authorship::Trait for Test {
-	type FindAuthor = TestAuthorityId;
+	type FindAuthor = AuthorGiven;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
 	type EventHandler = ();
 }
 
 impl frame_system::offchain::SigningTypes for Test {
-	type Public = <Signature as Verify>::Signer;
+	type Public = u64;
 	type Signature = Signature;
 }
 
@@ -161,7 +161,7 @@ impl frame_system::offchain::AppCrypto<<Signature as Verify>::Signer, Signature>
 }
 
 impl crate::Trait for Test {
-	type AuthorityId = TestAuthorityId;
+	type AuthorityId = Self::AuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
