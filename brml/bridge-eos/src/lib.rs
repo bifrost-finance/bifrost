@@ -393,7 +393,7 @@ decl_module! {
 			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
-			// let schedule_hash = Checksum256::from_str("cedd80489dcc2133068079b1d1c47f0c43f084f56ea6e02c2961841c93a0d2ba").unwrap();
+			let schedule_hash = Checksum256::from_str("cedd80489dcc2133068079b1d1c47f0c43f084f56ea6e02c2961841c93a0d2ba").unwrap();
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
