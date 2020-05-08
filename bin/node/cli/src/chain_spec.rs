@@ -448,7 +448,6 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 
 	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
 	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
-		dbg!(&v.0);
 		let decoded_ss58 = bs58::decode(&v.0).into_vec().expect("decode account id failure");
 		let mut data = [0u8; 32];
 		data.copy_from_slice(&decoded_ss58[1..33]);
