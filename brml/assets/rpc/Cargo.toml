@@ -1,6 +1,6 @@
 [package]
 name = "brml-assets-rpc"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 

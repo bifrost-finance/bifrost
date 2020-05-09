@@ -1,6 +1,6 @@
 [package]
 name = "brml-settlement"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 

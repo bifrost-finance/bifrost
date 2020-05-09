@@ -319,7 +319,7 @@ pub fn testnet_genesis(
 			prices: vec![],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
-			producer_schedule: eos_chain::ProducerSchedule::default(),
+			producer_schedule: eos_chain::ProducerAuthoritySchedule::default(),
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		}),
@@ -420,7 +420,7 @@ pub fn testnet_asgard_genesis(
 			prices: vec![],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
-			producer_schedule: eos_chain::ProducerSchedule::default(),
+			producer_schedule: eos_chain::ProducerAuthoritySchedule::default(),
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 		}),
