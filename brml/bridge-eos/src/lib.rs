@@ -203,7 +203,7 @@ decl_storage! {
 		ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
 
 		/// Initialize a producer schedule while starting a node.
-		InitializeSchedule get(fn producer_schedule) config(): ProducerAuthoritySchedule;
+		InitializeSchedule get(fn producer_schedule): ProducerAuthoritySchedule;
 
 		/// Save all unique transactions
 		/// Every transaction has different action receipt, but can have the same action
@@ -224,17 +224,11 @@ decl_storage! {
 
 			NotaryKeys::<T>::put(config.notary_keys.clone());
 
-			let ps_version = config.producer_schedule.version;
-			if !ProducerSchedules::contains_key(ps_version) {
-				let producers = &config.producer_schedule.producers;
-				let schedule_hash = config.producer_schedule.schedule_hash();
-				assert!(schedule_hash.is_ok());
-				ProducerSchedules::insert(ps_version, (producers, schedule_hash.unwrap()));
-				PendingScheduleVersion::put(ps_version);
-				debug::info!("producer schedule has been initialized");
-			} else {
-				debug::info!("producer schedule cannot be initialized twice");
-			}
+			let schedule = ProducerAuthoritySchedule::default();
+			let schedule_hash = schedule.schedule_hash();
+			assert!(schedule_hash.is_ok());
+			ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
+			PendingScheduleVersion::put(schedule.version);
 		});
 	}
 }
