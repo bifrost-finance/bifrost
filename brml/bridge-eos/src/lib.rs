@@ -18,14 +18,14 @@
 #[macro_use]
 extern crate alloc;
 
-use alloc::borrow::Cow;
 use alloc::string::{String, ToString};
 use core::{convert::TryFrom, ops::Div, str::FromStr};
 
 use codec::{Decode, Encode};
 use eos_chain::{
-	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle, ProducerKey,
+	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle,
 	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
+	ProducerAuthoritySchedule, ProducerAuthority,
 };
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
@@ -200,10 +200,10 @@ decl_storage! {
 		BridgeEnable get(fn is_bridge_enable): bool = true;
 
 		/// Eos producer list and hash which in specific version id
-		ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerKey>, Checksum256);
+		ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
 
 		/// Initialize a producer schedule while starting a node.
-		InitializeSchedule get(fn producer_schedule) config(): ProducerSchedule;
+		InitializeSchedule get(fn producer_schedule) config(): ProducerAuthoritySchedule;
 
 		/// Save all unique transactions
 		/// Every transaction has different action receipt, but can have the same action
@@ -251,7 +251,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 2)]
-		fn save_producer_schedule(origin, ps: ProducerSchedule) {
+		fn save_producer_schedule(origin, ps: ProducerAuthoritySchedule) {
 			ensure_root(origin)?;
 
 			let schedule_hash = ps.schedule_hash();
@@ -265,10 +265,10 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn init_schedule(origin, ps: ProducerSchedule) {
+		fn init_schedule(origin, ps: ProducerAuthoritySchedule) {
 			ensure_root(origin)?;
 
-			ensure!(!ProducerSchedules::contains_key(ps.version), "ProducerSchedule has been initialized.");
+			ensure!(!ProducerSchedules::contains_key(ps.version), "ProducerAuthoritySchedule has been initialized.");
 			ensure!(!PendingScheduleVersion::exists(), "PendingScheduleVersion has been initialized.");
 			let schedule_hash = ps.schedule_hash();
 			ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
@@ -393,7 +393,6 @@ decl_module! {
 			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
-			let schedule_hash = Checksum256::from_str("cedd80489dcc2133068079b1d1c47f0c43f084f56ea6e02c2961841c93a0d2ba").unwrap();
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
@@ -475,7 +474,7 @@ impl<T: Trait> Module<T> {
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
 		schedule_hash: &Checksum256,
-		producer_schedule: &ProducerSchedule,
+		producer_schedule: &ProducerAuthoritySchedule,
 		block_headers: &[SignedBlockHeader],
 		block_ids_list: Vec<Vec<Checksum256>>,
 	) -> Result<(), Error> {
@@ -498,7 +497,7 @@ impl<T: Trait> Module<T> {
 
 	fn verify_block_header_signature(
 		schedule_hash: &Checksum256,
-		producer_schedule: &ProducerSchedule,
+		producer_schedule: &ProducerAuthoritySchedule,
 		block_header: &SignedBlockHeader,
 		expected_mroot: &Checksum256,
 	) -> Result<(), Error> {
@@ -524,22 +523,30 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn get_schedule_hash_and_public_key<'a>(
-		new_producers: Option<&'a ProducerSchedule>
-	) -> Result<(Checksum256, Cow<'a, ProducerSchedule>), Error> {
-		let producer_schedule = match new_producers {
-			Some(producers) => Cow::Borrowed(producers), // use Cow to avoid cloning
+	fn get_schedule_hash_and_public_key(
+		new_producers: Option<&ProducerSchedule>
+	) -> Result<(Checksum256, ProducerAuthoritySchedule), Error> {
+		let ps = match new_producers {
+			Some(producers) => {
+				let schedule_version = PendingScheduleVersion::get();
+				if schedule_version != producers.version {
+					return Err(Error::ScheduleHashError)
+				}
+				let producers = ProducerSchedules::get(schedule_version).0;
+				let ps = ProducerAuthoritySchedule::new(schedule_version, producers);
+				ps
+			},
 			None => {
 				let schedule_version = PendingScheduleVersion::get();
 				let producers = ProducerSchedules::get(schedule_version).0;
-				let ps = ProducerSchedule::new(schedule_version, producers);
-                Cow::Owned(ps)
+				let ps = ProducerAuthoritySchedule::new(schedule_version, producers);
+				ps
 			}
 		};
 
-		let schedule_hash = producer_schedule.schedule_hash().map_err(|_| Error::ScheduleHashError)?;
+		let schedule_hash: Checksum256 = ps.schedule_hash().map_err(|_| Error::ScheduleHashError)?;
 
-		Ok((schedule_hash, producer_schedule))
+		Ok((schedule_hash, ps))
 	}
 
 	fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error> {

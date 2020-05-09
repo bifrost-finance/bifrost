@@ -113,5 +113,22 @@
     "vtoken_pool": "Balance",
     "current_reward": "Balance",
     "pending_reward": "Balance"
+  },
+  "ProducerAuthoritySchedule": {
+    "version": "u32",
+    "producers": "Vec<ProducerAuthority>"
+  },
+  "ProducerAuthority": {
+    "producer_name": "ActionName",
+    "authority": "BlockSigningAuthority"
+  },
+  "BlockSigningAuthority": "(UnsignedInt, BlockSigningAuthorityV0)",
+  "BlockSigningAuthorityV0": {
+    "threshold": "u32",
+    "keys": "Vec<KeyWeight>"
+  },
+  "KeyWeight": {
+    "key": "PublicKey",
+    "weight": "u16"
   }
 }
