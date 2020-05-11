@@ -288,6 +288,8 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn change_schedule(
 			origin,
+			legacy_schedule_hash: Checksum256,
+			new_schedule: ProducerAuthoritySchedule,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>
@@ -302,15 +304,20 @@ decl_module! {
 			ensure!(block_ids_list[0].is_empty(), "The first block ids must be empty.");
 			ensure!(block_ids_list[1].len() ==  10, "The rest of block ids length must be 10.");
 
-			let pending_schedule = block_headers[0].block_header.new_producers.as_ref();
+			let legacy_pending_schedule = block_headers[0].block_header.new_producers.as_ref();
+			let legacy_pending_schedule_hash = legacy_pending_schedule.unwrap().schedule_hash();
+			ensure!(legacy_pending_schedule_hash.is_ok(), "Failed to calculate legacy schedule hash value.");
+			ensure!(legacy_pending_schedule_hash.unwrap() == legacy_schedule_hash, "invalid producers schedule");
 
 			ensure!(PendingScheduleVersion::exists(), "PendingScheduleVersion has not been initialized.");
 
 			let current_schedule_version = PendingScheduleVersion::get();
 
-			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(pending_schedule);
-			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
-			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+			let (schedule_hash, producer_schedule) = {
+				let schedule_hash = new_schedule.schedule_hash();
+				ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
+				(schedule_hash.unwrap(), new_schedule)
+			};
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
