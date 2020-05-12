@@ -104,12 +104,12 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		raw_to: Vec<u8>,
 		amount: Asset,
 		threshold: u8,
+		memo: &str
 	) -> Result<Self, Error> {
 		let from = core::str::from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
 		let to = core::str::from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
 
 		// Construct action
-		let memo = "a memo";
 		let action = Action::transfer(from, to, amount.to_string().as_ref(), memo).map_err(Error::EosChainError)?;
 
 		// Construct transaction
