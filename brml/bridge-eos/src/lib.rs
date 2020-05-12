@@ -63,6 +63,12 @@ lazy_static::lazy_static! {
 	};
 }
 
+#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
+enum TransactionType {
+	Deposit,
+	Withdraw,
+}
+
 pub mod sr25519 {
 	pub mod app_sr25519 {
 		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, sr25519};
@@ -132,7 +138,7 @@ pub enum Error {
 	InvalidAccountId,
 	ConvertBalanceError,
 	EOSRpcError(String),
-	OtherErrors(String),
+	OtherErrors(&'static str),
 }
 
 impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
@@ -154,7 +160,7 @@ pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait 
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
 		+ From<<Self as frame_system::Trait>::AccountId>;
 
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
@@ -181,13 +187,17 @@ pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait 
 }
 
 decl_event! {
-	pub enum Event {
+	pub enum Event<T>
+		where <T as system::Trait>::AccountId,
+	{
 		InitSchedule(VersionId),
-		ChangeSchedule(VersionId, VersionId), // ChangeSchedule(from, to)
+		ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
 		ProveAction,
 		RelayBlock,
-		TransactionFail,
-		TransactionSuccess,
+		Deposit(Vec<u8>, AccountId), // EOS account => Bifrost AccountId
+		Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => EOS account
+		RedeemSuccess,
+		RedeemFail,
 	}
 }
 
@@ -255,7 +265,7 @@ decl_module! {
 			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash.unwrap()));
 			PendingScheduleVersion::put(ps.version);
 
-			Self::deposit_event(Event::InitSchedule(ps.version));
+			Self::deposit_event(RawEvent::InitSchedule(ps.version));
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
@@ -271,7 +281,7 @@ decl_module! {
 			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash.unwrap()));
 			PendingScheduleVersion::put(ps.version);
 
-			Self::deposit_event(Event::InitSchedule(ps.version));
+			Self::deposit_event(RawEvent::InitSchedule(ps.version));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -328,7 +338,7 @@ decl_module! {
 			ProducerSchedules::insert(producer_schedule.version, (&producer_schedule.producers, schedule_hash));
 			PendingScheduleVersion::put(producer_schedule.version);
 
-			Self::deposit_event(Event::ChangeSchedule(current_schedule_version, producer_schedule.version));
+			Self::deposit_event(RawEvent::ChangeSchedule(current_schedule_version, producer_schedule.version));
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
@@ -359,7 +369,7 @@ decl_module! {
 				"The block ids list cannot be empty."
 			);
 
-			// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{memo}
+			// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_type}
 			let act_transfer = Self::get_action_transfer_from_action(&action);
 			ensure!(act_transfer.is_ok(), "Cannot read transfer action from data.");
 			let act_transfer = act_transfer.unwrap();
@@ -403,10 +413,32 @@ decl_module! {
 			// save proves for this transaction
 			BridgeActionReceipt::insert(&action_receipt, &action);
 
-			Self::deposit_event(Event::ProveAction);
+			Self::deposit_event(RawEvent::ProveAction);
 
+			let token_type = {
+				match split_memo.len() {
+					2 => TokenType::VToken,
+					3 => {
+						match split_memo[2] {
+							"" | "vEOS" => TokenType::VToken,
+							"EOS" => TokenType::Token,
+							_ => {
+								debug::error!("A invalid token type, default token type will be vtoken");
+								TokenType::Token
+							}
+						}
+					}
+					_ => unreachable!("previous step checked he length of split_memo.")
+				}
+			};
 			// withdraw or deposit
-			ensure!(Self::map_assets_by_action(target, &act_transfer).is_ok(), "Failed to map asset to transfer");
+			let trx_result = Self::map_assets_by_action(&target, &act_transfer, token_type);
+			ensure!(trx_result.is_ok(), "Failed to map asset to transfer");
+
+			match trx_result.unwrap() {
+				TransactionType::Deposit => Self::deposit_event(RawEvent::Deposit(act_transfer.from.to_string().into_bytes(), target)),
+				TransactionType::Withdraw => Self::deposit_event(RawEvent::Withdraw(target, act_transfer.to.to_string().into_bytes())),
+			}
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -422,7 +454,8 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			#[compact] amount: T::Balance
+			#[compact] amount: T::Balance,
+			memo: Vec<u8>
 		) {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
@@ -444,15 +477,17 @@ decl_module! {
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
-				amount: eos_amount
+				amount: eos_amount,
+				memo
 			};
+
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
 				T::AssetTrait::asset_redeem(token_id, TokenType::VToken, origin, amount);
 				debug::info!("sent transaction to EOS node.");
-				Self::deposit_event(Event::TransactionSuccess);
+				Self::deposit_event(RawEvent::RedeemSuccess);
 			} else {
 				debug::warn!("failed to send transaction to EOS node.");
-				Self::deposit_event(Event::TransactionFail);
+				Self::deposit_event(RawEvent::RedeemFail);
 			}
 		}
 
@@ -558,7 +593,7 @@ impl<T: Trait> Module<T> {
 		Ok(action_transfer)
 	}
 
-	fn map_assets_by_action(target: T::AccountId, action_transfer: &ActionTransfer) -> Result<(), Error> {
+	fn map_assets_by_action(target: &T::AccountId, action_transfer: &ActionTransfer, token_type: TokenType) -> Result<TransactionType, Error> {
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
 		let symbol_precise = symbol.precision();
@@ -567,7 +602,7 @@ impl<T: Trait> Module<T> {
 		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let vtoken_id = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
+		let token_id = match T::AssetTrait::asset_id_exists(target, &symbol_code, symbol_precise.into()) {
 			Some(id) => id,
 			None => {
 				T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).0
@@ -577,24 +612,25 @@ impl<T: Trait> Module<T> {
 		// withdraw
 		let from = action_transfer.from.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == from {
-			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &target).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(&token_id, token_type, target).balance;
 			if vtoken_balances.lt(&vtoken_balances) {
-				debug::info!("origin account balance must be greater than or equal to the transfer amount.");
-				return Ok(())
+				debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+				return Err(Error::OtherErrors("origin account balance must be greater than or equal to the transfer amount."));
 			}
 
-			T::AssetTrait::asset_redeem(vtoken_id, TokenType::VToken, target, vtoken_balances);
-			return Ok(());
+			T::AssetTrait::asset_redeem(token_id, token_type, target.clone(), vtoken_balances);
+			return Ok(TransactionType::Withdraw)
 		}
 
 		// deposit
 		let to = action_transfer.to.to_string().as_bytes().to_vec();
 		if BridgeContractAccount::get().0 == to {
-			T::AssetTrait::asset_issue(vtoken_id, TokenType::VToken, target, vtoken_balances);
-			return Ok(());
+			T::AssetTrait::asset_issue(token_id, token_type, target.clone(), vtoken_balances);
+			return Ok(TransactionType::Deposit)
 		}
 
-		Ok(())
+		// if it goes to this line, means this is not a cross transaction.
+		Err(Error::OtherErrors("An invalid EOS contract account."))
 	}
 
 	/// check receiver account format
@@ -625,9 +661,11 @@ impl<T: Trait> Module<T> {
 			B: AtLeast32Bit,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
+		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(Error::ParseUtf8Error)?.to_string();
 		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
-		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold)?;
-		BridgeTxOuts::<T>::append(&tx_out);//.map_err(|e| Error::OtherErrors(e.to_string()))?;
+
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo)?;
+		BridgeTxOuts::<T>::append(&tx_out);
 
 		Ok(tx_out)
 	}

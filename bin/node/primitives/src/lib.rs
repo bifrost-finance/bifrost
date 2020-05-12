@@ -309,6 +309,7 @@ impl<Precision> BridgeAssetSymbol<Precision> {
 pub struct BridgeAssetBalance<Precision, Balance> {
 	pub symbol: BridgeAssetSymbol<Precision>,
 	pub amount: Balance,
+	pub memo: Vec<u8>,
 }
 
 /// Bridge asset from other blockchain to Bifrost
@@ -323,7 +324,7 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 /// Bridge asset from Bifrost to other blockchain
 pub trait BridgeAssetTo<Precision, Balance> {
 	type Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Balance>) -> Result<(), Self::Error>;
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Balance>, ) -> Result<(), Self::Error>;
 }
 
 impl<P, B> BridgeAssetTo<P, B> for () {
