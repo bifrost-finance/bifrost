@@ -1,6 +1,6 @@
 [package]
 name = "brml-assets-rpc-runtime-api"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 

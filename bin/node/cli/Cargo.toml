@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -70,6 +70,7 @@ frame-support = { version = "2.0.0-dev", default-features = false, git = "https:
 pallet-im-online = { version = "2.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-authority-discovery = { version = "2.0.0-dev",  git = "https://github.com/paritytech/substrate" }
 pallet-staking = { version = "2.0.0-dev",  git = "https://github.com/paritytech/substrate" }
+pallet-grandpa = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
 
 # node-specific dependencies
 node-runtime = { path = "../runtime" }
