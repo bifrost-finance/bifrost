@@ -1,6 +1,6 @@
 [package]
 name = "node-runtime"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 build = "build.rs"
@@ -75,7 +75,7 @@ chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", de
 brml-oracle = { path = "../../../brml/oracle", default-features = false }
 
 [build-dependencies]
-wasm-builder-runner = { version = "1.0.5", package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate" }
+wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate" }
 
 [dev-dependencies]
 sp-io = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }

@@ -1,6 +1,6 @@
 [package]
 name = "brml-voucher"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["alexgituser <alexgituser@gmail.com>"]
 edition = "2018"
 
