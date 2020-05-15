@@ -93,7 +93,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
 	spec_version: 8,
-	impl_version: 0,
+	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
 };
@@ -126,7 +126,7 @@ impl OnUnbalanced<NegativeImbalance> for DealWithFees {
 }
 
 parameter_types! {
-	pub const BlockHashCount: BlockNumber = 2400;
+	pub const BlockHashCount: BlockNumber = 250;
 	/// We allow for 2 seconds of compute with a 6 second average block time.
 	pub const MaximumBlockWeight: Weight = 2 * WEIGHT_PER_SECOND;
 	pub const MaximumBlockLength: u32 = 5 * 1024 * 1024;
@@ -566,7 +566,7 @@ impl pallet_grandpa::Trait for Runtime {
 	type KeyOwnerProofSystem = Historical;
 
 	type KeyOwnerProof =
-		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+	<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
 
 	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
 		KeyTypeId,

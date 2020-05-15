@@ -20,10 +20,10 @@ use sc_chain_spec::ChainSpecExtension;
 use sp_core::{Pair, Public, crypto::UncheckedInto, sr25519};
 use serde::{Serialize, Deserialize};
 use node_runtime::{
-	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig,
-	DemocracyConfig,GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus,
-	StakingConfig, ElectionsConfig, IndicesConfig, SocietyConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, WASM_BINARY, AssetsConfig, BridgeEosConfig, VoucherConfig,
+	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
+	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
+	AssetsConfig, BridgeEosConfig, VoucherConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
