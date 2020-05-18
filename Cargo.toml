@@ -14,6 +14,7 @@ members = [
 	"brml/convert/rpc",
 	"brml/oracle",
 	"brml/swap",
+	"brml/validator",
 	"brml/voucher",
 ]
 
