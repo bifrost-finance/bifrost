@@ -15,14 +15,16 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[macro_use]
 extern crate alloc;
 use alloc::vec::Vec;
+use alloc::collections::btree_map::BTreeMap;
 
 mod mock;
 mod tests;
 
 use frame_support::traits::Get;
-use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, IterableStorageMap};
+use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertPrice, AssetReward, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
@@ -58,6 +60,7 @@ decl_event! {
 		UpdatezRatePerBlockSuccess,
 		ConvertTokenToVTokenSuccess,
 		ConvertVTokenToTokenSuccess,
+		RedeemedPointsSuccess,
 	}
 }
 
@@ -84,9 +87,12 @@ decl_storage! {
 		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
-		/// referrer must be unique, so check it unique while a new referrer incoming
+        /// referrer must be unique, so check it unique while a new referrer incoming.
+        /// and insert the new channel to the
 		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId =>
-			(Vec<(T::AccountId, T::Balance)>, T::Balance);
+            (Vec<(T::AccountId, T::Balance)>, T::Balance);
+        /// referer channels for all users
+        AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
 		/// Convert pool
 		Pool get(fn pool): map hasher(blake2_128_concat) T::AssetId => ConvertPool<T::Balance>;
 	}
@@ -159,32 +165,12 @@ decl_module! {
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_id, TokenType::Token, converter.clone(), token_amount);
-			T::AssetTrait::asset_issue(token_id, TokenType::VToken, converter, vtokens_buy);
+			T::AssetTrait::asset_issue(token_id, TokenType::VToken, converter.clone(), vtokens_buy);
 
 			Self::increase_pool(token_id, token_amount, vtokens_buy);
 
-			// save
-//			if let referrer = Some(referrer) {
-//				// first time to referrer
-//				if !<ReferrerChannels<T>>::contains_key(&converter) {
-//					let value = (vec![(referrer, vtokens_buy)], vtokens_buy);
-//					<ReferrerChannels<T>>::insert(&converter, value);
-//				} else {
-//					// existed, but new referrer incoming
-//					<ReferrerChannels<T>>::mutate(&converter, |points| {
-//						if points.0.iter().any(|point| point.0 == referrer) {
-//							point.0[1] += vtokens_buy;
-//						} else {
-//							let value = (vec![(referrer, vtokens_buy)], vtokens_buy);
-//							<ReferrerChannels<T>>::insert(&converter, value);
-//						}
-////						points.0.iter().find(|point| )
-//						points.1 += vtokens_buy;
-//					});
-//				}
-//			} else {
-//				();
-//			}
+			// save refer channel
+			Self::handle_new_refer(converter, referrer, vtokens_buy);
 
 			Self::deposit_event(Event::ConvertTokenToVTokenSuccess);
 		}
@@ -214,16 +200,19 @@ decl_module! {
 			let tokens_buy = vtoken_amount / rate.into();
 
 			T::AssetTrait::asset_destroy(token_id, TokenType::VToken, converter.clone(), vtoken_amount);
-			T::AssetTrait::asset_issue(token_id, TokenType::Token, converter, tokens_buy);
+			T::AssetTrait::asset_issue(token_id, TokenType::Token, converter.clone(), tokens_buy);
 
 			Self::decrease_pool(token_id, tokens_buy, vtoken_amount);
+
+			// redeem income
+			Self::redeem_income(converter, vtoken_amount);
 
 			Self::deposit_event(Event::ConvertVTokenToTokenSuccess);
 		}
 
 		fn on_finalize(block_number: T::BlockNumber) {
 			// calculate & update convert rate
-			for (token_id, convert_pool) in <Pool<T>>::iter() {
+			for (token_id, _convert_pool) in <Pool<T>>::iter() {
 				<Pool<T>>::mutate(token_id, |convert_pool| {
 					let current_reward = convert_pool.current_reward;
 					let reward_per_block = current_reward / T::ConvertDuration::get().into();
@@ -249,18 +238,6 @@ decl_module! {
 					});
 				}
 			}
-
-//			let vtoken_balances = T::AssetTrait::get_account_asset(&vtoken_id, TokenType::VToken, &converter).balance;
-//			let benefit = 5;
-//			let epoch = 2000;
-//
-//			let curr_rate = <ConvertPrice<T>>::get(vtoken_id);
-//			let epoch_rate = (1 + benefit / vtoken_balances) * curr_rate;
-//
-//			let curr_blk_num = system::Module::<T>::block_number();
-//			let specified_convert_rate = {
-//				curr_rate + ((epoch_rate - curr_rate) / epoch) * (curr_blk_num % epoch)
-//			};
 		}
 	}
 }
@@ -282,6 +259,99 @@ impl<T: Trait> Module<T> {
 			pool.token_pool = pool.token_pool.saturating_sub(token_amount);
 			pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
 		});
+	}
+
+	fn handle_new_refer(converter: T::AccountId, referrer: Option<T::AccountId>, vtokens_buy: T::Balance) {
+		if let Some(ref refer) = referrer {
+			if !<ReferrerChannels<T>>::contains_key(&converter) {
+				// first time to referrer
+				let value = (vec![(refer, vtokens_buy)], vtokens_buy);
+				<ReferrerChannels<T>>::insert(&converter, value);
+			} else {
+				// existed, but new referrer incoming
+				<ReferrerChannels<T>>::mutate(&converter, |incomes| {
+					if incomes.0.iter().any(|income| income.0.eq(refer)) {
+						for income in &mut incomes.0 {
+							if income.0.eq(refer) {
+								income.1 += vtokens_buy;
+							}
+						}
+						incomes.1 += vtokens_buy;
+					} else {
+						incomes.1 += vtokens_buy;
+						incomes.0.push((refer.clone(), vtokens_buy));
+					}
+				});
+			}
+
+			// update all channels
+			if <AllReferrerChannels::<T>>::get().0.contains_key(refer) {
+				<AllReferrerChannels::<T>>::mutate(|(channels, total)| {
+					*total += vtokens_buy;
+					if let Some(income) = channels.get_mut(&refer) {
+						*income += vtokens_buy;
+					}
+				});
+			} else {
+				<AllReferrerChannels::<T>>::mutate(|(channels, total)| {
+					// this referer is not in all referer channels
+					let _ = channels.insert(refer.clone(), vtokens_buy);
+					*total += vtokens_buy;
+				});
+			}
+		} else {
+			();
+		}
+	}
+
+	fn redeem_income(converter: T::AccountId, incomes_to_redeem: T::Balance) {
+		if <ReferrerChannels<T>>::contains_key(&converter) {
+			// redeem the points by order
+			// for instance: user C has two channels that like: (A, 1000), (B, 2000),
+			// if C want to redeem 1500 points, first redeem 1000 from A, then 500 from B
+			<ReferrerChannels<T>>::mutate(&converter, |incomes| {
+				if incomes.1 < incomes_to_redeem {
+					debug::warn!("you're redeem the points that is bigger than all you have.");
+					return;
+				}
+
+				let mut rest: T::Balance = incomes_to_redeem;
+				let mut all_rest: T::Balance = incomes_to_redeem;
+				for income in &mut incomes.0 {
+					// update user's channels
+					if income.1 > rest {
+						income.1 -= rest;
+						rest = 0.into();
+					} else {
+						rest -= income.1;
+						income.1 = 0.into();
+					}
+
+					// update all channels
+					<AllReferrerChannels::<T>>::mutate(|(channels, _)| {
+						if let Some(b) = channels.get_mut(&income.0) {
+							if *b > all_rest {
+								*b -= all_rest;
+								all_rest = 0.into();
+							} else {
+								all_rest -= *b;
+								*b = 0.into();
+							}
+						}
+					});
+
+					if rest > 0.into() {
+						continue;
+					}
+				}
+				// update user's total points
+				incomes.1 -= incomes_to_redeem;
+				// update all channels total points
+				<AllReferrerChannels::<T>>::mutate(|(_, total)| {
+					*total -= incomes_to_redeem;
+				});
+			});
+		}
 	}
 }
 
