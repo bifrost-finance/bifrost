@@ -13,10 +13,10 @@ cleos create account eosio testd EOS7cpYZnAWdY9k84Ux4Jvz7tR16yKtAV7Ni38tg8fggwpE
 cleos set contract eosio.token [eos_project_path]/unittests/contracts/eosio.token/ eosio.token.wasm eosio.token.abi -p eosio.token@active
 
 # create bifrost contract account
-cleos create account eosio bifrost EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
+cleos create account eosio bifrostcross EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 
 # deploy bofrost contract
-cleos set contract bifrost [bifrost-eos-contracts_project_path]/build/contracts/bifrost.bridge bifrost.bridge.wasm bifrost.bridge.abi -p bifrost@active
+cleos set contract bifrostcross [bifrost-eos-contracts_project_path]/build/contracts/bifrost.bridge bifrost.bridge.wasm bifrost.bridge.abi -p bifrostcross@active
 
 # create token
 cleos push action eosio.token create '{"issuer":"eosio", "maximum_supply":"10000.0000 EOS"}' -p eosio.token@active
@@ -25,4 +25,4 @@ cleos push action eosio.token create '{"issuer":"eosio", "maximum_supply":"10000
 cleos push action eosio.token issue '["jim", "10000.0000 EOS", "memo"]' -p eosio@active
 
 # register token just created
-cleos push action bifrost regtoken '["eosio.token", "4,EOS", "10000.0000 EOS", "1.0000 EOS", "1000.0000 EOS", "10000.0000 EOS", "1"]' -p bifrost@active
+cleos push action bifrostcross regtoken '["eosio.token", "4,EOS", "10000.0000 EOS", "1.0000 EOS", "1000.0000 EOS", "10000.0000 EOS", "1"]' -p bifrostcross@active

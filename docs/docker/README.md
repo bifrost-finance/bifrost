@@ -91,7 +91,7 @@ $ docker pull bifrostnetwork/bifrost-eos-relay:w3_m1
 
 start producer node
 ```
-$ docker run --name=producer -p 8888:8888 -p 9876:9876 bifrostnetwork/bifrost-eos-relay:w3_m1 --max-transaction-time=1000 \
+$ docker run --name=producer -p 8888:8888 -p 9876:9876 bifrostnetwork/bifrost-eos-relay:v2.0.4.web3 --max-transaction-time=1000 \
 --enable-stale-production \
 --producer-name eosio \
 --plugin eosio::chain_api_plugin \
@@ -109,7 +109,7 @@ docker inspect producer
 ```
 Now, replace [eos_producer_ip] and [bifrost_internal_ip] with the ip you get, start a relay node.
 ```
-docker run --name=relayer -p 8889:8889 -p 9877:9877 bifrostnetwork/bifrost-eos-relay:w3_m1 --plugin eosio::chain_api_plugin \
+docker run --name=relayer -p 8889:8889 -p 9877:9877 bifrostnetwork/bifrost-eos-relay:v2.0.4.web3 --plugin eosio::chain_api_plugin \
 --plugin eosio::bridge_plugin \
 --plugin eosio::http_plugin \
 --http-server-address 0.0.0.0:8889 \
@@ -118,7 +118,8 @@ docker run --name=relayer -p 8889:8889 -p 9877:9877 bifrostnetwork/bifrost-eos-r
 --config-dir /home/localnet/node/relay/config \
 --data-dir /home/localnet/node/relay/data -l /home/localnet/node/relay/logging.json \
 --bifrost-node=[bifrost_internal_ip]:9944 \
---bifrost-account=bifrost
+--bifrost-crossaccount=bifrostcross \
+--bifrost-signer=//Alice
 ```
 Both nodes should be sychronizing each other.
 
@@ -175,19 +176,19 @@ Go to [polkadot.js.org](https://polkadot.js.org/apps/#/settings/developer), Copy
 
 ### EOS to Bifrost
 
-Before you send a transaction to Bifrost, check **jim**'s and **bifrost**'s balance.
+Before you send a transaction to Bifrost, check **jim**'s and **bifrostcross**'s balance.
 
 ```
 # should print 10000.0000 EOS
 $ cleos get currency balance eosio.token jim
 
 # bifrost is contract account, should print nothing
-$ cleos get currency balance eosio.token bifrost
+$ cleos get currency balance eosio.token bifrostcross
 ```
 
 Now send a transaction.
 ```
-$ cleos push action eosio.token transfer '["jim", "bifrost", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:EOS"]' -p jim@active
+$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:EOS"]' -p jim@active
 ```
 **5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY** is Alice, surely you can use Bob(5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty),
 Dave(5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy), etc.
@@ -202,13 +203,13 @@ If that event happens, Alice's assets will be created, the amount is 1000000(due
 
 ![assets_creation](check_balance.png)
 
-If you see that figure above, go check **jim**'s and **bifrost**'s balance again.
+If you see that figure above, go check **jim**'s and **bifrostcross**'s balance again.
 ```
 # should print 9900.0000 EOS
 $ cleos get currency balance eosio.token jim
 
 # should print 100.0000 EOS
-$ cleos get currency balance eosio.token bifrost
+$ cleos get currency balance eosio.token bifrostcross
 ```
 
 ### Bifrost to EOS
@@ -230,12 +231,12 @@ $ ./subkey_setting.sh
 EOS side:
 
 ```
-$ cleos set account permission bifrost active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"testa","permission":"active"},"weight":1}, {"permission":{"actor":"testb","permission":"active"},"weight":1}, {"permission":{"actor":"testc","permission":"active"},"weight":1}, {"permission":{"actor":"testd","permission":"active"},"weight":1}]}' owner
+$ cleos set account permission bifrostcross active '{"threshold":2,"keys":[],"accounts":[{"permission":{"actor":"testa","permission":"active"},"weight":1}, {"permission":{"actor":"testb","permission":"active"},"weight":1}, {"permission":{"actor":"testc","permission":"active"},"weight":1}, {"permission":{"actor":"testd","permission":"active"},"weight":1}]}' owner
 ```
 
 After you set permission for account bifrost, try this command to verify the result.
 ```
-$ cleos get account bifrost
+$ cleos get account bifrostcross
 ```
 
 It should print some info like this.
@@ -255,12 +256,12 @@ Follow the picture to send a transaction to EOS node( "jim" to hex: "0x6a696d").
 
 Surely you can go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics) to check Alice's assets change or not
 
-Check jim's and bifrost's balance in EOS node if it runs without error.
+Check jim's and bifrostcross's balance in EOS node if it runs without error.
 
 ```
 # should print 9910 EOS
 $ cleos get currency balance eosio.token jim
 
 # should print 90 EOS
-$ cleos get currency balance eosio.token bifrost
+$ cleos get currency balance eosio.token bifrostcross
 ```
