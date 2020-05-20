@@ -16,6 +16,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod mock;
+mod tests;
+
 use codec::{Encode, Decode};
 use core::convert::{From, Into};
 use frame_support::traits::Get;
