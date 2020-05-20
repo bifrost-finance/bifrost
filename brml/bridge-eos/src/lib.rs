@@ -404,6 +404,16 @@ decl_module! {
 			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
 			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
 			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+			// this is for testing due to there's a default producer schedule on standalone eos node.
+			let schedule_hash = {
+				if producer_schedule.version == 0 {
+					let ps_hash = ProducerSchedule::default().schedule_hash();
+					ensure!(ps_hash.is_ok(), "Failed to calculate schedule hash value.");
+					ps_hash.unwrap()
+				} else {
+					schedule_hash
+				}
+			};
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
