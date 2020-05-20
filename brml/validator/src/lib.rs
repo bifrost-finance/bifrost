@@ -26,7 +26,7 @@ use node_primitives::AssetSymbol;
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 
-#[derive(Encode, Decode, Clone, Default, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetConfig<Balance> {
 	redeem_duration: u16,
 	reward_per_block: Balance,
@@ -41,7 +41,7 @@ impl<Balance> AssetConfig<Balance> {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Default, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct Validator<Balance, BlockNumber> {
 	last_block: BlockNumber,
 	deposit: Balance,
@@ -63,18 +63,26 @@ impl<Balance: Default, BlockNumber: Default> Validator<Balance, BlockNumber> {
 pub trait Trait: frame_system::Trait {
 	/// event
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber>;
 }
 
 decl_event! {
-	pub enum Event<T> where <T as Trait>::Balance {
-		AssetConfigSet,
-		ValidatorRegistered,
-		ValidatorDeposited(AssetSymbol, Balance),
-		ValidatorWithdrawn(AssetSymbol, Balance),
+	pub enum Event<T> where
+		<T as Trait>::Balance,
+		<T as frame_system::Trait>::AccountId,
+		<T as frame_system::Trait>::BlockNumber,
+	{
+		/// A new asset has been set.
+		AssetConfigSet(AssetSymbol, AssetConfig<Balance>),
+		/// A new validator has been registered.
+		ValidatorRegistered(AssetSymbol, AccountId, Validator<Balance, BlockNumber>),
+		/// The validator changed the amount of staking it's needed.
+		ValidatorNeedAmountSet(AssetSymbol, AccountId, Balance),
+		/// The validator deposited the amount of reward.
+		ValidatorDeposited(AssetSymbol, AccountId, Balance),
+		/// The validator withdrawn the amount of reward.
+		ValidatorWithdrawn(AssetSymbol, AccountId, Balance),
 	}
 }
 
@@ -88,7 +96,8 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Validator {
 		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) AssetSymbol => AssetConfig<T::Balance>;
-		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId => Validator<T::Balance, T::BlockNumber>;
+		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId
+			=> Validator<T::Balance, T::BlockNumber>;
 	}
 }
 
@@ -108,9 +117,9 @@ decl_module! {
 			let _ = ensure_root(origin)?;
 
 			let asset_config = AssetConfig::new(redeem_duration, reward_per_block);
-			AssetConfigs::<T>::insert(&asset_symbol, asset_config);
+			AssetConfigs::<T>::insert(&asset_symbol, &asset_config);
 
-			Self::deposit_event(RawEvent::AssetConfigSet);
+			Self::deposit_event(RawEvent::AssetConfigSet(asset_symbol, asset_config));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -125,9 +134,9 @@ decl_module! {
 			ensure!(!Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorRegistered);
 
 			let validator  = Validator::new(need, validator_address);
-			Validators::<T>::insert(&asset_symbol, &origin, validator);
+			Validators::<T>::insert(&asset_symbol, &origin, &validator);
 
-			Self::deposit_event(RawEvent::ValidatorRegistered);
+			Self::deposit_event(RawEvent::ValidatorRegistered(asset_symbol, origin, validator));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -136,14 +145,11 @@ decl_module! {
 
 			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
 
-			// Lock balance from bridge chain
-			// T::Validator::lock(origin, amount);
-
 			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_add(amount);
 			});
 
-			Self::deposit_event(RawEvent::ValidatorDeposited(asset_symbol, amount));
+			Self::deposit_event(RawEvent::ValidatorDeposited(asset_symbol, origin, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -159,7 +165,7 @@ decl_module! {
 				validator.deposit = validator.deposit.saturating_sub(amount);
 			});
 
-			Self::deposit_event(RawEvent::ValidatorWithdrawn(asset_symbol, amount));
+			Self::deposit_event(RawEvent::ValidatorWithdrawn(asset_symbol, origin, amount));
 		}
 
 		fn on_finalize(now_block: T::BlockNumber) {
@@ -194,7 +200,7 @@ impl<T: Trait> Module<T> {
 					} else {
 						let blocks = now_block - val.last_block;
 						val.deposit = val.deposit - reward_per_block.saturating_mul(blocks.into());
-
+						val.last_block = now_block;
 						// TOD call redeem from bridge-eos
 					}
 				},
