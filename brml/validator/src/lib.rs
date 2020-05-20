@@ -140,6 +140,19 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
+		fn set_need_amount(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
+			let origin = ensure_signed(origin)?;
+
+			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
+
+			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
+				validator.need = validator.need.saturating_add(amount);
+			});
+
+			Self::deposit_event(RawEvent::ValidatorNeedAmountSet(asset_symbol, origin, amount));
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
 		fn deposit(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
