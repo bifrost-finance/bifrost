@@ -32,14 +32,16 @@ use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetConfig<Balance> {
 	redeem_duration: u16,
-	reward_per_block: Balance,
+	min_reward_per_block: Balance,
 }
 
 impl<Balance> AssetConfig<Balance> {
-	fn new(redeem_duration: u16, reward_per_block: Balance) -> Self {
+	fn new(redeem_duration: u16, min_reward_per_block: Balance) -> Self {
 		AssetConfig {
+			/// The redeem deration in blocks.
 			redeem_duration,
-			reward_per_block,
+			/// The minimium reward for staking of asset per unit per block.
+			min_reward_per_block,
 		}
 	}
 }
@@ -49,7 +51,7 @@ pub struct Validator<Balance, BlockNumber> {
 	last_block: BlockNumber,
 	deposit: Balance,
 	need: Balance,
-	current: Balance,
+	staking: Balance,
 	validator_address: Vec<u8>,
 }
 
@@ -93,6 +95,10 @@ decl_event! {
 		ValidatorDeposited(AssetSymbol, AccountId, Balance),
 		/// The validator withdrawn the amount of reward.
 		ValidatorWithdrawn(AssetSymbol, AccountId, Balance),
+		/// The amount of asset staked to the account.
+		ValidatorStaked(AssetSymbol, AccountId, Balance),
+		/// The amount of asset un-staked from the account.
+		ValidatorUnStaked(AssetSymbol, AccountId, Balance),
 	}
 }
 
@@ -102,7 +108,9 @@ decl_error! {
 		ValidatorRegistered,
 		/// The validator has not been registered.
 		ValidatorNotRegistered,
+		/// The validator's free balance is not enough for locking.
 		FreeBalanceNotEnough,
+		/// the validator's locked balance is not enough for unlocking.
 		LockedBalanceNotEnough,
 	}
 }
@@ -127,14 +135,58 @@ decl_module! {
 			origin,
 			asset_symbol: AssetSymbol,
 			redeem_duration: u16,
-			reward_per_block: T::Balance,
+			min_reward_per_block: T::Balance,
 		) {
 			let _ = ensure_root(origin)?;
 
-			let asset_config = AssetConfig::new(redeem_duration, reward_per_block);
+			let asset_config = AssetConfig::new(redeem_duration, min_reward_per_block);
 			AssetConfigs::<T>::insert(&asset_symbol, &asset_config);
 
 			Self::deposit_event(RawEvent::AssetConfigSet(asset_symbol, asset_config));
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn staking(
+			origin,
+			asset_symbol: AssetSymbol,
+			target: T::AccountId,
+			amount: T::Balance,
+		) {
+			let _ = ensure_root(origin)?;
+			ensure!(
+				Validators::<T>::contains_key(&asset_symbol, &target),
+				Error::<T>::ValidatorNotRegistered
+			);
+
+			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
+				validator.staking = validator.staking.saturating_add(amount);
+			});
+
+			// TODO stake asset by bridge module
+
+			Self::deposit_event(RawEvent::ValidatorStaked(asset_symbol, target, amount));
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn unstaking(
+			origin,
+			asset_symbol: AssetSymbol,
+			target: T::AccountId,
+			amount: T::Balance,
+		) {
+			let _ = ensure_root(origin)?;
+			ensure!(
+				Validators::<T>::contains_key(&asset_symbol, &target),
+				Error::<T>::ValidatorNotRegistered
+			);
+
+			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
+				validator.staking = validator.staking.saturating_sub(amount);
+			});
+
+			// TODO un-stake asset by bridge module
+
+			Self::deposit_event(RawEvent::ValidatorUnStaked(asset_symbol, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -146,7 +198,10 @@ decl_module! {
 		) {
 			let origin = ensure_signed(origin)?;
 
-			ensure!(!Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorRegistered);
+			ensure!(
+				!Validators::<T>::contains_key(&asset_symbol, &origin),
+				Error::<T>::ValidatorRegistered
+			);
 
 			let validator  = Validator::new(need, validator_address);
 			Validators::<T>::insert(&asset_symbol, &origin, &validator);
@@ -158,7 +213,10 @@ decl_module! {
 		fn set_need_amount(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
-			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
+			ensure!(
+				Validators::<T>::contains_key(&asset_symbol, &origin),
+				Error::<T>::ValidatorNotRegistered
+			);
 
 			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
 				validator.need = validator.need.saturating_add(amount);
@@ -171,7 +229,10 @@ decl_module! {
 		fn deposit(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
-			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
+			ensure!(
+				Validators::<T>::contains_key(&asset_symbol, &origin),
+				Error::<T>::ValidatorNotRegistered
+			);
 
 			// Lock balance
 			Self::asset_lock(origin.clone(), asset_symbol, amount)?;
@@ -187,7 +248,10 @@ decl_module! {
 		fn withdraw(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
-			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
+			ensure!(
+				Validators::<T>::contains_key(&asset_symbol, &origin),
+				Error::<T>::ValidatorNotRegistered
+			);
 
 			// UnLock balance
 			Self::asset_unlock(origin.clone(), asset_symbol, amount)?;
@@ -276,20 +340,24 @@ impl<T: Trait> Module<T> {
 					let asset_config = AssetConfigs::<T>::get(&asset_symbol);
 
 					let redeem_duration = asset_config.redeem_duration;
-					let reward_per_block = asset_config.reward_per_block;
+					let min_reward_per_block = asset_config.min_reward_per_block;
 
 					let need = val.need;
-					let current = val.current;
+					let staking = val.staking;
 
-					let redeem_fee = reward_per_block.saturating_mul(reward_per_block);
-					if redeem_fee >= val.deposit {
+					let max_fee = min_reward_per_block.saturating_mul(redeem_duration.into());
+					let mut fee = Zero::zero();
+					if max_fee >= val.deposit {
+						fee = val.deposit;
 						val.deposit = Zero::zero();
 					} else {
 						let blocks = now_block - val.last_block;
-						val.deposit = val.deposit - reward_per_block.saturating_mul(blocks.into());
-						val.last_block = now_block;
-						// TOD call redeem from bridge-eos
+						fee = min_reward_per_block.saturating_mul(blocks.into());
+						val.deposit = val.deposit.saturating_sub(fee);
 					}
+
+					val.last_block = now_block;
+					// TODO call redeem from bridge-eos
 				},
 				_ => {
 					unreachable!()
