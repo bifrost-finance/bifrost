@@ -52,6 +52,7 @@ pub struct Validator<Balance, BlockNumber> {
 	deposit: Balance,
 	need: Balance,
 	staking: Balance,
+	reward_per_block: Balance,
 	validator_address: Vec<u8>,
 }
 
@@ -356,43 +357,28 @@ impl<T: Trait> Module<T> {
 	fn validator_deduct(now_block: T::BlockNumber) {
 		for (asset_symbol, account_id, mut val) in Validators::<T>::iter() {
 			// calculate validator's deposit balance
-			match asset_symbol {
-				AssetSymbol::DOT => {
-					unimplemented!();
-				},
-				AssetSymbol::KSM => {
-					unimplemented!();
-				},
-				AssetSymbol::EOS => {
-					let asset_config = AssetConfigs::<T>::get(&asset_symbol);
+			let asset_config = AssetConfigs::<T>::get(&asset_symbol);
 
-					let redeem_duration = asset_config.redeem_duration;
-					let min_reward_per_block = asset_config.min_reward_per_block;
+			let redeem_duration = asset_config.redeem_duration;
+			let min_reward_per_block = asset_config.min_reward_per_block;
 
-					let need = val.need;
-					let staking = val.staking;
-
-					let max_fee = min_reward_per_block.saturating_mul(redeem_duration.into());
-					let mut fee = Zero::zero();
-					if max_fee >= val.deposit {
-						fee = val.deposit;
-						val.deposit = Zero::zero();
-					} else {
-						let blocks = now_block - val.last_block;
-						fee = min_reward_per_block.saturating_mul(blocks.into());
-						val.deposit = val.deposit.saturating_sub(fee);
-					}
-
-					val.last_block = now_block;
-					// TODO call redeem from bridge-eos
-				},
-				_ => {
-					unreachable!()
-				}
+			let min_fee = min_reward_per_block.saturating_mul(redeem_duration.into());
+			let mut fee = Zero::zero();
+			if min_fee >= val.deposit {
+				fee = val.deposit;
+				val.deposit = Zero::zero();
+			} else {
+				let blocks = now_block - val.last_block;
+				fee = val.staking.saturating_mul(val.reward_per_block.saturating_mul(blocks.into()));
+				val.deposit = val.deposit.saturating_sub(fee);
 			}
+
+			val.last_block = now_block;
 
 			// update validator
 			Validators::<T>::insert(&asset_symbol, &account_id, val);
+
+			// TODO call redeem from bridge-eos
 		}
 	}
 }
