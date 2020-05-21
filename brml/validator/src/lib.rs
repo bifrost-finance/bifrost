@@ -121,9 +121,14 @@ decl_error! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Validator {
+		/// Asset config data.
 		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) AssetSymbol => AssetConfig<T::Balance>;
+		/// The total amount of asset has been locked for staking.
+		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) AssetSymbol => T::Balance;
+		/// The validators registered from cross chain.
 		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId
 			=> Validator<T::Balance, T::BlockNumber>;
+		/// The locked amount of asset of account for staking.
 		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
 }
@@ -171,6 +176,10 @@ decl_module! {
 				validator.staking = validator.staking.saturating_add(amount);
 			});
 
+			AssetLockedBalances::<T>::mutate(&asset_symbol, |balance| {
+				*balance = balance.saturating_add(amount);
+			});
+
 			// TODO stake asset by bridge module
 
 			Self::deposit_event(RawEvent::ValidatorStaked(asset_symbol, target, amount));
@@ -196,6 +205,10 @@ decl_module! {
 
 			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
 				validator.staking = validator.staking.saturating_sub(amount);
+			});
+
+			AssetLockedBalances::<T>::mutate(&asset_symbol, |balance| {
+				*balance = balance.saturating_sub(amount);
 			});
 
 			// TODO un-stake asset by bridge module
