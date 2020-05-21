@@ -91,7 +91,9 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// The validator has been registered.
 		ValidatorRegistered,
+		/// The validator has not been registered.
 		ValidatorNotRegistered,
 	}
 }
