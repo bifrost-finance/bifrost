@@ -10,7 +10,7 @@
 Follow the [readme](https://github.com/bifrost-codes/bifrost/tree/ark-bridge-module) to compile a bifrost node.
 ```
 $ git clone https://github.com/bifrost-codes/bifrost.git
-$ git checkout ark-bridge-module
+$ git checkout web3_m1
 $ cargo build --release
 ```
 
@@ -23,11 +23,10 @@ Alice node:
 $ ./target/release/bifrost-node --base-path /tmp/alice \
 --rpc-port 4321 \
 --ws-port 9944 \
---chain=local \
+--chain=dev \
 --alice \
 --port 30333 \
 --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator --execution Native
 ```
 
@@ -37,10 +36,9 @@ $ ./target/release/bifrost-node --base-path /tmp/bob \
 --rpc-port 1234 \
 --ws-port 9933 \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
---chain=local \
+--chain=dev \
 --bob \
 --port 30334 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator --execution Native
 ```
 
@@ -83,7 +81,7 @@ $ cleos wallet unlock # prompt you input the password
 #### Compile
 
 ```
-$ git clone -b bridge-plugin https://github.com/bifrost-codes/eos
+$ git clone -b v2.0 https://github.com/bifrost-codes/eos
 $ git submodule update --init --recursive
 $ cd eos/
 $ mkdir build && cd build

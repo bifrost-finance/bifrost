@@ -8,7 +8,7 @@
 
 ### 1. Pull the image
 ```
-$ docker pull bifrostnetwork/bifrost:w3_m1
+$ docker pull bifrostnetwork/bifrost:web3_m1
 ```
 
 ### 2. Run nodes
@@ -17,33 +17,31 @@ Start two Bifrost nodes.
 
 Alice node: 
 ```
-$ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:w3_m1 --base-path /tmp/alice \
+$ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:web3_m1 --base-path /tmp/alice \
 --unsafe-rpc-external \
 --rpc-port 4321 \
 --rpc-cors all \
 --unsafe-ws-external \
 --ws-port 9944 \
---chain=local \
+--chain=dev \
 --alice \
 --port 30333 \
 --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator --execution Native
 ```
 
 Bob node:
 ```
-$ docker run --name=bob -p 9933:9933 -p 1234:1234 bifrostnetwork/bifrost:w3_m1 --base-path /tmp/bob \
+$ docker run --name=bob -p 9933:9933 -p 1234:1234 bifrostnetwork/bifrost:web3_m1 --base-path /tmp/bob \
 --unsafe-rpc-external \
 --rpc-cors all \
 --rpc-port 1234 \
 --unsafe-ws-external \
 --ws-port 9933 \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
---chain=local \
+--chain=dev \
 --bob \
 --port 30334 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator --execution Native
 ```
 
@@ -86,7 +84,7 @@ $ cleos wallet unlock # prompt you input the password
 ### 3. Run EOS nodes
 Pull image
 ```
-$ docker pull bifrostnetwork/bifrost-eos-relay:w3_m1
+$ docker pull bifrostnetwork/bifrost-eos-relay:v2.0.4.web3
 ```
 
 start producer node
@@ -107,14 +105,14 @@ then get the internal ip from the running container
 ```
 docker inspect producer
 ```
-Now, replace [eos_producer_ip] and [bifrost_internal_ip] with the ip you get, start a relay node.
+Now, replace [eos_producer_internal_ip] and [bifrost_internal_ip] with the ip you get, start a relay node.
 ```
 docker run --name=relayer -p 8889:8889 -p 9877:9877 bifrostnetwork/bifrost-eos-relay:v2.0.4.web3 --plugin eosio::chain_api_plugin \
 --plugin eosio::bridge_plugin \
 --plugin eosio::http_plugin \
 --http-server-address 0.0.0.0:8889 \
 --p2p-listen-endpoint 0.0.0.0:9877 \
---p2p-peer-address [eos_producer_ip]:9876 \
+--p2p-peer-address [eos_producer_internal_ip]:9876 \
 --config-dir /home/localnet/node/relay/config \
 --data-dir /home/localnet/node/relay/data -l /home/localnet/node/relay/logging.json \
 --bifrost-node=[bifrost_internal_ip]:9944 \
@@ -188,7 +186,7 @@ $ cleos get currency balance eosio.token bifrostcross
 
 Now send a transaction.
 ```
-$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:EOS"]' -p jim@active
+$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:vEOS"]' -p jim@active
 ```
 **5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY** is Alice, surely you can use Bob(5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty),
 Dave(5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy), etc.
@@ -223,7 +221,7 @@ Bifrost side:
 There're two Bifrost nodes that you start in previous steps, here you need add EOS node address info and EOS secret key
 to both running Bifrost nodes by tool **subkey**.
 
-Replace [eos_producer_ip] with eos producer internal ip address, and then execute the script. This script will add necessary data to alice node and bob node.
+Replace [eos_producer_internal_ip] with eos producer internal ip address, and then execute the script. This script will add necessary data to alice node and bob node.
 ```
 $ ./subkey_setting.sh
 ```
@@ -251,7 +249,7 @@ permissions:
 
 Now, we can send a transaction to EOS node.
 
-Follow the picture to send a transaction to EOS node( "jim" to hex: "0x6a696d").
+Follow the picture to send a transaction to EOS node( "jim" to hex: "0x6a696d"). And you can input any memo.
 ![send_transaction](send_trx.png)
 
 Surely you can go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics) to check Alice's assets change or not
