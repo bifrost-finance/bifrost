@@ -19,8 +19,12 @@ use alloc::string::{String, ToString};
 use core::iter::FromIterator;
 use codec::{Decode, Encode};
 use crate::Error;
-use eos_chain::{Action, Asset, Read, SerializeData, Signature, Transaction};
+use eos_chain::{Action, Asset, Read, SerializeData, Signature, SignedTransaction, Transaction};
 use eos_keys::secret::SecretKey;
+#[cfg(feature = "std")]
+use rpc::{
+	get_block, get_info, GetBlock, GetInfo, HyperClient, push_transaction, PushTransaction
+};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -122,17 +126,24 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		Ok(TxOut::Initial(multi_sig_tx))
 	}
 
+	#[cfg(feature = "std")]
 	pub fn generate(self, eos_node_url: &str) -> Result<Self, Error> {
 		match self {
 			TxOut::Initial(mut multi_sig_tx) => {
+				let hyper_client = HyperClient::new(eos_node_url);
+
 				// fetch info
-				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
-				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(Error::HexError)?;
+				let info: GetInfo = get_info().fetch(&hyper_client).map_err(Error::EosRpcError)?;
+				let chain_id: Vec<u8> = hex::decode(info.chain_id).map_err(Error::HexError)?;
+				let head_block_id = info.head_block_id;
 
 				// fetch block
-				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
+				let block: GetBlock = get_block(head_block_id).fetch(&hyper_client).map_err(Error::EosRpcError)?;
+				let ref_block_num = (block.block_num & 0xffff) as u16;
+				let ref_block_prefix = block.ref_block_prefix as u32;
 
 				let actions = vec![multi_sig_tx.action.clone()];
+
 				// Construct transaction
 				let expiration = (sp_io::offchain::timestamp().add(Duration::from_millis(600 * 1000)).unix_millis() as f64 / 1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
@@ -168,15 +179,28 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		}
 	}
 
+	#[cfg(feature = "std")]
 	pub fn send(self, eos_node_url: &str) -> Result<TxOut<AccountId>, Error> {
 		match self {
 			TxOut::Signed(multi_sig_tx) => {
-				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
+				let hyper_client = HyperClient::new(eos_node_url);
 
-				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
-
-				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| "Error string conversion failed")?;
-				let tx_id = hex::decode(transaction_id).map_err(Error::HexError)?;
+				let signatures = multi_sig_tx.multi_sig.signatures.iter()
+					.map(|tx_sig|
+						Signature::read(&tx_sig.signature, &mut 0).map_err(Error::EosReadError)
+					)
+					.map(Result::unwrap)
+					.collect::<Vec<Signature>>();
+				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0)
+					.map_err(Error::EosReadError)?;
+				let signed_trx = SignedTransaction {
+					signatures,
+					context_free_data: vec![],
+					trx,
+				};
+				let push_tx: PushTransaction = push_transaction(signed_trx).fetch(&hyper_client)
+					.map_err(Error::EosRpcError)?;
+				let tx_id = hex::decode(push_tx.transaction_id).map_err(Error::HexError)?;
 
 				Ok(TxOut::Processing {
 					tx_id,

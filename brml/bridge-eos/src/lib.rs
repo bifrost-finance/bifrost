@@ -133,6 +133,8 @@ pub enum Error {
 	HexError(hex::FromHexError),
 	EosChainError(eos_chain::Error),
 	EosReadError(eos_chain::ReadError),
+	#[cfg(feature = "std")]
+	EosRpcError(rpc::Error),
 	EosKeysError(eos_keys::error::Error),
 	NoLocalStorage,
 	InvalidAccountId,
@@ -508,6 +510,7 @@ decl_module! {
 			// Only send messages if we are a potential validator.
 			if sp_io::offchain::is_validator() {
 				debug::info!(target: "bridge-eos", "Is validator at {:?}.", now_block);
+				#[cfg(feature = "std")]
 				Self::offchain(now_block);
 			} else {
 				debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
@@ -680,6 +683,7 @@ impl<T: Trait> Module<T> {
 		Ok(tx_out)
 	}
 
+	#[cfg(feature = "std")]
 	fn offchain(_now_block: T::BlockNumber) {
 		//  avoid borrow checker issue if use has_change: bool
 		let has_change = core::cell::Cell::new(false);
@@ -703,6 +707,7 @@ impl<T: Trait> Module<T> {
 				match bto {
 					// generate raw transactions
 					TxOut::<T::AccountId>::Initial(_) => {
+						#[cfg(feature = "std")]
 						match bto.clone().generate(node_url.as_str()) {
 							Ok(generated_bto) => {
 								has_change.set(true);
