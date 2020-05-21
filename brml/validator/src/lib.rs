@@ -110,8 +110,12 @@ decl_error! {
 		ValidatorNotRegistered,
 		/// The validator's free balance is not enough for locking.
 		FreeBalanceNotEnough,
-		/// the validator's locked balance is not enough for unlocking.
+		/// The validator's locked balance is not enough for unlocking.
 		LockedBalanceNotEnough,
+		/// The staking amount is exceeded the validator's needs.
+		StakingAmountExceeded,
+		/// The staking amount is insufficient for un-staking.
+		StakingAmountInsufficient,
 	}
 }
 
@@ -157,6 +161,11 @@ decl_module! {
 				Validators::<T>::contains_key(&asset_symbol, &target),
 				Error::<T>::ValidatorNotRegistered
 			);
+			let validator = Validators::<T>::get(&asset_symbol, &target);
+			ensure!(
+				validator.need - validator.staking >= amount,
+				Error::<T>::StakingAmountExceeded,
+			);
 
 			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
 				validator.staking = validator.staking.saturating_add(amount);
@@ -178,6 +187,11 @@ decl_module! {
 			ensure!(
 				Validators::<T>::contains_key(&asset_symbol, &target),
 				Error::<T>::ValidatorNotRegistered
+			);
+			let validator = Validators::<T>::get(&asset_symbol, &target);
+			ensure!(
+				validator.staking >= amount,
+				Error::<T>::StakingAmountInsufficient,
 			);
 
 			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
