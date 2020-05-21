@@ -25,7 +25,7 @@ use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::AssetSymbol;
+use node_primitives::{AssetSymbol, AssetTrait, TokenType};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 
@@ -68,6 +68,13 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber>;
+	/// The arithmetic type of asset identifier.
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<AssetSymbol>;
+	/// The units in which we record costs.
+	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
+	/// The units in which we record incomes.
+	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 }
 
 decl_event! {
@@ -95,6 +102,8 @@ decl_error! {
 		ValidatorRegistered,
 		/// The validator has not been registered.
 		ValidatorNotRegistered,
+		FreeBalanceNotEnough,
+		LockedBalanceNotEnough,
 	}
 }
 
@@ -103,6 +112,7 @@ decl_storage! {
 		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) AssetSymbol => AssetConfig<T::Balance>;
 		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId
 			=> Validator<T::Balance, T::BlockNumber>;
+		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
 }
 
@@ -163,6 +173,9 @@ decl_module! {
 
 			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
 
+			// Lock balance
+			Self::asset_lock(origin.clone(), asset_symbol, amount)?;
+
 			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_add(amount);
 			});
@@ -176,8 +189,8 @@ decl_module! {
 
 			ensure!(Validators::<T>::contains_key(&asset_symbol, &origin), Error::<T>::ValidatorNotRegistered);
 
-			// UnLock balance from bridge chain
-			// T::Validator::unlock(origin, amount);
+			// UnLock balance
+			Self::asset_unlock(origin.clone(), asset_symbol, amount)?;
 
 			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_sub(amount);
@@ -193,6 +206,62 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+	fn asset_lock(
+		account_id: T::AccountId,
+		asset_symbol: AssetSymbol,
+		amount: T::Balance
+	) -> Result<(), Error<T>> {
+		// check if has enough balance
+		let asset_id: T::AssetId = asset_symbol.into();
+		let account_asset = T::AssetTrait::get_account_asset(
+			&asset_id,
+			TokenType::Token,
+			&account_id
+		);
+		ensure!(account_asset.balance >= amount, Error::<T>::FreeBalanceNotEnough);
+
+		// lock asset to this module
+		LockedBalances::<T>::mutate(&account_id, |locked_balance| {
+			*locked_balance = locked_balance.saturating_add(amount)
+		});
+
+		// destroy asset in assets module
+		T::AssetTrait::asset_destroy(
+			asset_id,
+			TokenType::Token,
+			account_id,
+			amount
+		);
+
+		Ok(())
+	}
+
+	fn asset_unlock(
+		account_id: T::AccountId,
+		asset_symbol: AssetSymbol,
+		amount: T::Balance
+	) -> Result<(), Error<T>> {
+		// check if has enough locked_balance
+		ensure!(LockedBalances::<T>::contains_key(&account_id), Error::<T>::LockedBalanceNotEnough);
+		ensure!(LockedBalances::<T>::get(&account_id) >= amount, Error::<T>::LockedBalanceNotEnough);
+
+		// unlock asset to this module
+		LockedBalances::<T>::mutate(&account_id, |locked_balance| {
+			*locked_balance = locked_balance.saturating_sub(amount)
+		});
+
+		// issue asset in assets module
+		let asset_id: T::AssetId = asset_symbol.into();
+		T::AssetTrait::asset_issue(
+			asset_id,
+			TokenType::Token,
+			account_id,
+			amount
+		);
+
+		Ok(())
+	}
+
 	fn validator_deduct(now_block: T::BlockNumber) {
 		for (asset_symbol, account_id, mut val) in Validators::<T>::iter() {
 			// calculate validator's deposit balance

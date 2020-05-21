@@ -109,6 +109,16 @@ impl From<AssetId> for AssetSymbol {
 	}
 }
 
+impl From<AssetSymbol> for AssetId {
+	fn from(symbol: AssetSymbol) -> Self {
+		match symbol {
+			AssetSymbol::DOT => 0,
+			AssetSymbol::KSM => 1,
+			AssetSymbol::EOS => 2,
+		}
+	}
+}
+
 /// Token pair to bond token and vtoken
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
