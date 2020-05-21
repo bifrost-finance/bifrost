@@ -332,8 +332,62 @@ pub fn testnet_genesis(
 	}
 }
 
-/// Helper function to create GenesisConfig for asgard test
-pub fn testnet_asgard_genesis(
+fn development_config_genesis() -> GenesisConfig {
+	testnet_genesis(
+		vec![
+			authority_keys_from_seed("Alice"),
+			authority_keys_from_seed("Bob"),
+		],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		None,
+		true,
+	)
+}
+
+/// Development config (single validator Alice)
+pub fn development_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Development",
+		"dev",
+		ChainType::Development,
+		development_config_genesis,
+		vec![],
+		None,
+		None,
+		None,
+		Default::default(),
+	)
+}
+
+fn local_testnet_genesis() -> GenesisConfig {
+	testnet_genesis(
+		vec![
+			authority_keys_from_seed("Alice"),
+			authority_keys_from_seed("Bob"),
+		],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		None,
+		false,
+	)
+}
+
+/// Local testnet config (multivalidator Alice + Bob)
+pub fn local_testnet_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Local Testnet",
+		"local_testnet",
+		ChainType::Local,
+		local_testnet_genesis,
+		vec![],
+		None,
+		None,
+		None,
+		Default::default(),
+	)
+}
+
+/// Helper function to create GenesisConfig for bifrost
+pub fn bifrost_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
@@ -342,7 +396,7 @@ pub fn testnet_asgard_genesis(
 	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: Balance = 10_000 * DOLLARS;
-	const STASH: Balance = 100 * DOLLARS;
+	const STASH: Balance = 10_000 * DOLLARS;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -369,7 +423,7 @@ pub fn testnet_asgard_genesis(
 		pallet_staking: Some(StakingConfig {
 			validator_count: initial_authorities.len() as u32 * 1,
 			minimum_validator_count: (initial_authorities.len() / 2) as u32,
-			stakers: initial_authorities[0..3].iter().map(|x| {
+			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
@@ -467,8 +521,8 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	Some(final_vouchers)
 }
 
-/// Configure genesis for asgard test
-fn asgard_config_genesis() -> GenesisConfig {
+/// Configure genesis for bifrost test
+fn bifrost_config_genesis() -> GenesisConfig {
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
 		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
 		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
@@ -544,7 +598,7 @@ fn asgard_config_genesis() -> GenesisConfig {
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
-	testnet_asgard_genesis(
+	bifrost_genesis(
 		initial_authorities,
 		root_key,
 		endowed_accounts,
@@ -552,49 +606,8 @@ fn asgard_config_genesis() -> GenesisConfig {
 	)
 }
 
-
-fn development_config_genesis() -> GenesisConfig {
-	testnet_genesis(
-		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
-		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-		true,
-	)
-}
-
-/// Development config (single validator Alice)
-pub fn development_config() -> ChainSpec {
-	ChainSpec::from_genesis(
-		"Development",
-		"dev",
-		ChainType::Development,
-		development_config_genesis,
-		vec![],
-		None,
-		None,
-		None,
-		Default::default(),
-	)
-}
-
-fn local_testnet_genesis() -> GenesisConfig {
-	testnet_genesis(
-		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
-		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-		false,
-	)
-}
-
-/// Local testnet config (multivalidator Alice + Bob)
 /// Adapt local test as asgard test, create chain spec use the command: birost-node build-spec --chain=local > chain.json
-pub fn local_testnet_config() -> ChainSpec {
+pub fn bifrost_chainspec_config() -> ChainSpec {
 	let properties = {
 		let mut props = serde_json::Map::new();
 
@@ -615,11 +628,17 @@ pub fn local_testnet_config() -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard Testnet",
+		"Bifrost Asgard CC1",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
-		asgard_config_genesis,
-		vec![],
+		bifrost_config_genesis,
+		vec![
+			"/dns4/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
+			"/dns4/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
+			"/dns4/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
+			"/dns4/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
+			"/dns4/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
+		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
 		protocol_id,
