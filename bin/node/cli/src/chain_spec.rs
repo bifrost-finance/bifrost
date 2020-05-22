@@ -406,7 +406,7 @@ pub fn bifrost_genesis(
 		pallet_balances: Some(BalancesConfig {
 			balances: initial_authorities.iter()
 				.map(|k| (k.0.clone(), ENDOWMENT))
-				.chain(endowed_accounts.iter().cloned().map(|x| (x, STASH)))
+				.chain(endowed_accounts.iter().cloned().map(|x| (x, STASH / 100)))
 				.collect(),
 		}),
 		pallet_indices: Some(IndicesConfig {
@@ -436,7 +436,7 @@ pub fn bifrost_genesis(
 			members: endowed_accounts.iter()
 				.take((num_endowed_accounts + 1) / 2)
 				.cloned()
-				.map(|member| (member, STASH))
+				.map(|member| (member, STASH / 100))
 				.collect(),
 		}),
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
