@@ -89,6 +89,12 @@ pub enum TokenType {
 	VToken,
 }
 
+impl Default for TokenType {
+	fn default() -> Self {
+		Self::VToken
+	}
+}
+
 #[derive(Debug, Decode, Encode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
@@ -315,30 +321,34 @@ impl<Precision> BridgeAssetSymbol<Precision> {
 
 /// Bridge asset type
 #[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetBalance<Precision, Balance> {
+pub struct BridgeAssetBalance<AccountId, Precision, Balance> {
 	pub symbol: BridgeAssetSymbol<Precision>,
 	pub amount: Balance,
 	pub memo: Vec<u8>,
+	// store the account who send transaction to EOS
+	pub from: AccountId,
+	// which token type is sent to EOS
+	pub token_type: TokenType,
 }
 
 /// Bridge asset from other blockchain to Bifrost
 pub trait BridgeAssetFrom<AccountId, Precision, Balance> {
-	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<Precision, Balance>);
+	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>);
 }
 
 impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
-	fn bridge_asset_from(_: A, _: BridgeAssetBalance<P, B>) {}
+	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, P, B>) {}
 }
 
 /// Bridge asset from Bifrost to other blockchain
-pub trait BridgeAssetTo<Precision, Balance> {
+pub trait BridgeAssetTo<AccountId, Precision, Balance> {
 	type Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<Precision, Balance>, ) -> Result<(), Self::Error>;
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
 }
 
-impl<P, B> BridgeAssetTo<P, B> for () {
+impl<A, P, B> BridgeAssetTo<A, P, B> for () {
 	type Error = core::convert::Infallible;
-	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<P, B>) -> Result<(), Self::Error> { Ok(()) }
+	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, P, B>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 pub trait AssetReward<AssetId, Balance> {

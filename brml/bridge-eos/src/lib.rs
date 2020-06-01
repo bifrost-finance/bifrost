@@ -136,6 +136,7 @@ pub enum Error {
 	EosKeysError(eos_keys::error::Error),
 	NoLocalStorage,
 	InvalidAccountId,
+	InvalidMemo,
 	ConvertBalanceError,
 	EOSRpcError(String),
 	OtherErrors(&'static str),
@@ -195,9 +196,11 @@ decl_event! {
 		ProveAction,
 		RelayBlock,
 		Deposit(Vec<u8>, AccountId), // EOS account => Bifrost AccountId
+		DepositFail,
 		Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => EOS account
-		RedeemSuccess,
-		RedeemFail,
+		WithdrawFail,
+		SendTransactionSuccess,
+		SendTransactionFailure,
 	}
 }
 
@@ -349,11 +352,12 @@ decl_module! {
 			action_merkle_paths: Vec<Checksum256>,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
-			block_ids_list: Vec<Vec<Checksum256>>
+			block_ids_list: Vec<Vec<Checksum256>>,
+			trx_id: Checksum256
 		) {
 			ensure_root(origin)?;
 
-			// ensure this transaction is unique
+			// ensure this transaction is unique, and ensure no duplicated transaction
 			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
 
 			// ensure action is what we want
@@ -368,20 +372,6 @@ decl_module! {
 				block_ids_list.len() ==  block_headers.len(),
 				"The block ids list cannot be empty."
 			);
-
-			// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_type}
-			let act_transfer = Self::get_action_transfer_from_action(&action);
-			ensure!(act_transfer.is_ok(), "Cannot read transfer action from data.");
-			let act_transfer = act_transfer.unwrap();
-			let split_memo = act_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
-			ensure!(split_memo.len() == 2 || split_memo.len() == 3, "This is an invalid memo.");
-
-			// get account
-			let account_data = Self::get_account_data(split_memo[0]);
-			ensure!(account_data.is_ok(), "This is an invalid account.");
-			let account = Self::into_account(account_data.unwrap());
-			ensure!(account.is_ok(), "Cannot find this account in bifrost.");
-			let target = account.unwrap();
 
 			let action_hash = action.digest();
 			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
@@ -425,29 +415,31 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::ProveAction);
 
-			let token_type = {
-				match split_memo.len() {
-					2 => TokenType::VToken,
-					3 => {
-						match split_memo[2] {
-							"" | "vEOS" => TokenType::VToken,
-							"EOS" => TokenType::Token,
-							_ => {
-								debug::error!("A invalid token type, default token type will be vtoken");
-								TokenType::Token
-							}
-						}
-					}
-					_ => unreachable!("previous step checked he length of split_memo.")
-				}
-			};
-			// withdraw or deposit
-			let trx_result = Self::map_assets_by_action(&target, &act_transfer, token_type);
-			ensure!(trx_result.is_ok(), "Failed to map asset to transfer");
+			let action_transfer = Self::get_action_transfer_from_action(&action);
+			ensure!(action_transfer.is_ok(), "Cannot read transfer action from data.");
+			let action_transfer = action_transfer.unwrap();
 
-			match trx_result.unwrap() {
-				TransactionType::Deposit => Self::deposit_event(RawEvent::Deposit(act_transfer.from.to_string().into_bytes(), target)),
-				TransactionType::Withdraw => Self::deposit_event(RawEvent::Withdraw(target, act_transfer.to.to_string().into_bytes())),
+			let cross_account = BridgeContractAccount::get().0;
+			// withdraw operation, Bifrost => EOS
+			if cross_account == action_transfer.from.to_string().into_bytes() {
+				match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
+					Ok(target) => Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes())),
+					Err(e) => {
+						debug::info!("Bifrost => EOS failed due to {:?}", e);
+						Self::deposit_event(RawEvent::WithdrawFail);
+					}
+				}
+			}
+
+			// deposit operation, EOS => Bifrost
+			if cross_account == action_transfer.to.to_string().into_bytes() {
+				match Self::transaction_from_eos_to_bifrost(&action_transfer) {
+					Ok(target) => Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target)),
+					Err(e) => {
+						debug::info!("EOS => Bifrost failed due to {:?}", e);
+						Self::deposit_event(RawEvent::DepositFail);
+					}
+				}
 			}
 		}
 
@@ -464,6 +456,7 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
+			token_type: TokenType,
 			#[compact] amount: T::Balance,
 			memo: Vec<u8>
 		) {
@@ -488,16 +481,17 @@ decl_module! {
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
 				amount: eos_amount,
-				memo
+				memo,
+				from: origin.clone(),
+				token_type
 			};
 
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				T::AssetTrait::asset_redeem(token_id, TokenType::VToken, origin, amount);
 				debug::info!("sent transaction to EOS node.");
-				Self::deposit_event(RawEvent::RedeemSuccess);
+				Self::deposit_event(RawEvent::SendTransactionSuccess);
 			} else {
 				debug::warn!("failed to send transaction to EOS node.");
-				Self::deposit_event(RawEvent::RedeemFail);
+				Self::deposit_event(RawEvent::SendTransactionFailure);
 			}
 		}
 
@@ -603,7 +597,36 @@ impl<T: Trait> Module<T> {
 		Ok(action_transfer)
 	}
 
-	fn map_assets_by_action(target: &T::AccountId, action_transfer: &ActionTransfer, token_type: TokenType) -> Result<TransactionType, Error> {
+	fn transaction_from_eos_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error> {
+		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_type}
+		let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
+
+		// the length should be 2, either 3.
+		if split_memo.len().gt(&3) || split_memo.len().lt(&2) {
+			return Err(Error::InvalidMemo);
+		}
+
+		// get account
+		let account_data = Self::get_account_data(split_memo[0])?;
+		let target = Self::into_account(account_data)?;
+
+		let token_type = {
+			match split_memo.len() {
+				2 => TokenType::VToken,
+				3 => {
+					match split_memo[2] {
+						"" | "vEOS" => TokenType::VToken,
+						"EOS" => TokenType::Token,
+						_ => {
+							debug::error!("A invalid token type, default token type will be vtoken");
+							TokenType::Token
+						}
+					}
+				}
+				_ => unreachable!("previous step checked he length of split_memo.")
+			}
+		};
+
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
 		let symbol_precise = symbol.precision();
@@ -612,34 +635,45 @@ impl<T: Trait> Module<T> {
 		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let token_id = match T::AssetTrait::asset_id_exists(target, &symbol_code, symbol_precise.into()) {
+		let token_id = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
 			Some(id) => id,
 			None => {
 				T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).0
 			}
 		};
 
-		// withdraw
-		let from = action_transfer.from.to_string().as_bytes().to_vec();
-		if BridgeContractAccount::get().0 == from {
-			let vtoken_balances = T::AssetTrait::get_account_asset(&token_id, token_type, target).balance;
-			if vtoken_balances.lt(&vtoken_balances) {
-				debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
-				return Err(Error::OtherErrors("origin account balance must be greater than or equal to the transfer amount."));
+		// issue asset to target
+		T::AssetTrait::asset_issue(token_id, token_type, target.clone(), vtoken_balances);
+
+		Ok(target)
+	}
+
+	fn transaction_from_bifrost_to_eos(pending_trx_id: Checksum256, action_transfer: &ActionTransfer) -> Result<T::AccountId, Error> {
+		let bridge_tx_outs = BridgeTxOuts::<T>::get();
+
+		for trx in bridge_tx_outs.iter() {
+			match trx {
+				TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
+					let target = &multi_sig_tx.from;
+					let token_id = T::AssetId::from(2);
+					let token_type = multi_sig_tx.token_type;
+
+					let all_vtoken_balances = T::AssetTrait::get_account_asset(&token_id, token_type, &target).balance;
+					let token_balances = action_transfer.quantity.amount as usize;
+					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
+
+					if all_vtoken_balances.lt(&vtoken_balances) {
+						debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+						return Err(Error::OtherErrors("origin account balance must be greater than or equal to the transfer amount."));
+					}
+
+					T::AssetTrait::asset_redeem(token_id, token_type, target.clone(), vtoken_balances);
+					return Ok(target.clone());
+				}
+				_ => continue,
 			}
-
-			T::AssetTrait::asset_redeem(token_id, token_type, target.clone(), vtoken_balances);
-			return Ok(TransactionType::Withdraw)
 		}
 
-		// deposit
-		let to = action_transfer.to.to_string().as_bytes().to_vec();
-		if BridgeContractAccount::get().0 == to {
-			T::AssetTrait::asset_issue(token_id, token_type, target.clone(), vtoken_balances);
-			return Ok(TransactionType::Deposit)
-		}
-
-		// if it goes to this line, means this is not a cross transaction.
 		Err(Error::OtherErrors("An invalid EOS contract account."))
 	}
 
@@ -664,17 +698,17 @@ impl<T: Trait> Module<T> {
 	/// generate transaction for transfer amount to
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
-		bridge_asset: BridgeAssetBalance<P, B>,
+		bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
 	) -> Result<TxOut<T::AccountId>, Error>
 		where
-			P: AtLeast32Bit,
-			B: AtLeast32Bit,
+			P: AtLeast32Bit + Copy,
+			B: AtLeast32Bit + Copy,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(Error::ParseUtf8Error)?.to_string();
-		let amount = Self::convert_to_eos_asset::<P, B>(bridge_asset)?;
+		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo)?;
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_type)?;
 		BridgeTxOuts::<T>::append(&tx_out);
 
 		Ok(tx_out)
@@ -763,8 +797,7 @@ impl<T: Trait> Module<T> {
 			}).collect::<Vec<_>>();
 
 		if has_change.get() {
-			#[cfg(test)] // for testing
-			BridgeTxOuts::<T>::put(bridge_tx_outs.clone());
+			BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
 			let call = Call::bridge_tx_report(bridge_tx_outs.clone());
 			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
 				Ok(_) => debug::info!(target: "bridge-eos", "Call::bridge_tx_report {:?}", bridge_tx_outs),
@@ -773,12 +806,12 @@ impl<T: Trait> Module<T> {
 		}
 	}
 
-	fn convert_to_eos_asset<P, B>(
-		bridge_asset: BridgeAssetBalance<P, B>
+	fn convert_to_eos_asset<A, P, B>(
+		bridge_asset: &BridgeAssetBalance<A, P, B>
 	) -> Result<Asset, Error>
 		where
-			P: AtLeast32Bit,
-			B: AtLeast32Bit
+			P: AtLeast32Bit + Copy,
+			B: AtLeast32Bit + Copy
 	{
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
 		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)
@@ -813,9 +846,9 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetTo<T::Precision, T::Balance> for Module<T> {
+impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
 	type Error = crate::Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) -> Result<(), Self::Error> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>) -> Result<(), Self::Error> {
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
 		Ok(())
