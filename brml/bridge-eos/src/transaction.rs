@@ -16,10 +16,10 @@
 
 use alloc::borrow::ToOwned;
 use alloc::string::{String, ToString};
-use core::iter::FromIterator;
+use core::{iter::FromIterator, str::FromStr};
 use codec::{Decode, Encode};
 use crate::Error;
-use eos_chain::{Action, Asset, Read, SerializeData, Signature, Transaction};
+use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use eos_keys::secret::SecretKey;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
@@ -72,7 +72,12 @@ pub struct MultiSigTx<AccountId> {
 	raw_tx: Vec<u8>,
 	/// Signatures of transaction
 	multi_sig: MultiSig<AccountId>,
+	/// EOS transaction action
 	action: Action,
+	/// Who sends Transaction to EOS
+	pub from: AccountId,
+	/// token type
+	pub token_type: node_primitives::TokenType,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
@@ -85,7 +90,7 @@ pub enum TxOut<AccountId> {
 	Signed(MultiSigTx<AccountId>),
 	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
 	Processing {
-		tx_id: Vec<u8>,
+		tx_id: Checksum256,
 		multi_sig_tx: MultiSigTx<AccountId>,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
@@ -104,13 +109,15 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		raw_to: Vec<u8>,
 		amount: Asset,
 		threshold: u8,
-		memo: &str
+		memo: &str,
+		from: AccountId,
+		token_type: node_primitives::TokenType
 	) -> Result<Self, Error> {
-		let from = core::str::from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
-		let to = core::str::from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
+		let eos_from = core::str::from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
+		let eos_to = core::str::from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
 
 		// Construct action
-		let action = Action::transfer(from, to, amount.to_string().as_ref(), memo).map_err(Error::EosChainError)?;
+		let action = Action::transfer(eos_from, eos_to, amount.to_string().as_ref(), memo).map_err(Error::EosChainError)?;
 
 		// Construct transaction
 		let multi_sig_tx = MultiSigTx {
@@ -118,6 +125,8 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 			raw_tx: Default::default(),
 			multi_sig: MultiSig::new(threshold),
 			action,
+			from,
+			token_type,
 		};
 		Ok(TxOut::Initial(multi_sig_tx))
 	}
@@ -176,7 +185,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
 
 				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| "Error string conversion failed")?;
-				let tx_id = hex::decode(transaction_id).map_err(Error::HexError)?;
+				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_|Error::OtherErrors("failed to convert trx id to checksum256."))?;
 
 				Ok(TxOut::Processing {
 					tx_id,
