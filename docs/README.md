@@ -23,12 +23,11 @@ Alice node:
 $ ./target/release/bifrost-node --base-path /tmp/alice \
 --rpc-port 4321 \
 --ws-port 9944 \
---chain=local \
+--chain=dev \
 --alice \
 --port 30333 \
 --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
---validator --execution Native
+--validator
 ```
 
 Bob node:
@@ -37,11 +36,10 @@ $ ./target/release/bifrost-node --base-path /tmp/bob \
 --rpc-port 1234 \
 --ws-port 9933 \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
---chain=local \
+--chain=dev \
 --bob \
 --port 30334 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
---validator --execution Native
+--validator
 ```
 
 Ensure both node are producing blocks and synchronizing each other.
