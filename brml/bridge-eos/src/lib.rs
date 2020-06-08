@@ -19,7 +19,7 @@
 extern crate alloc;
 
 use alloc::string::{String, ToString};
-use core::{convert::TryFrom, ops::Div, str::FromStr};
+use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
 
 use codec::{Decode, Encode};
 use eos_chain::{
@@ -38,10 +38,12 @@ use sp_runtime::{
 	},
 };
 use frame_support::traits::{Get};
-use frame_support::{decl_event, decl_module, decl_storage, debug, ensure, Parameter, dispatch::DispatchResult};
+use frame_support::{
+	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
+	dispatch::{DispatchResult, DispatchError}
+};
 use frame_system::{
-	self as system,
-	ensure_root, ensure_none,
+	self as system, ensure_root, ensure_none, ensure_signed,
 	offchain::{SubmitTransaction, CreateSignedTransaction}
 };
 
@@ -117,40 +119,62 @@ pub mod ed25519 {
 const EOS_NODE_URL: &[u8] = b"EOS_NODE_URL";
 const EOS_SECRET_KEY: &[u8] = b"EOS_SECRET_KEY";
 
-#[derive(Debug)]
-pub enum Error {
-	LengthNotEqual(usize, usize), // (expected, actual)
-	SignatureVerificationFailure,
-	MerkleRootVerificationFailure,
-	IncreMerkleError,
-	ScheduleHashError,
-	GetBlockIdFailure,
-	CalculateMerkleError,
-	EmptyActionMerklePaths,
-	InvalidTxOutType,
-	AlreadySignedByAuthor,
-	ParseUtf8Error(core::str::Utf8Error),
-	HexError(hex::FromHexError),
-	EosChainError(eos_chain::Error),
-	EosReadError(eos_chain::ReadError),
-	EosKeysError(eos_keys::error::Error),
-	NoLocalStorage,
-	InvalidAccountId,
-	InvalidMemo,
-	ConvertBalanceError,
-	EOSRpcError(String),
-	OtherErrors(&'static str),
-}
-
-impl core::convert::From<eos_chain::symbol::ParseSymbolError> for Error {
-	fn from(err: eos_chain::symbol::ParseSymbolError) -> Self {
-		Self::EosChainError(eos_chain::Error::ParseSymbolError(err))
-	}
-}
-
-impl core::convert::From<&str> for Error {
-	fn from(s: &str) -> Self {
-		Self::EOSRpcError(s.into())
+decl_error! {
+	pub enum Error for Module<T: Trait> {
+		/// Use has no privilege to execute cross transaction
+		NoCrossChainPrivilege,
+		/// EOS node address or private key is not set
+		NoLocalStorage,
+		/// The format of memo doesn't match the requirement
+		InvalidMemo,
+		/// This is an invalid hash value while hashing schedule
+		InvalidScheduleHash,
+		/// Sign a transaction more than twice
+		AlreadySignedByAuthor,
+		/// Fail to calculate merkle root tree
+		CalculateMerkleError,
+		/// Fail to get EOS block id from block header
+		FailureOnGetBlockId,
+		/// Invalid substrate account id
+		InvalidAccountId,
+		/// Fail to cast balance type
+		ConvertBalanceError,
+		/// Fail to append block id to merkel tree
+		AppendIncreMerkleError,
+		/// Fail to verify signature
+		SignatureVerificationFailure,
+		/// Fail to verify merkle tree
+		MerkleRootVerificationFailure,
+		/// The length of block headers don't meet the size 15
+		InvalidBlockHeadersLength,
+		/// Invalid transaction
+		InvalidTxOutType,
+		/// Error from eos-chain crate
+		EosChainError,
+		/// Error from eos-key crate
+		EosKeysError,
+		/// User hasn't enough balance to trade
+		InsufficientBalance,
+		/// Fail to parse utf8 array
+		ParseUtf8Error,
+		/// Error while decode hex text
+		DecodeHexError,
+		/// Fail to parse secret key
+		ParseSecretKeyError,
+		/// Fail to calcualte action hash
+		ErrorOnCalculationActionHash,
+		/// Fail to calcualte action receipt hash
+		ErrorOnCalculationActionReceiptHash,
+		/// Offchain http error
+		OffchainHttpError,
+		/// EOS node response a error after send a request
+		EOSRpcError,
+		/// Error from lite-json while serializing or deserializing
+		LiteJsonError,
+		/// Invalid checksum
+		InvalidChecksum256,
+		/// Initialze producer schedule multiple times
+		InitMultiTimeProducerSchedules,
 	}
 }
 
@@ -201,6 +225,7 @@ decl_event! {
 		WithdrawFail,
 		SendTransactionSuccess,
 		SendTransactionFailure,
+		GrantedCrossChainPrivilege(AccountId),
 	}
 }
 
@@ -230,6 +255,11 @@ decl_storage! {
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
+
+		/// Who has the privilege to call transaction between Bifrost and EOS
+		CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
+		/// How many address has the privilege sign transaction between EOS and Bifrost
+		AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
@@ -242,12 +272,24 @@ decl_storage! {
 			assert!(schedule_hash.is_ok());
 			ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
 			PendingScheduleVersion::put(schedule.version);
+
+			// grant privilege to sign transaction between EOS and Bifrost
+			for (who, privilege) in config.cross_chain_privilege.iter() {
+				<CrossChainPrivilege<T>>::insert(who, privilege);
+			}
+			// update to AllAddressesHaveCrossChainPrivilege
+			let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
+			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
+				all.extend(all_addresses.into_iter());
+			});
 		});
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+		type Error = Error<T>;
+
 		fn deposit_event() = default;
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -258,33 +300,49 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 2)]
-		fn save_producer_schedule(origin, ps: ProducerAuthoritySchedule) {
+		fn save_producer_schedule(origin, ps: ProducerAuthoritySchedule) -> DispatchResult {
 			ensure_root(origin)?;
 
-			let schedule_hash = ps.schedule_hash();
-			ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
+			let schedule_hash = ps.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
 
 			// calculate schedule hash just one time, instead of calculating it multiple times.
-			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash.unwrap()));
+			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash));
 			PendingScheduleVersion::put(ps.version);
 
 			Self::deposit_event(RawEvent::InitSchedule(ps.version));
+
+			Ok(())
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn init_schedule(origin, ps: ProducerAuthoritySchedule) {
 			ensure_root(origin)?;
 
-			ensure!(!ProducerSchedules::contains_key(ps.version), "ProducerAuthoritySchedule has been initialized.");
-			ensure!(!PendingScheduleVersion::exists(), "PendingScheduleVersion has been initialized.");
-			let schedule_hash = ps.schedule_hash();
-			ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
+			ensure!(!ProducerSchedules::contains_key(ps.version), Error::<T>::InitMultiTimeProducerSchedules);
+			ensure!(!PendingScheduleVersion::exists(), Error::<T>::InitMultiTimeProducerSchedules);
+
+			let schedule_hash = ps.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
 
 			// calculate schedule hash just one time, instead of calculating it multiple times.
-			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash.unwrap()));
+			ProducerSchedules::insert(ps.version, (ps.producers, schedule_hash));
 			PendingScheduleVersion::put(ps.version);
 
 			Self::deposit_event(RawEvent::InitSchedule(ps.version));
+		}
+
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		fn grant_crosschain_privilege(origin, target: T::AccountId) {
+			ensure_root(origin)?;
+
+			// grant privilege
+			<CrossChainPrivilege<T>>::insert(&target, true);
+
+			// update all addresses
+			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
+				all.push(target.clone());
+			});
+
+			Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -306,30 +364,30 @@ decl_module! {
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>
-		) {
-			ensure_root(origin)?;
+		) -> DispatchResult {
+			let origin = ensure_signed(origin)?;
+			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
 
-			ensure!(BridgeEnable::get(), "This call is not enable now!");
-			ensure!(!block_headers.is_empty(), "The signed block headers cannot be empty.");
-			ensure!(block_headers[0].block_header.new_producers.is_some(), "The producers list cannot be empty.");
-			ensure!(block_ids_list.len() == block_headers.len(), "The block ids list cannot be empty.");
-			ensure!(block_ids_list.len() == 15, "The length of signed block headers must be 15.");
-			ensure!(block_ids_list[0].is_empty(), "The first block ids must be empty.");
-			ensure!(block_ids_list[1].len() ==  10, "The rest of block ids length must be 10.");
+			ensure!(BridgeEnable::get(), DispatchError::Other("This call is not enabled now!"));
+			ensure!(!block_headers.is_empty(), DispatchError::Other("The signed block headers cannot be empty."));
+			ensure!(block_headers[0].block_header.new_producers.is_some(), DispatchError::Other("The producers list cannot be empty."));
+			ensure!(block_ids_list.len() == block_headers.len(), DispatchError::Other("The block ids list cannot be empty."));
+			ensure!(block_ids_list.len() == 15, DispatchError::Other("The length of signed block headers must be 15."));
+			ensure!(block_ids_list[0].is_empty(), DispatchError::Other("The first block ids must be empty."));
+			ensure!(block_ids_list[1].len() ==  10, DispatchError::Other("The rest of block ids length must be 10."));
 
 			let legacy_pending_schedule = block_headers[0].block_header.new_producers.as_ref();
-			let legacy_pending_schedule_hash = legacy_pending_schedule.unwrap().schedule_hash();
-			ensure!(legacy_pending_schedule_hash.is_ok(), "Failed to calculate legacy schedule hash value.");
-			ensure!(legacy_pending_schedule_hash.unwrap() == legacy_schedule_hash, "invalid producers schedule");
+			let legacy_pending_schedule_hash = legacy_pending_schedule.and_then(|ps| ps.schedule_hash().ok())
+				.ok_or(DispatchError::Other("Failed to calculate legacy schedule hash value."))?;
+			ensure!(legacy_pending_schedule_hash == legacy_schedule_hash, "invalid producers schedule");
 
-			ensure!(PendingScheduleVersion::exists(), "PendingScheduleVersion has not been initialized.");
+			ensure!(PendingScheduleVersion::exists(), DispatchError::Other("PendingScheduleVersion has not been initialized."));
 
 			let current_schedule_version = PendingScheduleVersion::get();
 
 			let (schedule_hash, producer_schedule) = {
-				let schedule_hash = new_schedule.schedule_hash();
-				ensure!(schedule_hash.is_ok(), "Failed to calculate schedule hash value.");
-				(schedule_hash.unwrap(), new_schedule)
+				let schedule_hash = new_schedule.schedule_hash().map_err(|_| DispatchError::Other("Failed to calculate schedule hash value."))?;
+				(schedule_hash, new_schedule)
 			};
 
 			ensure!(
@@ -342,6 +400,8 @@ decl_module! {
 			PendingScheduleVersion::put(producer_schedule.version);
 
 			Self::deposit_event(RawEvent::ChangeSchedule(current_schedule_version, producer_schedule.version));
+
+			Ok(())
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
@@ -354,8 +414,9 @@ decl_module! {
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>,
 			trx_id: Checksum256
-		) {
-			ensure_root(origin)?;
+		) -> DispatchResult {
+			let origin = ensure_signed(origin)?;
+			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
 
 			// ensure this transaction is unique, and ensure no duplicated transaction
 			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
@@ -373,17 +434,13 @@ decl_module! {
 				"The block ids list cannot be empty."
 			);
 
-			let action_hash = action.digest();
-			ensure!(action_hash.is_ok(), "failed to calculate action digest.");
-			let action_hash = action_hash.unwrap();
+			let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
 			ensure!(
 				action_hash == action_receipt.act_digest,
 				"current action hash isn't equal to act_digest from action_receipt."
 			);
 
-			let leaf = action_receipt.digest();
-			ensure!(leaf.is_ok(), "failed to calculate action digest.");
-			let leaf = leaf.unwrap();
+			let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
 
 			let block_under_verification = &block_headers[0];
 			ensure!(
@@ -391,15 +448,11 @@ decl_module! {
 				"failed to prove action."
 			);
 
-			let schedule_hash_and_producer_schedule = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref());
-			ensure!(schedule_hash_and_producer_schedule.is_ok(), "Failed to calculate schedule hash value.");
-			let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
+			let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
 			// this is for testing due to there's a default producer schedule on standalone eos node.
 			let schedule_hash = {
 				if producer_schedule.version == 0 {
-					let ps_hash = ProducerSchedule::default().schedule_hash();
-					ensure!(ps_hash.is_ok(), "Failed to calculate schedule hash value.");
-					ps_hash.unwrap()
+					ProducerSchedule::default().schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?
 				} else {
 					schedule_hash
 				}
@@ -415,9 +468,7 @@ decl_module! {
 
 			Self::deposit_event(RawEvent::ProveAction);
 
-			let action_transfer = Self::get_action_transfer_from_action(&action);
-			ensure!(action_transfer.is_ok(), "Cannot read transfer action from data.");
-			let action_transfer = action_transfer.unwrap();
+			let action_transfer = Self::get_action_transfer_from_action(&action)?;
 
 			let cross_account = BridgeContractAccount::get().0;
 			// withdraw operation, Bifrost => EOS
@@ -441,6 +492,8 @@ decl_module! {
 					}
 				}
 			}
+
+			Ok(())
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -502,7 +555,10 @@ decl_module! {
 			// Only send messages if we are a potential validator.
 			if sp_io::offchain::is_validator() {
 				debug::info!(target: "bridge-eos", "Is validator at {:?}.", now_block);
-				Self::offchain(now_block);
+				match Self::offchain(now_block) {
+					Ok(_) => debug::info!("A offchain worker started."),
+					Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+				}
 			} else {
 				debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
 			}
@@ -517,21 +573,22 @@ impl<T: Trait> Module<T> {
 		producer_schedule: &ProducerAuthoritySchedule,
 		block_headers: &[SignedBlockHeader],
 		block_ids_list: Vec<Vec<Checksum256>>,
-	) -> Result<(), Error> {
-		ensure!(block_headers.len() == 15, Error::LengthNotEqual(15, block_headers.len()));
-		ensure!(block_ids_list.len() == 15, Error::LengthNotEqual(15, block_ids_list.len()));
+	) -> Result<(), Error<T>> {
+		ensure!(block_headers.len() == 15, Error::<T>::InvalidBlockHeadersLength);
+		ensure!(block_ids_list.len() == 15, Error::<T>::InvalidBlockHeadersLength);
 
 		for (block_header, block_ids) in block_headers.iter().zip(block_ids_list.iter()) {
 			// calculate merkle root
 			Self::calculate_block_header_merkle_root(&mut merkle, &block_header, &block_ids)?;
 
 			// verify block header signature
-			Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root())?;
+			Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root()).map_err(|_| Error::<T>::SignatureVerificationFailure)?;
 
 			// append current block id
-			let block_id = block_header.id().map_err(|_| Error::GetBlockIdFailure)?;
-			merkle.append(block_id).map_err(|_| Error::IncreMerkleError)?;
+			let block_id = block_header.id().map_err(|_| Error::<T>::FailureOnGetBlockId)?;
+			merkle.append(block_id).map_err(|_| Error::<T>::AppendIncreMerkleError)?;
 		}
+
 		Ok(())
 	}
 
@@ -540,11 +597,9 @@ impl<T: Trait> Module<T> {
 		producer_schedule: &ProducerAuthoritySchedule,
 		block_header: &SignedBlockHeader,
 		expected_mroot: &Checksum256,
-	) -> Result<(), Error> {
+	) -> Result<(), Error<T>> {
 		let pk = producer_schedule.get_producer_key(block_header.block_header.producer);
-		block_header.verify(*expected_mroot, *schedule_hash, pk).map_err(|_| {
-			Error::SignatureVerificationFailure
-		})?;
+		block_header.verify(*expected_mroot, *schedule_hash, pk).map_err(|_| Error::<T>::SignatureVerificationFailure)?;
 
 		Ok(())
 	}
@@ -553,24 +608,25 @@ impl<T: Trait> Module<T> {
 		merkle: &mut IncrementalMerkle,
 		block_header: &SignedBlockHeader,
 		block_ids: &[Checksum256],
-	) -> Result<(), Error> {
+	) -> Result<(), Error<T>> {
 		for id in block_ids {
-			merkle.append(*id).map_err(|_| Error::IncreMerkleError)?;
+			merkle.append(*id).map_err(|_| Error::<T>::AppendIncreMerkleError)?;
 		}
 
 		// append previous block id
-		merkle.append(block_header.block_header.previous).map_err(|_| Error::IncreMerkleError)?;
+		merkle.append(block_header.block_header.previous).map_err(|_| Error::<T>::AppendIncreMerkleError)?;
+
 		Ok(())
 	}
 
 	fn get_schedule_hash_and_public_key(
 		new_producers: Option<&ProducerSchedule>
-	) -> Result<(Checksum256, ProducerAuthoritySchedule), Error> {
+	) -> Result<(Checksum256, ProducerAuthoritySchedule), Error<T>> {
 		let ps = match new_producers {
 			Some(producers) => {
 				let schedule_version = PendingScheduleVersion::get();
 				if schedule_version != producers.version {
-					return Err(Error::ScheduleHashError)
+					return Err(Error::<T>::InvalidScheduleHash)
 				}
 				let producers = ProducerSchedules::get(schedule_version).0;
 				let ps = ProducerAuthoritySchedule::new(schedule_version, producers);
@@ -584,26 +640,24 @@ impl<T: Trait> Module<T> {
 			}
 		};
 
-		let schedule_hash: Checksum256 = ps.schedule_hash().map_err(|_| Error::ScheduleHashError)?;
+		let schedule_hash: Checksum256 = ps.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
 
 		Ok((schedule_hash, ps))
 	}
 
-	fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error> {
-		let action_transfer = ActionTransfer::read(&act.data, &mut 0).map_err(|e| {
-			crate::Error::EosChainError(eos_chain::Error::BytesReadError(e))
-		})?;
+	fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error<T>> {
+		let action_transfer = ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
 
 		Ok(action_transfer)
 	}
 
-	fn transaction_from_eos_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error> {
+	fn transaction_from_eos_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
 		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_type}
 		let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
 
 		// the length should be 2, either 3.
 		if split_memo.len().gt(&3) || split_memo.len().lt(&2) {
-			return Err(Error::InvalidMemo);
+			return Err(Error::<T>::InvalidMemo);
 		}
 
 		// get account
@@ -632,7 +686,7 @@ impl<T: Trait> Module<T> {
 		let symbol_precise = symbol.precision();
 
 		let token_balances = action_transfer.quantity.amount as usize;
-		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
+		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
 		let token_id = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
@@ -648,7 +702,7 @@ impl<T: Trait> Module<T> {
 		Ok(target)
 	}
 
-	fn transaction_from_bifrost_to_eos(pending_trx_id: Checksum256, action_transfer: &ActionTransfer) -> Result<T::AccountId, Error> {
+	fn transaction_from_bifrost_to_eos(pending_trx_id: Checksum256, action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
 		let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
 		for trx in bridge_tx_outs.iter() {
@@ -660,11 +714,11 @@ impl<T: Trait> Module<T> {
 
 					let all_vtoken_balances = T::AssetTrait::get_account_asset(&token_id, token_type, &target).balance;
 					let token_balances = action_transfer.quantity.amount as usize;
-					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::ConvertBalanceError)?;
+					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 					if all_vtoken_balances.lt(&vtoken_balances) {
 						debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
-						return Err(Error::OtherErrors("origin account balance must be greater than or equal to the transfer amount."));
+						return Err(Error::<T>::InsufficientBalance);
 					}
 
 					T::AssetTrait::asset_redeem(token_id, token_type, target.clone(), vtoken_balances);
@@ -674,38 +728,38 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
-		Err(Error::OtherErrors("An invalid EOS contract account."))
+		Err(Error::<T>::InvalidAccountId)
 	}
 
 	/// check receiver account format
 	/// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
-	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error> {
-		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| crate::Error::InvalidAccountId)?;
+	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
+		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
 
 		if decoded_ss58.len() == 35 && decoded_ss58.first() == Some(&42) {
 			let mut data = [0u8; 32];
 			data.copy_from_slice(&decoded_ss58[1..33]);
 			Ok(data)
 		} else {
-			Err(Error::InvalidAccountId)
+			Err(Error::<T>::InvalidAccountId)
 		}
 	}
 
-	fn into_account(data: [u8; 32]) -> Result<T::AccountId, Error> {
-		T::AccountId::decode(&mut &data[..]).map_err(|_| Error::InvalidAccountId)
+	fn into_account(data: [u8; 32]) -> Result<T::AccountId, Error<T>> {
+		T::AccountId::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidAccountId)
 	}
 
 	/// generate transaction for transfer amount to
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
 		bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
-	) -> Result<TxOut<T::AccountId>, Error>
+	) -> Result<TxOut<T::AccountId>, Error<T>>
 		where
 			P: AtLeast32Bit + Copy,
 			B: AtLeast32Bit + Copy,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
-		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(Error::ParseUtf8Error)?.to_string();
+		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
 		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
 		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_type)?;
@@ -714,30 +768,23 @@ impl<T: Trait> Module<T> {
 		Ok(tx_out)
 	}
 
-	fn offchain(_now_block: T::BlockNumber) {
+	fn offchain(_now_block: T::BlockNumber) -> Result<(), Error<T>> {
 		//  avoid borrow checker issue if use has_change: bool
 		let has_change = core::cell::Cell::new(false);
 
 		let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
-		let node_url = Self::get_offchain_storage(EOS_NODE_URL);
-		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY);
-		if node_url.is_err() || sk_str.is_err() {
-			return;
-		}
-		let node_url = node_url.unwrap();
-		let sk = SecretKey::from_wif(sk_str.unwrap().as_str());
-		if sk.is_err() {
-			return;
-		}
-		let sk = sk.unwrap();
+		let node_url = Self::get_offchain_storage(EOS_NODE_URL)?;
+		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
+
+		let sk = SecretKey::from_wif(&sk_str).map_err(|_| Error::<T>::ParseSecretKeyError)?;
 
 		let bridge_tx_outs = bridge_tx_outs.into_iter()
 			.map(|bto| {
 				match bto {
 					// generate raw transactions
 					TxOut::<T::AccountId>::Initial(_) => {
-						match bto.clone().generate(node_url.as_str()) {
+						match bto.clone().generate::<T>(node_url.as_str()) {
 							Ok(generated_bto) => {
 								has_change.set(true);
 								debug::info!(target: "bridge-eos", "bto.generate {:?}",generated_bto);
@@ -761,7 +808,7 @@ impl<T: Trait> Module<T> {
 						if let Some(_) = Self::local_authority_keys()
 							.find(|key| *key == author.clone().into())
 						{
-							match bto.sign(sk.clone(), author) {
+							match bto.sign::<T>(sk.clone(), author) {
 								Ok(signed_bto) => {
 									has_change.set(true);
 									debug::info!(target: "bridge-eos", "bto.sign {:?}", signed_bto);
@@ -779,7 +826,7 @@ impl<T: Trait> Module<T> {
 			.map(|bto| {
 				match bto {
 					TxOut::<T::AccountId>::Signed(_) => {
-						match bto.clone().send(node_url.as_str()) {
+						match bto.clone().send::<T>(node_url.as_str()) {
 							Ok(sent_bto) => {
 								has_change.set(true);
 								debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
@@ -804,31 +851,31 @@ impl<T: Trait> Module<T> {
 				Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
 			}
 		}
+
+		Ok(())
 	}
 
 	fn convert_to_eos_asset<A, P, B>(
 		bridge_asset: &BridgeAssetBalance<A, P, B>
-	) -> Result<Asset, Error>
+	) -> Result<Asset, Error<T>>
 		where
 			P: AtLeast32Bit + Copy,
 			B: AtLeast32Bit + Copy
 	{
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
-		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)
-			.map_err(Error::ParseUtf8Error)?;
-		let symbol_code = SymbolCode::try_from(symbol_str)?;
+		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let symbol_code = SymbolCode::try_from(symbol_str).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let symbol = Symbol::new_with_code(precision, symbol_code);
+
 		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
 
 		Ok(Asset::new(amount, symbol))
 	}
 
-	fn get_offchain_storage(key: &[u8]) -> Result<String, Error> {
-		let value = sp_io::offchain::local_storage_get(
-			StorageKind::PERSISTENT,
-			key,
-		).ok_or(Error::NoLocalStorage)?;
-		Ok(String::from_utf8(value).map_err(|e| Error::ParseUtf8Error(e.utf8_error()))?)
+	fn get_offchain_storage(key: &[u8]) -> Result<String, Error<T>> {
+		let value = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key, ).ok_or(Error::<T>::NoLocalStorage)?;
+
+		Ok(String::from_utf8(value).map_err(|_| Error::<T>::ParseUtf8Error)?)
 	}
 
 	fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
@@ -847,7 +894,7 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
-	type Error = crate::Error;
+	type Error = crate::Error<T>;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>) -> Result<(), Self::Error> {
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
 

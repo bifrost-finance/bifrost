@@ -321,6 +321,9 @@ pub fn testnet_genesis(
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: initial_authorities.iter().map(|x| (x.0.clone(), true)).collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -445,7 +448,7 @@ pub fn bifrost_genesis(
 			phantom: Default::default(),
 		}),
 		pallet_sudo: Some(SudoConfig {
-			key: root_key,
+			key: root_key.clone(),
 		}),
 		pallet_babe: Some(BabeConfig {
 			authorities: vec![],
@@ -475,6 +478,9 @@ pub fn bifrost_genesis(
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// root_key has the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key, true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {

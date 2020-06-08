@@ -111,8 +111,7 @@
       "Initial": "MultiSigTx",
       "Generated": "MultiSigTx",
       "Signed": "MultiSigTx",
-      "Processing":,
-      "Processing",
+      "Processing": "Processing",
       "Success": "Vec<u8>",
       "Fail": "Fail"
     }

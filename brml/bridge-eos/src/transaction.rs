@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::borrow::ToOwned;
 use alloc::string::{String, ToString};
 use core::{iter::FromIterator, str::FromStr};
 use codec::{Decode, Encode};
@@ -104,7 +103,7 @@ pub enum TxOut<AccountId> {
 }
 
 impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
-	pub fn init(
+	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
 		amount: Asset,
@@ -112,12 +111,12 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		memo: &str,
 		from: AccountId,
 		token_type: node_primitives::TokenType
-	) -> Result<Self, Error> {
-		let eos_from = core::str::from_utf8(&raw_from).map_err(Error::ParseUtf8Error)?;
-		let eos_to = core::str::from_utf8(&raw_to).map_err(Error::ParseUtf8Error)?;
+	) -> Result<Self, Error<T>> {
+		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
 		// Construct action
-		let action = Action::transfer(eos_from, eos_to, amount.to_string().as_ref(), memo).map_err(Error::EosChainError)?;
+		let action = Action::transfer(eos_from, eos_to, amount.to_string().as_ref(), memo).map_err(|_| Error::<T>::EosChainError)?;
 
 		// Construct transaction
 		let multi_sig_tx = MultiSigTx {
@@ -128,15 +127,16 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 			from,
 			token_type,
 		};
+
 		Ok(TxOut::Initial(multi_sig_tx))
 	}
 
-	pub fn generate(self, eos_node_url: &str) -> Result<Self, Error> {
+	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Initial(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
-				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(Error::HexError)?;
+				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
 
 				// fetch block
 				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
@@ -145,26 +145,27 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				// Construct transaction
 				let expiration = (sp_io::offchain::timestamp().add(Duration::from_millis(600 * 1000)).unix_millis() as f64 / 1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
-				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(Error::EosChainError)?;
+				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
 				Ok(TxOut::Generated(multi_sig_tx))
 			},
-			_ => Err(Error::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidTxOutType)
 		}
 	}
 
-	pub fn sign(self, sk: SecretKey, author: AccountId) -> Result<Self, Error> {
+	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Generated(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
-					return Err(Error::AlreadySignedByAuthor);
+					return Err(Error::<T>::AlreadySignedByAuthor);
 				}
 
 				let chain_id = &multi_sig_tx.chain_id;
-				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(Error::EosReadError)?;
-				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(Error::EosChainError)?;
-				let sig_hex_data = sig.to_serialize_data().map_err(Error::EosChainError)?;
+				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
+				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::EosChainError)?;
+				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
+
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
@@ -173,26 +174,26 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 					Ok(TxOut::Generated(multi_sig_tx))
 				}
 			},
-			_ => Err(Error::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidTxOutType)
 		}
 	}
 
-	pub fn send(self, eos_node_url: &str) -> Result<TxOut<AccountId>, Error> {
+	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Signed(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
 
-				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| "Error string conversion failed")?;
-				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_|Error::OtherErrors("failed to convert trx id to checksum256."))?;
+				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
+				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
 				Ok(TxOut::Processing {
 					tx_id,
 					multi_sig_tx,
 				})
 			},
-			_ => Err(Error::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidTxOutType)
 		}
 	}
 }
@@ -216,16 +217,16 @@ pub(crate) mod eos_rpc {
 	type BlockNum = u16;
 	type RefBlockPrefix = u32;
 
-	pub(crate) fn get_info(node_url: &str) -> Result<(ChainId, HeadBlockId), Error> {
+	pub(crate) fn get_info<T: crate::Trait>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
 		let req_api = format!("{}{}", node_url, GET_INFO_API);
 		let pending = http::Request::post(&req_api, vec![b"{}"])
 			.add_header("Content-Type", "application/json")
-			.send().map_err(|_| "Http request error")?;
-		let response = pending.wait().map_err(|_| "Http request error")?;
+			.send().map_err(|_| Error::<T>::OffchainHttpError)?;
+		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
-		let body_str= core::str::from_utf8(body.as_slice()).map_err(|_| "Error string conversion failed")?;
-		let node_info = parse_json(body_str).map_err(|_| "Deserialization node info failure")?;
+		let body_str= core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let node_info = parse_json(body_str).map_err(|_| Error::<T>::LiteJsonError)?;
 
 		let mut chain_id = Default::default();
 		let mut head_block_id = Default::default();
@@ -237,7 +238,7 @@ pub(crate) mod eos_rpc {
 						chain_id = {
 							match item.1 {
 								JsonValue::String(ref chars) => String::from_iter(chars.iter()),
-								_ => return Err(Error::EOSRpcError("Failed to parse eos node info.".to_owned())),
+								_ => return Err(Error::<T>::EOSRpcError),
 							}
 						};
 					}
@@ -245,22 +246,22 @@ pub(crate) mod eos_rpc {
 						head_block_id = {
 							match item.1 {
 								JsonValue::String(ref chars) => String::from_iter(chars.iter()),
-								_ => return Err(Error::EOSRpcError("Failed to parse eos node info.".to_owned())),
+								_ => return Err(Error::<T>::EOSRpcError),
 							}
 						};
 					}
 				}
 			}
-			_ => return Err(Error::EOSRpcError("Failed to parse eos node info.".to_owned())),
+			_ => return Err(Error::<T>::EOSRpcError),
 		}
 		if chain_id == String::default() || head_block_id == String::default() {
-			return Err(Error::EOSRpcError("Failed to parse eos node info.".to_owned()));
+			return Err(Error::<T>::EOSRpcError);
 		}
 
 		Ok((chain_id, head_block_id))
 	}
 
-	pub(crate) fn get_block(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error> {
+	pub(crate) fn get_block<T: crate::Trait>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
 		let req_body = {
 			JsonValue::Object(vec![
 				(
@@ -271,11 +272,11 @@ pub(crate) mod eos_rpc {
 		};
 		let pending = http::Request::post(&format!("{}{}", node_url, GET_BLOCK_API), vec![req_body.as_slice()])
 			.add_header("Content-Type", "application/json")
-			.send().map_err(|_| "Error in waiting http response back")?;
-		let response = pending.wait().map_err(|_| "Error in waiting http response back")?;
+			.send().map_err(|_| Error::<T>::OffchainHttpError)?;
+		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
-		let body_str = core::str::from_utf8(body.as_slice()).map_err(|_| "Error cannot convert to string")?;
+		let body_str = core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
 		let maps = body_str.trim_matches(|c| c == '{' || c == '}')
 			.split(',').into_iter().filter_map(|i| {
@@ -290,39 +291,39 @@ pub(crate) mod eos_rpc {
 		}).collect::<BTreeMap<_, _>>();
 
 		if maps.is_empty() {
-			return Err(Error::EOSRpcError("Failed to parse eos block.".to_owned()));
+			return Err(Error::<T>::EOSRpcError);
 		}
 
 		let block_num = {
-			let num_str = maps.get("\"block_num\"").ok_or("cannot find block_num")?;
-			let block_num: u64 = num_str.parse().map_err(|_| "parse block number error")?;
+			let num_str = maps.get("\"block_num\"").ok_or(Error::<T>::ParseUtf8Error)?;
+			let block_num: u64 = num_str.parse().map_err(|_| Error::<T>::ParseUtf8Error)?;
 			(block_num & 0xffff) as u16
 		};
 		let ref_block_prefix = {
-			let prefix = maps.get("\"ref_block_prefix\"").ok_or("cannot find ref_block_prefix")?;
-			let prefix_num: u32 = prefix.parse().map_err(|_| "parse block number error")?;
+			let prefix = maps.get("\"ref_block_prefix\"").ok_or(Error::<T>::ParseUtf8Error)?;
+			let prefix_num: u32 = prefix.parse().map_err(|_| Error::<T>::ParseUtf8Error)?;
 			prefix_num
 		};
 
 		Ok((block_num, ref_block_prefix))
 	}
 
-	pub(crate) fn push_transaction(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error>{
-		let pending = http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx]).send().map_err(|_| "Error in waiting http response back")?;
-		let response = pending.wait().map_err(|_| "Error in waiting http response back")?;
+	pub(crate) fn push_transaction<T: crate::Trait>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
+		let pending = http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx]).send().map_err(|_| Error::<T>::OffchainHttpError)?;
+		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
-		let body_str = String::from_utf8(body).map_err(|_| "Error cannot convert to string")?;
+		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let tx_id = get_transaction_id(&body_str)?;
 
 		Ok(tx_id.into_bytes())
 	}
 
-	pub(crate) fn serialize_push_transaction_params<AccountId>(multi_sig_tx: &MultiSigTx<AccountId>) -> Result<Vec<u8>, Error> {
+	pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(multi_sig_tx: &MultiSigTx<AccountId>) -> Result<Vec<u8>, Error<T>> {
 		let serialized_signatures = {
 			let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
 			for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
-				let sig = Signature::read(&tx_sig.signature, &mut 0).map_err(Error::EosReadError)?;
+				let sig = Signature::read(&tx_sig.signature, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
 				let val = JsonValue::String(sig.to_string().chars().collect());
 				serialized_signatures.push(val);
 			}
@@ -353,10 +354,10 @@ pub(crate) mod eos_rpc {
 		Ok(signed_trx)
 	}
 
-	pub(crate) fn get_transaction_id(trx_response: &str) -> Result<String, Error> {
+	pub(crate) fn get_transaction_id<T: crate::Trait>(trx_response: &str) -> Result<String, Error<T>> {
 		// error happens while pushing transaction to EOS node
 		if !trx_response.contains("transaction_id") && !trx_response.contains("processed") {
-			return Err(Error::EOSRpcError(trx_response.to_string()));
+			return Err(Error::<T>::EOSRpcError);
 		}
 
 		let mut trx_id = String::new();
@@ -369,7 +370,7 @@ pub(crate) mod eos_rpc {
 		}
 
 		if trx_id.eq("") {
-			return Err(Error::EOSRpcError("cannot find transaction id in rpc response.".to_string()));
+			return Err(Error::<T>::EOSRpcError);
 		}
 
 		Ok(trx_id)
