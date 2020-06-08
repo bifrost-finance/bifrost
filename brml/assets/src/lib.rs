@@ -298,7 +298,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertPrice::fetch_convert_rate(asset_id);
+		let convert_rate = T::FetchConvertPrice::fetch_convert_price(asset_id);
 		let target_asset = (asset_id, token_type, target.clone());
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
@@ -343,7 +343,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		target: T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertPrice::fetch_convert_rate(asset_id);
+		let convert_rate = T::FetchConvertPrice::fetch_convert_price(asset_id);
 		let target_asset = (asset_id, token_type, target);
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
