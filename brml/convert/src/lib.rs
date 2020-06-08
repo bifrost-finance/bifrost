@@ -24,7 +24,8 @@ mod mock;
 mod tests;
 
 use frame_support::traits::Get;
-use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, IterableStorageMap};
+use frame_support::weights::{FunctionOf, DispatchClass, Weight, Pays};
+use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertPrice, AssetReward, TokenType};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
@@ -70,7 +71,7 @@ decl_error! {
 		TokenNotExist,
 		/// Amount of input should be less than or equal to origin balance
 		InvalidBalanceForTransaction,
-		/// Convert rate doesn't be set
+		/// Convert price doesn't be set
 		ConvertPriceDoesNotSet,
 		/// This is an invalid convert rate
 		InvalidConvertPrice,
@@ -81,8 +82,8 @@ decl_error! {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Convert {
-		/// convert rate between two tokens, vtoken => (token, convert_rate)
-		ConvertPrice get(fn convert_rate): map hasher(blake2_128_concat) T::AssetId => T::ConvertPrice;
+		/// convert price between two tokens, vtoken => (token, convert_price)
+		ConvertPrice get(fn convert_price): map hasher(blake2_128_concat) T::AssetId => T::ConvertPrice;
 		/// change rate per block, vtoken => (token, rate_per_block)
 		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
@@ -107,23 +108,23 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn set_convert_rate(
+		fn set_convert_price(
 			origin,
 			token_symbol: AssetSymbol,
-			convert_rate: T::ConvertPrice
+			convert_price: T::ConvertPrice
 		) {
 			ensure_root(origin)?;
 
 			let token_id = T::AssetId::from(token_symbol as u32);
 
 			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
-			<ConvertPrice<T>>::insert(token_id, convert_rate);
+			<ConvertPrice<T>>::insert(token_id, convert_price);
 
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn set_rate_per_block(
+		fn set_price_per_block(
 			origin,
 			token_symbol: AssetSymbol,
 			rate_per_block: T::RatePerBlock
@@ -138,7 +139,11 @@ decl_module! {
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = FunctionOf(
+			|args: (&T::Balance, &AssetSymbol, &Option<T::AccountId>)| Module::<T>::calculate_referer_gas(args.2),
+			DispatchClass::Normal,
+			Pays::Yes
+		)]
 		fn convert_token_to_vtoken(
 			origin,
 			#[compact] token_amount: T::Balance,
@@ -155,13 +160,13 @@ decl_module! {
 			let token_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::Token, &converter).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
-			// check convert rate has been set
+			// check convert price has been set
 			ensure!(<ConvertPrice<T>>::contains_key(token_id), Error::<T>::ConvertPriceDoesNotSet);
 
-			let rate = <ConvertPrice<T>>::get(token_id);
+			let price = <ConvertPrice<T>>::get(token_id);
 
-			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertPrice);
-			let vtokens_buy = token_amount.saturating_mul(rate.into());
+			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
+			let vtokens_buy = token_amount.saturating_mul(price.into());
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_id, TokenType::Token, converter.clone(), token_amount);
@@ -191,13 +196,13 @@ decl_module! {
 			let vtoken_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &converter).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
-			// check convert rate has been set
+			// check convert price has been set
 			ensure!(<ConvertPrice<T>>::contains_key(token_id), Error::<T>::ConvertPriceDoesNotSet);
 
-			let rate = <ConvertPrice<T>>::get(token_id);
+			let price = <ConvertPrice<T>>::get(token_id);
 
-			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertPrice);
-			let tokens_buy = vtoken_amount / rate.into();
+			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
+			let tokens_buy = vtoken_amount / price.into();
 
 			T::AssetTrait::asset_destroy(token_id, TokenType::VToken, converter.clone(), vtoken_amount);
 			T::AssetTrait::asset_issue(token_id, TokenType::Token, converter.clone(), tokens_buy);
@@ -211,7 +216,7 @@ decl_module! {
 		}
 
 		fn on_finalize(block_number: T::BlockNumber) {
-			// calculate & update convert rate
+			// calculate & update convert price
 			for (token_id, _convert_pool) in <Pool<T>>::iter() {
 				<Pool<T>>::mutate(token_id, |convert_pool| {
 					let current_reward = convert_pool.current_reward;
@@ -222,8 +227,8 @@ decl_module! {
 						&& convert_pool.vtoken_pool != Zero::zero()
 					{
 						if <ConvertPrice<T>>::contains_key(token_id) {
-							<ConvertPrice<T>>::mutate(token_id, |convert_rate| {
-								*convert_rate = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
+							<ConvertPrice<T>>::mutate(token_id, |convert_price| {
+								*convert_price = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
 							});
 						}
 					}
@@ -243,6 +248,11 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+	// if the input has something, charge more fee on caller
+	fn calculate_referer_gas(referer: &Option<T::AccountId>) -> Weight {
+		if referer.is_some() { 100 } else { 10 }
+	}
+
 	pub fn get_convert(token_id: T::AssetId) -> T::ConvertPrice {
 		<ConvertPrice<T>>::get(token_id)
 	}
@@ -356,10 +366,10 @@ impl<T: Trait> Module<T> {
 }
 
 impl<T: Trait> FetchConvertPrice<T::AssetId, T::ConvertPrice> for Module<T> {
-	fn fetch_convert_rate(asset_id: T::AssetId) -> T::ConvertPrice {
-		let rate = <ConvertPrice<T>>::get(asset_id);
+	fn fetch_convert_price(asset_id: T::AssetId) -> T::ConvertPrice {
+		let price = <ConvertPrice<T>>::get(asset_id);
 
-		rate
+		price
 	}
 }
 

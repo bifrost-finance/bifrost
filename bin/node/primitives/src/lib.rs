@@ -281,11 +281,11 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 /// Fetch convert rate handler
 pub trait FetchConvertPrice<AssetId, ConvertPrice> {
 	/// fetch convert rate
-	fn fetch_convert_rate(asset_id: AssetId) -> ConvertPrice;
+	fn fetch_convert_price(asset_id: AssetId) -> ConvertPrice;
 }
 
 impl<A, ER: Default> FetchConvertPrice<A, ER> for () {
-	fn fetch_convert_rate(_: A) -> ER { Default::default() }
+	fn fetch_convert_price(_: A) -> ER { Default::default() }
 }
 
 /// Blockchain types
