@@ -1,0 +1,15 @@
+[package]
+name = "chain-spec-builder"
+version = "0.3.2"
+authors = ["Jamie Deng <djptux@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+ansi_term = "0.12.1"
+sc-keystore = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+sc-chain-spec = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+node-cli = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+sp-core = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+rand = "0.7.2"
+structopt = "0.3.8"

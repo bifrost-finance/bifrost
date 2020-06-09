@@ -28,11 +28,11 @@ RUN apt-get update && \
 	apt-get dist-upgrade -y && \
 	apt-get install -y cmake pkg-config libssl-dev git clang curl apt-utils
 
-RUN curl https:#sh.rustup.rs -sSf | sh -s -- -y && \
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 	export PATH="$PATH:$HOME/.cargo/bin" && \
 	rustup toolchain install nightly && \
 	rustup target add wasm32-unknown-unknown --toolchain nightly && \
-	cargo install --git https:#github.com/alexcrichton/wasm-gc && \
+	cargo install --git https://github.com/alexcrichton/wasm-gc && \
 	rustup default nightly && \
 	rustup default stable && \
 	cargo build "--$PROFILE"
@@ -40,7 +40,7 @@ RUN curl https:#sh.rustup.rs -sSf | sh -s -- -y && \
 # ===== SECOND STAGE ======
 
 FROM ubuntu:18.04
-LABEL description="The second stage for configuring thr image."
+LABEL description="The second stage for configuring the image."
 ARG PROFILE=release
 
 RUN apt-get update && \
@@ -48,8 +48,8 @@ RUN apt-get update && \
 	apt install -y openssl libssl-dev
 
 RUN rm -rf /usr/share/*  && \
-	mkdir -p /root/.local/share/Bifrost && \
-	ln -s /root/.local/share/Bifrost /data && \
+	mkdir -p /root/.local/share/bifrost && \
+	ln -s /root/.local/share/bifrost /data && \
 	useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost
 
 COPY --from=builder /bifrost/target/$PROFILE/bifrost-node /usr/local/bin
@@ -66,5 +66,7 @@ USER bifrost
 EXPOSE 30333 9933 9944
 VOLUME ["/bifrost"]
 
-CMD ["/usr/local/bin/bifrost-node", "--ws-external", "--dev"]
+ENTRYPOINT ["/usr/local/bin/bifrost-node", "--chain=/usr/local/bin/chain.json"]
+CMD ["/usr/local/bin/bifrost-node"]
+
 ENV DEBIAN_FRONTEND teletype

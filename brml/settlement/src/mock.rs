@@ -1,4 +1,4 @@
-// Copyright 2019 Liebi Technologies.
+// Copyright 2019-2020 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -18,9 +18,9 @@
 
 #![cfg(test)]
 
-use srml_support::{impl_outer_origin, parameter_types};
-use substrate_primitives::{H256, Blake2Hasher};
-use sr_primitives::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use frame_support::{impl_outer_origin, parameter_types};
+use sp_core::H256;
+use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
 impl_outer_origin! {
@@ -46,9 +46,9 @@ impl system::Trait for Test {
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type WeightMultiplierUpdate = ();
 	type Header = Header;
 	type Event = ();
+	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -61,6 +61,7 @@ impl brml_assets::Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type ClearingHandler = Settlement;
+	type AssetRedeem = ();
 }
 
 parameter_types! {
@@ -79,6 +80,6 @@ pub type Settlement = Module<Test>;
 pub type Assets = brml_assets::Module<Test>;
 pub type System = system::Module<Test>;
 
-pub fn new_test_ext() -> runtime_io::TestExternalities<Blake2Hasher> {
+pub fn new_test_ext() -> runtime_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
