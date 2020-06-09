@@ -288,7 +288,7 @@ pub fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 		pallet_sudo: Some(SudoConfig {
-			key: root_key,
+			key: root_key.clone(),
 		}),
 		pallet_babe: Some(BabeConfig {
 			authorities: vec![],
@@ -322,7 +322,7 @@ pub fn testnet_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: initial_authorities.iter().map(|x| (x.0.clone(), true)).collect::<Vec<_>>(),
+			cross_chain_privilege: [(root_key, true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
