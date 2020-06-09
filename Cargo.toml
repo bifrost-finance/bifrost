@@ -1,41 +1,22 @@
-[package]
-name = "bifrost"
-version = "0.1.0"
-authors = ["Edwin Wang <lark930@gmail.com>"]
-build = "build.rs"
-edition = "2018"
-
-[[bin]]
-name = "bifrost-node"
-path = "src/main.rs"
-
-[dependencies]
-cli = { package = "node-cli", path = "cli" }
-futures = "0.1"
-ctrlc = { version = "3.0", features = ["termination"] }
-
-[build-dependencies]
-vergen = "3"
-
 [workspace]
 members = [
-	"cli",
-	"executor",
-	"primitives",
-	"rpc",
-	"rpc-client",
-	"runtime",
-	"testing",
+	"bin/node/cli",
+	"bin/node/inspect",
+	"bin/node/primitives",
+	"bin/node/runtime",
+	"bin/utils/chain-spec-builder",
+	"bin/utils/subkey",
 	"brml/assets",
-	"brml/settlement",
+	"brml/assets/rpc",
+	"brml/bridge-eos",
+	"brml/chainlink",
+	"brml/convert",
+	"brml/convert/rpc",
+	"brml/oracle",
+	"brml/swap",
+	"brml/validator",
+	"brml/voucher",
 ]
-exclude = [
-	"runtime/wasm",
-]
-
-[badges]
-travis-ci = { repository = "bifrost-codes/bifrost", branch = "master" }
-maintenance = { status = "actively-developed" }
 
 [profile.release]
 panic = "unwind"

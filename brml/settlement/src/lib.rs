@@ -1,4 +1,4 @@
-// Copyright 2019 Liebi Technologies.
+// Copyright 2019-2020 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -17,13 +17,13 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use rstd::prelude::*;
+use sp_std::prelude::*;
 use codec::{Encode, Decode};
-use srml_support::{StorageValue, StorageMap, EnumerableStorageMap, Parameter,
-	decl_module, decl_event, decl_storage};
-use srml_support::traits::Get;
-use sr_primitives::traits::{Member, SimpleArithmetic, One, Zero, SaturatedConversion, Saturating};
 use node_primitives::{ClearingHandler, AssetIssue};
+use frame_support::{
+	Parameter, decl_module, decl_event, decl_storage, traits::Get
+};
+use sp_runtime::traits::{Member, AtLeast32Bit, One, Zero, SaturatedConversion, Saturating};
 
 mod mock;
 mod tests;
@@ -39,9 +39,9 @@ pub struct BalanceDuration<BlockNumber, Balance, Duration> {
 }
 
 impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Duration> where
-	BlockNumber: Copy + SimpleArithmetic,
-	Balance: Copy + SimpleArithmetic + From<BlockNumber>,
-	Duration: Copy + SimpleArithmetic + From<Balance>,
+	BlockNumber: Copy + AtLeast32Bit,
+	Balance: Copy + AtLeast32Bit + From<BlockNumber>,
+	Duration: Copy + AtLeast32Bit + From<Balance>,
 {
 	fn new<SettlementId, SettlementPeriod>(
 		stl_id: SettlementId,
@@ -50,7 +50,7 @@ impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Durat
 		curr_amount: Balance,
 	) -> Self
 		where
-			SettlementId: Copy + SimpleArithmetic,
+			SettlementId: Copy + AtLeast32Bit,
 			SettlementPeriod: Get<BlockNumber>,
 	{
 		let stl_index = stl_id.saturated_into::<u64>();
@@ -80,13 +80,13 @@ pub trait Trait: system::Trait + brml_assets::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// Settlement id
-	type SettlementId: Member + Parameter + SimpleArithmetic + Default + Copy + Into<Self::BlockNumber>;
+	type SettlementId: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::BlockNumber>;
 
 	/// How often (in blocks) new settlement are started.
 	type SettlementPeriod: Get<Self::BlockNumber>;
 
 	/// The value that represent the duration of balance.
-	type Duration: Member + Parameter + SimpleArithmetic + Default + Copy + From<Self::Balance>;
+	type Duration: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::Balance>;
 
 	// Assets issue handler
 	type AssetIssue: AssetIssue<Self::AssetId, Self::AccountId, Self::Balance>;
@@ -103,13 +103,13 @@ decl_event!(
 decl_storage! {
 	trait Store for Module<T: Trait> as Settlement {
 		/// Records for asset clearing corresponding to an account id
-		ClearingAssets get(clearing_assets): linked_map (T::AssetId, T::AccountId, T::SettlementId)
+		ClearingAssets get(fn clearing_assets): linked_map hasher(blake2_128_concat) (T::AssetId, T::AccountId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// Records for token clearing corresponding to an asset id
-		ClearingTokens get(clearing_tokens): linked_map (T::AssetId, T::SettlementId)
+		ClearingTokens get(fn clearing_tokens): linked_map hasher(blake2_128_concat) (T::AssetId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
 		/// The next settlement identifier up for grabs.
-		NextSettlementId get(next_settlement_id): T::SettlementId;
+		NextSettlementId get(fn next_settlement_id): T::SettlementId;
 //		/// Records for settlements
 //		Settlements get(settlements): map (T::AssetId, T::SettlementId)
 ////			=> Settlement<T::Balance, T::BlockNumber>;
@@ -122,7 +122,7 @@ decl_module! {
 		/// How often (in blocks) new settlement are started.
 		const SettlementPeriod: T::BlockNumber = T::SettlementPeriod::get();
 
-		fn deposit_event<T>() = default;
+		fn deposit_event() = default;
 
 		fn on_initialize(now_block: T::BlockNumber) {
 			// check if need to begin a new settlement
@@ -148,7 +148,7 @@ impl<T: Trait> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Bala
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let index = (asset_id, target.clone(), curr_stl_id);
-		if <ClearingAssets<T>>::exists(&index) {
+		if <ClearingAssets<T>>::contains_key(&index) {
 			<ClearingAssets<T>>::mutate(&index, |clearing_asset| {
 				clearing_asset.update(last_block, curr_amount);
 			});
@@ -172,7 +172,7 @@ impl<T: Trait> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Bala
 		let curr_stl_id: T::SettlementId = Self::current_settlement_id();
 
 		let index = (asset_id, curr_stl_id);
-		if <ClearingTokens<T>>::exists(&index) {
+		if <ClearingTokens<T>>::contains_key(&index) {
 			<ClearingTokens<T>>::mutate(&index, |clearing_token| {
 				clearing_token.update(last_block, curr_amount);
 			});
