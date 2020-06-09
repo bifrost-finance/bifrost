@@ -40,7 +40,8 @@ use sp_runtime::{
 use frame_support::traits::{Get};
 use frame_support::{
 	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
-	dispatch::{DispatchResult, DispatchError}
+	dispatch::{DispatchResult, DispatchError},
+	weights::{FunctionOf, DispatchClass, Weight, Pays}
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed,
@@ -226,6 +227,7 @@ decl_event! {
 		SendTransactionSuccess,
 		SendTransactionFailure,
 		GrantedCrossChainPrivilege(AccountId),
+		RemovedCrossChainPrivilege(AccountId),
 	}
 }
 
@@ -339,13 +341,30 @@ decl_module! {
 
 			// update all addresses
 			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
-				all.push(target.clone());
+				if !all.contains(&target) {
+					all.push(target.clone());
+				}
 			});
 
 			Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn remove_crosschain_privilege(origin, target: T::AccountId) {
+			ensure_root(origin)?;
+
+			// remove privilege
+			<CrossChainPrivilege<T>>::insert(&target, false);
+
+			// update all addresses
+			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
+				all.retain(|who| who.ne(&target));
+			});
+
+			Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
+		}
+
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
 			ensure_root(origin)?;
 			BridgeContractAccount::put((account, threthold));
@@ -356,7 +375,7 @@ decl_module! {
 		// 3. compare current schedules version with pending_schedules'.
 		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
 		// 5. save the new_producers list.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn change_schedule(
 			origin,
 			legacy_schedule_hash: Checksum256,
@@ -404,7 +423,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn prove_action(
 			origin,
 			action: Action,
@@ -496,7 +515,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
 			ensure_none(origin)?;
 
@@ -505,7 +524,11 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = FunctionOf(
+			|args: (_, _, _, &Vec<u8>)| (args.3.len() * 10000usize) as Weight,
+			DispatchClass::Normal,
+			Pays::Yes
+		)]
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
@@ -552,15 +575,20 @@ decl_module! {
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
 
-			// Only send messages if we are a potential validator.
-			if sp_io::offchain::is_validator() {
-				debug::info!(target: "bridge-eos", "Is validator at {:?}.", now_block);
-				match Self::offchain(now_block) {
-					Ok(_) => debug::info!("A offchain worker started."),
-					Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+			// It's no nessesary to start offchain worker if no any task in queue
+			if !BridgeTxOuts::<T>::get().is_empty() {
+				// Only send messages if we are a potential validator.
+				if sp_io::offchain::is_validator() {
+					debug::info!(target: "bridge-eos", "Is validator at {:?}.", now_block);
+					match Self::offchain(now_block) {
+						Ok(_) => debug::info!("A offchain worker started."),
+						Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+					}
+				} else {
+					debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
 				}
 			} else {
-				debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
+				debug::info!("There's no offchain worker started.");
 			}
 		}
 	}
