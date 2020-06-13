@@ -25,7 +25,7 @@ use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetSymbol, AssetTrait, TokenType};
+use node_primitives::{AssetSymbol, AssetTrait, BridgeAssetTo, TokenType};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 
@@ -77,7 +77,10 @@ pub trait Trait: frame_system::Trait {
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record incomes.
 	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
+	/// The units in which we record asset precision.
+	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
 }
 
 decl_event! {
@@ -117,6 +120,10 @@ decl_error! {
 		StakingAmountExceeded,
 		/// The staking amount is insufficient for un-staking.
 		StakingAmountInsufficient,
+		/// An error occurred in stake action of bridge module.
+		BridgeStakeError,
+		/// An error occurred in unstake action of bridge module.
+		BridgeUnstakeError,
 	}
 }
 
@@ -156,7 +163,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn staking(
+		fn stake(
 			origin,
 			asset_symbol: AssetSymbol,
 			target: T::AccountId,
@@ -181,13 +188,16 @@ decl_module! {
 				*balance = balance.saturating_add(amount);
 			});
 
-			// TODO stake asset by bridge module
+			// stake asset by bridge module
+			let validator_address = validator.validator_address;
+			T::BridgeAssetTo::stake(asset_symbol, amount, validator_address)
+				.map_err(|_| Error::<T>::BridgeStakeError)?;
 
 			Self::deposit_event(RawEvent::ValidatorStaked(asset_symbol, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn unstaking(
+		fn unstake(
 			origin,
 			asset_symbol: AssetSymbol,
 			target: T::AccountId,
@@ -212,7 +222,10 @@ decl_module! {
 				*balance = balance.saturating_sub(amount);
 			});
 
-			// TODO un-stake asset by bridge module
+			// un-stake asset by bridge module
+			let validator_address = validator.validator_address;
+			T::BridgeAssetTo::unstake(asset_symbol, amount, validator_address)
+				.map_err(|_| Error::<T>::BridgeUnstakeError)?;
 
 			Self::deposit_event(RawEvent::ValidatorUnStaked(asset_symbol, target, amount));
 		}
@@ -379,6 +392,7 @@ impl<T: Trait> Module<T> {
 			Validators::<T>::insert(&asset_symbol, &account_id, val);
 
 			// TODO call redeem from bridge-eos
+			// T::BridgeAssetTo::redeem();
 		}
 	}
 }

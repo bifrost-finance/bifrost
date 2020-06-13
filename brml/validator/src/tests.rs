@@ -42,7 +42,7 @@ fn set_asset_should_work() {
 }
 
 #[test]
-fn staking_should_ok() {
+fn stake_should_ok() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
@@ -53,7 +53,7 @@ fn staking_should_ok() {
 
 		let target = 1;
 		let amount = 100;
-		assert_ok!(Validator::staking(Origin::ROOT, asset_symbol, target, amount));
+		assert_ok!(Validator::stake(Origin::ROOT, asset_symbol, target, amount));
 		let validator = Validator::validators(asset_symbol, origin_id);
 		assert_eq!(validator.staking, 100);
 		let asset_locked_balance = Validator::asset_locked_balances(asset_symbol);
@@ -61,7 +61,7 @@ fn staking_should_ok() {
 
 		let target = 1;
 		let amount = 200;
-		assert_ok!(Validator::staking(Origin::ROOT, asset_symbol, target, amount));
+		assert_ok!(Validator::stake(Origin::ROOT, asset_symbol, target, amount));
 		let validator = Validator::validators(asset_symbol, origin_id);
 		assert_eq!(validator.staking, 300);
 		let asset_locked_balance = Validator::asset_locked_balances(asset_symbol);
@@ -70,21 +70,21 @@ fn staking_should_ok() {
 }
 
 #[test]
-fn staking_not_registered_should_error() {
+fn stake_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
 		let asset_symbol = AssetSymbol::EOS;
 		let target = 1;
 		let amount = 100;
 
 		assert_noop!(
-			Validator::staking(Origin::ROOT, asset_symbol, target, amount),
+			Validator::stake(Origin::ROOT, asset_symbol, target, amount),
 			ValidatorError::ValidatorNotRegistered
 		);
 	});
 }
 
 #[test]
-fn staking_amount_exceed_should_error() {
+fn stake_amount_exceed_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin = Origin::signed(1);
 		let asset_symbol = AssetSymbol::EOS;
@@ -95,14 +95,14 @@ fn staking_amount_exceed_should_error() {
 		let target = 1;
 		let amount = 2000;
 		assert_noop!(
-			Validator::staking(Origin::ROOT, asset_symbol, target, amount),
+			Validator::stake(Origin::ROOT, asset_symbol, target, amount),
 			ValidatorError::StakingAmountExceeded
 		);
 	});
 }
 
 #[test]
-fn unstaking_should_ok() {
+fn unstake_should_ok() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
@@ -113,11 +113,11 @@ fn unstaking_should_ok() {
 
 		let target = 1;
 		let stake_amount = 500;
-		assert_ok!(Validator::staking(Origin::ROOT, asset_symbol, target, stake_amount));
+		assert_ok!(Validator::stake(Origin::ROOT, asset_symbol, target, stake_amount));
 
 		let target = 1;
 		let unstake_amount = 200;
-		assert_ok!(Validator::unstaking(Origin::ROOT, asset_symbol, target, unstake_amount));
+		assert_ok!(Validator::unstake(Origin::ROOT, asset_symbol, target, unstake_amount));
 		let validator = Validator::validators(asset_symbol, origin_id);
 		assert_eq!(validator.staking, 300);
 		let asset_locked_balance = Validator::asset_locked_balances(asset_symbol);
@@ -126,21 +126,21 @@ fn unstaking_should_ok() {
 }
 
 #[test]
-fn unstaking_not_registered_should_error() {
+fn unstake_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
 		let asset_symbol = AssetSymbol::EOS;
 		let target = 1;
 		let amount = 100;
 
 		assert_noop!(
-			Validator::unstaking(Origin::ROOT, asset_symbol, target, amount),
+			Validator::unstake(Origin::ROOT, asset_symbol, target, amount),
 			ValidatorError::ValidatorNotRegistered
 		);
 	});
 }
 
 #[test]
-fn unstaking_insufficient_should_error() {
+fn unstake_insufficient_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
@@ -151,12 +151,12 @@ fn unstaking_insufficient_should_error() {
 
 		let target = 1;
 		let stake_amount = 500;
-		assert_ok!(Validator::staking(Origin::ROOT, asset_symbol, target, stake_amount));
+		assert_ok!(Validator::stake(Origin::ROOT, asset_symbol, target, stake_amount));
 
 		let target = 1;
 		let unstake_amount = 1000;
 		assert_noop!(
-			Validator::unstaking(Origin::ROOT, asset_symbol, target, unstake_amount),
+			Validator::unstake(Origin::ROOT, asset_symbol, target, unstake_amount),
 			ValidatorError::StakingAmountInsufficient
 		);
 	});
