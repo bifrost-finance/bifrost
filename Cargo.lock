@@ -517,6 +517,7 @@ dependencies = [
 name = "brml-validator"
 version = "0.3.2"
 dependencies = [
+ "brml-assets 0.3.2",
  "frame-support 2.0.0-dev (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-dev (git+https://github.com/paritytech/substrate)",
  "node-primitives 0.3.2",
