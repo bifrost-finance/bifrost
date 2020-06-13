@@ -47,7 +47,7 @@ impl<Balance> AssetConfig<Balance> {
 }
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
-pub struct Validator<Balance, BlockNumber> {
+pub struct ValidatorRegister<Balance, BlockNumber> {
 	last_block: BlockNumber,
 	deposit: Balance,
 	need: Balance,
@@ -56,7 +56,7 @@ pub struct Validator<Balance, BlockNumber> {
 	validator_address: Vec<u8>,
 }
 
-impl<Balance: Default, BlockNumber: Default> Validator<Balance, BlockNumber> {
+impl<Balance: Default, BlockNumber: Default> ValidatorRegister<Balance, BlockNumber> {
 	fn new(need: Balance, validator_address: Vec<u8>) -> Self {
 		Self {
 			need,
@@ -89,7 +89,7 @@ decl_event! {
 		/// A new asset has been set.
 		AssetConfigSet(AssetSymbol, AssetConfig<Balance>),
 		/// A new validator has been registered.
-		ValidatorRegistered(AssetSymbol, AccountId, Validator<Balance, BlockNumber>),
+		ValidatorRegistered(AssetSymbol, AccountId, ValidatorRegister<Balance, BlockNumber>),
 		/// The validator changed the amount of staking it's needed.
 		ValidatorNeedAmountSet(AssetSymbol, AccountId, Balance),
 		/// The validator deposited the amount of reward.
@@ -128,7 +128,7 @@ decl_storage! {
 		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) AssetSymbol => T::Balance;
 		/// The validators registered from cross chain.
 		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId
-			=> Validator<T::Balance, T::BlockNumber>;
+			=> ValidatorRegister<T::Balance, T::BlockNumber>;
 		/// The locked amount of asset of account for staking.
 		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
@@ -231,7 +231,7 @@ decl_module! {
 				Error::<T>::ValidatorRegistered
 			);
 
-			let validator  = Validator::new(need, validator_address);
+			let validator = ValidatorRegister::new(need, validator_address);
 			Validators::<T>::insert(&asset_symbol, &origin, &validator);
 
 			Self::deposit_event(RawEvent::ValidatorRegistered(asset_symbol, origin, validator));
@@ -247,7 +247,7 @@ decl_module! {
 			);
 
 			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
-				validator.need = validator.need.saturating_add(amount);
+				validator.need = amount;
 			});
 
 			Self::deposit_event(RawEvent::ValidatorNeedAmountSet(asset_symbol, origin, amount));

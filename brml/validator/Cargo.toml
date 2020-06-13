@@ -11,6 +11,11 @@ frame-system = { version = "2.0.0-dev", git = "https://github.com/paritytech/sub
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
 sp-runtime = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
 
+[dev-dependencies]
+assets = { package = "brml-assets", path = "../assets" }
+sp-core = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+sp-io = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+
 [features]
 default = ["std"]
 std = [
@@ -20,7 +25,3 @@ std = [
 	"node-primitives/std",
 	"sp-runtime/std",
 ]
-
-[dev-dependencies]
-sp-core = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-io = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
