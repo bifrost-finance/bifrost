@@ -73,6 +73,7 @@ brml-voucher = { path = "../../../brml/voucher", default-features = false }
 brml-swap = { path = "../../../brml/swap", default-features = false }
 chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
 brml-oracle = { path = "../../../brml/oracle", default-features = false }
+brml-validator = { path = "../../../brml/validator", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { version = "1.0.6", package = "substrate-wasm-builder-runner", git = "https://github.com/paritytech/substrate" }
@@ -139,4 +140,5 @@ std = [
 	'chainlink/std',
 	'brml-oracle/std',
 	'brml-voucher/std',
+	'brml-validator/std',
 ]

@@ -25,9 +25,10 @@ use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetSymbol, AssetTrait, TokenType};
+use node_primitives::{AssetSymbol, AssetTrait, BridgeAssetTo, TokenType};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
+use sp_std::prelude::*;
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetConfig<Balance> {
@@ -47,7 +48,7 @@ impl<Balance> AssetConfig<Balance> {
 }
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
-pub struct Validator<Balance, BlockNumber> {
+pub struct ValidatorRegister<Balance, BlockNumber> {
 	last_block: BlockNumber,
 	deposit: Balance,
 	need: Balance,
@@ -56,7 +57,7 @@ pub struct Validator<Balance, BlockNumber> {
 	validator_address: Vec<u8>,
 }
 
-impl<Balance: Default, BlockNumber: Default> Validator<Balance, BlockNumber> {
+impl<Balance: Default, BlockNumber: Default> ValidatorRegister<Balance, BlockNumber> {
 	fn new(need: Balance, validator_address: Vec<u8>) -> Self {
 		Self {
 			need,
@@ -77,7 +78,10 @@ pub trait Trait: frame_system::Trait {
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record incomes.
 	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
+	/// The units in which we record asset precision.
+	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
 }
 
 decl_event! {
@@ -89,7 +93,7 @@ decl_event! {
 		/// A new asset has been set.
 		AssetConfigSet(AssetSymbol, AssetConfig<Balance>),
 		/// A new validator has been registered.
-		ValidatorRegistered(AssetSymbol, AccountId, Validator<Balance, BlockNumber>),
+		ValidatorRegistered(AssetSymbol, AccountId, ValidatorRegister<Balance, BlockNumber>),
 		/// The validator changed the amount of staking it's needed.
 		ValidatorNeedAmountSet(AssetSymbol, AccountId, Balance),
 		/// The validator deposited the amount of reward.
@@ -117,6 +121,10 @@ decl_error! {
 		StakingAmountExceeded,
 		/// The staking amount is insufficient for un-staking.
 		StakingAmountInsufficient,
+		/// An error occurred in stake action of bridge module.
+		BridgeStakeError,
+		/// An error occurred in unstake action of bridge module.
+		BridgeUnstakeError,
 	}
 }
 
@@ -128,7 +136,7 @@ decl_storage! {
 		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) AssetSymbol => T::Balance;
 		/// The validators registered from cross chain.
 		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId
-			=> Validator<T::Balance, T::BlockNumber>;
+			=> ValidatorRegister<T::Balance, T::BlockNumber>;
 		/// The locked amount of asset of account for staking.
 		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
@@ -156,7 +164,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn staking(
+		fn stake(
 			origin,
 			asset_symbol: AssetSymbol,
 			target: T::AccountId,
@@ -181,13 +189,16 @@ decl_module! {
 				*balance = balance.saturating_add(amount);
 			});
 
-			// TODO stake asset by bridge module
+			// stake asset by bridge module
+			let validator_address = validator.validator_address;
+			T::BridgeAssetTo::stake(asset_symbol, amount, validator_address)
+				.map_err(|_| Error::<T>::BridgeStakeError)?;
 
 			Self::deposit_event(RawEvent::ValidatorStaked(asset_symbol, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn unstaking(
+		fn unstake(
 			origin,
 			asset_symbol: AssetSymbol,
 			target: T::AccountId,
@@ -212,7 +223,10 @@ decl_module! {
 				*balance = balance.saturating_sub(amount);
 			});
 
-			// TODO un-stake asset by bridge module
+			// un-stake asset by bridge module
+			let validator_address = validator.validator_address;
+			T::BridgeAssetTo::unstake(asset_symbol, amount, validator_address)
+				.map_err(|_| Error::<T>::BridgeUnstakeError)?;
 
 			Self::deposit_event(RawEvent::ValidatorUnStaked(asset_symbol, target, amount));
 		}
@@ -231,7 +245,7 @@ decl_module! {
 				Error::<T>::ValidatorRegistered
 			);
 
-			let validator  = Validator::new(need, validator_address);
+			let validator = ValidatorRegister::new(need, validator_address);
 			Validators::<T>::insert(&asset_symbol, &origin, &validator);
 
 			Self::deposit_event(RawEvent::ValidatorRegistered(asset_symbol, origin, validator));
@@ -247,7 +261,7 @@ decl_module! {
 			);
 
 			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
-				validator.need = validator.need.saturating_add(amount);
+				validator.need = amount;
 			});
 
 			Self::deposit_event(RawEvent::ValidatorNeedAmountSet(asset_symbol, origin, amount));
@@ -358,18 +372,21 @@ impl<T: Trait> Module<T> {
 		for (asset_symbol, account_id, mut val) in Validators::<T>::iter() {
 			// calculate validator's deposit balance
 			let asset_config = AssetConfigs::<T>::get(&asset_symbol);
-
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
-			let min_fee = min_reward_per_block.saturating_mul(redeem_duration.into());
-			let mut fee = Zero::zero();
+			let min_fee = val.staking.saturating_mul(
+				min_reward_per_block.saturating_mul(redeem_duration.into())
+			);
 			if min_fee >= val.deposit {
-				fee = val.deposit;
+				// call redeem by bridge-eos
+				T::BridgeAssetTo::redeem(asset_symbol, val.deposit, val.validator_address.clone());
 				val.deposit = Zero::zero();
 			} else {
 				let blocks = now_block - val.last_block;
-				fee = val.staking.saturating_mul(val.reward_per_block.saturating_mul(blocks.into()));
+				let fee = val.staking.saturating_mul(
+					val.reward_per_block.saturating_mul(blocks.into())
+				);
 				val.deposit = val.deposit.saturating_sub(fee);
 			}
 
@@ -377,8 +394,6 @@ impl<T: Trait> Module<T> {
 
 			// update validator
 			Validators::<T>::insert(&asset_symbol, &account_id, val);
-
-			// TODO call redeem from bridge-eos
 		}
 	}
 }
