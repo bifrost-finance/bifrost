@@ -28,6 +28,7 @@ use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetSymbol, AssetTrait, BridgeAssetTo, TokenType};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
+use sp_std::prelude::*;
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetConfig<Balance> {
@@ -371,18 +372,21 @@ impl<T: Trait> Module<T> {
 		for (asset_symbol, account_id, mut val) in Validators::<T>::iter() {
 			// calculate validator's deposit balance
 			let asset_config = AssetConfigs::<T>::get(&asset_symbol);
-
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
-			let min_fee = min_reward_per_block.saturating_mul(redeem_duration.into());
-			let mut fee = Zero::zero();
+			let min_fee = val.staking.saturating_mul(
+				min_reward_per_block.saturating_mul(redeem_duration.into())
+			);
 			if min_fee >= val.deposit {
-				fee = val.deposit;
+				// call redeem by bridge-eos
+				T::BridgeAssetTo::redeem(asset_symbol, val.deposit, val.validator_address.clone());
 				val.deposit = Zero::zero();
 			} else {
 				let blocks = now_block - val.last_block;
-				fee = val.staking.saturating_mul(val.reward_per_block.saturating_mul(blocks.into()));
+				let fee = val.staking.saturating_mul(
+					val.reward_per_block.saturating_mul(blocks.into())
+				);
 				val.deposit = val.deposit.saturating_sub(fee);
 			}
 
@@ -390,9 +394,6 @@ impl<T: Trait> Module<T> {
 
 			// update validator
 			Validators::<T>::insert(&asset_symbol, &account_id, val);
-
-			// TODO call redeem from bridge-eos
-			// T::BridgeAssetTo::redeem();
 		}
 	}
 }

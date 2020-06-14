@@ -49,7 +49,7 @@ use frame_system::{
 };
 
 use node_primitives::{
-	AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
+	AssetSymbol, AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
 	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenType,
 };
 use transaction::TxOut;
@@ -928,6 +928,10 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
 
 		Ok(())
 	}
+
+	fn redeem(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 #[allow(deprecated)]

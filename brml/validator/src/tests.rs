@@ -349,7 +349,6 @@ fn withdraw_should_ok() {
 
 		let deposit_amount = 500;
 		assert_ok!(Validator::deposit(origin.clone(), asset_symbol, deposit_amount));
-		let validator = Validator::validators(asset_symbol, origin_id);
 
 		let withdraw_amount = 200;
 		assert_ok!(Validator::withdraw(origin, asset_symbol, withdraw_amount));
@@ -389,7 +388,6 @@ fn withdraw_not_enough_locked_balance_should_error() {
 
 		let deposit_amount = 500;
 		assert_ok!(Validator::deposit(origin.clone(), asset_symbol, deposit_amount));
-		let validator = Validator::validators(asset_symbol, origin_id);
 
 		let withdraw_amount = 1000;
 		assert_noop!(
