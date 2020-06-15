@@ -39,6 +39,7 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
+		assets<T>,
 		brml_validator<T>,
 	}
 }
@@ -80,13 +81,33 @@ impl frame_system::Trait for Test {
 	type ExtrinsicBaseWeight = ();
 }
 
+impl assets::Trait for Test {
+	type Event = TestEvent;
+	type Balance = u64;
+	type AssetId = u32;
+	type Price = u64;
+	type Cost = u64;
+	type Income = u64;
+	type Convert = u64;
+	type AssetRedeem = ();
+	type FetchConvertPrice = ();
+}
+
 impl crate::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
+	type Precision = u32;
+	type AssetTrait = Assets;
+	type BridgeAssetTo = ();
 }
 
 pub type Validator = crate::Module<Test>;
 pub type System = frame_system::Module<Test>;
+pub type Assets = assets::Module<Test>;
+pub type ValidatorError = Error<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {

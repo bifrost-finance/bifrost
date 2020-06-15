@@ -344,11 +344,17 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 pub trait BridgeAssetTo<AccountId, Precision, Balance> {
 	type Error;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
+	fn redeem(symbol: AssetSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn stake(symbol: AssetSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn unstake(symbol: AssetSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 }
 
 impl<A, P, B> BridgeAssetTo<A, P, B> for () {
 	type Error = core::convert::Infallible;
 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, P, B>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: AssetSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: AssetSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: AssetSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 pub trait AssetReward<AssetId, Balance> {
