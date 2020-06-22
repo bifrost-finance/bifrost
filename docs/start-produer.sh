@@ -7,7 +7,7 @@ $BIN_DIR/bin/nodeos --max-transaction-time=1000 \
 --enable-stale-production \
 --producer-name eosio \
 --plugin eosio::chain_api_plugin \
---plugin eosio::net_api_plugin
+--plugin eosio::net_api_plugin \
 --plugin eosio::producer_api_plugin \
 --http-server-address=0.0.0.0:8888 \
 --config-dir $CONF_DIR \
