@@ -8,7 +8,7 @@
 
 ### 1. Pull the image
 ```
-$ docker pull bifrostnetwork/bifrost:w3_m1
+$ docker pull bifrostnetwork/bifrost:web3_m1
 ```
 
 ### 2. Run nodes
@@ -17,33 +17,31 @@ Start two Bifrost nodes.
 
 Alice node: 
 ```
-$ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:w3_m1 --base-path /tmp/alice \
+$ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:web3_m1 --base-path /tmp/alice \
 --unsafe-rpc-external \
 --rpc-port 4321 \
 --rpc-cors all \
 --unsafe-ws-external \
 --ws-port 9944 \
---chain=local \
+--chain=dev \
 --alice \
 --port 30333 \
 --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator --execution Native
 ```
 
 Bob node:
 ```
-$ docker run --name=bob -p 9933:9933 -p 1234:1234 bifrostnetwork/bifrost:w3_m1 --base-path /tmp/bob \
+$ docker run --name=bob -p 9933:9933 -p 1234:1234 bifrostnetwork/bifrost:web3_m1 --base-path /tmp/bob \
 --unsafe-rpc-external \
 --rpc-cors all \
 --rpc-port 1234 \
 --unsafe-ws-external \
 --ws-port 9933 \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
---chain=local \
+--chain=dev \
 --bob \
 --port 30334 \
---telemetry-url ws://telemetry.polkadot.io:1024 \
 --validator --execution Native
 ```
 
@@ -86,7 +84,7 @@ $ cleos wallet unlock # prompt you input the password
 ### 3. Run EOS nodes
 Pull image
 ```
-$ docker pull bifrostnetwork/bifrost-eos-relay:w3_m1
+$ docker pull bifrostnetwork/bifrost-eos-relay:v2.0.4.web3
 ```
 
 start producer node
@@ -114,10 +112,10 @@ docker run --name=relayer -p 8889:8889 -p 9877:9877 bifrostnetwork/bifrost-eos-r
 --plugin eosio::http_plugin \
 --http-server-address 0.0.0.0:8889 \
 --p2p-listen-endpoint 0.0.0.0:9877 \
---p2p-peer-address [eos_producer_ip]:9876 \
+--p2p-peer-address [eos_producer_internal_ip]:9876 \
 --config-dir /home/localnet/node/relay/config \
 --data-dir /home/localnet/node/relay/data -l /home/localnet/node/relay/logging.json \
---bifrost-node=[bifrost_internal_ip]:9944 \
+--bifrost-node=ws://[bifrost_internal_ip]:9944 \
 --bifrost-crossaccount=bifrostcross \
 --bifrost-signer=//Alice
 ```
@@ -225,7 +223,7 @@ to both running Bifrost nodes by tool **subkey**.
 
 Replace [eos_producer_ip] with eos producer internal ip address, and then execute the script. This script will add necessary data to alice node and bob node.
 ```
-$ ./subkey_setting.sh
+$ ./docker_subkey_setting.sh
 ```
 
 EOS side:
