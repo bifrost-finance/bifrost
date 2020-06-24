@@ -1,16 +1,16 @@
 ## All related repotories
 - [bifrost](https://github.com/bifrost-codes/bifrost) (branch: master)
-- [bifrost-eos-relay](https://github.com/bifrost-codes/bifrost-eos-relay) (branch: bridge-plugin)
+- [bifrost-eos-relay](https://github.com/bifrost-codes/bifrost-eos-relay) (branch: v2.0)
 - [bifrost-eos-contracts](https://github.com/bifrost-codes/bifrost-eos-contracts) (branch: master)
-- [rust-eos](https://github.com/bifrost-codes/rust-eos) (branch: use-rust-secp256k1)
+- [rust-eos](https://github.com/bifrost-codes/rust-eos) (branch: master)
 
 ## Bifrost
 
 ### 1. Compile
-Follow the [readme](https://github.com/bifrost-codes/bifrost/tree/ark-bridge-module) to compile a bifrost node.
+Follow the [readme](https://github.com/bifrost-codes/bifrost/tree/master) to compile a bifrost node.
 ```
 $ git clone https://github.com/bifrost-codes/bifrost.git
-$ git checkout ark-bridge-module
+$ git checkout master
 $ cargo build --release
 ```
 
@@ -74,16 +74,17 @@ $ cleos wallet unlock # prompt you input the password
 
 #### Prerequisites
 - Cmake
-- LLVM@4.0
-- Rust(better use latest stable rust)
+- LLVM@7.0(at most 9.0)
+- Rust(at least 1.40)
 - CDT(Contract Development Toolkit). Follow this tutorial to install [cdt](https://developers.eos.io/eosio-home/docs/installing-the-contract-development-toolkit).
 
 #### Compile
 
 ```
-$ git clone -b bridge-plugin https://github.com/bifrost-codes/eos
-$ git submodule update --init --recursive
+$ git clone -b v2.0 https://github.com/bifrost-codes/bifrost-eos-relay.git
 $ cd eos/
+$ git submodule update --init --recursive
+$ git tag v2.0.4 -m 'fix no tag'
 $ mkdir build && cd build
 $ cmake ..
 $ make -j4
