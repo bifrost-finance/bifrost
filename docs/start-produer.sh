@@ -10,5 +10,6 @@ $BIN_DIR/bin/nodeos --max-transaction-time=1000 \
 --plugin eosio::net_api_plugin \
 --plugin eosio::producer_api_plugin \
 --http-server-address=0.0.0.0:8888 \
+--p2p-server-address=0.0.0.0:9876 \
 --config-dir $CONF_DIR \
 --data-dir $DATA_DIR -l $BASE_DIR/logging.json

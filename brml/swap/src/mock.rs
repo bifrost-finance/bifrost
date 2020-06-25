@@ -39,7 +39,7 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_swap,
+		brml_swap<T>,
 		assets<T>,
 	}
 }
@@ -83,15 +83,15 @@ impl frame_system::Trait for Test {
 
 impl crate::Trait for Test {
 	type Fee = u64;
-	type Event = Event;
-	type TokenPool = u64;
-	type VTokenPool = u64;
-	type InVariantPool = u64;
+	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
 	type Cost = u64;
 	type Income = u64;
+	type InvariantValue = u64;
+	type Weight = u64;
+	type MinimumBalance = ();
 }
 
 impl assets::Trait for Test {
