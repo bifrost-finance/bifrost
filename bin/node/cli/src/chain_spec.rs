@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig, VoucherConfig,
+	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -36,7 +36,7 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature};
+pub use node_primitives::{AccountId, Balance, Signature, TokenType};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -322,7 +322,7 @@ pub fn testnet_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key, true)].iter().cloned().collect::<Vec<_>>(),
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
@@ -332,7 +332,48 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		brml_swap: initialize_swap_module(root_key),
 	}
+}
+
+fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
+	let all_pool_token = 1000;
+	let count_of_supported_tokens = 7u8;
+	let global_pool = {
+		let pool = vec![
+			(0, TokenType::Token, 1000, 15),
+			(0, TokenType::VToken, 1000, 15),
+			(1, TokenType::Token, 1000, 15),
+			(1, TokenType::VToken, 1000, 20),
+			(2, TokenType::Token, 1000, 20),
+			(2, TokenType::VToken, 1000, 15),
+		];
+		(pool, 0)
+	};
+	let user_pool = {
+		let pool = vec![
+			(0, TokenType::Token, 1000),
+			(0, TokenType::VToken, 1000),
+			(1, TokenType::Token, 1000),
+			(1, TokenType::VToken, 1000),
+			(2, TokenType::Token, 1000),
+			(2, TokenType::VToken, 1000),
+		];
+		vec![(sudo, (pool, all_pool_token))]
+	};
+	let swap_fee = 150;
+	let exit_fee = 0;
+	let total_weight = global_pool.0.iter().map(|p| p.3).collect();
+
+	Some(SwapConfig {
+		all_pool_token,
+		count_of_supported_tokens,
+		global_pool,
+		user_pool,
+		swap_fee,
+		exit_fee,
+		total_weight
+	})
 }
 
 fn development_config_genesis() -> GenesisConfig {
@@ -479,7 +520,7 @@ pub fn bifrost_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// root_key has the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key, true)].iter().cloned().collect::<Vec<_>>(),
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
@@ -489,6 +530,7 @@ pub fn bifrost_genesis(
 				None
 			}
 		},
+		brml_swap: initialize_swap_module(root_key),
 	}
 }
 

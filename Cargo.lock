@@ -504,13 +504,16 @@ name = "brml-swap"
 version = "0.3.2"
 dependencies = [
  "brml-assets 0.3.2",
+ "float-cmp 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "frame-support 2.0.0-dev (git+https://github.com/paritytech/substrate)",
  "frame-system 2.0.0-dev (git+https://github.com/paritytech/substrate)",
  "node-primitives 0.3.2",
  "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.106 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-core 2.0.0-dev (git+https://github.com/paritytech/substrate)",
  "sp-io 2.0.0-dev (git+https://github.com/paritytech/substrate)",
  "sp-runtime 2.0.0-dev (git+https://github.com/paritytech/substrate)",
+ "substrate-fixed 0.5.4 (git+https://github.com/encointer/substrate-fixed)",
 ]
 
 [[package]]
@@ -1273,6 +1276,14 @@ dependencies = [
  "libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "miniz_oxide 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "float-cmp"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "num-traits 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -6960,6 +6971,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "substrate-fixed"
+version = "0.5.4"
+source = "git+https://github.com/encointer/substrate-fixed#2c52170fa02507dc5b52c516061302670860869a"
+dependencies = [
+ "parity-scale-codec 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typenum 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "substrate-frame-rpc-system"
 version = "2.0.0-dev"
 source = "git+https://github.com/paritytech/substrate#e7457b1eb9980596301fe1afd36478a6725157ef"
@@ -8291,6 +8311,7 @@ dependencies = [
 "checksum fixed-hash 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "11498d382790b7a8f2fd211780bec78619bba81cdad3a283997c0c41f836759c"
 "checksum fixedbitset 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "37ab347416e802de484e4d03c7316c48f1ecb56574dfd4a46a80f173ce1de04d"
 "checksum flate2 1.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2cfff41391129e0a856d6d822600b8d71179d46879e310417eb9c762eb178b42"
+"checksum float-cmp 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e1267f4ac4f343772758f7b1bdcbe767c218bbab93bb432acbf5162bbf85a6c4"
 "checksum fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 "checksum fork-tree 2.0.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum frame-benchmarking 2.0.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"
@@ -8741,6 +8762,7 @@ dependencies = [
 "checksum substrate-bip39 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c004e8166d6e0aa3a9d5fa673e5b7098ff25f930de1013a21341988151e681bb"
 "checksum substrate-browser-utils 0.8.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-build-script-utils 2.0.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"
+"checksum substrate-fixed 0.5.4 (git+https://github.com/encointer/substrate-fixed)" = "<none>"
 "checksum substrate-frame-rpc-system 2.0.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-prometheus-endpoint 0.8.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"
 "checksum substrate-test-client 2.0.0-dev (git+https://github.com/paritytech/substrate)" = "<none>"

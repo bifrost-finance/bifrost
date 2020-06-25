@@ -116,3 +116,41 @@ fn swap_token_to_vtoken_should_be_ok() {
 		assert_eq!(<InVariant<Test>>::get(vtoken_id), (30, 20, token_pool * vtoken_pool)); // check pool change
 	});
 }
+
+//1_099_511_627_776.0
+//1_000_000_000_000.0
+//02_964_065_097_341_038_956
+#[test]
+fn test_u128() {
+	use fixed_point::{types::*, traits::*, FixedU128, transcendental::{pow, powi}};
+
+	let left = fixed_point::FixedI128::<extra::U64>::from_num(2u128);
+	let right = fixed_point::FixedI128::<extra::U64>::from_num(4u32);
+
+	let t: Result<I64F64, _> = pow(left, right);
+	dbg!(t);
+}
+
+#[test]
+fn calculate_in_given_out_should_work() {
+	let t = Swap::calculate_out_given_in(1000, 1, 1000, 49, 500, 0);
+	dbg!(t);
+	let t = Swap::calculate_out_given_in(1008, 49, 500, 1, 8, 0);
+	dbg!(t);
+
+	let alice = 1u64;
+
+	let dot_token = 0.into();
+	let ksm_token = 1.into();
+
+	// add liquidity
+	new_test_ext().execute_with(|| {
+		let assets = vec![
+			(dot_token, 1000, Some(1)),
+			(ksm_token, 1000, Some(49)),
+		];
+		Swap::add_all_assets_liquidity(Origin::signed(alice), assets, None, None);
+
+//		Swap::swap_out_given_in()
+	});
+}
