@@ -88,12 +88,12 @@ decl_storage! {
 		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
-        /// referrer must be unique, so check it unique while a new referrer incoming.
-        /// and insert the new channel to the
+		/// referrer must be unique, so check it unique while a new referrer incoming.
+		/// and insert the new channel to the
 		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId =>
-            (Vec<(T::AccountId, T::Balance)>, T::Balance);
-        /// referer channels for all users
-        AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
+			(Vec<(T::AccountId, T::Balance)>, T::Balance);
+		/// referer channels for all users
+		AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
 		/// Convert pool
 		Pool get(fn pool): map hasher(blake2_128_concat) T::AssetId => ConvertPool<T::Balance>;
 	}

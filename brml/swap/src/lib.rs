@@ -174,8 +174,7 @@ decl_module! {
 			// ensure new pool's balances bigger than MinimumBalance
 			ensure!(new_pool_token >= T::MinimumBalance::get(), Error::<T>::LessThanMinimumBalance);
 
-			// three times db reading
-			let provider_pool = UserPool::<T>::get(&provider);
+			// two times db reading
 			let all_pool_tokens = BalancerPoolToken::<T>::get();
 			let whole_pool = GlobalPool::<T>::get();
 
@@ -185,14 +184,15 @@ decl_module! {
 				// ensure user have the token
 				ensure!(T::AssetTrait::token_exists(p.0), Error::<T>::TokenNotExist);
 
-				// about the algorithm: https://balancer.finance/whitepaper/#all-asset-depositwithdrawal
-				let need_deposited = new_pool_token.saturating_mul(p.2) / all_pool_tokens; // todo, div may lose precision
-				// ensure user have enough token to deposit to this pool
 				let balances = T::AssetTrait::get_account_asset(&p.0, p.1, &provider).balance;
+				// about the algorithm: https://balancer.finance/whitepaper/#all-asset-depositwithdrawal
+				let need_deposited = new_pool_token.saturating_mul(balances) / all_pool_tokens; // todo, div may lose precision
+				// ensure user have enough token to deposit to this pool
 				ensure!(balances >= need_deposited, Error::<T>::NotEnoughBalance);
 				new_user_pool.push((p.0, p.1, need_deposited));
 			}
 
+			let provider_pool = UserPool::<T>::get(&provider);
 			// first time to add liquidity
 			if provider_pool.0.is_empty() || provider_pool.1 == 0.into() {
 				UserPool::<T>::mutate(&provider, |pool| {
@@ -223,6 +223,13 @@ decl_module! {
 				*pool_token = pool_token.saturating_add(new_pool_token);
 			});
 
+			// update global pool
+			GlobalPool::<T>::mutate(|pool| {
+				for (p, n) in pool.0.iter_mut().zip(new_user_pool.iter()) {
+					p.2 = p.2.saturating_add(n.2);
+				}
+			});
+
 			Self::deposit_event(RawEvent::AddLiquiditySuccess);
 		}
 
@@ -231,8 +238,8 @@ decl_module! {
 			origin,
 			token_symbol: AssetSymbol,
 			token_type: TokenType,
-			#[compact] token_amout_in: T::Balance,
-		) {
+			#[compact] token_amount_in: T::Balance,
+		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
 			let token_id = T::AssetId::from(token_symbol as u32);
@@ -240,25 +247,49 @@ decl_module! {
 			// ensure user have token
 			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
 
-			// caculate how many pool token will be issued to user
-			let new_pool_token = todo!("Self::calculate_pool_out_given_single_in()");
-
 			let balances = T::AssetTrait::get_account_asset(&token_id, token_type, &provider).balance;
 			// ensure this use have enough balanes to deposit
-			ensure!(balances >= new_pool_token, Error::<T>::NotEnoughBalance);
+			ensure!(balances >= token_amount_in, Error::<T>::NotEnoughBalance);
+
+			// get current token balance and weight in the pool
+			let (token_balance_in, token_weight_in) = {
+				let whole_pool = GlobalPool::<T>::get();
+				let mut token_balance_in = 0.into();
+				let mut token_weight_in = 0.into();
+				for p in whole_pool.0.iter() {
+					if token_id == p.0 && token_type == p.1 {
+						token_balance_in = p.2;
+						token_weight_in = p.3;
+						break;
+					}
+				}
+				(token_balance_in, token_weight_in)
+			};
+
+			let pool_supply = BalancerPoolToken::<T>::get();
+
+			let total_weight = TotalWeight::<T>::get();
+			let swap_fee = SwapFee::<T>::get();
+
+			// caculate how many pool token will be issued to user
+			let new_pool_token = {
+				let issued_pool_token = Self::calculate_pool_out_given_single_in(token_balance_in, token_weight_in, token_amount_in, total_weight, pool_supply, swap_fee)?;
+				let pool_token_issued = u128::from_fixed(issued_pool_token);
+				TryInto::<T::Balance>::try_into(pool_token_issued).map_err(|_| Error::<T>::ConvertFailure)?
+			};
 
 			// first time to add liquidity
 			if !UserSinglePool::<T>::contains_key((&provider, token_id, token_type)) {
 				// add it to user's single pool
 				UserSinglePool::<T>::insert(
 					(&provider, token_id, token_type),
-					(token_amout_in, new_pool_token)
+					(token_amount_in, new_pool_token)
 				);
 			} else {
 				// add more liquidity to current single pool
 				let single_pool = UserSinglePool::<T>::contains_key((&provider, token_id, token_type));
 				UserSinglePool::<T>::mutate((&provider, token_id, token_type), |pool| {
-					pool.0 = pool.0.saturating_add(token_amout_in);
+					pool.0 = pool.0.saturating_add(token_amount_in);
 					pool.1 = pool.1.saturating_add(new_pool_token);
 				});
 			}
@@ -269,9 +300,10 @@ decl_module! {
 			});
 
 			// destroy token from user
-			T::AssetTrait::asset_redeem(token_id, token_type, provider, token_amout_in);
+			T::AssetTrait::asset_redeem(token_id, token_type, provider, token_amount_in);
 
 			Self::deposit_event(RawEvent::SingleAssetDepositSuccess);
+			Ok(())
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
@@ -314,7 +346,12 @@ decl_module! {
 			ensure!(pool_token_in <= pool_supply, Error::<T>::NotEnoughBalance);
 
 			// calculate how many balance user will get
-			let token_amount = Self::calculate_single_out_given_pool_in(token_weight, pool_token_in, total_weight, user_single_pool.0, pool_supply, swap_fee, exit_fee)?;
+			let token_amount = {
+				let token_amount_out = Self::calculate_single_out_given_pool_in(token_weight, pool_token_in, total_weight, user_single_pool.0, pool_supply, swap_fee, exit_fee)?;
+				let token_amount_out = u128::from_fixed(token_amount_out);
+
+				TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)?
+			};
 
 			// update user asset
 			T::AssetTrait::asset_issue(token_id, token_type, remover.clone(), token_amount);
@@ -386,7 +423,6 @@ decl_module! {
 			min_token_amount_out: Option<T::Balance>,
 			token_out_symbol: AssetSymbol,
 			token_out_ype: TokenType,
-			ausd: Option<T::Balance>,
 			max_price: Option<T::Balance>
 		) -> DispatchResult {
 			let swaper = ensure_signed(origin)?;
@@ -398,7 +434,7 @@ decl_module! {
 			ensure!(UserPool::<T>::contains_key(&swaper), Error::<T>::NotExistedCurrentPool);
 
 			let token_in_id = T::AssetId::from(token_in_symbol as u32);
-			let token_out_id = T::AssetId::from(token_in_symbol as u32);
+			let token_out_id = T::AssetId::from(token_out_symbol as u32);
 
 			let swaper_pool = UserPool::<T>::get(&swaper);
 			// ensure this user have enough balance to make a transaction
@@ -433,7 +469,12 @@ decl_module! {
 			};
 
 			// do a swap
-			let token_amount_out = Self::calculate_out_given_in(token_balance_in, token_weight_in, token_amount_in, token_balance_out, token_weight_out, swap_fee)?;
+			let token_amount_out = {
+				let fixed_token_amount_out = Self::calculate_out_given_in(token_balance_in, token_weight_in, token_amount_in, token_balance_out, token_weight_out, swap_fee)?;
+				let token_amount_out = u128::from_fixed(fixed_token_amount_out);
+
+				TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)?
+			};
 
 			// ensure token_amount_in is bigger than you exepect
 			// ensure!(token_amount_in >= min_token_amount_out, "");
@@ -485,7 +526,7 @@ impl<T: Trait> Module<T> {
 		let fixed = {
 			let u = FixedI128::<extra::U64>::from_num(u);
 			let d = FixedI128::<extra::U64>::from_num(d);
-			u / d
+			u.saturating_div(d)
 		};
 
 		Ok(fixed)
@@ -497,15 +538,16 @@ impl<T: Trait> Module<T> {
 	pub(crate) fn value_function(pool: &[(T::AssetId, T::Balance, T::Weight)]) -> Result<T::InvariantValue, Error<T>> {
 		let total_weight = Self::total_weight(pool);
 
-		let mut v = FixedI128::<extra::U64>::from_num(0);
+		let mut v = FixedI128::<extra::U64>::from_num(1);
 		for p in pool.iter() {
 			let base = {
 				let v = TryInto::<u128>::try_into(p.1).map_err(|_| Error::<T>::ConvertFailure)?;
 				FixedI128::<extra::U64>::from_num(v)
 			};
 			let exp = Self::weight_ratio(p.2, total_weight)?;
+			let power = transcendental::pow(base, exp).map_err(|_| Error::<T>::FixedPointError)?;
 
-			v = v.saturating_mul(transcendental::pow(base, exp).map_err(|_| Error::<T>::FixedPointError)?);
+			v = v.saturating_mul(power);
 		}
 		let fixed_v = u128::from_fixed(v);
 
@@ -528,7 +570,7 @@ impl<T: Trait> Module<T> {
 		token_balance_out: T::Balance,
 		token_weight_out: T::Weight,
 		swap_fee: T::Fee
-	) -> Result<T::Balance, Error<T>> {
+	) -> Result<I64F64, Error<T>> {
 		// convert to u128
 		let token_balance_in = TryInto::<u128>::try_into(token_balance_in).map_err(|_| Error::<T>::ConvertFailure)?;
 		let token_weight_in = TryInto::<u128>::try_into(token_weight_in).map_err(|_| Error::<T>::ConvertFailure)?;
@@ -541,12 +583,15 @@ impl<T: Trait> Module<T> {
 		let token_weight_in = FixedI128::<extra::U64>::from_num(token_weight_in);
 		let token_balance_out = FixedI128::<extra::U64>::from_num(token_balance_out);
 		let token_weight_out = FixedI128::<extra::U64>::from_num(token_weight_out);
-		let swap_fee = FixedI128::<extra::U64>::from_num(1).saturating_sub(FixedI128::<extra::U64>::from_num(swap_fee));
+		let swap_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			let fee = FixedI128::<extra::U64>::from_num(swap_fee).saturating_div(precision);
+			FixedI128::<extra::U64>::from_num(1).saturating_sub(fee)
+		};
 
 		let fixed_price = token_balance_in.saturating_mul(token_weight_out) / (token_weight_in.saturating_mul(token_balance_out).saturating_mul(swap_fee));
-		let price = u128::from_fixed(fixed_price);
-
-		TryInto::<T::Balance>::try_into(price).map_err(|_| Error::<T>::ConvertFailure)
+		Ok(fixed_price)
 	}
 
 	/**********************************************************************************************
@@ -566,7 +611,7 @@ impl<T: Trait> Module<T> {
 		token_weight_out: T::Weight,
 		token_amount_out: T::Balance,
 		swap_fee: T::Fee
-	) -> Result<T::Balance, Error<T>> {
+	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in = TryInto::<u128>::try_into(token_balance_in).map_err(|_| Error::<T>::ConvertFailure)?;
 		let token_balance_out = TryInto::<u128>::try_into(token_balance_out).map_err(|_| Error::<T>::ConvertFailure)?;
@@ -576,7 +621,12 @@ impl<T: Trait> Module<T> {
 		let token_balance_in = I64F64::from_num(token_balance_in);
 		let token_balance_out = FixedI128::<extra::U64>::from_num(token_balance_out);
 		let token_amount_out = FixedI128::<extra::U64>::from_num(token_amount_out);
-		let swap_fee = FixedI128::<extra::U64>::from_num(1).saturating_sub(FixedI128::<extra::U64>::from_num(swap_fee));
+		let swap_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			let fee = FixedI128::<extra::U64>::from_num(swap_fee).saturating_div(precision);
+			FixedI128::<extra::U64>::from_num(1).saturating_sub(fee)
+		};
 
 		// pow exp
 		let weight_ratio = Self::weight_ratio(token_weight_in, token_weight_out)?;
@@ -588,22 +638,19 @@ impl<T: Trait> Module<T> {
 			upper.saturating_div(swap_fee)
 		};
 
-		// convert to T::Balance
-		let token_amount_in = u128::from_fixed(fixed_token_amount_in);
-
-		TryInto::<T::Balance>::try_into(token_amount_in).map_err(|_| Error::<T>::ConvertFailure)
+		Ok(fixed_token_amount_in)
 	}
 
 	/**********************************************************************************************
-    // calcOutGivenIn                                                                            //
-    // aO = tokenAmountOut                                                                       //
-    // bO = tokenBalanceOut                                                                      //
-    // bI = tokenBalanceIn              /      /            bI             \    (wI / wO) \      //
-    // aI = tokenAmountIn    aO = bO * |  1 - | --------------------------  | ^            |     //
-    // wI = tokenWeightIn               \      \ ( bI + ( aI * ( 1 - sF )) /              /      //
-    // wO = tokenWeightOut                                                                       //
-    // sF = swapFee                                                                              //
-    **********************************************************************************************/
+	// calcOutGivenIn                                                                            //
+	// aO = tokenAmountOut                                                                       //
+	// bO = tokenBalanceOut                                                                      //
+	// bI = tokenBalanceIn              /      /            bI             \    (wI / wO) \      //
+	// aI = tokenAmountIn    aO = bO * |  1 - | --------------------------  | ^            |     //
+	// wI = tokenWeightIn               \      \ ( bI + ( aI * ( 1 - sF )) /              /      //
+	// wO = tokenWeightOut                                                                       //
+	// sF = swapFee                                                                              //
+	**********************************************************************************************/
 	pub(crate) fn calculate_out_given_in(
 		token_balance_in: T::Balance,
 		token_weight_in: T::Weight,
@@ -611,7 +658,7 @@ impl<T: Trait> Module<T> {
 		token_balance_out: T::Balance,
 		token_weight_out: T::Weight,
 		swap_fee: T::Fee
-	) -> Result<T::Balance, Error<T>> {
+	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in = TryInto::<u128>::try_into(token_balance_in).map_err(|_| Error::<T>::ConvertFailure)?;
 		let token_balance_out = TryInto::<u128>::try_into(token_balance_out).map_err(|_| Error::<T>::ConvertFailure)?;
@@ -621,7 +668,12 @@ impl<T: Trait> Module<T> {
 		let token_balance_in = I64F64::from_num(token_balance_in);
 		let token_balance_out = FixedI128::<extra::U64>::from_num(token_balance_out);
 		let token_amount_in = FixedI128::<extra::U64>::from_num(token_amount_in);
-		let swap_fee = FixedI128::<extra::U64>::from_num(1).saturating_sub(FixedI128::<extra::U64>::from_num(swap_fee));
+		let swap_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			let fee = FixedI128::<extra::U64>::from_num(swap_fee).saturating_div(precision);
+			FixedI128::<extra::U64>::from_num(1).saturating_sub(fee)
+		};
 
 		// pow exp
 		let weight_ratio = Self::weight_ratio(token_weight_in, token_weight_out)?;
@@ -636,10 +688,7 @@ impl<T: Trait> Module<T> {
 			token_balance_out.saturating_mul(rhs)
 		};
 
-		// convert to T::Balance
-		let token_amount_out = u128::from_fixed(fixed_token_amount_out);
-
-		TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)
+		Ok(fixed_token_amount_out)
 	}
 
 	/**********************************************************************************************
@@ -659,7 +708,7 @@ impl<T: Trait> Module<T> {
 		token_total_weight: T::Weight,
 		pool_supply: T::Balance,
 		swap_fee: T::Fee
-	) -> Result<T::Balance, Error<T>> {
+	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in = TryInto::<u128>::try_into(token_balance_in).map_err(|_| Error::<T>::ConvertFailure)?;
 		let token_amount_in = TryInto::<u128>::try_into(token_amount_in).map_err(|_| Error::<T>::ConvertFailure)?;
@@ -669,7 +718,11 @@ impl<T: Trait> Module<T> {
 		let token_balance_in = I64F64::from_num(token_balance_in);
 		let token_amount_in = FixedI128::<extra::U64>::from_num(token_amount_in);
 		let pool_supply = FixedI128::<extra::U64>::from_num(pool_supply);
-		let swap_fee = FixedI128::<extra::U64>::from_num(swap_fee);
+		let swap_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			FixedI128::<extra::U64>::from_num(swap_fee).saturating_div(precision)
+		};
 
 		let weight_ratio = Self::weight_ratio(token_weight_in, token_total_weight)?;
 
@@ -680,10 +733,7 @@ impl<T: Trait> Module<T> {
 			pool_supply.saturating_mul(lhs.saturating_sub(FixedI128::<extra::U64>::from_num(1)))
 		};
 
-		// convert to T::Balance
-		let pool_token_issued = u128::from_fixed(pool_token_issued);
-
-		TryInto::<T::Balance>::try_into(pool_token_issued).map_err(|_| Error::<T>::ConvertFailure)
+		Ok(pool_token_issued)
 	}
 
 	/**********************************************************************************************
@@ -696,7 +746,7 @@ impl<T: Trait> Module<T> {
 	// tW = totalWeight                          |  1 - ----  |  * sF                            //
 	// sF = swapFee                               \      tW  /                                   //
 	**********************************************************************************************/
-	pub(crate) fn calculate_single_in_given_out(
+	pub(crate) fn calculate_single_in_given_pool_out(
 		token_balance_in: T::Balance,
 		token_weight_in: T::Weight,
 		token_total_weight: T::Weight,
@@ -713,7 +763,11 @@ impl<T: Trait> Module<T> {
 		let token_balance_in = I64F64::from_num(token_balance_in);
 		let pool_amount_out = FixedI128::<extra::U64>::from_num(pool_amount_out);
 		let pool_supply = FixedI128::<extra::U64>::from_num(pool_supply);
-		let swap_fee = FixedI128::<extra::U64>::from_num(swap_fee);
+		let swap_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			FixedI128::<extra::U64>::from_num(swap_fee).saturating_div(precision)
+		};
 
 		let weight_ratio = Self::weight_ratio(token_weight_in, token_total_weight)?;
 
@@ -750,8 +804,8 @@ impl<T: Trait> Module<T> {
 		token_balance_out: T::Balance,
 		pool_supply: T::Balance,
 		swap_fee: T::Fee,
-		exit_fee: T::Fee,
-	) -> Result<T::Balance, Error<T>> {
+		exit_fee: T::Fee
+	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_out = TryInto::<u128>::try_into(token_balance_out).map_err(|_| Error::<T>::ConvertFailure)?;
 		let pool_amount_in = TryInto::<u128>::try_into(pool_amount_in).map_err(|_| Error::<T>::ConvertFailure)?;
@@ -762,8 +816,16 @@ impl<T: Trait> Module<T> {
 		let token_balance_out = I64F64::from_num(token_balance_out);
 		let pool_amount_in = FixedI128::<extra::U64>::from_num(pool_amount_in);
 		let pool_supply = FixedI128::<extra::U64>::from_num(pool_supply);
-		let swap_fee = FixedI128::<extra::U64>::from_num(swap_fee);
-		let exit_fee = FixedI128::<extra::U64>::from_num(exit_fee);
+		let swap_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			FixedI128::<extra::U64>::from_num(swap_fee).saturating_div(precision)
+		};
+		let exit_fee = {
+			let precision = TryInto::<u128>::try_into(T::FeePrecision::get()).map_err(|_| Error::<T>::ConvertFailure)?;
+			let precision = FixedI128::<extra::U64>::from_num(precision);
+			FixedI128::<extra::U64>::from_num(exit_fee).saturating_div(precision)
+		};
 
 		let weight_ratio = Self::weight_ratio(token_weight_in, token_total_weight)?;
 		let base = {
@@ -779,11 +841,12 @@ impl<T: Trait> Module<T> {
 		};
 
 		let token_amount_out = lhs.saturating_mul(rhs);
+		Ok(token_amount_out)
 
 		// convert to T::Balance
-		let token_amount_out = u128::from_fixed(token_amount_out);
-
-		TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)
+//		let token_amount_out = u128::from_fixed(token_amount_out);
+//
+//		TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)
 	}
 }
 

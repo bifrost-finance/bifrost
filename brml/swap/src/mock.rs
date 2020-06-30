@@ -23,6 +23,8 @@ use sp_core::H256;
 use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
 
+const DOLLARS: u64 = 1_000_000_000_000u64;
+
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
 		brml_swap::Swap,
@@ -81,6 +83,11 @@ impl frame_system::Trait for Test {
 	type ExtrinsicBaseWeight = ();
 }
 
+parameter_types! {
+	pub const FeePrecision: u64 = DOLLARS / 10_000_000;
+	pub const MinimumBalance: u64 = 0 * DOLLARS;
+}
+
 impl crate::Trait for Test {
 	type Fee = u64;
 	type Event = TestEvent;
@@ -91,7 +98,8 @@ impl crate::Trait for Test {
 	type Income = u64;
 	type InvariantValue = u64;
 	type Weight = u64;
-	type MinimumBalance = ();
+	type MinimumBalance = MinimumBalance;
+	type FeePrecision = FeePrecision;
 }
 
 impl assets::Trait for Test {

@@ -337,27 +337,27 @@ pub fn testnet_genesis(
 }
 
 fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
-	let all_pool_token = 1000;
+	let all_pool_token = 1000 * DOLLARS;
 	let count_of_supported_tokens = 7u8;
 	let global_pool = {
 		let pool = vec![
-			(0, TokenType::Token, 1000, 15),
-			(0, TokenType::VToken, 1000, 15),
-			(1, TokenType::Token, 1000, 15),
-			(1, TokenType::VToken, 1000, 20),
-			(2, TokenType::Token, 1000, 20),
-			(2, TokenType::VToken, 1000, 15),
+			(0, TokenType::Token, 1000 * DOLLARS, 15),
+			(0, TokenType::VToken, 1000 * DOLLARS, 15),
+			(1, TokenType::Token, 1000 * DOLLARS, 15),
+			(1, TokenType::VToken, 1000 * DOLLARS, 20),
+			(2, TokenType::Token, 1000 * DOLLARS, 20),
+			(2, TokenType::VToken, 1000 * DOLLARS, 15),
 		];
 		(pool, 0)
 	};
 	let user_pool = {
 		let pool = vec![
-			(0, TokenType::Token, 1000),
-			(0, TokenType::VToken, 1000),
-			(1, TokenType::Token, 1000),
-			(1, TokenType::VToken, 1000),
-			(2, TokenType::Token, 1000),
-			(2, TokenType::VToken, 1000),
+			(0, TokenType::Token, 1000 * DOLLARS),
+			(0, TokenType::VToken, 1000 * DOLLARS),
+			(1, TokenType::Token, 1000 * DOLLARS),
+			(1, TokenType::VToken, 1000 * DOLLARS),
+			(2, TokenType::Token, 1000 * DOLLARS),
+			(2, TokenType::VToken, 1000 * DOLLARS),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
