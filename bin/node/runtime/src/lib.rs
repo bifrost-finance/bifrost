@@ -722,7 +722,7 @@ impl brml_bridge_eos::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const FeePrecision: Balance = DOLLARS / 1_000_000;
+	pub const FeePrecision: Balance = DOLLARS / 10_000_000;
 	pub const MinimumBalance: Balance = 1 * DOLLARS;
 }
 
