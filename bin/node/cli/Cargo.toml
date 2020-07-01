@@ -97,7 +97,7 @@ browser-utils = { package = "substrate-browser-utils", git = "https://github.com
 
 # for initialize producer schedule
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
-eos-chain = { git = "https://github.com/bifrost-codes/rust-eos" }
+eos-chain = { git = "https://github.com/bifrost-finance/rust-eos" }
 
 # brml rpc crates
 brml-assets-rpc = { path = "../../../brml/assets/rpc" }

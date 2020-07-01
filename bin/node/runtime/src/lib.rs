@@ -735,7 +735,7 @@ impl brml_swap::Trait for Runtime {
 	type Cost = Cost;
 	type Income = Income;
 	type InvariantValue = Balance;
-	type Weight = Balance;
+	type PoolWeight = Balance;
 	type MinimumBalance = MinimumBalance;
 	type FeePrecision = FeePrecision;
 }

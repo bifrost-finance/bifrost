@@ -2,7 +2,7 @@
 <img src=./docs/web3_foundation_grants_badge_black.svg width = 400>
 </p>
 
-[![Build Status](https://travis-ci.org/bifrost-codes/bifrost.svg?branch=master)](https://travis-ci.org/bifrost-codes/bifrost)
+[![Build Status](https://travis-ci.org/bifrost-finance/bifrost.svg?branch=master)](https://travis-ci.org/bifrost-finance/bifrost)
 
 # Bifrost Node
 

@@ -1,15 +1,15 @@
 ## All related repotories
-- [bifrost](https://github.com/bifrost-codes/bifrost) (branch: master)
-- [bifrost-eos-relay](https://github.com/bifrost-codes/bifrost-eos-relay) (branch: v2.0)
-- [bifrost-eos-contracts](https://github.com/bifrost-codes/bifrost-eos-contracts) (branch: master)
-- [rust-eos](https://github.com/bifrost-codes/rust-eos) (branch: master)
+- [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: v2.0)
+- [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
+- [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: master)
 
 ## Bifrost
 
 ### 1. Compile
-Follow the [readme](https://github.com/bifrost-codes/bifrost/tree/master) to compile a bifrost node.
+Follow the [readme](https://github.com/bifrost-finance/bifrost/tree/master) to compile a bifrost node.
 ```
-$ git clone https://github.com/bifrost-codes/bifrost.git
+$ git clone https://github.com/bifrost-finance/bifrost.git
 $ git checkout master
 $ cargo build --release
 ```
@@ -81,7 +81,7 @@ $ cleos wallet unlock # prompt you input the password
 #### Compile
 
 ```
-$ git clone -b v2.0 https://github.com/bifrost-codes/bifrost-eos-relay.git
+$ git clone -b v2.0 https://github.com/bifrost-finance/bifrost-eos-relay.git
 $ cd eos/
 $ git submodule update --init --recursive
 $ git tag v2.0.4 -m 'fix no tag'
@@ -132,7 +132,7 @@ $ ./build/bin/nodeos --delete-all-blocks --delete-state-history --delete-relay-h
 
 #### Compile
 ```
-$ git clone https://github.com/bifrost-codes/bifrost-eos-contracts
+$ git clone https://github.com/bifrost-finance/bifrost-eos-contracts
 $ cd bifrost-eos-contracts
 $ mkdir build && cd build
 $ cmake ..

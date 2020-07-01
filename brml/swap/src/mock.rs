@@ -97,7 +97,7 @@ impl crate::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type InvariantValue = u64;
-	type Weight = u64;
+	type PoolWeight = u64;
 	type MinimumBalance = MinimumBalance;
 	type FeePrecision = FeePrecision;
 }
