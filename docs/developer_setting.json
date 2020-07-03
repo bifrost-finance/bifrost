@@ -169,5 +169,20 @@
   "KeyWeight": {
     "key": "PublicKey",
     "weight": "u16"
-  }
+  },
+  "InvariantValue": "Balance",
+  "PoolWeight": "Balance",
+  "AssetConfig": {
+    "redeem_duration": "u16",
+    "min_reward_per_block": "Balance"
+  },
+  "ValidatorRegister": {
+    "last_block": "BlockNumber",
+    "deposit": "Balance",
+    "need": "Balance",
+    "staking": "Balance",
+    "reward_per_block": "Balance",
+    "validator_address": "Vec<u8>"
+  },
+  "BlockNumber": "u32"
 }

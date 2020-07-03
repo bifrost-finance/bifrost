@@ -721,17 +721,32 @@ impl brml_bridge_eos::Trait for Runtime {
 	type AssetTrait = Assets;
 }
 
+parameter_types! {
+	pub const InitPoolSupply: Balance = 1000 * DOLLARS;
+	// when in a trade, trade_amount / all_amount <= 1 / 2
+	pub const MaximumSwapInRatio: Balance = 2;
+	pub const MinimumBalance: Balance = 1 * DOLLARS;
+	pub const MaximumSwapFee: Balance = 10_000; // 10%
+	pub const MinimumSwapFee: Balance = 1; // 0.0001%
+	pub const FeePrecision: Balance = DOLLARS / 10_000_000;
+}
+
 impl brml_swap::Trait for Runtime {
 	type Fee = Balance;
 	type Event = Event;
-	type TokenPool = Balance;
-	type VTokenPool = Balance;
-	type InVariantPool = Balance;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Cost = Cost;
 	type Income = Income;
+	type InvariantValue = Balance;
+	type PoolWeight = Balance;
+	type InitPoolSupply = InitPoolSupply;
+	type MaximumSwapInRatio = MaximumSwapInRatio;
+	type MinimumBalance = MinimumBalance;
+	type MaximumSwapFee = MaximumSwapFee;
+	type MinimumSwapFee = MinimumSwapFee;
+	type FeePrecision = FeePrecision;
 }
 
 impl brml_validator::Trait for Runtime {
@@ -796,7 +811,7 @@ construct_runtime!(
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-		Swap: brml_swap::{Module, Call, Storage, Event},
+		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		Validator: brml_validator::{Module, Call, Storage, Event<T>},
 		// chainlink
