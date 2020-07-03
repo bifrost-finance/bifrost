@@ -84,8 +84,12 @@ impl frame_system::Trait for Test {
 }
 
 parameter_types! {
+	pub const InitPoolSupply: u64 = 1000;
+	pub const MaximumSwapInRatio: u64 = 2;
+	pub const MinimumBalance: u64 = 10;
+	pub const MaximumSwapFee: u64 = 10_000; // 10%
+	pub const MinimumSwapFee: u64 = 1; // 0.0001%
 	pub const FeePrecision: u64 = DOLLARS / 10_000_000;
-	pub const MinimumBalance: u64 = 0 * DOLLARS;
 }
 
 impl crate::Trait for Test {
@@ -98,7 +102,11 @@ impl crate::Trait for Test {
 	type Income = u64;
 	type InvariantValue = u64;
 	type PoolWeight = u64;
+	type InitPoolSupply = InitPoolSupply;
+	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumBalance = MinimumBalance;
+	type MaximumSwapFee = MaximumSwapFee;
+	type MinimumSwapFee = MinimumSwapFee;
 	type FeePrecision = FeePrecision;
 }
 

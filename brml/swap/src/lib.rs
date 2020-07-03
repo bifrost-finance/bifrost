@@ -23,9 +23,10 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use core::convert::{From, Into, TryInto};
+use core::ops::Div;
 use fixed_point::{FixedI128, types::{*, extra}, transcendental, traits::FromFixed};
 use frame_support::traits::{Get};
-use frame_support::{decl_event, decl_error, decl_module, decl_storage, debug, ensure, Parameter, dispatch::DispatchResult, StorageValue, IterableStorageMap};
+use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter, dispatch::DispatchResult, StorageValue};
 use frame_system::{self as system, ensure_signed};
 use node_primitives::{AssetTrait, AssetSymbol, TokenType};
 use sp_runtime::traits::{MaybeSerializeDeserialize, Member, Saturating, AtLeast32Bit, Zero};
@@ -58,10 +59,14 @@ pub trait Trait: frame_system::Trait {
 	type InvariantValue: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize + From<Self::Balance> + From<Self::Balance>;
 
 	/// Weight
-	type PoolWeight: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize+ Into<Self::Balance> + From<Self::Balance> + Into<Self::InvariantValue>;
+	type PoolWeight: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize+ Into<Self::Balance> + From<Self::Balance>;
 
 	/// Some limitations on Balancer protocol
+	type InitPoolSupply: Get<Self::Balance>;
+	type MaximumSwapInRatio: Get<Self::Balance>;
 	type MinimumBalance: Get<Self::Balance>;
+	type MaximumSwapFee: Get<Self::Fee>;
+	type MinimumSwapFee: Get<Self::Fee>;
 	type FeePrecision: Get<Self::Balance>;
 }
 
@@ -69,10 +74,8 @@ decl_event! {
 	pub enum Event<T> where <T as Trait>::Balance, {
 		AddLiquiditySuccess,
 		RemoveLiquiditySuccess,
-		WeightedAssetsDepositSuccess,
-		WeightedAssetsWithdrawSuccess,
-		SingleAssetDepositSuccess,
-		SingleAssetWithdrawSuccess,
+		AddSingleLiquiditySuccess,
+		RemoveSingleLiquiditySuccess,
 		SwapTokenSuccess(Balance, Balance),
 	}
 }
@@ -101,6 +104,16 @@ decl_error! {
 		ForbidSameTokenSwap,
 		/// Error on fix point crate
 		FixedPointError,
+		/// Exceed too many amount of token, it should be trade_amount / all_amount <= 1 / 2
+		ExceedMaximumSwapInRatio,
+		/// Less than expected price while trading
+		LessThanExpectedPrice,
+		/// Bigger than expected price while trading
+		BiggerThanExpectedPrice,
+		/// Less than expected amount while trading
+		LessThanExpectedAmount,
+		/// Bigger than expected price while trading
+		BiggerThanExpectedAmount,
 	}
 }
 
@@ -131,8 +144,12 @@ decl_storage! {
 		TokenWeight get(fn token_weight): map hasher(blake2_128_concat) (T::AssetId, TokenType) => T::PoolWeight;
 
 		/// Fee stuff
+		LiquidityFee get(fn liquidity_fee): T::Fee = T::Fee::from(0); // now we don't charge fee on adding or remoinge liquidity
 		SwapFee get(fn swap_fee) config(): T::Fee;
 		ExitFee get(fn exit_fee) config(): T::Fee;
+
+		/// shared fee pool
+		SharedRewardPool get(fn shared_reward): Vec<(T::AssetId, TokenType, T::Balance)>;
 	}
 	add_extra_genesis {
 		config(total_weight): Vec<T::PoolWeight>;
@@ -154,6 +171,17 @@ decl_storage! {
 			}
 			// initialize global pool
 			<GlobalPool<T>>::put(&config.global_pool);
+
+			// initialize reward pool
+			let reward = vec![
+				(T::AssetId::from(0), TokenType::Token, T::Balance::from(0)),
+				(T::AssetId::from(0), TokenType::VToken, T::Balance::from(0)),
+				(T::AssetId::from(1), TokenType::Token, T::Balance::from(0)),
+				(T::AssetId::from(1), TokenType::VToken, T::Balance::from(0)),
+				(T::AssetId::from(2), TokenType::Token, T::Balance::from(0)),
+				(T::AssetId::from(2), TokenType::VToken, T::Balance::from(0)),
+			];
+			<SharedRewardPool::<T>>::put(reward);
 		});
 	}
 }
@@ -162,7 +190,13 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
+		const InitPoolSupply: T::Balance = T::InitPoolSupply::get();
+		// when in a trade, trade_amount / all_amount <= 1 / 2
+		const MaximumSwapInRatio: T::Balance = T::MaximumSwapInRatio::get();
+		// when add liquidity, deposit this amount at least
 		const MinimumBalance: T::Balance = T::MinimumBalance::get();
+		const MaximumSwapFee: T::Fee = T::MaximumSwapFee::get();
+		const MinimumSwapFee: T::Fee = T::MinimumSwapFee::get();
 		const FeePrecision: T::Balance = T::FeePrecision::get();
 
 		fn deposit_event() = default;
@@ -273,7 +307,7 @@ decl_module! {
 
 			let pool_supply = BalancerPoolToken::<T>::get();
 			let total_weight = TotalWeight::<T>::get();
-			let swap_fee = SwapFee::<T>::get();
+			let swap_fee = LiquidityFee::<T>::get();
 
 			// caculate how many pool token will be issued to user
 			let new_pool_token = {
@@ -315,7 +349,7 @@ decl_module! {
 			// destroy token from user
 			T::AssetTrait::asset_redeem(token_id, token_type, provider, token_amount_in);
 
-			Self::deposit_event(RawEvent::SingleAssetDepositSuccess);
+			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
 		}
 
@@ -339,8 +373,11 @@ decl_module! {
 			let user_single_pool = UserSinglePool::<T>::get((&remover, token_id, token_type));
 			ensure!(user_single_pool.1 >= pool_token_in, Error::<T>::NotEnoughBalance);
 
+			let whole_pool = BalancerPoolToken::<T>::get();
+			ensure!(whole_pool >= pool_token_in, Error::<T>::NotEnoughBalance);
+
 			let total_weight = TotalWeight::<T>::get();
-			let swap_fee = SwapFee::<T>::get();
+			let swap_fee = LiquidityFee::<T>::get();
 			let exit_fee = ExitFee::<T>::get();
 
 			// get token's weight
@@ -348,7 +385,7 @@ decl_module! {
 				let mut weight = T::PoolWeight::from(0);
 				let mut pool_token = T::Balance::from(0);
 				for pool in GlobalPool::<T>::get().0.iter() {
-					if token_id == pool.0 {
+					if token_id == pool.0 && token_type == pool.1 {
 						weight = pool.3;
 						pool_token = pool.2;
 						break;
@@ -366,8 +403,18 @@ decl_module! {
 				TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)?
 			};
 
+			let mut redeemed_reward: T::Balance = 0.into();
+			SharedRewardPool::<T>::mutate(|reward| {
+				for r in reward.iter_mut() {
+					if token_id == r.0 && token_type == r.1 {
+						redeemed_reward = r.2.saturating_mul(pool_token_in) / whole_pool;
+						r.2 = r.2.saturating_sub(redeemed_reward);
+					}
+				}
+			});
+
 			// update user asset
-			T::AssetTrait::asset_issue(token_id, token_type, remover.clone(), token_amount);
+			T::AssetTrait::asset_issue(token_id, token_type, remover.clone(), token_amount.saturating_add(redeemed_reward));
 			// update user's pool
 			UserSinglePool::<T>::mutate((&remover, token_id, token_type), |pool| {
 				pool.0 = pool.0.saturating_sub(token_amount);
@@ -387,7 +434,7 @@ decl_module! {
 				}
 			});
 
-			Self::deposit_event(RawEvent::SingleAssetWithdrawSuccess);
+			Self::deposit_event(RawEvent::RemoveSingleLiquiditySuccess);
 
 			Ok(())
 		}
@@ -403,12 +450,15 @@ decl_module! {
 			ensure!(UserPool::<T>::contains_key(&remover), Error::<T>::NotExistedCurrentPool);
 
 			let whole_pool = BalancerPoolToken::<T>::get();
+			ensure!(whole_pool >= pool_amount_in, Error::<T>::NotEnoughBalance);
+
 			let user_pool = UserPool::<T>::get(&remover);
 			// ensure user doesn't redeem too many
 			ensure!(user_pool.1 >= pool_amount_in, Error::<T>::NotEnoughBalance);
 
+			let gpool = GlobalPool::<T>::get();
 			let mut redeemed_pool = Vec::with_capacity(user_pool.0.len());
-			for p in user_pool.0.iter() {
+			for p in gpool.0.iter() {
 				let to_redeem =  p.2.saturating_mul(pool_amount_in) / user_pool.1;
 				ensure!(to_redeem <= p.2, Error::<T>::NotEnoughBalance);
 				redeemed_pool.push((p.0, p.1, to_redeem));
@@ -428,8 +478,18 @@ decl_module! {
 			});
 
 			// redeem assets
-			for p in redeemed_pool.iter() {
-				T::AssetTrait::asset_issue(p.0, p.1, remover.clone(), p.2);
+			let mut redeemed_rewards = Vec::with_capacity(redeemed_pool.len());
+			SharedRewardPool::<T>::mutate(|reward| {
+				for r in reward.iter_mut() {
+//					let redeemed_reward = r.2.saturating_mul(pool_amount_in) / whole_pool.saturating_sub(T::InitPoolSupply::get());
+					let redeemed_reward = r.2.saturating_mul(pool_amount_in) / whole_pool;
+					redeemed_rewards.push((r.0, r.1, redeemed_reward));
+					r.2 = r.2.saturating_sub(redeemed_reward);
+				}
+			});
+
+			for (p, r) in redeemed_pool.iter().zip(redeemed_rewards.iter()) {
+				T::AssetTrait::asset_issue(p.0, p.1, remover.clone(), p.2.saturating_add(r.2));
 			}
 
 			// update global pool
@@ -439,7 +499,7 @@ decl_module! {
 				}
 			});
 
-			Self::deposit_event(RawEvent::WeightedAssetsWithdrawSuccess);
+			Self::deposit_event(RawEvent::RemoveLiquiditySuccess);
 		}
 
 		// consider maxPrice and minAmountOut
@@ -459,24 +519,20 @@ decl_module! {
 			// ensure token symbol is different
 			ensure!(token_in_symbol != token_out_symbol, Error::<T>::ForbidSameTokenSwap);
 
-			// ensure this user have the pool
-			// ensure!(UserPool::<T>::contains_key(&swaper), Error::<T>::NotExistedCurrentPool);
-
 			let token_in_id = T::AssetId::from(token_in_symbol as u32);
 			let token_out_id = T::AssetId::from(token_out_symbol as u32);
 
 			let balances = T::AssetTrait::get_account_asset(&token_in_id, token_in_type, &swaper).balance;
 			// ensure this use have enough balanes to deposit
 			ensure!(balances.ge(&token_amount_in), Error::<T>::NotEnoughBalance);
+			// trade less half of balances
+			ensure!(balances.div(token_amount_in) >= T::MaximumSwapInRatio::get(), Error::<T>::ExceedMaximumSwapInRatio);
 
 			let swaper_pool = UserPool::<T>::get(&swaper);
-
-			// spot price before do a swap
-			// let spot_price_before = todo!("Self::calculate_spot_price");
-			// ensure!(spot_price <= max_price, "detailed error");
-
 			let total_weight = TotalWeight::<T>::get();
 			let swap_fee = SwapFee::<T>::get();
+
+			let charged_fee = Self::calculate_charged_swap_fee(token_amount_in, swap_fee);
 
 			let ((token_balance_in, token_weight_in), (token_balance_out, token_weight_out)) = {
 				let mut weight_in = T::PoolWeight::from(0);
@@ -496,23 +552,76 @@ decl_module! {
 				((token_balance_in, weight_in), (token_balance_out, weight_out))
 			};
 
+			let spot_price_before = {
+				let price = Self::calculate_spot_price(token_balance_in, token_weight_in, token_balance_out, token_weight_out, swap_fee)?;
+				Self::convert_float(price)?
+			};
+
+			// compare spot price before do a swap
+			if max_price.is_some() {
+				ensure!(Some(spot_price_before) <= max_price, Error::<T>::BiggerThanExpectedPrice);
+			}
+
 			// do a swap
 			let token_amount_out = {
-				let fixed_token_amount_out = Self::calculate_out_given_in(token_balance_in, token_weight_in, token_amount_in, token_balance_out, token_weight_out, swap_fee)?;
+				let fixed_token_amount_out = Self::calculate_out_given_in(
+					token_balance_in,
+					token_weight_in,
+					token_amount_in,
+					token_balance_out,
+					token_weight_out,
+					swap_fee
+				)?;
 				let token_amount_out = u128::from_fixed(fixed_token_amount_out);
 
 				TryInto::<T::Balance>::try_into(token_amount_out).map_err(|_| Error::<T>::ConvertFailure)?
 			};
 
 			// ensure token_amount_in is bigger than you exepect
-			// ensure!(token_amount_in >= min_token_amount_out, "");
+			if min_token_amount_out.is_some() {
+				ensure!(Some(token_amount_out) >= min_token_amount_out, Error::<T>::LessThanExpectedAmount);
+			}
 
 			// spot price before do a swap
-			// let spot_price_before = todo!("Self::calculate_spot_price");
-			// ensure!(spot_price >= max_price, "detailed error");
+			let spot_price_after = {
+				let price = Self::calculate_spot_price(
+					token_balance_in.saturating_add(token_amount_in),
+					token_weight_in,
+					token_balance_out.saturating_sub(token_amount_out),
+					token_weight_out,
+					swap_fee
+				)?;
+				Self::convert_float(price)?
+			};
+			if max_price.is_some() {
+				ensure!(Some(spot_price_after) >= max_price, Error::<T>::LessThanExpectedPrice);
+				ensure!(spot_price_before <= spot_price_after, "The Price should rise after trade");
+				ensure!(spot_price_before <= token_amount_in.div(token_amount_out), "todo, what does it means");
+			}
 
 			// update global pool
 			GlobalPool::<T>::mutate(|pool| {
+				for p in pool.0.iter_mut() {
+					if token_in_id == p.0 && token_in_type == p.1 {
+						p.2 = p.2.saturating_add(token_amount_in);
+					}
+					if token_out_id == p.0 && token_out_ype == p.1 {
+						p.2 = p.2.saturating_sub(token_amount_out);
+					}
+				}
+			});
+
+			// update reward pool
+			SharedRewardPool::<T>::mutate(|reward| {
+				for r in reward.iter_mut() {
+					if token_in_id == r.0 && token_in_type == r.1 {
+						r.2 = r.2.saturating_add(charged_fee);
+					}
+				}
+			});
+
+			// update user pool
+			UserPool::<T>::mutate(&swaper, |pool| {
 				for p in pool.0.iter_mut() {
 					if token_in_id == p.0 && token_in_type == p.1 {
 						p.2 = p.2.saturating_add(token_amount_in);
@@ -536,6 +645,29 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+	pub(crate) fn convert_float(input: I64F64) -> Result<T::Balance, Error<T>> {
+		let converted = u128::from_fixed(input);
+		TryInto::<T::Balance>::try_into(converted).map_err(|_| Error::<T>::ConvertFailure)
+	}
+
+	#[allow(dead_code)]
+	pub(crate) fn calculate_charged_swap_fee(balance: T::Balance, swap_fee: T::Fee) -> T::Balance {
+		let swap_fee: T::Balance = swap_fee.into();
+		balance.saturating_mul(swap_fee) / T::FeePrecision::get()
+	}
+
+	#[allow(dead_code)]
+	pub(crate) fn single_liquidity_charged_fee(balance: T::Balance, token_weight: T::PoolWeight, total_weight: T::PoolWeight, swap_fee: T::Fee) ->(T::Balance, T::Balance) {
+		let charged_fee = {
+			let token_weight: T::Balance = token_weight.into();
+			let total_weight: T::Balance = total_weight.into();
+			let swap_fee: T::Balance = swap_fee.into();
+			let proportion = balance.saturating_mul(total_weight.saturating_sub(token_weight)) / total_weight;
+			proportion.saturating_mul(swap_fee) / T::FeePrecision::get()
+		};
+		(balance, balance.saturating_mul(charged_fee))
+	}
+
 	pub(crate) fn total_weight(pool: &[(T::AssetId, T::Balance, T::PoolWeight)]) -> T::PoolWeight {
 		pool.iter().fold(0.into(), |acc, v| acc + v.2)
 	}
@@ -556,6 +688,7 @@ impl<T: Trait> Module<T> {
 	/**********************************************************************************************
 	// https://balancer.finance/whitepaper/#value-function                                       //
 	**********************************************************************************************/
+	#[allow(dead_code)]
 	pub(crate) fn value_function(pool: &[(T::AssetId, T::Balance, T::PoolWeight)]) -> Result<T::InvariantValue, Error<T>> {
 		let total_weight = Self::total_weight(pool);
 
