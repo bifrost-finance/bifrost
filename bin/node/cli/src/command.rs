@@ -36,7 +36,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> &'static str {
-		"https://github.com/bifrost-codes/bifrost/issues/new"
+		"https://github.com/bifrost-finance/bifrost/issues/new"
 	}
 
 	fn copyright_start_year() -> i32 {

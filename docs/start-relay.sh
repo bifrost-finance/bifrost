@@ -1,5 +1,5 @@
 BIN_DIR="[eos_project_path]/build"
-BASE_DIR="[eos_project_path]/localnet/node/producer"
+BASE_DIR="[eos_project_path]/localnet/node/relay"
 CONF_DIR=$BASE_DIR/config
 DATA_DIR=$BASE_DIR/data
 
@@ -11,5 +11,6 @@ $BIN_DIR/bin/nodeos --plugin eosio::chain_api_plugin \
 --p2p-peer-address 127.0.0.1:9876 \
 --config-dir $CONF_DIR \
 --data-dir $DATA_DIR -l $BASE_DIR/logging.json \
---bifrost-node=127.0.0.1:9944 \
---bifrost-account=bifrost
+--bifrost-node=ws://127.0.0.1:9944 \
+--bifrost-crossaccount=bifrostcross \
+--bifrost-signer=//Alice
