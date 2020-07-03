@@ -2,6 +2,7 @@
 <img src=./docs/web3_foundation_grants_badge_black.svg width = 400>
 </p>
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/28dbf466e68d4f35ada4604321ef0d37)](https://app.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&utm_medium=referral&utm_content=bifrost-finance/bifrost&utm_campaign=Badge_Grade_Dashboard)
 [![Build Status](https://travis-ci.org/bifrost-codes/bifrost.svg?branch=master)](https://travis-ci.org/bifrost-codes/bifrost)
 
 # Bifrost Node
