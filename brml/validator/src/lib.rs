@@ -31,13 +31,13 @@ use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
-pub struct AssetConfig<Balance> {
-	redeem_duration: u16,
+pub struct AssetConfig<BlockNumber, Balance> {
+	redeem_duration: BlockNumber,
 	min_reward_per_block: Balance,
 }
 
-impl<Balance> AssetConfig<Balance> {
-	fn new(redeem_duration: u16, min_reward_per_block: Balance) -> Self {
+impl<BlockNumber, Balance> AssetConfig<BlockNumber, Balance> {
+	fn new(redeem_duration: BlockNumber, min_reward_per_block: Balance) -> Self {
 		AssetConfig {
 			/// The redeem deration in blocks.
 			redeem_duration,
@@ -91,7 +91,7 @@ decl_event! {
 		<T as frame_system::Trait>::BlockNumber,
 	{
 		/// A new asset has been set.
-		AssetConfigSet(AssetSymbol, AssetConfig<Balance>),
+		AssetConfigSet(AssetSymbol, AssetConfig<BlockNumber, Balance>),
 		/// A new validator has been registered.
 		ValidatorRegistered(AssetSymbol, AccountId, ValidatorRegister<Balance, BlockNumber>),
 		/// The validator changed the amount of staking it's needed.
@@ -131,7 +131,7 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Validator {
 		/// Asset config data.
-		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) AssetSymbol => AssetConfig<T::Balance>;
+		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) AssetSymbol => AssetConfig<T::BlockNumber, T::Balance>;
 		/// The total amount of asset has been locked for staking.
 		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) AssetSymbol => T::Balance;
 		/// The validators registered from cross chain.
@@ -152,7 +152,7 @@ decl_module! {
 		fn set_asset(
 			origin,
 			asset_symbol: AssetSymbol,
-			redeem_duration: u16,
+			redeem_duration: T::BlockNumber,
 			min_reward_per_block: T::Balance,
 		) {
 			let _ = ensure_root(origin)?;
