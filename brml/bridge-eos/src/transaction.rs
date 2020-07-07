@@ -76,7 +76,7 @@ pub struct MultiSigTx<AccountId> {
 	/// Who sends Transaction to EOS
 	pub from: AccountId,
 	/// token type
-	pub token_type: node_primitives::TokenSymbol,
+	pub token_symbol: node_primitives::TokenSymbol,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
@@ -110,7 +110,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		threshold: u8,
 		memo: &str,
 		from: AccountId,
-		token_type: node_primitives::TokenSymbol
+		token_symbol: node_primitives::TokenSymbol
 	) -> Result<Self, Error<T>> {
 		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -125,7 +125,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 			multi_sig: MultiSig::new(threshold),
 			action,
 			from,
-			token_type,
+			token_symbol,
 		};
 
 		Ok(TxOut::Initial(multi_sig_tx))

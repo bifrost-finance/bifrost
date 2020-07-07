@@ -95,7 +95,7 @@
     "multi_sig": "MultiSig",
     "action": "Action",
     "from": "AccountId",
-    "token_type": "TokenSymbol"
+    "token_symbol": "TokenSymbol"
   },
   "Processing": {
     "tx_id": "Vec<u8>",
