@@ -21,7 +21,7 @@ before_install:
   - df -h
 
 script:
-  - ./ci/script.sh
+  - travis_wait 30 ./ci/script.sh
 
 after_script:
   # Check how much free disk space left after the build
