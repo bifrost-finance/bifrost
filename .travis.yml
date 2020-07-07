@@ -1,7 +1,7 @@
 # Request an environment that provides sudo (that goes with larger containers)
 # and a minimal language environment.
 sudo: true
-dist: xenial
+dist: bionic 
 language: rust
 rust:
   - stable
@@ -19,7 +19,7 @@ before_script:
   - travis_wait sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
   - travis_wait rustup update nightly
   - travis_wait rustup target add wasm32-unknown-unknown --toolchain nightly
-  - travis_wait rustup default stable
+  - rustup default stable
 
 script:
   - travis_wait cargo build
