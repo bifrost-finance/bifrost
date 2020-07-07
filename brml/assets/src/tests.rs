@@ -20,7 +20,7 @@
 
 use super::*;
 use crate::mock::*;
-use frame_support::{assert_ok, assert_noop};
+use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
 use system::{EventRecord, Phase};
 
 #[test]
@@ -31,39 +31,37 @@ fn create_asset_should_work() {
 			precision: 8,
 			total_supply: 0,
 		};
-		let vtoken1 = token1.clone();
-		let token_pair1 = TokenPair::new(token1, vtoken1);
 
 		let id1 = Assets::next_asset_id();
+		let token_type1 = TokenType::from(id1);
 
 		System::set_block_number(1);
 
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		assert_eq!(Assets::next_asset_id(), id1 + 1);
-		assert_eq!(Assets::token_details(id1), token_pair1);
+		assert_eq!(Assets::token_details(token_type1), token1);
 
 		let token2 = Token {
 			symbol: vec![0x56, 0x68, 0x90],
 			precision: 4,
 			total_supply: 0,
 		};
-		let vtoken2 = token2.clone();
-		let token_pair2 = TokenPair::new(token2, vtoken2);
 
 		let id2 = Assets::next_asset_id();
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x56, 0x68, 0x90], 4)); // take asset id 4
+		let token_type2 = TokenType::from(id2);
+		assert_ok!(Assets::create(Origin::ROOT, vec![0x56, 0x68, 0x90], 4)); // take 2 as asset id
 		assert_eq!(Assets::next_asset_id(), id2 + 1);
-		assert_eq!(Assets::token_details(id2), token_pair2);
+		assert_eq!(Assets::token_details(token_type2), token2);
 
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id1, token_pair1)),
+				event: TestEvent::assets(RawEvent::Created(id1, token1)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id2, token_pair2)),
+				event: TestEvent::assets(RawEvent::Created(id2, token2)),
 				topics: vec![],
 			}
 		]);
@@ -73,62 +71,48 @@ fn create_asset_should_work() {
 #[test]
 fn issuing_asset_units_to_issuer_should_work() {
 	new_test_ext().execute_with(|| {
-		let id = Assets::next_asset_id();
-
-		System::set_block_number(1);
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-
-		let token = Token {
-			symbol: vec![0x12, 0x34],
-			precision: 8,
-			total_supply: 0,
-		};
-		let token_pair = TokenPair::new(token.clone(), token.clone());
 		let alice = 1;
 
-		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
-		assert_eq!(Assets::token_details(id), TokenPair::new(
-			token.clone(),
-			Token { total_supply: 10000, ..token.clone() }
-		));
-		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 10000);
+		let ausd_id = Assets::next_asset_id();
+		let ausd_type = TokenType::from(ausd_id);
+		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18));
+
+		let dot_id = Assets::next_asset_id();
+		let dot_type = TokenType::from(dot_id);
+		assert_ok!(Assets::create(Origin::ROOT, b"DOT".to_vec(), 12));
+
+		let vdot_id = Assets::next_asset_id();
+		let vdot_type = TokenType::from(vdot_id);
+		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12));
+
+		System::set_block_number(1);
+
+		assert_ok!(Assets::issue(Origin::ROOT, dot_type, alice, 10000));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 12, 10000));
+		assert_eq!(Assets::account_assets((dot_type, alice)).balance, 10000);
+
+		assert_ok!(Assets::issue(Origin::ROOT, vdot_type, alice, 20000));
+		assert_eq!(Assets::token_details(vdot_type), Token::new(b"vDOT".to_vec(), 12, 20000));
+		assert_eq!(Assets::account_assets((vdot_type, alice)).balance, 20000);
 
 		let bob = 2;
-		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::Token, bob, 20000));
-		assert_eq!(Assets::token_details(id), TokenPair::new(
-			Token { total_supply: 20000, ..token.clone() },
-			Token { total_supply: 10000, ..token.clone() }
-		));
-		assert_eq!(Assets::account_assets((id, TokenType::Token, bob)).balance, 20000);
+		// issue bob balances twice
+		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, bob, 20000));
+		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, bob, 30000));
+		assert_eq!(Assets::token_details(ausd_type), Token::new(b"aUSD".to_vec(), 18, 50000));
+		assert_eq!(Assets::account_assets((ausd_type, bob)).balance, 50000);
 
-		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::Token, bob, 30000));
-		assert_eq!(Assets::token_details(id), TokenPair::new(
-			Token { total_supply: 50000, ..token.clone() },
-			Token { total_supply: 10000, ..token.clone() }
-		));
-		assert_eq!(Assets::account_assets((id, TokenType::Token, bob)).balance, 50000);
+		// creare a exsited token
+		assert_eq!(
+			Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12),
+			Err(DispatchError::Module { index: 0, error: 0, message: Some("TokenExisted") })
+		);
 
 		assert_eq!(System::events(), vec![
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Issued(id, TokenType::Token, bob, 20000)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Issued(id, TokenType::Token, bob, 30000)),
-				topics: vec![],
-			}
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(TokenType::DOT, 1, 10000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(TokenType::vDOT, 1, 20000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(TokenType::aUSD, 2, 20000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(TokenType::aUSD, 2, 30000)), topics: vec![] },
 		]);
 	});
 }
@@ -137,7 +121,7 @@ fn issuing_asset_units_to_issuer_should_work() {
 fn issuing_before_creating_should_now_work() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Assets::issue(Origin::ROOT, 0.into(), TokenType::Token, 1, 10000),
+			Assets::issue(Origin::ROOT, TokenType::DOT, 1, 10000),
 			AssetsError::TokenNotExist
 		);
 	});
@@ -146,46 +130,26 @@ fn issuing_before_creating_should_now_work() {
 #[test]
 fn transferring_amount_above_available_balance_should_work() {
 	new_test_ext().execute_with(|| {
-		let token = Token {
-			symbol: vec![0x12, 0x34],
-			precision: 8,
-			total_supply: 0,
-		};
-		let token_pair = TokenPair::new(token.clone(), token.clone());
 		let alice = 1;
 		let bob = 2;
-		let id = Assets::next_asset_id();
+		let ausd_id = Assets::next_asset_id();
+		let ausd_type = TokenType::from(ausd_id);
+		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18));
 
 		System::set_block_number(1);
 
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
+		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, alice, 10000));
 
-		assert_ok!(Assets::transfer(Origin::signed(alice), id.into(), TokenType::VToken, bob, 1000));
-		assert_eq!(Assets::account_asset_ids(bob), vec![id]);
-		assert_eq!(Assets::token_details(id), TokenPair::new(
-			token.clone(),
-			Token { total_supply: 10000, ..token.clone() }
-		));
-		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 9000);
-		assert_eq!(Assets::account_assets((id, TokenType::VToken, bob)).balance, 1000);
+		assert_ok!(Assets::transfer(Origin::signed(alice), ausd_type, bob, 1000));
+		assert_eq!(Assets::account_asset_ids(bob), vec![ausd_type]);
+		assert_eq!(Assets::token_details(ausd_type), Token::new(b"aUSD".to_vec(), 18, 10000));
+
+		assert_eq!(Assets::account_assets((ausd_type, alice)).balance, 9000);
+		assert_eq!(Assets::account_assets((ausd_type, bob)).balance, 1000);
 
 		assert_eq!(System::events(), vec![
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Transferred(id, TokenType::VToken, alice, bob, 1000)),
-				topics: vec![],
-			}
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(ausd_type, 1, 10000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Transferred(ausd_type, 1, 2, 1000)), topics: vec![] }
 		]);
 	});
 }
@@ -194,8 +158,9 @@ fn transferring_amount_above_available_balance_should_work() {
 fn transferring_amount_less_than_available_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		let (alice, bob) = (1, 2);
 		assert_noop!(
-			Assets::transfer(Origin::signed(1), 0.into(), TokenType::VToken, 1, 1000),
+			Assets::transfer(Origin::signed(alice), TokenType::aUSD, bob, 1000),
 			AssetsError::InvalidBalanceForTransaction
 		);
 	});
@@ -205,8 +170,9 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 fn transferring_less_than_one_unit_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		let (alice, bob) = (1, 2);
 		assert_noop!(
-			Assets::transfer(Origin::signed(1), 0.into(), TokenType::VToken, 1, 0),
+			Assets::transfer(Origin::signed(alice), TokenType::aUSD, bob, 0),
 			AssetsError::ZeroAmountOfBalance
 		);
 	});
@@ -215,42 +181,26 @@ fn transferring_less_than_one_unit_should_not_work() {
 #[test]
 fn destroying_asset_balance_with_positive_balance_should_work() {
 	new_test_ext().execute_with(|| {
-		let token = Token {
-			symbol: vec![0x12, 0x34],
-			precision: 8,
-			total_supply: 0,
-		};
-		let token_pair = TokenPair::new(token.clone(), token.clone());
+		System::set_block_number(1);
+
+		let alice = 1;
+		let ausd_id = Assets::next_asset_id();
+		let ausd_type = TokenType::from(ausd_id);
+		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18));
 
 		System::set_block_number(1);
 
-		let id = Assets::next_asset_id();
-		let alice = 1;
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
-		assert_ok!(Assets::issue(Origin::ROOT, id.into(), TokenType::VToken, alice, 10000));
-		assert_ok!(Assets::destroy(Origin::signed(alice), id.into(), TokenType::VToken, 1000));
-		assert_eq!(Assets::token_details(id), TokenPair::new(
-			token.clone(),
-			Token { total_supply: 9000, ..token.clone() }
-		));
-		assert_eq!(Assets::account_assets((id, TokenType::VToken, alice)).balance, 9000);
+		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, alice, 10000));
+		assert_ok!(Assets::destroy(Origin::signed(alice), ausd_type, 1000));
+
+		assert_eq!(Assets::token_details(ausd_type), Token::new(b"aUSD".to_vec(), 18, 9000));
+
+		assert_eq!(Assets::account_assets((ausd_type, alice)).balance, 9000);
 
 		assert_eq!(System::events(), vec![
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id, token_pair)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Issued(id, TokenType::VToken, alice, 10000)),
-				topics: vec![],
-			},
-			EventRecord {
-				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Destroyed(id, TokenType::VToken, alice, 1000)),
-				topics: vec![],
-			}
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Created(0, Token { symbol: b"aUSD".to_vec(), precision: 18, total_supply: 0 })), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(ausd_type, 1, 10000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Destroyed(ausd_type, 1, 1000)), topics: vec![] }
 		]);
 	});
 }
@@ -259,10 +209,12 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 fn destroying_asset_balance_with_zero_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		let alice = 1;
 		let id = Assets::next_asset_id();
-		assert_ok!(Assets::issue(Origin::ROOT, (id - 1).into(), TokenType::VToken, 1, 100));
+		let token_type = TokenType::from(id - 1);
+		assert_ok!(Assets::issue(Origin::ROOT, token_type, alice, 100));
 		assert_noop!(
-			Assets::destroy(Origin::signed(1), 0.into(), TokenType::VToken, 200),
+			Assets::destroy(Origin::signed(alice), token_type, 100 + 1),
 			AssetsError::InvalidBalanceForTransaction
 		);
 	});

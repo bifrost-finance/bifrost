@@ -19,14 +19,12 @@
 use codec::Codec;
 use sp_api::decl_runtime_apis;
 
-#[allow(unused_doc_comments)]
-/// Create convert runtime api for rpc call
 decl_runtime_apis! {
-	pub trait ConvertPriceApi<AssetId, ConvertPrice> where
-		AssetId: Codec,
+	pub trait ConvertPriceApi<TokenType, ConvertPrice> where
+		TokenType: Codec,
 		ConvertPrice: Codec
 	{
 		/// get current convert rate
-		fn get_convert_rate(token_id: AssetId) -> ConvertPrice;
+		fn get_convert_rate(token_type: TokenType) -> ConvertPrice;
 	}
 }
