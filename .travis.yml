@@ -15,6 +15,7 @@ env:
 before_script:
   # Check how much space we've got on this machine.
   - df -h
+  - sudo apt-get update -qq
   - sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
   - rustup update nightly
   - rustup target add wasm32-unknown-unknown --toolchain nightly
