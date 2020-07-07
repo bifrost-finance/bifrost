@@ -15,14 +15,14 @@ env:
 before_script:
   # Check how much space we've got on this machine.
   - df -h
-  - sudo apt-get update -qq
-  - sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
-  - rustup update nightly
-  - rustup target add wasm32-unknown-unknown --toolchain nightly
-  - rustup default stable
+  - travis_wait sudo apt-get update -qq
+  - travis_wait sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
+  - travis_wait rustup update nightly
+  - travis_wait rustup target add wasm32-unknown-unknown --toolchain nightly
+  - travis_wait rustup default stable
 
 script:
-  - cargo build
+  - travis_wait cargo build
 
 after_script:
   # Check how much free disk space left after the build
