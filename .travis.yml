@@ -22,7 +22,7 @@ before_script:
   - rustup default stable
 
 script:
-  - travis_wait cargo build
+  - travis_wait 60 cargo build
 
 after_script:
   # Check how much free disk space left after the build
