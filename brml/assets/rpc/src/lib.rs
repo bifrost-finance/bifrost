@@ -47,7 +47,7 @@ pub trait AssetsApi<BlockHash, TokenSymbol, AccountId, Balance> {
 	#[rpc(name = "assets_getBalances")]
 	fn asset_balances(
 		&self,
-		token_type: TokenSymbol,
+		token_symbol: TokenSymbol,
 		who: AccountId,
 		at: Option<BlockHash>
 	) -> JsonRpcResult<u64>;
@@ -72,11 +72,11 @@ where
 	TokenSymbol: Codec,
 	Balance: Codec,
 {
-	fn asset_balances(&self, token_type: TokenSymbol, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<u64> {
+	fn asset_balances(&self, token_symbol: TokenSymbol, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<u64> {
 		let asset_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		asset_rpc_api.asset_balances(&at, token_type, who).map_err(|e| RpcError {
+		asset_rpc_api.asset_balances(&at, token_symbol, who).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
 			message: "Failed to get balance for you requested asset id.".to_owned(),
 			data: Some(format!("{:?}", e).into()),

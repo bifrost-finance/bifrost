@@ -211,10 +211,10 @@ fn destroying_asset_balance_with_zero_balance_should_not_work() {
 		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
 		let alice = 1;
 		let id = Assets::next_asset_id();
-		let token_type = TokenSymbol::from(id - 1);
-		assert_ok!(Assets::issue(Origin::ROOT, token_type, alice, 100));
+		let token_symbol = TokenSymbol::from(id - 1);
+		assert_ok!(Assets::issue(Origin::ROOT, token_symbol, alice, 100));
 		assert_noop!(
-			Assets::destroy(Origin::signed(alice), token_type, 100 + 1),
+			Assets::destroy(Origin::signed(alice), token_symbol, 100 + 1),
 			AssetsError::InvalidBalanceForTransaction
 		);
 	});

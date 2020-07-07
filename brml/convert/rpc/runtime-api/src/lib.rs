@@ -25,6 +25,6 @@ decl_runtime_apis! {
 		ConvertPrice: Codec
 	{
 		/// get current convert rate
-		fn get_convert_rate(token_type: TokenSymbol) -> ConvertPrice;
+		fn get_convert_rate(token_symbol: TokenSymbol) -> ConvertPrice;
 	}
 }

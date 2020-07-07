@@ -233,19 +233,19 @@ pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	type Error;
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> Result<(AssetId, Token<Balance>), Self::Error>;
 
-	fn asset_issue(token_type: TokenSymbol, target: AccountId, amount: Balance);
+	fn asset_issue(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_redeem(token_type: TokenSymbol, target: AccountId, amount: Balance);
+	fn asset_redeem(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_destroy(token_type: TokenSymbol, target: AccountId, amount: Balance);
+	fn asset_destroy(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
 
 	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<TokenSymbol>;
 
-	fn token_exists(token_type: TokenSymbol) -> bool;
+	fn token_exists(token_symbol: TokenSymbol) -> bool;
 
-	fn get_account_asset(token_type: TokenSymbol, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
+	fn get_account_asset(token_symbol: TokenSymbol, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
 
-	fn get_token(token_type: TokenSymbol) -> Token<Balance>;
+	fn get_token(token_symbol: TokenSymbol) -> Token<Balance>;
 }
 
 impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
@@ -280,7 +280,7 @@ impl<Price> TokenPriceHandler<Price> for () {
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(token_type: TokenSymbol, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
+	fn asset_redeem(token_symbol: TokenSymbol, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
 }
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
@@ -290,7 +290,7 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 /// Fetch convert rate handler
 pub trait FetchConvertPrice<TokenSymbol, ConvertPrice> {
 	/// fetch convert rate
-	fn fetch_convert_price(token_type: TokenSymbol) -> ConvertPrice;
+	fn fetch_convert_price(token_symbol: TokenSymbol) -> ConvertPrice;
 }
 
 impl<TokenSymbol, ER: Default> FetchConvertPrice<TokenSymbol, ER> for () {
@@ -337,7 +337,7 @@ pub struct BridgeAssetBalance<AccountId, Precision, Balance> {
 	// store the account who send transaction to EOS
 	pub from: AccountId,
 	// which token type is sent to EOS
-	pub token_type: TokenSymbol,
+	pub token_symbol: TokenSymbol,
 }
 
 /// Bridge asset from other blockchain to Bifrost
@@ -353,9 +353,9 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 pub trait BridgeAssetTo<AccountId, Precision, Balance> {
 	type Error;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
-	fn redeem(token_type: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn stake(token_type: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn unstake(token_type: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn redeem(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn stake(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn unstake(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 }
 
 impl<A, P, B> BridgeAssetTo<A, P, B> for () {
@@ -369,7 +369,7 @@ impl<A, P, B> BridgeAssetTo<A, P, B> for () {
 pub trait AssetReward<TokenSymbol, Balance> {
 	type Output;
 	type Error;
-	fn set_asset_reward(token_type: TokenSymbol, reward: Balance) -> Result<Self::Output, Self::Error>;
+	fn set_asset_reward(token_symbol: TokenSymbol, reward: Balance) -> Result<Self::Output, Self::Error>;
 }
 
 impl<A, B> AssetReward<A, B> for () {

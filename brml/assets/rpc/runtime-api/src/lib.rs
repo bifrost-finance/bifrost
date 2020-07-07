@@ -29,7 +29,7 @@ decl_runtime_apis! {
 		Balance: Codec,
 	{
 		/// get balances by account id
-		fn asset_balances(token_type: TokenSymbol, who: AccountId) -> u64;
+		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64;
 
 		/// get all issued tokens by account id
 		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol>;

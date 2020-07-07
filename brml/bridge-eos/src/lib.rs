@@ -536,7 +536,7 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			token_type: TokenSymbol,
+			token_symbol: TokenSymbol,
 			#[compact] amount: T::Balance,
 			memo: Vec<u8>
 		) {
@@ -544,15 +544,15 @@ decl_module! {
 			let eos_amount = amount;
 
 			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_type), "this token doesn't exist.");
+			ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
 			// ensure redeem EOS instead of any others tokens like vEOS, DOT, KSM etc
-			ensure!(token_type == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
+			ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
 
-			let token = T::AssetTrait::get_token(token_type);
+			let token = T::AssetTrait::get_token(token_symbol);
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = T::AssetTrait::get_account_asset(token_type, &origin).balance;
+			let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
 			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
 			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
@@ -563,7 +563,7 @@ decl_module! {
 				amount: eos_amount,
 				memo,
 				from: origin.clone(),
-				token_type
+				token_symbol
 			};
 
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
@@ -684,7 +684,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn transaction_from_eos_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
-		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_type}
+		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
 		let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
 
 		// the length should be 2, either 3.
@@ -697,7 +697,7 @@ impl<T: Trait> Module<T> {
 		let target = Self::into_account(account_data)?;
 
 		#[allow(unused_variables)]
-		let token_type = {
+		let token_symbol = {
 			match split_memo.len() {
 				2 => TokenSymbol::vEOS,
 				3 => {
@@ -723,17 +723,17 @@ impl<T: Trait> Module<T> {
 		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let token_type = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
+		let token_symbol = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
 			Some(id) => id,
 			None => {
 				let (id, _) = T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).map_err(|_| Error::<T>::TokenNotExist)?;
-				let token_type: TokenSymbol = id.into();
-				token_type
+				let token_symbol: TokenSymbol = id.into();
+				token_symbol
 			}
 		};
 
 		// issue asset to target
-		T::AssetTrait::asset_issue(token_type, target.clone(), vtoken_balances);
+		T::AssetTrait::asset_issue(token_symbol, target.clone(), vtoken_balances);
 
 		Ok(target)
 	}
@@ -745,9 +745,9 @@ impl<T: Trait> Module<T> {
 			match trx {
 				TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
 					let target = &multi_sig_tx.from;
-					let token_type = multi_sig_tx.token_type;
+					let token_symbol = multi_sig_tx.token_symbol;
 
-					let all_vtoken_balances = T::AssetTrait::get_account_asset(token_type, &target).balance;
+					let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
 					let token_balances = action_transfer.quantity.amount as usize;
 					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
@@ -756,7 +756,7 @@ impl<T: Trait> Module<T> {
 						return Err(Error::<T>::InsufficientBalance);
 					}
 
-					T::AssetTrait::asset_redeem(token_type, target.clone(), vtoken_balances);
+					T::AssetTrait::asset_redeem(token_symbol, target.clone(), vtoken_balances);
 					return Ok(target.clone());
 				}
 				_ => continue,
@@ -797,7 +797,7 @@ impl<T: Trait> Module<T> {
 		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
 		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_type)?;
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
 		BridgeTxOuts::<T>::append(&tx_out);
 
 		Ok(tx_out)

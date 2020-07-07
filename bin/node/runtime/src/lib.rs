@@ -1040,8 +1040,8 @@ impl_runtime_apis! {
 
 	// impl asset rpc methods for runtime
 	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, TokenSymbol, AccountId, Balance> for Runtime {
-		fn asset_balances(token_type: TokenSymbol, who: AccountId) -> u64 {
-			Assets::asset_balances(token_type, who)
+		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64 {
+			Assets::asset_balances(token_symbol, who)
 		}
 
 		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol> {
@@ -1050,8 +1050,8 @@ impl_runtime_apis! {
 	}
 
 	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, TokenSymbol, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(token_type: TokenSymbol) -> node_primitives::ConvertPrice {
-			Convert::get_convert(token_type)
+		fn get_convert_rate(token_symbol: TokenSymbol) -> node_primitives::ConvertPrice {
+			Convert::get_convert(token_symbol)
 		}
 	}
 }

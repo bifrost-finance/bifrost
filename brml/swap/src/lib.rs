@@ -275,15 +275,15 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn add_single_liquidity(
 			origin,
-			token_type: TokenSymbol,
+			token_symbol: TokenSymbol,
 			#[compact] token_amount_in: T::Balance,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
 			// ensure user have token
-			ensure!(T::AssetTrait::token_exists(token_type), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
 
-			let balances = T::AssetTrait::get_account_asset(token_type, &provider).balance;
+			let balances = T::AssetTrait::get_account_asset(token_symbol, &provider).balance;
 			// ensure this use have enough balanes to deposit
 			ensure!(balances.gt(&T::Balance::from(0)), Error::<T>::NotEnoughBalance);
 			ensure!(balances >= token_amount_in, Error::<T>::NotEnoughBalance);
@@ -294,7 +294,7 @@ decl_module! {
 				let mut token_balance_in = 0.into();
 				let mut token_weight_in = 0.into();
 				for p in whole_pool.0.iter() {
-					if token_type == p.0 {
+					if token_symbol == p.0 {
 						token_balance_in = p.1;
 						token_weight_in = p.2;
 						break;
@@ -315,15 +315,15 @@ decl_module! {
 			};
 
 			// first time to add liquidity
-			if !UserSinglePool::<T>::contains_key((&provider, token_type)) {
+			if !UserSinglePool::<T>::contains_key((&provider, token_symbol)) {
 				// add it to user's single pool
 				UserSinglePool::<T>::insert(
-					(&provider, token_type),
+					(&provider, token_symbol),
 					(token_amount_in, new_pool_token)
 				);
 			} else {
 				// add more liquidity to current single pool
-				UserSinglePool::<T>::mutate((&provider, token_type), |pool| {
+				UserSinglePool::<T>::mutate((&provider, token_symbol), |pool| {
 					pool.0 = pool.0.saturating_add(token_amount_in);
 					pool.1 = pool.1.saturating_add(new_pool_token);
 				});
@@ -337,14 +337,14 @@ decl_module! {
 			// update global pool
 			GlobalPool::<T>::mutate(|pool| {
 				for p in pool.0.iter_mut() {
-					if token_type == p.0 {
+					if token_symbol == p.0 {
 						p.1 = p.1.saturating_add(token_amount_in);
 					}
 				}
 			});
 
 			// destroy token from user
-			T::AssetTrait::asset_redeem(token_type, provider, token_amount_in);
+			T::AssetTrait::asset_redeem(token_symbol, provider, token_amount_in);
 
 			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
@@ -353,19 +353,19 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn remove_single_asset_liquidity(
 			origin,
-			token_type: TokenSymbol,
+			token_symbol: TokenSymbol,
 			#[compact] pool_token_in: T::Balance
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
 
 			// ensure this user has the pool
 			ensure!(
-				UserSinglePool::<T>::contains_key((&remover, token_type)),
+				UserSinglePool::<T>::contains_key((&remover, token_symbol)),
 				Error::<T>::NotExistedCurrentSinglePool
 			);
 
 			// ensure user doesn't redeem exceed all he has
-			let user_single_pool = UserSinglePool::<T>::get((&remover, token_type));
+			let user_single_pool = UserSinglePool::<T>::get((&remover, token_symbol));
 			ensure!(user_single_pool.1 >= pool_token_in, Error::<T>::NotEnoughBalance);
 
 			let whole_pool = BalancerPoolToken::<T>::get();
@@ -380,7 +380,7 @@ decl_module! {
 				let mut weight = T::PoolWeight::from(0);
 				let mut pool_token = T::Balance::from(0);
 				for pool in GlobalPool::<T>::get().0.iter() {
-					if token_type == pool.0 {
+					if token_symbol == pool.0 {
 						weight = pool.2;
 						pool_token = pool.1;
 						break;
@@ -401,7 +401,7 @@ decl_module! {
 			let mut redeemed_reward: T::Balance = 0.into();
 			SharedRewardPool::<T>::mutate(|reward| {
 				for r in reward.iter_mut() {
-					if token_type == r.0 {
+					if token_symbol == r.0 {
 						redeemed_reward = r.1.saturating_mul(pool_token_in) / whole_pool;
 						r.1 = r.1.saturating_sub(redeemed_reward);
 					}
@@ -409,9 +409,9 @@ decl_module! {
 			});
 
 			// update user asset
-			T::AssetTrait::asset_issue(token_type, remover.clone(), token_amount.saturating_add(redeemed_reward));
+			T::AssetTrait::asset_issue(token_symbol, remover.clone(), token_amount.saturating_add(redeemed_reward));
 			// update user's pool
-			UserSinglePool::<T>::mutate((&remover, token_type), |pool| {
+			UserSinglePool::<T>::mutate((&remover, token_symbol), |pool| {
 				pool.0 = pool.0.saturating_sub(token_amount);
 				pool.1 = pool.1.saturating_sub(pool_token_in);
 			});
@@ -423,7 +423,7 @@ decl_module! {
 			// update global pool
 			GlobalPool::<T>::mutate(|pool| {
 				for p in pool.0.iter_mut() {
-					if token_type == p.0 {
+					if token_symbol == p.0 {
 						p.1 = p.1.saturating_sub(token_amount);
 					}
 				}
