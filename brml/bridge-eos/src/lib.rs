@@ -50,7 +50,7 @@ use frame_system::{
 
 use node_primitives::{
 	AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
-	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenType,
+	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
 };
 use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
@@ -196,7 +196,7 @@ pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait 
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenType> + Into<TokenType> + MaybeSerializeDeserialize;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
 
 	/// The units in which we record costs.
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
@@ -536,7 +536,7 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			#[compact] amount: T::Balance,
 			memo: Vec<u8>
 		) {
@@ -546,7 +546,7 @@ decl_module! {
 			// check vtoken id exist or not
 			ensure!(T::AssetTrait::token_exists(token_type), "this token doesn't exist.");
 			// ensure redeem EOS instead of any others tokens like vEOS, DOT, KSM etc
-			ensure!(token_type == TokenType::EOS, Error::<T>::InvalidTokenForTrade);
+			ensure!(token_type == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
 
 			let token = T::AssetTrait::get_token(token_type);
 			let symbol_code = token.symbol;
@@ -699,11 +699,11 @@ impl<T: Trait> Module<T> {
 		#[allow(unused_variables)]
 		let token_type = {
 			match split_memo.len() {
-				2 => TokenType::vEOS,
+				2 => TokenSymbol::vEOS,
 				3 => {
 					match split_memo[2] {
-						"" | "vEOS" => TokenType::vEOS,
-						"EOS" => TokenType::EOS,
+						"" | "vEOS" => TokenSymbol::vEOS,
+						"EOS" => TokenSymbol::EOS,
 						_ => {
 							debug::error!("A invalid token type, default token type will be vtoken");
 							return Err(Error::<T>::InvalidMemo);
@@ -727,7 +727,7 @@ impl<T: Trait> Module<T> {
 			Some(id) => id,
 			None => {
 				let (id, _) = T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).map_err(|_| Error::<T>::TokenNotExist)?;
-				let token_type: TokenType = id.into();
+				let token_type: TokenSymbol = id.into();
 				token_type
 			}
 		};
@@ -936,9 +936,9 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
 		Ok(())
 	}
 
-	fn redeem(_: TokenType, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: TokenType, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: TokenType, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 #[allow(deprecated)]

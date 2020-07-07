@@ -95,7 +95,7 @@
     "multi_sig": "MultiSig",
     "action": "Action",
     "from": "AccountId",
-    "token_type": "TokenType"
+    "token_type": "TokenSymbol"
   },
   "Processing": {
     "tx_id": "Vec<u8>",
@@ -122,7 +122,7 @@
   "TokenPool": "Balance",
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
-  "TokenType": {
+  "TokenSymbol": {
     "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS"]
   },
   "Cost": "u128",

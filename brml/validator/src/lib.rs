@@ -25,7 +25,7 @@ use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, BridgeAssetTo, TokenType};
+use node_primitives::{AssetTrait, BridgeAssetTo, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
@@ -73,7 +73,7 @@ pub trait Trait: frame_system::Trait {
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber>;
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenType>;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol>;
 	/// The units in which we record costs.
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record incomes.
@@ -91,19 +91,19 @@ decl_event! {
 		<T as frame_system::Trait>::BlockNumber,
 	{
 		/// A new asset has been set.
-		AssetConfigSet(TokenType, AssetConfig<BlockNumber, Balance>),
+		AssetConfigSet(TokenSymbol, AssetConfig<BlockNumber, Balance>),
 		/// A new validator has been registered.
-		ValidatorRegistered(TokenType, AccountId, ValidatorRegister<Balance, BlockNumber>),
+		ValidatorRegistered(TokenSymbol, AccountId, ValidatorRegister<Balance, BlockNumber>),
 		/// The validator changed the amount of staking it's needed.
-		ValidatorNeedAmountSet(TokenType, AccountId, Balance),
+		ValidatorNeedAmountSet(TokenSymbol, AccountId, Balance),
 		/// The validator deposited the amount of reward.
-		ValidatorDeposited(TokenType, AccountId, Balance),
+		ValidatorDeposited(TokenSymbol, AccountId, Balance),
 		/// The validator withdrawn the amount of reward.
-		ValidatorWithdrawn(TokenType, AccountId, Balance),
+		ValidatorWithdrawn(TokenSymbol, AccountId, Balance),
 		/// The amount of asset staked to the account.
-		ValidatorStaked(TokenType, AccountId, Balance),
+		ValidatorStaked(TokenSymbol, AccountId, Balance),
 		/// The amount of asset un-staked from the account.
-		ValidatorUnStaked(TokenType, AccountId, Balance),
+		ValidatorUnStaked(TokenSymbol, AccountId, Balance),
 	}
 }
 
@@ -133,11 +133,11 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Validator {
 		/// Asset config data.
-		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) TokenType => AssetConfig<T::BlockNumber, T::Balance>;
+		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) TokenSymbol => AssetConfig<T::BlockNumber, T::Balance>;
 		/// The total amount of asset has been locked for staking.
-		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) TokenType => T::Balance;
+		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) TokenSymbol => T::Balance;
 		/// The validators registered from cross chain.
-		Validators get(fn validators): double_map hasher(blake2_128_concat) TokenType, hasher(blake2_128_concat) T::AccountId
+		Validators get(fn validators): double_map hasher(blake2_128_concat) TokenSymbol, hasher(blake2_128_concat) T::AccountId
 			=> ValidatorRegister<T::Balance, T::BlockNumber>;
 		/// The locked amount of asset of account for staking.
 		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
@@ -153,7 +153,7 @@ decl_module! {
 		#[weight = 0]
 		fn set_asset(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			redeem_duration: T::BlockNumber,
 			min_reward_per_block: T::Balance,
 		) {
@@ -168,7 +168,7 @@ decl_module! {
 		#[weight = T::DbWeight::get().writes(1)]
 		fn stake(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			target: T::AccountId,
 			amount: T::Balance,
 		) {
@@ -202,7 +202,7 @@ decl_module! {
 		#[weight = T::DbWeight::get().writes(1)]
 		fn unstake(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			target: T::AccountId,
 			amount: T::Balance,
 		) {
@@ -236,7 +236,7 @@ decl_module! {
 		#[weight = T::DbWeight::get().writes(1)]
 		fn register(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			need: T::Balance,
 			validator_address: Vec<u8>,
 		) {
@@ -254,7 +254,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn set_need_amount(origin, token_type: TokenType, amount: T::Balance) {
+		fn set_need_amount(origin, token_type: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
@@ -270,7 +270,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn deposit(origin, token_type: TokenType, amount: T::Balance) {
+		fn deposit(origin, token_type: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
@@ -289,7 +289,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn withdraw(origin, token_type: TokenType, amount: T::Balance) {
+		fn withdraw(origin, token_type: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
@@ -319,7 +319,7 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	fn asset_lock(
 		account_id: T::AccountId,
-		token_type: TokenType,
+		token_type: TokenSymbol,
 		amount: T::Balance
 	) -> Result<(), Error<T>> {
 		// check if has enough balance
@@ -339,7 +339,7 @@ impl<T: Trait> Module<T> {
 
 	fn asset_unlock(
 		account_id: T::AccountId,
-		token_type: TokenType,
+		token_type: TokenSymbol,
 		amount: T::Balance
 	) -> Result<(), Error<T>> {
 		// check if has enough locked_balance

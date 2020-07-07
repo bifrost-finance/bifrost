@@ -21,7 +21,7 @@ use alloc::collections::btree_map::BTreeMap;
 use crate::*;
 use crate::mock::*;
 use frame_support::assert_ok;
-use node_primitives::{ConvertPool, TokenType};
+use node_primitives::{ConvertPool, TokenSymbol};
 
 #[test]
 #[ignore]
@@ -33,7 +33,7 @@ fn update_rate_multiple_times() {
 		let precise = 18;
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, symbol, precise));
 		let ausd_id = <assets::NextAssetId<Test>>::get() - 1;
-		let ausd_type = TokenType::from(ausd_id);
+		let ausd_type = TokenSymbol::from(ausd_id);
 
 		let convert_rate = 20;
 		assert_ok!(Convert::set_convert_price(Origin::ROOT, ausd_type, convert_rate));
@@ -57,7 +57,7 @@ fn update_rate_multiple_times_until_overflow() {
 		let precise = 4;
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, symbol, precise));
 		let ausd_id = <assets::NextAssetId<Test>>::get() - 1;
-		let ausd_type = TokenType::from(ausd_id);
+		let ausd_type = TokenSymbol::from(ausd_id);
 
 		let convert_rate = 20;
 		assert_ok!(Convert::set_convert_price(Origin::ROOT, ausd_type, convert_rate));
@@ -96,11 +96,11 @@ fn convert_token_to_vtoken_should_be_ok() {
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = <assets::NextAssetId<Test>>::get() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vdot_symbol, precise));
 		let vdot_id = <assets::NextAssetId<Test>>::get() - 1;
-		let vdot_type = TokenType::from(vdot_id);
+		let vdot_type = TokenSymbol::from(vdot_id);
 
 		// issue vtoken and token to bob
 		let bob_dot_issued = 60;
@@ -138,11 +138,11 @@ fn convert_vtoken_to_token_should_be_ok() {
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = <assets::NextAssetId<Test>>::get() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vdot_symbol, precise));
 		let vdot_id = <assets::NextAssetId<Test>>::get() - 1;
-		let vdot_type = TokenType::from(vdot_id);
+		let vdot_type = TokenSymbol::from(vdot_id);
 
 		// issue vtoken and token to bob
 		let bob_vdot_issued = 60;
@@ -181,11 +181,11 @@ fn add_new_refer_channel_should_be_ok() {
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = <assets::NextAssetId<Test>>::get() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vdot_symbol, precise));
 		let vdot_id = <assets::NextAssetId<Test>>::get() - 1;
-		let vdot_type = TokenType::from(vdot_id);
+		let vdot_type = TokenSymbol::from(vdot_id);
 
 		// issue vdot and dot to bob
 		let bob_vdot_issued = 60;

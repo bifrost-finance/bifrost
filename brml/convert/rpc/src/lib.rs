@@ -41,22 +41,22 @@ impl<C, Block> Convert<C, Block> {
 }
 
 #[rpc]
-pub trait ConvertPriceApi<BlockHash, TokenType, ConvertPrice> {
+pub trait ConvertPriceApi<BlockHash, TokenSymbol, ConvertPrice> {
 	/// rpc method for getting current convert rate
 	#[rpc(name = "convert_getConvert")]
-	fn get_convert_rate(&self, token_type: TokenType, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
+	fn get_convert_rate(&self, token_type: TokenSymbol, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
 }
 
-impl<C, Block, TokenType, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, TokenType, ConvertPrice>
+impl<C, Block, TokenSymbol, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, TokenSymbol, ConvertPrice>
 for Convert<C, Block>
 	where
 		Block: BlockT,
 		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ConvertRateRuntimeApi<Block, TokenType, ConvertPrice>,
-		TokenType: Codec,
+		C::Api: ConvertRateRuntimeApi<Block, TokenSymbol, ConvertPrice>,
+		TokenSymbol: Codec,
 		ConvertPrice: Codec,
 {
-	fn get_convert_rate(&self, token_type: TokenType, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
+	fn get_convert_rate(&self, token_type: TokenSymbol, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
 		let convert_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 

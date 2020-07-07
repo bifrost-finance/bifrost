@@ -41,13 +41,13 @@ impl<C, Block> Assets<C, Block> {
 }
 
 #[rpc]
-pub trait AssetsApi<BlockHash, TokenType, AccountId, Balance> {
+pub trait AssetsApi<BlockHash, TokenSymbol, AccountId, Balance> {
 	/// rpc method get balances by account id
 	/// useage: curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "assets_getBalances", "params": [0, "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]}' http://localhost:9933/
 	#[rpc(name = "assets_getBalances")]
 	fn asset_balances(
 		&self,
-		token_type: TokenType,
+		token_type: TokenSymbol,
 		who: AccountId,
 		at: Option<BlockHash>
 	) -> JsonRpcResult<u64>;
@@ -59,20 +59,20 @@ pub trait AssetsApi<BlockHash, TokenType, AccountId, Balance> {
 		&self,
 		who: AccountId,
 		at: Option<BlockHash>
-	) -> JsonRpcResult<Vec<TokenType>>;
+	) -> JsonRpcResult<Vec<TokenSymbol>>;
 }
 
-impl<C, Block, TokenType, AccountId, Balance> AssetsApi<<Block as BlockT>::Hash, TokenType, AccountId, Balance>
+impl<C, Block, TokenSymbol, AccountId, Balance> AssetsApi<<Block as BlockT>::Hash, TokenSymbol, AccountId, Balance>
 	for Assets<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: AssetsRuntimeApi<Block, TokenType, AccountId, Balance>,
+	C::Api: AssetsRuntimeApi<Block, TokenSymbol, AccountId, Balance>,
 	AccountId: Codec,
-	TokenType: Codec,
+	TokenSymbol: Codec,
 	Balance: Codec,
 {
-	fn asset_balances(&self, token_type: TokenType, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<u64> {
+	fn asset_balances(&self, token_type: TokenSymbol, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<u64> {
 		let asset_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
@@ -83,7 +83,7 @@ where
 		})
 	}
 
-	fn asset_tokens(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<Vec<TokenType>> {
+	fn asset_tokens(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<Vec<TokenSymbol>> {
 		let asset_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 

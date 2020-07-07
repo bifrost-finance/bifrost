@@ -27,7 +27,7 @@ use frame_support::traits::Get;
 use frame_support::weights::{FunctionOf, DispatchClass, Weight, Pays};
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, AssetReward, TokenType};
+use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, AssetReward, TokenSymbol};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize};
 
 pub trait Trait: frame_system::Trait {
@@ -76,16 +76,16 @@ decl_error! {
 		/// This is an invalid convert rate
 		InvalidConvertPrice,
 		/// Vtoken id is not equal to token id
-		InvalidTokenPair,
+		NotSupportaUSD,
 	}
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Convert {
 		/// convert price between two tokens, vtoken => (token, convert_price)
-		ConvertPrice get(fn convert_price): map hasher(blake2_128_concat) TokenType => T::ConvertPrice;
+		ConvertPrice get(fn convert_price): map hasher(blake2_128_concat) TokenSymbol => T::ConvertPrice;
 		/// change rate per block, vtoken => (token, rate_per_block)
-		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) TokenType => T::RatePerBlock;
+		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) TokenSymbol => T::RatePerBlock;
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
 		/// referrer must be unique, so check it unique while a new referrer incoming.
@@ -95,7 +95,7 @@ decl_storage! {
 		/// referer channels for all users
 		AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
 		/// Convert pool
-		Pool get(fn pool): map hasher(blake2_128_concat) TokenType => ConvertPool<T::Balance>;
+		Pool get(fn pool): map hasher(blake2_128_concat) TokenSymbol => ConvertPool<T::Balance>;
 	}
 }
 
@@ -110,10 +110,12 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_convert_price(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			convert_price: T::ConvertPrice
 		) {
 			ensure_root(origin)?;
+
+			ensure!(token_type != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
 
 			ensure!(T::AssetTrait::token_exists(token_type), Error::<T>::TokenNotExist);
 			<ConvertPrice<T>>::insert(token_type, convert_price);
@@ -124,10 +126,12 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_price_per_block(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			rate_per_block: T::RatePerBlock
 		) {
 			ensure_root(origin)?;
+
+			ensure!(token_type != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
 
 			ensure!(T::AssetTrait::token_exists(token_type), Error::<T>::TokenNotExist);
 			<RatePerBlock<T>>::insert(token_type, rate_per_block);
@@ -136,17 +140,19 @@ decl_module! {
 		}
 
 		#[weight = FunctionOf(
-			|args: (&TokenType, &T::Balance, &Option<T::AccountId>)| Module::<T>::calculate_referer_gas(args.2),
+			|args: (&TokenSymbol, &T::Balance, &Option<T::AccountId>)| Module::<T>::calculate_referer_gas(args.2),
 			DispatchClass::Normal,
 			Pays::Yes
 		)]
 		fn convert_token_to_vtoken(
 			origin,
-			vtoken_type: TokenType,
+			vtoken_type: TokenSymbol,
 			#[compact] token_amount: T::Balance,
 			referrer: Option<T::AccountId>
 		) {
 			let converter = ensure_signed(origin)?;
+
+			ensure!(vtoken_type != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
 
 			// get paired tokens
 			let (token_type, vtoken_type) = vtoken_type.paired_token();
@@ -180,10 +186,12 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn convert_vtoken_to_token(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			#[compact] vtoken_amount: T::Balance,
 		) {
 			let converter = ensure_signed(origin)?;
+
+			ensure!(token_type != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
 
 			// get paired tokens
 			let (token_type, vtoken_type) = token_type.paired_token();
@@ -251,18 +259,18 @@ impl<T: Trait> Module<T> {
 		if referer.is_some() { 100 } else { 10 }
 	}
 
-	pub fn get_convert(token_type: TokenType) -> T::ConvertPrice {
+	pub fn get_convert(token_type: TokenSymbol) -> T::ConvertPrice {
 		<ConvertPrice<T>>::get(token_type)
 	}
 
-	fn increase_pool(token_type: TokenType, token_amount: T::Balance, vtoken_amount: T::Balance) {
+	fn increase_pool(token_type: TokenSymbol, token_amount: T::Balance, vtoken_amount: T::Balance) {
 		<Pool<T>>::mutate(token_type, |pool| {
 			pool.token_pool = pool.token_pool.saturating_add(token_amount);
 			pool.vtoken_pool = pool.vtoken_pool.saturating_add(vtoken_amount);
 		});
 	}
 
-	fn decrease_pool(token_type: TokenType, token_amount: T::Balance, vtoken_amount: T::Balance) {
+	fn decrease_pool(token_type: TokenSymbol, token_amount: T::Balance, vtoken_amount: T::Balance) {
 		<Pool<T>>::mutate(token_type, |pool| {
 			pool.token_pool = pool.token_pool.saturating_sub(token_amount);
 			pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
@@ -363,18 +371,18 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> FetchConvertPrice<TokenType, T::ConvertPrice> for Module<T> {
-	fn fetch_convert_price(token_type: TokenType) -> T::ConvertPrice {
+impl<T: Trait> FetchConvertPrice<TokenSymbol, T::ConvertPrice> for Module<T> {
+	fn fetch_convert_price(token_type: TokenSymbol) -> T::ConvertPrice {
 		let price = <ConvertPrice<T>>::get(token_type);
 
 		price
 	}
 }
 
-impl<T: Trait> AssetReward<TokenType, T::Balance> for Module<T> {
+impl<T: Trait> AssetReward<TokenSymbol, T::Balance> for Module<T> {
 	type Output = ();
 	type Error = ();
-	fn set_asset_reward(token_type: TokenType, reward: T::Balance) -> Result<(), ()> {
+	fn set_asset_reward(token_type: TokenSymbol, reward: T::Balance) -> Result<(), ()> {
 		if <Pool<T>>::contains_key(&token_type) {
 			<Pool<T>>::mutate(token_type, |pool| {
 				pool.pending_reward = pool.pending_reward.saturating_add(reward);
