@@ -86,7 +86,7 @@ pub type BlockId = generic::BlockId<Block>;
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
-pub enum TokenType {
+pub enum TokenSymbol {
 	aUSD = 0,
 	DOT = 1,
 	vDOT = 2,
@@ -98,13 +98,13 @@ pub enum TokenType {
 	vIOST = 8,
 }
 
-impl Default for TokenType {
+impl Default for TokenSymbol {
 	fn default() -> Self {
 		Self::aUSD
 	}
 }
 
-impl TokenType {
+impl TokenSymbol {
 	pub fn paired_token(&self) -> (Self, Self) {
 		match *self {
 			Self::DOT | Self::vDOT => (Self::DOT, Self::vDOT),
@@ -116,7 +116,7 @@ impl TokenType {
 	}
 }
 
-impl From<AssetId> for TokenType {
+impl From<AssetId> for TokenSymbol {
 	fn from(id: AssetId) -> Self {
 		match id {
 			0 => Self::aUSD,
@@ -133,18 +133,18 @@ impl From<AssetId> for TokenType {
 	}
 }
 
-impl From<TokenType> for AssetId {
-	fn from(symbol: TokenType) -> Self {
+impl From<TokenSymbol> for AssetId {
+	fn from(symbol: TokenSymbol) -> Self {
 		match symbol {
-			TokenType::aUSD => 0,
-			TokenType::DOT => 1,
-			TokenType::vDOT => 2,
-			TokenType::KSM => 3,
-			TokenType::vKSM => 4,
-			TokenType::EOS => 5,
-			TokenType::vEOS => 6,
-			TokenType::IOST => 7,
-			TokenType::vIOST => 8,
+			TokenSymbol::aUSD => 0,
+			TokenSymbol::DOT => 1,
+			TokenSymbol::vDOT => 2,
+			TokenSymbol::KSM => 3,
+			TokenSymbol::vKSM => 4,
+			TokenSymbol::EOS => 5,
+			TokenSymbol::vEOS => 6,
+			TokenSymbol::IOST => 7,
+			TokenSymbol::vIOST => 8,
 		}
 	}
 }
@@ -233,19 +233,19 @@ pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	type Error;
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> Result<(AssetId, Token<Balance>), Self::Error>;
 
-	fn asset_issue(token_type: TokenType, target: AccountId, amount: Balance);
+	fn asset_issue(token_type: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_redeem(token_type: TokenType, target: AccountId, amount: Balance);
+	fn asset_redeem(token_type: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_destroy(token_type: TokenType, target: AccountId, amount: Balance);
+	fn asset_destroy(token_type: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<TokenType>;
+	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<TokenSymbol>;
 
-	fn token_exists(token_type: TokenType) -> bool;
+	fn token_exists(token_type: TokenSymbol) -> bool;
 
-	fn get_account_asset(token_type: TokenType, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
+	fn get_account_asset(token_type: TokenSymbol, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
 
-	fn get_token(token_type: TokenType) -> Token<Balance>;
+	fn get_token(token_type: TokenSymbol) -> Token<Balance>;
 }
 
 impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
@@ -254,19 +254,19 @@ impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, B
 	type Error = core::convert::Infallible;
 	fn asset_create(_: Vec<u8>, _: u16) -> Result<(AssetId, Token<Balance>), Self::Error> { Ok(Default::default()) }
 
-	fn asset_issue(_: TokenType, _: AccountId, _: Balance) {}
+	fn asset_issue(_: TokenSymbol, _: AccountId, _: Balance) {}
 
-	fn asset_redeem(_: TokenType, _: AccountId, _: Balance) {}
+	fn asset_redeem(_: TokenSymbol, _: AccountId, _: Balance) {}
 
-	fn asset_destroy(_: TokenType, _: AccountId, _: Balance) {}
+	fn asset_destroy(_: TokenSymbol, _: AccountId, _: Balance) {}
 
-	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<TokenType> { Default::default() }
+	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<TokenSymbol> { Default::default() }
 
-	fn token_exists(_: TokenType) -> bool { Default::default() }
+	fn token_exists(_: TokenSymbol) -> bool { Default::default() }
 
-	fn get_account_asset(_: TokenType, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
+	fn get_account_asset(_: TokenSymbol, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
 
-	fn get_token(_: TokenType) -> Token<Balance> { Default::default() }
+	fn get_token(_: TokenSymbol) -> Token<Balance> { Default::default() }
 }
 
 pub trait TokenPriceHandler<Price> {
@@ -280,21 +280,21 @@ impl<Price> TokenPriceHandler<Price> for () {
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(token_type: TokenType, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
+	fn asset_redeem(token_type: TokenSymbol, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
 }
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-	fn asset_redeem(_: TokenType, _: AC, _: B, _: Option<Vec<u8>>) {}
+	fn asset_redeem(_: TokenSymbol, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
 /// Fetch convert rate handler
-pub trait FetchConvertPrice<TokenType, ConvertPrice> {
+pub trait FetchConvertPrice<TokenSymbol, ConvertPrice> {
 	/// fetch convert rate
-	fn fetch_convert_price(token_type: TokenType) -> ConvertPrice;
+	fn fetch_convert_price(token_type: TokenSymbol) -> ConvertPrice;
 }
 
-impl<TokenType, ER: Default> FetchConvertPrice<TokenType, ER> for () {
-	fn fetch_convert_price(_: TokenType) -> ER { Default::default() }
+impl<TokenSymbol, ER: Default> FetchConvertPrice<TokenSymbol, ER> for () {
+	fn fetch_convert_price(_: TokenSymbol) -> ER { Default::default() }
 }
 
 /// Blockchain types
@@ -337,7 +337,7 @@ pub struct BridgeAssetBalance<AccountId, Precision, Balance> {
 	// store the account who send transaction to EOS
 	pub from: AccountId,
 	// which token type is sent to EOS
-	pub token_type: TokenType,
+	pub token_type: TokenSymbol,
 }
 
 /// Bridge asset from other blockchain to Bifrost
@@ -353,23 +353,23 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 pub trait BridgeAssetTo<AccountId, Precision, Balance> {
 	type Error;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
-	fn redeem(token_type: TokenType, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn stake(token_type: TokenType, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn unstake(token_type: TokenType, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn redeem(token_type: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn stake(token_type: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn unstake(token_type: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 }
 
 impl<A, P, B> BridgeAssetTo<A, P, B> for () {
 	type Error = core::convert::Infallible;
 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, P, B>) -> Result<(), Self::Error> { Ok(()) }
-	fn redeem(_: TokenType, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: TokenType, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: TokenType, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: TokenSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: TokenSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: TokenSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
-pub trait AssetReward<TokenType, Balance> {
+pub trait AssetReward<TokenSymbol, Balance> {
 	type Output;
 	type Error;
-	fn set_asset_reward(token_type: TokenType, reward: Balance) -> Result<Self::Output, Self::Error>;
+	fn set_asset_reward(token_type: TokenSymbol, reward: Balance) -> Result<Self::Output, Self::Error>;
 }
 
 impl<A, B> AssetReward<A, B> for () {

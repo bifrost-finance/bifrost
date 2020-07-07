@@ -20,11 +20,11 @@ use codec::Codec;
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
-	pub trait ConvertPriceApi<TokenType, ConvertPrice> where
-		TokenType: Codec,
+	pub trait ConvertPriceApi<TokenSymbol, ConvertPrice> where
+		TokenSymbol: Codec,
 		ConvertPrice: Codec
 	{
 		/// get current convert rate
-		fn get_convert_rate(token_type: TokenType) -> ConvertPrice;
+		fn get_convert_rate(token_type: TokenSymbol) -> ConvertPrice;
 	}
 }

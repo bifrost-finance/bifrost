@@ -22,7 +22,7 @@ use crate::*;
 use crate::mock::*;
 use float_cmp::approx_eq;
 use frame_support::{assert_ok, dispatch::DispatchError};
-use node_primitives::TokenType;
+use node_primitives::TokenSymbol;
 
 #[test]
 fn total_weight_should_work() {
@@ -188,8 +188,8 @@ fn add_liquidity_should_work() {
 
 		// this pool has two tokens, an each one has 1000 balance, weight 1 and 49
 		let raw_pool = vec![
-			(TokenType::DOT, 1000, 1),
-			(TokenType::KSM, 1000, 49)
+			(TokenSymbol::DOT, 1000, 1),
+			(TokenSymbol::KSM, 1000, 49)
 		];
 		let original_pool = (raw_pool, 0);
 		<GlobalPool<Test>>::put(original_pool);
@@ -205,7 +205,7 @@ fn add_liquidity_should_work() {
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
@@ -219,7 +219,7 @@ fn add_liquidity_should_work() {
 
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
-		let ksm_type = TokenType::from(ksm_id);
+		let ksm_type = TokenSymbol::from(ksm_id);
 
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((ksm_type, alice)).balance, ksm_token_amount);
@@ -268,8 +268,8 @@ fn add_single_liquidity_should_work() {
 
 		// this pool has two tokens, an each one has 1000 balance, weight 1 and 49
 		let raw_pool = vec![
-			(TokenType::DOT, 1000, 1),
-			(TokenType::KSM, 1000, 49)
+			(TokenSymbol::DOT, 1000, 1),
+			(TokenSymbol::KSM, 1000, 49)
 		];
 		let original_pool = (raw_pool, 0);
 		<GlobalPool<Test>>::put(original_pool);
@@ -285,7 +285,7 @@ fn add_single_liquidity_should_work() {
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
@@ -296,7 +296,7 @@ fn add_single_liquidity_should_work() {
 		let ksm_symbol = b"KSM".to_vec();
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
-		let ksm_type = TokenType::from(ksm_id);
+		let ksm_type = TokenSymbol::from(ksm_id);
 
 		// set swap fee
 		let fee = 100;
@@ -315,7 +315,7 @@ fn add_single_liquidity_should_work() {
 
 		// add a token alice doesn't have
 		assert_eq!(
-			Swap::add_single_liquidity(Origin::signed(alice), TokenType::IOST, token_amount_in),
+			Swap::add_single_liquidity(Origin::signed(alice), TokenSymbol::IOST, token_amount_in),
 			Err(DispatchError::Module { index: 0, error: 0, message: Some("TokenNotExist") })
 		);
 
@@ -351,8 +351,8 @@ fn swap_should_work() {
 
 		// this pool has two tokens, an each one has 1000 balance, weight 1 and 49
 		let raw_pool = vec![
-			(TokenType::DOT, 0, 1),
-			(TokenType::KSM, 0, 49)
+			(TokenSymbol::DOT, 0, 1),
+			(TokenSymbol::KSM, 0, 49)
 		];
 		let original_pool = (raw_pool, 0);
 		<GlobalPool<Test>>::put(original_pool);
@@ -368,7 +368,7 @@ fn swap_should_work() {
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
@@ -381,7 +381,7 @@ fn swap_should_work() {
 		let ksm_token_amount = 1_000_000;
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
-		let ksm_type = TokenType::from(ksm_id);
+		let ksm_type = TokenSymbol::from(ksm_id);
 
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((ksm_type, alice)).balance, ksm_token_amount);
@@ -494,8 +494,8 @@ fn remove_single_liquidity_should_work() {
 
 		// this pool has two tokens, an each one has 1000 balance, weight 1 and 49
 		let raw_pool = vec![
-			(TokenType::DOT, 0, 1),
-			(TokenType::KSM, 0, 49)
+			(TokenSymbol::DOT, 0, 1),
+			(TokenSymbol::KSM, 0, 49)
 		];
 		let original_pool = (raw_pool, 0);
 		<GlobalPool<Test>>::put(original_pool);
@@ -514,7 +514,7 @@ fn remove_single_liquidity_should_work() {
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
@@ -527,7 +527,7 @@ fn remove_single_liquidity_should_work() {
 		let ksm_token_amount = 1_000_000;
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
-		let ksm_type = TokenType::from(ksm_id);
+		let ksm_type = TokenSymbol::from(ksm_id);
 
 		// issue ksm token
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
@@ -609,8 +609,8 @@ fn remove_assets_liquidity_should_work() {
 
 		// this pool has two tokens, an each one has 1000 balance, weight 1 and 49
 		let raw_pool = vec![
-			(TokenType::DOT, 0, 1),
-			(TokenType::KSM, 0, 49)
+			(TokenSymbol::DOT, 0, 1),
+			(TokenSymbol::KSM, 0, 49)
 		];
 		let original_pool = (raw_pool, 0);
 		<GlobalPool<Test>>::put(original_pool);
@@ -628,7 +628,7 @@ fn remove_assets_liquidity_should_work() {
 		// issue dot token
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
@@ -640,7 +640,7 @@ fn remove_assets_liquidity_should_work() {
 		let ksm_token_amount = 100_000;
 		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
-		let ksm_type = TokenType::from(ksm_id);
+		let ksm_type = TokenSymbol::from(ksm_id);
 
 		// issue ksm token
 		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));

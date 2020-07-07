@@ -22,13 +22,13 @@ use crate::*;
 use crate::mock::*;
 use frame_support::{assert_ok, assert_noop};
 use node_primitives::{
-	Token, TokenType,
+	Token, TokenSymbol,
 };
 
 #[test]
 fn set_asset_should_work() {
 	new_test_ext().execute_with(|| {
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let redeem_duration = 100;
 		let min_reward_per_block = 1;
 		let asset_config = AssetConfig::new(redeem_duration, min_reward_per_block);
@@ -46,7 +46,7 @@ fn stake_should_ok() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 		assert_ok!(Validator::register(origin, token_type, need, validator_address));
@@ -72,7 +72,7 @@ fn stake_should_ok() {
 #[test]
 fn stake_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let target = 1;
 		let amount = 100;
 
@@ -87,7 +87,7 @@ fn stake_not_registered_should_error() {
 fn stake_amount_exceed_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin = Origin::signed(1);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 		assert_ok!(Validator::register(origin, token_type, need, validator_address));
@@ -106,7 +106,7 @@ fn unstake_should_ok() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 		assert_ok!(Validator::register(origin, token_type, need, validator_address));
@@ -128,7 +128,7 @@ fn unstake_should_ok() {
 #[test]
 fn unstake_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let target = 1;
 		let amount = 100;
 
@@ -144,7 +144,7 @@ fn unstake_insufficient_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 		assert_ok!(Validator::register(origin, token_type, need, validator_address));
@@ -167,7 +167,7 @@ fn register_should_work() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 		let validator = ValidatorRegister::new(need, validator_address.clone());
@@ -182,7 +182,7 @@ fn register_should_work() {
 fn register_twice_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin = Origin::signed(1);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 
@@ -202,7 +202,7 @@ fn set_need_amount_should_work() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 		assert_ok!(Validator::register(origin.clone(), token_type, need, validator_address));
@@ -219,7 +219,7 @@ fn set_need_amount_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let new_need = 2000;
 
 		assert_noop!(
@@ -241,7 +241,7 @@ fn deposit_should_work() {
 
 		assert_ok!(Assets::create(Origin::ROOT, symbol.clone(), precision));
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
 
@@ -275,7 +275,7 @@ fn deposit_not_enough_free_balance_should_error() {
 		assert_ok!(Assets::create(Origin::ROOT, symbol, precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
@@ -297,7 +297,7 @@ fn deposit_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let deposit_amount = 100;
 
 		assert_noop!(
@@ -319,7 +319,7 @@ fn withdraw_should_ok() {
 		assert_ok!(Assets::create(Origin::ROOT, symbol, precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
@@ -351,7 +351,7 @@ fn withdraw_not_enough_locked_balance_should_error() {
 		assert_ok!(Assets::create(Origin::ROOT, symbol, precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
-		let dot_type = TokenType::from(dot_id);
+		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
@@ -376,7 +376,7 @@ fn withdraw_not_registered_should_error() {
 	new_test_ext().execute_with(|| {
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let token_type = TokenType::EOS;
+		let token_type = TokenSymbol::EOS;
 		let deposit_amount = 100;
 
 		assert_noop!(

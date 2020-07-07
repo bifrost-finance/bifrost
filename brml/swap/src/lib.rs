@@ -28,7 +28,7 @@ use fixed_point::{FixedI128, types::{*, extra}, transcendental, traits::FromFixe
 use frame_support::traits::{Get};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter, dispatch::DispatchResult, StorageValue};
 use frame_system::{self as system, ensure_signed};
-use node_primitives::{AssetTrait, TokenType};
+use node_primitives::{AssetTrait, TokenSymbol};
 use sp_runtime::traits::{MaybeSerializeDeserialize, Member, Saturating, AtLeast32Bit, Zero};
 
 mod mock;
@@ -123,13 +123,13 @@ decl_storage! {
 		BalancerPoolToken get(fn all_pool_token) config(): T::Balance; // set pool token as 1000 by default
 
 		/// Global pool, pool's details, like asset type, balance, weight, and value of function
-		GlobalPool get(fn global_pool) config(): (Vec<(TokenType, T::Balance, T::PoolWeight)>, T::InvariantValue);
+		GlobalPool get(fn global_pool) config(): (Vec<(TokenSymbol, T::Balance, T::PoolWeight)>, T::InvariantValue);
 
 		/// Each user details for pool
-		UserPool get(fn user_pool) config(): map hasher(blake2_128_concat) T::AccountId => (Vec<(TokenType, T::Balance)>, T::Balance);
+		UserPool get(fn user_pool) config(): map hasher(blake2_128_concat) T::AccountId => (Vec<(TokenSymbol, T::Balance)>, T::Balance);
 
 		/// User may add a single asst to liquidity
-		UserSinglePool: map hasher(blake2_128_concat) (T::AccountId, TokenType) => (T::Balance, T::Balance);
+		UserSinglePool: map hasher(blake2_128_concat) (T::AccountId, TokenSymbol) => (T::Balance, T::Balance);
 		// (T::Balance, BalancerPoolToken)
 
 		/// Now only support 7 tokens
@@ -141,7 +141,7 @@ decl_storage! {
 		}): T::PoolWeight;
 
 		/// Each token's weight
-		TokenWeight get(fn token_weight): map hasher(blake2_128_concat) TokenType => T::PoolWeight;
+		TokenWeight get(fn token_weight): map hasher(blake2_128_concat) TokenSymbol => T::PoolWeight;
 
 		/// Fee stuff
 		LiquidityFee get(fn liquidity_fee): T::Fee = T::Fee::from(0); // now we don't charge fee on adding or removing liquidity
@@ -149,7 +149,7 @@ decl_storage! {
 		ExitFee get(fn exit_fee) config(): T::Fee;
 
 		/// shared fee pool
-		SharedRewardPool get(fn shared_reward): Vec<(TokenType, T::Balance)>;
+		SharedRewardPool get(fn shared_reward): Vec<(TokenSymbol, T::Balance)>;
 	}
 	add_extra_genesis {
 		config(total_weight): Vec<T::PoolWeight>;
@@ -174,13 +174,13 @@ decl_storage! {
 
 			// initialize reward pool
 			let reward = vec![
-				(TokenType::aUSD, T::Balance::from(0)),
-				(TokenType::DOT, T::Balance::from(0)),
-				(TokenType::vDOT, T::Balance::from(0)),
-				(TokenType::KSM, T::Balance::from(0)),
-				(TokenType::vKSM, T::Balance::from(0)),
-				(TokenType::EOS, T::Balance::from(0)),
-				(TokenType::vEOS, T::Balance::from(0)),
+				(TokenSymbol::aUSD, T::Balance::from(0)),
+				(TokenSymbol::DOT, T::Balance::from(0)),
+				(TokenSymbol::vDOT, T::Balance::from(0)),
+				(TokenSymbol::KSM, T::Balance::from(0)),
+				(TokenSymbol::vKSM, T::Balance::from(0)),
+				(TokenSymbol::EOS, T::Balance::from(0)),
+				(TokenSymbol::vEOS, T::Balance::from(0)),
 			];
 			<SharedRewardPool::<T>>::put(reward);
 		});
@@ -275,7 +275,7 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn add_single_liquidity(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			#[compact] token_amount_in: T::Balance,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
@@ -353,7 +353,7 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn remove_single_asset_liquidity(
 			origin,
-			token_type: TokenType,
+			token_type: TokenSymbol,
 			#[compact] pool_token_in: T::Balance
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
@@ -500,10 +500,10 @@ decl_module! {
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn swap(
 			origin,
-			token_in_type: TokenType,
+			token_in_type: TokenSymbol,
 			#[compact]token_amount_in: T::Balance,
 			min_token_amount_out: Option<T::Balance>,
-			token_out_type: TokenType,
+			token_out_type: TokenSymbol,
 			max_price: Option<T::Balance>
 		) -> DispatchResult {
 			let swaper = ensure_signed(origin)?;

@@ -36,7 +36,7 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature, TokenType};
+pub use node_primitives::{AccountId, Balance, Signature, TokenSymbol};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -341,25 +341,25 @@ fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
 	let count_of_supported_tokens = 7u8;
 	let global_pool = {
 		let pool = vec![
-			(TokenType::aUSD, 1000 * DOLLARS, 15),
-			(TokenType::DOT, 1000 * DOLLARS, 15),
-			(TokenType::vDOT, 1000 * DOLLARS, 15),
-			(TokenType::KSM, 1000 * DOLLARS, 20),
-			(TokenType::vKSM, 1000 * DOLLARS, 20),
-			(TokenType::EOS, 1000 * DOLLARS, 15),
-			(TokenType::vEOS, 1000 * DOLLARS, 15),
+			(TokenSymbol::aUSD, 1000 * DOLLARS, 15),
+			(TokenSymbol::DOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::vDOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::KSM, 1000 * DOLLARS, 20),
+			(TokenSymbol::vKSM, 1000 * DOLLARS, 20),
+			(TokenSymbol::EOS, 1000 * DOLLARS, 15),
+			(TokenSymbol::vEOS, 1000 * DOLLARS, 15),
 		];
 		(pool, 0)
 	};
 	let user_pool = {
 		let pool = vec![
-			(TokenType::aUSD, 1000 * DOLLARS),
-			(TokenType::DOT, 1000 * DOLLARS),
-			(TokenType::vDOT, 1000 * DOLLARS),
-			(TokenType::KSM, 1000 * DOLLARS),
-			(TokenType::vKSM, 1000 * DOLLARS),
-			(TokenType::EOS, 1000 * DOLLARS),
-			(TokenType::vEOS, 1000 * DOLLARS),
+			(TokenSymbol::aUSD, 1000 * DOLLARS),
+			(TokenSymbol::DOT, 1000 * DOLLARS),
+			(TokenSymbol::vDOT, 1000 * DOLLARS),
+			(TokenSymbol::KSM, 1000 * DOLLARS),
+			(TokenSymbol::vKSM, 1000 * DOLLARS),
+			(TokenSymbol::EOS, 1000 * DOLLARS),
+			(TokenSymbol::vEOS, 1000 * DOLLARS),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
