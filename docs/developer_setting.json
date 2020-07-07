@@ -123,11 +123,7 @@
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
   "TokenType": {
-    "_enum": ["Token", "VToken"]
-  },
-  "TokenPair": {
-    "token": "Token",
-    "vtoken": "Token"
+    "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS"]
   },
   "Cost": "u128",
   "Income": "u128",
@@ -140,13 +136,6 @@
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
-  "AssetSymbol": {
-    "_enum": [
-      "DOT",
-      "KSM",
-      "EOS"
-    ]
-  },
   "ConvertPool": {
     "token_pool": "Balance",
     "vtoken_pool": "Balance",

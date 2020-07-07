@@ -23,9 +23,9 @@ use codec::{Encode, Decode};
 use core::convert::{From, Into};
 use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
-use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter};
+use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetSymbol, AssetTrait, BridgeAssetTo, TokenType};
+use node_primitives::{AssetTrait, BridgeAssetTo, TokenType};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
@@ -73,7 +73,7 @@ pub trait Trait: frame_system::Trait {
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber>;
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<AssetSymbol>;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenType>;
 	/// The units in which we record costs.
 	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record incomes.
@@ -91,19 +91,19 @@ decl_event! {
 		<T as frame_system::Trait>::BlockNumber,
 	{
 		/// A new asset has been set.
-		AssetConfigSet(AssetSymbol, AssetConfig<BlockNumber, Balance>),
+		AssetConfigSet(TokenType, AssetConfig<BlockNumber, Balance>),
 		/// A new validator has been registered.
-		ValidatorRegistered(AssetSymbol, AccountId, ValidatorRegister<Balance, BlockNumber>),
+		ValidatorRegistered(TokenType, AccountId, ValidatorRegister<Balance, BlockNumber>),
 		/// The validator changed the amount of staking it's needed.
-		ValidatorNeedAmountSet(AssetSymbol, AccountId, Balance),
+		ValidatorNeedAmountSet(TokenType, AccountId, Balance),
 		/// The validator deposited the amount of reward.
-		ValidatorDeposited(AssetSymbol, AccountId, Balance),
+		ValidatorDeposited(TokenType, AccountId, Balance),
 		/// The validator withdrawn the amount of reward.
-		ValidatorWithdrawn(AssetSymbol, AccountId, Balance),
+		ValidatorWithdrawn(TokenType, AccountId, Balance),
 		/// The amount of asset staked to the account.
-		ValidatorStaked(AssetSymbol, AccountId, Balance),
+		ValidatorStaked(TokenType, AccountId, Balance),
 		/// The amount of asset un-staked from the account.
-		ValidatorUnStaked(AssetSymbol, AccountId, Balance),
+		ValidatorUnStaked(TokenType, AccountId, Balance),
 	}
 }
 
@@ -125,17 +125,19 @@ decl_error! {
 		BridgeStakeError,
 		/// An error occurred in unstake action of bridge module.
 		BridgeUnstakeError,
+		/// An error while calling redeem by bridge-eos
+		BridgeEOSRedeemError,
 	}
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Validator {
 		/// Asset config data.
-		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) AssetSymbol => AssetConfig<T::BlockNumber, T::Balance>;
+		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) TokenType => AssetConfig<T::BlockNumber, T::Balance>;
 		/// The total amount of asset has been locked for staking.
-		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) AssetSymbol => T::Balance;
+		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) TokenType => T::Balance;
 		/// The validators registered from cross chain.
-		Validators get(fn validators): double_map hasher(blake2_128_concat) AssetSymbol, hasher(blake2_128_concat) T::AccountId
+		Validators get(fn validators): double_map hasher(blake2_128_concat) TokenType, hasher(blake2_128_concat) T::AccountId
 			=> ValidatorRegister<T::Balance, T::BlockNumber>;
 		/// The locked amount of asset of account for staking.
 		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
@@ -151,162 +153,165 @@ decl_module! {
 		#[weight = 0]
 		fn set_asset(
 			origin,
-			asset_symbol: AssetSymbol,
+			token_type: TokenType,
 			redeem_duration: T::BlockNumber,
 			min_reward_per_block: T::Balance,
 		) {
 			let _ = ensure_root(origin)?;
 
 			let asset_config = AssetConfig::new(redeem_duration, min_reward_per_block);
-			AssetConfigs::<T>::insert(&asset_symbol, &asset_config);
+			AssetConfigs::<T>::insert(&token_type, &asset_config);
 
-			Self::deposit_event(RawEvent::AssetConfigSet(asset_symbol, asset_config));
+			Self::deposit_event(RawEvent::AssetConfigSet(token_type, asset_config));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
 		fn stake(
 			origin,
-			asset_symbol: AssetSymbol,
+			token_type: TokenType,
 			target: T::AccountId,
 			amount: T::Balance,
 		) {
 			let _ = ensure_root(origin)?;
 			ensure!(
-				Validators::<T>::contains_key(&asset_symbol, &target),
+				Validators::<T>::contains_key(&token_type, &target),
 				Error::<T>::ValidatorNotRegistered
 			);
-			let validator = Validators::<T>::get(&asset_symbol, &target);
+			let validator = Validators::<T>::get(&token_type, &target);
 			ensure!(
 				validator.need - validator.staking >= amount,
 				Error::<T>::StakingAmountExceeded,
 			);
 
-			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
+			Validators::<T>::mutate(&token_type, &target, |validator| {
 				validator.staking = validator.staking.saturating_add(amount);
 			});
 
-			AssetLockedBalances::<T>::mutate(&asset_symbol, |balance| {
+			AssetLockedBalances::<T>::mutate(&token_type, |balance| {
 				*balance = balance.saturating_add(amount);
 			});
 
 			// stake asset by bridge module
 			let validator_address = validator.validator_address;
-			T::BridgeAssetTo::stake(asset_symbol, amount, validator_address)
+			T::BridgeAssetTo::stake(token_type, amount, validator_address)
 				.map_err(|_| Error::<T>::BridgeStakeError)?;
 
-			Self::deposit_event(RawEvent::ValidatorStaked(asset_symbol, target, amount));
+			Self::deposit_event(RawEvent::ValidatorStaked(token_type, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
 		fn unstake(
 			origin,
-			asset_symbol: AssetSymbol,
+			token_type: TokenType,
 			target: T::AccountId,
 			amount: T::Balance,
 		) {
 			let _ = ensure_root(origin)?;
 			ensure!(
-				Validators::<T>::contains_key(&asset_symbol, &target),
+				Validators::<T>::contains_key(&token_type, &target),
 				Error::<T>::ValidatorNotRegistered
 			);
-			let validator = Validators::<T>::get(&asset_symbol, &target);
+			let validator = Validators::<T>::get(&token_type, &target);
 			ensure!(
 				validator.staking >= amount,
 				Error::<T>::StakingAmountInsufficient,
 			);
 
-			Validators::<T>::mutate(&asset_symbol, &target, |validator| {
+			Validators::<T>::mutate(&token_type, &target, |validator| {
 				validator.staking = validator.staking.saturating_sub(amount);
 			});
 
-			AssetLockedBalances::<T>::mutate(&asset_symbol, |balance| {
+			AssetLockedBalances::<T>::mutate(&token_type, |balance| {
 				*balance = balance.saturating_sub(amount);
 			});
 
 			// un-stake asset by bridge module
 			let validator_address = validator.validator_address;
-			T::BridgeAssetTo::unstake(asset_symbol, amount, validator_address)
+			T::BridgeAssetTo::unstake(token_type, amount, validator_address)
 				.map_err(|_| Error::<T>::BridgeUnstakeError)?;
 
-			Self::deposit_event(RawEvent::ValidatorUnStaked(asset_symbol, target, amount));
+			Self::deposit_event(RawEvent::ValidatorUnStaked(token_type, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
 		fn register(
 			origin,
-			asset_symbol: AssetSymbol,
+			token_type: TokenType,
 			need: T::Balance,
 			validator_address: Vec<u8>,
 		) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				!Validators::<T>::contains_key(&asset_symbol, &origin),
+				!Validators::<T>::contains_key(&token_type, &origin),
 				Error::<T>::ValidatorRegistered
 			);
 
 			let validator = ValidatorRegister::new(need, validator_address);
-			Validators::<T>::insert(&asset_symbol, &origin, &validator);
+			Validators::<T>::insert(&token_type, &origin, &validator);
 
-			Self::deposit_event(RawEvent::ValidatorRegistered(asset_symbol, origin, validator));
+			Self::deposit_event(RawEvent::ValidatorRegistered(token_type, origin, validator));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn set_need_amount(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
+		fn set_need_amount(origin, token_type: TokenType, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				Validators::<T>::contains_key(&asset_symbol, &origin),
+				Validators::<T>::contains_key(&token_type, &origin),
 				Error::<T>::ValidatorNotRegistered
 			);
 
-			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
+			Validators::<T>::mutate(&token_type, &origin, |validator| {
 				validator.need = amount;
 			});
 
-			Self::deposit_event(RawEvent::ValidatorNeedAmountSet(asset_symbol, origin, amount));
+			Self::deposit_event(RawEvent::ValidatorNeedAmountSet(token_type, origin, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn deposit(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
+		fn deposit(origin, token_type: TokenType, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				Validators::<T>::contains_key(&asset_symbol, &origin),
+				Validators::<T>::contains_key(&token_type, &origin),
 				Error::<T>::ValidatorNotRegistered
 			);
 
 			// Lock balance
-			Self::asset_lock(origin.clone(), asset_symbol, amount)?;
+			Self::asset_lock(origin.clone(), token_type, amount)?;
 
-			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
+			Validators::<T>::mutate(&token_type, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_add(amount);
 			});
 
-			Self::deposit_event(RawEvent::ValidatorDeposited(asset_symbol, origin, amount));
+			Self::deposit_event(RawEvent::ValidatorDeposited(token_type, origin, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn withdraw(origin, asset_symbol: AssetSymbol, amount: T::Balance) {
+		fn withdraw(origin, token_type: TokenType, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				Validators::<T>::contains_key(&asset_symbol, &origin),
+				Validators::<T>::contains_key(&token_type, &origin),
 				Error::<T>::ValidatorNotRegistered
 			);
 
 			// UnLock balance
-			Self::asset_unlock(origin.clone(), asset_symbol, amount)?;
+			Self::asset_unlock(origin.clone(), token_type, amount)?;
 
-			Validators::<T>::mutate(&asset_symbol, &origin, |validator| {
+			Validators::<T>::mutate(&token_type, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_sub(amount);
 			});
 
-			Self::deposit_event(RawEvent::ValidatorWithdrawn(asset_symbol, origin, amount));
+			Self::deposit_event(RawEvent::ValidatorWithdrawn(token_type, origin, amount));
 		}
 
 		fn on_finalize(now_block: T::BlockNumber) {
-			Self::validator_deduct(now_block);
+			match Self::validator_deduct(now_block) {
+				Ok(_) => debug::info!("Deducted successfully."),
+				Err(e) => debug::error!("An error happened while deduct: {:?}", e),
+			}
 		}
 	}
 }
@@ -314,16 +319,11 @@ decl_module! {
 impl<T: Trait> Module<T> {
 	fn asset_lock(
 		account_id: T::AccountId,
-		asset_symbol: AssetSymbol,
+		token_type: TokenType,
 		amount: T::Balance
 	) -> Result<(), Error<T>> {
 		// check if has enough balance
-		let asset_id: T::AssetId = asset_symbol.into();
-		let account_asset = T::AssetTrait::get_account_asset(
-			&asset_id,
-			TokenType::Token,
-			&account_id
-		);
+		let account_asset = T::AssetTrait::get_account_asset(token_type, &account_id);
 		ensure!(account_asset.balance >= amount, Error::<T>::FreeBalanceNotEnough);
 
 		// lock asset to this module
@@ -332,19 +332,14 @@ impl<T: Trait> Module<T> {
 		});
 
 		// destroy asset in assets module
-		T::AssetTrait::asset_destroy(
-			asset_id,
-			TokenType::Token,
-			account_id,
-			amount
-		);
+		T::AssetTrait::asset_destroy(token_type, account_id, amount);
 
 		Ok(())
 	}
 
 	fn asset_unlock(
 		account_id: T::AccountId,
-		asset_symbol: AssetSymbol,
+		token_type: TokenType,
 		amount: T::Balance
 	) -> Result<(), Error<T>> {
 		// check if has enough locked_balance
@@ -357,21 +352,15 @@ impl<T: Trait> Module<T> {
 		});
 
 		// issue asset in assets module
-		let asset_id: T::AssetId = asset_symbol.into();
-		T::AssetTrait::asset_issue(
-			asset_id,
-			TokenType::Token,
-			account_id,
-			amount
-		);
+		T::AssetTrait::asset_issue(token_type, account_id, amount);
 
 		Ok(())
 	}
 
-	fn validator_deduct(now_block: T::BlockNumber) {
-		for (asset_symbol, account_id, mut val) in Validators::<T>::iter() {
+	fn validator_deduct(now_block: T::BlockNumber) -> Result<(), Error<T>> {
+		for (token_type, account_id, mut val) in Validators::<T>::iter() {
 			// calculate validator's deposit balance
-			let asset_config = AssetConfigs::<T>::get(&asset_symbol);
+			let asset_config = AssetConfigs::<T>::get(&token_type);
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
@@ -380,7 +369,7 @@ impl<T: Trait> Module<T> {
 			);
 			if min_fee >= val.deposit {
 				// call redeem by bridge-eos
-				T::BridgeAssetTo::redeem(asset_symbol, val.deposit, val.validator_address.clone());
+				T::BridgeAssetTo::redeem(token_type, val.deposit, val.validator_address.clone()).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
 				val.deposit = Zero::zero();
 			} else {
 				let blocks = now_block - val.last_block;
@@ -393,7 +382,9 @@ impl<T: Trait> Module<T> {
 			val.last_block = now_block;
 
 			// update validator
-			Validators::<T>::insert(&asset_symbol, &account_id, val);
+			Validators::<T>::insert(&token_type, &account_id, val);
 		}
+
+		Ok(())
 	}
 }

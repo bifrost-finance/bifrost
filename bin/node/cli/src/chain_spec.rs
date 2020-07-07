@@ -314,7 +314,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
@@ -341,29 +341,31 @@ fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
 	let count_of_supported_tokens = 7u8;
 	let global_pool = {
 		let pool = vec![
-			(0, TokenType::Token, 1000 * DOLLARS, 15),
-			(0, TokenType::VToken, 1000 * DOLLARS, 15),
-			(1, TokenType::Token, 1000 * DOLLARS, 15),
-			(1, TokenType::VToken, 1000 * DOLLARS, 20),
-			(2, TokenType::Token, 1000 * DOLLARS, 20),
-			(2, TokenType::VToken, 1000 * DOLLARS, 15),
+			(TokenType::aUSD, 1000 * DOLLARS, 15),
+			(TokenType::DOT, 1000 * DOLLARS, 15),
+			(TokenType::vDOT, 1000 * DOLLARS, 15),
+			(TokenType::KSM, 1000 * DOLLARS, 20),
+			(TokenType::vKSM, 1000 * DOLLARS, 20),
+			(TokenType::EOS, 1000 * DOLLARS, 15),
+			(TokenType::vEOS, 1000 * DOLLARS, 15),
 		];
 		(pool, 0)
 	};
 	let user_pool = {
 		let pool = vec![
-			(0, TokenType::Token, 1000 * DOLLARS),
-			(0, TokenType::VToken, 1000 * DOLLARS),
-			(1, TokenType::Token, 1000 * DOLLARS),
-			(1, TokenType::VToken, 1000 * DOLLARS),
-			(2, TokenType::Token, 1000 * DOLLARS),
-			(2, TokenType::VToken, 1000 * DOLLARS),
+			(TokenType::aUSD, 1000 * DOLLARS),
+			(TokenType::DOT, 1000 * DOLLARS),
+			(TokenType::vDOT, 1000 * DOLLARS),
+			(TokenType::KSM, 1000 * DOLLARS),
+			(TokenType::vKSM, 1000 * DOLLARS),
+			(TokenType::EOS, 1000 * DOLLARS),
+			(TokenType::vEOS, 1000 * DOLLARS),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
 	let swap_fee = 150;
 	let exit_fee = 0;
-	let total_weight = global_pool.0.iter().map(|p| p.3).collect();
+	let total_weight = global_pool.0.iter().map(|p| p.2).collect();
 
 	Some(SwapConfig {
 		all_pool_token,
@@ -512,7 +514,7 @@ pub fn bifrost_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
