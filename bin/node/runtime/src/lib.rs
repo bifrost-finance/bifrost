@@ -37,7 +37,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	BridgeAssetTo, AssetId, Precision, TokenType, ConvertPrice, RatePerBlock
+	BridgeAssetTo, AssetId, Precision, TokenSymbol, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -1039,19 +1039,19 @@ impl_runtime_apis! {
 	}
 
 	// impl asset rpc methods for runtime
-	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
-		fn asset_balances(id: AssetId, who: AccountId) -> u64 {
-			Assets::asset_balances(id, TokenType::VToken, who)
+	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, TokenSymbol, AccountId, Balance> for Runtime {
+		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64 {
+			Assets::asset_balances(token_symbol, who)
 		}
 
-		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
+		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol> {
 			Assets::asset_tokens(who)
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(vtoken_id: AssetId) -> node_primitives::ConvertPrice {
-			Convert::get_convert(vtoken_id)
+	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, TokenSymbol, node_primitives::ConvertPrice> for Runtime {
+		fn get_convert_rate(token_symbol: TokenSymbol) -> node_primitives::ConvertPrice {
+			Convert::get_convert(token_symbol)
 		}
 	}
 }

@@ -41,26 +41,26 @@ impl<C, Block> Convert<C, Block> {
 }
 
 #[rpc]
-pub trait ConvertPriceApi<BlockHash, AssetId, ConvertPrice> {
+pub trait ConvertPriceApi<BlockHash, TokenSymbol, ConvertPrice> {
 	/// rpc method for getting current convert rate
 	#[rpc(name = "convert_getConvert")]
-	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
+	fn get_convert_rate(&self, token_symbol: TokenSymbol, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
 }
 
-impl<C, Block, AssetId, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, AssetId, ConvertPrice>
+impl<C, Block, TokenSymbol, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, TokenSymbol, ConvertPrice>
 for Convert<C, Block>
 	where
 		Block: BlockT,
 		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ConvertRateRuntimeApi<Block, AssetId, ConvertPrice>,
-		AssetId: Codec,
+		C::Api: ConvertRateRuntimeApi<Block, TokenSymbol, ConvertPrice>,
+		TokenSymbol: Codec,
 		ConvertPrice: Codec,
 {
-	fn get_convert_rate(&self, vtoken_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
+	fn get_convert_rate(&self, token_symbol: TokenSymbol, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
 		let convert_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		convert_rpc_api.get_convert_rate(&at, vtoken_id).map_err(|e| RpcError {
+		convert_rpc_api.get_convert_rate(&at, token_symbol).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
 			message: "Failed to get current convert rate.".to_owned(),
 			data: Some(format!("{:?}", e).into()),

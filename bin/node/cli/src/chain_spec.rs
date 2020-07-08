@@ -36,7 +36,7 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature, TokenType};
+pub use node_primitives::{AccountId, Balance, Signature, TokenSymbol};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -314,7 +314,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
@@ -341,29 +341,31 @@ fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
 	let count_of_supported_tokens = 7u8;
 	let global_pool = {
 		let pool = vec![
-			(0, TokenType::Token, 1000 * DOLLARS, 15),
-			(0, TokenType::VToken, 1000 * DOLLARS, 15),
-			(1, TokenType::Token, 1000 * DOLLARS, 15),
-			(1, TokenType::VToken, 1000 * DOLLARS, 20),
-			(2, TokenType::Token, 1000 * DOLLARS, 20),
-			(2, TokenType::VToken, 1000 * DOLLARS, 15),
+			(TokenSymbol::aUSD, 1000 * DOLLARS, 15),
+			(TokenSymbol::DOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::vDOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::KSM, 1000 * DOLLARS, 20),
+			(TokenSymbol::vKSM, 1000 * DOLLARS, 20),
+			(TokenSymbol::EOS, 1000 * DOLLARS, 15),
+			(TokenSymbol::vEOS, 1000 * DOLLARS, 15),
 		];
 		(pool, 0)
 	};
 	let user_pool = {
 		let pool = vec![
-			(0, TokenType::Token, 1000 * DOLLARS),
-			(0, TokenType::VToken, 1000 * DOLLARS),
-			(1, TokenType::Token, 1000 * DOLLARS),
-			(1, TokenType::VToken, 1000 * DOLLARS),
-			(2, TokenType::Token, 1000 * DOLLARS),
-			(2, TokenType::VToken, 1000 * DOLLARS),
+			(TokenSymbol::aUSD, 1000 * DOLLARS),
+			(TokenSymbol::DOT, 1000 * DOLLARS),
+			(TokenSymbol::vDOT, 1000 * DOLLARS),
+			(TokenSymbol::KSM, 1000 * DOLLARS),
+			(TokenSymbol::vKSM, 1000 * DOLLARS),
+			(TokenSymbol::EOS, 1000 * DOLLARS),
+			(TokenSymbol::vEOS, 1000 * DOLLARS),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
 	let swap_fee = 150;
 	let exit_fee = 0;
-	let total_weight = global_pool.0.iter().map(|p| p.3).collect();
+	let total_weight = global_pool.0.iter().map(|p| p.2).collect();
 
 	Some(SwapConfig {
 		all_pool_token,
@@ -512,7 +514,7 @@ pub fn bifrost_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
