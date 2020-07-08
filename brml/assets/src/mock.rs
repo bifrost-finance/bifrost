@@ -60,6 +60,8 @@ impl system::Trait for Test {
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
 	type ExtrinsicBaseWeight = ();
+	type BaseCallFilter = ();
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 }
 
 parameter_types! {

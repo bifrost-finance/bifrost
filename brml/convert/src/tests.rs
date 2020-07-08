@@ -31,14 +31,14 @@ fn update_rate_multiple_times() {
 		// issue a vtoken
 		let symbol = b"aUSD".to_vec();
 		let precise = 18;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), symbol, precise));
 		let ausd_id = <assets::NextAssetId<Test>>::get() - 1;
 		let ausd_type = TokenSymbol::from(ausd_id);
 
 		let convert_rate = 20;
-		assert_ok!(Convert::set_convert_price(Origin::ROOT, ausd_type, convert_rate));
+		assert_ok!(Convert::set_convert_price(Origin::root(), ausd_type, convert_rate));
 		let update_rate = 2;
-		assert_ok!(Convert::set_price_per_block(Origin::ROOT, ausd_type, update_rate));
+		assert_ok!(Convert::set_price_per_block(Origin::root(), ausd_type, update_rate));
 
 		let change_times = 3;
 		run_to_block(change_times + 5);
@@ -55,15 +55,15 @@ fn update_rate_multiple_times_until_overflow() {
 		run_to_block(1);
 		let symbol = b"aUSD".to_vec();
 		let precise = 4;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), symbol, precise));
 		let ausd_id = <assets::NextAssetId<Test>>::get() - 1;
 		let ausd_type = TokenSymbol::from(ausd_id);
 
 		let convert_rate = 20;
-		assert_ok!(Convert::set_convert_price(Origin::ROOT, ausd_type, convert_rate));
+		assert_ok!(Convert::set_convert_price(Origin::root(), ausd_type, convert_rate));
 		run_to_block(3);
 		let update_rate = 2;
-		assert_ok!(Convert::set_price_per_block(Origin::ROOT, ausd_type, update_rate));
+		assert_ok!(Convert::set_price_per_block(Origin::root(), ausd_type, update_rate));
 		run_to_block(4);
 
 		let token_amount = 100u64;
@@ -92,25 +92,25 @@ fn convert_token_to_vtoken_should_be_ok() {
 		let vdot_symbol = b"vDOT".to_vec();
 		let precise = 4;
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, b"aUSD".to_vec(), precise)); // let asset id is start from 1
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), b"aUSD".to_vec(), precise)); // let asset id is start from 1
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = <assets::NextAssetId<Test>>::get() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vdot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), vdot_symbol, precise));
 		let vdot_id = <assets::NextAssetId<Test>>::get() - 1;
 		let vdot_type = TokenSymbol::from(vdot_id);
 
 		// issue vtoken and token to bob
 		let bob_dot_issued = 60;
 		let bob_vdot_issued = 20;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, bob, bob_dot_issued)); // 60 vtokens to bob
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vdot_type, bob, bob_vdot_issued)); // 20 tokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, bob, bob_dot_issued)); // 60 vtokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, bob, bob_vdot_issued)); // 20 tokens to bob
 
 		// set convert rate, token => vtoken, 1token equals to 2vtoken
 		let rate = 2;
-		assert_ok!(Convert::set_convert_price(Origin::ROOT, dot_type, rate));
+		assert_ok!(Convert::set_convert_price(Origin::root(), dot_type, rate));
 
 		// convert
 		let bob_dot_convert = 10;
@@ -134,25 +134,25 @@ fn convert_vtoken_to_token_should_be_ok() {
 		let vdot_symbol = b"vDOT".to_vec();
 		let precise = 4;
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, b"aUSD".to_vec(), precise)); // let asset id is start from 1
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), b"aUSD".to_vec(), precise)); // let asset id is start from 1
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = <assets::NextAssetId<Test>>::get() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vdot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), vdot_symbol, precise));
 		let vdot_id = <assets::NextAssetId<Test>>::get() - 1;
 		let vdot_type = TokenSymbol::from(vdot_id);
 
 		// issue vtoken and token to bob
 		let bob_vdot_issued = 60;
 		let bob_dot_issued = 20;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, bob, bob_dot_issued)); // 20 tokens to bob
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vdot_type, bob, bob_vdot_issued)); // 60 tokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, bob, bob_dot_issued)); // 20 tokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, bob, bob_vdot_issued)); // 60 tokens to bob
 
 		// set convert rate, token => vtoken, 1token equals to 2vtoken
 		let rate = 2;
-		assert_ok!(Convert::set_convert_price(Origin::ROOT, dot_type, rate));
+		assert_ok!(Convert::set_convert_price(Origin::root(), dot_type, rate));
 
 		// convert
 		let bob_vdot_convert = 10;
@@ -177,25 +177,25 @@ fn add_new_refer_channel_should_be_ok() {
 		let vdot_symbol = b"vDOT".to_vec();
 		let precise = 4;
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, b"aUSD".to_vec(), precise)); // let asset id is start from 1
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), b"aUSD".to_vec(), precise)); // let asset id is start from 1
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = <assets::NextAssetId<Test>>::get() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, vdot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), vdot_symbol, precise));
 		let vdot_id = <assets::NextAssetId<Test>>::get() - 1;
 		let vdot_type = TokenSymbol::from(vdot_id);
 
 		// issue vdot and dot to bob
 		let bob_vdot_issued = 60;
 		let bob_dot_issued = 100;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, bob, bob_dot_issued));
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vdot_type, bob, bob_vdot_issued));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, bob, bob_dot_issued));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, bob, bob_vdot_issued));
 
 		// set convert rate, dot => vdot, 1dot equals to 2vdot
 		let rate = 2;
-		assert_ok!(Convert::set_convert_price(Origin::ROOT, dot_type, rate));
+		assert_ok!(Convert::set_convert_price(Origin::root(), dot_type, rate));
 
 		let referer1 = 10;
 		let referer2 = 11;
@@ -235,8 +235,8 @@ fn add_new_refer_channel_should_be_ok() {
 		// issue dot/vdot to alice
 		let alice_vdot_issued = 50;
 		let alice_dot_issued = 80;
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, vdot_type, alice, alice_vdot_issued));
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, alice_dot_issued));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, alice, alice_vdot_issued));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, alice, alice_dot_issued));
 
 		let alice_dot_convert1 = (2, referer2);
 		let alice_dot_convert2 = (4, referer4);

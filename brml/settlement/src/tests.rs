@@ -28,9 +28,9 @@ const SETTLEMENT_PERIOD: u64 = 24 * 60 * 10;
 #[test]
 fn issuing_asset_clearing_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 1, 10000));
 		assert_eq!(Settlement::clearing_assets((0, 1, 0)), BalanceDuration {
 			last_block: 1,
 			last_balance: 10000,
@@ -43,7 +43,7 @@ fn issuing_asset_clearing_should_work() {
 		});
 
 		System::set_block_number(100);
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 20000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 2, 20000));
 		assert_eq!(Settlement::clearing_assets((0, 2, 0)), BalanceDuration {
 			last_block: 100,
 			last_balance: 20000,
@@ -56,7 +56,7 @@ fn issuing_asset_clearing_should_work() {
 		});
 
 		System::set_block_number(200);
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 30000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 2, 30000));
 		assert_eq!(Settlement::clearing_assets((0, 2, 0)), BalanceDuration {
 			last_block: 200,
 			last_balance: 50000,
@@ -73,9 +73,9 @@ fn issuing_asset_clearing_should_work() {
 #[test]
 fn transfer_asset_clearing_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 1, 10000));
 		assert_eq!(Settlement::clearing_assets((0, 1, 0)), BalanceDuration {
 			last_block: 1,
 			last_balance: 10000,
@@ -100,9 +100,9 @@ fn transfer_asset_clearing_should_work() {
 #[test]
 fn destroy_asset_clearing_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 1, 10000));
 		assert_eq!(Settlement::clearing_assets((0, 1, 0)), BalanceDuration {
 			last_block: 1,
 			last_balance: 10000,
@@ -146,9 +146,9 @@ fn destroy_clearing_record_should_work() {
 	new_test_ext().execute_with(|| {
 		Settlement::on_initialize(0);
 
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 1, 10000));
 		assert_eq!(Settlement::clearing_assets((0, 1, 0)), BalanceDuration {
 			last_block: 1,
 			last_balance: 10000,
@@ -185,16 +185,16 @@ fn enumerate_should_work() {
 	new_test_ext().execute_with(|| {
 		Settlement::on_initialize(0);
 
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 1, 10000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 1, 10000));
 		assert_eq!(Settlement::clearing_assets((0, 1, 0)), BalanceDuration {
 			last_block: 1,
 			last_balance: 10000,
 			value: 0,
 		});
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 5000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 2, 5000));
 		assert_eq!(Settlement::clearing_assets((0, 2, 0)), BalanceDuration {
 			last_block: 1,
 			last_balance: 5000,
@@ -206,7 +206,7 @@ fn enumerate_should_work() {
 		System::set_block_number(SETTLEMENT_PERIOD);
 		Settlement::on_initialize(SETTLEMENT_PERIOD);
 
-		assert_ok!(Assets::issue(Origin::ROOT, 0, 2, 5000));
+		assert_ok!(Assets::issue(Origin::root(), 0, 2, 5000));
 		assert_eq!(Settlement::clearing_assets((0, 2, 1)), BalanceDuration {
 			last_block: 14400,
 			last_balance: 10000,
