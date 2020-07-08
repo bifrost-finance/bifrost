@@ -31,7 +31,7 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-	traits::{Member, SaturatedConversion, AtLeast32Bit},
+	traits::{Member, SaturatedConversion, AtLeast32Bit, MaybeSerializeDeserialize},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction, TransactionSource
@@ -49,8 +49,8 @@ use frame_system::{
 };
 
 use node_primitives::{
-	AssetSymbol, AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
-	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenType,
+	AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
+	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
 };
 use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
@@ -176,6 +176,10 @@ decl_error! {
 		InvalidChecksum256,
 		/// Initialze producer schedule multiple times
 		InitMultiTimeProducerSchedules,
+		/// EOS or vEOS not existed
+		TokenNotExist,
+		/// Invalid token
+		InvalidTokenForTrade,
 	}
 }
 
@@ -189,19 +193,19 @@ pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait 
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
 
 	/// The units in which we record costs.
-	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The units in which we record incomes.
-	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The units in which we record asset precision.
-	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// Bridge asset from another blockchain.
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
@@ -532,23 +536,23 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			token_type: TokenType,
+			token_symbol: TokenSymbol,
 			#[compact] amount: T::Balance,
 			memo: Vec<u8>
 		) {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
 
-			let token_id = T::AssetId::from(2);
-
 			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_id), "this token doesn't exist.");
+			ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
+			// ensure redeem EOS instead of any others tokens like vEOS, DOT, KSM etc
+			ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
 
-			let token = T::AssetTrait::get_token(&token_id).token;
+			let token = T::AssetTrait::get_token(token_symbol);
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &origin).balance;
+			let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
 			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
 			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
@@ -559,7 +563,7 @@ decl_module! {
 				amount: eos_amount,
 				memo,
 				from: origin.clone(),
-				token_type
+				token_symbol
 			};
 
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
@@ -680,7 +684,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn transaction_from_eos_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
-		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_type}
+		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
 		let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
 
 		// the length should be 2, either 3.
@@ -692,16 +696,17 @@ impl<T: Trait> Module<T> {
 		let account_data = Self::get_account_data(split_memo[0])?;
 		let target = Self::into_account(account_data)?;
 
-		let token_type = {
+		#[allow(unused_variables)]
+		let token_symbol = {
 			match split_memo.len() {
-				2 => TokenType::VToken,
+				2 => TokenSymbol::vEOS,
 				3 => {
 					match split_memo[2] {
-						"" | "vEOS" => TokenType::VToken,
-						"EOS" => TokenType::Token,
+						"" | "vEOS" => TokenSymbol::vEOS,
+						"EOS" => TokenSymbol::EOS,
 						_ => {
 							debug::error!("A invalid token type, default token type will be vtoken");
-							TokenType::Token
+							return Err(Error::<T>::InvalidMemo);
 						}
 					}
 				}
@@ -714,18 +719,21 @@ impl<T: Trait> Module<T> {
 		let symbol_precise = symbol.precision();
 
 		let token_balances = action_transfer.quantity.amount as usize;
+		// todo, according convert price to save as vEOS
 		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let token_id = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
+		let token_symbol = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
 			Some(id) => id,
 			None => {
-				T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).0
+				let (id, _) = T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).map_err(|_| Error::<T>::TokenNotExist)?;
+				let token_symbol: TokenSymbol = id.into();
+				token_symbol
 			}
 		};
 
 		// issue asset to target
-		T::AssetTrait::asset_issue(token_id, token_type, target.clone(), vtoken_balances);
+		T::AssetTrait::asset_issue(token_symbol, target.clone(), vtoken_balances);
 
 		Ok(target)
 	}
@@ -737,10 +745,9 @@ impl<T: Trait> Module<T> {
 			match trx {
 				TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
 					let target = &multi_sig_tx.from;
-					let token_id = T::AssetId::from(2);
-					let token_type = multi_sig_tx.token_type;
+					let token_symbol = multi_sig_tx.token_symbol;
 
-					let all_vtoken_balances = T::AssetTrait::get_account_asset(&token_id, token_type, &target).balance;
+					let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
 					let token_balances = action_transfer.quantity.amount as usize;
 					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
@@ -749,7 +756,7 @@ impl<T: Trait> Module<T> {
 						return Err(Error::<T>::InsufficientBalance);
 					}
 
-					T::AssetTrait::asset_redeem(token_id, token_type, target.clone(), vtoken_balances);
+					T::AssetTrait::asset_redeem(token_symbol, target.clone(), vtoken_balances);
 					return Ok(target.clone());
 				}
 				_ => continue,
@@ -790,7 +797,7 @@ impl<T: Trait> Module<T> {
 		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
 		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_type)?;
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
 		BridgeTxOuts::<T>::append(&tx_out);
 
 		Ok(tx_out)
@@ -929,9 +936,9 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
 		Ok(())
 	}
 
-	fn redeem(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 #[allow(deprecated)]
