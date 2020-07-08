@@ -110,20 +110,6 @@ bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 sc-cli = { version = "0.8.0-rc4", optional = true, features = [ "wasmtime" ] }
 sc-service = { version = "0.8.0-rc4", default-features = false, features = [ "wasmtime" ] }
 
-[dev-dependencies]
-sc-keystore = "2.0.0-rc4"
-sc-consensus = "0.8.0-rc4"
-sc-consensus-babe = { version = "0.8.0-rc4", features = ["test-helpers"] }
-sc-consensus-epochs = "0.8.0-rc4"
-sc-service-test = { version = "2.0.0-rc4", git = "https://github.com/paritytech/substrate" }
-futures = "0.3.4"
-tempfile = "3.1.0"
-assert_cmd = "1.0"
-nix = "0.17"
-serde_json = "1.0"
-regex = "1"
-platforms = "0.2.1"
-
 [build-dependencies]
 structopt = { version = "0.3.8", optional = true }
 node-inspect = { optional = true, path = "../inspect" }

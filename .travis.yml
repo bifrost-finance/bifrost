@@ -21,6 +21,7 @@ before_script:
 
 script:
   - travis_wait 60 cargo build
+  - travis_wait 60 cargo test
 
 after_script:
   # Check how much free disk space left after the build
