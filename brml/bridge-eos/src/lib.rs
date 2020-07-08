@@ -41,11 +41,11 @@ use frame_support::traits::{Get};
 use frame_support::{
 	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
 	dispatch::{DispatchResult, DispatchError},
-	weights::{FunctionOf, DispatchClass, Weight, Pays}
+	weights::{DispatchClass, Weight, Pays}
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed,
-	offchain::{SubmitTransaction, CreateSignedTransaction}
+	offchain::{CreateSignedTransaction, SubmitTransaction}
 };
 
 use node_primitives::{
@@ -528,11 +528,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = FunctionOf(
-			|args: (_, _, _, &Vec<u8>)| (args.3.len() * 10000usize) as Weight,
-			DispatchClass::Normal,
-			Pays::Yes
-		)]
+		#[weight = (weight_for::asset_redeem::<T>(memo.len() as Weight), DispatchClass::Normal)]
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
@@ -916,6 +912,7 @@ impl<T: Trait> Module<T> {
 	fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
 		let authorities = NotaryKeys::<T>::get();
 		let mut local_keys = T::AuthorityId::all();
+//		let mut local_keys = Signer::<T, T::AuthorityId>::all_accounts();
 		local_keys.sort();
 
 		authorities.into_iter()
@@ -958,5 +955,21 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 		} else {
 			InvalidTransaction::Call.into()
 		}
+	}
+}
+
+#[allow(dead_code)]
+mod weight_for {
+	use frame_support::{traits::Get, weights::Weight};
+	use super::Trait;
+
+	/// asset_redeem weight
+	pub(crate) fn asset_redeem<T: Trait>(memo_len: Weight) -> Weight {
+		let db = T::DbWeight::get();
+		db.writes(1) // put task to tx_out
+			.saturating_add(db.reads(1)) // token exists or not
+			.saturating_add(db.reads(1)) // get token
+			.saturating_add(db.reads(1)) // get account asset
+			.saturating_add(memo_len.saturating_add(10000)) // memo length
 	}
 }

@@ -34,7 +34,7 @@ fn set_asset_should_work() {
 		let asset_config = AssetConfig::new(redeem_duration, min_reward_per_block);
 
 		assert_ok!(
-			Validator::set_asset(Origin::ROOT, token_symbol, redeem_duration, min_reward_per_block)
+			Validator::set_asset(Origin::root(), token_symbol, redeem_duration, min_reward_per_block)
 		);
 
 		assert_eq!(Validator::asset_configs(token_symbol), asset_config);
@@ -53,7 +53,7 @@ fn stake_should_ok() {
 
 		let target = 1;
 		let amount = 100;
-		assert_ok!(Validator::stake(Origin::ROOT, token_symbol, target, amount));
+		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, amount));
 		let validator = Validator::validators(token_symbol, origin_id);
 		assert_eq!(validator.staking, 100);
 		let asset_locked_balance = Validator::asset_locked_balances(token_symbol);
@@ -61,7 +61,7 @@ fn stake_should_ok() {
 
 		let target = 1;
 		let amount = 200;
-		assert_ok!(Validator::stake(Origin::ROOT, token_symbol, target, amount));
+		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, amount));
 		let validator = Validator::validators(token_symbol, origin_id);
 		assert_eq!(validator.staking, 300);
 		let asset_locked_balance = Validator::asset_locked_balances(token_symbol);
@@ -77,7 +77,7 @@ fn stake_not_registered_should_error() {
 		let amount = 100;
 
 		assert_noop!(
-			Validator::stake(Origin::ROOT, token_symbol, target, amount),
+			Validator::stake(Origin::root(), token_symbol, target, amount),
 			ValidatorError::ValidatorNotRegistered
 		);
 	});
@@ -95,7 +95,7 @@ fn stake_amount_exceed_should_error() {
 		let target = 1;
 		let amount = 2000;
 		assert_noop!(
-			Validator::stake(Origin::ROOT, token_symbol, target, amount),
+			Validator::stake(Origin::root(), token_symbol, target, amount),
 			ValidatorError::StakingAmountExceeded
 		);
 	});
@@ -113,11 +113,11 @@ fn unstake_should_ok() {
 
 		let target = 1;
 		let stake_amount = 500;
-		assert_ok!(Validator::stake(Origin::ROOT, token_symbol, target, stake_amount));
+		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, stake_amount));
 
 		let target = 1;
 		let unstake_amount = 200;
-		assert_ok!(Validator::unstake(Origin::ROOT, token_symbol, target, unstake_amount));
+		assert_ok!(Validator::unstake(Origin::root(), token_symbol, target, unstake_amount));
 		let validator = Validator::validators(token_symbol, origin_id);
 		assert_eq!(validator.staking, 300);
 		let asset_locked_balance = Validator::asset_locked_balances(token_symbol);
@@ -133,7 +133,7 @@ fn unstake_not_registered_should_error() {
 		let amount = 100;
 
 		assert_noop!(
-			Validator::unstake(Origin::ROOT, token_symbol, target, amount),
+			Validator::unstake(Origin::root(), token_symbol, target, amount),
 			ValidatorError::ValidatorNotRegistered
 		);
 	});
@@ -151,12 +151,12 @@ fn unstake_insufficient_should_error() {
 
 		let target = 1;
 		let stake_amount = 500;
-		assert_ok!(Validator::stake(Origin::ROOT, token_symbol, target, stake_amount));
+		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, stake_amount));
 
 		let target = 1;
 		let unstake_amount = 1000;
 		assert_noop!(
-			Validator::unstake(Origin::ROOT, token_symbol, target, unstake_amount),
+			Validator::unstake(Origin::root(), token_symbol, target, unstake_amount),
 			ValidatorError::StakingAmountInsufficient
 		);
 	});
@@ -237,12 +237,12 @@ fn deposit_should_work() {
 		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
-		assert_ok!(Assets::create(Origin::ROOT, symbol.clone(), precision));
+		assert_ok!(Assets::create(Origin::root(), symbol.clone(), precision));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
-		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
+		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
 
 		let need = 1000;
@@ -271,13 +271,13 @@ fn deposit_not_enough_free_balance_should_error() {
 		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
-		assert_ok!(Assets::create(Origin::ROOT, symbol, precision));
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), symbol, precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
+		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
 
 		let need = 1000;
@@ -315,13 +315,13 @@ fn withdraw_should_ok() {
 		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
-		assert_ok!(Assets::create(Origin::ROOT, symbol, precision));
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), symbol, precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
+		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
 
 		let need = 1000;
@@ -347,13 +347,13 @@ fn withdraw_not_enough_locked_balance_should_error() {
 		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
-		assert_ok!(Assets::create(Origin::ROOT, symbol, precision));
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), symbol, precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(Assets::issue(Origin::ROOT, dot_type, origin_id, 10000));
+		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
 
 		let need = 1000;
