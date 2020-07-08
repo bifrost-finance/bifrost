@@ -45,7 +45,7 @@ use frame_support::{
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed,
-	offchain::{CreateSignedTransaction, SubmitTransaction}
+	offchain::{SubmitTransaction, SendTransactionTypes}
 };
 
 use node_primitives::{
@@ -89,9 +89,10 @@ pub mod sr25519 {
 		}
 	}
 
-	/// An bridge-eos keypair using sr25519 as its crypto.
-	#[cfg(feature = "std")]
-	pub type AuthorityPair = app_sr25519::Pair;
+	sp_application_crypto::with_pair! {
+		/// An bridge-eos keypair using sr25519 as its crypto.
+		pub type AuthorityPair = app_sr25519::Pair;
+	}
 
 	/// An bridge-eos signature using sr25519 as its crypto.
 	pub type AuthoritySignature = app_sr25519::Signature;
@@ -106,9 +107,10 @@ pub mod ed25519 {
 		app_crypto!(ed25519, ACCOUNT);
 	}
 
-	/// An bridge-eos keypair using ed25519 as its crypto.
-	#[cfg(feature = "std")]
-	pub type AuthorityPair = app_ed25519::Pair;
+	sp_application_crypto::with_pair! {
+		/// An bridge-eos keypair using ed25519 as its crypto.
+		pub type AuthorityPair = app_ed25519::Pair;
+	}
 
 	/// An bridge-eos signature using ed25519 as its crypto.
 	pub type AuthoritySignature = app_ed25519::Signature;
@@ -185,7 +187,7 @@ decl_error! {
 
 pub type VersionId = u32;
 
-pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait {
+pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
 		+ From<<Self as frame_system::Trait>::AccountId>;
@@ -912,7 +914,6 @@ impl<T: Trait> Module<T> {
 	fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
 		let authorities = NotaryKeys::<T>::get();
 		let mut local_keys = T::AuthorityId::all();
-//		let mut local_keys = Signer::<T, T::AuthorityId>::all_accounts();
 		local_keys.sort();
 
 		authorities.into_iter()
@@ -945,13 +946,12 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		if let Call::bridge_tx_report(_tx_list) = call {
 			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-			Ok(ValidTransaction {
-				priority: TransactionPriority::max_value(),
-				requires: vec![],
-				provides: vec![(now_block).encode()],
-				longevity: TransactionLongevity::max_value(),
-				propagate: true,
-			})
+			ValidTransaction::with_tag_prefix("BridgeEos")
+				.priority(TransactionPriority::max_value())
+				.and_provides(vec![(now_block).encode()])
+				.longevity(TransactionLongevity::max_value())
+				.propagate(true)
+				.build()
 		} else {
 			InvalidTransaction::Call.into()
 		}

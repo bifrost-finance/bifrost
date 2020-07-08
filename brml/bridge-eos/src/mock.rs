@@ -21,14 +21,12 @@ use frame_support::{
 	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, ConsensusEngineId,
 	traits::{OnInitialize, OnFinalize, FindAuthor}
 };
-//use node_primitives::{AccountId, Signature};
-use sp_core::{H256, sr25519::Signature};
+use sp_core::H256;
 use sp_runtime::{
 	Perbill,
-	testing::{Header, TestXt, TestSignature, UintAuthorityId},
-	traits::{BlakeTwo256, IdentityLookup, Extrinsic as ExtrinsicT, Verify, IdentifyAccount},
+	testing::{Header, TestXt},
+	traits::{BlakeTwo256, IdentityLookup},
 };
-use frame_system::offchain::{SubmitTransaction, CreateSignedTransaction};
 use super::*;
 
 impl_outer_dispatch! {
@@ -39,8 +37,6 @@ impl_outer_dispatch! {
 
 /// An extrinsic type used for tests.
 pub type Extrinsic = TestXt<Call, ()>;
-//type SubmitTransaction = frame_system::offchain::TransactionSubmitter<(), Call, Extrinsic>;
-type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 
 #[derive(Clone, Eq, PartialEq, Encode, Decode)]
 pub struct Test;
@@ -122,11 +118,6 @@ impl pallet_authorship::Trait for Test {
 	type EventHandler = ();
 }
 
-//impl frame_system::offchain::SigningTypes for Test {
-//	type Public = <Signature as Verify>::Signer;
-//	type Signature = Signature;
-//}
-
 impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test where
 	Call: From<LocalCall>,
 {
@@ -134,18 +125,11 @@ impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
 	type OverarchingCall = Call;
 }
 
-//impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Test where
-//	Call: From<LocalCall>,
-//{
-//	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
-//		call: Call,
-//		_public: <Signature as Verify>::Signer,
-//		_account: AccountId,
-//		nonce: u64,
-//	) -> Option<(Call, <Extrinsic as ExtrinsicT>::SignaturePayload)> {
-//		Some((call, (nonce, ())))
-//	}
-//}
+impl From<u64> for sr25519::AuthorityId {
+	fn from(_: u64) -> Self {
+		Default::default()
+	}
+}
 
 impl crate::Trait for Test {
 	type AuthorityId = sr25519::AuthorityId;
@@ -157,7 +141,6 @@ impl crate::Trait for Test {
 	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
-	//	type SubmitTransaction = SubmitTransaction;
 	type AssetTrait = Assets;
 }
 
@@ -193,9 +176,10 @@ pub(crate) fn run_to_block(n: u64) {
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	GenesisConfig::<Test> {
-		producer_schedule: eos_chain::ProducerSchedule::default(),
 		bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 		notary_keys: vec![1u64, 2u64],
+		cross_chain_privilege: vec![],
+		all_crosschain_privilege: Vec::new(),
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }
