@@ -19,10 +19,6 @@
 [![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_network)
 [![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-network)
 
-# Bifrost Node
-
-A parachain focused on building bridges of chains which based on PoS consensus.
-
 # Building
 
 Install Rust:
