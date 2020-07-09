@@ -1,12 +1,12 @@
-name: master-build
+name: jamie-dev-build
 
 on:
   pull_request:
     branches:
-      - master
+      - jamie-dev
   push:
     branches:
-      - master
+      - jamie-dev
 
 env:
   CARGO_TERM_COLOR: always
@@ -40,5 +40,3 @@ jobs:
           default: true
       - name: Build bifrost
         run: cargo build --locked
-      - name: Run tests
-        run: cargo test --all
