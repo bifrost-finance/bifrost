@@ -2,9 +2,9 @@
 
 <img align="right" width="100" src="./docs/bifrost-black-logo.svg" alt="Bifrost Logo"/>
 
-<h1 align="left"><a href="https://bifrost.finance">Bifrost</a></h1>
+<h1 align="left"><a href="https://bifrost.finance">Homepage</a></h1>
 
-<h4>📦 A parachain designed for staking's liquidity.</h4>
+<h4>💰 Grants by</h4>
 
 <p align="left">
   <a href="https://web3.foundation/grants"><img src="./docs/web3-foundation-grant.svg" width="200" alt="Web3 Foundation Grants"></a>
