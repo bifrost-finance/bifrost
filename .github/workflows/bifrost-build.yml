@@ -38,10 +38,6 @@ jobs:
           toolchain: nightly
           target: wasm32-unknown-unknown
           default: true
-      - name: Install clippy
-        run: rustup component add clippy
-      - name: Clippy check
-        run: cargo clippy -- -D warnings
       - name: Build bifrost
         run: cargo build --locked
       - name: Run tests
