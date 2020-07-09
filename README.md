@@ -2,12 +2,13 @@
 
 <h1 align="left"><a href="https://bifrost.finance">Bifrost</a></h1>
 
-📦 A parachain designed for staking's liquidity.
+<h5>📦 A parachain designed for staking's liquidity.</h5>
 
-<p align="center">
-  <a href="https://web3.foundation/grants"><img src="./docs/web3-foundation-grant.svg" width="150" style="padding: 0px 30px;" alt="Web3 Foundation Grants"></a>
-  <a href="https://www.substrate.io/builders-program"><img src="./docs/substrate-builder.svg" width="150" style="padding: 0px 30px;" alt="Substrate Builders Program"></a>
-  <a href="https://bootcamp.web3.foundation/"><img src="./docs/web3-bootcamp.svg" width="150" style="padding: 0px 30px;" alt="Web3 Bootcamp"></a>
+Grants
+<p align="left">
+  <a href="https://web3.foundation/grants"><img src="./docs/web3-foundation-grant.svg" width="150" alt="Web3 Foundation Grants"></a>
+  <a href="https://www.substrate.io/builders-program"><img src="./docs/substrate-builder.svg" width="150" alt="Substrate Builders Program"></a>
+  <a href="https://bootcamp.web3.foundation/"><img src="./docs/web3-bootcamp.svg" width="150" alt="Web3 Bootcamp"></a>
 </p>
 
 [![jamie-dev-build](https://github.com/bifrost-finance/bifrost/workflows/jamie-dev-build/badge.svg)](https://github.com/bifrost-finance/bifrost/actions)
