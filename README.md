@@ -1,3 +1,5 @@
+<img align="center" src="./docs/bifrost-banner.svg" alt="Bifrost Banner"/>
+
 <img align="right" width="100" src="./docs/bifrost-black-logo.svg" alt="Bifrost Logo"/>
 
 <h1 align="left"><a href="https://bifrost.finance">Bifrost</a></h1>
