@@ -53,7 +53,7 @@
 <stop offset="1" stop-color="#C4C4C4" stop-opacity="0"/>
 </linearGradient>
 <clipPath id="clip0">
-<rect width="1280" height="370" fill="white"/>
+<rect width="1280" height="370" rx="8" fill="white"/>
 </clipPath>
 </defs>
 </svg>
