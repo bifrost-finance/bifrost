@@ -36,7 +36,6 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
-          default: true
       - name: Rust nightly
         run: rustup update nightly
       - name: Wasm target
