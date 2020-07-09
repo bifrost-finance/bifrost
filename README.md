@@ -10,7 +10,7 @@
   <a href="https://bootcamp.web3.foundation/"><img src="./docs/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
 </p>
 
-[![jamie-dev-build](https://github.com/bifrost-finance/bifrost/workflows/jamie-dev-build/badge.svg)](https://github.com/bifrost-finance/bifrost/actions)
+[![master-build](https://github.com/bifrost-finance/bifrost/workflows/master-build/badge.svg)](https://github.com/bifrost-finance/bifrost/actions)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bifrost-finance/bifrost&amp;utm_campaign=Badge_Grade)
 [![Substrate Version](https://img.shields.io/badge/Substrate-2.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
 [![Docker](https://img.shields.io/badge/Docker-v0.3.2-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
