@@ -1,6 +1,6 @@
-<img align="center" src="./docs/bifrost-banner.svg" alt="Bifrost Banner"/>
+<a href="https://bifrost.finance"><img align="center" src="./docs/bifrost-banner.svg" alt="Bifrost Banner"/></a>
 
-<img align="right" width="100" src="./docs/bifrost-black-logo.svg" alt="Bifrost Logo"/>
+<a href="https://bifrost.finance"><img align="right" width="100" src="./docs/bifrost-black-logo.svg" alt="Bifrost Logo"/></a>
 
 <h1 align="left"><a href="https://bifrost.finance">Homepage</a></h1>
 
