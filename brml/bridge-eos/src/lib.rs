@@ -694,7 +694,6 @@ impl<T: Trait> Module<T> {
 		let account_data = Self::get_account_data(split_memo[0])?;
 		let target = Self::into_account(account_data)?;
 
-		#[allow(unused_variables)]
 		let token_symbol = {
 			match split_memo.len() {
 				2 => TokenSymbol::vEOS,
@@ -712,23 +711,20 @@ impl<T: Trait> Module<T> {
 			}
 		};
 
-		let symbol = action_transfer.quantity.symbol;
-		let symbol_code = symbol.code().to_string().into_bytes();
-		let symbol_precise = symbol.precision();
+		// let symbol = action_transfer.quantity.symbol;
+		// let symbol_code = symbol.code().to_string().into_bytes();
+		// let symbol_precision = symbol.precision() as u16;
+		// todo, need to check symbol and precision?
+		// ensure symbol and precision matched
+		// let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
+		// ensure!(
+		//	existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+		//	Error::<T>::InvalidTokenForTrade
+		// );
 
-		let token_balances = action_transfer.quantity.amount as usize;
+		let token_balances = action_transfer.quantity.amount as u128;
 		// todo, according convert price to save as vEOS
-		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
-
-		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let token_symbol = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
-			Some(id) => id,
-			None => {
-				let (id, _) = T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).map_err(|_| Error::<T>::TokenNotExist)?;
-				let token_symbol: TokenSymbol = id.into();
-				token_symbol
-			}
-		};
+		let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// issue asset to target
 		T::AssetTrait::asset_issue(token_symbol, target.clone(), vtoken_balances);
