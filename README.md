@@ -1,13 +1,25 @@
-<p align="center">
-<img src=./docs/web3_foundation_grants_badge_black.svg width = 400>
+<img align="center" src="./docs/bifrost-banner.svg" alt="Bifrost Banner"/>
+
+<img align="right" width="100" src="./docs/bifrost-black-logo.svg" alt="Bifrost Logo"/>
+
+<h1 align="left"><a href="https://bifrost.finance">Homepage</a></h1>
+
+<h4>💰 Grants by</h4>
+
+<p align="left">
+  <a href="https://web3.foundation/grants"><img src="./docs/web3-foundation-grant.svg" width="200" alt="Web3 Foundation Grants"></a>
+  <a href="https://www.substrate.io/builders-program"><img src="./docs/substrate-builder.svg" width="200" alt="Substrate Builders Program"></a>
+  <a href="https://bootcamp.web3.foundation/"><img src="./docs/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
 </p>
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/28dbf466e68d4f35ada4604321ef0d37)](https://app.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&utm_medium=referral&utm_content=bifrost-finance/bifrost&utm_campaign=Badge_Grade_Dashboard)
-[![Build Status](https://travis-ci.org/bifrost-codes/bifrost.svg?branch=master)](https://travis-ci.org/bifrost-codes/bifrost)
-
-# Bifrost Node
-
-A parachain focused on building bridges of chains which based on PoS consensus.
+[![master-build](https://github.com/bifrost-finance/bifrost/workflows/master-build/badge.svg)](https://github.com/bifrost-finance/bifrost/actions)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bifrost-finance/bifrost&amp;utm_campaign=Badge_Grade)
+[![Substrate Version](https://img.shields.io/badge/Substrate-2.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
+[![Docker](https://img.shields.io/badge/Docker-v0.3.2-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
+[![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
+[![Faucet](https://img.shields.io/badge/-Faucet-5c5c5c?logo=Telegram)](https://t.me/bifrost_faucet)
+[![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_network)
+[![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-network)
 
 # Building
 
