@@ -41,11 +41,11 @@ use frame_support::traits::{Get};
 use frame_support::{
 	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
 	dispatch::{DispatchResult, DispatchError},
-	weights::{FunctionOf, DispatchClass, Weight, Pays}
+	weights::{DispatchClass, Weight, Pays}
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed,
-	offchain::{SubmitTransaction, CreateSignedTransaction}
+	offchain::{SubmitTransaction, SendTransactionTypes}
 };
 
 use node_primitives::{
@@ -89,9 +89,10 @@ pub mod sr25519 {
 		}
 	}
 
-	/// An bridge-eos keypair using sr25519 as its crypto.
-	#[cfg(feature = "std")]
-	pub type AuthorityPair = app_sr25519::Pair;
+	sp_application_crypto::with_pair! {
+		/// An bridge-eos keypair using sr25519 as its crypto.
+		pub type AuthorityPair = app_sr25519::Pair;
+	}
 
 	/// An bridge-eos signature using sr25519 as its crypto.
 	pub type AuthoritySignature = app_sr25519::Signature;
@@ -106,9 +107,10 @@ pub mod ed25519 {
 		app_crypto!(ed25519, ACCOUNT);
 	}
 
-	/// An bridge-eos keypair using ed25519 as its crypto.
-	#[cfg(feature = "std")]
-	pub type AuthorityPair = app_ed25519::Pair;
+	sp_application_crypto::with_pair! {
+		/// An bridge-eos keypair using ed25519 as its crypto.
+		pub type AuthorityPair = app_ed25519::Pair;
+	}
 
 	/// An bridge-eos signature using ed25519 as its crypto.
 	pub type AuthoritySignature = app_ed25519::Signature;
@@ -180,12 +182,14 @@ decl_error! {
 		TokenNotExist,
 		/// Invalid token
 		InvalidTokenForTrade,
+		/// EOSSymbolMismatch,
+		EOSSymbolMismatch,
 	}
 }
 
 pub type VersionId = u32;
 
-pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait {
+pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
 		+ From<<Self as frame_system::Trait>::AccountId>;
@@ -528,11 +532,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = FunctionOf(
-			|args: (_, _, _, &Vec<u8>)| (args.3.len() * 10000usize) as Weight,
-			DispatchClass::Normal,
-			Pays::Yes
-		)]
+		#[weight = (weight_for::asset_redeem::<T>(memo.len() as Weight), DispatchClass::Normal)]
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
@@ -696,7 +696,6 @@ impl<T: Trait> Module<T> {
 		let account_data = Self::get_account_data(split_memo[0])?;
 		let target = Self::into_account(account_data)?;
 
-		#[allow(unused_variables)]
 		let token_symbol = {
 			match split_memo.len() {
 				2 => TokenSymbol::vEOS,
@@ -716,21 +715,18 @@ impl<T: Trait> Module<T> {
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
-		let symbol_precise = symbol.precision();
+		let symbol_precision = symbol.precision() as u16;
+		// ensure symbol and precision matched
+		let (_token_symbol, _) = token_symbol.paired_token();
+		let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
+		ensure!(
+			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+			Error::<T>::EOSSymbolMismatch
+		);
 
-		let token_balances = action_transfer.quantity.amount as usize;
+		let token_balances = action_transfer.quantity.amount as u128;
 		// todo, according convert price to save as vEOS
-		let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
-
-		// check vtoken id exists not not, if it doesn't exist, create a vtoken for it
-		let token_symbol = match T::AssetTrait::asset_id_exists(&target, &symbol_code, symbol_precise.into()) {
-			Some(id) => id,
-			None => {
-				let (id, _) = T::AssetTrait::asset_create(symbol_code, symbol_precise.into()).map_err(|_| Error::<T>::TokenNotExist)?;
-				let token_symbol: TokenSymbol = id.into();
-				token_symbol
-			}
-		};
+		let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// issue asset to target
 		T::AssetTrait::asset_issue(token_symbol, target.clone(), vtoken_balances);
@@ -948,15 +944,30 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 		if let Call::bridge_tx_report(_tx_list) = call {
 			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-			Ok(ValidTransaction {
-				priority: TransactionPriority::max_value(),
-				requires: vec![],
-				provides: vec![(now_block).encode()],
-				longevity: TransactionLongevity::max_value(),
-				propagate: true,
-			})
+			ValidTransaction::with_tag_prefix("BridgeEos")
+				.priority(TransactionPriority::max_value())
+				.and_provides(vec![(now_block).encode()])
+				.longevity(TransactionLongevity::max_value())
+				.propagate(true)
+				.build()
 		} else {
 			InvalidTransaction::Call.into()
 		}
+	}
+}
+
+#[allow(dead_code)]
+mod weight_for {
+	use frame_support::{traits::Get, weights::Weight};
+	use super::Trait;
+
+	/// asset_redeem weight
+	pub(crate) fn asset_redeem<T: Trait>(memo_len: Weight) -> Weight {
+		let db = T::DbWeight::get();
+		db.writes(1) // put task to tx_out
+			.saturating_add(db.reads(1)) // token exists or not
+			.saturating_add(db.reads(1)) // get token
+			.saturating_add(db.reads(1)) // get account asset
+			.saturating_add(memo_len.saturating_add(10000)) // memo length
 	}
 }

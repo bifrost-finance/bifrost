@@ -37,7 +37,7 @@ fn create_asset_should_work() {
 
 		System::set_block_number(1);
 
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 		assert_eq!(Assets::next_asset_id(), id1 + 1);
 		assert_eq!(Assets::token_details(token_type1), token1);
 
@@ -49,7 +49,7 @@ fn create_asset_should_work() {
 
 		let id2 = Assets::next_asset_id();
 		let token_type2 = TokenSymbol::from(id2);
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x56, 0x68, 0x90], 4)); // take 2 as asset id
+		assert_ok!(Assets::create(Origin::root(), vec![0x56, 0x68, 0x90], 4)); // take 2 as asset id
 		assert_eq!(Assets::next_asset_id(), id2 + 1);
 		assert_eq!(Assets::token_details(token_type2), token2);
 
@@ -75,36 +75,36 @@ fn issuing_asset_units_to_issuer_should_work() {
 
 		let ausd_id = Assets::next_asset_id();
 		let ausd_type = TokenSymbol::from(ausd_id);
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18));
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18));
 
 		let dot_id = Assets::next_asset_id();
 		let dot_type = TokenSymbol::from(dot_id);
-		assert_ok!(Assets::create(Origin::ROOT, b"DOT".to_vec(), 12));
+		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), 12));
 
 		let vdot_id = Assets::next_asset_id();
 		let vdot_type = TokenSymbol::from(vdot_id);
-		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12));
+		assert_ok!(Assets::create(Origin::root(), b"vDOT".to_vec(), 12));
 
 		System::set_block_number(1);
 
-		assert_ok!(Assets::issue(Origin::ROOT, dot_type, alice, 10000));
+		assert_ok!(Assets::issue(Origin::root(), dot_type, alice, 10000));
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 12, 10000));
 		assert_eq!(Assets::account_assets((dot_type, alice)).balance, 10000);
 
-		assert_ok!(Assets::issue(Origin::ROOT, vdot_type, alice, 20000));
+		assert_ok!(Assets::issue(Origin::root(), vdot_type, alice, 20000));
 		assert_eq!(Assets::token_details(vdot_type), Token::new(b"vDOT".to_vec(), 12, 20000));
 		assert_eq!(Assets::account_assets((vdot_type, alice)).balance, 20000);
 
 		let bob = 2;
 		// issue bob balances twice
-		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, bob, 20000));
-		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, bob, 30000));
+		assert_ok!(Assets::issue(Origin::root(), ausd_type, bob, 20000));
+		assert_ok!(Assets::issue(Origin::root(), ausd_type, bob, 30000));
 		assert_eq!(Assets::token_details(ausd_type), Token::new(b"aUSD".to_vec(), 18, 50000));
 		assert_eq!(Assets::account_assets((ausd_type, bob)).balance, 50000);
 
 		// creare a exsited token
 		assert_eq!(
-			Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12),
+			Assets::create(Origin::root(), b"vDOT".to_vec(), 12),
 			Err(DispatchError::Module { index: 0, error: 0, message: Some("TokenExisted") })
 		);
 
@@ -121,7 +121,7 @@ fn issuing_asset_units_to_issuer_should_work() {
 fn issuing_before_creating_should_now_work() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Assets::issue(Origin::ROOT, TokenSymbol::DOT, 1, 10000),
+			Assets::issue(Origin::root(), TokenSymbol::DOT, 1, 10000),
 			AssetsError::TokenNotExist
 		);
 	});
@@ -134,11 +134,11 @@ fn transferring_amount_above_available_balance_should_work() {
 		let bob = 2;
 		let ausd_id = Assets::next_asset_id();
 		let ausd_type = TokenSymbol::from(ausd_id);
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18));
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18));
 
 		System::set_block_number(1);
 
-		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, alice, 10000));
+		assert_ok!(Assets::issue(Origin::root(), ausd_type, alice, 10000));
 
 		assert_ok!(Assets::transfer(Origin::signed(alice), ausd_type, bob, 1000));
 		assert_eq!(Assets::account_asset_ids(bob), vec![ausd_type]);
@@ -157,7 +157,7 @@ fn transferring_amount_above_available_balance_should_work() {
 #[test]
 fn transferring_amount_less_than_available_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 		let (alice, bob) = (1, 2);
 		assert_noop!(
 			Assets::transfer(Origin::signed(alice), TokenSymbol::aUSD, bob, 1000),
@@ -169,7 +169,7 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 #[test]
 fn transferring_less_than_one_unit_should_not_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 		let (alice, bob) = (1, 2);
 		assert_noop!(
 			Assets::transfer(Origin::signed(alice), TokenSymbol::aUSD, bob, 0),
@@ -186,11 +186,11 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 		let alice = 1;
 		let ausd_id = Assets::next_asset_id();
 		let ausd_type = TokenSymbol::from(ausd_id);
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18));
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18));
 
 		System::set_block_number(1);
 
-		assert_ok!(Assets::issue(Origin::ROOT, ausd_type, alice, 10000));
+		assert_ok!(Assets::issue(Origin::root(), ausd_type, alice, 10000));
 		assert_ok!(Assets::destroy(Origin::signed(alice), ausd_type, 1000));
 
 		assert_eq!(Assets::token_details(ausd_type), Token::new(b"aUSD".to_vec(), 18, 9000));
@@ -208,11 +208,11 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 #[test]
 fn destroying_asset_balance_with_zero_balance_should_not_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Assets::create(Origin::ROOT, vec![0x12, 0x34], 8));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8));
 		let alice = 1;
 		let id = Assets::next_asset_id();
 		let token_symbol = TokenSymbol::from(id - 1);
-		assert_ok!(Assets::issue(Origin::ROOT, token_symbol, alice, 100));
+		assert_ok!(Assets::issue(Origin::root(), token_symbol, alice, 100));
 		assert_noop!(
 			Assets::destroy(Origin::signed(alice), token_symbol, 100 + 1),
 			AssetsError::InvalidBalanceForTransaction

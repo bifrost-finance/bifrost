@@ -21,7 +21,7 @@ use sc_cli::{ImportParams, SharedParams};
 use structopt::StructOpt;
 
 /// The `inspect` command used to print decoded chain data.
-#[derive(Debug, StructOpt, Clone)]
+#[derive(Debug, StructOpt)]
 pub struct InspectCmd {
 	#[allow(missing_docs)]
 	#[structopt(flatten)]
@@ -37,7 +37,7 @@ pub struct InspectCmd {
 }
 
 /// A possible inspect sub-commands.
-#[derive(Debug, StructOpt, Clone)]
+#[derive(Debug, StructOpt)]
 pub enum InspectSubCmd {
 	/// Decode block with native version of runtime and print out the details.
 	Block {
