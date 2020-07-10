@@ -1,8 +1,8 @@
 ## All related repotories
-- [bifrost](https://github.com/bifrost-codes/bifrost) (branch: master)
-- [bifrost-eos-relay](https://github.com/bifrost-codes/bifrost-eos-relay) (branch: bridge-plugin)
-- [bifrost-eos-contracts](https://github.com/bifrost-codes/bifrost-eos-contracts) (branch: master)
-- [rust-eos](https://github.com/bifrost-codes/rust-eos) (branch: use-rust-secp256k1)
+- [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: bridge-plugin)
+- [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
+- [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: use-rust-secp256k1)
 
 ## Bifrost
 
@@ -127,7 +127,7 @@ Both nodes should be sychronizing each other.
 
 #### Compile
 ```
-$ git clone https://github.com/bifrost-codes/bifrost-eos-contracts
+$ git clone https://github.com/bifrost-finance/bifrost-eos-contracts
 $ cd bifrost-eos-contracts
 $ mkdir build && cd build
 $ cmake ..

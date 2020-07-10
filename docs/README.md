@@ -1,15 +1,15 @@
 ## All related repotories
-- [bifrost](https://github.com/bifrost-codes/bifrost) (branch: master)
-- [bifrost-eos-relay](https://github.com/bifrost-codes/bifrost-eos-relay) (branch: bridge-plugin)
-- [bifrost-eos-contracts](https://github.com/bifrost-codes/bifrost-eos-contracts) (branch: master)
-- [rust-eos](https://github.com/bifrost-codes/rust-eos) (branch: use-rust-secp256k1)
+- [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: bridge-plugin)
+- [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
+- [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: use-rust-secp256k1)
 
 ## Bifrost
 
 ### 1. Compile
-Follow the [readme](https://github.com/bifrost-codes/bifrost/tree/ark-bridge-module) to compile a bifrost node.
+Follow the [readme](https://github.com/bifrost-finance/bifrost/tree/ark-bridge-module) to compile a bifrost node.
 ```
-$ git clone https://github.com/bifrost-codes/bifrost.git
+$ git clone https://github.com/bifrost-finance/bifrost.git
 $ git checkout web3_m1
 $ cargo build --release
 ```
@@ -81,7 +81,7 @@ $ cleos wallet unlock # prompt you input the password
 #### Compile
 
 ```
-$ git clone -b v2.0 https://github.com/bifrost-codes/eos
+$ git clone -b v2.0 https://github.com/bifrost-finance/eos
 $ git submodule update --init --recursive
 $ cd eos/
 $ mkdir build && cd build
@@ -131,7 +131,7 @@ $ ./build/bin/nodeos --delete-all-blocks --delete-state-history --delete-relay-h
 
 #### Compile
 ```
-$ git clone https://github.com/bifrost-codes/bifrost-eos-contracts
+$ git clone https://github.com/bifrost-finance/bifrost-eos-contracts
 $ cd bifrost-eos-contracts
 $ mkdir build && cd build
 $ cmake ..
@@ -190,7 +190,7 @@ $ cleos get currency balance eosio.token bifrostcross
 
 Now send a transaction.
 ```
-$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "alice@bifrost:EOS"]' -p jim@active
+$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:EOS"]' -p jim@active
 ```
 
 Go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), to check whether transaction is sent successfully to Bifrost or not.
