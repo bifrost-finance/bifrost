@@ -182,6 +182,8 @@ decl_error! {
 		TokenNotExist,
 		/// Invalid token
 		InvalidTokenForTrade,
+		/// EOSSymbolMismatch,
+		EOSSymbolMismatch,
 	}
 }
 
@@ -711,16 +713,16 @@ impl<T: Trait> Module<T> {
 			}
 		};
 
-		// let symbol = action_transfer.quantity.symbol;
-		// let symbol_code = symbol.code().to_string().into_bytes();
-		// let symbol_precision = symbol.precision() as u16;
-		// todo, need to check symbol and precision?
+		let symbol = action_transfer.quantity.symbol;
+		let symbol_code = symbol.code().to_string().into_bytes();
+		let symbol_precision = symbol.precision() as u16;
 		// ensure symbol and precision matched
-		// let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
-		// ensure!(
-		//	existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
-		//	Error::<T>::InvalidTokenForTrade
-		// );
+		let (_token_symbol, _) = token_symbol.paired_token();
+		let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
+		ensure!(
+			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+			Error::<T>::EOSSymbolMismatch
+		);
 
 		let token_balances = action_transfer.quantity.amount as u128;
 		// todo, according convert price to save as vEOS
