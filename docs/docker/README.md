@@ -1,8 +1,8 @@
 ## All related repotories
-- [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
+- [bifrost](https://github.com/bifrost-finance/bifrost) (branch: web3_m1)
 - [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: v2.0)
 - [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
-- [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: use-rust-secp256k1)
+- [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: master)
 
 ## Bifrost
 
