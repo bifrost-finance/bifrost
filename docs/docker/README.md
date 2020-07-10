@@ -1,6 +1,6 @@
 ## All related repotories
 - [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
-- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: bridge-plugin)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: v2.0)
 - [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
 - [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: use-rust-secp256k1)
 
@@ -115,7 +115,7 @@ docker run --name=relayer -p 8889:8889 -p 9877:9877 bifrostnetwork/bifrost-eos-r
 --p2p-peer-address [eos_producer_internal_ip]:9876 \
 --config-dir /home/localnet/node/relay/config \
 --data-dir /home/localnet/node/relay/data -l /home/localnet/node/relay/logging.json \
---bifrost-node=[bifrost_internal_ip]:9944 \
+--bifrost-node=ws://[bifrost_internal_ip]:9944 \
 --bifrost-crossaccount=bifrostcross \
 --bifrost-signer=//Alice
 ```
