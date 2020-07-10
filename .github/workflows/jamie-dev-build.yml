@@ -36,7 +36,6 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
-          components: rustfmt
           target: wasm32-unknown-unknown
           default: true
       - name: Install clippy
@@ -44,4 +43,4 @@ jobs:
       - name: Build bifrost
         run: cargo build --locked
       - name: Clippy check
-        run: cargo clippy -- -W
+        run: cargo clippy
