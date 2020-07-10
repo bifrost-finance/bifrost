@@ -1,8 +1,9 @@
 name: docker-image-build
 
 on:
-  tags:
-    - '*'
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
