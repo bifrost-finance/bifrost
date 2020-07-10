@@ -24,7 +24,7 @@ mod mock;
 mod tests;
 
 use frame_support::traits::Get;
-use frame_support::weights::{FunctionOf, DispatchClass, Weight, Pays};
+use frame_support::weights::DispatchClass;
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, AssetReward, TokenSymbol};
@@ -139,16 +139,12 @@ decl_module! {
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
-		#[weight = FunctionOf(
-			|args: (&TokenSymbol, &T::Balance, &Option<T::AccountId>)| Module::<T>::calculate_referer_gas(args.2),
-			DispatchClass::Normal,
-			Pays::Yes
-		)]
+		#[weight = (weight_for::convert_token_to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
 		fn convert_token_to_vtoken(
 			origin,
 			vtoken_symbol: TokenSymbol,
 			#[compact] token_amount: T::Balance,
-			referrer: Option<T::AccountId>
+			referer: Option<T::AccountId>
 		) {
 			let converter = ensure_signed(origin)?;
 
@@ -178,7 +174,7 @@ decl_module! {
 			Self::increase_pool(vtoken_symbol, token_amount, vtokens_buy);
 
 			// save refer channel
-			Self::handle_new_refer(converter, referrer, vtokens_buy);
+			Self::handle_new_refer(converter, referer, vtokens_buy);
 
 			Self::deposit_event(Event::ConvertTokenToVTokenSuccess);
 		}
@@ -254,11 +250,6 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-	// if the input has something, charge more fee on caller
-	fn calculate_referer_gas(referer: &Option<T::AccountId>) -> Weight {
-		if referer.is_some() { 100 } else { 10 }
-	}
-
 	pub fn get_convert(token_symbol: TokenSymbol) -> T::ConvertPrice {
 		<ConvertPrice<T>>::get(token_symbol)
 	}
@@ -391,5 +382,19 @@ impl<T: Trait> AssetReward<TokenSymbol, T::Balance> for Module<T> {
 		} else {
 			Err(())
 		}
+	}
+}
+
+#[allow(dead_code)]
+mod weight_for {
+	use frame_support::{traits::Get, weights::Weight};
+	use super::Trait;
+
+	/// asset_redeem weight
+	pub(crate) fn convert_token_to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight {
+		let referer_weight = referer.map_or(1000, |_| 100);
+		let db = T::DbWeight::get();
+		db.reads_writes(1, 1)
+			.saturating_add(referer_weight) // memo length
 	}
 }

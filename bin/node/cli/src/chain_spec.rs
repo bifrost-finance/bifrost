@@ -148,7 +148,6 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 		initial_authorities,
 		root_key,
 		Some(endowed_accounts),
-		false,
 	)
 }
 
@@ -214,7 +213,6 @@ pub fn testnet_genesis(
 	)>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
-	enable_println: bool,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
 		vec![
@@ -386,7 +384,6 @@ fn development_config_genesis() -> GenesisConfig {
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
-		true,
 	)
 }
 
@@ -413,7 +410,6 @@ fn local_testnet_genesis() -> GenesisConfig {
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
-		false,
 	)
 }
 
@@ -437,7 +433,6 @@ pub fn bifrost_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	enable_println: bool,
 ) -> GenesisConfig {
 	let num_endowed_accounts = endowed_accounts.len();
 
@@ -652,7 +647,6 @@ fn bifrost_config_genesis() -> GenesisConfig {
 		initial_authorities,
 		root_key,
 		endowed_accounts,
-		true,
 	)
 }
 
@@ -678,16 +672,16 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard CC1",
+		"Bifrost Asgard CC2",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		bifrost_config_genesis,
 		vec![
-			"/dns4/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
-			"/dns4/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
-			"/dns4/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
-			"/dns4/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
-			"/dns4/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
+			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
+			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
+			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
+			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
@@ -695,78 +689,4 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 		properties,
 		Default::default(),
 	)
-}
-
-#[cfg(test)]
-pub(crate) mod tests {
-	use super::*;
-	use crate::service::{new_full, new_light};
-	use sc_service_test;
-	use sp_runtime::BuildStorage;
-
-	fn local_testnet_genesis_instant_single() -> GenesisConfig {
-		testnet_genesis(
-			vec![
-				authority_keys_from_seed("Alice"),
-			],
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			None,
-			false,
-		)
-	}
-
-	/// Local testnet config (single validator - Alice)
-	pub fn integration_test_config_with_single_authority() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis_instant_single,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	/// Local testnet config (multivalidator Alice + Bob)
-	pub fn integration_test_config_with_two_authorities() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	#[test]
-	#[ignore]
-	fn test_connectivity() {
-		sc_service_test::connectivity(
-			integration_test_config_with_two_authorities(),
-			|config| new_full(config),
-			|config| new_light(config),
-		);
-	}
-
-	#[test]
-	fn test_create_development_chain_spec() {
-		development_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_create_local_testnet_chain_spec() {
-		local_testnet_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_staging_test_net_chain_spec() {
-		staging_testnet_config().build_storage().unwrap();
-	}
 }

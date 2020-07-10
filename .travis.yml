@@ -1,7 +1,7 @@
 # Request an environment that provides sudo (that goes with larger containers)
 # and a minimal language environment.
 sudo: true
-dist: bionic 
+dist: bionic
 language: rust
 rust:
   - stable
@@ -13,8 +13,6 @@ env:
     - RUST_BACKTRACE=1
 
 before_script:
-  # Check how much space we've got on this machine.
-  - df -h
   - travis_wait sudo apt-get update -qq
   - travis_wait sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
   - travis_wait rustup update nightly
@@ -23,7 +21,8 @@ before_script:
 
 script:
   - travis_wait 60 cargo build
+  - travis_wait 60 cargo test
 
 after_script:
   # Check how much free disk space left after the build
-  - df -h
+  - travis_wait df -h

@@ -200,28 +200,28 @@ fn add_liquidity_should_work() {
 		let precise = 4;
 		let dot_token_amount = 10000;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
 
-		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12)); // skip vDOT
+		assert_ok!(Assets::create(Origin::root(), b"vDOT".to_vec(), 12)); // skip vDOT
 
 		// issue ksm token
 		let ksm_symbol = b"KSM".to_vec();
 		let precise = 4;
 		let ksm_token_amount = 100000;
 
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
 		let ksm_type = TokenSymbol::from(ksm_id);
 
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), ksm_type, alice, ksm_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((ksm_type, alice)).balance, ksm_token_amount);
 
 		// set swap fee
@@ -280,21 +280,21 @@ fn add_single_liquidity_should_work() {
 		let precise = 4;
 		let dot_token_amount = 1000;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
 
-		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12)); // skip vDOT
+		assert_ok!(Assets::create(Origin::root(), b"vDOT".to_vec(), 12)); // skip vDOT
 
 		// create ksm token, but issue nothing
 		let ksm_symbol = b"KSM".to_vec();
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
 		let ksm_type = TokenSymbol::from(ksm_id);
 
@@ -363,27 +363,27 @@ fn swap_should_work() {
 		let precise = 4;
 		let dot_token_amount = 1_000_000;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
 
-		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12)); // skip vDOT
+		assert_ok!(Assets::create(Origin::root(), b"vDOT".to_vec(), 12)); // skip vDOT
 
 		// create ksm token
 		let ksm_symbol = b"KSM".to_vec();
 		let ksm_token_amount = 1_000_000;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
 		let ksm_type = TokenSymbol::from(ksm_id);
 
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), ksm_type, alice, ksm_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((ksm_type, alice)).balance, ksm_token_amount);
 
 		// set swap fee
@@ -509,32 +509,32 @@ fn remove_single_liquidity_should_work() {
 		let precise = 4;
 		let dot_token_amount = 1_000_000;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
 
-		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12)); // skip vDOT
+		assert_ok!(Assets::create(Origin::root(), b"vDOT".to_vec(), 12)); // skip vDOT
 
 		// create ksm token
 		let ksm_symbol = b"KSM".to_vec();
 		let ksm_token_amount = 1_000_000;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
 		let ksm_type = TokenSymbol::from(ksm_id);
 
 		// issue ksm token
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), ksm_type, alice, ksm_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((ksm_type, alice)).balance, ksm_token_amount);
 
 		// issue bob dot token
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, bob, dot_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, bob, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, dot_token_amount);
 
 		// set swap fee
@@ -623,27 +623,27 @@ fn remove_assets_liquidity_should_work() {
 		let precise = 4;
 		let dot_token_amount = 10_000;
 
-		assert_ok!(Assets::create(Origin::ROOT, b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
 		// issue dot token
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, dot_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), dot_symbol, precise));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, dot_type, alice, dot_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, alice, dot_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, alice)).balance, dot_token_amount);
 
-		assert_ok!(Assets::create(Origin::ROOT, b"vDOT".to_vec(), 12)); // skip vDOT
+		assert_ok!(Assets::create(Origin::root(), b"vDOT".to_vec(), 12)); // skip vDOT
 
 		// create ksm token
 		let ksm_symbol = b"KSM".to_vec();
 		let ksm_token_amount = 100_000;
-		assert_ok!(assets::Module::<Test>::create(Origin::ROOT, ksm_symbol, precise));
+		assert_ok!(assets::Module::<Test>::create(Origin::root(), ksm_symbol, precise));
 		let ksm_id = Assets::next_asset_id() - 1;
 		let ksm_type = TokenSymbol::from(ksm_id);
 
 		// issue ksm token
-		assert_ok!(assets::Module::<Test>::issue(Origin::ROOT, ksm_type, alice, ksm_token_amount));
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), ksm_type, alice, ksm_token_amount));
 		assert_eq!(<assets::AccountAssets<Test>>::get((ksm_type, alice)).balance, ksm_token_amount);
 
 		// set swap fee
