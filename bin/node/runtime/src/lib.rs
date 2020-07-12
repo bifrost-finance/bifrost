@@ -57,6 +57,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
+use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use pallet_session::{historical as pallet_session_historical};
@@ -721,6 +722,20 @@ impl brml_bridge_eos::Trait for Runtime {
 	type AssetTrait = Assets;
 }
 
+impl brml_bridge_iost::Trait for Runtime {
+	type AuthorityId = BridgeIostId;
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
+	type Precision = Precision;
+	type BridgeAssetFrom = ();
+	type Call = Call;
+	//	type SubmitTransaction = BridgeSubmitTransaction;
+	type AssetTrait = Assets;
+}
+
 impl brml_swap::Trait for Runtime {
 	type Fee = Balance;
 	type Event = Event;
@@ -796,6 +811,7 @@ construct_runtime!(
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		Validator: brml_validator::{Module, Call, Storage, Event<T>},

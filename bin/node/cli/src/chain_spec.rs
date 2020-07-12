@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig, VoucherConfig,
+	AssetsConfig, BridgeEosConfig, BridgeIostConfig, VoucherConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -322,7 +322,14 @@ pub fn testnet_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key, true)].iter().cloned().collect::<Vec<_>>(),
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
+		}),
+		brml_bridge_iost: Some(BridgeIostConfig {
+			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
@@ -479,7 +486,14 @@ pub fn bifrost_genesis(
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// root_key has the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key, true)].iter().cloned().collect::<Vec<_>>(),
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
+		}),
+		brml_bridge_iost: Some(BridgeIostConfig {
+			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {

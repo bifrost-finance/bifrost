@@ -69,6 +69,7 @@ brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", d
 brml-convert = { path = "../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
+brml-bridge-iost = { path = "../../../brml/bridge-iost", default-features = false }
 brml-voucher = { path = "../../../brml/voucher", default-features = false }
 brml-swap = { path = "../../../brml/swap", default-features = false }
 chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
@@ -136,6 +137,7 @@ std = [
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
 	"brml-bridge-eos/std",
+	"brml-bridge-iost/std",
 	"brml-swap/std",
 	'chainlink/std',
 	'brml-oracle/std',
