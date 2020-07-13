@@ -20,7 +20,7 @@ extern crate alloc;
 
 use alloc::string::{String, ToString};
 use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
-
+use crate::transaction::TxOut;
 use codec::{Decode, Encode};
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle,
@@ -37,22 +37,16 @@ use sp_runtime::{
 		TransactionValidity, ValidTransaction, TransactionSource
 	},
 };
-use frame_support::traits::{Get};
 use frame_support::{
-	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
-	dispatch::{DispatchResult, DispatchError},
-	weights::{DispatchClass, Weight, Pays}
+	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
+	dispatch::{DispatchResult, DispatchError}, weights::{DispatchClass, Weight, Pays},
 };
 use frame_system::{
-	self as system, ensure_root, ensure_none, ensure_signed,
-	offchain::{SubmitTransaction, SendTransactionTypes}
+	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
-
 use node_primitives::{
-	AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
-	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
+	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
 };
-use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
 
 mod transaction;
@@ -270,6 +264,9 @@ decl_storage! {
 		CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
 		/// How many address has the privilege sign transaction between EOS and Bifrost
 		AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
+
+		/// Record times of cross-chain trade, (EOS => Bifrost, Bifrost => EOS)
+		TimesOfCrossChainTrade get(fn trade_times): map hasher(blake2_128_concat) T::AccountId => (u32, u32) = (0u32, 0u32);
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
@@ -501,7 +498,13 @@ decl_module! {
 			// withdraw operation, Bifrost => EOS
 			if cross_account == action_transfer.from.to_string().into_bytes() {
 				match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
-					Ok(target) => Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes())),
+					Ok(target) => {
+						// update times of trade from Bifrost => EOS
+						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+							times.1 = times.1.saturating_add(1);
+						});
+						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
+					}
 					Err(e) => {
 						debug::info!("Bifrost => EOS failed due to {:?}", e);
 						Self::deposit_event(RawEvent::WithdrawFail);
@@ -512,7 +515,13 @@ decl_module! {
 			// deposit operation, EOS => Bifrost
 			if cross_account == action_transfer.to.to_string().into_bytes() {
 				match Self::transaction_from_eos_to_bifrost(&action_transfer) {
-					Ok(target) => Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target)),
+					Ok(target) => {
+						// update times of trade from EOS => Bifrost
+						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+							times.0 = times.0.saturating_add(1);
+						});
+						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
+					}
 					Err(e) => {
 						debug::info!("EOS => Bifrost failed due to {:?}", e);
 						Self::deposit_event(RawEvent::DepositFail);

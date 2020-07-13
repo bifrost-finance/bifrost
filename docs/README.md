@@ -1,6 +1,6 @@
 ## All related repotories
 - [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
-- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: v2.0)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: master)
 - [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
 - [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: master)
 
@@ -81,8 +81,9 @@ $ cleos wallet unlock # prompt you input the password
 #### Compile
 
 ```
-$ git clone -b v2.0 https://github.com/bifrost-finance/bifrost-eos-relay.git
-$ cd eos/
+$ git clone https://github.com/bifrost-finance/bifrost-eos-relay.git
+$ git checkout master
+$ cd bifrost-eos-relay/
 $ git submodule update --init --recursive
 $ git tag v2.0.4 -m 'fix no tag'
 $ mkdir build && cd build

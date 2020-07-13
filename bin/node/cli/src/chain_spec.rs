@@ -341,11 +341,11 @@ fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
 		let pool = vec![
 			(TokenSymbol::aUSD, 1000 * DOLLARS, 15),
 			(TokenSymbol::DOT, 1000 * DOLLARS, 15),
-			(TokenSymbol::vDOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::vDOT, 1000 * DOLLARS, 10),
 			(TokenSymbol::KSM, 1000 * DOLLARS, 20),
 			(TokenSymbol::vKSM, 1000 * DOLLARS, 20),
-			(TokenSymbol::EOS, 1000 * DOLLARS, 15),
-			(TokenSymbol::vEOS, 1000 * DOLLARS, 15),
+			(TokenSymbol::EOS, 1000 * DOLLARS, 10),
+			(TokenSymbol::vEOS, 1000 * DOLLARS, 10),
 		];
 		(pool, 0)
 	};
