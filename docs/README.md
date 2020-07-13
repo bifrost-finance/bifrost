@@ -81,10 +81,11 @@ $ cleos wallet unlock # prompt you input the password
 #### Compile
 
 ```
-$ git clone -b v2.0 https://github.com/bifrost-finance/eos
+$ git clone https://github.com/bifrost-codes/bifrost-eos-relay.git
+$ cd bifrost-eos-relay/
+$ git checkout v2.0
 $ git tag v2.0.4 -m 'fix no tag'
 $ git submodule update --init --recursive
-$ cd eos/
 $ mkdir build && cd build
 $ cmake ..
 $ make -j4
