@@ -25,7 +25,7 @@ use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, BridgeAssetTo, TokenSymbol};
+use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
@@ -58,10 +58,11 @@ pub struct ValidatorRegister<Balance, BlockNumber> {
 }
 
 impl<Balance: Default, BlockNumber: Default> ValidatorRegister<Balance, BlockNumber> {
-	fn new(need: Balance, validator_address: Vec<u8>) -> Self {
+	fn new(need: Balance, reward_per_block: Balance, validator_address: Vec<u8>) -> Self {
 		Self {
 			need,
 			validator_address,
+			reward_per_block,
 			..Default::default()
 		}
 	}
@@ -82,6 +83,7 @@ pub trait Trait: frame_system::Trait {
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
+	type RewardHandler: RewardHandler<Self::Balance>;
 }
 
 decl_event! {
@@ -238,6 +240,7 @@ decl_module! {
 			origin,
 			token_symbol: TokenSymbol,
 			need: T::Balance,
+			reward_per_block: T::Balance,
 			validator_address: Vec<u8>,
 		) {
 			let origin = ensure_signed(origin)?;
@@ -247,7 +250,7 @@ decl_module! {
 				Error::<T>::ValidatorRegistered
 			);
 
-			let validator = ValidatorRegister::new(need, validator_address);
+			let validator = ValidatorRegister::new(need, reward_per_block, validator_address);
 			Validators::<T>::insert(&token_symbol, &origin, &validator);
 
 			Self::deposit_event(RawEvent::ValidatorRegistered(token_symbol, origin, validator));
@@ -364,19 +367,25 @@ impl<T: Trait> Module<T> {
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
+			let mut reward = Zero::zero();
 			let min_fee = val.staking.saturating_mul(
 				min_reward_per_block.saturating_mul(redeem_duration.into())
 			);
 			if min_fee >= val.deposit {
 				// call redeem by bridge-eos
 				T::BridgeAssetTo::redeem(token_symbol, val.deposit, val.validator_address.clone()).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
+				reward = val.deposit;
 				val.deposit = Zero::zero();
 			} else {
 				let blocks = now_block - val.last_block;
-				let fee = val.staking.saturating_mul(
+				reward = val.staking.saturating_mul(
 					val.reward_per_block.saturating_mul(blocks.into())
 				);
-				val.deposit = val.deposit.saturating_sub(fee);
+				val.deposit = val.deposit.saturating_sub(reward);
+			}
+
+			if reward > Zero::zero() {
+				T::RewardHandler::send_reward(reward);
 			}
 
 			val.last_block = now_block;
