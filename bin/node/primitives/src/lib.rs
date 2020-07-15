@@ -378,6 +378,14 @@ impl<A, B> AssetReward<A, B> for () {
 	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
 }
 
+pub trait RewardHandler<Balance> {
+	fn send_reward(reward: Balance);
+}
+
+impl<B> RewardHandler<B> for () {
+	fn send_reward(_: B) {}
+}
+
 
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
