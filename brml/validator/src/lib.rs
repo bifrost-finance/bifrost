@@ -384,7 +384,9 @@ impl<T: Trait> Module<T> {
 				val.deposit = val.deposit.saturating_sub(reward);
 			}
 
-			T::RewardHandler::send_reward(reward);
+			if reward > Zero::zero() {
+				T::RewardHandler::send_reward(reward);
+			}
 
 			val.last_block = now_block;
 
