@@ -861,7 +861,7 @@ impl brml_validator::Trait for Runtime {
 	type Precision = Precision;
 	type AssetTrait = Assets;
 	type BridgeAssetTo = BridgeEos;
-	type RewardHandler = ();
+	type RewardHandler = Convert;
 }
 
 impl brml_oracle::Trait for Runtime {
