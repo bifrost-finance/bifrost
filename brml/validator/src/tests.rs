@@ -49,7 +49,8 @@ fn stake_should_ok() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin, token_symbol, need, reward_per_block, validator_address));
 
 		let target = 1;
 		let amount = 100;
@@ -90,7 +91,8 @@ fn stake_amount_exceed_should_error() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin, token_symbol, need, reward_per_block, validator_address));
 
 		let target = 1;
 		let amount = 2000;
@@ -109,7 +111,8 @@ fn unstake_should_ok() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin, token_symbol, need, reward_per_block, validator_address));
 
 		let target = 1;
 		let stake_amount = 500;
@@ -147,7 +150,8 @@ fn unstake_insufficient_should_error() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin, token_symbol, need, reward_per_block, validator_address));
 
 		let target = 1;
 		let stake_amount = 500;
@@ -170,9 +174,10 @@ fn register_should_work() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		let validator = ValidatorRegister::new(need, validator_address.clone());
+		let reward_per_block = 0;
+		let validator = ValidatorRegister::new(need, reward_per_block, validator_address.clone());
 
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		assert_ok!(Validator::register(origin, token_symbol, need, reward_per_block, validator_address));
 
 		assert_eq!(Validator::validators(token_symbol, origin_id), validator);
 	});
@@ -185,13 +190,14 @@ fn register_twice_should_error() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
+		let reward_per_block = 0;
 
 		assert_ok!(
-			Validator::register(origin.clone(), token_symbol, need, validator_address.clone())
+			Validator::register(origin.clone(), token_symbol, need, reward_per_block, validator_address.clone())
 		);
 
 		assert_noop!(
-			Validator::register(origin, token_symbol, need, validator_address),
+			Validator::register(origin, token_symbol, need, reward_per_block, validator_address),
 			ValidatorError::ValidatorRegistered
 		);
 	});
@@ -205,7 +211,8 @@ fn set_need_amount_should_work() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), token_symbol, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin.clone(), token_symbol, need, reward_per_block, validator_address));
 
 		let new_need = 2000;
 		assert_ok!(Validator::set_need_amount(origin, token_symbol, new_need));
@@ -247,7 +254,8 @@ fn deposit_should_work() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin.clone(), dot_type, need, reward_per_block, validator_address));
 
 		let deposit_amount = 100;
 		assert_ok!(Validator::deposit(origin.clone(), dot_type, deposit_amount));
@@ -282,7 +290,8 @@ fn deposit_not_enough_free_balance_should_error() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin.clone(), dot_type, need, reward_per_block, validator_address));
 
 		let deposit_amount = 20000;
 		assert_noop!(
@@ -326,7 +335,8 @@ fn withdraw_should_ok() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin.clone(), dot_type, need, reward_per_block, validator_address));
 
 		let deposit_amount = 500;
 		assert_ok!(Validator::deposit(origin.clone(), dot_type, deposit_amount));
@@ -358,7 +368,8 @@ fn withdraw_not_enough_locked_balance_should_error() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		let reward_per_block = 0;
+		assert_ok!(Validator::register(origin.clone(), dot_type, need, reward_per_block, validator_address));
 
 		let deposit_amount = 500;
 		assert_ok!(Validator::deposit(origin.clone(), dot_type, deposit_amount));

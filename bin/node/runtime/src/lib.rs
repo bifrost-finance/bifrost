@@ -790,7 +790,9 @@ impl brml_voucher::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const ConvertDuration: BlockNumber = 24 * 60 * MINUTES;
+	// 3 hours(1800 blocks) as an era
+	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
 }
 
 impl brml_convert::Trait for Runtime {
@@ -803,6 +805,7 @@ impl brml_convert::Trait for Runtime {
 	type Cost = Cost;
 	type Income = Income;
 	type ConvertDuration = ConvertDuration;
+	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 //type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
@@ -912,7 +915,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Convert: brml_convert::{Module, Call, Storage, Event},
+		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
