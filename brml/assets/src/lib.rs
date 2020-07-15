@@ -125,7 +125,7 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub AccountAssets get(fn account_assets): map hasher(blake2_128_concat) (TokenSymbol, T::AccountId)
+		pub AccountAssets get(fn account_assets) config(): map hasher(blake2_128_concat) (TokenSymbol, T::AccountId)
 			=> AccountAsset<T::Balance, T::Cost, T::Income>;
 		/// The number of units of prices held by any given asset.
 		pub Prices get(fn prices) config(): map hasher(blake2_128_concat) TokenSymbol => T::Price;
@@ -138,6 +138,10 @@ decl_storage! {
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
+			// initalize assets for account
+			for ((token_symbol, who), asset) in config.account_assets.iter() {
+				<AccountAssets<T>>::insert((token_symbol, who), asset);
+			}
 			// initialze three assets id for these tokens
 			<NextAssetId<T>>::put(config.next_asset_id);
 
