@@ -36,7 +36,7 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature, TokenSymbol};
+pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -312,6 +312,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
+			account_assets: vec![],
 			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
@@ -516,6 +517,7 @@ pub fn bifrost_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
+			account_assets: initialize_assets(),
 			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
@@ -559,10 +561,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 
 	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
 	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
-		let decoded_ss58 = bs58::decode(&v.0).into_vec().expect("decode account id failure");
-		let mut data = [0u8; 32];
-		data.copy_from_slice(&decoded_ss58[1..33]);
-		(node_primitives::AccountId::from(data), v.1.parse().expect("Balance is invalid."))
+		(parse_address(&v.0), v.1.parse().expect("Balance is invalid."))
 	}).collect();
 
 	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
@@ -578,6 +577,29 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	}
 
 	Some(final_vouchers)
+}
+
+fn parse_address(address: impl AsRef<str>) -> AccountId {
+	let decoded_ss58 = bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
+	let mut data = [0u8; 32];
+	data.copy_from_slice(&decoded_ss58[1..33]);
+
+	node_primitives::AccountId::from(data)
+}
+
+/// initialize assets for specific bifrost accounts
+fn initialize_assets() -> Vec<((TokenSymbol, AccountId), AccountAsset<Balance, Cost, Income>)> {
+	let assets = vec![
+		(
+			(TokenSymbol::DOT, parse_address("5CDWwkPsyc37XdB9N5QpZosgrcqcKA48Lpb81KjDZ89W9GPm")),
+			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+		),
+		(
+			(TokenSymbol::KSM, parse_address("5DAQaLpQjAZKuX4F77Lb69e5qb3GtaKVLF1mdiYt5SAhXeLC")),
+			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+		),
+	];
+	assets
 }
 
 /// Configure genesis for bifrost test
