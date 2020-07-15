@@ -40,7 +40,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	BridgeAssetTo, AssetId, Precision, TokenSymbol, ConvertPrice, RatePerBlock
+	BridgeAssetTo, AssetId, Precision, TokenSymbol, ConvertPrice, RatePerBlock, RewardHandler
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -858,6 +858,7 @@ impl brml_validator::Trait for Runtime {
 	type Precision = Precision;
 	type AssetTrait = Assets;
 	type BridgeAssetTo = BridgeEos;
+	type RewardHandler = ();
 }
 
 impl brml_oracle::Trait for Runtime {
