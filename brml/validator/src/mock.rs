@@ -104,6 +104,7 @@ impl crate::Trait for Test {
 	type Precision = u32;
 	type AssetTrait = Assets;
 	type BridgeAssetTo = ();
+	type RewardHandler = ();
 }
 
 pub type Validator = crate::Module<Test>;

@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig,
+	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -316,6 +316,13 @@ pub fn testnet_genesis(
 			token_details: vec![],
 			prices: vec![],
 		}),
+		brml_convert: Some(ConvertConfig {
+			convert_price: vec![
+				(TokenSymbol::DOT, DOLLARS / 1000),
+				(TokenSymbol::KSM, DOLLARS / 1000),
+				(TokenSymbol::EOS, DOLLARS / 1000),
+			], // initialize convert price as 0.1%
+		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
@@ -462,8 +469,8 @@ pub fn bifrost_genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: initial_authorities.len() as u32 * 1,
-			minimum_validator_count: (initial_authorities.len() / 2) as u32,
+			validator_count: 30,
+			minimum_validator_count: 5,
 			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
@@ -512,6 +519,13 @@ pub fn bifrost_genesis(
 			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
+		}),
+		brml_convert: Some(ConvertConfig {
+			convert_price: vec![
+				(TokenSymbol::DOT, DOLLARS / 1000),
+				(TokenSymbol::KSM, DOLLARS / 1000),
+				(TokenSymbol::EOS, DOLLARS / 1000),
+			], // initialize convert price as 0.1%
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
@@ -677,11 +691,11 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 		ChainType::Custom("Asgard Testnet".into()),
 		bifrost_config_genesis,
 		vec![
-			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
-			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
-			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
-			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
-			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
+			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWBMjifHHUZxbQaQZS9t5jMmTDtZbugAtJ8TG9RuX4umEY".parse().expect("failed to parse multiaddress."),
+			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
+			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
+			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),

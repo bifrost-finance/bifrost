@@ -83,7 +83,7 @@ pub trait Trait: frame_system::Trait {
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
-	type RewardHandler: RewardHandler<Self::Balance>;
+	type RewardHandler: RewardHandler<TokenSymbol, Self::Balance>;
 }
 
 decl_event! {
@@ -385,7 +385,7 @@ impl<T: Trait> Module<T> {
 			}
 
 			if reward > Zero::zero() {
-				T::RewardHandler::send_reward(reward);
+				T::RewardHandler::send_reward(token_symbol, reward);
 			}
 
 			val.last_block = now_block;
