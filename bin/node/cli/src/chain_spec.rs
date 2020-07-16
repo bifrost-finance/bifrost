@@ -319,10 +319,10 @@ pub fn testnet_genesis(
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
-				(TokenSymbol::DOT, DOLLARS / 1000),
-				(TokenSymbol::KSM, DOLLARS / 1000),
-				(TokenSymbol::EOS, DOLLARS / 1000),
-			], // initialize convert price as 0.1%
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
+			], // initialize convert price as 1%
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
@@ -343,29 +343,42 @@ pub fn testnet_genesis(
 }
 
 fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
+	/*
+	This list is each token for aUSD.
+	Accroding to the weight to calculate how many token will be added to the pool.
+	For example, if aUSD has 10000 in the pool, DOT has to be added 10000 / (300 * dot_amount) = 15 / 15 =>
+	so dot_amount = 10000 / 300 = 33.3333
+	aUSD 10000
+	DOT 300 aUSD
+	vDOT 3 aUSD
+	KSM 8.6 aUSD
+	vKSM 0.086 aUSD
+	EOS 2.62 aUSD
+	vEOS 0.0262 aUSD
+	*/
 	let all_pool_token = 1000 * DOLLARS;
 	let count_of_supported_tokens = 7u8;
 	let global_pool = {
 		let pool = vec![
-			(TokenSymbol::aUSD, 1000 * DOLLARS, 15),
-			(TokenSymbol::DOT, 1000 * DOLLARS, 15),
-			(TokenSymbol::vDOT, 1000 * DOLLARS, 10),
-			(TokenSymbol::KSM, 1000 * DOLLARS, 20),
-			(TokenSymbol::vKSM, 1000 * DOLLARS, 20),
-			(TokenSymbol::EOS, 1000 * DOLLARS, 10),
-			(TokenSymbol::vEOS, 1000 * DOLLARS, 10),
+			(TokenSymbol::aUSD, 10000 * DOLLARS, 15),
+			(TokenSymbol::DOT, (33.333_333_333_333f64 * DOLLARS as f64) as Balance, 15), // 33.333_333_333_333
+			(TokenSymbol::vDOT, (2222.222222222222f64 * DOLLARS as f64) as Balance, 10), // 2222.222222222222
+			(TokenSymbol::KSM, (1550.3875968992247f64 * DOLLARS as f64) as Balance, 20), // 1550.3875968992247
+			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance, 20), // 155038.7596899225
+			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance, 10), // 2544.529262086514
+			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance, 10), // 254452.9262086514
 		];
 		(pool, 0)
 	};
 	let user_pool = {
 		let pool = vec![
-			(TokenSymbol::aUSD, 1000 * DOLLARS),
-			(TokenSymbol::DOT, 1000 * DOLLARS),
-			(TokenSymbol::vDOT, 1000 * DOLLARS),
-			(TokenSymbol::KSM, 1000 * DOLLARS),
-			(TokenSymbol::vKSM, 1000 * DOLLARS),
-			(TokenSymbol::EOS, 1000 * DOLLARS),
-			(TokenSymbol::vEOS, 1000 * DOLLARS),
+			(TokenSymbol::aUSD, 10000 * DOLLARS),
+			(TokenSymbol::DOT, (33.333_333_333_333f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vDOT, (2222.222222222222f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::KSM, (1550.3875968992247f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
@@ -543,10 +556,10 @@ pub fn bifrost_genesis(
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
-				(TokenSymbol::DOT, DOLLARS / 1000),
-				(TokenSymbol::KSM, DOLLARS / 1000),
-				(TokenSymbol::EOS, DOLLARS / 1000),
-			], // initialize convert price as 0.1%
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
+			], // initialize convert price as 1%
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
