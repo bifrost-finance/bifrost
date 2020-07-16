@@ -397,6 +397,25 @@ fn development_config_genesis() -> GenesisConfig {
 
 /// Development config (single validator Alice)
 pub fn development_config() -> ChainSpec {
+	let properties = {
+		let mut props = serde_json::Map::new();
+
+		props.insert(
+			"ss58Format".to_owned(),
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenDecimals".to_owned(),
+			serde_json::value::to_value(12u8).expect("The tokenDecimals cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenSymbol".to_owned(),
+			serde_json::value::to_value("ASG".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+		);
+		Some(props)
+	};
+	let protocol_id = Some("bifrost-test");
+
 	ChainSpec::from_genesis(
 		"Development",
 		"dev",
@@ -404,8 +423,8 @@ pub fn development_config() -> ChainSpec {
 		development_config_genesis,
 		vec![],
 		None,
-		None,
-		None,
+		protocol_id,
+		properties,
 		Default::default(),
 	)
 }

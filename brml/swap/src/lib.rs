@@ -451,9 +451,8 @@ decl_module! {
 			// ensure user doesn't redeem too many
 			ensure!(user_pool.1 >= pool_amount_in, Error::<T>::NotEnoughBalance);
 
-			let gpool = GlobalPool::<T>::get();
 			let mut redeemed_pool = Vec::with_capacity(user_pool.0.len());
-			for p in gpool.0.iter() {
+			for p in user_pool.0.iter() {
 				let to_redeem =  p.1.saturating_mul(pool_amount_in) / user_pool.1;
 				ensure!(to_redeem <= p.1, Error::<T>::NotEnoughBalance);
 				redeemed_pool.push((p.0, to_redeem));
