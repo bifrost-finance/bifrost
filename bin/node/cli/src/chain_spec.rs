@@ -415,7 +415,7 @@ pub fn development_config() -> ChainSpec {
 
 		props.insert(
 			"ss58Format".to_owned(),
-			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
+			serde_json::value::to_value(42u8).expect("The ss58Format cannot be convert to json value.")
 		);
 		props.insert(
 			"tokenDecimals".to_owned(),
@@ -503,7 +503,7 @@ pub fn bifrost_genesis(
 		}),
 		pallet_staking: Some(StakingConfig {
 			validator_count: 30,
-			minimum_validator_count: 5,
+			minimum_validator_count: 3,
 			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
@@ -563,7 +563,7 @@ pub fn bifrost_genesis(
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			notary_keys: initial_authorities[2..5].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// root_key has the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
@@ -705,8 +705,8 @@ fn bifrost_config_genesis() -> GenesisConfig {
 
 	// generated with secret: subkey inspect "$secret"/fir
 	let root_key: AccountId = hex![
-		// 5DU1gVL9GAWbDswdpAULxaQMVfBwPjseNrX21fp6wDDCHuGD
-		"3e02e15e036a8f5fe634f88bdd41cf6cb2fca4051546fbcd203a04431e016563"
+		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	].into();
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
@@ -725,7 +725,7 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 
 		props.insert(
 			"ss58Format".to_owned(),
-			serde_json::value::to_value(42u8).expect("The ss58Format cannot be convert to json value.")
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
 		);
 		props.insert(
 			"tokenDecimals".to_owned(),
