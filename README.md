@@ -88,13 +88,13 @@ If docker isn't installed on your machine, just check here to install it: [Docke
 
 After installation, pull the docker image by the following command:
 ```bash
-docker pull linux6/bifrost:0.1
+docker pull bifrostnetwork/bifrost:asgard-v0.4.0
 ```
 
 #### Start a single chain
 Run the chain quickly:
 ```bash
-docker run -p 9944:9944 --name=bifrost linux6/bifrost:0.1
+docker run -p 9944:9944 --name=bifrost bifrostnetwork/bifrost:asgard-v0.4.0
 ```
 
 #### Start multi-nodes
@@ -102,22 +102,22 @@ If you want to run multi-nodes like the way in **Normal way**,
 
 Start a container named alice on tcp port 9944.
 ```bash
-docker run -p 9944:9944 --name=alice linux6/bifrost:0.1 bifrost-node --base-path /tmp/alice \
-  --chain=local \
+docker run -p 9944:9944 --name=alice bifrostnetwork/bifrost:asgard-v0.4.0 --base-path /tmp/alice \
+  --chain=dev \
   --alice \
   --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
-  --telemetry-url ws://telemetry.polkadot.io:1024 \
+  --telemetry-url wss://telemetry.polkadot.io/submit/ 0 \
   --validator
 ```
 
 Start another container named bob on tcp port 9933.
 ```bash
-docker run -p 9933:9933 --name=bob linux6/bifrost:0.1 bifrost-node --base-path /tmp/bob \
+docker run -p 9933:9933 --name=bob bifrostnetwork/bifrost:asgard-v0.4.0 --base-path /tmp/bob \
   --bootnodes /ip4/127.0.0.1/tcp/9933/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
-  --chain=local \
+  --chain=dev \
   --bob \
   --port 9933 \
-  --telemetry-url ws://telemetry.polkadot.io:1024 \
+  --telemetry-url wss://telemetry.polkadot.io/submit/ 0 \
   --validator
 ```
 Observe both nodes.

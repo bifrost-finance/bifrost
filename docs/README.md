@@ -192,7 +192,7 @@ $ cleos get currency balance eosio.token bifrostcross
 
 Now send a transaction.
 ```
-$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "alice@bifrost:vEOS"]' -p jim@active
+$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:vEOS"]' -p jim@active
 ```
 
 Go to [polkadot.js.org](https://polkadot.js.org/apps/#/extrinsics), to check whether transaction is sent successfully to Bifrost or not.
