@@ -776,7 +776,8 @@ impl<T: Trait> Module<T> {
 	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
 		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
 
-		if decoded_ss58.len() == 35 && decoded_ss58.first() == Some(&42) {
+		// todo, decoded_ss58.first() == Some(&42) || Some(&6) || ...
+		if decoded_ss58.len() == 35 {
 			let mut data = [0u8; 32];
 			data.copy_from_slice(&decoded_ss58[1..33]);
 			Ok(data)

@@ -415,7 +415,7 @@ pub fn development_config() -> ChainSpec {
 
 		props.insert(
 			"ss58Format".to_owned(),
-			serde_json::value::to_value(42u8).expect("The ss58Format cannot be convert to json value.")
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
 		);
 		props.insert(
 			"tokenDecimals".to_owned(),
