@@ -98,6 +98,8 @@ decl_event! {
 		ProxyValidatorRegistered(TokenSymbol, AccountId, ProxyValidatorRegister<Balance, BlockNumber>),
 		/// The proxy validator changed the amount of staking it's needed.
 		ProxyValidatorNeedAmountSet(TokenSymbol, AccountId, Balance),
+		/// The proxy validator changed the reward per block.
+		ProxyValidatorRewardPerBlockSet(TokenSymbol, AccountId, Balance),
 		/// The proxy validator deposited the amount of reward.
 		ProxyValidatorDeposited(TokenSymbol, AccountId, Balance),
 		/// The proxy validator withdrawn the amount of reward.
@@ -285,6 +287,28 @@ decl_module! {
 			});
 
 			Self::deposit_event(RawEvent::ProxyValidatorNeedAmountSet(token_symbol, origin, amount));
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn set_reward_per_block(origin, token_symbol: TokenSymbol, reward_per_block: T::Balance) {
+			let origin = ensure_signed(origin)?;
+
+			ensure!(
+				ProxyValidators::<T>::contains_key(&token_symbol, &origin),
+				Error::<T>::ProxyValidatorNotRegistered
+			);
+
+			let asset_config = AssetConfigs::<T>::get(&token_symbol);
+			ensure!(
+				asset_config.min_reward_per_block <= reward_per_block,
+				Error::<T>::RewardTooLow
+			);
+
+			ProxyValidators::<T>::mutate(&token_symbol, &origin, |validator| {
+				validator.reward_per_block = reward_per_block;
+			});
+
+			Self::deposit_event(RawEvent::ProxyValidatorRewardPerBlockSet(token_symbol, origin, reward_per_block));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
