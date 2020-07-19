@@ -849,7 +849,7 @@ impl brml_swap::Trait for Runtime {
 	type FeePrecision = FeePrecision;
 }
 
-impl brml_validator::Trait for Runtime {
+impl brml_proxy_validator::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -916,7 +916,7 @@ construct_runtime!(
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
-		Validator: brml_validator::{Module, Call, Storage, Event<T>},
+		ProxyValidator: brml_proxy_validator::{Module, Call, Storage, Event<T>},
 		// chainlink
 		Oracle: brml_oracle::{Module, Call, Storage},
 		Chainlink: chainlink::{Module, Call, Storage, Event<T>},
