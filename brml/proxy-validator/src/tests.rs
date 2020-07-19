@@ -25,6 +25,12 @@ use node_primitives::{
 	Token, TokenSymbol,
 };
 
+fn set_asset(token_symbol: TokenSymbol) {
+	let redeem_duration = 100;
+	let min_reward_per_block = 1;
+	ProxyValidator::set_asset(Origin::root(), token_symbol, redeem_duration, min_reward_per_block).unwrap();
+}
+
 #[test]
 fn set_asset_should_work() {
 	new_test_ext().execute_with(|| {
@@ -44,6 +50,8 @@ fn set_asset_should_work() {
 #[test]
 fn stake_should_ok() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
 		let token_symbol = TokenSymbol::EOS;
@@ -86,6 +94,8 @@ fn stake_not_registered_should_error() {
 #[test]
 fn stake_amount_exceed_should_error() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin = Origin::signed(1);
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
@@ -104,6 +114,8 @@ fn stake_amount_exceed_should_error() {
 #[test]
 fn unstake_should_ok() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
 		let token_symbol = TokenSymbol::EOS;
@@ -142,6 +154,8 @@ fn unstake_not_registered_should_error() {
 #[test]
 fn unstake_insufficient_should_error() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
 		let token_symbol = TokenSymbol::EOS;
@@ -165,6 +179,8 @@ fn unstake_insufficient_should_error() {
 #[test]
 fn register_should_work() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
 		let token_symbol = TokenSymbol::EOS;
@@ -180,8 +196,27 @@ fn register_should_work() {
 }
 
 #[test]
+fn register_asset_not_set_should_error() {
+	new_test_ext().execute_with(|| {
+		let origin_id = 1;
+		let origin = Origin::signed(origin_id);
+		let token_symbol = TokenSymbol::EOS;
+		let need = 1000;
+		let reward_per_block = 100;
+		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
+
+		assert_noop!(
+			ProxyValidator::register(origin, token_symbol, need, reward_per_block, validator_address),
+			ProxyValidatorError::AssetConfigNotSet
+		);
+	});
+}
+
+#[test]
 fn register_twice_should_error() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin = Origin::signed(1);
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
@@ -201,6 +236,8 @@ fn register_twice_should_error() {
 #[test]
 fn set_need_amount_should_work() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
 		let token_symbol = TokenSymbol::EOS;
@@ -233,18 +270,19 @@ fn set_need_amount_not_registered_should_error() {
 #[test]
 fn deposit_should_work() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::DOT);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
 		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
 
-		assert_ok!(Assets::create(Origin::root(), symbol.clone(), precision));
+		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 10000));
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
@@ -254,32 +292,33 @@ fn deposit_should_work() {
 		assert_ok!(ProxyValidator::deposit(origin.clone(), dot_type, deposit_amount));
 		let validator = ProxyValidator::validators(dot_type, origin_id);
 		assert_eq!(validator.deposit, 100);
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 9900));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 9900));
 
 		let deposit_amount = 200;
 		assert_ok!(ProxyValidator::deposit(origin, dot_type, deposit_amount));
 		let validator = ProxyValidator::validators(dot_type, origin_id);
 		assert_eq!(validator.deposit, 300);
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 9700));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 9700));
 	});
 }
 
 #[test]
 fn deposit_not_enough_free_balance_should_error() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::DOT);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
 		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
-		assert_ok!(Assets::create(Origin::root(), symbol, precision));
+		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 10000));
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
@@ -311,19 +350,20 @@ fn deposit_not_registered_should_error() {
 #[test]
 fn withdraw_should_ok() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::DOT);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
 		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
-		assert_ok!(Assets::create(Origin::root(), symbol, precision));
+		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 10000));
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
@@ -336,26 +376,27 @@ fn withdraw_should_ok() {
 		assert_ok!(ProxyValidator::withdraw(origin, dot_type, withdraw_amount));
 		let validator = ProxyValidator::validators(dot_type, origin_id);
 		assert_eq!(validator.deposit, 300);
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 9700));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 9700));
 	});
 }
 
 #[test]
 fn withdraw_not_enough_locked_balance_should_error() {
 	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::DOT);
+
 		let origin_id = 1;
 		let origin = Origin::signed(origin_id);
-		let symbol = b"EOS".to_vec();
 		let precision = 8;
 
 		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
-		assert_ok!(Assets::create(Origin::root(), symbol, precision));
+		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
 		let dot_type = TokenSymbol::from(dot_id);
 
 		assert_ok!(Assets::issue(Origin::root(), dot_type, origin_id, 10000));
-		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 10000));
+		assert_eq!(Assets::token_details(dot_type), Token::new(b"DOT".to_vec(), 8, 10000));
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
