@@ -17,7 +17,7 @@
 #![cfg(test)]
 
 use frame_support::{
-	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}
+	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types
 };
 use sp_core::H256;
 use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
@@ -108,20 +108,8 @@ impl crate::Trait for Test {
 }
 
 pub type ProxyValidator = crate::Module<Test>;
-pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
 pub type ProxyValidatorError = Error<Test>;
-
-// simulate block production
-pub(crate) fn run_to_block(n: u64) {
-	while System::block_number() < n {
-		ProxyValidator::on_finalize(System::block_number());
-		System::on_finalize(System::block_number());
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		ProxyValidator::on_initialize(System::block_number());
-	}
-}
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {

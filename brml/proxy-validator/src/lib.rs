@@ -92,7 +92,7 @@ decl_event! {
 		<T as frame_system::Trait>::AccountId,
 		<T as frame_system::Trait>::BlockNumber,
 	{
-		/// A new asset has been set.
+		/// A new asset config has been set.
 		AssetConfigSet(TokenSymbol, AssetConfig<BlockNumber, Balance>),
 		/// A new proxy validator has been registered.
 		ProxyValidatorRegistered(TokenSymbol, AccountId, ProxyValidatorRegister<Balance, BlockNumber>),
@@ -111,6 +111,8 @@ decl_event! {
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
+		/// The asset config has not been set.
+		AssetConfigNotSet,
 		/// The proxy validator has been registered.
 		ProxyValidatorRegistered,
 		/// The proxy validator has not been registered.
@@ -244,6 +246,11 @@ decl_module! {
 			validator_address: Vec<u8>,
 		) {
 			let origin = ensure_signed(origin)?;
+
+			ensure!(
+				AssetConfigs::<T>::contains_key(&token_symbol),
+				Error::<T>::AssetConfigNotSet
+			);
 
 			ensure!(
 				!ProxyValidators::<T>::contains_key(&token_symbol, &origin),
