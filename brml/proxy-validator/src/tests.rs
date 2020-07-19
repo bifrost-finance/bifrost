@@ -291,6 +291,63 @@ fn set_need_amount_not_registered_should_error() {
 }
 
 #[test]
+fn set_reward_per_block_should_work() {
+	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
+		let origin_id = 1;
+		let origin = Origin::signed(origin_id);
+		let token_symbol = TokenSymbol::EOS;
+		let need = 1000;
+		let reward_per_block = 10;
+		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
+		assert_ok!(ProxyValidator::register(origin.clone(), token_symbol, need, reward_per_block, validator_address));
+
+		let reward_per_block = 200000;
+		assert_ok!(ProxyValidator::set_reward_per_block(origin, token_symbol, reward_per_block));
+		let validator = ProxyValidator::validators(token_symbol, origin_id);
+		assert_eq!(validator.reward_per_block, reward_per_block);
+	});
+}
+
+#[test]
+fn set_reward_per_block_not_registered_should_error() {
+	new_test_ext().execute_with(|| {
+		let origin_id = 1;
+		let origin = Origin::signed(origin_id);
+		let token_symbol = TokenSymbol::EOS;
+		let reward_per_block = 200000;
+
+		assert_noop!(
+			ProxyValidator::set_reward_per_block(origin, token_symbol, reward_per_block),
+			ProxyValidatorError::ProxyValidatorNotRegistered
+		);
+	});
+}
+
+#[test]
+fn set_reward_per_block_reward_too_low_should_error() {
+	new_test_ext().execute_with(|| {
+		set_asset(TokenSymbol::EOS);
+
+		let origin_id = 1;
+		let origin = Origin::signed(origin_id);
+		let token_symbol = TokenSymbol::EOS;
+		let need = 1000;
+		let reward_per_block = 10;
+		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
+		assert_ok!(ProxyValidator::register(origin.clone(), token_symbol, need, reward_per_block, validator_address));
+
+		let reward_per_block = 0;
+		assert_noop!(
+			ProxyValidator::set_reward_per_block(origin, token_symbol, reward_per_block),
+			ProxyValidatorError::RewardTooLow
+		);
+	});
+}
+
+
+#[test]
 fn deposit_should_work() {
 	new_test_ext().execute_with(|| {
 		set_asset(TokenSymbol::DOT);
