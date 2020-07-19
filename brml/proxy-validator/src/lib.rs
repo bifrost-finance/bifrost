@@ -30,6 +30,8 @@ use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
 
+pub type ValidatorAddress = Vec<u8>;
+
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetConfig<BlockNumber, Balance> {
 	redeem_duration: BlockNumber,
@@ -54,11 +56,15 @@ pub struct ProxyValidatorRegister<Balance, BlockNumber> {
 	need: Balance,
 	staking: Balance,
 	reward_per_block: Balance,
-	validator_address: Vec<u8>,
+	validator_address: ValidatorAddress,
 }
 
 impl<Balance: Default, BlockNumber: Default> ProxyValidatorRegister<Balance, BlockNumber> {
-	fn new(need: Balance, reward_per_block: Balance, validator_address: Vec<u8>) -> Self {
+	fn new(
+		need: Balance,
+		reward_per_block: Balance,
+		validator_address: ValidatorAddress
+	) -> Self {
 		Self {
 			need,
 			validator_address,
@@ -81,8 +87,11 @@ pub trait Trait: frame_system::Trait {
 	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record asset precision.
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
+	/// Asset handler
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	/// Bridge asset handler
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
+	/// Reward handler
 	type RewardHandler: RewardHandler<Self::Balance>;
 }
 
@@ -119,6 +128,8 @@ decl_error! {
 		ProxyValidatorRegistered,
 		/// The proxy validator has not been registered.
 		ProxyValidatorNotRegistered,
+		/// The asset of proxy validator has not been registered.
+		ProxyValidatorAssetNotSet,
 		/// The proxy validator's free balance is not enough for locking.
 		FreeBalanceNotEnough,
 		/// The proxy validator's locked balance is not enough for unlocking.
@@ -159,7 +170,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		fn set_asset(
+		fn set_global_asset(
 			origin,
 			token_symbol: TokenSymbol,
 			redeem_duration: T::BlockNumber,
@@ -242,7 +253,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn register(
+		fn validator_register(
 			origin,
 			token_symbol: TokenSymbol,
 			need: T::Balance,
@@ -412,7 +423,11 @@ impl<T: Trait> Module<T> {
 			);
 			if min_fee >= val.deposit {
 				// call redeem by bridge-eos
-				T::BridgeAssetTo::redeem(token_symbol, val.deposit, val.validator_address.clone()).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
+				T::BridgeAssetTo::redeem(
+					token_symbol,
+					val.deposit,
+					val.validator_address.clone()
+				).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
 				reward = val.deposit;
 				val.deposit = Zero::zero();
 			} else {
