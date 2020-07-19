@@ -1,5 +1,5 @@
 [package]
-name = "brml-validator"
+name = "brml-proxy-validator"
 version = "0.3.2"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"

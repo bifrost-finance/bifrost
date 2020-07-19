@@ -25,7 +25,7 @@ use super::*;
 
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
-		brml_validator::Validator,
+		brml_proxy_validator::ProxyValidator,
 	}
 }
 
@@ -40,11 +40,11 @@ impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
 		assets<T>,
-		brml_validator<T>,
+		brml_proxy_validator<T>,
 	}
 }
 
-mod brml_validator {
+mod brml_proxy_validator {
 	pub use crate::Event;
 }
 
@@ -104,21 +104,22 @@ impl crate::Trait for Test {
 	type Precision = u32;
 	type AssetTrait = Assets;
 	type BridgeAssetTo = ();
+	type RewardHandler = ();
 }
 
-pub type Validator = crate::Module<Test>;
+pub type ProxyValidator = crate::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
-pub type ValidatorError = Error<Test>;
+pub type ProxyValidatorError = Error<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
-		Validator::on_finalize(System::block_number());
+		ProxyValidator::on_finalize(System::block_number());
 		System::on_finalize(System::block_number());
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
-		Validator::on_initialize(System::block_number());
+		ProxyValidator::on_initialize(System::block_number());
 	}
 }
 
