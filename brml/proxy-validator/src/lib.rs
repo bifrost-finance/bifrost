@@ -131,6 +131,8 @@ decl_error! {
 		BridgeUnstakeError,
 		/// An error while calling redeem by bridge-eos
 		BridgeEOSRedeemError,
+		/// Reward value is too low
+		RewardTooLow,
 	}
 }
 
@@ -255,6 +257,12 @@ decl_module! {
 			ensure!(
 				!ProxyValidators::<T>::contains_key(&token_symbol, &origin),
 				Error::<T>::ProxyValidatorRegistered
+			);
+
+			let asset_config = AssetConfigs::<T>::get(&token_symbol);
+			ensure!(
+				asset_config.min_reward_per_block <= reward_per_block,
+				Error::<T>::RewardTooLow
 			);
 
 			let validator = ProxyValidatorRegister::new(need, reward_per_block, validator_address);
