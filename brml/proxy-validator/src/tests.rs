@@ -34,10 +34,10 @@ fn set_asset_should_work() {
 		let asset_config = AssetConfig::new(redeem_duration, min_reward_per_block);
 
 		assert_ok!(
-			Validator::set_asset(Origin::root(), token_symbol, redeem_duration, min_reward_per_block)
+			ProxyValidator::set_asset(Origin::root(), token_symbol, redeem_duration, min_reward_per_block)
 		);
 
-		assert_eq!(Validator::asset_configs(token_symbol), asset_config);
+		assert_eq!(ProxyValidator::asset_configs(token_symbol), asset_config);
 	});
 }
 
@@ -49,22 +49,22 @@ fn stake_should_ok() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin, token_symbol, need, Zero::zero(), validator_address));
 
 		let target = 1;
 		let amount = 100;
-		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, amount));
-		let validator = Validator::validators(token_symbol, origin_id);
+		assert_ok!(ProxyValidator::stake(Origin::root(), token_symbol, target, amount));
+		let validator = ProxyValidator::validators(token_symbol, origin_id);
 		assert_eq!(validator.staking, 100);
-		let asset_locked_balance = Validator::asset_locked_balances(token_symbol);
+		let asset_locked_balance = ProxyValidator::asset_locked_balances(token_symbol);
 		assert_eq!(asset_locked_balance, 100);
 
 		let target = 1;
 		let amount = 200;
-		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, amount));
-		let validator = Validator::validators(token_symbol, origin_id);
+		assert_ok!(ProxyValidator::stake(Origin::root(), token_symbol, target, amount));
+		let validator = ProxyValidator::validators(token_symbol, origin_id);
 		assert_eq!(validator.staking, 300);
-		let asset_locked_balance = Validator::asset_locked_balances(token_symbol);
+		let asset_locked_balance = ProxyValidator::asset_locked_balances(token_symbol);
 		assert_eq!(asset_locked_balance, 300);
 	});
 }
@@ -77,8 +77,8 @@ fn stake_not_registered_should_error() {
 		let amount = 100;
 
 		assert_noop!(
-			Validator::stake(Origin::root(), token_symbol, target, amount),
-			ValidatorError::ValidatorNotRegistered
+			ProxyValidator::stake(Origin::root(), token_symbol, target, amount),
+			ProxyValidatorError::ProxyValidatorNotRegistered
 		);
 	});
 }
@@ -90,13 +90,13 @@ fn stake_amount_exceed_should_error() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin, token_symbol, need, Zero::zero(), validator_address));
 
 		let target = 1;
 		let amount = 2000;
 		assert_noop!(
-			Validator::stake(Origin::root(), token_symbol, target, amount),
-			ValidatorError::StakingAmountExceeded
+			ProxyValidator::stake(Origin::root(), token_symbol, target, amount),
+			ProxyValidatorError::StakingAmountExceeded
 		);
 	});
 }
@@ -109,18 +109,18 @@ fn unstake_should_ok() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin, token_symbol, need, Zero::zero(), validator_address));
 
 		let target = 1;
 		let stake_amount = 500;
-		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, stake_amount));
+		assert_ok!(ProxyValidator::stake(Origin::root(), token_symbol, target, stake_amount));
 
 		let target = 1;
 		let unstake_amount = 200;
-		assert_ok!(Validator::unstake(Origin::root(), token_symbol, target, unstake_amount));
-		let validator = Validator::validators(token_symbol, origin_id);
+		assert_ok!(ProxyValidator::unstake(Origin::root(), token_symbol, target, unstake_amount));
+		let validator = ProxyValidator::validators(token_symbol, origin_id);
 		assert_eq!(validator.staking, 300);
-		let asset_locked_balance = Validator::asset_locked_balances(token_symbol);
+		let asset_locked_balance = ProxyValidator::asset_locked_balances(token_symbol);
 		assert_eq!(asset_locked_balance, 300);
 	});
 }
@@ -133,8 +133,8 @@ fn unstake_not_registered_should_error() {
 		let amount = 100;
 
 		assert_noop!(
-			Validator::unstake(Origin::root(), token_symbol, target, amount),
-			ValidatorError::ValidatorNotRegistered
+			ProxyValidator::unstake(Origin::root(), token_symbol, target, amount),
+			ProxyValidatorError::ProxyValidatorNotRegistered
 		);
 	});
 }
@@ -147,17 +147,17 @@ fn unstake_insufficient_should_error() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin, token_symbol, need, Zero::zero(), validator_address));
 
 		let target = 1;
 		let stake_amount = 500;
-		assert_ok!(Validator::stake(Origin::root(), token_symbol, target, stake_amount));
+		assert_ok!(ProxyValidator::stake(Origin::root(), token_symbol, target, stake_amount));
 
 		let target = 1;
 		let unstake_amount = 1000;
 		assert_noop!(
-			Validator::unstake(Origin::root(), token_symbol, target, unstake_amount),
-			ValidatorError::StakingAmountInsufficient
+			ProxyValidator::unstake(Origin::root(), token_symbol, target, unstake_amount),
+			ProxyValidatorError::StakingAmountInsufficient
 		);
 	});
 }
@@ -169,12 +169,13 @@ fn register_should_work() {
 		let origin = Origin::signed(origin_id);
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
+		let reward_per_block = 100;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		let validator = ValidatorRegister::new(need, validator_address.clone());
+		let validator = ProxyValidatorRegister::new(need, reward_per_block, validator_address.clone());
 
-		assert_ok!(Validator::register(origin, token_symbol, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin, token_symbol, need, reward_per_block, validator_address));
 
-		assert_eq!(Validator::validators(token_symbol, origin_id), validator);
+		assert_eq!(ProxyValidator::validators(token_symbol, origin_id), validator);
 	});
 }
 
@@ -187,12 +188,12 @@ fn register_twice_should_error() {
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
 
 		assert_ok!(
-			Validator::register(origin.clone(), token_symbol, need, validator_address.clone())
+			ProxyValidator::register(origin.clone(), token_symbol, need, Zero::zero(), validator_address.clone())
 		);
 
 		assert_noop!(
-			Validator::register(origin, token_symbol, need, validator_address),
-			ValidatorError::ValidatorRegistered
+			ProxyValidator::register(origin, token_symbol, need, Zero::zero(), validator_address),
+			ProxyValidatorError::ProxyValidatorRegistered
 		);
 	});
 }
@@ -205,11 +206,11 @@ fn set_need_amount_should_work() {
 		let token_symbol = TokenSymbol::EOS;
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), token_symbol, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin.clone(), token_symbol, need, Zero::zero(), validator_address));
 
 		let new_need = 2000;
-		assert_ok!(Validator::set_need_amount(origin, token_symbol, new_need));
-		let validator = Validator::validators(token_symbol, origin_id);
+		assert_ok!(ProxyValidator::set_need_amount(origin, token_symbol, new_need));
+		let validator = ProxyValidator::validators(token_symbol, origin_id);
 		assert_eq!(validator.need, new_need);
 	});
 }
@@ -223,8 +224,8 @@ fn set_need_amount_not_registered_should_error() {
 		let new_need = 2000;
 
 		assert_noop!(
-			Validator::set_need_amount(origin, token_symbol, new_need),
-			ValidatorError::ValidatorNotRegistered
+			ProxyValidator::set_need_amount(origin, token_symbol, new_need),
+			ProxyValidatorError::ProxyValidatorNotRegistered
 		);
 	});
 }
@@ -247,17 +248,17 @@ fn deposit_should_work() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin.clone(), dot_type, need, Zero::zero(), validator_address));
 
 		let deposit_amount = 100;
-		assert_ok!(Validator::deposit(origin.clone(), dot_type, deposit_amount));
-		let validator = Validator::validators(dot_type, origin_id);
+		assert_ok!(ProxyValidator::deposit(origin.clone(), dot_type, deposit_amount));
+		let validator = ProxyValidator::validators(dot_type, origin_id);
 		assert_eq!(validator.deposit, 100);
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 9900));
 
 		let deposit_amount = 200;
-		assert_ok!(Validator::deposit(origin, dot_type, deposit_amount));
-		let validator = Validator::validators(dot_type, origin_id);
+		assert_ok!(ProxyValidator::deposit(origin, dot_type, deposit_amount));
+		let validator = ProxyValidator::validators(dot_type, origin_id);
 		assert_eq!(validator.deposit, 300);
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 9700));
 	});
@@ -282,12 +283,12 @@ fn deposit_not_enough_free_balance_should_error() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin.clone(), dot_type, need, Zero::zero(), validator_address));
 
 		let deposit_amount = 20000;
 		assert_noop!(
-			Validator::deposit(origin.clone(), dot_type, deposit_amount),
-			ValidatorError::FreeBalanceNotEnough
+			ProxyValidator::deposit(origin.clone(), dot_type, deposit_amount),
+			ProxyValidatorError::FreeBalanceNotEnough
 		);
 	});
 }
@@ -301,8 +302,8 @@ fn deposit_not_registered_should_error() {
 		let deposit_amount = 100;
 
 		assert_noop!(
-			Validator::deposit(origin, token_symbol, deposit_amount),
-			ValidatorError::ValidatorNotRegistered
+			ProxyValidator::deposit(origin, token_symbol, deposit_amount),
+			ProxyValidatorError::ProxyValidatorNotRegistered
 		);
 	});
 }
@@ -326,14 +327,14 @@ fn withdraw_should_ok() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin.clone(), dot_type, need, Zero::zero(), validator_address));
 
 		let deposit_amount = 500;
-		assert_ok!(Validator::deposit(origin.clone(), dot_type, deposit_amount));
+		assert_ok!(ProxyValidator::deposit(origin.clone(), dot_type, deposit_amount));
 
 		let withdraw_amount = 200;
-		assert_ok!(Validator::withdraw(origin, dot_type, withdraw_amount));
-		let validator = Validator::validators(dot_type, origin_id);
+		assert_ok!(ProxyValidator::withdraw(origin, dot_type, withdraw_amount));
+		let validator = ProxyValidator::validators(dot_type, origin_id);
 		assert_eq!(validator.deposit, 300);
 		assert_eq!(Assets::token_details(dot_type), Token::new(b"EOS".to_vec(), 8, 9700));
 	});
@@ -358,15 +359,15 @@ fn withdraw_not_enough_locked_balance_should_error() {
 
 		let need = 1000;
 		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
-		assert_ok!(Validator::register(origin.clone(), dot_type, need, validator_address));
+		assert_ok!(ProxyValidator::register(origin.clone(), dot_type, need, Zero::zero(), validator_address));
 
 		let deposit_amount = 500;
-		assert_ok!(Validator::deposit(origin.clone(), dot_type, deposit_amount));
+		assert_ok!(ProxyValidator::deposit(origin.clone(), dot_type, deposit_amount));
 
 		let withdraw_amount = 1000;
 		assert_noop!(
-			Validator::withdraw(origin, dot_type, withdraw_amount),
-			ValidatorError::LockedBalanceNotEnough
+			ProxyValidator::withdraw(origin, dot_type, withdraw_amount),
+			ProxyValidatorError::LockedBalanceNotEnough
 		);
 	});
 }
@@ -380,8 +381,8 @@ fn withdraw_not_registered_should_error() {
 		let deposit_amount = 100;
 
 		assert_noop!(
-			Validator::withdraw(origin, token_symbol, deposit_amount),
-			ValidatorError::ValidatorNotRegistered
+			ProxyValidator::withdraw(origin, token_symbol, deposit_amount),
+			ProxyValidatorError::ProxyValidatorNotRegistered
 		);
 	});
 }
