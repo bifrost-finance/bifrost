@@ -114,7 +114,7 @@ fn convert_token_to_vtoken_should_be_ok() {
 
 		// convert
 		let bob_dot_convert = 10;
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), dot_type, bob_dot_convert, None));
+		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert, None));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued - bob_dot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued + bob_dot_convert * rate); // check bob's token change
 
@@ -156,7 +156,7 @@ fn convert_vtoken_to_token_should_be_ok() {
 
 		// convert
 		let bob_vdot_convert = 10;
-		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(bob), vdot_type, bob_vdot_convert));
+		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(bob), dot_type, bob_vdot_convert));
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued - bob_vdot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued + bob_vdot_convert / rate); // check bob's token change
 
@@ -283,7 +283,7 @@ fn add_new_refer_channel_should_be_ok() {
 
 		// now convert vdot to dot
 		let alice_vdot = 5;
-		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(alice), vdot_type, alice_vdot));
+		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(alice), dot_type, alice_vdot));
 		let all_channels: BTreeMap<u64, u64> = [
 			(referer1, bob_dot_convert1.0 * rate),
 			(referer2, (bob_dot_convert2.0 * 2 + alice_dot_convert1.0) * rate - alice_vdot),

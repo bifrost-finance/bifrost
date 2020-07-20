@@ -30,6 +30,8 @@ use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
 
+pub type ValidatorAddress = Vec<u8>;
+
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
 pub struct AssetConfig<BlockNumber, Balance> {
 	redeem_duration: BlockNumber,
@@ -48,17 +50,21 @@ impl<BlockNumber, Balance> AssetConfig<BlockNumber, Balance> {
 }
 
 #[derive(Encode, Decode, Clone, Default, PartialEq, Eq, RuntimeDebug)]
-pub struct ValidatorRegister<Balance, BlockNumber> {
+pub struct ProxyValidatorRegister<Balance, BlockNumber> {
 	last_block: BlockNumber,
 	deposit: Balance,
 	need: Balance,
 	staking: Balance,
 	reward_per_block: Balance,
-	validator_address: Vec<u8>,
+	validator_address: ValidatorAddress,
 }
 
-impl<Balance: Default, BlockNumber: Default> ValidatorRegister<Balance, BlockNumber> {
-	fn new(need: Balance, reward_per_block: Balance, validator_address: Vec<u8>) -> Self {
+impl<Balance: Default, BlockNumber: Default> ProxyValidatorRegister<Balance, BlockNumber> {
+	fn new(
+		need: Balance,
+		reward_per_block: Balance,
+		validator_address: ValidatorAddress
+	) -> Self {
 		Self {
 			need,
 			validator_address,
@@ -81,8 +87,11 @@ pub trait Trait: frame_system::Trait {
 	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// The units in which we record asset precision.
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
+	/// Asset handler
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	/// Bridge asset handler
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
+	/// Reward handler
 	type RewardHandler: RewardHandler<TokenSymbol, Self::Balance>;
 }
 
@@ -92,32 +101,38 @@ decl_event! {
 		<T as frame_system::Trait>::AccountId,
 		<T as frame_system::Trait>::BlockNumber,
 	{
-		/// A new asset has been set.
+		/// A new asset config has been set.
 		AssetConfigSet(TokenSymbol, AssetConfig<BlockNumber, Balance>),
-		/// A new validator has been registered.
-		ValidatorRegistered(TokenSymbol, AccountId, ValidatorRegister<Balance, BlockNumber>),
-		/// The validator changed the amount of staking it's needed.
-		ValidatorNeedAmountSet(TokenSymbol, AccountId, Balance),
-		/// The validator deposited the amount of reward.
-		ValidatorDeposited(TokenSymbol, AccountId, Balance),
-		/// The validator withdrawn the amount of reward.
-		ValidatorWithdrawn(TokenSymbol, AccountId, Balance),
+		/// A new proxy validator has been registered.
+		ProxyValidatorRegistered(TokenSymbol, AccountId, ProxyValidatorRegister<Balance, BlockNumber>),
+		/// The proxy validator changed the amount of staking it's needed.
+		ProxyValidatorNeedAmountSet(TokenSymbol, AccountId, Balance),
+		/// The proxy validator changed the reward per block.
+		ProxyValidatorRewardPerBlockSet(TokenSymbol, AccountId, Balance),
+		/// The proxy validator deposited the amount of reward.
+		ProxyValidatorDeposited(TokenSymbol, AccountId, Balance),
+		/// The proxy validator withdrawn the amount of reward.
+		ProxyValidatorWithdrawn(TokenSymbol, AccountId, Balance),
 		/// The amount of asset staked to the account.
-		ValidatorStaked(TokenSymbol, AccountId, Balance),
+		ProxyValidatorStaked(TokenSymbol, AccountId, Balance),
 		/// The amount of asset un-staked from the account.
-		ValidatorUnStaked(TokenSymbol, AccountId, Balance),
+		ProxyValidatorUnStaked(TokenSymbol, AccountId, Balance),
 	}
 }
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
-		/// The validator has been registered.
-		ValidatorRegistered,
-		/// The validator has not been registered.
-		ValidatorNotRegistered,
-		/// The validator's free balance is not enough for locking.
+		/// The asset config has not been set.
+		AssetConfigNotSet,
+		/// The proxy validator has been registered.
+		ProxyValidatorRegistered,
+		/// The proxy validator has not been registered.
+		ProxyValidatorNotRegistered,
+		/// The asset of proxy validator has not been registered.
+		ProxyValidatorAssetNotSet,
+		/// The proxy validator's free balance is not enough for locking.
 		FreeBalanceNotEnough,
-		/// The validator's locked balance is not enough for unlocking.
+		/// The proxy validator's locked balance is not enough for unlocking.
 		LockedBalanceNotEnough,
 		/// The staking amount is exceeded the validator's needs.
 		StakingAmountExceeded,
@@ -129,18 +144,20 @@ decl_error! {
 		BridgeUnstakeError,
 		/// An error while calling redeem by bridge-eos
 		BridgeEOSRedeemError,
+		/// Reward value is too low
+		RewardTooLow,
 	}
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Validator {
+	trait Store for Module<T: Trait> as ProxyValidator {
 		/// Asset config data.
 		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) TokenSymbol => AssetConfig<T::BlockNumber, T::Balance>;
 		/// The total amount of asset has been locked for staking.
 		AssetLockedBalances get(fn asset_locked_balances): map hasher(blake2_128_concat) TokenSymbol => T::Balance;
-		/// The validators registered from cross chain.
-		Validators get(fn validators): double_map hasher(blake2_128_concat) TokenSymbol, hasher(blake2_128_concat) T::AccountId
-			=> ValidatorRegister<T::Balance, T::BlockNumber>;
+		/// The proxy validators registered from cross chain.
+		ProxyValidators get(fn validators): double_map hasher(blake2_128_concat) TokenSymbol, hasher(blake2_128_concat) T::AccountId
+			=> ProxyValidatorRegister<T::Balance, T::BlockNumber>;
 		/// The locked amount of asset of account for staking.
 		LockedBalances get(fn locked_balances): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
@@ -153,7 +170,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		fn set_asset(
+		fn set_global_asset(
 			origin,
 			token_symbol: TokenSymbol,
 			redeem_duration: T::BlockNumber,
@@ -176,16 +193,16 @@ decl_module! {
 		) {
 			let _ = ensure_root(origin)?;
 			ensure!(
-				Validators::<T>::contains_key(&token_symbol, &target),
-				Error::<T>::ValidatorNotRegistered
+				ProxyValidators::<T>::contains_key(&token_symbol, &target),
+				Error::<T>::ProxyValidatorNotRegistered
 			);
-			let validator = Validators::<T>::get(&token_symbol, &target);
+			let validator = ProxyValidators::<T>::get(&token_symbol, &target);
 			ensure!(
 				validator.need - validator.staking >= amount,
 				Error::<T>::StakingAmountExceeded,
 			);
 
-			Validators::<T>::mutate(&token_symbol, &target, |validator| {
+			ProxyValidators::<T>::mutate(&token_symbol, &target, |validator| {
 				validator.staking = validator.staking.saturating_add(amount);
 			});
 
@@ -198,7 +215,7 @@ decl_module! {
 			T::BridgeAssetTo::stake(token_symbol, amount, validator_address)
 				.map_err(|_| Error::<T>::BridgeStakeError)?;
 
-			Self::deposit_event(RawEvent::ValidatorStaked(token_symbol, target, amount));
+			Self::deposit_event(RawEvent::ProxyValidatorStaked(token_symbol, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -210,16 +227,16 @@ decl_module! {
 		) {
 			let _ = ensure_root(origin)?;
 			ensure!(
-				Validators::<T>::contains_key(&token_symbol, &target),
-				Error::<T>::ValidatorNotRegistered
+				ProxyValidators::<T>::contains_key(&token_symbol, &target),
+				Error::<T>::ProxyValidatorNotRegistered
 			);
-			let validator = Validators::<T>::get(&token_symbol, &target);
+			let validator = ProxyValidators::<T>::get(&token_symbol, &target);
 			ensure!(
 				validator.staking >= amount,
 				Error::<T>::StakingAmountInsufficient,
 			);
 
-			Validators::<T>::mutate(&token_symbol, &target, |validator| {
+			ProxyValidators::<T>::mutate(&token_symbol, &target, |validator| {
 				validator.staking = validator.staking.saturating_sub(amount);
 			});
 
@@ -232,11 +249,11 @@ decl_module! {
 			T::BridgeAssetTo::unstake(token_symbol, amount, validator_address)
 				.map_err(|_| Error::<T>::BridgeUnstakeError)?;
 
-			Self::deposit_event(RawEvent::ValidatorUnStaked(token_symbol, target, amount));
+			Self::deposit_event(RawEvent::ProxyValidatorUnStaked(token_symbol, target, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
-		fn register(
+		fn validator_register(
 			origin,
 			token_symbol: TokenSymbol,
 			need: T::Balance,
@@ -246,14 +263,25 @@ decl_module! {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				!Validators::<T>::contains_key(&token_symbol, &origin),
-				Error::<T>::ValidatorRegistered
+				AssetConfigs::<T>::contains_key(&token_symbol),
+				Error::<T>::AssetConfigNotSet
 			);
 
-			let validator = ValidatorRegister::new(need, reward_per_block, validator_address);
-			Validators::<T>::insert(&token_symbol, &origin, &validator);
+			ensure!(
+				!ProxyValidators::<T>::contains_key(&token_symbol, &origin),
+				Error::<T>::ProxyValidatorRegistered
+			);
 
-			Self::deposit_event(RawEvent::ValidatorRegistered(token_symbol, origin, validator));
+			let asset_config = AssetConfigs::<T>::get(&token_symbol);
+			ensure!(
+				asset_config.min_reward_per_block <= reward_per_block,
+				Error::<T>::RewardTooLow
+			);
+
+			let validator = ProxyValidatorRegister::new(need, reward_per_block, validator_address);
+			ProxyValidators::<T>::insert(&token_symbol, &origin, &validator);
+
+			Self::deposit_event(RawEvent::ProxyValidatorRegistered(token_symbol, origin, validator));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -261,15 +289,37 @@ decl_module! {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				Validators::<T>::contains_key(&token_symbol, &origin),
-				Error::<T>::ValidatorNotRegistered
+				ProxyValidators::<T>::contains_key(&token_symbol, &origin),
+				Error::<T>::ProxyValidatorNotRegistered
 			);
 
-			Validators::<T>::mutate(&token_symbol, &origin, |validator| {
+			ProxyValidators::<T>::mutate(&token_symbol, &origin, |validator| {
 				validator.need = amount;
 			});
 
-			Self::deposit_event(RawEvent::ValidatorNeedAmountSet(token_symbol, origin, amount));
+			Self::deposit_event(RawEvent::ProxyValidatorNeedAmountSet(token_symbol, origin, amount));
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn set_reward_per_block(origin, token_symbol: TokenSymbol, reward_per_block: T::Balance) {
+			let origin = ensure_signed(origin)?;
+
+			ensure!(
+				ProxyValidators::<T>::contains_key(&token_symbol, &origin),
+				Error::<T>::ProxyValidatorNotRegistered
+			);
+
+			let asset_config = AssetConfigs::<T>::get(&token_symbol);
+			ensure!(
+				asset_config.min_reward_per_block <= reward_per_block,
+				Error::<T>::RewardTooLow
+			);
+
+			ProxyValidators::<T>::mutate(&token_symbol, &origin, |validator| {
+				validator.reward_per_block = reward_per_block;
+			});
+
+			Self::deposit_event(RawEvent::ProxyValidatorRewardPerBlockSet(token_symbol, origin, reward_per_block));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -277,18 +327,18 @@ decl_module! {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				Validators::<T>::contains_key(&token_symbol, &origin),
-				Error::<T>::ValidatorNotRegistered
+				ProxyValidators::<T>::contains_key(&token_symbol, &origin),
+				Error::<T>::ProxyValidatorNotRegistered
 			);
 
 			// Lock balance
 			Self::asset_lock(origin.clone(), token_symbol, amount)?;
 
-			Validators::<T>::mutate(&token_symbol, &origin, |validator| {
+			ProxyValidators::<T>::mutate(&token_symbol, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_add(amount);
 			});
 
-			Self::deposit_event(RawEvent::ValidatorDeposited(token_symbol, origin, amount));
+			Self::deposit_event(RawEvent::ProxyValidatorDeposited(token_symbol, origin, amount));
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
@@ -296,18 +346,18 @@ decl_module! {
 			let origin = ensure_signed(origin)?;
 
 			ensure!(
-				Validators::<T>::contains_key(&token_symbol, &origin),
-				Error::<T>::ValidatorNotRegistered
+				ProxyValidators::<T>::contains_key(&token_symbol, &origin),
+				Error::<T>::ProxyValidatorNotRegistered
 			);
 
 			// UnLock balance
 			Self::asset_unlock(origin.clone(), token_symbol, amount)?;
 
-			Validators::<T>::mutate(&token_symbol, &origin, |validator| {
+			ProxyValidators::<T>::mutate(&token_symbol, &origin, |validator| {
 				validator.deposit = validator.deposit.saturating_sub(amount);
 			});
 
-			Self::deposit_event(RawEvent::ValidatorWithdrawn(token_symbol, origin, amount));
+			Self::deposit_event(RawEvent::ProxyValidatorWithdrawn(token_symbol, origin, amount));
 		}
 
 		fn on_finalize(now_block: T::BlockNumber) {
@@ -361,8 +411,8 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn validator_deduct(now_block: T::BlockNumber) -> Result<(), Error<T>> {
-		for (token_symbol, account_id, mut val) in Validators::<T>::iter() {
-			// calculate validator's deposit balance
+		for (token_symbol, account_id, mut val) in ProxyValidators::<T>::iter() {
+			// calculate proxy validator's deposit balance
 			let asset_config = AssetConfigs::<T>::get(&token_symbol);
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
@@ -373,7 +423,11 @@ impl<T: Trait> Module<T> {
 			);
 			if min_fee >= val.deposit {
 				// call redeem by bridge-eos
-				T::BridgeAssetTo::redeem(token_symbol, val.deposit, val.validator_address.clone()).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
+				T::BridgeAssetTo::redeem(
+					token_symbol,
+					val.deposit,
+					val.validator_address.clone()
+				).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
 				reward = val.deposit;
 				val.deposit = Zero::zero();
 			} else {
@@ -390,8 +444,8 @@ impl<T: Trait> Module<T> {
 
 			val.last_block = now_block;
 
-			// update validator
-			Validators::<T>::insert(&token_symbol, &account_id, val);
+			// update proxy validator
+			ProxyValidators::<T>::insert(&token_symbol, &account_id, val);
 		}
 
 		Ok(())

@@ -53,7 +53,6 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type ConvertDuration: Get<Self::BlockNumber>;
-	type ConvertPricePrecision: Get<Self::ConvertPrice>;
 }
 
 decl_event! {
@@ -114,7 +113,6 @@ decl_module! {
 		type Error = Error<T>;
 
 		const ConvertDuration: T::BlockNumber = T::ConvertDuration::get();
-		const ConvertPricePrecision: T::ConvertPrice = T::ConvertPricePrecision::get();
 
 		fn deposit_event() = default;
 
@@ -177,7 +175,7 @@ decl_module! {
 			let price = <ConvertPrice<T>>::get(token_symbol);
 
 			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
-			let vtokens_buy = token_amount.saturating_mul(T::ConvertPricePrecision::get().into()) / price.into();
+			let vtokens_buy = token_amount.saturating_mul(price.into());
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_symbol, converter.clone(), token_amount);
@@ -217,7 +215,7 @@ decl_module! {
 			let price = <ConvertPrice<T>>::get(token_symbol);
 
 			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
-			let tokens_buy = vtoken_amount.saturating_mul(price.into()) / T::ConvertPricePrecision::get().into();
+			let tokens_buy = vtoken_amount / price.into();
 
 			T::AssetTrait::asset_destroy(vtoken_symbol, converter.clone(), vtoken_amount);
 			T::AssetTrait::asset_issue(token_symbol, converter.clone(), tokens_buy);
@@ -244,12 +242,7 @@ decl_module! {
 					{
 						if <ConvertPrice<T>>::contains_key(token_id) {
 							<ConvertPrice<T>>::mutate(token_id, |convert_price| {
-								*convert_price = {
-									let precision: T::ConvertPrice = T::ConvertPricePrecision::get();
-									let token_pool: T::ConvertPrice = convert_pool.token_pool.into();
-									let vtoken_pool: T::ConvertPrice = convert_pool.vtoken_pool.into();
-									token_pool.saturating_mul(precision) / vtoken_pool
-								};
+								*convert_price = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
 							});
 						}
 					}
