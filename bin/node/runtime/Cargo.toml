@@ -71,14 +71,14 @@ pallet-vesting = { version = "2.0.0-rc4", default-features = false }
 
 brml-assets = { path = "../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", default-features = false }
+brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
 brml-convert = { path = "../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../brml/convert/rpc/runtime-api", default-features = false }
-brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
-brml-voucher = { path = "../../../brml/voucher", default-features = false }
-brml-swap = { path = "../../../brml/swap", default-features = false }
-chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
 brml-oracle = { path = "../../../brml/oracle", default-features = false }
-brml-validator = { path = "../../../brml/validator", default-features = false }
+brml-proxy-validator = { path = "../../../brml/proxy-validator", default-features = false }
+brml-swap = { path = "../../../brml/swap", default-features = false }
+brml-voucher = { path = "../../../brml/voucher", default-features = false }
+chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
 node-primitives = { default-features = false, path = "../primitives" }
 
 [build-dependencies]
@@ -142,12 +142,12 @@ std = [
 	"pallet-vesting/std",
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
+	"brml-bridge-eos/std",
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
-	"brml-bridge-eos/std",
-	"brml-swap/std",
-	'chainlink/std',
 	'brml-oracle/std',
+	'brml-proxy-validator/std',
+	"brml-swap/std",
 	'brml-voucher/std',
-	'brml-validator/std',
+	'chainlink/std',
 ]
