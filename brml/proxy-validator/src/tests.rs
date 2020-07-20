@@ -31,6 +31,11 @@ fn set_global_asset(token_symbol: TokenSymbol) {
 	ProxyValidator::set_global_asset(Origin::root(), token_symbol, redeem_duration, min_reward_per_block).unwrap();
 }
 
+fn asset_issue(account_id: u64, symbol: Vec<u8>, token_symbol: TokenSymbol, amount: u64) {
+	assert_ok!(Assets::create(Origin::root(), symbol, 18));
+	assert_ok!(Assets::issue(Origin::root(), token_symbol, account_id, amount));
+}
+
 #[test]
 fn set_asset_should_work() {
 	new_test_ext().execute_with(|| {
@@ -509,5 +514,34 @@ fn withdraw_not_registered_should_error() {
 			ProxyValidator::withdraw(origin, token_symbol, deposit_amount),
 			ProxyValidatorError::ProxyValidatorNotRegistered
 		);
+	});
+}
+
+#[test]
+fn validator_deduct_should_ok() {
+	new_test_ext().execute_with(|| {
+		let token_symbol = TokenSymbol::aUSD;
+		set_global_asset(token_symbol);
+
+		let origin_id = 1;
+		let origin = Origin::signed(origin_id);
+		let need = 1_000_000_000_000_000;
+		let reward_per_block = 220;
+		let validator_address = vec![0x12, 0x34, 0x56, 0x78];
+		assert_ok!(ProxyValidator::validator_register(origin.clone(), token_symbol, need, reward_per_block, validator_address));
+
+		let deposit_amount = 100_000_000_000_000;
+		asset_issue(origin_id, b"aUSD".to_vec(), token_symbol, deposit_amount);
+		assert_ok!(ProxyValidator::deposit(origin.clone(), token_symbol, deposit_amount));
+
+		let target = 1;
+		let amount = 1_000_000_000_000_000;
+		assert_ok!(ProxyValidator::stake(Origin::root(), token_symbol, target, amount));
+
+		run_to_block(3600);
+
+		let validator = ProxyValidator::validators(token_symbol, origin_id);
+		assert_eq!(validator.last_block, 3599);
+		assert_eq!(validator.deposit, 99_999_208_220_000);
 	});
 }
