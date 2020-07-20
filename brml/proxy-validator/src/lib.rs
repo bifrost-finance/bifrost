@@ -387,7 +387,7 @@ impl<T: Trait> Module<T> {
 		});
 
 		// destroy asset in assets module
-		T::AssetTrait::asset_destroy(token_symbol, account_id, amount);
+		T::AssetTrait::asset_destroy(token_symbol, &account_id, amount);
 
 		Ok(())
 	}
@@ -407,7 +407,7 @@ impl<T: Trait> Module<T> {
 		});
 
 		// issue asset in assets module
-		T::AssetTrait::asset_issue(token_symbol, account_id, amount);
+		T::AssetTrait::asset_issue(token_symbol, &account_id, amount);
 
 		Ok(())
 	}
