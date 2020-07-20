@@ -199,7 +199,7 @@ decl_module! {
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 
-			Self::asset_issue(token_symbol, target.clone(), amount);
+			Self::asset_issue(token_symbol, &target, amount);
 
 			Self::deposit_event(RawEvent::Issued(token_symbol, target, amount));
 		}
@@ -240,7 +240,7 @@ decl_module! {
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
 			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
 
-			Self::asset_destroy(token_symbol, origin.clone(), amount);
+			Self::asset_destroy(token_symbol, &origin, amount);
 
 			Self::deposit_event(RawEvent::Destroyed(token_symbol, origin, amount));
 		}
@@ -261,7 +261,7 @@ decl_module! {
 
 			T::AssetRedeem::asset_redeem(token_symbol, origin.clone(), amount, to_name);
 
-			Self::asset_destroy(token_symbol, origin, amount);
+			Self::asset_destroy(token_symbol, &origin, amount);
 		}
 	}
 }
@@ -293,13 +293,14 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 
 	fn asset_issue(
 		token_symbol: TokenSymbol,
-		target: T::AccountId,
+		target: &T::AccountId,
 		amount: T::Balance,
 	) {
 		let convert_rate = T::FetchConvertPrice::fetch_convert_price(token_symbol);
 		let target_asset = (token_symbol, target.clone());
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
+			asset.available = asset.available.saturating_add(amount);
 			asset.cost = asset.cost.saturating_add(amount.saturating_mul(convert_rate.into()).into());
 		});
 
@@ -321,21 +322,22 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 
 	fn asset_redeem(
 		token_symbol: TokenSymbol,
-		target: T::AccountId,
+		target: &T::AccountId,
 		amount: T::Balance,
 	) {
-		Self::asset_destroy(token_symbol, target, amount);
+		Self::asset_destroy(token_symbol, &target, amount);
 	}
 
 	fn asset_destroy(
 		token_symbol: TokenSymbol,
-		target: T::AccountId,
+		target: &T::AccountId,
 		amount: T::Balance,
 	) {
 		let convert_rate = T::FetchConvertPrice::fetch_convert_price(token_symbol);
 		let target_asset = (token_symbol, target);
-		<AccountAssets<T>>::mutate(&target_asset, |asset| {
+		<AccountAssets<T>>::mutate(target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
+			asset.available = asset.available.saturating_sub(amount);
 			asset.income = asset.income.saturating_add(amount.saturating_mul(convert_rate.into()).into());
 		});
 
@@ -368,6 +370,23 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 
 	fn get_token(token_symbol: TokenSymbol) -> Token<T::Balance> {
 		<Tokens<T>>::get(&token_symbol)
+	}
+
+	fn lock_asset(who: &T::AccountId, token_symbol: TokenSymbol, locked: T::Balance) {
+		let target_asset = (token_symbol, who);
+		<AccountAssets<T>>::mutate(target_asset, |asset| {
+			asset.locked = locked;
+			asset.available = asset.balance - asset.locked;
+		});
+	}
+
+	fn unlock_asset(who: &T::AccountId, token_symbol: TokenSymbol, locked: T::Balance) {
+		let target_asset = (token_symbol, who);
+		<AccountAssets<T>>::mutate(target_asset, |asset| {
+			asset.balance = asset.balance.saturating_sub(locked);
+			asset.locked = 0.into();
+			asset.available = asset.balance;
+		});
 	}
 }
 

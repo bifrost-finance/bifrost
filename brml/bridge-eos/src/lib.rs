@@ -577,6 +577,9 @@ decl_module! {
 
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
 				debug::info!("sent transaction to EOS node.");
+				// locked balance until trade is verified
+				T::AssetTrait::lock_asset(&origin, token_symbol, amount);
+
 				Self::deposit_event(RawEvent::SendTransactionSuccess);
 			} else {
 				debug::warn!("failed to send transaction to EOS node.");
@@ -721,6 +724,10 @@ impl<T: Trait> Module<T> {
 				_ => unreachable!("previous step checked he length of split_memo.")
 			}
 		};
+		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
+		// but in the future, we will support both token, let user to which token he wants to get
+		// according to the convert price
+		let token_symbol = TokenSymbol::EOS;
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
@@ -738,7 +745,7 @@ impl<T: Trait> Module<T> {
 		let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// issue asset to target
-		T::AssetTrait::asset_issue(token_symbol, target.clone(), vtoken_balances);
+		T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
 
 		Ok(target)
 	}
@@ -761,7 +768,10 @@ impl<T: Trait> Module<T> {
 						return Err(Error::<T>::InsufficientBalance);
 					}
 
-					T::AssetTrait::asset_redeem(token_symbol, target.clone(), vtoken_balances);
+					// the trade is verified, unlock asset
+					T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
+
+//					T::AssetTrait::asset_redeem(token_symbol, &target, vtoken_balances);
 					return Ok(target.clone());
 				}
 				_ => continue,

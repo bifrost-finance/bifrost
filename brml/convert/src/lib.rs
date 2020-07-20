@@ -178,8 +178,8 @@ decl_module! {
 			let vtokens_buy = token_amount.saturating_mul(price.into());
 
 			// transfer
-			T::AssetTrait::asset_destroy(token_symbol, converter.clone(), token_amount);
-			T::AssetTrait::asset_issue(vtoken_symbol, converter.clone(), vtokens_buy);
+			T::AssetTrait::asset_destroy(token_symbol, &converter, token_amount);
+			T::AssetTrait::asset_issue(vtoken_symbol, &converter, vtokens_buy);
 
 			Self::increase_pool(vtoken_symbol, token_amount, vtokens_buy);
 
@@ -217,8 +217,8 @@ decl_module! {
 			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
 			let tokens_buy = vtoken_amount / price.into();
 
-			T::AssetTrait::asset_destroy(vtoken_symbol, converter.clone(), vtoken_amount);
-			T::AssetTrait::asset_issue(token_symbol, converter.clone(), tokens_buy);
+			T::AssetTrait::asset_destroy(vtoken_symbol, &converter, vtoken_amount);
+			T::AssetTrait::asset_issue(token_symbol, &converter, tokens_buy);
 
 			Self::decrease_pool(vtoken_symbol, tokens_buy, vtoken_amount);
 
