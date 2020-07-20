@@ -81,7 +81,7 @@ fn update_rate_multiple_times_until_overflow() {
 }
 
 #[test]
-fn convert_token_to_vtoken_should_be_ok() {
+fn to_vtoken_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		run_to_block(2);
 
@@ -114,7 +114,7 @@ fn convert_token_to_vtoken_should_be_ok() {
 
 		// convert
 		let bob_dot_convert = 10;
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert, None));
+		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert, None));
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued - bob_dot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued + bob_dot_convert * rate); // check bob's token change
 
@@ -123,7 +123,7 @@ fn convert_token_to_vtoken_should_be_ok() {
 }
 
 #[test]
-fn convert_vtoken_to_token_should_be_ok() {
+fn to_token_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		run_to_block(2);
 
@@ -156,7 +156,7 @@ fn convert_vtoken_to_token_should_be_ok() {
 
 		// convert
 		let bob_vdot_convert = 10;
-		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(bob), dot_type, bob_vdot_convert));
+		assert_ok!(Convert::to_token(Origin::signed(bob), dot_type, bob_vdot_convert));
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued - bob_vdot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued + bob_vdot_convert / rate); // check bob's token change
 
@@ -207,11 +207,11 @@ fn add_new_refer_channel_should_be_ok() {
 		let bob_dot_convert2 = (5, referer2);
 		let bob_dot_convert3 = (8, referer3);
 		let bob_dot_convert4 = (2, 0); // 0 means no referer
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert1.0, Some(bob_dot_convert1.1)));
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert2.0, Some(bob_dot_convert2.1)));
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert2.0, Some(bob_dot_convert2.1))); // recommend referer2 2 times
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert3.0, Some(bob_dot_convert3.1)));
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert4.0, None)); // no referer
+		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert1.0, Some(bob_dot_convert1.1)));
+		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert2.0, Some(bob_dot_convert2.1)));
+		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert2.0, Some(bob_dot_convert2.1))); // recommend referer2 2 times
+		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert3.0, Some(bob_dot_convert3.1)));
+		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert4.0, None)); // no referer
 
 		// check bob's dot change
 		assert_eq!(
@@ -242,9 +242,9 @@ fn add_new_refer_channel_should_be_ok() {
 		let alice_dot_convert2 = (4, referer4);
 		let alice_dot_convert3 = (3, 0); // 0 means no referer
 
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(alice), vdot_type, alice_dot_convert1.0, Some(alice_dot_convert1.1)));
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(alice), vdot_type, alice_dot_convert2.0, Some(alice_dot_convert2.1)));
-		assert_ok!(Convert::convert_token_to_vtoken(Origin::signed(alice), vdot_type, alice_dot_convert3.0, None)); // no referer
+		assert_ok!(Convert::to_vtoken(Origin::signed(alice), vdot_type, alice_dot_convert1.0, Some(alice_dot_convert1.1)));
+		assert_ok!(Convert::to_vtoken(Origin::signed(alice), vdot_type, alice_dot_convert2.0, Some(alice_dot_convert2.1)));
+		assert_ok!(Convert::to_vtoken(Origin::signed(alice), vdot_type, alice_dot_convert3.0, None)); // no referer
 
 		// check alice's dot change
 		assert_eq!(
@@ -283,7 +283,7 @@ fn add_new_refer_channel_should_be_ok() {
 
 		// now convert vdot to dot
 		let alice_vdot = 5;
-		assert_ok!(Convert::convert_vtoken_to_token(Origin::signed(alice), dot_type, alice_vdot));
+		assert_ok!(Convert::to_token(Origin::signed(alice), dot_type, alice_vdot));
 		let all_channels: BTreeMap<u64, u64> = [
 			(referer1, bob_dot_convert1.0 * rate),
 			(referer2, (bob_dot_convert2.0 * 2 + alice_dot_convert1.0) * rate - alice_vdot),

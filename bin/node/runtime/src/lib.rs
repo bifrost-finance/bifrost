@@ -792,6 +792,7 @@ impl brml_voucher::Trait for Runtime {
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
 }
 
 impl brml_convert::Trait for Runtime {
@@ -804,6 +805,7 @@ impl brml_convert::Trait for Runtime {
 	type Cost = Cost;
 	type Income = Income;
 	type ConvertDuration = ConvertDuration;
+	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 //type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;

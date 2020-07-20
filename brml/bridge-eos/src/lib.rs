@@ -541,8 +541,8 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (weight_for::asset_redeem::<T>(memo.len() as Weight), DispatchClass::Normal)]
-		fn asset_redeem(
+		#[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
+		fn cross_to_eos(
 			origin,
 			to: Vec<u8>,
 			token_symbol: TokenSymbol,
@@ -771,7 +771,6 @@ impl<T: Trait> Module<T> {
 					// the trade is verified, unlock asset
 					T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
 
-//					T::AssetTrait::asset_redeem(token_symbol, &target, vtoken_balances);
 					return Ok(target.clone());
 				}
 				_ => continue,
@@ -863,7 +862,6 @@ impl<T: Trait> Module<T> {
 								Ok(signed_bto) => {
 									has_change.set(true);
 									debug::info!(target: "bridge-eos", "bto.sign {:?}", signed_bto);
-									debug::info!("bto.sign with: {:?}", sk.to_string());
 									ret = signed_bto;
 								}
 								Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
@@ -981,8 +979,8 @@ mod weight_for {
 	use frame_support::{traits::Get, weights::Weight};
 	use super::Trait;
 
-	/// asset_redeem weight
-	pub(crate) fn asset_redeem<T: Trait>(memo_len: Weight) -> Weight {
+	/// cross_to_eos weight
+	pub(crate) fn cross_to_eos<T: Trait>(memo_len: Weight) -> Weight {
 		let db = T::DbWeight::get();
 		db.writes(1) // put task to tx_out
 			.saturating_add(db.reads(1)) // token exists or not

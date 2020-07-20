@@ -319,9 +319,9 @@ pub fn testnet_genesis(
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
-				(TokenSymbol::DOT, 100),
-				(TokenSymbol::KSM, 100),
-				(TokenSymbol::EOS, 100),
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
@@ -556,9 +556,9 @@ pub fn bifrost_genesis(
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
-				(TokenSymbol::DOT, 100),
-				(TokenSymbol::KSM, 100),
-				(TokenSymbol::EOS, 100),
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
