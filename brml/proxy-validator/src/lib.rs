@@ -29,7 +29,7 @@ use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
-use std::ops::Div;
+use core::ops::Div;
 
 pub type ValidatorAddress = Vec<u8>;
 
