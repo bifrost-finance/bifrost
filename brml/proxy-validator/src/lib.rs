@@ -29,6 +29,7 @@ use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
+use core::ops::Div;
 
 pub type ValidatorAddress = Vec<u8>;
 
@@ -204,6 +205,7 @@ decl_module! {
 
 			ProxyValidators::<T>::mutate(&token_symbol, &target, |validator| {
 				validator.staking = validator.staking.saturating_add(amount);
+				validator.last_block = <frame_system::Module<T>>::block_number();
 			});
 
 			AssetLockedBalances::<T>::mutate(&token_symbol, |balance| {
@@ -418,10 +420,10 @@ impl<T: Trait> Module<T> {
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
 			let mut reward = Zero::zero();
-			let min_fee = val.staking.saturating_mul(
+			let min_reward = val.staking.saturating_mul(
 				min_reward_per_block.saturating_mul(redeem_duration.into())
-			);
-			if min_fee >= val.deposit {
+			).div(1_000_000.into()).div(1_000_000.into());
+			if min_reward >= val.deposit {
 				// call redeem by bridge-eos
 				T::BridgeAssetTo::redeem(
 					token_symbol,
@@ -434,7 +436,7 @@ impl<T: Trait> Module<T> {
 				let blocks = now_block - val.last_block;
 				reward = val.staking.saturating_mul(
 					val.reward_per_block.saturating_mul(blocks.into())
-				);
+				).div(1_000_000.into()).div(1_000_000.into());
 				val.deposit = val.deposit.saturating_sub(reward);
 			}
 
