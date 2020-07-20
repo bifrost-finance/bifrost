@@ -102,6 +102,7 @@ impl crate::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type ConvertDuration = ConvertDuration;
+	type ConvertPricePrecision = ();
 }
 
 pub type Convert = crate::Module<Test>;

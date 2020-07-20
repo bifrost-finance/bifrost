@@ -53,6 +53,7 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type ConvertDuration: Get<Self::BlockNumber>;
+	type ConvertPricePrecision: Get<Self::ConvertPrice>;
 }
 
 decl_event! {
@@ -113,6 +114,7 @@ decl_module! {
 		type Error = Error<T>;
 
 		const ConvertDuration: T::BlockNumber = T::ConvertDuration::get();
+		const ConvertPricePrecision: T::ConvertPrice = T::ConvertPricePrecision::get();
 
 		fn deposit_event() = default;
 
@@ -149,7 +151,7 @@ decl_module! {
 		}
 
 		#[weight = (weight_for::convert_token_to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
-		fn convert_token_to_vtoken(
+		fn to_vtoken(
 			origin,
 			vtoken_symbol: TokenSymbol,
 			#[compact] token_amount: T::Balance,
@@ -175,13 +177,14 @@ decl_module! {
 			let price = <ConvertPrice<T>>::get(token_symbol);
 
 			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
-			let vtokens_buy = token_amount.saturating_mul(price.into());
+			let vtokens_buy = token_amount.saturating_mul(T::ConvertPricePrecision::get().into()) / price.into();
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_symbol, &converter, token_amount);
 			T::AssetTrait::asset_issue(vtoken_symbol, &converter, vtokens_buy);
 
-			Self::increase_pool(vtoken_symbol, token_amount, vtokens_buy);
+			// both are the same pool, but need to be updated together
+			Self::increase_pool(token_symbol, token_amount, vtokens_buy);
 
 			// save refer channel
 			Self::handle_new_refer(converter, referer, vtokens_buy);
@@ -190,7 +193,7 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn convert_vtoken_to_token(
+		fn to_token(
 			origin,
 			token_symbol: TokenSymbol,
 			#[compact] vtoken_amount: T::Balance,
@@ -215,12 +218,13 @@ decl_module! {
 			let price = <ConvertPrice<T>>::get(token_symbol);
 
 			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
-			let tokens_buy = vtoken_amount / price.into();
+			let tokens_buy = vtoken_amount.saturating_mul(price.into()) / T::ConvertPricePrecision::get().into();
 
 			T::AssetTrait::asset_destroy(vtoken_symbol, &converter, vtoken_amount);
 			T::AssetTrait::asset_issue(token_symbol, &converter, tokens_buy);
 
-			Self::decrease_pool(vtoken_symbol, tokens_buy, vtoken_amount);
+			// both are the same pool, but need to be updated together
+			Self::decrease_pool(token_symbol, tokens_buy, vtoken_amount);
 
 			// redeem income
 			Self::redeem_income(converter, vtoken_amount);
@@ -242,7 +246,12 @@ decl_module! {
 					{
 						if <ConvertPrice<T>>::contains_key(token_id) {
 							<ConvertPrice<T>>::mutate(token_id, |convert_price| {
-								*convert_price = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
+								*convert_price = {
+									let precision: T::ConvertPrice = T::ConvertPricePrecision::get();
+									let token_pool: T::ConvertPrice = convert_pool.token_pool.into();
+									let vtoken_pool: T::ConvertPrice = convert_pool.vtoken_pool.into();
+									token_pool.saturating_mul(precision) / vtoken_pool
+								};
 							});
 						}
 					}
