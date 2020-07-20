@@ -562,7 +562,7 @@ pub fn bifrost_genesis(
 			], // initialize convert price as token = 100 * vtoken
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+			bridge_contract_account: (b"bifrostcross".to_vec(), 3), // this eos account needs 3 signer to sign a trade
 			notary_keys: initial_authorities[2..5].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// root_key has the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
