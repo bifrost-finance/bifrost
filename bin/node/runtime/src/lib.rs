@@ -97,7 +97,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 10,
+	spec_version: 12,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -294,7 +294,7 @@ impl pallet_balances::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const TransactionByteFee: Balance = 10 * MILLICENTS;
+	pub const TransactionByteFee: Balance = MILLICENTS / 10;
 	pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
 	pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
 	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
@@ -790,7 +790,9 @@ impl brml_voucher::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const ConvertDuration: BlockNumber = 24 * 60 * MINUTES;
+	// 3 hours(1800 blocks) as an era
+	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
 }
 
 impl brml_convert::Trait for Runtime {
@@ -803,6 +805,7 @@ impl brml_convert::Trait for Runtime {
 	type Cost = Cost;
 	type Income = Income;
 	type ConvertDuration = ConvertDuration;
+	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 //type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
@@ -858,7 +861,7 @@ impl brml_proxy_validator::Trait for Runtime {
 	type Precision = Precision;
 	type AssetTrait = Assets;
 	type BridgeAssetTo = BridgeEos;
-	type RewardHandler = ();
+	type RewardHandler = Convert;
 }
 
 impl brml_oracle::Trait for Runtime {
@@ -912,7 +915,7 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Convert: brml_convert::{Module, Call, Storage, Event},
+		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},

@@ -15,7 +15,7 @@
 [![master-build](https://github.com/bifrost-finance/bifrost/workflows/master-build/badge.svg)](https://github.com/bifrost-finance/bifrost/actions)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/acec53276777415593c2b02b2200f62e)](https://www.codacy.com/gh/bifrost-finance/bifrost?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=bifrost-finance/bifrost&amp;utm_campaign=Badge_Grade)
 [![Substrate Version](https://img.shields.io/badge/Substrate-2.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
-[![Docker](https://img.shields.io/badge/Docker-v0.3.2-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
+[![Docker](https://img.shields.io/badge/Docker-v0.4.0-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
 [![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
 [![Faucet](https://img.shields.io/badge/-Faucet-5c5c5c?logo=Telegram)](https://t.me/bifrost_faucet)
 [![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_network)
@@ -58,66 +58,71 @@ We'll start Alice's bifrost node first on default TCP port 30333 with her chain 
 
 ```bash
 cargo run -- \
-  --base-path /tmp/alice \
-  --chain=local \
-  --alice \
-  --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
-  --telemetry-url ws://telemetry.polkadot.io:1024 \
-  --validator
+--base-path /tmp/alice \
+--chain=dev \
+--alice \
+--port 30333 \
+--node-key 0000000000000000000000000000000000000000000000000000000000000001 \
+--telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
+--validator
 ```
 
 In the second terminal, we'll start Bob's bifrost node on a different TCP port of 30334, and with his chain database stored locally at `/tmp/bob`. We'll specify a value for the `--bootnodes` option that will connect his node to Alice's bootnode ID on TCP port 30333:
 
 ```bash
 cargo run -- \
-  --base-path /tmp/bob \
-  --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
-  --chain=local \
-  --bob \
-  --port 30334 \
-  --telemetry-url ws://telemetry.polkadot.io:1024 \
-  --validator
+--base-path /tmp/bob \
+--bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp \
+--chain=dev \
+--bob \
+--port 30334 \
+--telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
+--validator
 ```
 
 Additional CLI usage options are available and may be shown by running `cargo run -- --help`.
 
-### Easy way
+### Quick way
 You can use docker to run Bifrost chain, and you don't need to install rust.
 
 If docker isn't installed on your machine, just check here to install it: [Docker Installation](https://docs.docker.com/install/).
 
 After installation, pull the docker image by the following command:
 ```bash
-docker pull linux6/bifrost:0.1
+docker pull bifrostnetwork/bifrost:v0.4.0
 ```
 
 #### Start a single chain
-Run the chain quickly:
+Run the chain in quick way:
 ```bash
-docker run -p 9944:9944 --name=bifrost linux6/bifrost:0.1
+docker run -p 9944:9944 bifrostnetwork/bifrost:v0.4.0 --unsafe-ws-external --ws-port 9944 --dev
 ```
 
 #### Start multi-nodes
-If you want to run multi-nodes like the way in **Normal way**, 
 
-Start a container named alice on tcp port 9944.
+Start alice node.
 ```bash
-docker run -p 9944:9944 --name=alice linux6/bifrost:0.1 bifrost-node --base-path /tmp/alice \
-  --chain=local \
-  --alice \
-  --node-key 0000000000000000000000000000000000000000000000000000000000000001 \
-  --telemetry-url ws://telemetry.polkadot.io:1024 \
-  --validator
+docker run -p 9944:9944 --name=alice bifrostnetwork/bifrost:v0.4.0 --base-path /tmp/alice \
+--unsafe-ws-external \
+--ws-port 9944 \
+--chain=dev \
+--alice \
+--node-key 0000000000000000000000000000000000000000000000000000000000000001 \
+--telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
+--validator
 ```
 
-Start another container named bob on tcp port 9933.
+Start bob node.
 ```bash
-docker run -p 9933:9933 --name=bob linux6/bifrost:0.1 bifrost-node --base-path /tmp/bob \
-  --bootnodes /ip4/127.0.0.1/tcp/9933/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
-  --chain=local \
-  --bob \
-  --port 9933 \
-  --telemetry-url ws://telemetry.polkadot.io:1024 \
-  --validator
+docker run -p 9933:9933 --name=bob bifrostnetwork/bifrost:v0.4.0 --base-path /tmp/bob \
+--bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp \
+--chain=dev \
+--unsafe-ws-external \
+--ws-port 9933 \
+--bob \
+--port 30334 \
+--telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
+--validator
 ```
-Observe both nodes.
+
+Ensure both nodes are synchronizing each other.

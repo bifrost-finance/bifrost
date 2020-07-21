@@ -20,7 +20,7 @@ extern crate alloc;
 
 use alloc::string::{String, ToString};
 use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
-
+use crate::transaction::TxOut;
 use codec::{Decode, Encode};
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle,
@@ -37,22 +37,16 @@ use sp_runtime::{
 		TransactionValidity, ValidTransaction, TransactionSource
 	},
 };
-use frame_support::traits::{Get};
 use frame_support::{
-	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
-	dispatch::{DispatchResult, DispatchError},
-	weights::{DispatchClass, Weight, Pays}
+	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
+	dispatch::{DispatchResult, DispatchError}, weights::{DispatchClass, Weight, Pays},
 };
 use frame_system::{
-	self as system, ensure_root, ensure_none, ensure_signed,
-	offchain::{SubmitTransaction, SendTransactionTypes}
+	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
-
 use node_primitives::{
-	AssetTrait, BridgeAssetBalance, BridgeAssetFrom,
-	BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
+	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
 };
-use transaction::TxOut;
 use sp_application_crypto::RuntimeAppPublic;
 
 mod transaction;
@@ -270,6 +264,9 @@ decl_storage! {
 		CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
 		/// How many address has the privilege sign transaction between EOS and Bifrost
 		AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
+
+		/// Record times of cross-chain trade, (EOS => Bifrost, Bifrost => EOS)
+		TimesOfCrossChainTrade get(fn trade_times): map hasher(blake2_128_concat) T::AccountId => (u32, u32) = (0u32, 0u32);
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
@@ -501,7 +498,13 @@ decl_module! {
 			// withdraw operation, Bifrost => EOS
 			if cross_account == action_transfer.from.to_string().into_bytes() {
 				match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
-					Ok(target) => Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes())),
+					Ok(target) => {
+						// update times of trade from Bifrost => EOS
+						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+							times.1 = times.1.saturating_add(1);
+						});
+						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
+					}
 					Err(e) => {
 						debug::info!("Bifrost => EOS failed due to {:?}", e);
 						Self::deposit_event(RawEvent::WithdrawFail);
@@ -512,7 +515,13 @@ decl_module! {
 			// deposit operation, EOS => Bifrost
 			if cross_account == action_transfer.to.to_string().into_bytes() {
 				match Self::transaction_from_eos_to_bifrost(&action_transfer) {
-					Ok(target) => Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target)),
+					Ok(target) => {
+						// update times of trade from EOS => Bifrost
+						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+							times.0 = times.0.saturating_add(1);
+						});
+						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
+					}
 					Err(e) => {
 						debug::info!("EOS => Bifrost failed due to {:?}", e);
 						Self::deposit_event(RawEvent::DepositFail);
@@ -532,8 +541,8 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (weight_for::asset_redeem::<T>(memo.len() as Weight), DispatchClass::Normal)]
-		fn asset_redeem(
+		#[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
+		fn cross_to_eos(
 			origin,
 			to: Vec<u8>,
 			token_symbol: TokenSymbol,
@@ -568,6 +577,9 @@ decl_module! {
 
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
 				debug::info!("sent transaction to EOS node.");
+				// locked balance until trade is verified
+				T::AssetTrait::lock_asset(&origin, token_symbol, amount);
+
 				Self::deposit_event(RawEvent::SendTransactionSuccess);
 			} else {
 				debug::warn!("failed to send transaction to EOS node.");
@@ -712,6 +724,10 @@ impl<T: Trait> Module<T> {
 				_ => unreachable!("previous step checked he length of split_memo.")
 			}
 		};
+		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
+		// but in the future, we will support both token, let user to which token he wants to get
+		// according to the convert price
+		let token_symbol = TokenSymbol::EOS;
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
@@ -729,7 +745,7 @@ impl<T: Trait> Module<T> {
 		let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 		// issue asset to target
-		T::AssetTrait::asset_issue(token_symbol, target.clone(), vtoken_balances);
+		T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
 
 		Ok(target)
 	}
@@ -752,7 +768,9 @@ impl<T: Trait> Module<T> {
 						return Err(Error::<T>::InsufficientBalance);
 					}
 
-					T::AssetTrait::asset_redeem(token_symbol, target.clone(), vtoken_balances);
+					// the trade is verified, unlock asset
+					T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
+
 					return Ok(target.clone());
 				}
 				_ => continue,
@@ -767,7 +785,8 @@ impl<T: Trait> Module<T> {
 	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
 		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
 
-		if decoded_ss58.len() == 35 && decoded_ss58.first() == Some(&42) {
+		// todo, decoded_ss58.first() == Some(&42) || Some(&6) || ...
+		if decoded_ss58.len() == 35 {
 			let mut data = [0u8; 32];
 			data.copy_from_slice(&decoded_ss58[1..33]);
 			Ok(data)
@@ -843,7 +862,6 @@ impl<T: Trait> Module<T> {
 								Ok(signed_bto) => {
 									has_change.set(true);
 									debug::info!(target: "bridge-eos", "bto.sign {:?}", signed_bto);
-									debug::info!("bto.sign with: {:?}", sk.to_string());
 									ret = signed_bto;
 								}
 								Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
@@ -961,8 +979,8 @@ mod weight_for {
 	use frame_support::{traits::Get, weights::Weight};
 	use super::Trait;
 
-	/// asset_redeem weight
-	pub(crate) fn asset_redeem<T: Trait>(memo_len: Weight) -> Weight {
+	/// cross_to_eos weight
+	pub(crate) fn cross_to_eos<T: Trait>(memo_len: Weight) -> Weight {
 		let db = T::DbWeight::get();
 		db.writes(1) // put task to tx_out
 			.saturating_add(db.reads(1)) // token exists or not

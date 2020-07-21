@@ -172,6 +172,8 @@ impl<Balance> Token<Balance> {
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct AccountAsset<Balance, Cost, Income> {
 	pub balance: Balance,
+	pub locked: Balance,
+	pub available: Balance,
 	pub cost: Cost,
 	pub income: Income,
 }
@@ -233,11 +235,11 @@ pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	type Error;
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> Result<(AssetId, Token<Balance>), Self::Error>;
 
-	fn asset_issue(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
+	fn asset_issue(token_symbol: TokenSymbol, target: &AccountId, amount: Balance);
 
-	fn asset_redeem(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
+	fn asset_redeem(token_symbol: TokenSymbol, target: &AccountId, amount: Balance);
 
-	fn asset_destroy(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
+	fn asset_destroy(token_symbol: TokenSymbol, target: &AccountId, amount: Balance);
 
 	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<TokenSymbol>;
 
@@ -246,6 +248,10 @@ pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	fn get_account_asset(token_symbol: TokenSymbol, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
 
 	fn get_token(token_symbol: TokenSymbol) -> Token<Balance>;
+
+	fn lock_asset(who: &AccountId, token_symbol: TokenSymbol, locked: Balance);
+
+	fn unlock_asset(who: &AccountId, token_symbol: TokenSymbol, unlocked: Balance);
 }
 
 impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
@@ -254,11 +260,11 @@ impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, B
 	type Error = core::convert::Infallible;
 	fn asset_create(_: Vec<u8>, _: u16) -> Result<(AssetId, Token<Balance>), Self::Error> { Ok(Default::default()) }
 
-	fn asset_issue(_: TokenSymbol, _: AccountId, _: Balance) {}
+	fn asset_issue(_: TokenSymbol, _: &AccountId, _: Balance) {}
 
-	fn asset_redeem(_: TokenSymbol, _: AccountId, _: Balance) {}
+	fn asset_redeem(_: TokenSymbol, _: &AccountId, _: Balance) {}
 
-	fn asset_destroy(_: TokenSymbol, _: AccountId, _: Balance) {}
+	fn asset_destroy(_: TokenSymbol, _: &AccountId, _: Balance) {}
 
 	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<TokenSymbol> { Default::default() }
 
@@ -267,6 +273,10 @@ impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, B
 	fn get_account_asset(_: TokenSymbol, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
 
 	fn get_token(_: TokenSymbol) -> Token<Balance> { Default::default() }
+
+	fn lock_asset( _: &AccountId, _: TokenSymbol, _: Balance) {}
+
+	fn unlock_asset( _: &AccountId, _: TokenSymbol, _: Balance) {}
 }
 
 pub trait TokenPriceHandler<Price> {
@@ -378,12 +388,12 @@ impl<A, B> AssetReward<A, B> for () {
 	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
 }
 
-pub trait RewardHandler<Balance> {
-	fn send_reward(reward: Balance);
+pub trait RewardHandler<TokenSymbol, Balance> {
+	fn send_reward(token_symbol: TokenSymbol, reward: Balance);
 }
 
-impl<B> RewardHandler<B> for () {
-	fn send_reward(_: B) {}
+impl<A, B> RewardHandler<A, B> for () {
+	fn send_reward(_: A, _: B) {}
 }
 
 
