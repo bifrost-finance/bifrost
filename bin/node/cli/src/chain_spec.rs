@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig,
+	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -36,7 +36,7 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature, TokenSymbol};
+pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -312,9 +312,17 @@ pub fn testnet_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
+			account_assets: vec![],
 			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
+		}),
+		brml_convert: Some(ConvertConfig {
+			convert_price: vec![
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
+			], // initialize convert price as token = 100 * vtoken
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
@@ -335,29 +343,42 @@ pub fn testnet_genesis(
 }
 
 fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
+	/*
+	This list is each token for aUSD.
+	Accroding to the weight to calculate how many token will be added to the pool.
+	For example, if aUSD has 10000 in the pool, DOT has to be added 10000 / (300 * dot_amount) = 15 / 15 =>
+	so dot_amount = 10000 / 300 = 33.3333
+	aUSD 10000
+	DOT 300 aUSD
+	vDOT 3 aUSD
+	KSM 8.6 aUSD
+	vKSM 0.086 aUSD
+	EOS 2.62 aUSD
+	vEOS 0.0262 aUSD
+	*/
 	let all_pool_token = 1000 * DOLLARS;
 	let count_of_supported_tokens = 7u8;
 	let global_pool = {
 		let pool = vec![
-			(TokenSymbol::aUSD, 1000 * DOLLARS, 15),
-			(TokenSymbol::DOT, 1000 * DOLLARS, 15),
-			(TokenSymbol::vDOT, 1000 * DOLLARS, 15),
-			(TokenSymbol::KSM, 1000 * DOLLARS, 20),
-			(TokenSymbol::vKSM, 1000 * DOLLARS, 20),
-			(TokenSymbol::EOS, 1000 * DOLLARS, 15),
-			(TokenSymbol::vEOS, 1000 * DOLLARS, 15),
+			(TokenSymbol::aUSD, 10000 * DOLLARS, 15),
+			(TokenSymbol::DOT, (33.333_333_333_333f64 * DOLLARS as f64) as Balance, 15), // 33.333_333_333_333
+			(TokenSymbol::vDOT, (2222.222222222222f64 * DOLLARS as f64) as Balance, 10), // 2222.222222222222
+			(TokenSymbol::KSM, (1550.3875968992247f64 * DOLLARS as f64) as Balance, 20), // 1550.3875968992247
+			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance, 20), // 155038.7596899225
+			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance, 10), // 2544.529262086514
+			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance, 10), // 254452.9262086514
 		];
 		(pool, 0)
 	};
 	let user_pool = {
 		let pool = vec![
-			(TokenSymbol::aUSD, 1000 * DOLLARS),
-			(TokenSymbol::DOT, 1000 * DOLLARS),
-			(TokenSymbol::vDOT, 1000 * DOLLARS),
-			(TokenSymbol::KSM, 1000 * DOLLARS),
-			(TokenSymbol::vKSM, 1000 * DOLLARS),
-			(TokenSymbol::EOS, 1000 * DOLLARS),
-			(TokenSymbol::vEOS, 1000 * DOLLARS),
+			(TokenSymbol::aUSD, 10000 * DOLLARS),
+			(TokenSymbol::DOT, (33.333_333_333_333f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vDOT, (2222.222222222222f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::KSM, (1550.3875968992247f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
@@ -389,6 +410,25 @@ fn development_config_genesis() -> GenesisConfig {
 
 /// Development config (single validator Alice)
 pub fn development_config() -> ChainSpec {
+	let properties = {
+		let mut props = serde_json::Map::new();
+
+		props.insert(
+			"ss58Format".to_owned(),
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenDecimals".to_owned(),
+			serde_json::value::to_value(12u8).expect("The tokenDecimals cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenSymbol".to_owned(),
+			serde_json::value::to_value("ASG".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+		);
+		Some(props)
+	};
+	let protocol_id = Some("bifrost-test");
+
 	ChainSpec::from_genesis(
 		"Development",
 		"dev",
@@ -396,8 +436,8 @@ pub fn development_config() -> ChainSpec {
 		development_config_genesis,
 		vec![],
 		None,
-		None,
-		None,
+		protocol_id,
+		properties,
 		Default::default(),
 	)
 }
@@ -462,8 +502,8 @@ pub fn bifrost_genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: initial_authorities.len() as u32 * 1,
-			minimum_validator_count: (initial_authorities.len() / 2) as u32,
+			validator_count: 30,
+			minimum_validator_count: 3,
 			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
@@ -509,13 +549,21 @@ pub fn bifrost_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
+			account_assets: initialize_assets(),
 			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
+		brml_convert: Some(ConvertConfig {
+			convert_price: vec![
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
+			], // initialize convert price as token = 100 * vtoken
+		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			bridge_contract_account: (b"bifrostcross".to_vec(), 3), // this eos account needs 3 signer to sign a trade
+			notary_keys: initial_authorities[2..5].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// root_key has the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
@@ -545,10 +593,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 
 	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
 	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
-		let decoded_ss58 = bs58::decode(&v.0).into_vec().expect("decode account id failure");
-		let mut data = [0u8; 32];
-		data.copy_from_slice(&decoded_ss58[1..33]);
-		(node_primitives::AccountId::from(data), v.1.parse().expect("Balance is invalid."))
+		(parse_address(&v.0), v.1.parse().expect("Balance is invalid."))
 	}).collect();
 
 	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
@@ -564,6 +609,29 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	}
 
 	Some(final_vouchers)
+}
+
+fn parse_address(address: impl AsRef<str>) -> AccountId {
+	let decoded_ss58 = bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
+	let mut data = [0u8; 32];
+	data.copy_from_slice(&decoded_ss58[1..33]);
+
+	node_primitives::AccountId::from(data)
+}
+
+/// initialize assets for specific bifrost accounts
+fn initialize_assets() -> Vec<((TokenSymbol, AccountId), AccountAsset<Balance, Cost, Income>)> {
+	let assets = vec![
+		(
+			(TokenSymbol::DOT, parse_address("5CDWwkPsyc37XdB9N5QpZosgrcqcKA48Lpb81KjDZ89W9GPm")),
+			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+		),
+		(
+			(TokenSymbol::KSM, parse_address("5DAQaLpQjAZKuX4F77Lb69e5qb3GtaKVLF1mdiYt5SAhXeLC")),
+			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+		),
+	];
+	assets
 }
 
 /// Configure genesis for bifrost test
@@ -637,8 +705,8 @@ fn bifrost_config_genesis() -> GenesisConfig {
 
 	// generated with secret: subkey inspect "$secret"/fir
 	let root_key: AccountId = hex![
-		// 5DU1gVL9GAWbDswdpAULxaQMVfBwPjseNrX21fp6wDDCHuGD
-		"3e02e15e036a8f5fe634f88bdd41cf6cb2fca4051546fbcd203a04431e016563"
+		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	].into();
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
@@ -657,7 +725,7 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 
 		props.insert(
 			"ss58Format".to_owned(),
-			serde_json::value::to_value(42u8).expect("The ss58Format cannot be convert to json value.")
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
 		);
 		props.insert(
 			"tokenDecimals".to_owned(),
@@ -677,11 +745,11 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 		ChainType::Custom("Asgard Testnet".into()),
 		bifrost_config_genesis,
 		vec![
-			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
-			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
-			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
-			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
-			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
+			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWBMjifHHUZxbQaQZS9t5jMmTDtZbugAtJ8TG9RuX4umEY".parse().expect("failed to parse multiaddress."),
+			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
+			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
+			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),

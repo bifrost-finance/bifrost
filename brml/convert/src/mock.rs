@@ -90,6 +90,7 @@ impl system::Trait for Test {
 
 parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
+	pub const ConvertPricePrecision: u64 = 4;
 }
 
 impl crate::Trait for Test {
@@ -102,6 +103,7 @@ impl crate::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type ConvertDuration = ConvertDuration;
+	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 pub type Convert = crate::Module<Test>;

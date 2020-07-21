@@ -130,6 +130,8 @@
   "Price": "u64",
   "AccountAsset": {
     "balance": "Balance",
+    "locked": "Balance",
+    "available": "Balance",
     "cost": "Cost",
     "income": "Income"
   },
@@ -162,10 +164,10 @@
   "InvariantValue": "Balance",
   "PoolWeight": "Balance",
   "AssetConfig": {
-    "redeem_duration": "u16",
+    "redeem_duration": "BlockNumber",
     "min_reward_per_block": "Balance"
   },
-  "ValidatorRegister": {
+  "ProxyValidatorRegister": {
     "last_block": "BlockNumber",
     "deposit": "Balance",
     "need": "Balance",
