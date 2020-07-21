@@ -31,17 +31,19 @@ mod mock;
 mod tests;
 
 lazy_static::lazy_static! {
-	pub static ref TOKEN_LIST: [Vec<u8>; 3] = {
+	pub static ref TOKEN_LIST: [Vec<u8>; 4] = {
 		let dot = b"DOT".to_vec();
 		let ksm = b"KSM".to_vec();
 		let eos = b"EOS".to_vec();
-		[dot, ksm, eos]
+		let iost = b"IOST".to_vec();
+		[dot, ksm, eos, iost]
 	};
-	pub static ref VTOKEN_LIST: [Vec<u8>; 3] = {
+	pub static ref VTOKEN_LIST: [Vec<u8>; 4] = {
 		let vdot = b"vDOT".to_vec();
 		let vksm = b"vKSM".to_vec();
 		let veos = b"vEOS".to_vec();
-		[vdot, vksm, veos]
+		let viost = b"vIOST".to_vec();
+		[vdot, vksm, veos, viost]
 	};
 }
 
@@ -271,6 +273,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 			b"DOT" => 0.into(),
 			b"KSM" => 1.into(),
 			b"EOS" => 2.into(),
+			b"IOST" => 3.into(),
 			_ => {
 				let id = Self::next_asset_id();
 				<NextAssetId<T>>::mutate(|id| *id += One::one());

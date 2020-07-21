@@ -286,11 +286,91 @@ decl_module! {
             BridgeEnable::put(enable);
         }
 
+        #[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
+			ensure_root(origin)?;
+			BridgeContractAccount::put((account, threthold));
+		}
 
+        #[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
+			ensure_none(origin)?;
+
+			BridgeTxOuts::<T>::put(tx_list);
+
+			Ok(())
+		}
+
+		#[weight = FunctionOf(
+			|args: (_, _, _, &Vec<u8>)| (args.3.len() * 10000usize) as Weight,
+			DispatchClass::Normal,
+			Pays::Yes
+		)]
+		fn asset_redeem(
+			origin,
+			to: Vec<u8>,
+			token_type: TokenType,
+			#[compact] amount: T::Balance,
+			memo: Vec<u8>
+		) {
+            let origin = system::ensure_signed(origin)?;
+			let iost_amount = amount;
+
+			let token_id = T::AssetId::from(3);
+
+			// check vtoken id exist or not
+			ensure!(T::AssetTrait::token_exists(token_id), "this token doesn't exist.");
+
+			let token = T::AssetTrait::get_token(&token_id).token;
+			let symbol_code = token.symbol;
+			let symbol_precise = token.precision;
+
+			let balance = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &origin).balance;
+			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
+			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
+
+            let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
+
+            let bridge_asset = BridgeAssetBalance {
+				symbol: asset_symbol,
+				amount: iost_amount,
+				memo,
+				from: origin.clone(),
+				token_type
+			};
+
+			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
+				debug::info!("sent transaction to IOST node.");
+				Self::deposit_event(RawEvent::SendTransactionSuccess);
+			} else {
+				debug::warn!("failed to send transaction to IOST node.");
+				Self::deposit_event(RawEvent::SendTransactionFailure);
+			}
+		}
     }
 }
 
-impl<T: Trait> Module<T> {}
+impl<T: Trait> Module<T> {
+    /// generate transaction for transfer amount to
+    fn tx_transfer_to<P, B>(
+        raw_to: Vec<u8>,
+        bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
+    ) -> Result<TxOut<T::AccountId>, Error<T>>
+        where
+            P: AtLeast32Bit + Copy,
+            B: AtLeast32Bit + Copy,
+    {
+        let (raw_from, threshold) = BridgeContractAccount::get();
+        let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
+        // let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
+
+        let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, threshold, &memo, bridge_asset.from, bridge_asset.token_type)?;
+        BridgeTxOuts::<T>::append(&tx_out);
+
+        Ok(tx_out)
+    }
+}
 
 impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
     type Error = crate::Error<T>;
@@ -298,7 +378,7 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
         target: Vec<u8>,
         bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>,
     ) -> Result<(), Self::Error> {
-        // let _ = Self::tx_transfer_to(target, bridge_asset)?;
+        let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
         Ok(())
     }

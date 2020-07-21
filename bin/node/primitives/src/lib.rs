@@ -102,6 +102,7 @@ pub enum AssetSymbol {
 	DOT = 0,
 	KSM,
 	EOS,
+	IOST,
 }
 
 impl From<AssetId> for AssetSymbol {
@@ -110,6 +111,7 @@ impl From<AssetId> for AssetSymbol {
 			0 => Self::DOT,
 			1 => Self::KSM,
 			2 => Self::EOS,
+			3 => Self::IOST,
 			_ => unimplemented!("This asset id is not sopported now.")
 		}
 	}
@@ -121,6 +123,7 @@ impl From<AssetSymbol> for AssetId {
 			AssetSymbol::DOT => 0,
 			AssetSymbol::KSM => 1,
 			AssetSymbol::EOS => 2,
+			AssetSymbol::IOST => 3,
 		}
 	}
 }
@@ -293,6 +296,7 @@ impl<A, ER: Default> FetchConvertPrice<A, ER> for () {
 pub enum BlockchainType {
 	BIFROST,
 	EOS,
+	IOST,
 }
 
 impl Default for BlockchainType {
