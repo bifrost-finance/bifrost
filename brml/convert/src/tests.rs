@@ -105,8 +105,8 @@ fn to_vtoken_should_be_ok() {
 		// issue vtoken and token to bob
 		let bob_dot_issued = 60;
 		let bob_vdot_issued = 20;
-		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, bob, bob_dot_issued)); // 60 vtokens to bob
-		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, bob, bob_vdot_issued)); // 20 tokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), dot_type, bob, bob_dot_issued)); // 60 tokens to bob
+		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, bob, bob_vdot_issued)); // 20 vtokens to bob
 
 		// set convert rate, token => vtoken, 1token equals to 2vtoken
 		let rate = 2;
@@ -118,7 +118,7 @@ fn to_vtoken_should_be_ok() {
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued - bob_dot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued + bob_dot_convert * rate); // check bob's token change
 
-		assert_eq!(Convert::pool(vdot_type), ConvertPool::new(bob_dot_convert, bob_dot_convert * rate));
+		assert_eq!(Convert::pool(dot_type), ConvertPool::new(bob_dot_convert, bob_dot_convert * rate));
 	});
 }
 
@@ -160,7 +160,7 @@ fn to_token_should_be_ok() {
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued - bob_vdot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued + bob_vdot_convert / rate); // check bob's token change
 
-		assert_eq!(Convert::pool(vdot_type), ConvertPool::new(0, 0));
+		assert_eq!(Convert::pool(dot_type), ConvertPool::new(0, 0));
 	});
 }
 
