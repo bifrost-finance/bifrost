@@ -266,6 +266,9 @@ fn get_app<'a, 'b>(usage: &'a str) -> App<'a, 'b> {
 						If the value is a file, the file content is used as URI. \
 						If not given, you will be prompted for the URI.'
 				"),
+			SubCommand::with_name("inspect-node-key")
+				.about("Print the peer ID corresponding to the node key in the given file")
+				.args_from_usage("[file] 'Name of file to read the secret key from'"),
 			SubCommand::with_name("sign")
 				.about("Sign a message, provided on STDIN, with a given (secret) key")
 				.args_from_usage("
@@ -421,7 +424,7 @@ where
 		Some(Err(e)) => return Err(e),
 		Some(Ok(v)) => Some(v),
 		None => None,
-	 };
+	};
 
 	if let Some(network) = maybe_network {
 		set_default_ss58_version(network);
@@ -431,7 +434,7 @@ where
 		Some(Err(_)) => return Err(Error::Static("Invalid output name. See --help for available outputs.")),
 		Some(Ok(v)) => v,
 		None => OutputType::Text,
-	 };
+	};
 
 	match matches.subcommand() {
 		("generate", Some(matches)) => {
@@ -451,6 +454,17 @@ where
 		}
 		("inspect", Some(matches)) => {
 			C::print_from_uri(&get_uri("uri", &matches)?, password, maybe_network, output);
+		}
+		("inspect-node-key", Some(matches)) => {
+			let file = matches.value_of("file").ok_or(Error::Static("Input file name is required"))?;
+
+			let mut file_content = fs::read(file)?;
+			let secret = libp2p_ed25519::SecretKey::from_bytes(&mut file_content)
+				.map_err(|_| Error::Static("Bad node key file"))?;
+			let keypair = libp2p_ed25519::Keypair::from(secret);
+			let peer_id = PublicKey::Ed25519(keypair.public()).into_peer_id();
+
+			println!("{}", peer_id);
 		}
 		("sign", Some(matches)) => {
 			let suri = get_uri("suri", &matches)?;
@@ -738,7 +752,8 @@ fn create_extrinsic<C: Crypto>(
 {
 	let extra = |i: Index, f: Balance| {
 		(
-			frame_system::CheckVersion::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
 			frame_system::CheckGenesis::<Runtime>::new(),
 			frame_system::CheckEra::<Runtime>::from(Era::Immortal),
 			frame_system::CheckNonce::<Runtime>::from(i),
@@ -751,7 +766,8 @@ fn create_extrinsic<C: Crypto>(
 		function,
 		extra(index, 0),
 		(
-			VERSION.spec_version as u32,
+			VERSION.spec_version,
+			VERSION.transaction_version,
 			genesis_hash,
 			genesis_hash,
 			(),

@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig, BridgeIostConfig, VoucherConfig,
+	AssetsConfig, BridgeEosConfig, BridgeIostConfig, VoucherConfig, SwapConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -36,7 +36,7 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature};
+pub use node_primitives::{AccountId, Balance, Signature, TokenSymbol};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -148,7 +148,6 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 		initial_authorities,
 		root_key,
 		Some(endowed_accounts),
-		false,
 	)
 }
 
@@ -214,7 +213,6 @@ pub fn testnet_genesis(
 	)>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
-	enable_println: bool,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
 		vec![
@@ -314,7 +312,7 @@ pub fn testnet_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
@@ -326,7 +324,7 @@ pub fn testnet_genesis(
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+			bridge_contract_account: (b"bifrost-iost-cross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
@@ -339,7 +337,50 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		brml_swap: initialize_swap_module(root_key),
 	}
+}
+
+fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
+	let all_pool_token = 1000 * DOLLARS;
+	let count_of_supported_tokens = 7u8;
+	let global_pool = {
+		let pool = vec![
+			(TokenSymbol::aUSD, 1000 * DOLLARS, 15),
+			(TokenSymbol::DOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::vDOT, 1000 * DOLLARS, 15),
+			(TokenSymbol::KSM, 1000 * DOLLARS, 20),
+			(TokenSymbol::vKSM, 1000 * DOLLARS, 20),
+			(TokenSymbol::EOS, 1000 * DOLLARS, 15),
+			(TokenSymbol::vEOS, 1000 * DOLLARS, 15),
+		];
+		(pool, 0)
+	};
+	let user_pool = {
+		let pool = vec![
+			(TokenSymbol::aUSD, 1000 * DOLLARS),
+			(TokenSymbol::DOT, 1000 * DOLLARS),
+			(TokenSymbol::vDOT, 1000 * DOLLARS),
+			(TokenSymbol::KSM, 1000 * DOLLARS),
+			(TokenSymbol::vKSM, 1000 * DOLLARS),
+			(TokenSymbol::EOS, 1000 * DOLLARS),
+			(TokenSymbol::vEOS, 1000 * DOLLARS),
+		];
+		vec![(sudo, (pool, all_pool_token))]
+	};
+	let swap_fee = 150;
+	let exit_fee = 0;
+	let total_weight = global_pool.0.iter().map(|p| p.2).collect();
+
+	Some(SwapConfig {
+		all_pool_token,
+		count_of_supported_tokens,
+		global_pool,
+		user_pool,
+		swap_fee,
+		exit_fee,
+		total_weight
+	})
 }
 
 fn development_config_genesis() -> GenesisConfig {
@@ -350,7 +391,6 @@ fn development_config_genesis() -> GenesisConfig {
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
-		true,
 	)
 }
 
@@ -377,7 +417,6 @@ fn local_testnet_genesis() -> GenesisConfig {
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
-		false,
 	)
 }
 
@@ -401,7 +440,6 @@ pub fn bifrost_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	enable_println: bool,
 ) -> GenesisConfig {
 	let num_endowed_accounts = endowed_accounts.len();
 
@@ -478,7 +516,7 @@ pub fn bifrost_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
@@ -490,7 +528,7 @@ pub fn bifrost_genesis(
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+			bridge_contract_account: (b"bifrost-iost-cross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
@@ -503,6 +541,7 @@ pub fn bifrost_genesis(
 				None
 			}
 		},
+		brml_swap: initialize_swap_module(root_key),
 	}
 }
 
@@ -622,7 +661,6 @@ fn bifrost_config_genesis() -> GenesisConfig {
 		initial_authorities,
 		root_key,
 		endowed_accounts,
-		true,
 	)
 }
 
@@ -648,16 +686,16 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard CC1",
+		"Bifrost Asgard CC2",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		bifrost_config_genesis,
 		vec![
-			"/dns4/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
-			"/dns4/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
-			"/dns4/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
-			"/dns4/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
-			"/dns4/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
+			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/QmTKx4x4TCj6ptoe22Nfqr8FiCtMCicwbY34KcGt4xMvKC".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/QmPQUbcEfMskoQBfsinAU354f3P91ENa3pcaDJsLwXbM2o".parse().expect("failed to parse multiaddress."),
+			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/Qmbpc8jNDoZVBxW4ZZGAgVUzgyUcFPrKxHvTAafjjwRVFp".parse().expect("failed to parse multiaddress."),
+			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/QmYTccenokf4hmTvpzpgrNK2UxYngNHjXguuGTkZTW8aF3".parse().expect("failed to parse multiaddress."),
+			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/QmSUwR4ppe9sB4VQCuy3itB7A2BF8BcfweLsVz83bh1vPy".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
@@ -665,78 +703,4 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 		properties,
 		Default::default(),
 	)
-}
-
-#[cfg(test)]
-pub(crate) mod tests {
-	use super::*;
-	use crate::service::{new_full, new_light};
-	use sc_service_test;
-	use sp_runtime::BuildStorage;
-
-	fn local_testnet_genesis_instant_single() -> GenesisConfig {
-		testnet_genesis(
-			vec![
-				authority_keys_from_seed("Alice"),
-			],
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			None,
-			false,
-		)
-	}
-
-	/// Local testnet config (single validator - Alice)
-	pub fn integration_test_config_with_single_authority() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis_instant_single,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	/// Local testnet config (multivalidator Alice + Bob)
-	pub fn integration_test_config_with_two_authorities() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	#[test]
-	#[ignore]
-	fn test_connectivity() {
-		sc_service_test::connectivity(
-			integration_test_config_with_two_authorities(),
-			|config| new_full(config),
-			|config| new_light(config),
-		);
-	}
-
-	#[test]
-	fn test_create_development_chain_spec() {
-		development_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_create_local_testnet_chain_spec() {
-		local_testnet_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_staging_test_net_chain_spec() {
-		staging_testnet_config().build_storage().unwrap();
-	}
 }

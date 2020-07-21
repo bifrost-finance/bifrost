@@ -23,6 +23,8 @@ use sp_core::H256;
 use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
 
+const DOLLARS: u64 = 1_000_000_000_000u64;
+
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
 		brml_swap::Swap,
@@ -39,7 +41,7 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_swap,
+		brml_swap<T>,
 		assets<T>,
 	}
 }
@@ -79,19 +81,35 @@ impl frame_system::Trait for Test {
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
 	type ExtrinsicBaseWeight = ();
+	type BaseCallFilter = ();
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
+}
+
+parameter_types! {
+	pub const InitPoolSupply: u64 = 1000;
+	pub const MaximumSwapInRatio: u64 = 2;
+	pub const MinimumBalance: u64 = 10;
+	pub const MaximumSwapFee: u64 = 10_000; // 10%
+	pub const MinimumSwapFee: u64 = 1; // 0.0001%
+	pub const FeePrecision: u64 = DOLLARS / 10_000_000;
 }
 
 impl crate::Trait for Test {
 	type Fee = u64;
-	type Event = Event;
-	type TokenPool = u64;
-	type VTokenPool = u64;
-	type InVariantPool = u64;
+	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
 	type Cost = u64;
 	type Income = u64;
+	type InvariantValue = u64;
+	type PoolWeight = u64;
+	type InitPoolSupply = InitPoolSupply;
+	type MaximumSwapInRatio = MaximumSwapInRatio;
+	type MinimumBalance = MinimumBalance;
+	type MaximumSwapFee = MaximumSwapFee;
+	type MinimumSwapFee = MinimumSwapFee;
+	type FeePrecision = FeePrecision;
 }
 
 impl assets::Trait for Test {

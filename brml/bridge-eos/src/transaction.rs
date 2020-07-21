@@ -76,7 +76,7 @@ pub struct MultiSigTx<AccountId> {
 	/// Who sends Transaction to EOS
 	pub from: AccountId,
 	/// token type
-	pub token_type: node_primitives::TokenType,
+	pub token_symbol: node_primitives::TokenSymbol,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
@@ -110,7 +110,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		threshold: u8,
 		memo: &str,
 		from: AccountId,
-		token_type: node_primitives::TokenType
+		token_symbol: node_primitives::TokenSymbol
 	) -> Result<Self, Error<T>> {
 		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -125,7 +125,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 			multi_sig: MultiSig::new(threshold),
 			action,
 			from,
-			token_type,
+			token_symbol,
 		};
 
 		Ok(TxOut::Initial(multi_sig_tx))
@@ -374,49 +374,5 @@ pub(crate) mod eos_rpc {
 		}
 
 		Ok(trx_id)
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use eos_chain::Symbol;
-	use sp_std::str::FromStr;
-
-	#[test]
-	fn tx_send_with_multisig_should_work() {
-		let eos_node_url: &'static str = "http://127.0.0.1:8888/";
-		let raw_from = b"bifrost".to_vec();
-		let raw_to = b"alice".to_vec();
-		let sym = Symbol::from_str("4,EOS").unwrap();
-		let asset = Asset::new(1i64, sym);
-		let account_id_1= 1u64;
-		let account_id_2= 2u64;
-
-		// init tx
-		let tx_out = TxOut::<u64>::init(raw_from, raw_to, asset, 2);
-		assert!(tx_out.is_ok());
-
-		// generate Eos raw tx
-		let tx_out = tx_out.unwrap();
-		let tx_out = tx_out.generate(eos_node_url);
-		assert!(tx_out.is_ok());
-
-		// sign tx by account testa
-		let tx_out = tx_out.unwrap();
-		let sk = SecretKey::from_wif("5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr").unwrap();
-		let tx_out = tx_out.sign(sk, account_id_1);
-		assert!(tx_out.is_ok());
-
-		// tx by account testb
-		let tx_out = tx_out.unwrap();
-		let sk = SecretKey::from_wif("5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj").unwrap();
-		let tx_out = tx_out.sign(sk, account_id_2);
-		assert!(tx_out.is_ok());
-
-		// send tx
-		let tx_out = tx_out.unwrap();
-		let tx_out = tx_out.send(eos_node_url);
-		assert!(tx_out.is_ok());
 	}
 }

@@ -5,16 +5,16 @@ authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.3.1", default-features = false, features = ["derive"] }
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
-frame-support = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
-frame-system = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
-sp-runtime = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate", default-features = false }
+frame-support = { version = "2.0.0-rc4", default-features = false }
+frame-system = { version = "2.0.0-rc4", default-features = false }
+sp-runtime = { version = "2.0.0-rc4", default-features = false }
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }
-sp-core = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
-sp-io = { version = "2.0.0-dev", git = "https://github.com/paritytech/substrate" }
+sp-core = { version = "2.0.0-rc4" }
+sp-io = { version = "2.0.0-rc4" }
 
 [features]
 default = ["std"]

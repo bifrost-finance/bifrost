@@ -36,7 +36,7 @@ use frame_system::{
 };
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-    traits::{AtLeast32Bit, Member, SaturatedConversion},
+    traits::{AtLeast32Bit, Member, SaturatedConversion, MaybeSerializeDeserialize},
     transaction_validity::{
         InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
         TransactionValidity, ValidTransaction,
@@ -45,8 +45,8 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use node_primitives::{
-    AssetSymbol, AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom,
-    BridgeAssetSymbol, BridgeAssetTo, TokenType,
+    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom,
+    BridgeAssetSymbol, BridgeAssetTo, TokenSymbol,
 };
 use sp_application_crypto::RuntimeAppPublic;
 use transaction::TxOut;
@@ -150,6 +150,8 @@ decl_error! {
         InvalidChecksum256,
         /// Initialze producer schedule multiple times
         InitMultiTimeProducerSchedules,
+        /// Invalid token
+		InvalidTokenForTrade,
     }
 }
 
@@ -170,7 +172,7 @@ pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait 
     type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
 
     /// The arithmetic type of asset identifier.
-    type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
+    type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
 
     /// The units in which we record costs.
     type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
@@ -309,44 +311,44 @@ decl_module! {
 		fn asset_redeem(
 			origin,
 			to: Vec<u8>,
-			token_type: TokenType,
+			token_symbol: TokenSymbol,
 			#[compact] amount: T::Balance,
 			memo: Vec<u8>
 		) {
             let origin = system::ensure_signed(origin)?;
 			let iost_amount = amount;
 
-			let token_id = T::AssetId::from(3);
-
 			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_id), "this token doesn't exist.");
+			ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
+			// ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
+			ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
 
-			let token = T::AssetTrait::get_token(&token_id).token;
+			let token = T::AssetTrait::get_token(token_symbol);
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &origin).balance;
-			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
-
-            let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
-
-            let bridge_asset = BridgeAssetBalance {
-				symbol: asset_symbol,
-				amount: iost_amount,
-				memo,
-				from: origin.clone(),
-				token_type
-			};
-
-			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				debug::info!("sent transaction to IOST node.");
-				Self::deposit_event(RawEvent::SendTransactionSuccess);
-			} else {
-				debug::warn!("failed to send transaction to IOST node.");
-				Self::deposit_event(RawEvent::SendTransactionFailure);
-			}
+			// let balance = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &origin).balance;
+			// ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
+			// let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+			// ensure!(balance >= amount, "amount should be less than or equal to origin balance");
+            //
+            // let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
+            //
+            // let bridge_asset = BridgeAssetBalance {
+			// 	symbol: asset_symbol,
+			// 	amount: iost_amount,
+			// 	memo,
+			// 	from: origin.clone(),
+			// 	token_type
+			// };
+            //
+			// if Self::bridge_asset_to(to, bridge_asset).is_ok() {
+			// 	debug::info!("sent transaction to IOST node.");
+			// 	Self::deposit_event(RawEvent::SendTransactionSuccess);
+			// } else {
+			// 	debug::warn!("failed to send transaction to IOST node.");
+			// 	Self::deposit_event(RawEvent::SendTransactionFailure);
+			// }
 		}
     }
 }
@@ -365,7 +367,7 @@ impl<T: Trait> Module<T> {
         let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
         // let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
-        let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, threshold, &memo, bridge_asset.from, bridge_asset.token_type)?;
+        let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
         BridgeTxOuts::<T>::append(&tx_out);
 
         Ok(tx_out)
@@ -383,13 +385,13 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
         Ok(())
     }
 
-    fn redeem(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+    fn redeem(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn stake(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+    fn stake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn unstake(_: AssetSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+    fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
     }
 }

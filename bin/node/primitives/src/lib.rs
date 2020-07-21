@@ -84,63 +84,67 @@ pub type BlockId = generic::BlockId<Block>;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub enum TokenType {
-	Token,
-	VToken,
+#[non_exhaustive]
+#[allow(non_camel_case_types)]
+pub enum TokenSymbol {
+	aUSD = 0,
+	DOT = 1,
+	vDOT = 2,
+	KSM = 3,
+	vKSM = 4,
+	EOS = 5,
+	vEOS = 6,
+	IOST = 7,
+	vIOST = 8,
 }
 
-impl Default for TokenType {
+impl Default for TokenSymbol {
 	fn default() -> Self {
-		Self::VToken
+		Self::aUSD
 	}
 }
 
-#[derive(Debug, Decode, Encode, Eq, PartialEq, Copy, Clone, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-#[non_exhaustive]
-pub enum AssetSymbol {
-	DOT = 0,
-	KSM,
-	EOS,
-	IOST,
+impl TokenSymbol {
+	pub fn paired_token(&self) -> (Self, Self) {
+		match *self {
+			Self::DOT | Self::vDOT => (Self::DOT, Self::vDOT),
+			Self::KSM | Self::vKSM => (Self::KSM, Self::vKSM),
+			Self::EOS | Self::vEOS => (Self::EOS, Self::vEOS),
+			Self::IOST | Self::vIOST => (Self::IOST, Self::vIOST),
+			_ => unimplemented!("aUSD or this token is not sopported now."),
+		}
+	}
 }
 
-impl From<AssetId> for AssetSymbol {
+impl From<AssetId> for TokenSymbol {
 	fn from(id: AssetId) -> Self {
 		match id {
-			0 => Self::DOT,
-			1 => Self::KSM,
-			2 => Self::EOS,
-			3 => Self::IOST,
+			0 => Self::aUSD,
+			1 => Self::DOT,
+			2 => Self::vDOT,
+			3 => Self::KSM,
+			4 => Self::vKSM,
+			5 => Self::EOS,
+			6 => Self::vEOS,
+			7 => Self::IOST,
+			8 => Self::vIOST,
 			_ => unimplemented!("This asset id is not sopported now.")
 		}
 	}
 }
 
-impl From<AssetSymbol> for AssetId {
-	fn from(symbol: AssetSymbol) -> Self {
+impl From<TokenSymbol> for AssetId {
+	fn from(symbol: TokenSymbol) -> Self {
 		match symbol {
-			AssetSymbol::DOT => 0,
-			AssetSymbol::KSM => 1,
-			AssetSymbol::EOS => 2,
-			AssetSymbol::IOST => 3,
-		}
-	}
-}
-
-/// Token pair to bond token and vtoken
-#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub struct TokenPair<Balance> {
-	pub token: Token<Balance>,
-	pub vtoken: Token<Balance>,
-}
-
-impl<Balance> TokenPair<Balance> {
-	pub fn new(token: Token<Balance>, vtoken: Token<Balance>) -> Self {
-		Self {
-			token,
-			vtoken,
+			TokenSymbol::aUSD => 0,
+			TokenSymbol::DOT => 1,
+			TokenSymbol::vDOT => 2,
+			TokenSymbol::KSM => 3,
+			TokenSymbol::vKSM => 4,
+			TokenSymbol::EOS => 5,
+			TokenSymbol::vEOS => 6,
+			TokenSymbol::IOST => 7,
+			TokenSymbol::vIOST => 8,
 		}
 	}
 }
@@ -226,41 +230,43 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 }
 
 pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
-	fn asset_create(symbol: Vec<u8>, precision: u16) -> (AssetId, TokenPair<Balance>);
+	type Error;
+	fn asset_create(symbol: Vec<u8>, precision: u16) -> Result<(AssetId, Token<Balance>), Self::Error>;
 
-	fn asset_issue(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
+	fn asset_issue(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_redeem(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
+	fn asset_redeem(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_destroy(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance);
+	fn asset_destroy(token_symbol: TokenSymbol, target: AccountId, amount: Balance);
 
-	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<AssetId>;
+	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<TokenSymbol>;
 
-	fn token_exists(asset_id: AssetId) -> bool;
+	fn token_exists(token_symbol: TokenSymbol) -> bool;
 
-	fn get_account_asset(asset_id: &AssetId, token_type: TokenType, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
+	fn get_account_asset(token_symbol: TokenSymbol, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
 
-	fn get_token(asset_id: &AssetId) -> TokenPair<Balance>;
+	fn get_token(token_symbol: TokenSymbol) -> Token<Balance>;
 }
 
 impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, Balance, Cost, Income> for ()
 	where AssetId: Default, AccountId: Default, Balance: Default, Cost: Default, Income: Default
 {
-	fn asset_create(_: Vec<u8>, _: u16) -> (AssetId, TokenPair<Balance>) { Default::default() }
+	type Error = core::convert::Infallible;
+	fn asset_create(_: Vec<u8>, _: u16) -> Result<(AssetId, Token<Balance>), Self::Error> { Ok(Default::default()) }
 
-	fn asset_issue(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
+	fn asset_issue(_: TokenSymbol, _: AccountId, _: Balance) {}
 
-	fn asset_redeem(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
+	fn asset_redeem(_: TokenSymbol, _: AccountId, _: Balance) {}
 
-	fn asset_destroy(_: AssetId, _: TokenType, _: AccountId, _: Balance) {}
+	fn asset_destroy(_: TokenSymbol, _: AccountId, _: Balance) {}
 
-	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<AssetId> { Default::default() }
+	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<TokenSymbol> { Default::default() }
 
-	fn token_exists(_: AssetId) -> bool { Default::default() }
+	fn token_exists(_: TokenSymbol) -> bool { Default::default() }
 
-	fn get_account_asset(_: &AssetId, _: TokenType, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
+	fn get_account_asset(_: TokenSymbol, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
 
-	fn get_token(_: &AssetId) -> TokenPair<Balance> { Default::default() }
+	fn get_token(_: TokenSymbol) -> Token<Balance> { Default::default() }
 }
 
 pub trait TokenPriceHandler<Price> {
@@ -274,21 +280,21 @@ impl<Price> TokenPriceHandler<Price> for () {
 /// Asset redeem handler
 pub trait AssetRedeem<AssetId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(asset_id: AssetId, token_type: TokenType, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
+	fn asset_redeem(token_symbol: TokenSymbol, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
 }
 
 impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-	fn asset_redeem(_: A, _: TokenType, _: AC, _: B, _: Option<Vec<u8>>) {}
+	fn asset_redeem(_: TokenSymbol, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
 /// Fetch convert rate handler
-pub trait FetchConvertPrice<AssetId, ConvertPrice> {
+pub trait FetchConvertPrice<TokenSymbol, ConvertPrice> {
 	/// fetch convert rate
-	fn fetch_convert_price(asset_id: AssetId) -> ConvertPrice;
+	fn fetch_convert_price(token_symbol: TokenSymbol) -> ConvertPrice;
 }
 
-impl<A, ER: Default> FetchConvertPrice<A, ER> for () {
-	fn fetch_convert_price(_: A) -> ER { Default::default() }
+impl<TokenSymbol, ER: Default> FetchConvertPrice<TokenSymbol, ER> for () {
+	fn fetch_convert_price(_: TokenSymbol) -> ER { Default::default() }
 }
 
 /// Blockchain types
@@ -332,7 +338,7 @@ pub struct BridgeAssetBalance<AccountId, Precision, Balance> {
 	// store the account who send transaction to EOS
 	pub from: AccountId,
 	// which token type is sent to EOS
-	pub token_type: TokenType,
+	pub token_symbol: TokenSymbol,
 }
 
 /// Bridge asset from other blockchain to Bifrost
@@ -348,25 +354,37 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 pub trait BridgeAssetTo<AccountId, Precision, Balance> {
 	type Error;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
-	fn redeem(symbol: AssetSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn stake(symbol: AssetSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn unstake(symbol: AssetSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn redeem(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn stake(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn unstake(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 }
 
 impl<A, P, B> BridgeAssetTo<A, P, B> for () {
 	type Error = core::convert::Infallible;
 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, P, B>) -> Result<(), Self::Error> { Ok(()) }
-	fn redeem(_: AssetSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: AssetSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: AssetSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: TokenSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: TokenSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: TokenSymbol, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
-pub trait AssetReward<AssetId, Balance> {
-	fn set_asset_reward(token_id: AssetId, reward: Balance) -> Result<(), ()>;
+pub trait AssetReward<TokenSymbol, Balance> {
+	type Output;
+	type Error;
+	fn set_asset_reward(token_symbol: TokenSymbol, reward: Balance) -> Result<Self::Output, Self::Error>;
 }
 
 impl<A, B> AssetReward<A, B> for () {
-	fn set_asset_reward(_: A, _: B) -> Result<(), ()> { Ok(()) }
+	type Output = ();
+	type Error = core::convert::Infallible;
+	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
+}
+
+pub trait RewardHandler<Balance> {
+	fn send_reward(reward: Balance);
+}
+
+impl<B> RewardHandler<B> for () {
+	fn send_reward(_: B) {}
 }
 
 
@@ -376,11 +394,11 @@ impl<A, B> AssetReward<A, B> for () {
 pub mod report {
 	use super::{Signature, Verify};
 	use frame_system::offchain::AppCrypto;
-	use sp_core::crypto::KeyTypeId;
+	use sp_core::crypto::{key_types, KeyTypeId};
 
 	/// Key type for the reporting module. Used for reporting BABE and GRANDPA
 	/// equivocations.
-	pub const KEY_TYPE: KeyTypeId = KeyTypeId(*b"fish");
+	pub const KEY_TYPE: KeyTypeId = key_types::REPORTING;
 
 	mod app {
 		use sp_application_crypto::{app_crypto, sr25519};
