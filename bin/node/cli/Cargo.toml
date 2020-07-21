@@ -4,6 +4,7 @@ version = "0.4.0"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
+default-run = "bifrost-node"
 edition = "2018"
 
 [[bin]]
