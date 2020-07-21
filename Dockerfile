@@ -65,7 +65,7 @@ USER bifrost
 EXPOSE 30333 9933 9944
 VOLUME ["/bifrost"]
 
-ENTRYPOINT ["/usr/local/bin/bifrost-node", "--chain=/usr/local/bin/chain.json"]
+ENTRYPOINT ["/usr/local/bin/bifrost-node"]
 CMD ["/usr/local/bin/bifrost-node"]
 
 ENV DEBIAN_FRONTEND teletype
