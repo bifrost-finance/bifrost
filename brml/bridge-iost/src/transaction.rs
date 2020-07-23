@@ -18,7 +18,7 @@ use crate::Error;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{iter::FromIterator, str::FromStr};
-// use iost_chain::action::Action;
+use iost_chain::Action;
 // use eos_chain::{Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;

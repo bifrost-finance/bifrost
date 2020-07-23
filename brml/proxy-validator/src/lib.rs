@@ -93,7 +93,7 @@ pub trait Trait: frame_system::Trait {
 	/// Bridge asset handler
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
 	/// Reward handler
-	type RewardHandler: RewardHandler<Self::Balance>;
+	type RewardHandler: RewardHandler<TokenSymbol, Self::Balance>;
 }
 
 decl_event! {
@@ -387,7 +387,7 @@ impl<T: Trait> Module<T> {
 		});
 
 		// destroy asset in assets module
-		T::AssetTrait::asset_destroy(token_symbol, account_id, amount);
+		T::AssetTrait::asset_destroy(token_symbol, &account_id, amount);
 
 		Ok(())
 	}
@@ -407,7 +407,7 @@ impl<T: Trait> Module<T> {
 		});
 
 		// issue asset in assets module
-		T::AssetTrait::asset_issue(token_symbol, account_id, amount);
+		T::AssetTrait::asset_issue(token_symbol, &account_id, amount);
 
 		Ok(())
 	}
@@ -441,7 +441,7 @@ impl<T: Trait> Module<T> {
 			}
 
 			if reward > Zero::zero() {
-				T::RewardHandler::send_reward(reward);
+				T::RewardHandler::send_reward(token_symbol, reward);
 			}
 
 			val.last_block = now_block;

@@ -254,7 +254,7 @@ decl_module! {
 
 			// destroy token from user's assets
 			for p in new_user_pool.iter() {
-				T::AssetTrait::asset_redeem(p.0, provider.clone(), p.1);
+				T::AssetTrait::asset_redeem(p.0, &provider, p.1);
 			}
 
 			// update whole pool token
@@ -344,7 +344,7 @@ decl_module! {
 			});
 
 			// destroy token from user
-			T::AssetTrait::asset_redeem(token_symbol, provider, token_amount_in);
+			T::AssetTrait::asset_redeem(token_symbol, &provider, token_amount_in);
 
 			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
@@ -409,7 +409,7 @@ decl_module! {
 			});
 
 			// update user asset
-			T::AssetTrait::asset_issue(token_symbol, remover.clone(), token_amount.saturating_add(redeemed_reward));
+			T::AssetTrait::asset_issue(token_symbol, &remover, token_amount.saturating_add(redeemed_reward));
 			// update user's pool
 			UserSinglePool::<T>::mutate((&remover, token_symbol), |pool| {
 				pool.0 = pool.0.saturating_sub(token_amount);
@@ -451,9 +451,8 @@ decl_module! {
 			// ensure user doesn't redeem too many
 			ensure!(user_pool.1 >= pool_amount_in, Error::<T>::NotEnoughBalance);
 
-			let gpool = GlobalPool::<T>::get();
 			let mut redeemed_pool = Vec::with_capacity(user_pool.0.len());
-			for p in gpool.0.iter() {
+			for p in user_pool.0.iter() {
 				let to_redeem =  p.1.saturating_mul(pool_amount_in) / user_pool.1;
 				ensure!(to_redeem <= p.1, Error::<T>::NotEnoughBalance);
 				redeemed_pool.push((p.0, to_redeem));
@@ -483,7 +482,7 @@ decl_module! {
 			});
 
 			for (p, r) in redeemed_pool.iter().zip(redeemed_rewards.iter()) {
-				T::AssetTrait::asset_issue(p.0, remover.clone(), p.1.saturating_add(r.1));
+				T::AssetTrait::asset_issue(p.0, &remover, p.1.saturating_add(r.1));
 			}
 
 			// update global pool
@@ -622,9 +621,9 @@ decl_module! {
 			});
 
 			// destroy token from user
-			T::AssetTrait::asset_redeem(token_in_type, swaper.clone(), token_amount_in);
+			T::AssetTrait::asset_redeem(token_in_type, &swaper, token_amount_in);
 			// what you get
-			T::AssetTrait::asset_issue(token_out_type, swaper, token_amount_out);
+			T::AssetTrait::asset_issue(token_out_type, &swaper, token_amount_out);
 
 			Self::deposit_event(RawEvent::SwapTokenSuccess(token_amount_in, token_amount_out));
 
