@@ -42,3 +42,5 @@ jobs:
         run: rustup component add clippy
       - name: Build bifrost
         run: cargo build --locked
+      - name: Run tests
+        run: cargo test --all
