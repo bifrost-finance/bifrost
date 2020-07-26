@@ -179,10 +179,6 @@ decl_error! {
 		InvalidTokenForTrade,
 		/// EOSSymbolMismatch,
 		EOSSymbolMismatch,
-		/// User hasn't enough balance for trade
-		NotEnoughBalance,
-		/// Precision doesn't match
-		PrecisionMismatch,
 	}
 }
 
@@ -573,7 +569,7 @@ decl_module! {
 			let eos_amount = amount;
 
 			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
 			// ensure redeem EOS instead of any others tokens like vEOS, DOT, KSM etc
 			ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
 
@@ -582,9 +578,9 @@ decl_module! {
 			let symbol_precise = token.precision;
 
 			let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
-			ensure!(symbol_precise <= 12, Error::<T>::PrecisionMismatch);
+			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
 			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-			ensure!(balance >= eos_amount, Error::<T>::NotEnoughBalance);
+			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
 			let bridge_asset = BridgeAssetBalance {
