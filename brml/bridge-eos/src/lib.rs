@@ -31,7 +31,7 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-	traits::{Member, SaturatedConversion, AtLeast32Bit, MaybeSerializeDeserialize},
+	traits::{Member, SaturatedConversion, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction, TransactionSource
@@ -39,13 +39,14 @@ use sp_runtime::{
 };
 use frame_support::{
 	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
-	dispatch::{DispatchResult, DispatchError}, weights::{DispatchClass, Weight, Pays},
+	dispatch::{DispatchResult, DispatchError}, weights::{DispatchClass, Weight, Pays}, IterableStorageMap,
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
 use node_primitives::{
 	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
+//	FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -210,6 +211,8 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
+//	type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
+
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
 }
@@ -298,6 +301,19 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn clear_cross_trade_times(origin) {
+			ensure_root(origin)?;
+
+			// clear cross trade times
+			for (who, _) in TimesOfCrossChainTrade::<T>::iter() {
+				TimesOfCrossChainTrade::<T>::mutate(&who, |pool| {
+					pool.0 = Zero::zero();
+					pool.1 = Zero::zero();
+				});
+			}
+		}
 
 		#[weight = T::DbWeight::get().writes(1)]
 		fn bridge_enable(origin, enable: bool) {
@@ -578,7 +594,7 @@ decl_module! {
 			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
 				debug::info!("sent transaction to EOS node.");
 				// locked balance until trade is verified
-				T::AssetTrait::lock_asset(&origin, token_symbol, amount);
+				T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
 
 				Self::deposit_event(RawEvent::SendTransactionSuccess);
 			} else {
@@ -727,22 +743,33 @@ impl<T: Trait> Module<T> {
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
 		// but in the future, we will support both token, let user to which token he wants to get
 		// according to the convert price
-		let token_symbol = TokenSymbol::EOS;
+		let (token_symbol, vtoken_symbol) = token_symbol.paired_token();
+//		let convert_pool = T::FetchConvertPool::fetch_convert_pool(token_symbol);
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
 		let symbol_precision = symbol.precision() as u16;
 		// ensure symbol and precision matched
-		let (_token_symbol, _) = token_symbol.paired_token();
-		let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
+		let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
 		ensure!(
 			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
 			Error::<T>::EOSSymbolMismatch
 		);
 
-		let token_balances = action_transfer.quantity.amount as u128;
+		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
 		// todo, according convert price to save as vEOS
-		let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+		let vtoken_balances: T::Balance = {
+			TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?
+//			let b: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+//			b * convert_pool.vtoken_pool / convert_pool.token_pool
+		};
+//
+//		let (token_symbol, balance) = if token_symbol.is_vtoken() {
+
+//			(
+//		} else {
+//			(token_symbol, token_balances)
+//		};
 
 		// issue asset to target
 		T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
@@ -760,8 +787,19 @@ impl<T: Trait> Module<T> {
 					let token_symbol = multi_sig_tx.token_symbol;
 
 					let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
-					let token_balances = action_transfer.quantity.amount as usize;
-					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+					let symbol = action_transfer.quantity.symbol;
+					let symbol_code = symbol.code().to_string().into_bytes();
+					let symbol_precision = symbol.precision() as u16;
+					// ensure symbol and precision matched
+					let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
+					ensure!(
+						existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+						Error::<T>::EOSSymbolMismatch
+					);
+
+					let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
+					let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 					if all_vtoken_balances.lt(&vtoken_balances) {
 						debug::warn!("origin account balance must be greater than or equal to the transfer amount.");

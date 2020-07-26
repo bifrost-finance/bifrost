@@ -97,7 +97,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 12,
+	spec_version: 13,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -820,8 +820,8 @@ impl brml_bridge_eos::Trait for Runtime {
 	type Precision = Precision;
 	type BridgeAssetFrom = ();
 	type Call = Call;
-	//	type SubmitTransaction = BridgeSubmitTransaction;
 	type AssetTrait = Assets;
+//	type FetchConvertPool = Convert;
 }
 
 parameter_types! {
