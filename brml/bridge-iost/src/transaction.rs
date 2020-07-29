@@ -108,7 +108,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
     pub fn init<T: crate::Trait>(
         raw_from: Vec<u8>,
         raw_to: Vec<u8>,
-        // amount: Asset,
+        amount: String,
         threshold: u8,
         memo: &str,
         from: AccountId,
@@ -118,7 +118,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
         // Construct action
-        // let action = Action::transfer(eos_from, eos_to, amount.to_string().as_ref(), memo).map_err(|_| Error::<T>::IostChainError)?;
+        let action = Action::transfer(String::from(eos_from), String::from(eos_to), amount, memo).map_err(|_| Error::<T>::IostChainError)?;
 
         // Construct transaction
         let multi_sig_tx = MultiSigTx {

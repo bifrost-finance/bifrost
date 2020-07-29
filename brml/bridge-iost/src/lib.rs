@@ -34,6 +34,7 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{CreateSignedTransaction, SubmitTransaction},
 };
+use iost_chain::{Action, ActionName};
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
     traits::{AtLeast32Bit, Member, SaturatedConversion, MaybeSerializeDeserialize},
@@ -53,12 +54,12 @@ use transaction::TxOut;
 
 mod transaction;
 
-// lazy_static::lazy_static! {
-// 	pub static ref ACTION_NAMES: [ActionName; 1] = {
-// 		let name = ActionName::from_str("transfer").unwrap();
-// 		[name]
-// 	};
-// }
+lazy_static::lazy_static! {
+	pub static ref ACTION_NAMES: [ActionName; 1] = {
+		let name = ActionName::from_str("transfer").unwrap();
+		[name]
+	};
+}
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 enum TransactionType {
@@ -303,12 +304,8 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = FunctionOf(
-			|args: (_, _, _, &Vec<u8>)| (args.3.len() * 10000usize) as Weight,
-			DispatchClass::Normal,
-			Pays::Yes
-		)]
-		fn asset_redeem(
+    	#[weight = (weight_for::cross_to_iost::<T>(memo.len() as Weight), DispatchClass::Normal)]
+		fn cross_to_iost(
 			origin,
 			to: Vec<u8>,
 			token_symbol: TokenSymbol,
@@ -327,33 +324,37 @@ decl_module! {
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			// let balance = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &origin).balance;
-			// ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-			// let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-			// ensure!(balance >= amount, "amount should be less than or equal to origin balance");
-            //
-            // let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
-            //
-            // let bridge_asset = BridgeAssetBalance {
-			// 	symbol: asset_symbol,
-			// 	amount: iost_amount,
-			// 	memo,
-			// 	from: origin.clone(),
-			// 	token_type
-			// };
-            //
-			// if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-			// 	debug::info!("sent transaction to IOST node.");
-			// 	Self::deposit_event(RawEvent::SendTransactionSuccess);
-			// } else {
-			// 	debug::warn!("failed to send transaction to IOST node.");
-			// 	Self::deposit_event(RawEvent::SendTransactionFailure);
-			// }
+            let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
+			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
+			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
+
+			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
+			let bridge_asset = BridgeAssetBalance {
+				symbol: asset_symbol,
+				amount: iost_amount,
+				memo,
+				from: origin.clone(),
+				token_symbol
+			};
+
+			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
+				debug::info!("sent transaction to IOST node.");
+                // locked balance until trade is verified
+                Self::deposit_event(RawEvent::SendTransactionSuccess);
+			} else {
+				debug::warn!("failed to send transaction to IOST node.");
+				Self::deposit_event(RawEvent::SendTransactionFailure);
+			}
 		}
     }
 }
 
 impl<T: Trait> Module<T> {
+    fn into_account(data: [u8; 32]) -> Result<T::AccountId, Error<T>> {
+        T::AccountId::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidAccountId)
+    }
+
     /// generate transaction for transfer amount to
     fn tx_transfer_to<P, B>(
         raw_to: Vec<u8>,
@@ -365,13 +366,30 @@ impl<T: Trait> Module<T> {
     {
         let (raw_from, threshold) = BridgeContractAccount::get();
         let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
-        // let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
-
-        let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
+        // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
+        let amount = "10000324";
+        let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, String::from(amount), threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
         BridgeTxOuts::<T>::append(&tx_out);
 
         Ok(tx_out)
     }
+
+    // fn convert_to_iost_asset<A, P, B>(
+    //     bridge_asset: &BridgeAssetBalance<A, P, B>
+    // ) -> Result<Asset, Error<T>>
+    //     where
+    //         P: AtLeast32Bit + Copy,
+    //         B: AtLeast32Bit + Copy
+    // {
+    //     let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
+    //     let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(|_| Error::<T>::ParseUtf8Error)?;
+    //     let symbol_code = SymbolCode::try_from(symbol_str).map_err(|_| Error::<T>::ParseUtf8Error)?;
+    //     let symbol = Symbol::new_with_code(precision, symbol_code);
+    //
+    //     let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+    //
+    //     Ok(Asset::new(amount, symbol))
+    // }
 }
 
 impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
@@ -393,5 +411,22 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
     }
     fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
+    }
+}
+
+#[allow(dead_code)]
+mod weight_for {
+    use frame_support::{traits::Get, weights::Weight};
+    use super::Trait;
+    use sp_runtime::traits::Saturating;
+
+    /// cross_to_iost weight
+    pub(crate) fn cross_to_iost<T: Trait>(memo_len: Weight) -> Weight {
+        let db = T::DbWeight::get();
+        db.writes(1) // put task to tx_out
+            .saturating_add(db.reads(1)) // token exists or not
+            .saturating_add(db.reads(1)) // get token
+            .saturating_add(db.reads(1)) // get account asset
+            .saturating_add(memo_len.saturating_add(10000)) // memo length
     }
 }
