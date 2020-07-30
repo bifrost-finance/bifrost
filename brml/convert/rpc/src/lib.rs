@@ -14,56 +14,66 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
+pub use self::gen_client::Client as ConvertClient;
 use codec::Codec;
-use jsonrpc_derive::rpc;
+pub use convert_rpc_runtime_api::{self as runtime_api, ConvertPriceApi as ConvertRateRuntimeApi};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
-use std::sync::Arc;
-use std::marker::PhantomData;
+use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-pub use self::gen_client::Client as ConvertClient;
-pub use convert_rpc_runtime_api::{self as runtime_api, ConvertPriceApi as ConvertRateRuntimeApi};
+use std::marker::PhantomData;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct Convert<C, Block> {
-	client: Arc<C>,
-	_marker: PhantomData<Block>
+    client: Arc<C>,
+    _marker: PhantomData<Block>,
 }
 
 impl<C, Block> Convert<C, Block> {
-	pub fn new(client: Arc<C>) -> Self {
-		Self {
-			client,
-			_marker: PhantomData
-		}
-	}
+    pub fn new(client: Arc<C>) -> Self {
+        Self {
+            client,
+            _marker: PhantomData,
+        }
+    }
 }
 
 #[rpc]
 pub trait ConvertPriceApi<BlockHash, TokenSymbol, ConvertPrice> {
-	/// rpc method for getting current convert rate
-	#[rpc(name = "convert_getConvert")]
-	fn get_convert_rate(&self, token_symbol: TokenSymbol, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
+    /// rpc method for getting current convert rate
+    #[rpc(name = "convert_getConvert")]
+    fn get_convert_rate(
+        &self,
+        token_symbol: TokenSymbol,
+        at: Option<BlockHash>,
+    ) -> JsonRpcResult<ConvertPrice>;
 }
 
-impl<C, Block, TokenSymbol, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, TokenSymbol, ConvertPrice>
-for Convert<C, Block>
-	where
-		Block: BlockT,
-		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ConvertRateRuntimeApi<Block, TokenSymbol, ConvertPrice>,
-		TokenSymbol: Codec,
-		ConvertPrice: Codec,
+impl<C, Block, TokenSymbol, ConvertPrice>
+    ConvertPriceApi<<Block as BlockT>::Hash, TokenSymbol, ConvertPrice> for Convert<C, Block>
+where
+    Block: BlockT,
+    C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+    C::Api: ConvertRateRuntimeApi<Block, TokenSymbol, ConvertPrice>,
+    TokenSymbol: Codec,
+    ConvertPrice: Codec,
 {
-	fn get_convert_rate(&self, token_symbol: TokenSymbol, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
-		let convert_rpc_api = self.client.runtime_api();
-		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+    fn get_convert_rate(
+        &self,
+        token_symbol: TokenSymbol,
+        at: Option<<Block as BlockT>::Hash>,
+    ) -> JsonRpcResult<ConvertPrice> {
+        let convert_rpc_api = self.client.runtime_api();
+        let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		convert_rpc_api.get_convert_rate(&at, token_symbol).map_err(|e| RpcError {
-			code: ErrorCode::InternalError,
-			message: "Failed to get current convert rate.".to_owned(),
-			data: Some(format!("{:?}", e).into()),
-		})
-	}
+        convert_rpc_api
+            .get_convert_rate(&at, token_symbol)
+            .map_err(|e| RpcError {
+                code: ErrorCode::InternalError,
+                message: "Failed to get current convert rate.".to_owned(),
+                data: Some(format!("{:?}", e).into()),
+            })
+    }
 }

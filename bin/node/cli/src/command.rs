@@ -19,70 +19,67 @@ use node_runtime::{Block, RuntimeApi};
 use sc_cli::{Result, SubstrateCli};
 
 impl SubstrateCli for Cli {
-	fn impl_name() -> &'static str {
-		"bifrost-node"
-	}
+    fn impl_name() -> &'static str {
+        "bifrost-node"
+    }
 
-	fn impl_version() -> &'static str {
-		env!("CARGO_PKG_VERSION")
-	}
+    fn impl_version() -> &'static str {
+        env!("CARGO_PKG_VERSION")
+    }
 
-	fn description() -> &'static str {
-		env!("CARGO_PKG_DESCRIPTION")
-	}
+    fn description() -> &'static str {
+        env!("CARGO_PKG_DESCRIPTION")
+    }
 
-	fn author() -> &'static str {
-		env!("CARGO_PKG_AUTHORS")
-	}
+    fn author() -> &'static str {
+        env!("CARGO_PKG_AUTHORS")
+    }
 
-	fn support_url() -> &'static str {
-		"https://github.com/bifrost-finance/bifrost/issues/new"
-	}
+    fn support_url() -> &'static str {
+        "https://github.com/bifrost-finance/bifrost/issues/new"
+    }
 
-	fn copyright_start_year() -> i32 {
-		2019
-	}
+    fn copyright_start_year() -> i32 {
+        2019
+    }
 
-	fn executable_name() -> &'static str {
-		"bifrost"
-	}
+    fn executable_name() -> &'static str {
+        "bifrost"
+    }
 
-	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		Ok(match id {
-			"dev" => Box::new(chain_spec::development_config()),
-			"local" => Box::new(chain_spec::local_testnet_config()),
-			"" | "fir" | "flaming-fir" => Box::new(chain_spec::flaming_fir_config()?),
-			"staging" => Box::new(chain_spec::staging_testnet_config()),
-			"bifrost" => Box::new(chain_spec::bifrost_chainspec_config()),
-			path => Box::new(chain_spec::ChainSpec::from_json_file(
-				std::path::PathBuf::from(path),
-			)?),
-		})
-	}
+    fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+        Ok(match id {
+            "dev" => Box::new(chain_spec::development_config()),
+            "local" => Box::new(chain_spec::local_testnet_config()),
+            "" | "fir" | "flaming-fir" => Box::new(chain_spec::flaming_fir_config()?),
+            "staging" => Box::new(chain_spec::staging_testnet_config()),
+            "bifrost" => Box::new(chain_spec::bifrost_chainspec_config()),
+            path => Box::new(chain_spec::ChainSpec::from_json_file(
+                std::path::PathBuf::from(path),
+            )?),
+        })
+    }
 }
 
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
-	let cli = Cli::from_args();
+    let cli = Cli::from_args();
 
-	match &cli.subcommand {
-		None => {
-			let runner = cli.create_runner(&cli.run)?;
-			runner.run_node(
-				service::new_light,
-				service::new_full,
-				node_runtime::VERSION
-			)
-		}
-		Some(Subcommand::Inspect(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
+    match &cli.subcommand {
+        None => {
+            let runner = cli.create_runner(&cli.run)?;
+            runner.run_node(service::new_light, service::new_full, node_runtime::VERSION)
+        }
+        Some(Subcommand::Inspect(cmd)) => {
+            let runner = cli.create_runner(cmd)?;
 
-			runner.sync_run(|config| cmd.run::<Block, RuntimeApi, crate::executor::Executor>(config))
-		}
-		Some(Subcommand::Base(subcommand)) => {
-			let runner = cli.create_runner(subcommand)?;
+            runner
+                .sync_run(|config| cmd.run::<Block, RuntimeApi, crate::executor::Executor>(config))
+        }
+        Some(Subcommand::Base(subcommand)) => {
+            let runner = cli.create_runner(subcommand)?;
 
-			runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
-		}
-	}
+            runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
+        }
+    }
 }

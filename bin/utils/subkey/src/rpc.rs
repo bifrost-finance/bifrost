@@ -18,82 +18,72 @@
 
 use futures::Future;
 use hyper::rt;
+use jsonrpc_core_client::transports::http;
 use node_primitives::Hash;
 use sc_rpc::{author::AuthorClient, offchain::OffchainClient};
-use jsonrpc_core_client::transports::http;
-use sp_core::{Bytes, offchain::StorageKind};
+use sp_core::{offchain::StorageKind, Bytes};
 
-pub struct RpcClient { url: String }
+pub struct RpcClient {
+    url: String,
+}
 
 impl RpcClient {
-	pub fn new(url: String) -> Self { Self { url } }
+    pub fn new(url: String) -> Self {
+        Self { url }
+    }
 
-	pub fn insert_key(
-		&self,
-		key_type: String,
-		suri: String,
-		public: Bytes,
-	) {
-		let url = self.url.clone();
+    pub fn insert_key(&self, key_type: String, suri: String, public: Bytes) {
+        let url = self.url.clone();
 
-		rt::run(
-			http::connect(&url)
-				.and_then(|client: AuthorClient<Hash, Hash>| {
-					client.insert_key(key_type, suri, public).map(|_| ())
-				})
-				.map_err(|e| {
-					eprintln!("Error inserting key: {:?}", e);
-				})
-		);
-	}
+        rt::run(
+            http::connect(&url)
+                .and_then(|client: AuthorClient<Hash, Hash>| {
+                    client.insert_key(key_type, suri, public).map(|_| ())
+                })
+                .map_err(|e| {
+                    eprintln!("Error inserting key: {:?}", e);
+                }),
+        );
+    }
 
-	// bifrost code
-	pub fn get_offchain_storage(
-		&self,
-		prefix: StorageKind,
-		key: Bytes,
-	) {
-		let url = self.url.clone();
+    // bifrost code
+    pub fn get_offchain_storage(&self, prefix: StorageKind, key: Bytes) {
+        let url = self.url.clone();
 
-		rt::run(
-			http::connect(&url)
-				.and_then(move |client: OffchainClient| {
-					client.get_local_storage(prefix, key.clone()).map(move |ret| {
-						match ret {
-							Some(value) => println!(
-								"Value of key(0x{}) is 0x{}",
-								hex::encode(&*key),
-								hex::encode(&*value),
-							),
-							None => println!("Value of key(0x{}) not exists", hex::encode(&*key)),
-						}
-					})
-				})
-				.map_err(|e| {
-					println!("Error getting local storage: {:?}", e);
-				})
-		);
-	}
+        rt::run(
+            http::connect(&url)
+                .and_then(move |client: OffchainClient| {
+                    client
+                        .get_local_storage(prefix, key.clone())
+                        .map(move |ret| match ret {
+                            Some(value) => println!(
+                                "Value of key(0x{}) is 0x{}",
+                                hex::encode(&*key),
+                                hex::encode(&*value),
+                            ),
+                            None => println!("Value of key(0x{}) not exists", hex::encode(&*key)),
+                        })
+                })
+                .map_err(|e| {
+                    println!("Error getting local storage: {:?}", e);
+                }),
+        );
+    }
 
-	// bifrost code
-	pub fn set_offchain_storage(
-		&self,
-		prefix: StorageKind,
-		key: Bytes,
-		value: Bytes,
-	) {
-		let url = self.url.clone();
+    // bifrost code
+    pub fn set_offchain_storage(&self, prefix: StorageKind, key: Bytes, value: Bytes) {
+        let url = self.url.clone();
 
-		rt::run(
-			http::connect(&url)
-				.and_then(move |client: OffchainClient| {
-					client.set_local_storage(prefix, key, value).map(|_| {
-						println!("Set local storage successfully");
-					})
-				})
-				.map_err(|e| {
-					println!("Error setting local storage: {:?}", e);
-				})
-		);
-	}
+        rt::run(
+            http::connect(&url)
+                .and_then(move |client: OffchainClient| {
+                    client.set_local_storage(prefix, key, value).map(|_| {
+                        println!("Set local storage successfully");
+                    })
+                })
+                .map_err(|e| {
+                    println!("Error setting local storage: {:?}", e);
+                }),
+        );
+    }
 }

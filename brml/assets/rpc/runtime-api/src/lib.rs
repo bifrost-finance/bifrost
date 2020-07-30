@@ -23,15 +23,15 @@ use codec::Codec;
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
-	pub trait AssetsApi<TokenSymbol, AccountId, Balance> where
-		TokenSymbol: Codec,
-		AccountId: Codec,
-		Balance: Codec,
-	{
-		/// get balances by account id
-		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64;
+    pub trait AssetsApi<TokenSymbol, AccountId, Balance> where
+        TokenSymbol: Codec,
+        AccountId: Codec,
+        Balance: Codec,
+    {
+        /// get balances by account id
+        fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64;
 
-		/// get all issued tokens by account id
-		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol>;
-	}
+        /// get all issued tokens by account id
+        fn asset_tokens(who: AccountId) -> Vec<TokenSymbol>;
+    }
 }
