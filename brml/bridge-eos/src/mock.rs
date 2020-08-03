@@ -178,7 +178,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	GenesisConfig::<Test> {
 		bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 		notary_keys: vec![1u64, 2u64],
-		cross_chain_privilege: vec![],
+		cross_chain_privilege: vec![(1u64, true)],
 		all_crosschain_privilege: Vec::new(),
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()

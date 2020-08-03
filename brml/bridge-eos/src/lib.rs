@@ -39,7 +39,7 @@ use sp_runtime::{
 };
 use frame_support::{
 	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
-	dispatch::{DispatchResult, DispatchError}, weights::{DispatchClass, Weight, Pays}, IterableStorageMap,
+	dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap,
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
@@ -179,6 +179,21 @@ decl_error! {
 		InvalidTokenForTrade,
 		/// EOSSymbolMismatch,
 		EOSSymbolMismatch,
+		/// Bridge eos has been disabled
+		CrossChainDisabled,
+		/// Who hasn't the permission to sign a cross-chain trade
+		NoPermissionSignCrossChainTrade,
+		/// There's no any blockheaders for verifying
+		InvalidDataForVerifyingBlockheaders,
+		/// Blockheaders length are not equal to Id list
+		/// These Id list are for verifying blockheaders
+		BlockHeaderLengthMismatchWithIdList,
+		/// Fail to verify blockheaders
+		FailureOnVerifyingBlockheaders,
+		/// Duplicated trade because this trade has been on bifrost
+		DuplicatedCrossChainTransaction,
+		/// This action is invalid
+		InvalidAction,
 	}
 }
 
@@ -406,33 +421,26 @@ decl_module! {
 			block_ids_list: Vec<Vec<Checksum256>>
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+			ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
-			ensure!(BridgeEnable::get(), DispatchError::Other("This call is not enabled now!"));
-			ensure!(!block_headers.is_empty(), DispatchError::Other("The signed block headers cannot be empty."));
-			ensure!(block_headers[0].block_header.new_producers.is_some(), DispatchError::Other("The producers list cannot be empty."));
-			ensure!(block_ids_list.len() == block_headers.len(), DispatchError::Other("The block ids list cannot be empty."));
-			ensure!(block_ids_list.len() == 15, DispatchError::Other("The length of signed block headers must be 15."));
-			ensure!(block_ids_list[0].is_empty(), DispatchError::Other("The first block ids must be empty."));
-			ensure!(block_ids_list[1].len() ==  10, DispatchError::Other("The rest of block ids length must be 10."));
-
-			let legacy_pending_schedule = block_headers[0].block_header.new_producers.as_ref();
-			let legacy_pending_schedule_hash = legacy_pending_schedule.and_then(|ps| ps.schedule_hash().ok())
-				.ok_or(DispatchError::Other("Failed to calculate legacy schedule hash value."))?;
-			ensure!(legacy_pending_schedule_hash == legacy_schedule_hash, "invalid producers schedule");
-
-			ensure!(PendingScheduleVersion::exists(), DispatchError::Other("PendingScheduleVersion has not been initialized."));
+			// check the data is valid for verifying these blockheaders
+			ensure!(BridgeEnable::get(), Error::<T>::CrossChainDisabled);
+			ensure!(!block_headers.is_empty(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list.len() == block_headers.len(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list.len() == 15, Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[0].is_empty(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[1].len() ==  10, Error::<T>::InvalidDataForVerifyingBlockheaders);
 
 			let current_schedule_version = PendingScheduleVersion::get();
 
 			let (schedule_hash, producer_schedule) = {
-				let schedule_hash = new_schedule.schedule_hash().map_err(|_| DispatchError::Other("Failed to calculate schedule hash value."))?;
+				let schedule_hash = new_schedule.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
 				(schedule_hash, new_schedule)
 			};
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-				"Failed to verify block."
+				Error::<T>::FailureOnVerifyingBlockheaders
 			);
 
 			// if verification is successful, save the new producers schedule.
@@ -456,36 +464,29 @@ decl_module! {
 			trx_id: Checksum256
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+			ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
 			// ensure this transaction is unique, and ensure no duplicated transaction
-			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
+			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
 			// ensure action is what we want
-			ensure!(action.name == ACTION_NAMES[0], "This is an invalid action to Bifrost");
-
-			ensure!(BridgeEnable::get(), "This call is not enable now!");
-			ensure!(
-				!block_headers.is_empty(),
-				"The signed block headers cannot be empty."
-			);
-			ensure!(
-				block_ids_list.len() ==  block_headers.len(),
-				"The block ids list cannot be empty."
-			);
-
+			ensure!(action.name == ACTION_NAMES[0], Error::<T>::InvalidAction);
 			let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
-			ensure!(
-				action_hash == action_receipt.act_digest,
-				"current action hash isn't equal to act_digest from action_receipt."
-			);
+			ensure!(action_hash == action_receipt.act_digest, Error::<T>::InvalidAction);
+
+			// check the data is valid for verifying these blockheaders
+			ensure!(BridgeEnable::get(), Error::<T>::CrossChainDisabled);
+			ensure!(block_ids_list.len() == block_headers.len(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list.len() == 15, Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[0].is_empty(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[1].len() ==  10, Error::<T>::InvalidDataForVerifyingBlockheaders);
 
 			let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
 
 			let block_under_verification = &block_headers[0];
 			ensure!(
 				verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
-				"failed to prove action."
+				Error::<T>::FailureOnVerifyingBlockheaders
 			);
 
 			let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
@@ -500,7 +501,7 @@ decl_module! {
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-				"Failed to verify blocks."
+				Error::<T>::FailureOnVerifyingBlockheaders
 			);
 
 			// save proves for this transaction
