@@ -2366,10 +2366,11 @@ dependencies = [
 [[package]]
 name = "iost-chain"
 version = "0.1.0"
-source = "git+https://github.com/hsqlu/rust-iost?branch=qiannan-dev#284da1e614efe209aa2dead1651512cbe746049f"
+source = "git+https://github.com/hsqlu/rust-iost?branch=qiannan-dev#25faa7e1e6087104ee2cd305baf075193fa2e8f9"
 dependencies = [
  "async-trait",
  "byteorder",
+ "chrono",
  "crypto",
  "digest 0.8.1",
  "ed25519",
@@ -2385,7 +2386,7 @@ dependencies = [
 [[package]]
 name = "iost-derive"
 version = "0.2.1"
-source = "git+https://github.com/hsqlu/rust-iost?branch=qiannan-dev#284da1e614efe209aa2dead1651512cbe746049f"
+source = "git+https://github.com/hsqlu/rust-iost?branch=qiannan-dev#25faa7e1e6087104ee2cd305baf075193fa2e8f9"
 dependencies = [
  "proc-macro2",
  "quote 1.0.7",

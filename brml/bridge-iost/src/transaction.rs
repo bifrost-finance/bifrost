@@ -18,7 +18,7 @@ use crate::Error;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{iter::FromIterator, str::FromStr};
-use iost_chain::Action;
+use iost_chain::{Action, Tx};
 // use eos_chain::{Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
@@ -121,6 +121,9 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         #[cfg(feature = "std")]
         let action = Action::transfer(String::from(eos_from), String::from(eos_to), amount, memo).map_err(|_| Error::<T>::IostChainError)?;
 
+        let mut tx = Tx::new();
+        // tx.actions = vec![action.clone()];
+
         // Construct transaction
         let multi_sig_tx = MultiSigTx {
             chain_id: Default::default(),
@@ -134,6 +137,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         Ok(TxOut::Initial(multi_sig_tx))
     }
 }
+
 pub(crate) mod iost_rpc {
     use super::*;
     use crate::Error;
@@ -158,7 +162,7 @@ pub(crate) mod iost_rpc {
     ) -> Result<(ChainId, HeadBlockHash), Error<T>> {
         let req_api = format!("{}{}", node_url, GET_INFO_API);
         let pending = http::Request::post(&req_api, vec![b"{}"])
-            .add_header("Content-Type", "application/json")
+            // .add_header("Content-Type", "application/json")
             .send()
             .map_err(|_| Error::<T>::OffchainHttpError)?;
 

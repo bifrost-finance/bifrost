@@ -32,7 +32,7 @@ use frame_support::{
 };
 use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
-    offchain::{CreateSignedTransaction, SubmitTransaction},
+    offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use iost_chain::{Action, ActionName};
 use sp_core::offchain::StorageKind;
@@ -52,7 +52,10 @@ use node_primitives::{
 use sp_application_crypto::RuntimeAppPublic;
 use transaction::TxOut;
 
+// mod rpc;
 mod transaction;
+mod mock;
+mod tests;
 
 lazy_static::lazy_static! {
 	pub static ref ACTION_NAMES: [ActionName; 1] = {
@@ -94,6 +97,9 @@ pub mod sr25519 {
     /// A bridge-iost identifier using sr25519 as its crypto.
     pub type AuthorityId = app_sr25519::Public;
 }
+
+const IOST_NODE_URL: &[u8] = b"IOST_NODE_URL";
+const IOST_SECRET_KEY: &[u8] = b"IOST_SECRET_KEY";
 
 decl_error! {
     pub enum Error for Module<T: Trait> {
@@ -158,7 +164,7 @@ decl_error! {
 
 pub type VersionId = u32;
 
-pub trait Trait: CreateSignedTransaction<Call<Self>> + pallet_authorship::Trait {
+pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     /// The identifier type for an authority.
     type AuthorityId: Member
         + Parameter
@@ -220,7 +226,7 @@ decl_event! {
 
 decl_storage! {
     trait Store for Module<T: Trait> as BridgeIost {
-        /// The current set of notary keys that may send bridge transactions to Eos chain.
+        /// The current set of notary keys that may send bridge transactions to Iost chain.
         NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
 
         /// Config to enable/disable this runtime
@@ -347,6 +353,27 @@ decl_module! {
 				Self::deposit_event(RawEvent::SendTransactionFailure);
 			}
 		}
+
+		// Runs after every block.
+		fn offchain_worker(now_block: T::BlockNumber) {
+			debug::RuntimeLogger::init();
+
+			// It's no nessesary to start offchain worker if no any task in queue
+			if !BridgeTxOuts::<T>::get().is_empty() {
+				// Only send messages if we are a potential validator.
+				if sp_io::offchain::is_validator() {
+					debug::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
+					match Self::offchain(now_block) {
+						Ok(_) => debug::info!("A offchain worker started."),
+						Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+					}
+				} else {
+					debug::info!(target: "bridge-ioso", "Skipping send tx at {:?}. Not a validator.",now_block)
+				}
+			} else {
+				debug::info!("There's no offchain worker started.");
+			}
+		}
     }
 }
 
@@ -374,6 +401,9 @@ impl<T: Trait> Module<T> {
         Ok(tx_out)
     }
 
+    fn offchain(_now_block: T::BlockNumber) -> Result<(), Error<T>> {
+        Ok(())
+    }
     // fn convert_to_iost_asset<A, P, B>(
     //     bridge_asset: &BridgeAssetBalance<A, P, B>
     // ) -> Result<Asset, Error<T>>
