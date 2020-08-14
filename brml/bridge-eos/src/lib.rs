@@ -194,6 +194,8 @@ decl_error! {
 		DuplicatedCrossChainTransaction,
 		/// This action is invalid
 		InvalidAction,
+		/// Fail to verify transaction action
+		FailureOnVerifyingTransactionAction,
 	}
 }
 
@@ -268,6 +270,8 @@ decl_storage! {
 		/// Save all unique transactions
 		/// Every transaction has different action receipt, but can have the same action
 		BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
+		/// Transaction ID is unique on EOS
+		BridgeTransactionID: map hasher(blake2_128_concat) Checksum256 => ActionReceipt;
 
 		/// Current pending schedule version
 		PendingScheduleVersion: VersionId;
@@ -484,9 +488,10 @@ decl_module! {
 			let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
 
 			let block_under_verification = &block_headers[0];
+			// verify transaction and related action from this transaction
 			ensure!(
 				verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
-				Error::<T>::FailureOnVerifyingBlockheaders
+				Error::<T>::FailureOnVerifyingTransactionAction
 			);
 
 			let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
@@ -499,6 +504,7 @@ decl_module! {
 				}
 			};
 
+			// verify EOS block headers
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
 				Error::<T>::FailureOnVerifyingBlockheaders
