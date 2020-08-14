@@ -20,7 +20,7 @@ for real users.
 - Transaction filter. You can check [line 449](https://github.com/bifrost-finance/bifrost-eos-relay/blob/master/plugins/bridge_plugin/bridge_plugin.cpp#L449) at project bifrost-eos-relay.
 - Transaction verify. You can check [line 492](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L492) at project bifrost.
 
-####Merkel tree verification
+#### Merkel tree verification
 This implementation is at [merkle](https://github.com/bifrost-finance/rust-eos/blob/master/chain/src/merkle.rs) at project [rust-eos](https://github.com/bifrost-finance/rust-eos).
 We use it at file [line 492](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L492) at project bifrost, this ensures transaction is in merkle tree to avoid someone fake it.
 
