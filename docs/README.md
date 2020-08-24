@@ -1,13 +1,13 @@
 ## All related repotories
 - [bifrost](https://github.com/bifrost-finance/bifrost) (branch: web3_m1)
-- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: v2.0)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: master)
 - [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
 - [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: master)
 
 ## Bifrost
 
 ### 1. Compile
-Follow the [readme](https://github.com/bifrost-finance/bifrost/tree/ark-bridge-module) to compile a bifrost node.
+Follow the [readme](https://github.com/bifrost-finance/bifrost/tree/web3_m1) to compile a bifrost node.
 ```
 $ git clone https://github.com/bifrost-finance/bifrost.git
 $ git checkout web3_m1
@@ -74,18 +74,19 @@ $ cleos wallet unlock # prompt you input the password
 
 #### Prerequisites
 - Cmake
-- LLVM@7.0(7~9)
-- Rust(better use latest stable rust)
+- LLVM@7.0(at most 9.0)
+- Boost 1.70
+- Rust(at least 1.40)
 - CDT(Contract Development Toolkit). Follow this tutorial to install [cdt](https://developers.eos.io/eosio-home/docs/installing-the-contract-development-toolkit).
 
 #### Compile
 
 ```
-$ git clone https://github.com/bifrost-codes/bifrost-eos-relay.git
+$ git clone https://github.com/bifrost-finance/bifrost-eos-relay.git
+$ git checkout master
 $ cd bifrost-eos-relay/
-$ git checkout v2.0
-$ git tag v2.0.4 -m 'fix no tag'
 $ git submodule update --init --recursive
+$ git tag v2.0.4 -m 'fix no tag'
 $ mkdir build && cd build
 $ cmake ..
 $ make -j4

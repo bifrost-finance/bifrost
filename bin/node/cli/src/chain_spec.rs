@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
-	AssetsConfig, BridgeEosConfig, VoucherConfig,
+	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -36,7 +36,8 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, Balance, Signature};
+//pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol, ConvertPool};
+pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol, ConvertPool};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -148,7 +149,6 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 		initial_authorities,
 		root_key,
 		Some(endowed_accounts),
-		false,
 	)
 }
 
@@ -214,7 +214,6 @@ pub fn testnet_genesis(
 	)>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
-	enable_println: bool,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
 		vec![
@@ -288,7 +287,7 @@ pub fn testnet_genesis(
 			phantom: Default::default(),
 		}),
 		pallet_sudo: Some(SudoConfig {
-			key: root_key,
+			key: root_key.clone(),
 		}),
 		pallet_babe: Some(BabeConfig {
 			authorities: vec![],
@@ -314,13 +313,29 @@ pub fn testnet_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			account_assets: vec![],
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
+		}),
+		brml_convert: Some(ConvertConfig {
+			convert_price: vec![
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
+			], // initialize convert price as token = 100 * vtoken
+//			pool: vec![
+//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+//			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -329,20 +344,146 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		brml_swap: initialize_swap_module(root_key),
 	}
 }
 
-/// Helper function to create GenesisConfig for asgard test
-pub fn testnet_asgard_genesis(
+fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
+	/*
+	This list is each token for aUSD.
+	Accroding to the weight to calculate how many token will be added to the pool.
+	For example, if aUSD has 10000 in the pool, DOT has to be added 10000 / (300 * dot_amount) = 15 / 15 =>
+	so dot_amount = 10000 / 300 = 33.3333
+	aUSD 10000
+	DOT 300 aUSD
+	vDOT 3 aUSD
+	KSM 8.6 aUSD
+	vKSM 0.086 aUSD
+	EOS 2.62 aUSD
+	vEOS 0.0262 aUSD
+	*/
+	let all_pool_token = 1000 * DOLLARS;
+	let count_of_supported_tokens = 7u8;
+	let global_pool = {
+		let pool = vec![
+			(TokenSymbol::aUSD, 10000 * DOLLARS, 15),
+			(TokenSymbol::DOT, (33.333_333_333_333f64 * DOLLARS as f64) as Balance, 15), // 33.333_333_333_333
+			(TokenSymbol::vDOT, (2222.222222222222f64 * DOLLARS as f64) as Balance, 10), // 2222.222222222222
+			(TokenSymbol::KSM, (1550.3875968992247f64 * DOLLARS as f64) as Balance, 20), // 1550.3875968992247
+			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance, 20), // 155038.7596899225
+			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance, 10), // 2544.529262086514
+			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance, 10), // 254452.9262086514
+		];
+		(pool, 0)
+	};
+	let user_pool = {
+		let pool = vec![
+			(TokenSymbol::aUSD, 10000 * DOLLARS),
+			(TokenSymbol::DOT, (33.333_333_333_333f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vDOT, (2222.222222222222f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::KSM, (1550.3875968992247f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance),
+			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance),
+		];
+		vec![(sudo, (pool, all_pool_token))]
+	};
+	let swap_fee = 150;
+	let exit_fee = 0;
+	let total_weight = global_pool.0.iter().map(|p| p.2).collect();
+
+	Some(SwapConfig {
+		all_pool_token,
+		count_of_supported_tokens,
+		global_pool,
+		user_pool,
+		swap_fee,
+		exit_fee,
+		total_weight
+	})
+}
+
+fn development_config_genesis() -> GenesisConfig {
+	testnet_genesis(
+		vec![
+			authority_keys_from_seed("Alice"),
+			authority_keys_from_seed("Bob"),
+		],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		None,
+	)
+}
+
+/// Development config (single validator Alice)
+pub fn development_config() -> ChainSpec {
+	let properties = {
+		let mut props = serde_json::Map::new();
+
+		props.insert(
+			"ss58Format".to_owned(),
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenDecimals".to_owned(),
+			serde_json::value::to_value(12u8).expect("The tokenDecimals cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenSymbol".to_owned(),
+			serde_json::value::to_value("ASG".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+		);
+		Some(props)
+	};
+	let protocol_id = Some("bifrost-test");
+
+	ChainSpec::from_genesis(
+		"Development",
+		"dev",
+		ChainType::Development,
+		development_config_genesis,
+		vec![],
+		None,
+		protocol_id,
+		properties,
+		Default::default(),
+	)
+}
+
+fn local_testnet_genesis() -> GenesisConfig {
+	testnet_genesis(
+		vec![
+			authority_keys_from_seed("Alice"),
+			authority_keys_from_seed("Bob"),
+		],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		None,
+	)
+}
+
+/// Local testnet config (multivalidator Alice + Bob)
+pub fn local_testnet_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Local Testnet",
+		"local_testnet",
+		ChainType::Local,
+		local_testnet_genesis,
+		vec![],
+		None,
+		None,
+		None,
+		Default::default(),
+	)
+}
+
+/// Helper function to create GenesisConfig for bifrost
+pub fn bifrost_genesis(
 	initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)>,
 	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
-	enable_println: bool,
 ) -> GenesisConfig {
 	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: Balance = 10_000 * DOLLARS;
-	const STASH: Balance = 100 * DOLLARS;
+	const STASH: Balance = 10_000 * DOLLARS;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -352,7 +493,7 @@ pub fn testnet_asgard_genesis(
 		pallet_balances: Some(BalancesConfig {
 			balances: initial_authorities.iter()
 				.map(|k| (k.0.clone(), ENDOWMENT))
-				.chain(endowed_accounts.iter().cloned().map(|x| (x, STASH)))
+				.chain(endowed_accounts.iter().cloned().map(|x| (x, STASH / 100)))
 				.collect(),
 		}),
 		pallet_indices: Some(IndicesConfig {
@@ -367,9 +508,9 @@ pub fn testnet_asgard_genesis(
 			}).collect::<Vec<_>>(),
 		}),
 		pallet_staking: Some(StakingConfig {
-			validator_count: initial_authorities.len() as u32 * 1,
-			minimum_validator_count: (initial_authorities.len() / 2) as u32,
-			stakers: initial_authorities[0..3].iter().map(|x| {
+			validator_count: 30,
+			minimum_validator_count: 3,
+			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
@@ -382,7 +523,7 @@ pub fn testnet_asgard_genesis(
 			members: endowed_accounts.iter()
 				.take((num_endowed_accounts + 1) / 2)
 				.cloned()
-				.map(|member| (member, STASH))
+				.map(|member| (member, STASH / 100))
 				.collect(),
 		}),
 		pallet_collective_Instance1: Some(CouncilConfig::default()),
@@ -391,7 +532,7 @@ pub fn testnet_asgard_genesis(
 			phantom: Default::default(),
 		}),
 		pallet_sudo: Some(SudoConfig {
-			key: root_key,
+			key: root_key.clone(),
 		}),
 		pallet_babe: Some(BabeConfig {
 			authorities: vec![],
@@ -414,13 +555,29 @@ pub fn testnet_asgard_genesis(
 		}),
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
-			next_asset_id: 3u32, // start from 3, 0, 1, 2 has been reserved
+			account_assets: initialize_assets(),
+			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
+		brml_convert: Some(ConvertConfig {
+			convert_price: vec![
+				(TokenSymbol::DOT, DOLLARS / 100),
+				(TokenSymbol::KSM, DOLLARS / 100),
+				(TokenSymbol::EOS, DOLLARS / 100),
+			], // initialize convert price as token = 100 * vtoken
+//			pool: vec![
+//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+//			],
+		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-			notary_keys: initial_authorities[0..3].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			bridge_contract_account: (b"bifrostcross".to_vec(), 3), // this eos account needs 3 signer to sign a trade
+			notary_keys: initial_authorities[2..5].iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// root_key has the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -429,6 +586,7 @@ pub fn testnet_asgard_genesis(
 				None
 			}
 		},
+		brml_swap: initialize_swap_module(root_key),
 	}
 }
 
@@ -446,10 +604,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 
 	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
 	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
-		let decoded_ss58 = bs58::decode(&v.0).into_vec().expect("decode account id failure");
-		let mut data = [0u8; 32];
-		data.copy_from_slice(&decoded_ss58[1..33]);
-		(node_primitives::AccountId::from(data), v.1.parse().expect("Balance is invalid."))
+		(parse_address(&v.0), v.1.parse().expect("Balance is invalid."))
 	}).collect();
 
 	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
@@ -467,8 +622,33 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	Some(final_vouchers)
 }
 
-/// Configure genesis for asgard test
-fn asgard_config_genesis() -> GenesisConfig {
+fn parse_address(address: impl AsRef<str>) -> AccountId {
+	let decoded_ss58 = bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
+	let mut data = [0u8; 32];
+	data.copy_from_slice(&decoded_ss58[1..33]);
+
+	node_primitives::AccountId::from(data)
+}
+
+/// initialize assets for specific bifrost accounts
+fn initialize_assets() -> Vec<((TokenSymbol, AccountId), AccountAsset<Balance, Cost, Income>)> {
+	let assets = vec![
+		(
+			(TokenSymbol::DOT, parse_address("5CDWwkPsyc37XdB9N5QpZosgrcqcKA48Lpb81KjDZ89W9GPm")),
+			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+//			AccountAsset { balance: 5_000_000 * DOLLARS, available: 5_000_000 * DOLLARS, ..Default::default() }
+		),
+		(
+			(TokenSymbol::KSM, parse_address("5DAQaLpQjAZKuX4F77Lb69e5qb3GtaKVLF1mdiYt5SAhXeLC")),
+			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+//			AccountAsset { balance: 5_000_000 * DOLLARS, available: 5_000_000 * DOLLARS, ..Default::default() }
+		),
+	];
+	assets
+}
+
+/// Configure genesis for bifrost test
+fn bifrost_config_genesis() -> GenesisConfig {
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
 		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
 		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
@@ -538,69 +718,27 @@ fn asgard_config_genesis() -> GenesisConfig {
 
 	// generated with secret: subkey inspect "$secret"/fir
 	let root_key: AccountId = hex![
-		// 5DU1gVL9GAWbDswdpAULxaQMVfBwPjseNrX21fp6wDDCHuGD
-		"3e02e15e036a8f5fe634f88bdd41cf6cb2fca4051546fbcd203a04431e016563"
+		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	].into();
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
-	testnet_asgard_genesis(
+	bifrost_genesis(
 		initial_authorities,
 		root_key,
 		endowed_accounts,
-		true,
 	)
 }
 
-
-fn development_config_genesis() -> GenesisConfig {
-	testnet_genesis(
-		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
-		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-		true,
-	)
-}
-
-/// Development config (single validator Alice)
-pub fn development_config() -> ChainSpec {
-	ChainSpec::from_genesis(
-		"Development",
-		"dev",
-		ChainType::Development,
-		development_config_genesis,
-		vec![],
-		None,
-		None,
-		None,
-		Default::default(),
-	)
-}
-
-fn local_testnet_genesis() -> GenesisConfig {
-	testnet_genesis(
-		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
-		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
-		false,
-	)
-}
-
-/// Local testnet config (multivalidator Alice + Bob)
 /// Adapt local test as asgard test, create chain spec use the command: birost-node build-spec --chain=local > chain.json
-pub fn local_testnet_config() -> ChainSpec {
+pub fn bifrost_chainspec_config() -> ChainSpec {
 	let properties = {
 		let mut props = serde_json::Map::new();
 
 		props.insert(
 			"ss58Format".to_owned(),
-			serde_json::value::to_value(42u8).expect("The ss58Format cannot be convert to json value.")
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
 		);
 		props.insert(
 			"tokenDecimals".to_owned(),
@@ -615,89 +753,21 @@ pub fn local_testnet_config() -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard Testnet",
+		"Bifrost Asgard CC2",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
-		asgard_config_genesis,
-		vec![],
+		bifrost_config_genesis,
+		vec![
+			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWBMjifHHUZxbQaQZS9t5jMmTDtZbugAtJ8TG9RuX4umEY".parse().expect("failed to parse multiaddress."),
+			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
+			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
+			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
+		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
 		protocol_id,
 		properties,
 		Default::default(),
 	)
-}
-
-#[cfg(test)]
-pub(crate) mod tests {
-	use super::*;
-	use crate::service::{new_full, new_light};
-	use sc_service_test;
-	use sp_runtime::BuildStorage;
-
-	fn local_testnet_genesis_instant_single() -> GenesisConfig {
-		testnet_genesis(
-			vec![
-				authority_keys_from_seed("Alice"),
-			],
-			get_account_id_from_seed::<sr25519::Public>("Alice"),
-			None,
-			false,
-		)
-	}
-
-	/// Local testnet config (single validator - Alice)
-	pub fn integration_test_config_with_single_authority() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis_instant_single,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	/// Local testnet config (multivalidator Alice + Bob)
-	pub fn integration_test_config_with_two_authorities() -> ChainSpec {
-		ChainSpec::from_genesis(
-			"Integration Test",
-			"test",
-			ChainType::Development,
-			local_testnet_genesis,
-			vec![],
-			None,
-			None,
-			None,
-			Default::default(),
-		)
-	}
-
-	#[test]
-	#[ignore]
-	fn test_connectivity() {
-		sc_service_test::connectivity(
-			integration_test_config_with_two_authorities(),
-			|config| new_full(config),
-			|config| new_light(config),
-		);
-	}
-
-	#[test]
-	fn test_create_development_chain_spec() {
-		development_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_create_local_testnet_chain_spec() {
-		local_testnet_config().build_storage().unwrap();
-	}
-
-	#[test]
-	fn test_staging_test_net_chain_spec() {
-		staging_testnet_config().build_storage().unwrap();
-	}
 }

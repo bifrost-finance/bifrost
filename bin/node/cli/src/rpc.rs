@@ -29,9 +29,9 @@
 
 #![warn(missing_docs)]
 
-use std::{sync::Arc, fmt};
+use std::sync::Arc;
 
-use node_primitives::{Block, BlockNumber, AccountId, AssetId, ConvertPrice, Index, Balance, Hash};
+use node_primitives::{Block, BlockNumber, AccountId, TokenSymbol, ConvertPrice, Index, Balance, Hash};
 use node_runtime::UncheckedExtrinsic;
 use sp_api::ProvideRuntimeApi;
 use sp_transaction_pool::TransactionPool;
@@ -41,9 +41,11 @@ use sc_keystore::KeyStorePtr;
 use sp_consensus_babe::BabeApi;
 use sc_consensus_epochs::SharedEpochChanges;
 use sc_consensus_babe::{Config, Epoch};
-use sc_consensus_babe_rpc::BabeRPCHandler;
-use sc_finality_grandpa::{SharedVoterState, SharedAuthoritySet};
+use sc_consensus_babe_rpc::BabeRpcHandler;
+use grandpa::{SharedVoterState, SharedAuthoritySet};
 use sc_finality_grandpa_rpc::GrandpaRpcHandler;
+use sc_rpc_api::DenyUnsafe;
+use sp_block_builder::BlockBuilder;
 
 /// Light client extra dependencies.
 pub struct LightDeps<C, F, P> {
@@ -83,6 +85,8 @@ pub struct FullDeps<C, P, SC> {
 	pub pool: Arc<P>,
 	/// The SelectChain Strategy
 	pub select_chain: SC,
+	/// Whether to deny unsafe calls
+	pub deny_unsafe: DenyUnsafe,
 	/// BABE specific dependencies.
 	pub babe: BabeDeps,
 	/// GRANDPA specific dependencies.
@@ -98,10 +102,10 @@ pub fn create_full<C, P, M, SC>(
 	C: Send + Sync + 'static,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance, UncheckedExtrinsic>,
-	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
-	C::Api: brml_convert_rpc::ConvertRateRuntimeApi<Block, AssetId, ConvertPrice>,
+	C::Api: brml_assets_rpc::AssetsRuntimeApi<Block, TokenSymbol, AccountId, Balance>,
+	C::Api: brml_convert_rpc::ConvertRateRuntimeApi<Block, TokenSymbol, ConvertPrice>,
 	C::Api: BabeApi<Block>,
-	<C::Api as sp_api::ApiErrorExt>::Error: fmt::Debug,
+	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 	M: jsonrpc_core::Metadata + Default,
 	SC: SelectChain<Block> +'static,
@@ -114,6 +118,7 @@ pub fn create_full<C, P, M, SC>(
 		client,
 		pool,
 		select_chain,
+		deny_unsafe,
 		babe,
 		grandpa,
 	} = deps;
@@ -128,7 +133,7 @@ pub fn create_full<C, P, M, SC>(
 	} = grandpa;
 
 	io.extend_with(
-		SystemApi::to_delegate(FullSystem::new(client.clone(), pool))
+		SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe))
 	);
 	// Making synchronous calls in light client freezes the browser currently,
 	// more context: https://github.com/paritytech/substrate/pull/3480
@@ -138,7 +143,14 @@ pub fn create_full<C, P, M, SC>(
 	);
 	io.extend_with(
 		sc_consensus_babe_rpc::BabeApi::to_delegate(
-			BabeRPCHandler::new(client.clone(), shared_epoch_changes, keystore, babe_config, select_chain)
+			BabeRpcHandler::new(
+				client.clone(),
+				shared_epoch_changes,
+				keystore,
+				babe_config,
+				select_chain,
+				deny_unsafe,
+			),
 		)
 	);
 	io.extend_with(
@@ -179,7 +191,7 @@ pub fn create_light<C, P, M, F>(
 	} = deps;
 	let mut io = jsonrpc_core::IoHandler::default();
 	io.extend_with(
-		SystemApi::<AccountId, Index>::to_delegate(LightSystem::new(client, remote_blockchain, fetcher, pool))
+		SystemApi::<Hash, AccountId, Index>::to_delegate(LightSystem::new(client, remote_blockchain, fetcher, pool))
 	);
 
 	io

@@ -84,10 +84,13 @@ impl system::Trait for Test {
 	type DbWeight = ();
 	type BlockExecutionWeight = ();
 	type ExtrinsicBaseWeight = ();
+	type BaseCallFilter = ();
+	type MaximumExtrinsicWeight = MaximumBlockWeight;
 }
 
 parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
+	pub const ConvertPricePrecision: u64 = 4;
 }
 
 impl crate::Trait for Test {
@@ -100,6 +103,7 @@ impl crate::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type ConvertDuration = ConvertDuration;
+	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 pub type Convert = crate::Module<Test>;
@@ -108,8 +112,9 @@ pub type Assets = assets::Module<Test>;
 
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
-		Convert::on_finalize(System::block_number());
-		System::on_finalize(System::block_number());
+		if System::block_number() > 1 {
+			System::on_finalize(System::block_number());
+		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
 		Convert::on_initialize(System::block_number());

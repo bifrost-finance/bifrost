@@ -24,27 +24,29 @@ mod mock;
 mod tests;
 
 use frame_support::traits::Get;
-use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, IterableStorageMap};
+use frame_support::weights::DispatchClass;
+use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
 use frame_system::{self as system, ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, AssetSymbol, ConvertPool, FetchConvertPrice, AssetReward, TokenType};
-use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero};
+//use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, FetchConvertPool, AssetReward, TokenSymbol, RewardHandler};
+use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, AssetReward, TokenSymbol, RewardHandler};
+use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize};
 
 pub trait Trait: frame_system::Trait {
 	/// convert rate
-	type ConvertPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance>;
-	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::ConvertPrice>;
+	type ConvertPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + MaybeSerializeDeserialize;
+	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::ConvertPrice> + MaybeSerializeDeserialize;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber> + Into<Self::ConvertPrice>;
+	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize + From<Self::BlockNumber> + Into<Self::ConvertPrice>;
 
 	/// The units in which we record costs.
-	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The units in which we record incomes.
-	type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
+	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
@@ -52,6 +54,7 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type ConvertDuration: Get<Self::BlockNumber>;
+	type ConvertPricePrecision: Get<Self::ConvertPrice>;
 }
 
 decl_event! {
@@ -70,31 +73,49 @@ decl_error! {
 		TokenNotExist,
 		/// Amount of input should be less than or equal to origin balance
 		InvalidBalanceForTransaction,
-		/// Convert rate doesn't be set
-		ConvertPriceDoesNotSet,
+		/// Convert price doesn't be set
+		ConvertPriceIsNotSet,
 		/// This is an invalid convert rate
 		InvalidConvertPrice,
 		/// Vtoken id is not equal to token id
-		InvalidTokenPair,
+		NotSupportaUSD,
+		/// Cannot convert token with itself
+		ConvertWithTheSameToken,
+		// Empty convert pool, cause there's no price at all
+//		EmptyConvertPool,
 	}
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Convert {
-		/// convert rate between two tokens, vtoken => (token, convert_rate)
-		ConvertPrice get(fn convert_rate): map hasher(blake2_128_concat) T::AssetId => T::ConvertPrice;
+		/// convert price between two tokens, vtoken => (token, convert_price)
+		ConvertPrice get(fn convert_price) config(): map hasher(blake2_128_concat) TokenSymbol => T::ConvertPrice;
 		/// change rate per block, vtoken => (token, rate_per_block)
-		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
+		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) TokenSymbol => T::RatePerBlock;
 		/// collect referrer, converter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
-        /// referrer must be unique, so check it unique while a new referrer incoming.
-        /// and insert the new channel to the
+		/// referrer must be unique, so check it unique while a new referrer incoming.
+		/// and insert the new channel to the
 		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId =>
-            (Vec<(T::AccountId, T::Balance)>, T::Balance);
-        /// referer channels for all users
-        AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
+			(Vec<(T::AccountId, T::Balance)>, T::Balance);
+		/// referer channels for all users
+		AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
 		/// Convert pool
-		Pool get(fn pool): map hasher(blake2_128_concat) T::AssetId => ConvertPool<T::Balance>;
+		Pool get(fn pool): map hasher(blake2_128_concat) TokenSymbol => ConvertPool<T::Balance>;
+//		Pool get(fn pool) config(): map hasher(blake2_128_concat) TokenSymbol => ConvertPool<T::Balance>;
+	}
+	add_extra_genesis {
+		build(|config: &GenesisConfig<T>| {
+			for (token_symbol, price) in config.convert_price.iter() {
+				ConvertPrice::<T>::insert(token_symbol, price);
+			}
+//			for (token_symbol, token_pool) in config.pool.iter() {
+//				let price: T::ConvertPrice = token_pool.vtoken_pool.into() / token_pool.token_pool.into();
+//				ConvertPrice::<T>::insert(token_symbol, price);
+//
+//				Pool::<T>::insert(token_symbol, token_pool);
+//			}
+		});
 	}
 }
 
@@ -103,106 +124,124 @@ decl_module! {
 		type Error = Error<T>;
 
 		const ConvertDuration: T::BlockNumber = T::ConvertDuration::get();
+		const ConvertPricePrecision: T::ConvertPrice = T::ConvertPricePrecision::get();
 
 		fn deposit_event() = default;
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn set_convert_rate(
+		fn set_convert_price(
 			origin,
-			token_symbol: AssetSymbol,
-			convert_rate: T::ConvertPrice
+			token_symbol: TokenSymbol,
+			convert_price: T::ConvertPrice
 		) {
 			ensure_root(origin)?;
 
-			let token_id = T::AssetId::from(token_symbol as u32);
+			ensure!(token_symbol != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
 
-			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
-			<ConvertPrice<T>>::insert(token_id, convert_rate);
+			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
+			<ConvertPrice<T>>::insert(token_symbol, convert_price);
 
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn set_rate_per_block(
+		fn set_price_per_block(
 			origin,
-			token_symbol: AssetSymbol,
+			token_symbol: TokenSymbol,
 			rate_per_block: T::RatePerBlock
 		) {
 			ensure_root(origin)?;
 
-			let token_id = T::AssetId::from(token_symbol as u32);
+			ensure!(token_symbol != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
 
-			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
-			<RatePerBlock<T>>::insert(token_id, rate_per_block);
+			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
+			<RatePerBlock<T>>::insert(token_symbol, rate_per_block);
 
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn convert_token_to_vtoken(
+		#[weight = (weight_for::convert_token_to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
+		fn to_vtoken(
 			origin,
+			vtoken_symbol: TokenSymbol,
 			#[compact] token_amount: T::Balance,
-			token_symbol: AssetSymbol,
-			referrer: Option<T::AccountId>
+			referer: Option<T::AccountId>
 		) {
 			let converter = ensure_signed(origin)?;
 
-			let token_id = T::AssetId::from(token_symbol as u32);
+			ensure!(vtoken_symbol != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
+
+			// get paired tokens
+			let (token_symbol, _) = vtoken_symbol.paired_token();
+			ensure!(token_symbol != vtoken_symbol, Error::<T>::ConvertWithTheSameToken);
 
 			// check asset_id exist or not
-			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
 
-			let token_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::Token, &converter).balance;
+			let token_balances = T::AssetTrait::get_account_asset(token_symbol, &converter).balance;
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
-			// check convert rate has been set
-			ensure!(<ConvertPrice<T>>::contains_key(token_id), Error::<T>::ConvertPriceDoesNotSet);
+			// use current covert pool to get latest price
+//			let convert_pool = Pool::<T>::get(token_symbol);
+//			let ConvertPool { token_pool, vtoken_pool, .. } = convert_pool;
+//			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
+//
+//			// latest price should be vtoken_pool / token_pool
+//			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
+			let price = <ConvertPrice<T>>::get(token_symbol);
 
-			let rate = <ConvertPrice<T>>::get(token_id);
-
-			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertPrice);
-			let vtokens_buy = token_amount.saturating_mul(rate.into());
+			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
+			let vtokens_buy = token_amount.saturating_mul(T::ConvertPricePrecision::get().into()) / price.into();
 
 			// transfer
-			T::AssetTrait::asset_destroy(token_id, TokenType::Token, converter.clone(), token_amount);
-			T::AssetTrait::asset_issue(token_id, TokenType::VToken, converter.clone(), vtokens_buy);
+			T::AssetTrait::asset_destroy(token_symbol, &converter, token_amount);
+			T::AssetTrait::asset_issue(vtoken_symbol, &converter, vtokens_buy);
 
-			Self::increase_pool(token_id, token_amount, vtokens_buy);
+			// both are the same pool, but need to be updated together
+			Self::increase_pool(token_symbol, token_amount, vtokens_buy);
 
 			// save refer channel
-			Self::handle_new_refer(converter, referrer, vtokens_buy);
+			Self::handle_new_refer(converter, referer, vtokens_buy);
 
 			Self::deposit_event(Event::ConvertTokenToVTokenSuccess);
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn convert_vtoken_to_token(
+		fn to_token(
 			origin,
+			token_symbol: TokenSymbol,
 			#[compact] vtoken_amount: T::Balance,
-			token_symbol: AssetSymbol,
 		) {
 			let converter = ensure_signed(origin)?;
 
-			let token_id = T::AssetId::from(token_symbol as u32);
+			ensure!(token_symbol != TokenSymbol::aUSD, Error::<T>::NotSupportaUSD);
+
+			// get paired tokens
+			let (_, vtoken_symbol) = token_symbol.paired_token();
+			ensure!(token_symbol != vtoken_symbol, Error::<T>::ConvertWithTheSameToken);
 
 			// check asset_id exist or not
-			ensure!(T::AssetTrait::token_exists(token_id), Error::<T>::TokenNotExist);
+			ensure!(T::AssetTrait::token_exists(vtoken_symbol), Error::<T>::TokenNotExist);
 
-			let vtoken_balances = T::AssetTrait::get_account_asset(&token_id, TokenType::VToken, &converter).balance;
+			let vtoken_balances = T::AssetTrait::get_account_asset(vtoken_symbol, &converter).balance;
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
-			// check convert rate has been set
-			ensure!(<ConvertPrice<T>>::contains_key(token_id), Error::<T>::ConvertPriceDoesNotSet);
+			// use current covert pool to get latest price
+//			let convert_pool = Pool::<T>::get(token_symbol);
+//			let ConvertPool { token_pool, vtoken_pool, .. } = convert_pool;
+//			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
+//
+//			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
+			let price = <ConvertPrice<T>>::get(token_symbol);
 
-			let rate = <ConvertPrice<T>>::get(token_id);
+			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
+			let tokens_buy = vtoken_amount.saturating_mul(price.into()) / T::ConvertPricePrecision::get().into();
 
-			ensure!(!rate.is_zero(), Error::<T>::InvalidConvertPrice);
-			let tokens_buy = vtoken_amount / rate.into();
+			T::AssetTrait::asset_destroy(vtoken_symbol, &converter, vtoken_amount);
+			T::AssetTrait::asset_issue(token_symbol, &converter, tokens_buy);
 
-			T::AssetTrait::asset_destroy(token_id, TokenType::VToken, converter.clone(), vtoken_amount);
-			T::AssetTrait::asset_issue(token_id, TokenType::Token, converter.clone(), tokens_buy);
-
-			Self::decrease_pool(token_id, tokens_buy, vtoken_amount);
+			// both are the same pool, but need to be updated together
+			Self::decrease_pool(token_symbol, tokens_buy, vtoken_amount);
 
 			// redeem income
 			Self::redeem_income(converter, vtoken_amount);
@@ -211,25 +250,32 @@ decl_module! {
 		}
 
 		fn on_finalize(block_number: T::BlockNumber) {
-			// calculate & update convert rate
+			// calculate & update convert price
 			for (token_id, _convert_pool) in <Pool<T>>::iter() {
 				<Pool<T>>::mutate(token_id, |convert_pool| {
+					// issue staking rewards
 					let current_reward = convert_pool.current_reward;
 					let reward_per_block = current_reward / T::ConvertDuration::get().into();
 					convert_pool.token_pool = convert_pool.token_pool.saturating_add(reward_per_block);
 
-					if convert_pool.token_pool != Zero::zero()
-						&& convert_pool.vtoken_pool != Zero::zero()
+					// update convert price after issued rewwards
+					if convert_pool.token_pool != Zero::zero() && convert_pool.vtoken_pool != Zero::zero()
 					{
 						if <ConvertPrice<T>>::contains_key(token_id) {
-							<ConvertPrice<T>>::mutate(token_id, |convert_rate| {
-								*convert_rate = (convert_pool.token_pool / convert_pool.vtoken_pool).into();
+							<ConvertPrice<T>>::mutate(token_id, |convert_price| {
+								*convert_price = {
+									let precision: T::ConvertPrice = T::ConvertPricePrecision::get();
+									let token_pool: T::ConvertPrice = convert_pool.token_pool.into();
+									let vtoken_pool: T::ConvertPrice = convert_pool.vtoken_pool.into();
+									token_pool.saturating_mul(precision) / vtoken_pool
+								};
 							});
 						}
 					}
 				});
 			}
 
+			// finishes current era of rewards, start next round
 			if block_number % T::ConvertDuration::get() == Zero::zero() {
 				// new convert round
 				for (token_id, _convert_pool) in <Pool<T>>::iter() {
@@ -243,19 +289,19 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
-	pub fn get_convert(token_id: T::AssetId) -> T::ConvertPrice {
-		<ConvertPrice<T>>::get(token_id)
+	pub fn get_convert(token_symbol: TokenSymbol) -> T::ConvertPrice {
+		<ConvertPrice<T>>::get(token_symbol)
 	}
 
-	fn increase_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
-		<Pool<T>>::mutate(token_id, |pool| {
+	fn increase_pool(token_symbol: TokenSymbol, token_amount: T::Balance, vtoken_amount: T::Balance) {
+		<Pool<T>>::mutate(token_symbol, |pool| {
 			pool.token_pool = pool.token_pool.saturating_add(token_amount);
 			pool.vtoken_pool = pool.vtoken_pool.saturating_add(vtoken_amount);
 		});
 	}
 
-	fn decrease_pool(token_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
-		<Pool<T>>::mutate(token_id, |pool| {
+	fn decrease_pool(token_symbol: TokenSymbol, token_amount: T::Balance, vtoken_amount: T::Balance) {
+		<Pool<T>>::mutate(token_symbol, |pool| {
 			pool.token_pool = pool.token_pool.saturating_sub(token_amount);
 			pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
 		});
@@ -355,23 +401,53 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> FetchConvertPrice<T::AssetId, T::ConvertPrice> for Module<T> {
-	fn fetch_convert_rate(asset_id: T::AssetId) -> T::ConvertPrice {
-		let rate = <ConvertPrice<T>>::get(asset_id);
+impl<T: Trait> FetchConvertPrice<TokenSymbol, T::ConvertPrice> for Module<T> {
+	fn fetch_convert_price(token_symbol: TokenSymbol) -> T::ConvertPrice {
+		let price = <ConvertPrice<T>>::get(token_symbol);
 
-		rate
+		price
 	}
 }
 
-impl<T: Trait> AssetReward<T::AssetId, T::Balance> for Module<T> {
-	fn set_asset_reward(token_id: T::AssetId, reward: T::Balance) -> Result<(), ()> {
-		if <Pool<T>>::contains_key(&token_id) {
-			<Pool<T>>::mutate(token_id, |pool| {
+//impl<T: Trait> FetchConvertPool<TokenSymbol, T::Balance> for Module<T> {
+//	fn fetch_convert_pool(token_symbol: TokenSymbol) -> ConvertPool<T::Balance> { Pool::<T>::get(token_symbol) }
+//}
+
+impl<T: Trait> AssetReward<TokenSymbol, T::Balance> for Module<T> {
+	type Output = ();
+	type Error = ();
+	fn set_asset_reward(token_symbol: TokenSymbol, reward: T::Balance) -> Result<(), ()> {
+		if <Pool<T>>::contains_key(&token_symbol) {
+			<Pool<T>>::mutate(token_symbol, |pool| {
 				pool.pending_reward = pool.pending_reward.saturating_add(reward);
 			});
 			Ok(())
 		} else {
 			Err(())
 		}
+	}
+}
+
+impl<T: Trait> RewardHandler<TokenSymbol, T::Balance> for Module<T> {
+	fn send_reward(token_symbol: TokenSymbol, reward: T::Balance) {
+		if <Pool<T>>::contains_key(token_symbol) {
+			<Pool<T>>::mutate(token_symbol, |pool| {
+				pool.pending_reward = pool.pending_reward.saturating_add(reward);
+			});
+		}
+	}
+}
+
+#[allow(dead_code)]
+mod weight_for {
+	use frame_support::{traits::Get, weights::Weight};
+	use super::Trait;
+
+	/// asset_redeem weight
+	pub(crate) fn convert_token_to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight {
+		let referer_weight = referer.map_or(1000, |_| 100);
+		let db = T::DbWeight::get();
+		db.reads_writes(1, 1)
+			.saturating_add(referer_weight) // memo length
 	}
 }

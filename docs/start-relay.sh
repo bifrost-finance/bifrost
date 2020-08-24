@@ -1,5 +1,5 @@
 BIN_DIR="[eos_project_path]/build"
-BASE_DIR="[eos_project_path]/localnet/node/relayer"
+BASE_DIR="[eos_project_path]/localnet/node/relay"
 CONF_DIR=$BASE_DIR/config
 DATA_DIR=$BASE_DIR/data
 

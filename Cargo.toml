@@ -4,7 +4,6 @@ members = [
 	"bin/node/inspect",
 	"bin/node/primitives",
 	"bin/node/runtime",
-	"bin/utils/chain-spec-builder",
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
@@ -13,8 +12,8 @@ members = [
 	"brml/convert",
 	"brml/convert/rpc",
 	"brml/oracle",
+	"brml/proxy-validator",
 	"brml/swap",
-	"brml/validator",
 	"brml/voucher",
 ]
 

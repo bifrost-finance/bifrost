@@ -1,6 +1,6 @@
 ## All related repotories
 - [bifrost](https://github.com/bifrost-finance/bifrost) (branch: web3_m1)
-- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: v2.0)
+- [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: master)
 - [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
 - [rust-eos](https://github.com/bifrost-finance/rust-eos) (branch: master)
 
@@ -186,7 +186,7 @@ $ cleos get currency balance eosio.token bifrostcross
 
 Now send a transaction.
 ```
-$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:vEOS"]' -p jim@active
+$ cleos push action eosio.token transfer '["jim", "bifrostcross", "100.0000 EOS", "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:EOS"]' -p jim@active
 ```
 **5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY** is Alice, surely you can use Bob(5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty),
 Dave(5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy), etc.
@@ -223,7 +223,7 @@ to both running Bifrost nodes by tool **subkey**.
 
 Replace [eos_producer_internal_ip] with eos producer internal ip address, and then execute the script. This script will add necessary data to alice node and bob node.
 ```
-$ ./subkey_setting.sh
+$ ./docker_subkey_setting.sh
 ```
 
 EOS side:

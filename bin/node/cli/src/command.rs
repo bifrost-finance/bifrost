@@ -36,7 +36,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn support_url() -> &'static str {
-		"https://github.com/bifrost-codes/bifrost/issues/new"
+		"https://github.com/bifrost-finance/bifrost/issues/new"
 	}
 
 	fn copyright_start_year() -> i32 {
@@ -53,6 +53,7 @@ impl SubstrateCli for Cli {
 			"local" => Box::new(chain_spec::local_testnet_config()),
 			"" | "fir" | "flaming-fir" => Box::new(chain_spec::flaming_fir_config()?),
 			"staging" => Box::new(chain_spec::staging_testnet_config()),
+			"bifrost" => Box::new(chain_spec::bifrost_chainspec_config()),
 			path => Box::new(chain_spec::ChainSpec::from_json_file(
 				std::path::PathBuf::from(path),
 			)?),
@@ -62,8 +63,6 @@ impl SubstrateCli for Cli {
 
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
-	sc_cli::reset_signal_pipe_handler()?;
-
 	let cli = Cli::from_args();
 
 	match &cli.subcommand {
