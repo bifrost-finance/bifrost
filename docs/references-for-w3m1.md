@@ -13,22 +13,22 @@ for real users.
 
 #### Block listener/verify
 - Block listener. You can check [line 343](https://github.com/bifrost-finance/bifrost-eos-relay/blob/master/plugins/bridge_plugin/bridge_plugin.cpp#L343) at project bifrost-eos-relay.
-- Block verify. You can check [line 508](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L508) at bifrost.
+- Block verify. You can check [line 505](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/lib.rs#L505) at bifrost.
 
 #### Transaction listener/filter/verify
 - Transaction listener. You can check [line 422](https://github.com/bifrost-finance/bifrost-eos-relay/blob/master/plugins/bridge_plugin/bridge_plugin.cpp#L422) at project bifrost-eos-relay.
 - Transaction filter. You can check [line 449](https://github.com/bifrost-finance/bifrost-eos-relay/blob/master/plugins/bridge_plugin/bridge_plugin.cpp#L449) at project bifrost-eos-relay.
-- Transaction verify. You can check [line 492](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L492) at project bifrost.
+- Transaction verify. You can check [line 489](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/lib.rs#L489) at project bifrost.
 
 #### Merkel tree verification
 This implementation is at [merkle](https://github.com/bifrost-finance/rust-eos/blob/master/chain/src/merkle.rs) at project [rust-eos](https://github.com/bifrost-finance/rust-eos).
-We use it at file [line 492](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L492) at project bifrost, this ensures transaction is in merkle tree to avoid someone fake it.
+We use it at file [line 489](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/lib.rs#L489) at project bifrost, this ensures transaction is in merkle tree to avoid someone fake it.
 
 #### Multisig transaction
-1. Set threshold for signing a transaction, meaning how many signers to sign a transaction, you can find step at [readme](https://github.com/bifrost-finance/bifrost/tree/jamie-dev/docs#bifrost-to-eos).
-2. Save private keys to Bifrost nodes, each node has one EOS signer's key, but not store it on-chain, you might remember you executed a script named [subkey_setting.sh](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/docs/subkey_setting.sh)
-3. About related data structures at file [transaction](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/transaction.rs), [line 30](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/transaction.rs#L30) - [line 111](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/transaction.rs#L111).
-4. And when to sign a transaction, see file [bridge-eos](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs) at [line 898](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L898) - [line 919](https://github.com/bifrost-finance/bifrost/blob/jamie-dev/brml/bridge-eos/src/lib.rs#L919).
+1. Set threshold for signing a transaction, meaning how many signers to sign a transaction, you can find step at [readme](https://github.com/bifrost-finance/bifrost/tree/web3_m1/docs#bifrost-to-eos).
+2. Save private keys to Bifrost nodes, each node has one EOS signer's key, but not store it on-chain, you might remember you executed a script named [subkey_setting.sh](https://github.com/bifrost-finance/bifrost/blob/web3_m1/docs/subkey_setting.sh)
+3. About related data structures at file [transaction](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/transaction.rs), [line 34](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/transaction.rs#L34) - [line 115](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/transaction.rs#L115).
+4. And when to sign a transaction, see file [bridge-eos](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/lib.rs) at [line 898](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/lib.rs#L898) - [line 919](https://github.com/bifrost-finance/bifrost/blob/web3_m1/brml/bridge-eos/src/lib.rs#L919).
 
 #### Bridge contract on EOS
 As you said, you have tested it.
