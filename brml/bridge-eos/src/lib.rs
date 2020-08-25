@@ -281,6 +281,7 @@ decl_storage! {
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
+		BigBlockNumber get(fn now_block): u32 = 10;
 
 		/// Who has the privilege to call transaction between Bifrost and EOS
 		CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
@@ -564,6 +565,17 @@ decl_module! {
 			Ok(())
 		}
 
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn save_block_num(origin, num: T::BlockNumber) -> DispatchResult {
+			ensure_none(origin)?;
+
+			BigBlockNumber::mutate(|v| {
+				*v += 1;
+			});
+
+			Ok(())
+		}
+
 		#[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
 		fn cross_to_eos(
 			origin,
@@ -598,21 +610,30 @@ decl_module! {
 				token_symbol
 			};
 
-			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				debug::info!("sent transaction to EOS node.");
-				// locked balance until trade is verified
-				T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
+			match Self::bridge_asset_to(to, bridge_asset) {
+				Ok(_) => {
+					debug::info!("sent transaction to EOS node.");
+					// locked balance until trade is verified
+					T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
 
-				Self::deposit_event(RawEvent::SendTransactionSuccess);
-			} else {
-				debug::warn!("failed to send transaction to EOS node.");
-				Self::deposit_event(RawEvent::SendTransactionFailure);
+					Self::deposit_event(RawEvent::SendTransactionSuccess);
+				}
+				Err(e) => {
+					debug::warn!("failed to send transaction to EOS node, due to {:?}", e);
+					Self::deposit_event(RawEvent::SendTransactionFailure);
+				}
 			}
 		}
 
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
+
+			let call = Call::save_block_num(now_block);
+			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
+				Ok(_) => debug::info!("block number {:?}", now_block),
+				Err(e) => debug::warn!("submit block number with failure: {:?}", e),
+			}
 
 			// It's no nessesary to start offchain worker if no any task in queue
 			if !BridgeTxOuts::<T>::get().is_empty() {
@@ -1005,16 +1026,37 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-		if let Call::bridge_tx_report(_tx_list) = call {
-			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-			ValidTransaction::with_tag_prefix("BridgeEos")
-				.priority(TransactionPriority::max_value())
-				.and_provides(vec![(now_block).encode()])
-				.longevity(TransactionLongevity::max_value())
-				.propagate(true)
-				.build()
-		} else {
-			InvalidTransaction::Call.into()
+//		if let Call::bridge_tx_report(_tx_list) = call {
+//			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+//			ValidTransaction::with_tag_prefix("BridgeEos")
+//				.priority(TransactionPriority::max_value())
+//				.and_provides(vec![(now_block).encode()])
+//				.longevity(TransactionLongevity::max_value())
+//				.propagate(true)
+//				.build()
+//		} else {
+//			InvalidTransaction::Call.into()
+//		}
+		match call {
+			Call::bridge_tx_report(_tx_list) => {
+				let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+				ValidTransaction::with_tag_prefix("BridgeEos")
+					.priority(TransactionPriority::max_value())
+					.and_provides(vec![(now_block).encode()])
+					.longevity(TransactionLongevity::max_value())
+					.propagate(true)
+					.build()
+			}
+			Call::save_block_num(_tx_list) => {
+				let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+				ValidTransaction::with_tag_prefix("SaveBlockNum")
+					.priority(TransactionPriority::max_value())
+					.and_provides(vec![(now_block).encode()])
+					.longevity(TransactionLongevity::max_value())
+					.propagate(true)
+					.build()
+			}
+			_ => InvalidTransaction::Call.into()
 		}
 	}
 }

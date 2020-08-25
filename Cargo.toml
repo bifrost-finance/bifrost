@@ -4,7 +4,7 @@ members = [
 	"bin/node/inspect",
 	"bin/node/primitives",
 	"bin/node/runtime",
-	"bin/utils/subkey",
+#	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
 	"brml/bridge-eos",
