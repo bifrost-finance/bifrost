@@ -249,9 +249,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.36"
+version = "0.1.38"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a265e3abeffdce30b2e26b7a11b222fe37c6067404001b434101457d0385eb92"
+checksum = "6e1a4a2f97ce50c9d0282c1468816208588441492b40d813b2e0419c22c05e7f"
 dependencies = [
  "proc-macro2",
  "quote 1.0.7",
@@ -1205,15 +1205,6 @@ name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
-
-[[package]]
-name = "ed25519"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdd4f7ef77fea914346157eb9090865349fc396f93271d792ca210c394aee01b"
-dependencies = [
- "signature",
-]
 
 [[package]]
 name = "ed25519-dalek"
@@ -2366,16 +2357,16 @@ dependencies = [
 [[package]]
 name = "iost-chain"
 version = "0.1.0"
-source = "git+https://github.com/hsqlu/rust-iost?branch=qiannan-dev#25faa7e1e6087104ee2cd305baf075193fa2e8f9"
 dependencies = [
  "async-trait",
+ "base64 0.12.3",
  "byteorder",
  "chrono",
  "crypto",
  "digest 0.8.1",
- "ed25519",
  "hex",
  "iost-derive",
+ "iost-keys",
  "itoa",
  "parity-scale-codec",
  "serde",
@@ -2386,11 +2377,24 @@ dependencies = [
 [[package]]
 name = "iost-derive"
 version = "0.2.1"
-source = "git+https://github.com/hsqlu/rust-iost?branch=qiannan-dev#25faa7e1e6087104ee2cd305baf075193fa2e8f9"
 dependencies = [
  "proc-macro2",
  "quote 1.0.7",
  "syn 1.0.33",
+]
+
+[[package]]
+name = "iost-keys"
+version = "0.1.0"
+dependencies = [
+ "base58",
+ "base64 0.12.3",
+ "bitcoin_hashes",
+ "byteorder",
+ "hex",
+ "libsecp256k1 0.3.5 (git+https://github.com/bifrost-codes/libsecp256k1.git)",
+ "rand 0.7.3",
+ "signature",
 ]
 
 [[package]]
@@ -6491,9 +6495,9 @@ dependencies = [
 
 [[package]]
 name = "signature"
-version = "0.3.0"
+version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4a5e37049d50ec8878c63cd6e91cc2f41073d49f29a1b038eede1500116557b"
+checksum = "29f060a7d147e33490ec10da418795238fd7545bba241504d6b31a409f2e6210"
 
 [[package]]
 name = "slab"

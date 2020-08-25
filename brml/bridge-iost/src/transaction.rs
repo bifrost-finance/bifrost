@@ -19,7 +19,6 @@ use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{iter::FromIterator, str::FromStr};
 use iost_chain::{Action, Tx};
-// use eos_chain::{Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -121,7 +120,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         #[cfg(feature = "std")]
         let action = Action::transfer(String::from(eos_from), String::from(eos_to), amount, memo).map_err(|_| Error::<T>::IostChainError)?;
 
-        let mut tx = Tx::new();
+        // let mut tx = Tx::from_action(vec![action]);
         // tx.actions = vec![action.clone()];
 
         // Construct transaction

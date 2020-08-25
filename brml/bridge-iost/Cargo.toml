@@ -7,9 +7,9 @@ edition = "2018"
 [dependencies]
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.3.0", default-features = false, features = ["derive"] }
-# iost-chain = { path = "/Users/qiannan/workspace/blockchain/rust-iost/chain", default-features = false }
-#iost-rpc = { path = "/Users/qiannan/workspace/blockchain/rust-iost/rpc", default-features = false }
-iost-chain = { git = "https://github.com/hsqlu/rust-iost", branch = "qiannan-dev", default-features = false }
+iost-chain = { path = "/Users/qiannan/workspace/blockchain/rs-iost/chain", default-features = false }
+#iost-keys = { path = "/Users/qiannan/workspace/blockchain/rs-iost/keys", default-features = false }
+#iost-chain = { git = "https://github.com/hsqlu/rs-iost", branch = "master", default-features = false, optional = true}
 frame-support = { version = "2.0.0-rc4", default-features = false }
 frame-system = { version = "2.0.0-rc4", default-features = false }
 hex = { version = "0.4.2", default-features = false }
@@ -34,8 +34,7 @@ default = ["std"]
 std = [
 	"codec/std",
 	"iost-chain/std",
-#	"iost-rpc/std",
-#	"iost-keys/std",
+#    "iost-keys/std",
 	"frame-support/std",
 	"frame-system/std",
 	"hex/std",

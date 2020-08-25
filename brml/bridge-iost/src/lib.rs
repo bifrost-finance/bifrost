@@ -34,7 +34,6 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::{Action, ActionName};
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
     traits::{AtLeast32Bit, Member, SaturatedConversion, MaybeSerializeDeserialize},
@@ -56,13 +55,6 @@ use transaction::TxOut;
 mod transaction;
 mod mock;
 mod tests;
-
-lazy_static::lazy_static! {
-	pub static ref ACTION_NAMES: [ActionName; 1] = {
-		let name = ActionName::from_str("transfer").unwrap();
-		[name]
-	};
-}
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 enum TransactionType {
