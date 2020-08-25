@@ -14,13 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use wasm_builder_runner::WasmBuilder;
+//! A list of the different weight modules for our runtime.
 
-fn main() {
-	WasmBuilder::new()
-		.with_current_project()
-		.with_wasm_builder_from_crates("2.0.0")
-		.export_heap_base()
-		.import_memory()
-		.build()
-}
+pub mod frame_system;
+pub mod pallet_balances;
+pub mod pallet_democracy;
+pub mod pallet_timestamp;
+pub mod pallet_utility;

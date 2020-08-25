@@ -90,6 +90,7 @@ impl frame_system::Trait for Test {
 	type ExtrinsicBaseWeight = ();
 	type BaseCallFilter = ();
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
+	type SystemWeightInfo = ();
 }
 
 

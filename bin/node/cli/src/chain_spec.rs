@@ -22,7 +22,7 @@ use serde::{Serialize, Deserialize};
 use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
-	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
+	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, wasm_binary_unwrap,
 	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
@@ -238,7 +238,7 @@ pub fn testnet_genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
@@ -487,7 +487,7 @@ pub fn bifrost_genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
