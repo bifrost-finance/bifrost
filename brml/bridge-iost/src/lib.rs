@@ -34,6 +34,7 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
+use iost_chain::{Action, ActionTransfer};
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
     traits::{AtLeast32Bit, Member, SaturatedConversion, MaybeSerializeDeserialize},
@@ -151,6 +152,8 @@ decl_error! {
         InitMultiTimeProducerSchedules,
         /// Invalid token
 		InvalidTokenForTrade,
+        /// IOSTSymbolMismatch,
+		IOSTSymbolMismatch,
     }
 }
 
@@ -260,10 +263,10 @@ decl_storage! {
             // ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
             // PendingScheduleVersion::put(schedule.version);
             //
-            // // grant privilege to sign transaction between EOS and Bifrost
-            // for (who, privilege) in config.cross_chain_privilege.iter() {
-            // 	<CrossChainPrivilege<T>>::insert(who, privilege);
-            // }
+            // grant privilege to sign transaction between EOS and Bifrost
+            for (who, privilege) in config.cross_chain_privilege.iter() {
+            	<CrossChainPrivilege<T>>::insert(who, privilege);
+            }
             // update to AllAddressesHaveCrossChainPrivilege
             let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
             <AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
@@ -293,6 +296,142 @@ decl_module! {
 			BridgeContractAccount::put((account, threthold));
 		}
 
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		fn grant_crosschain_privilege(origin, target: T::AccountId) {
+			ensure_root(origin)?;
+
+			// grant privilege
+			<CrossChainPrivilege<T>>::insert(&target, true);
+
+			// update all addresses
+			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
+				if !all.contains(&target) {
+					all.push(target.clone());
+				}
+			});
+
+			Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
+		}
+
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn remove_crosschain_privilege(origin, target: T::AccountId) {
+			ensure_root(origin)?;
+
+			// remove privilege
+			<CrossChainPrivilege<T>>::insert(&target, false);
+
+			// update all addresses
+			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
+				all.retain(|who| who.ne(&target));
+			});
+
+			Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
+		}
+
+        #[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn prove_action(
+			origin,
+			action: Action,
+			// action_receipt: ActionReceipt,
+			// action_merkle_paths: Vec<Checksum256>,
+			// merkle: IncrementalMerkle,
+			// block_headers: Vec<SignedBlockHeader>,
+			// block_ids_list: Vec<Vec<Checksum256>>,
+			// trx_id: Checksum256
+		) -> DispatchResult {
+			let origin = ensure_signed(origin)?;
+			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+
+			// ensure this transaction is unique, and ensure no duplicated transaction
+			// ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
+
+			// ensure action is what we want
+			// ensure!(action.action_name == "transfer", "This is an invalid action to Bifrost");
+
+			ensure!(BridgeEnable::get(), "This call is not enable now!");
+			// ensure!(
+			// 	!block_headers.is_empty(),
+			// 	"The signed block headers cannot be empty."
+			// );
+			// ensure!(
+			// 	block_ids_list.len() ==  block_headers.len(),
+			// 	"The block ids list cannot be empty."
+			// );
+            //
+			// let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
+			// ensure!(
+			// 	action_hash == action_receipt.act_digest,
+			// 	"current action hash isn't equal to act_digest from action_receipt."
+			// );
+            //
+			// let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
+            //
+			// let block_under_verification = &block_headers[0];
+			// ensure!(
+			// 	verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
+			// 	"failed to prove action."
+			// );
+            //
+			// let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
+			// // this is for testing due to there's a default producer schedule on standalone eos node.
+			// let schedule_hash = {
+			// 	if producer_schedule.version == 0 {
+			// 		ProducerSchedule::default().schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?
+			// 	} else {
+			// 		schedule_hash
+			// 	}
+			// };
+            //
+			// ensure!(
+			// 	Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
+			// 	"Failed to verify blocks."
+			// );
+            //
+			// // save proves for this transaction
+			// BridgeActionReceipt::insert(&action_receipt, &action);
+            //
+			// Self::deposit_event(RawEvent::ProveAction);
+            //
+			// let action_transfer = Self::get_action_transfer_from_action(&action)?;
+            //
+			// let cross_account = BridgeContractAccount::get().0;
+			// // withdraw operation, Bifrost => EOS
+			// if cross_account == action_transfer.from.to_string().into_bytes() {
+			// 	match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
+			// 		Ok(target) => {
+			// 			// update times of trade from Bifrost => EOS
+			// 			TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+			// 				times.1 = times.1.saturating_add(1);
+			// 			});
+			// 			Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
+			// 		}
+			// 		Err(e) => {
+			// 			debug::info!("Bifrost => EOS failed due to {:?}", e);
+			// 			Self::deposit_event(RawEvent::WithdrawFail);
+			// 		}
+			// 	}
+			// }
+            //
+			// // deposit operation, EOS => Bifrost
+			// if cross_account == action_transfer.to.to_string().into_bytes() {
+			// 	match Self::transaction_from_eos_to_bifrost(&action_transfer) {
+			// 		Ok(target) => {
+			// 			// update times of trade from EOS => Bifrost
+			// 			TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+			// 				times.0 = times.0.saturating_add(1);
+			// 			});
+			// 			Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
+			// 		}
+			// 		Err(e) => {
+			// 			debug::info!("EOS => Bifrost failed due to {:?}", e);
+			// 			Self::deposit_event(RawEvent::DepositFail);
+			// 		}
+			// 	}
+			// }
+
+			Ok(())
+		}
+
         #[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
 			ensure_none(origin)?;
@@ -303,7 +442,7 @@ decl_module! {
 		}
 
     	#[weight = (weight_for::cross_to_iost::<T>(memo.len() as Weight), DispatchClass::Normal)]
-		fn cross_to_iost(
+        fn cross_to_iost(
 			origin,
 			to: Vec<u8>,
 			token_symbol: TokenSymbol,
@@ -336,7 +475,7 @@ decl_module! {
 				token_symbol
 			};
 
-			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
+            if Self::bridge_asset_to(to, bridge_asset).is_ok() {
 				debug::info!("sent transaction to IOST node.");
                 // locked balance until trade is verified
                 Self::deposit_event(RawEvent::SendTransactionSuccess);
@@ -370,6 +509,106 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    fn transaction_from_iost_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
+        // check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
+        let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
+
+        // the length should be 2, either 3.
+        if split_memo.len().gt(&3) || split_memo.len().lt(&2) {
+            return Err(Error::<T>::InvalidMemo);
+        }
+
+        // get account
+        let account_data = Self::get_account_data(split_memo[0])?;
+        let target = Self::into_account(account_data)?;
+
+        let token_symbol = {
+            match split_memo.len() {
+                2 => TokenSymbol::vIOST,
+                3 => {
+                    match split_memo[2] {
+                        "" | "vIOST" => TokenSymbol::vIOST,
+                        "IOST" => TokenSymbol::IOST,
+                        _ => {
+                            debug::error!("A invalid token type, default token type will be vtoken");
+                            return Err(Error::<T>::InvalidMemo);
+                        }
+                    }
+                }
+                _ => unreachable!("previous step checked he length of split_memo.")
+            }
+        };
+        // todo, vIOST or IOST, all asset will be added to IOST asset, instead of vIOST or IOST
+        // but in the future, we will support both token, let user to which token he wants to get
+        // according to the convert price
+        let token_symbol = TokenSymbol::IOST;
+
+        // let symbol = action_transfer.quantity.symbol;
+        let symbol_code = "IOST".to_string().into_bytes();
+        let symbol_precision = 8 as u16;
+        // // ensure symbol and precision matched
+        let (_token_symbol, _) = token_symbol.paired_token();
+        let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
+        ensure!(
+			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+			Error::<T>::IOSTSymbolMismatch
+		);
+
+            let token_balances = 100 as u128;
+        // todo, according convert price to save as vIOST
+        let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+        // issue asset to target
+        T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
+
+        Ok(target)
+    }
+
+    fn transaction_from_bifrost_to_iost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
+        let bridge_tx_outs = BridgeTxOuts::<T>::get();
+
+        for trx in bridge_tx_outs.iter() {
+            match trx {
+                // TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
+                //     let target = &multi_sig_tx.from;
+                //     let token_symbol = multi_sig_tx.token_symbol;
+                //
+                //     let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
+                //     let token_balances = action_transfer.quantity.amount as usize;
+                //     let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+                //
+                //     if all_vtoken_balances.lt(&vtoken_balances) {
+                //         debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+                //         return Err(Error::<T>::InsufficientBalance);
+                //     }
+                //
+                //     // the trade is verified, unlock asset
+                //     T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
+                //
+                //     return Ok(target.clone());
+                // }
+                _ => continue,
+            }
+        }
+
+        Err(Error::<T>::InvalidAccountId)
+    }
+
+    /// check receiver account format
+    /// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
+    fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
+        let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
+
+        // todo, decoded_ss58.first() == Some(&42) || Some(&6) || ...
+        if decoded_ss58.len() == 35 {
+            let mut data = [0u8; 32];
+            data.copy_from_slice(&decoded_ss58[1..33]);
+            Ok(data)
+        } else {
+            Err(Error::<T>::InvalidAccountId)
+        }
+    }
+
     fn into_account(data: [u8; 32]) -> Result<T::AccountId, Error<T>> {
         T::AccountId::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidAccountId)
     }

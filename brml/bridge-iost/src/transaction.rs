@@ -117,10 +117,13 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
         // Construct action
-        #[cfg(feature = "std")]
-        let action = Action::transfer(String::from(eos_from), String::from(eos_to), amount, memo).map_err(|_| Error::<T>::IostChainError)?;
+        let action = Action::transfer(eos_from, eos_to, amount.as_str(), memo).map_err(|_| Error::<T>::IostChainError)?;
 
-        // let mut tx = Tx::from_action(vec![action]);
+        let mut tx = Tx::from_action(vec![action]);
+        let time = sp_io::offchain::timestamp().unix_millis() as i64;
+        let expiration = time + Duration::from_millis(1000 * 10000).millis() as i64;
+        tx.time = time;
+        tx.expiration = expiration;
         // tx.actions = vec![action.clone()];
 
         // Construct transaction
@@ -132,7 +135,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
             from,
             token_type,
         };
-
+        let _ = tx.customized_to_serialize_data(true);
         Ok(TxOut::Initial(multi_sig_tx))
     }
 }

@@ -2359,6 +2359,7 @@ name = "iost-chain"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base58",
  "base64 0.12.3",
  "byteorder",
  "chrono",

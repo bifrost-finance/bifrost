@@ -978,7 +978,6 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 mod weight_for {
 	use frame_support::{traits::Get, weights::Weight};
 	use super::Trait;
-	use sp_runtime::traits::Saturating;
 
 	/// cross_to_eos weight
 	pub(crate) fn cross_to_eos<T: Trait>(memo_len: Weight) -> Weight {
