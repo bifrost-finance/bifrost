@@ -34,7 +34,7 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::{Action, ActionTransfer};
+use iost_chain::{Action, ActionTransfer, Read};
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
     traits::{AtLeast32Bit, Member, SaturatedConversion, MaybeSerializeDeserialize},
@@ -390,44 +390,36 @@ decl_module! {
 			// // save proves for this transaction
 			// BridgeActionReceipt::insert(&action_receipt, &action);
             //
-			// Self::deposit_event(RawEvent::ProveAction);
-            //
-			// let action_transfer = Self::get_action_transfer_from_action(&action)?;
-            //
-			// let cross_account = BridgeContractAccount::get().0;
-			// // withdraw operation, Bifrost => EOS
-			// if cross_account == action_transfer.from.to_string().into_bytes() {
-			// 	match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
-			// 		Ok(target) => {
-			// 			// update times of trade from Bifrost => EOS
-			// 			TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
-			// 				times.1 = times.1.saturating_add(1);
-			// 			});
-			// 			Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
-			// 		}
-			// 		Err(e) => {
-			// 			debug::info!("Bifrost => EOS failed due to {:?}", e);
-			// 			Self::deposit_event(RawEvent::WithdrawFail);
-			// 		}
-			// 	}
-			// }
-            //
-			// // deposit operation, EOS => Bifrost
-			// if cross_account == action_transfer.to.to_string().into_bytes() {
-			// 	match Self::transaction_from_eos_to_bifrost(&action_transfer) {
-			// 		Ok(target) => {
-			// 			// update times of trade from EOS => Bifrost
-			// 			TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
-			// 				times.0 = times.0.saturating_add(1);
-			// 			});
-			// 			Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
-			// 		}
-			// 		Err(e) => {
-			// 			debug::info!("EOS => Bifrost failed due to {:?}", e);
-			// 			Self::deposit_event(RawEvent::DepositFail);
-			// 		}
-			// 	}
-			// }
+			Self::deposit_event(RawEvent::ProveAction);
+
+			let action_transfer = Self::get_action_transfer_from_action(&action)?;
+
+			let cross_account = BridgeContractAccount::get().0;
+			// withdraw operation, Bifrost => IOST
+			if cross_account == action_transfer.from.to_string().into_bytes() {
+				match Self::transaction_from_bifrost_to_iost(&action_transfer) {
+					Ok(target) => {
+						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
+					}
+					Err(e) => {
+						debug::info!("Bifrost => IOST failed due to {:?}", e);
+						Self::deposit_event(RawEvent::WithdrawFail);
+					}
+				}
+			}
+
+			// deposit operation, EOS => Bifrost
+			if cross_account == action_transfer.to.to_string().into_bytes() {
+				match Self::transaction_from_iost_to_bifrost(&action_transfer) {
+					Ok(target) => {
+						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
+					}
+					Err(e) => {
+						debug::info!("IOST => Bifrost failed due to {:?}", e);
+						Self::deposit_event(RawEvent::DepositFail);
+					}
+				}
+			}
 
 			Ok(())
 		}
@@ -509,6 +501,12 @@ decl_module! {
 }
 
 impl<T: Trait> Module<T> {
+    fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error<T>> {
+        let action_transfer = ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
+
+        Ok(action_transfer)
+    }
+
     fn transaction_from_iost_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
         // check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
         let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
