@@ -15,29 +15,24 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-use crate::*;
 use crate::mock::*;
+use crate::*;
 
-use crate::*;
 use crate::mock::*;
+use crate::*;
 use core::{convert::From, str::FromStr};
 
-#[cfg(feature = "std")]
-use std::{
-    error::Error,
-    fs::File,
-    io::Read as StdRead,
-    path::Path,
+use frame_support::{assert_ok, dispatch};
+use node_primitives::{BlockchainType, BridgeAssetSymbol};
+use sp_core::offchain::{
+    testing::{TestOffchainExt, TestTransactionPoolExt},
+    OffchainExt, TransactionPoolExt,
 };
 use sp_core::H256;
-use sp_core::offchain::{
-    OffchainExt, TransactionPoolExt,
-    testing::{TestOffchainExt, TestTransactionPoolExt},
-};
 use sp_runtime::traits::Header as HeaderT;
 use sp_runtime::{generic::DigestItem, testing::Header};
-use node_primitives::{BridgeAssetSymbol, BlockchainType};
-use frame_support::{assert_ok, dispatch};
+#[cfg(feature = "std")]
+use std::{error::Error, fs::File, io::Read as StdRead, path::Path};
 
 #[test]
 #[ignore = "This is a simulated http server, no response actually."]
@@ -50,10 +45,18 @@ fn bridge_iost_offchain_should_work() {
 
     ext.execute_with(|| {
         System::set_block_number(1);
-        sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"IOST_NODE_URL", b"http://127.0.0.1:30001/");
+        sp_io::offchain::local_storage_set(
+            StorageKind::PERSISTENT,
+            b"IOST_NODE_URL",
+            b"http://127.0.0.1:30001/",
+        );
 
         // EOS secret key of account testa
-        sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"IOST_SECRET_KEY", b"5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr");
+        sp_io::offchain::local_storage_set(
+            StorageKind::PERSISTENT,
+            b"IOST_SECRET_KEY",
+            b"5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr",
+        );
 
         let raw_to = b"alice".to_vec();
         let raw_symbol = b"IOST".to_vec();
@@ -69,7 +72,11 @@ fn bridge_iost_offchain_should_work() {
         assert_ok!(BridgeIost::offchain(1));
 
         // EOS secret key of account testb
-        sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"IOST_SECRET_KEY", b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj");
+        sp_io::offchain::local_storage_set(
+            StorageKind::PERSISTENT,
+            b"IOST_SECRET_KEY",
+            b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj",
+        );
 
         rotate_author(2);
         assert_ok!(BridgeEos::offchain(2));
@@ -83,11 +90,17 @@ fn bridge_iost_offchain_should_work() {
             e => panic!("Unexpected call: {:?}", e),
         };
 
-        assert_eq!(tx_outs.iter().filter(|out| {
-            match out {
-                TxOut::Processing{ .. } => true,
-                _ => false,
-            }
-        }).count(), 1);
+        assert_eq!(
+            tx_outs
+                .iter()
+                .filter(|out| {
+                    match out {
+                        TxOut::Processing { .. } => true,
+                        _ => false,
+                    }
+                })
+                .count(),
+            1
+        );
     });
 }

@@ -37,7 +37,7 @@ use frame_system::{
 use iost_chain::{Action, ActionTransfer, Read};
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-    traits::{AtLeast32Bit, Member, SaturatedConversion, MaybeSerializeDeserialize},
+    traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion},
     transaction_validity::{
         InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
         TransactionValidity, ValidTransaction,
@@ -46,16 +46,16 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use node_primitives::{
-    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom,
-    BridgeAssetSymbol, BridgeAssetTo, TokenSymbol,
+    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
+    BridgeAssetTo, TokenSymbol,
 };
 use sp_application_crypto::RuntimeAppPublic;
 use transaction::TxOut;
 
 // mod rpc;
-mod transaction;
 mod mock;
 mod tests;
+mod transaction;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 enum TransactionType {
@@ -151,9 +151,9 @@ decl_error! {
         /// Initialze producer schedule multiple times
         InitMultiTimeProducerSchedules,
         /// Invalid token
-		InvalidTokenForTrade,
+        InvalidTokenForTrade,
         /// IOSTSymbolMismatch,
-		IOSTSymbolMismatch,
+        IOSTSymbolMismatch,
     }
 }
 
@@ -174,7 +174,14 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
 
     /// The arithmetic type of asset identifier.
-    type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
+    type AssetId: Member
+        + Parameter
+        + AtLeast32Bit
+        + Default
+        + Copy
+        + From<TokenSymbol>
+        + Into<TokenSymbol>
+        + MaybeSerializeDeserialize;
 
     /// The units in which we record costs.
     type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
@@ -265,7 +272,7 @@ decl_storage! {
             //
             // grant privilege to sign transaction between EOS and Bifrost
             for (who, privilege) in config.cross_chain_privilege.iter() {
-            	<CrossChainPrivilege<T>>::insert(who, privilege);
+                <CrossChainPrivilege<T>>::insert(who, privilege);
             }
             // update to AllAddressesHaveCrossChainPrivilege
             let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
@@ -291,225 +298,232 @@ decl_module! {
         }
 
         #[weight = (0, DispatchClass::Normal, Pays::No)]
-		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
-			ensure_root(origin)?;
-			BridgeContractAccount::put((account, threthold));
-		}
+        fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
+            ensure_root(origin)?;
+            BridgeContractAccount::put((account, threthold));
+        }
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn grant_crosschain_privilege(origin, target: T::AccountId) {
-			ensure_root(origin)?;
+        #[weight = T::DbWeight::get().reads_writes(1, 1)]
+        fn grant_crosschain_privilege(origin, target: T::AccountId) {
+            ensure_root(origin)?;
 
-			// grant privilege
-			<CrossChainPrivilege<T>>::insert(&target, true);
+            // grant privilege
+            <CrossChainPrivilege<T>>::insert(&target, true);
 
-			// update all addresses
-			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
-				if !all.contains(&target) {
-					all.push(target.clone());
-				}
-			});
+            // update all addresses
+            <AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
+                if !all.contains(&target) {
+                    all.push(target.clone());
+                }
+            });
 
-			Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
-		}
-
-		#[weight = (0, DispatchClass::Normal, Pays::No)]
-		fn remove_crosschain_privilege(origin, target: T::AccountId) {
-			ensure_root(origin)?;
-
-			// remove privilege
-			<CrossChainPrivilege<T>>::insert(&target, false);
-
-			// update all addresses
-			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
-				all.retain(|who| who.ne(&target));
-			});
-
-			Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
-		}
+            Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
+        }
 
         #[weight = (0, DispatchClass::Normal, Pays::No)]
-		fn prove_action(
-			origin,
-			action: Action,
-			// action_receipt: ActionReceipt,
-			// action_merkle_paths: Vec<Checksum256>,
-			// merkle: IncrementalMerkle,
-			// block_headers: Vec<SignedBlockHeader>,
-			// block_ids_list: Vec<Vec<Checksum256>>,
-			// trx_id: Checksum256
-		) -> DispatchResult {
-			let origin = ensure_signed(origin)?;
-			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+        fn remove_crosschain_privilege(origin, target: T::AccountId) {
+            ensure_root(origin)?;
 
-			// ensure this transaction is unique, and ensure no duplicated transaction
-			// ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
+            // remove privilege
+            <CrossChainPrivilege<T>>::insert(&target, false);
 
-			// ensure action is what we want
-			// ensure!(action.action_name == "transfer", "This is an invalid action to Bifrost");
+            // update all addresses
+            <AllAddressesHaveCrossChainPrivilege<T>>::mutate(|all| {
+                all.retain(|who| who.ne(&target));
+            });
 
-			ensure!(BridgeEnable::get(), "This call is not enable now!");
-			// ensure!(
-			// 	!block_headers.is_empty(),
-			// 	"The signed block headers cannot be empty."
-			// );
-			// ensure!(
-			// 	block_ids_list.len() ==  block_headers.len(),
-			// 	"The block ids list cannot be empty."
-			// );
-            //
-			// let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
-			// ensure!(
-			// 	action_hash == action_receipt.act_digest,
-			// 	"current action hash isn't equal to act_digest from action_receipt."
-			// );
-            //
-			// let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
-            //
-			// let block_under_verification = &block_headers[0];
-			// ensure!(
-			// 	verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
-			// 	"failed to prove action."
-			// );
-            //
-			// let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
-			// // this is for testing due to there's a default producer schedule on standalone eos node.
-			// let schedule_hash = {
-			// 	if producer_schedule.version == 0 {
-			// 		ProducerSchedule::default().schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?
-			// 	} else {
-			// 		schedule_hash
-			// 	}
-			// };
-            //
-			// ensure!(
-			// 	Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-			// 	"Failed to verify blocks."
-			// );
-            //
-			// // save proves for this transaction
-			// BridgeActionReceipt::insert(&action_receipt, &action);
-            //
-			Self::deposit_event(RawEvent::ProveAction);
-
-			let action_transfer = Self::get_action_transfer_from_action(&action)?;
-
-			let cross_account = BridgeContractAccount::get().0;
-			// withdraw operation, Bifrost => IOST
-			if cross_account == action_transfer.from.to_string().into_bytes() {
-				match Self::transaction_from_bifrost_to_iost(&action_transfer) {
-					Ok(target) => {
-						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
-					}
-					Err(e) => {
-						debug::info!("Bifrost => IOST failed due to {:?}", e);
-						Self::deposit_event(RawEvent::WithdrawFail);
-					}
-				}
-			}
-
-			// deposit operation, EOS => Bifrost
-			if cross_account == action_transfer.to.to_string().into_bytes() {
-				match Self::transaction_from_iost_to_bifrost(&action_transfer) {
-					Ok(target) => {
-						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
-					}
-					Err(e) => {
-						debug::info!("IOST => Bifrost failed due to {:?}", e);
-						Self::deposit_event(RawEvent::DepositFail);
-					}
-				}
-			}
-
-			Ok(())
-		}
+            Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
+        }
 
         #[weight = (0, DispatchClass::Normal, Pays::No)]
-		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
-			ensure_none(origin)?;
+        fn prove_action(
+            origin,
+            action: Action,
+            // action_receipt: ActionReceipt,
+            // action_merkle_paths: Vec<Checksum256>,
+            // merkle: IncrementalMerkle,
+            // block_headers: Vec<SignedBlockHeader>,
+            // block_ids_list: Vec<Vec<Checksum256>>,
+            // trx_id: Checksum256
+        ) -> DispatchResult {
+            let origin = ensure_signed(origin)?;
+            ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
 
-			BridgeTxOuts::<T>::put(tx_list);
+            // ensure this transaction is unique, and ensure no duplicated transaction
+            // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
 
-			Ok(())
-		}
+            // ensure action is what we want
+            // ensure!(action.action_name == "transfer", "This is an invalid action to Bifrost");
 
-    	#[weight = (weight_for::cross_to_iost::<T>(memo.len() as Weight), DispatchClass::Normal)]
+            ensure!(BridgeEnable::get(), "This call is not enable now!");
+            // ensure!(
+            // 	!block_headers.is_empty(),
+            // 	"The signed block headers cannot be empty."
+            // );
+            // ensure!(
+            // 	block_ids_list.len() ==  block_headers.len(),
+            // 	"The block ids list cannot be empty."
+            // );
+            //
+            // let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
+            // ensure!(
+            // 	action_hash == action_receipt.act_digest,
+            // 	"current action hash isn't equal to act_digest from action_receipt."
+            // );
+            //
+            // let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
+            //
+            // let block_under_verification = &block_headers[0];
+            // ensure!(
+            // 	verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
+            // 	"failed to prove action."
+            // );
+            //
+            // let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
+            // // this is for testing due to there's a default producer schedule on standalone eos node.
+            // let schedule_hash = {
+            // 	if producer_schedule.version == 0 {
+            // 		ProducerSchedule::default().schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?
+            // 	} else {
+            // 		schedule_hash
+            // 	}
+            // };
+            //
+            // ensure!(
+            // 	Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
+            // 	"Failed to verify blocks."
+            // );
+            //
+            // // save proves for this transaction
+            // BridgeActionReceipt::insert(&action_receipt, &action);
+            //
+            Self::deposit_event(RawEvent::ProveAction);
+
+            let action_transfer = Self::get_action_transfer_from_action(&action)?;
+
+            let cross_account = BridgeContractAccount::get().0;
+            // withdraw operation, Bifrost => IOST
+            if cross_account == action_transfer.from.to_string().into_bytes() {
+                match Self::transaction_from_bifrost_to_iost(&action_transfer) {
+                    Ok(target) => {
+                        Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
+                    }
+                    Err(e) => {
+                        debug::info!("Bifrost => IOST failed due to {:?}", e);
+                        Self::deposit_event(RawEvent::WithdrawFail);
+                    }
+                }
+            }
+
+            // deposit operation, EOS => Bifrost
+            if cross_account == action_transfer.to.to_string().into_bytes() {
+                match Self::transaction_from_iost_to_bifrost(&action_transfer) {
+                    Ok(target) => {
+                        Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
+                    }
+                    Err(e) => {
+                        debug::info!("IOST => Bifrost failed due to {:?}", e);
+                        Self::deposit_event(RawEvent::DepositFail);
+                    }
+                }
+            }
+
+            Ok(())
+        }
+
+        #[weight = (0, DispatchClass::Normal, Pays::No)]
+        fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
+            ensure_none(origin)?;
+
+            BridgeTxOuts::<T>::put(tx_list);
+
+            Ok(())
+        }
+
+        #[weight = (weight_for::cross_to_iost::<T>(memo.len() as Weight), DispatchClass::Normal)]
         fn cross_to_iost(
-			origin,
-			to: Vec<u8>,
-			token_symbol: TokenSymbol,
-			#[compact] amount: T::Balance,
-			memo: Vec<u8>
-		) {
+            origin,
+            to: Vec<u8>,
+            token_symbol: TokenSymbol,
+            #[compact] amount: T::Balance,
+            memo: Vec<u8>
+        ) {
             let origin = system::ensure_signed(origin)?;
-			let iost_amount = amount;
+            let iost_amount = amount;
 
-			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
-			// ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
-			ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
+            // check vtoken id exist or not
+            ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
+            // ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
+            ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
 
-			let token = T::AssetTrait::get_token(token_symbol);
-			let symbol_code = token.symbol;
-			let symbol_precise = token.precision;
+            let token = T::AssetTrait::get_token(token_symbol);
+            let symbol_code = token.symbol;
+            let symbol_precise = token.precision;
 
             let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
-			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
+            ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
+            let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+            ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
-			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
-			let bridge_asset = BridgeAssetBalance {
-				symbol: asset_symbol,
-				amount: iost_amount,
-				memo,
-				from: origin.clone(),
-				token_symbol
-			};
+            let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
+            let bridge_asset = BridgeAssetBalance {
+                symbol: asset_symbol,
+                amount: iost_amount,
+                memo,
+                from: origin.clone(),
+                token_symbol
+            };
 
             if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				debug::info!("sent transaction to IOST node.");
+                debug::info!("sent transaction to IOST node.");
                 // locked balance until trade is verified
                 Self::deposit_event(RawEvent::SendTransactionSuccess);
-			} else {
-				debug::warn!("failed to send transaction to IOST node.");
-				Self::deposit_event(RawEvent::SendTransactionFailure);
-			}
-		}
+            } else {
+                debug::warn!("failed to send transaction to IOST node.");
+                Self::deposit_event(RawEvent::SendTransactionFailure);
+            }
+        }
 
-		// Runs after every block.
-		fn offchain_worker(now_block: T::BlockNumber) {
-			debug::RuntimeLogger::init();
+        // Runs after every block.
+        fn offchain_worker(now_block: T::BlockNumber) {
+            debug::RuntimeLogger::init();
 
-			// It's no nessesary to start offchain worker if no any task in queue
-			if !BridgeTxOuts::<T>::get().is_empty() {
-				// Only send messages if we are a potential validator.
-				if sp_io::offchain::is_validator() {
-					debug::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
-					match Self::offchain(now_block) {
-						Ok(_) => debug::info!("A offchain worker started."),
-						Err(e) => debug::error!("A offchain worker got error: {:?}", e),
-					}
-				} else {
-					debug::info!(target: "bridge-ioso", "Skipping send tx at {:?}. Not a validator.",now_block)
-				}
-			} else {
-				debug::info!("There's no offchain worker started.");
-			}
-		}
+            // It's no nessesary to start offchain worker if no any task in queue
+            if !BridgeTxOuts::<T>::get().is_empty() {
+                // Only send messages if we are a potential validator.
+                if sp_io::offchain::is_validator() {
+                    debug::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
+                    match Self::offchain(now_block) {
+                        Ok(_) => debug::info!("A offchain worker started."),
+                        Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+                    }
+                } else {
+                    debug::info!(target: "bridge-ioso", "Skipping send tx at {:?}. Not a validator.",now_block)
+                }
+            } else {
+                debug::info!("There's no offchain worker started.");
+            }
+        }
     }
 }
 
 impl<T: Trait> Module<T> {
     fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error<T>> {
-        let action_transfer = ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
+        let action_transfer =
+            ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
 
         Ok(action_transfer)
     }
 
-    fn transaction_from_iost_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
+    fn transaction_from_iost_to_bifrost(
+        action_transfer: &ActionTransfer,
+    ) -> Result<T::AccountId, Error<T>> {
         // check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
-        let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
+        let split_memo = action_transfer
+            .memo
+            .as_str()
+            .split(|c| c == '@' || c == ':')
+            .collect::<Vec<_>>();
 
         // the length should be 2, either 3.
         if split_memo.len().gt(&3) || split_memo.len().lt(&2) {
@@ -523,17 +537,15 @@ impl<T: Trait> Module<T> {
         let token_symbol = {
             match split_memo.len() {
                 2 => TokenSymbol::vIOST,
-                3 => {
-                    match split_memo[2] {
-                        "" | "vIOST" => TokenSymbol::vIOST,
-                        "IOST" => TokenSymbol::IOST,
-                        _ => {
-                            debug::error!("A invalid token type, default token type will be vtoken");
-                            return Err(Error::<T>::InvalidMemo);
-                        }
+                3 => match split_memo[2] {
+                    "" | "vIOST" => TokenSymbol::vIOST,
+                    "IOST" => TokenSymbol::IOST,
+                    _ => {
+                        debug::error!("A invalid token type, default token type will be vtoken");
+                        return Err(Error::<T>::InvalidMemo);
                     }
-                }
-                _ => unreachable!("previous step checked he length of split_memo.")
+                },
+                _ => unreachable!("previous step checked he length of split_memo."),
             }
         };
         // todo, vIOST or IOST, all asset will be added to IOST asset, instead of vIOST or IOST
@@ -548,13 +560,15 @@ impl<T: Trait> Module<T> {
         let (_token_symbol, _) = token_symbol.paired_token();
         let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
         ensure!(
-			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
-			Error::<T>::IOSTSymbolMismatch
-		);
+            existed_token_symbol.symbol == symbol_code
+                && existed_token_symbol.precision == symbol_precision,
+            Error::<T>::IOSTSymbolMismatch
+        );
 
-            let token_balances = 100 as u128;
+        let token_balances = 100 as u128;
         // todo, according convert price to save as vIOST
-        let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+        let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances)
+            .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
         // issue asset to target
         T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
@@ -562,7 +576,9 @@ impl<T: Trait> Module<T> {
         Ok(target)
     }
 
-    fn transaction_from_bifrost_to_iost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
+    fn transaction_from_bifrost_to_iost(
+        action_transfer: &ActionTransfer,
+    ) -> Result<T::AccountId, Error<T>> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
         for trx in bridge_tx_outs.iter() {
@@ -595,7 +611,9 @@ impl<T: Trait> Module<T> {
     /// check receiver account format
     /// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
     fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
-        let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
+        let decoded_ss58 = bs58::decode(receiver)
+            .into_vec()
+            .map_err(|_| Error::<T>::InvalidAccountId)?;
 
         // todo, decoded_ss58.first() == Some(&42) || Some(&6) || ...
         if decoded_ss58.len() == 35 {
@@ -616,21 +634,102 @@ impl<T: Trait> Module<T> {
         raw_to: Vec<u8>,
         bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
     ) -> Result<TxOut<T::AccountId>, Error<T>>
-        where
-            P: AtLeast32Bit + Copy,
-            B: AtLeast32Bit + Copy,
+    where
+        P: AtLeast32Bit + Copy,
+        B: AtLeast32Bit + Copy,
     {
         let (raw_from, threshold) = BridgeContractAccount::get();
-        let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
+        let memo = core::str::from_utf8(&bridge_asset.memo)
+            .map_err(|_| Error::<T>::ParseUtf8Error)?
+            .to_string();
         // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
-        let amount = "10000324";
-        let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, String::from(amount), threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
+        let amount = "100";
+        let tx_out = TxOut::<T::AccountId>::init(
+            raw_from,
+            raw_to,
+            String::from(amount),
+            threshold,
+            &memo,
+            bridge_asset.from,
+            bridge_asset.token_symbol,
+        )?;
         BridgeTxOuts::<T>::append(&tx_out);
 
         Ok(tx_out)
     }
 
     fn offchain(_now_block: T::BlockNumber) -> Result<(), Error<T>> {
+        //  avoid borrow checker issue if use has_change: bool
+        let has_change = core::cell::Cell::new(false);
+        let bridge_tx_outs = BridgeTxOuts::<T>::get();
+
+        let node_url = Self::get_offchain_storage(IOST_NODE_URL)?;
+        let sk_str = Self::get_offchain_storage(IOST_SECRET_KEY)?;
+
+        let bridge_tx_outs = bridge_tx_outs.into_iter()
+            .map(|bto| {
+                match bto {
+                    // generate raw transactions
+                    TxOut::<T::AccountId>::Initial(_) => {
+                        match bto.clone().generate::<T>(node_url.as_str()) {
+                            Ok(generated_bto) => {
+                                has_change.set(true);
+                                debug::info!(target: "bridge-iost", "bto.generate {:?}",generated_bto);
+                                debug::info!("bto.generate");
+                                generated_bto
+                            }
+                            Err(e) => {
+                                debug::info!("failed to get latest block due to: {:?}", e);
+                                bto
+                            }
+                        }
+                    },
+                    _ => bto,
+                }
+            })
+            .map(|bto| {
+                match bto {
+                    TxOut::<T::AccountId>::Generated(_) => {
+                        let author = <pallet_authorship::Module<T>>::author();
+                        let mut ret = bto.clone();
+                        let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
+                        if let Some(_) = Self::local_authority_keys()
+                            .find(|key| *key == author.clone().into())
+                        {
+                            match bto.sign::<T>(decoded_sk, author) {
+                                Ok(signed_bto) => {
+                                    has_change.set(true);
+                                    debug::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
+                                    ret = signed_bto;
+                                }
+                                Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
+                            }
+                        }
+                        ret
+                    },
+                    _ => bto,
+                }
+            }).collect::<Vec<_>>();
+        //     .map(|bto| {
+        //         match bto {
+        //             TxOut::<T::AccountId>::Signed(_) => {
+        //                 match bto.clone().send::<T>(node_url.as_str()) {
+        //                     Ok(sent_bto) => {
+        //                         has_change.set(true);
+        //                         debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
+        //                         debug::info!("bto.send");
+        //                         sent_bto
+        //                     }
+        //                     Err(e) => {
+        //                         debug::warn!("error happened while pushing transaction: {:?}", e);
+        //                         bto
+        //                     }
+        //                 }
+        //             },
+        //             _ => bto,
+        //         }
+        //     }).collect::<Vec<_>>();
+
         Ok(())
     }
     // fn convert_to_iost_asset<A, P, B>(
@@ -649,6 +748,28 @@ impl<T: Trait> Module<T> {
     //
     //     Ok(Asset::new(amount, symbol))
     // }
+    fn get_offchain_storage(key: &[u8]) -> Result<String, Error<T>> {
+        let value = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key)
+            .ok_or(Error::<T>::NoLocalStorage)?;
+
+        Ok(String::from_utf8(value).map_err(|_| Error::<T>::ParseUtf8Error)?)
+    }
+
+    fn local_authority_keys() -> impl Iterator<Item = T::AuthorityId> {
+        let authorities = NotaryKeys::<T>::get();
+        let mut local_keys = T::AuthorityId::all();
+        local_keys.sort();
+
+        authorities
+            .into_iter()
+            .enumerate()
+            .filter_map(move |(_, authority)| {
+                local_keys
+                    .binary_search(&authority.into())
+                    .ok()
+                    .map(|location| local_keys[location].clone())
+            })
+    }
 }
 
 impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
@@ -675,8 +796,8 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
 
 #[allow(dead_code)]
 mod weight_for {
-    use frame_support::{traits::Get, weights::Weight};
     use super::Trait;
+    use frame_support::{traits::Get, weights::Weight};
     use sp_runtime::traits::Saturating;
 
     /// cross_to_iost weight

@@ -18,7 +18,8 @@ use crate::Error;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{iter::FromIterator, str::FromStr};
-use iost_chain::{Action, Tx};
+use frame_support::debug;
+use iost_chain::{Action, Read, SerializeData, Tx};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -68,13 +69,13 @@ impl<AccountId> Default for MultiSig<AccountId> {
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub struct MultiSigTx<AccountId> {
     /// Chain id of Eos node that transaction will be sent
-    chain_id: Vec<u8>,
+    chain_id: i32,
     /// Transaction raw data for signing
     raw_tx: Vec<u8>,
     /// Signatures of transaction
     multi_sig: MultiSig<AccountId>,
-    /// EOS transaction action
-    // action: Action,
+    // IOST transaction action
+    action: Action,
     /// Who sends Transaction to EOS
     pub from: AccountId,
     /// token type
@@ -117,26 +118,101 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
         // Construct action
-        let action = Action::transfer(eos_from, eos_to, amount.as_str(), memo).map_err(|_| Error::<T>::IostChainError)?;
+        let action = Action::transfer(eos_from, eos_to, amount.as_str(), memo)
+            .map_err(|_| Error::<T>::IostChainError)?;
 
-        let mut tx = Tx::from_action(vec![action]);
-        let time = sp_io::offchain::timestamp().unix_millis() as i64;
-        let expiration = time + Duration::from_millis(1000 * 10000).millis() as i64;
-        tx.time = time;
-        tx.expiration = expiration;
-        // tx.actions = vec![action.clone()];
-
-        // Construct transaction
         let multi_sig_tx = MultiSigTx {
             chain_id: Default::default(),
             raw_tx: Default::default(),
             multi_sig: MultiSig::new(threshold),
-            // action,
+            action,
             from,
             token_type,
         };
-        let _ = tx.customized_to_serialize_data(true);
         Ok(TxOut::Initial(multi_sig_tx))
+    }
+
+    pub fn generate<T: crate::Trait>(self, iost_node_url: &str) -> Result<Self, Error<T>> {
+        match self {
+            TxOut::Initial(mut multi_sig_tx) => {
+                // fetch info
+                let (chain_id, head_block_id) = iost_rpc::get_info(iost_node_url)?;
+
+                // Construct transaction
+                let time = sp_io::offchain::timestamp().unix_millis() as i64;
+                debug::info!(target: "bridge-iost", "tx timestamp {:?}", time);
+
+                let expiration = time + Duration::from_millis(1000 * 10000).millis() as i64;
+
+                let tx = Tx::new(
+                    time,
+                    expiration,
+                    chain_id as u32,
+                    vec![multi_sig_tx.action.clone()],
+                );
+
+                multi_sig_tx.raw_tx = tx
+                    .to_serialize_data()
+                    .map_err(|_| Error::<T>::IostChainError)?;
+                multi_sig_tx.chain_id = chain_id;
+
+                // tx.sign("admin".to_string(), iost_keys::algorithm::SECP256K1,
+                //         bs58::decode("3BZ3HWs2nWucCCvLp7FRFv1K7RR3fAjjEQccf9EJrTv4").into_vec().unwrap().as_slice());
+                // debug::info!(target: "bridge-iost", "tx verify {:?}", tx.verify());
+
+                Ok(TxOut::Generated(multi_sig_tx))
+            }
+            _ => Err(Error::<T>::InvalidTxOutType),
+        }
+    }
+
+    pub fn sign<T: crate::Trait>(self, sk: Vec<u8>, author: AccountId) -> Result<Self, Error<T>> {
+        match self {
+            TxOut::Generated(mut multi_sig_tx) => {
+                // if multi_sig_tx.multi_sig.has_signed(author.clone()) {
+                //     return Err(Error::<T>::AlreadySignedByAuthor);
+                // }
+
+                let chain_id = &multi_sig_tx.chain_id;
+                let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
+                    .map_err(|_| Error::<T>::IostChainError)?;
+                // let sig: Signature = tx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::IostChainError)?;
+                tx.sign(
+                    "admin".to_string(),
+                    iost_keys::algorithm::ED25519,
+                    sk.as_slice(),
+                );
+                match tx.verify() {
+                    Ok(_) => {
+                        multi_sig_tx.raw_tx = tx
+                            .to_serialize_data()
+                            .map_err(|_| Error::<T>::IostChainError)?;
+                        Ok(TxOut::Signed(multi_sig_tx))
+                    }
+                    _ => Err(Error::<T>::IostChainError),
+                }
+            }
+            _ => Err(Error::<T>::InvalidTxOutType),
+        }
+    }
+
+    pub fn send<T: crate::Trait>(self, iost_node_url: &str) -> Result<Self, Error<T>> {
+        match self {
+            TxOut::Signed(multi_sig_tx) => {
+                let signed_trx = iost_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
+
+                // let transaction_vec = iost_rpc::push_transaction(iost_node_url, signed_trx)?;
+
+                // let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
+                // let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
+
+                Ok(TxOut::Processing {
+                    // tx_id,
+                    multi_sig_tx,
+                })
+            }
+            _ => Err(Error::<T>::InvalidTxOutType),
+        }
     }
 }
 
@@ -154,7 +230,7 @@ pub(crate) mod iost_rpc {
     const GET_BLOCK_API: &'static str = "/getBlockByHash";
     const PUSH_TRANSACTION_API: &'static str = "/v1/chain/push_transaction";
 
-    type ChainId = String;
+    type ChainId = i32;
     type HeadBlockHash = String;
     type BlockNum = u16;
     type RefBlockPrefix = u32;
@@ -173,7 +249,7 @@ pub(crate) mod iost_rpc {
         let body_str =
             core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
         let node_info = parse_json(body_str).map_err(|_| Error::<T>::LiteJsonError)?;
-        let mut chain_id = Default::default();
+        let mut chain_id = 0;
         let mut head_block_hash = Default::default();
 
         match node_info {
@@ -181,8 +257,8 @@ pub(crate) mod iost_rpc {
                 for item in json.iter() {
                     if item.0 == CHAIN_ID {
                         chain_id = {
-                            match item.1 {
-                                JsonValue::String(ref chars) => String::from_iter(chars.iter()),
+                            match item.1.clone() {
+                                // JsonValue::Number(numberValue) => numberValue.into() as i32,
                                 _ => return Err(Error::<T>::IOSTRpcError),
                             }
                         };
@@ -199,14 +275,48 @@ pub(crate) mod iost_rpc {
             }
             _ => return Err(Error::<T>::IOSTRpcError),
         }
-        if chain_id == String::default() || head_block_hash == String::default() {
+        if chain_id == 0 || head_block_hash == String::default() {
             return Err(Error::<T>::IOSTRpcError);
         }
 
         Ok((chain_id, head_block_hash))
     }
 
-    // pub(crate) fn get_block<T: crate::Trait>(node_url: &str, head_block_hash: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
-    //
-    // }
+    pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(
+        multi_sig_tx: &MultiSigTx<AccountId>,
+    ) -> Result<Vec<u8>, Error<T>> {
+        unimplemented!()
+        // let serialized_signatures = {
+        //     let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
+        //     for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
+        //         let sig = Signature::read(&tx_sig.signature, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
+        //         let val = JsonValue::String(sig.to_string().chars().collect());
+        //         serialized_signatures.push(val);
+        //     }
+        //     serialized_signatures
+        // };
+        //
+        // let signed_trx = JsonValue::Object(vec![
+        //     (
+        //         "signatures".chars().collect::<Vec<_>>(),
+        //         JsonValue::Array(serialized_signatures),
+        //     ),
+        //     (
+        //         "compression".chars().collect::<Vec<_>>(),
+        //         JsonValue::String("none".chars().collect()),
+        //     ),
+        //     (
+        //         "packed_context_free_data".chars().collect::<Vec<_>>(),
+        //         JsonValue::String(Vec::new()),
+        //     ),
+        //     (
+        //         "packed_trx".chars().collect::<Vec<_>>(),
+        //         JsonValue::String(
+        //             hex::encode(&multi_sig_tx.raw_tx).chars().collect()
+        //         ),
+        //     ),
+        // ]).serialize();
+        //
+        // Ok(signed_trx)
+    }
 }
