@@ -92,7 +92,7 @@ pub enum TxOut<AccountId> {
     Signed(MultiSigTx<AccountId>),
     /// Sending Eos multi-sig transaction to and fetching tx id from Eos node
     Processing {
-        // tx_id: Checksum256,
+        tx_id: Vec<u8>,
         multi_sig_tx: MultiSigTx<AccountId>,
     },
     /// Eos multi-sig transaction processed successfully, so only save tx id
@@ -173,7 +173,6 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
                 //     return Err(Error::<T>::AlreadySignedByAuthor);
                 // }
 
-                let chain_id = &multi_sig_tx.chain_id;
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
                     .map_err(|_| Error::<T>::IostChainError)?;
                 // let sig: Signature = tx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::IostChainError)?;
@@ -201,13 +200,13 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
             TxOut::Signed(multi_sig_tx) => {
                 let signed_trx = iost_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
-                // let transaction_vec = iost_rpc::push_transaction(iost_node_url, signed_trx)?;
+                let tx_id = iost_rpc::push_transaction(iost_node_url, signed_trx)?;
 
                 // let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
                 // let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
                 Ok(TxOut::Processing {
-                    // tx_id,
+                    tx_id,
                     multi_sig_tx,
                 })
             }
@@ -222,6 +221,7 @@ pub(crate) mod iost_rpc {
     use lite_json::{parse_json, JsonValue, Serialize};
     use sp_runtime::offchain::http;
 
+    const HASH: [char; 4] = ['h', 'a', 's', 'h']; // tx hash
     const CHAIN_ID: [char; 8] = ['c', 'h', 'a', 'i', 'n', '_', 'i', 'd']; // key chain_id
     const HEAD_BLOCK_HASH: [char; 15] = [
         'h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'h', 'a', 's', 'h',
@@ -285,38 +285,60 @@ pub(crate) mod iost_rpc {
     pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(
         multi_sig_tx: &MultiSigTx<AccountId>,
     ) -> Result<Vec<u8>, Error<T>> {
-        unimplemented!()
-        // let serialized_signatures = {
-        //     let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
-        //     for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
-        //         let sig = Signature::read(&tx_sig.signature, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
-        //         let val = JsonValue::String(sig.to_string().chars().collect());
-        //         serialized_signatures.push(val);
-        //     }
-        //     serialized_signatures
-        // };
-        //
-        // let signed_trx = JsonValue::Object(vec![
-        //     (
-        //         "signatures".chars().collect::<Vec<_>>(),
-        //         JsonValue::Array(serialized_signatures),
-        //     ),
-        //     (
-        //         "compression".chars().collect::<Vec<_>>(),
-        //         JsonValue::String("none".chars().collect()),
-        //     ),
-        //     (
-        //         "packed_context_free_data".chars().collect::<Vec<_>>(),
-        //         JsonValue::String(Vec::new()),
-        //     ),
-        //     (
-        //         "packed_trx".chars().collect::<Vec<_>>(),
-        //         JsonValue::String(
-        //             hex::encode(&multi_sig_tx.raw_tx).chars().collect()
-        //         ),
-        //     ),
-        // ]).serialize();
-        //
-        // Ok(signed_trx)
+        let mut tx =
+            Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
+        Ok(tx.no_std_serialize())
+    }
+
+    pub(crate) fn push_transaction<T: crate::Trait>(
+        node_url: &str,
+        signed_trx: Vec<u8>,
+    ) -> Result<Vec<u8>, Error<T>> {
+        let pending = http::Request::post(
+            &format!("{}{}", node_url, PUSH_TRANSACTION_API),
+            vec![signed_trx],
+        )
+        .send()
+        .map_err(|_| Error::<T>::OffchainHttpError)?;
+        let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
+
+        let body = response.body().collect::<Vec<u8>>();
+        let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
+        let tx_id = get_transaction_id(&body_str)?;
+
+        Ok(tx_id.into_bytes())
+    }
+
+    pub(crate) fn get_transaction_id<T: crate::Trait>(
+        trx_response: &str,
+    ) -> Result<String, Error<T>> {
+        // error happens while pushing transaction to EOS node
+        if !trx_response.contains("hash") && !trx_response.contains("pre_tx_receipt") {
+            return Err(Error::<T>::IOSTRpcError);
+        }
+        let mut trx_id = String::new();
+        let node_info = parse_json(trx_response).map_err(|_| Error::<T>::LiteJsonError)?;
+
+        match node_info {
+            JsonValue::Object(ref json) => {
+                for item in json.iter() {
+                    if item.0 == HASH {
+                        trx_id = {
+                            match item.1.clone() {
+                                JsonValue::String(ref chars) => String::from_iter(chars.iter()),
+                                _ => return Err(Error::<T>::IOSTRpcError),
+                            }
+                        };
+                    }
+                }
+            }
+            _ => return Err(Error::<T>::IOSTRpcError),
+        }
+
+        if trx_id.eq("") {
+            return Err(Error::<T>::IOSTRpcError);
+        }
+
+        Ok(trx_id)
     }
 }

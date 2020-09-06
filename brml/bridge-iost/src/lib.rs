@@ -709,26 +709,26 @@ impl<T: Trait> Module<T> {
                     },
                     _ => bto,
                 }
+            })
+            .map(|bto| {
+                match bto {
+                    TxOut::<T::AccountId>::Signed(_) => {
+                        match bto.clone().send::<T>(node_url.as_str()) {
+                            Ok(sent_bto) => {
+                                has_change.set(true);
+                                debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
+                                debug::info!("bto.send");
+                                sent_bto
+                            }
+                            Err(e) => {
+                                debug::warn!("error happened while pushing transaction: {:?}", e);
+                                bto
+                            }
+                        }
+                    },
+                    _ => bto,
+                }
             }).collect::<Vec<_>>();
-        //     .map(|bto| {
-        //         match bto {
-        //             TxOut::<T::AccountId>::Signed(_) => {
-        //                 match bto.clone().send::<T>(node_url.as_str()) {
-        //                     Ok(sent_bto) => {
-        //                         has_change.set(true);
-        //                         debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
-        //                         debug::info!("bto.send");
-        //                         sent_bto
-        //                     }
-        //                     Err(e) => {
-        //                         debug::warn!("error happened while pushing transaction: {:?}", e);
-        //                         bto
-        //                     }
-        //                 }
-        //             },
-        //             _ => bto,
-        //         }
-        //     }).collect::<Vec<_>>();
 
         Ok(())
     }
