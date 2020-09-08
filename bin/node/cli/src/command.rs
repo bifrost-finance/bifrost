@@ -15,36 +15,35 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{chain_spec, service, Cli, Subcommand};
+use crate::executor::Executor;
 use node_runtime::{Block, RuntimeApi};
-use sc_cli::{Result, SubstrateCli};
+use sc_cli::{Result, SubstrateCli, RuntimeVersion, Role, ChainSpec};
+use sc_service::PartialComponents;
+use crate::service::new_partial;
 
 impl SubstrateCli for Cli {
-	fn impl_name() -> &'static str {
-		"bifrost-node"
+	fn impl_name() -> String {
+		"bifrost-node".into()
 	}
 
-	fn impl_version() -> &'static str {
-		env!("CARGO_PKG_VERSION")
+	fn impl_version() -> String {
+		env!("CARGO_PKG_VERSION").into()
 	}
 
-	fn description() -> &'static str {
-		env!("CARGO_PKG_DESCRIPTION")
+	fn description() -> String {
+		env!("CARGO_PKG_DESCRIPTION").into()
 	}
 
-	fn author() -> &'static str {
-		env!("CARGO_PKG_AUTHORS")
+	fn author() -> String {
+		env!("CARGO_PKG_AUTHORS").into()
 	}
 
-	fn support_url() -> &'static str {
-		"https://github.com/bifrost-finance/bifrost/issues/new"
+	fn support_url() -> String {
+		"https://github.com/bifrost-finance/bifrost/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
 		2019
-	}
-
-	fn executable_name() -> &'static str {
-		"bifrost"
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -59,6 +58,10 @@ impl SubstrateCli for Cli {
 			)?),
 		})
 	}
+
+	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		&node_runtime::VERSION
+	}
 }
 
 /// Parse command line arguments into service configuration.
@@ -68,21 +71,27 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
-			runner.run_node(
-				service::new_light,
-				service::new_full,
-				node_runtime::VERSION
-			)
+			runner.run_node_until_exit(|config| match config.role {
+				Role::Light => service::new_light(config),
+				_ => service::new_full(config),
+			})
 		}
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
-			runner.sync_run(|config| cmd.run::<Block, RuntimeApi, crate::executor::Executor>(config))
+			runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config))
 		}
+		Some(Subcommand::Key(cmd)) => cmd.run(),
+		Some(Subcommand::Sign(cmd)) => cmd.run(),
+		Some(Subcommand::Verify(cmd)) => cmd.run(),
+		Some(Subcommand::Vanity(cmd)) => cmd.run(),
 		Some(Subcommand::Base(subcommand)) => {
 			let runner = cli.create_runner(subcommand)?;
-
-			runner.run_subcommand(subcommand, |config| Ok(new_full_start!(config).0))
+			runner.run_subcommand(subcommand, |config| {
+				let PartialComponents { client, backend, task_manager, import_queue, ..}
+					= new_partial(&config)?;
+				Ok((client, backend, import_queue, task_manager))
+			})
 		}
 	}
 }

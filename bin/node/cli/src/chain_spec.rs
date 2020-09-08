@@ -22,7 +22,7 @@ use serde::{Serialize, Deserialize};
 use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
-	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, WASM_BINARY,
+	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, wasm_binary_unwrap,
 	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
@@ -36,7 +36,8 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol};
+//pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol, ConvertPool};
+pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol, ConvertPool};
 pub use node_runtime::GenesisConfig;
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -237,7 +238,7 @@ pub fn testnet_genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
@@ -323,6 +324,11 @@ pub fn testnet_genesis(
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
+//			pool: vec![
+//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+//			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
@@ -481,7 +487,7 @@ pub fn bifrost_genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
@@ -560,6 +566,11 @@ pub fn bifrost_genesis(
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
+//			pool: vec![
+//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+//			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 3), // this eos account needs 3 signer to sign a trade
@@ -625,10 +636,12 @@ fn initialize_assets() -> Vec<((TokenSymbol, AccountId), AccountAsset<Balance, C
 		(
 			(TokenSymbol::DOT, parse_address("5CDWwkPsyc37XdB9N5QpZosgrcqcKA48Lpb81KjDZ89W9GPm")),
 			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+//			AccountAsset { balance: 5_000_000 * DOLLARS, available: 5_000_000 * DOLLARS, ..Default::default() }
 		),
 		(
 			(TokenSymbol::KSM, parse_address("5DAQaLpQjAZKuX4F77Lb69e5qb3GtaKVLF1mdiYt5SAhXeLC")),
 			AccountAsset { balance: 5_000_000 * DOLLARS, ..Default::default() }
+//			AccountAsset { balance: 5_000_000 * DOLLARS, available: 5_000_000 * DOLLARS, ..Default::default() }
 		),
 	];
 	assets

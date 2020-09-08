@@ -1,0 +1,14 @@
+{
+  "receiver": "llcllcllcllc",
+  "act_digest": "9fc13ae41b29fe5d61db11e2a7d9efe0a26d107aa0c990912ecc81923c725bdd",
+  "global_sequence": 35683388,
+  "recv_sequence": 810,
+  "auth_sequence": [
+    [
+      "llcllcllcllc",
+      1942
+    ]
+  ],
+  "code_sequence": 1,
+  "abi_sequence": 1
+}

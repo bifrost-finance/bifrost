@@ -53,8 +53,13 @@
     "data": "[u8;33]"
   },
   "UnsignedInt": "u32",
+  "Signature": {
+    "type_": "UnsignedInt",
+    "data": "[u8;65]"
+  },
   "SignedBlockHeader": {
-    "block_header": "BlockHeader"
+    "block_header": "BlockHeader",
+    "producer_signature": "Signature"
   },
   "BlockHeader": {
     "timestamp": "BlockTimestamp",
@@ -72,11 +77,6 @@
   "IncrementalMerkle": {
     "_node_count": "u64",
     "_active_nodes": "Vec<Checksum256>"
-  },
-  "BalanceDuration": {
-    "last_block": "BlockNumber",
-    "last_balance": "Balance",
-    "value": "Duration"
   },
   "FlatMap": {
     "map": "Vec<(ActionName, u64)>"

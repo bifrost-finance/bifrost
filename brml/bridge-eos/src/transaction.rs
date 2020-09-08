@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
+/*
+This module is mainly for composing a transaction and how to send it to EOS node.
+*/
+
 use alloc::string::{String, ToString};
 use core::{iter::FromIterator, str::FromStr};
 use codec::{Decode, Encode};
@@ -29,6 +33,7 @@ pub struct TxSig<AccountId> {
 	author: AccountId,
 }
 
+/// Save multi-signatures and threshold means that how many signatures to complete the transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub struct MultiSig<AccountId> {
 	/// Collection of signature of transaction
@@ -45,10 +50,12 @@ impl<AccountId: PartialEq> MultiSig<AccountId> {
 		}
 	}
 
+	/// check whether a transaction is complete
 	fn reach_threshold(&self) -> bool {
 		self.signatures.len() >= self.threshold as usize
 	}
 
+	/// check whether a transaction is signed twice
 	fn has_signed(&self, author: AccountId) -> bool {
 		self.signatures.iter().find(|sig| sig.author == author).is_some()
 	}
@@ -79,6 +86,7 @@ pub struct MultiSigTx<AccountId> {
 	pub token_symbol: node_primitives::TokenSymbol,
 }
 
+/// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub enum TxOut<AccountId> {
 	/// Initial Eos multi-sig transaction
@@ -103,6 +111,7 @@ pub enum TxOut<AccountId> {
 }
 
 impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
+	/// intialize a transaction
 	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
@@ -131,6 +140,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		Ok(TxOut::Initial(multi_sig_tx))
 	}
 
+	/// compose a transaction
 	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Initial(mut multi_sig_tx) => {
@@ -154,6 +164,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		}
 	}
 
+	/// sign the transaction
 	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Generated(mut multi_sig_tx) => {
@@ -178,6 +189,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 		}
 	}
 
+	/// send transaction to EOS node
 	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Signed(multi_sig_tx) => {
@@ -199,6 +211,14 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 }
 
 pub(crate) mod eos_rpc {
+	/*
+	Compose a transaction and push a transaction to EOS net by rpc interafce, surely rpc API can be found
+	at: https://developers.eos.io/manuals/eos/latest/nodeos/plugins/chain_api_plugin/api-reference/index
+	And there're three APIs we need here:
+		1. get_info: Returns an object containing various details about the blockchain.
+		2. get_block: Returns an object containing various details about a specific block on the blockchain.
+		3. get_block: Returns an object containing various details about a specific block on the blockchain.
+	*/
 	use alloc::collections::btree_map::BTreeMap;
 	use alloc::string::ToString;
 	use crate::Error;
@@ -217,6 +237,7 @@ pub(crate) mod eos_rpc {
 	type BlockNum = u16;
 	type RefBlockPrefix = u32;
 
+	/// Get EOS node information
 	pub(crate) fn get_info<T: crate::Trait>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
 		let req_api = format!("{}{}", node_url, GET_INFO_API);
 		let pending = http::Request::post(&req_api, vec![b"{}"])
@@ -261,6 +282,7 @@ pub(crate) mod eos_rpc {
 		Ok((chain_id, head_block_id))
 	}
 
+	/// Get current highest block from EOS net
 	pub(crate) fn get_block<T: crate::Trait>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
 		let req_body = {
 			JsonValue::Object(vec![
@@ -308,6 +330,7 @@ pub(crate) mod eos_rpc {
 		Ok((block_num, ref_block_prefix))
 	}
 
+	/// Push transaction to EOS net
 	pub(crate) fn push_transaction<T: crate::Trait>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
 		let pending = http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx]).send().map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
