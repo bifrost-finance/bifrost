@@ -1,0 +1,11 @@
+{
+  "account": "eosio.token",
+  "name": "transfer",
+  "authorization": [
+    {
+      "actor": "llcllcllcllc",
+      "permission": "active"
+    }
+  ],
+  "hex_data": "80624431a218518c8031bd28637a973b20a107000000000004454f53000000003765567074457a35775a36396f3735446f6f715739414b6e4152536850384d686174473557784e4b64446d463741793940626966726f7374"
+}

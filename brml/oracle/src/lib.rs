@@ -4,7 +4,7 @@ use chainlink::{Event, create_request_event_from_parameters};
 use frame_support::traits::{Get};
 use frame_support::{Parameter, decl_module, decl_storage, dispatch::DispatchResult};
 use node_primitives::TokenPriceHandler;
-use system::ensure_signed;
+use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 use sp_runtime::traits::{Member, AtLeast32Bit, Zero, SaturatedConversion};
 
