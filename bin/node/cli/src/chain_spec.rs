@@ -753,7 +753,7 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard CC2",
+		"Bifrost Asgard CC3",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		bifrost_config_genesis,

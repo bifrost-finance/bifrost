@@ -31,7 +31,7 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-	traits::{Member, SaturatedConversion, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
+	traits::{Member, SaturatedConversion, Saturating, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction, TransactionSource
@@ -46,7 +46,7 @@ use frame_system::{
 };
 use node_primitives::{
 	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
-//	FetchConvertPool,
+	FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -228,7 +228,8 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 
-//	type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
+	/// Fetch convert pool from convert module
+	type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -565,17 +566,6 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (0, DispatchClass::Normal, Pays::No)]
-		fn save_block_num(origin, num: T::BlockNumber) -> DispatchResult {
-			ensure_none(origin)?;
-
-			BigBlockNumber::mutate(|v| {
-				*v += 1;
-			});
-
-			Ok(())
-		}
-
 		#[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
 		fn cross_to_eos(
 			origin,
@@ -628,12 +618,6 @@ decl_module! {
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
-
-			let call = Call::save_block_num(now_block);
-			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-				Ok(_) => debug::info!("block number {:?}", now_block),
-				Err(e) => debug::warn!("submit block number with failure: {:?}", e),
-			}
 
 			// It's no nessesary to start offchain worker if no any task in queue
 			if !BridgeTxOuts::<T>::get().is_empty() {
@@ -771,36 +755,31 @@ impl<T: Trait> Module<T> {
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
 		// but in the future, we will support both token, let user to which token he wants to get
 		// according to the convert price
-		let (token_symbol, vtoken_symbol) = token_symbol.paired_token();
-//		let convert_pool = T::FetchConvertPool::fetch_convert_pool(token_symbol);
+		let token_symbol_pair = token_symbol.paired_token(); // return (token_symbol, vtoken_symbol)
+		let convert_pool = T::FetchConvertPool::fetch_convert_pool(token_symbol_pair.0);
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
 		let symbol_precision = symbol.precision() as u16;
 		// ensure symbol and precision matched
-		let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
+		let existed_token_symbol = T::AssetTrait::get_token(token_symbol_pair.0);
 		ensure!(
 			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
 			Error::<T>::EOSSymbolMismatch
 		);
 
 		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-		// todo, according convert price to save as vEOS
-		let vtoken_balances: T::Balance = {
-			TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?
-//			let b: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
-//			b * convert_pool.vtoken_pool / convert_pool.token_pool
-		};
-//
-//		let (token_symbol, balance) = if token_symbol.is_vtoken() {
+		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
-//			(
-//		} else {
-//			(token_symbol, token_balances)
-//		};
-
-		// issue asset to target
-		T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
+		if token_symbol.is_vtoken() {
+			// according convert pool to convert EOS to vEOS
+			let vtoken_balances: T::Balance = {
+				new_balance.saturating_mul(convert_pool.vtoken_pool) / convert_pool.token_pool
+			};
+			T::AssetTrait::asset_issue(token_symbol_pair.1, &target, vtoken_balances);
+		} else {
+			T::AssetTrait::asset_issue(token_symbol_pair.0, &target, new_balance);
+		}
 
 		Ok(target)
 	}
@@ -1026,37 +1005,16 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-//		if let Call::bridge_tx_report(_tx_list) = call {
-//			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-//			ValidTransaction::with_tag_prefix("BridgeEos")
-//				.priority(TransactionPriority::max_value())
-//				.and_provides(vec![(now_block).encode()])
-//				.longevity(TransactionLongevity::max_value())
-//				.propagate(true)
-//				.build()
-//		} else {
-//			InvalidTransaction::Call.into()
-//		}
-		match call {
-			Call::bridge_tx_report(_tx_list) => {
-				let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-				ValidTransaction::with_tag_prefix("BridgeEos")
-					.priority(TransactionPriority::max_value())
-					.and_provides(vec![(now_block).encode()])
-					.longevity(TransactionLongevity::max_value())
-					.propagate(true)
-					.build()
-			}
-			Call::save_block_num(_tx_list) => {
-				let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-				ValidTransaction::with_tag_prefix("SaveBlockNum")
-					.priority(TransactionPriority::max_value())
-					.and_provides(vec![(now_block).encode()])
-					.longevity(TransactionLongevity::max_value())
-					.propagate(true)
-					.build()
-			}
-			_ => InvalidTransaction::Call.into()
+		if let Call::bridge_tx_report(_tx_list) = call {
+			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+			ValidTransaction::with_tag_prefix("BridgeEos")
+				.priority(TransactionPriority::max_value())
+				.and_provides(vec![(now_block).encode()])
+				.longevity(TransactionLongevity::max_value())
+				.propagate(true)
+				.build()
+		} else {
+			InvalidTransaction::Call.into()
 		}
 	}
 }
