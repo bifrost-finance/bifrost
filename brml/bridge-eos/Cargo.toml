@@ -26,6 +26,7 @@ lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", defau
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }
+convert = { package = "brml-convert", path = "../convert" }
 substrate-offchain = { version = "2.0.0-rc6", package = "sp-offchain" }
 
 [features]

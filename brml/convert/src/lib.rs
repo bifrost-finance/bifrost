@@ -26,9 +26,8 @@ mod tests;
 use frame_support::traits::Get;
 use frame_support::weights::DispatchClass;
 use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
-use frame_system::{self as system, ensure_root, ensure_signed};
-//use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, FetchConvertPool, AssetReward, TokenSymbol, RewardHandler};
-use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, AssetReward, TokenSymbol, RewardHandler};
+use frame_system::{ensure_root, ensure_signed};
+use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, FetchConvertPool, AssetReward, TokenSymbol, RewardHandler};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize};
 
 pub trait Trait: frame_system::Trait {
@@ -54,7 +53,6 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type ConvertDuration: Get<Self::BlockNumber>;
-	type ConvertPricePrecision: Get<Self::ConvertPrice>;
 }
 
 decl_event! {
@@ -81,8 +79,8 @@ decl_error! {
 		NotSupportaUSD,
 		/// Cannot convert token with itself
 		ConvertWithTheSameToken,
-		// Empty convert pool, cause there's no price at all
-//		EmptyConvertPool,
+		/// Empty convert pool, cause there's no price at all
+		EmptyConvertPool,
 	}
 }
 
@@ -101,20 +99,16 @@ decl_storage! {
 		/// referer channels for all users
 		AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
 		/// Convert pool
-		Pool get(fn pool): map hasher(blake2_128_concat) TokenSymbol => ConvertPool<T::Balance>;
-//		Pool get(fn pool) config(): map hasher(blake2_128_concat) TokenSymbol => ConvertPool<T::Balance>;
+		Pool get(fn pool) config(): map hasher(blake2_128_concat) TokenSymbol => ConvertPool<T::Balance>;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
-			for (token_symbol, price) in config.convert_price.iter() {
+			for (token_symbol, token_pool) in config.pool.iter() {
+				let price: T::ConvertPrice = token_pool.vtoken_pool.into() / token_pool.token_pool.into();
 				ConvertPrice::<T>::insert(token_symbol, price);
+
+				Pool::<T>::insert(token_symbol, token_pool);
 			}
-//			for (token_symbol, token_pool) in config.pool.iter() {
-//				let price: T::ConvertPrice = token_pool.vtoken_pool.into() / token_pool.token_pool.into();
-//				ConvertPrice::<T>::insert(token_symbol, price);
-//
-//				Pool::<T>::insert(token_symbol, token_pool);
-//			}
 		});
 	}
 }
@@ -124,10 +118,10 @@ decl_module! {
 		type Error = Error<T>;
 
 		const ConvertDuration: T::BlockNumber = T::ConvertDuration::get();
-		const ConvertPricePrecision: T::ConvertPrice = T::ConvertPricePrecision::get();
 
 		fn deposit_event() = default;
 
+//		#[cfg(test)]
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_convert_price(
 			origin,
@@ -144,6 +138,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
+//		#[cfg(test)]
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_price_per_block(
 			origin,
@@ -182,16 +177,11 @@ decl_module! {
 			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// use current covert pool to get latest price
-//			let convert_pool = Pool::<T>::get(token_symbol);
-//			let ConvertPool { token_pool, vtoken_pool, .. } = convert_pool;
-//			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
-//
-//			// latest price should be vtoken_pool / token_pool
-//			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
-			let price = <ConvertPrice<T>>::get(token_symbol);
+			let ConvertPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_symbol);
+			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
 
-			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
-			let vtokens_buy = token_amount.saturating_mul(T::ConvertPricePrecision::get().into()) / price.into();
+			// latest price should be vtoken_pool / token_pool
+			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_symbol, &converter, token_amount);
@@ -227,15 +217,10 @@ decl_module! {
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
 
 			// use current covert pool to get latest price
-//			let convert_pool = Pool::<T>::get(token_symbol);
-//			let ConvertPool { token_pool, vtoken_pool, .. } = convert_pool;
-//			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
-//
-//			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
-			let price = <ConvertPrice<T>>::get(token_symbol);
+			let ConvertPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_symbol);
+			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
 
-			ensure!(!price.is_zero(), Error::<T>::InvalidConvertPrice);
-			let tokens_buy = vtoken_amount.saturating_mul(price.into()) / T::ConvertPricePrecision::get().into();
+			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
 
 			T::AssetTrait::asset_destroy(vtoken_symbol, &converter, vtoken_amount);
 			T::AssetTrait::asset_issue(token_symbol, &converter, tokens_buy);
@@ -264,10 +249,9 @@ decl_module! {
 						if <ConvertPrice<T>>::contains_key(token_id) {
 							<ConvertPrice<T>>::mutate(token_id, |convert_price| {
 								*convert_price = {
-									let precision: T::ConvertPrice = T::ConvertPricePrecision::get();
 									let token_pool: T::ConvertPrice = convert_pool.token_pool.into();
 									let vtoken_pool: T::ConvertPrice = convert_pool.vtoken_pool.into();
-									token_pool.saturating_mul(precision) / vtoken_pool
+									vtoken_pool / token_pool
 								};
 							});
 						}
@@ -409,9 +393,9 @@ impl<T: Trait> FetchConvertPrice<TokenSymbol, T::ConvertPrice> for Module<T> {
 	}
 }
 
-//impl<T: Trait> FetchConvertPool<TokenSymbol, T::Balance> for Module<T> {
-//	fn fetch_convert_pool(token_symbol: TokenSymbol) -> ConvertPool<T::Balance> { Pool::<T>::get(token_symbol) }
-//}
+impl<T: Trait> FetchConvertPool<TokenSymbol, T::Balance> for Module<T> {
+	fn fetch_convert_pool(token_symbol: TokenSymbol) -> ConvertPool<T::Balance> { Pool::<T>::get(token_symbol) }
+}
 
 impl<T: Trait> AssetReward<TokenSymbol, T::Balance> for Module<T> {
 	type Output = ();

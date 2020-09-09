@@ -50,6 +50,7 @@ impl_outer_event! {
 		system<T>,
 		bridge_eos<T>,
 		assets<T>,
+		convert,
 	}
 }
 
@@ -143,6 +144,7 @@ impl crate::Trait for Test {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
+	type FetchConvertPool = Convert;
 }
 
 impl assets::Trait for Test {
@@ -154,13 +156,30 @@ impl assets::Trait for Test {
 	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchConvertPrice = Convert;
+}
+
+parameter_types! {
+	pub const ConvertDuration: u64 = 24 * 60 * 10;
+}
+
+impl convert::Trait for Test {
+	type ConvertPrice = u64;
+	type RatePerBlock = u64;
+	type Event = TestEvent;
+	type AssetTrait = Assets;
+	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
+	type ConvertDuration = ConvertDuration;
 }
 
 pub type BridgeEos = crate::Module<Test>;
 pub type Authorship = pallet_authorship::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
+pub type Convert = convert::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
