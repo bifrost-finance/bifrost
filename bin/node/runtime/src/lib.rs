@@ -854,7 +854,6 @@ impl brml_convert::Trait for Runtime {
 	type Cost = Cost;
 	type Income = Income;
 	type ConvertDuration = ConvertDuration;
-	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 //type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
@@ -870,7 +869,7 @@ impl brml_bridge_eos::Trait for Runtime {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
-//	type FetchConvertPool = Convert;
+	type FetchConvertPool = Convert;
 }
 
 parameter_types! {
@@ -923,6 +922,12 @@ impl chainlink::Trait for Runtime {
 	type Event = Event;
 }
 
+impl pallet_generic_asset::Trait for Runtime {
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Event = Event;
+}
+
 // bifrost rumtine time end
 
 construct_runtime!(
@@ -972,6 +977,7 @@ construct_runtime!(
 		// chainlink
 		Oracle: brml_oracle::{Module, Call, Storage},
 		Chainlink: chainlink::{Module, Call, Storage, Event<T>},
+		GenericAsset: pallet_generic_asset::{Module, Call, Storage, Event<T>},
 	}
 );
 

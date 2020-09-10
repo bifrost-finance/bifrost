@@ -103,6 +103,10 @@ decl_storage! {
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
+			for (token_symbol, price) in config.convert_price.iter() {
+				ConvertPrice::<T>::insert(token_symbol, price);
+			}
+
 			for (token_symbol, token_pool) in config.pool.iter() {
 				let price: T::ConvertPrice = token_pool.vtoken_pool.into() / token_pool.token_pool.into();
 				ConvertPrice::<T>::insert(token_symbol, price);
@@ -121,7 +125,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-//		#[cfg(test)]
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_convert_price(
 			origin,
@@ -138,7 +141,6 @@ decl_module! {
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
-//		#[cfg(test)]
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		fn set_price_per_block(
 			origin,

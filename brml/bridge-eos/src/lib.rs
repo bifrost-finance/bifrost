@@ -632,7 +632,7 @@ decl_module! {
 					debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
 				}
 			} else {
-				debug::info!("There's no offchain worker started.");
+				();
 			}
 		}
 	}
