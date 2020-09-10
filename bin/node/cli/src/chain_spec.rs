@@ -324,11 +324,11 @@ pub fn testnet_genesis(
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
-//			pool: vec![
-//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
-//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
-//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
-//			],
+			pool: vec![
+				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
@@ -566,11 +566,11 @@ pub fn bifrost_genesis(
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
-//			pool: vec![
-//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
-//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
-//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
-//			],
+			pool: vec![
+				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 3), // this eos account needs 3 signer to sign a trade
