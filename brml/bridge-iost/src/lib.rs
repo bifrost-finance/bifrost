@@ -450,6 +450,7 @@ decl_module! {
         ) {
             let origin = system::ensure_signed(origin)?;
             let iost_amount = amount;
+            debug::warn!("trying to send transaction to IOST node.");
 
             // check vtoken id exist or not
             ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
@@ -464,6 +465,7 @@ decl_module! {
             ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
             let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
             ensure!(balance >= amount, "amount should be less than or equal to origin balance");
+            // debug::warn!("failed to send transaction to IOST node. {} - {}", symbol_precise, balance);
 
             let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
             let bridge_asset = BridgeAssetBalance {
@@ -501,7 +503,7 @@ decl_module! {
                     debug::info!(target: "bridge-ioso", "Skipping send tx at {:?}. Not a validator.",now_block)
                 }
             } else {
-                debug::info!("There's no offchain worker started.");
+                debug::info!(target: "bridge-ioso", "There's no offchain worker started.");
             }
         }
     }

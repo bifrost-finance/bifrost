@@ -314,7 +314,7 @@ pub fn testnet_genesis(
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
-			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
+			next_asset_id: 9u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
@@ -494,7 +494,7 @@ pub fn bifrost_genesis(
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
-			code: WASM_BINARY.to_vec(),
+			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
 		}),
 		pallet_balances: Some(BalancesConfig {
