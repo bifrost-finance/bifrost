@@ -22,7 +22,7 @@ use frame_support::traits::{Get};
 use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure, dispatch::DispatchResult, IterableStorageMap};
 use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup, MaybeSerializeDeserialize};
 use sp_std::prelude::*;
-use system::{ensure_signed, ensure_root};
+use frame_system::{self as system, ensure_signed, ensure_root};
 use node_primitives::{
 	AccountAsset, AssetRedeem, AssetTrait, FetchConvertPrice, Token, TokenPriceHandler, TokenSymbol,
 };
@@ -375,8 +375,8 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 	fn lock_asset(who: &T::AccountId, token_symbol: TokenSymbol, locked: T::Balance) {
 		let target_asset = (token_symbol, who);
 		<AccountAssets<T>>::mutate(target_asset, |asset| {
-			asset.locked = locked;
-			asset.available = asset.balance - asset.locked;
+			asset.locked += locked;
+			asset.available = asset.balance.saturating_sub(asset.locked);
 		});
 	}
 
@@ -384,8 +384,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		let target_asset = (token_symbol, who);
 		<AccountAssets<T>>::mutate(target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(locked);
-			asset.locked = 0.into();
-			asset.available = asset.balance;
+			asset.locked -= locked;
 		});
 	}
 }

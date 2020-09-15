@@ -31,7 +31,7 @@ use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
-	traits::{Member, SaturatedConversion, AtLeast32Bit, MaybeSerializeDeserialize},
+	traits::{Member, SaturatedConversion, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
 	transaction_validity::{
 		InvalidTransaction, TransactionLongevity, TransactionPriority,
 		TransactionValidity, ValidTransaction, TransactionSource
@@ -39,13 +39,14 @@ use sp_runtime::{
 };
 use frame_support::{
 	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
-	dispatch::{DispatchResult, DispatchError}, weights::{DispatchClass, Weight, Pays},
+	dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap,
 };
 use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
 use node_primitives::{
 	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
+//	FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -178,6 +179,23 @@ decl_error! {
 		InvalidTokenForTrade,
 		/// EOSSymbolMismatch,
 		EOSSymbolMismatch,
+		/// Bridge eos has been disabled
+		CrossChainDisabled,
+		/// Who hasn't the permission to sign a cross-chain trade
+		NoPermissionSignCrossChainTrade,
+		/// There's no any blockheaders for verifying
+		InvalidDataForVerifyingBlockheaders,
+		/// Blockheaders length are not equal to Id list
+		/// These Id list are for verifying blockheaders
+		BlockHeaderLengthMismatchWithIdList,
+		/// Fail to verify blockheaders
+		FailureOnVerifyingBlockheaders,
+		/// Duplicated trade because this trade has been on bifrost
+		DuplicatedCrossChainTransaction,
+		/// This action is invalid
+		InvalidAction,
+		/// Fail to verify transaction action
+		FailureOnVerifyingTransactionAction,
 	}
 }
 
@@ -209,6 +227,8 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+
+//	type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -250,6 +270,8 @@ decl_storage! {
 		/// Save all unique transactions
 		/// Every transaction has different action receipt, but can have the same action
 		BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
+		/// Transaction ID is unique on EOS
+		BridgeTransactionID: map hasher(blake2_128_concat) Checksum256 => ActionReceipt;
 
 		/// Current pending schedule version
 		PendingScheduleVersion: VersionId;
@@ -259,6 +281,7 @@ decl_storage! {
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
+		BigBlockNumber get(fn now_block): u32 = 10;
 
 		/// Who has the privilege to call transaction between Bifrost and EOS
 		CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
@@ -298,6 +321,19 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn clear_cross_trade_times(origin) {
+			ensure_root(origin)?;
+
+			// clear cross trade times
+			for (who, _) in TimesOfCrossChainTrade::<T>::iter() {
+				TimesOfCrossChainTrade::<T>::mutate(&who, |pool| {
+					pool.0 = Zero::zero();
+					pool.1 = Zero::zero();
+				});
+			}
+		}
 
 		#[weight = T::DbWeight::get().writes(1)]
 		fn bridge_enable(origin, enable: bool) {
@@ -390,33 +426,26 @@ decl_module! {
 			block_ids_list: Vec<Vec<Checksum256>>
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+			ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
-			ensure!(BridgeEnable::get(), DispatchError::Other("This call is not enabled now!"));
-			ensure!(!block_headers.is_empty(), DispatchError::Other("The signed block headers cannot be empty."));
-			ensure!(block_headers[0].block_header.new_producers.is_some(), DispatchError::Other("The producers list cannot be empty."));
-			ensure!(block_ids_list.len() == block_headers.len(), DispatchError::Other("The block ids list cannot be empty."));
-			ensure!(block_ids_list.len() == 15, DispatchError::Other("The length of signed block headers must be 15."));
-			ensure!(block_ids_list[0].is_empty(), DispatchError::Other("The first block ids must be empty."));
-			ensure!(block_ids_list[1].len() ==  10, DispatchError::Other("The rest of block ids length must be 10."));
-
-			let legacy_pending_schedule = block_headers[0].block_header.new_producers.as_ref();
-			let legacy_pending_schedule_hash = legacy_pending_schedule.and_then(|ps| ps.schedule_hash().ok())
-				.ok_or(DispatchError::Other("Failed to calculate legacy schedule hash value."))?;
-			ensure!(legacy_pending_schedule_hash == legacy_schedule_hash, "invalid producers schedule");
-
-			ensure!(PendingScheduleVersion::exists(), DispatchError::Other("PendingScheduleVersion has not been initialized."));
+			// check the data is valid for verifying these blockheaders
+			ensure!(BridgeEnable::get(), Error::<T>::CrossChainDisabled);
+			ensure!(!block_headers.is_empty(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list.len() == block_headers.len(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list.len() == 15, Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[0].is_empty(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[1].len() ==  10, Error::<T>::InvalidDataForVerifyingBlockheaders);
 
 			let current_schedule_version = PendingScheduleVersion::get();
 
 			let (schedule_hash, producer_schedule) = {
-				let schedule_hash = new_schedule.schedule_hash().map_err(|_| DispatchError::Other("Failed to calculate schedule hash value."))?;
+				let schedule_hash = new_schedule.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
 				(schedule_hash, new_schedule)
 			};
 
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-				"Failed to verify block."
+				Error::<T>::FailureOnVerifyingBlockheaders
 			);
 
 			// if verification is successful, save the new producers schedule.
@@ -440,36 +469,30 @@ decl_module! {
 			trx_id: Checksum256
 		) -> DispatchResult {
 			let origin = ensure_signed(origin)?;
-			ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+			ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
 			// ensure this transaction is unique, and ensure no duplicated transaction
-			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
+			ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
 			// ensure action is what we want
-			ensure!(action.name == ACTION_NAMES[0], "This is an invalid action to Bifrost");
-
-			ensure!(BridgeEnable::get(), "This call is not enable now!");
-			ensure!(
-				!block_headers.is_empty(),
-				"The signed block headers cannot be empty."
-			);
-			ensure!(
-				block_ids_list.len() ==  block_headers.len(),
-				"The block ids list cannot be empty."
-			);
-
+			ensure!(action.name == ACTION_NAMES[0], Error::<T>::InvalidAction);
 			let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
-			ensure!(
-				action_hash == action_receipt.act_digest,
-				"current action hash isn't equal to act_digest from action_receipt."
-			);
+			ensure!(action_hash == action_receipt.act_digest, Error::<T>::InvalidAction);
+
+			// check the data is valid for verifying these blockheaders
+			ensure!(BridgeEnable::get(), Error::<T>::CrossChainDisabled);
+			ensure!(block_ids_list.len() == block_headers.len(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list.len() == 15, Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[0].is_empty(), Error::<T>::InvalidDataForVerifyingBlockheaders);
+			ensure!(block_ids_list[1].len() ==  10, Error::<T>::InvalidDataForVerifyingBlockheaders);
 
 			let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
 
 			let block_under_verification = &block_headers[0];
+			// verify transaction and related action from this transaction
 			ensure!(
 				verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
-				"failed to prove action."
+				Error::<T>::FailureOnVerifyingTransactionAction
 			);
 
 			let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
@@ -482,9 +505,10 @@ decl_module! {
 				}
 			};
 
+			// verify EOS block headers
 			ensure!(
 				Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-				"Failed to verify blocks."
+				Error::<T>::FailureOnVerifyingBlockheaders
 			);
 
 			// save proves for this transaction
@@ -541,6 +565,17 @@ decl_module! {
 			Ok(())
 		}
 
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		fn save_block_num(origin, num: T::BlockNumber) -> DispatchResult {
+			ensure_none(origin)?;
+
+			BigBlockNumber::mutate(|v| {
+				*v += 1;
+			});
+
+			Ok(())
+		}
+
 		#[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
 		fn cross_to_eos(
 			origin,
@@ -575,21 +610,30 @@ decl_module! {
 				token_symbol
 			};
 
-			if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-				debug::info!("sent transaction to EOS node.");
-				// locked balance until trade is verified
-				T::AssetTrait::lock_asset(&origin, token_symbol, amount);
+			match Self::bridge_asset_to(to, bridge_asset) {
+				Ok(_) => {
+					debug::info!("sent transaction to EOS node.");
+					// locked balance until trade is verified
+					T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
 
-				Self::deposit_event(RawEvent::SendTransactionSuccess);
-			} else {
-				debug::warn!("failed to send transaction to EOS node.");
-				Self::deposit_event(RawEvent::SendTransactionFailure);
+					Self::deposit_event(RawEvent::SendTransactionSuccess);
+				}
+				Err(e) => {
+					debug::warn!("failed to send transaction to EOS node, due to {:?}", e);
+					Self::deposit_event(RawEvent::SendTransactionFailure);
+				}
 			}
 		}
 
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
+
+			let call = Call::save_block_num(now_block);
+			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
+				Ok(_) => debug::info!("block number {:?}", now_block),
+				Err(e) => debug::warn!("submit block number with failure: {:?}", e),
+			}
 
 			// It's no nessesary to start offchain worker if no any task in queue
 			if !BridgeTxOuts::<T>::get().is_empty() {
@@ -727,22 +771,33 @@ impl<T: Trait> Module<T> {
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
 		// but in the future, we will support both token, let user to which token he wants to get
 		// according to the convert price
-		let token_symbol = TokenSymbol::EOS;
+		let (token_symbol, vtoken_symbol) = token_symbol.paired_token();
+//		let convert_pool = T::FetchConvertPool::fetch_convert_pool(token_symbol);
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
 		let symbol_precision = symbol.precision() as u16;
 		// ensure symbol and precision matched
-		let (_token_symbol, _) = token_symbol.paired_token();
-		let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
+		let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
 		ensure!(
 			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
 			Error::<T>::EOSSymbolMismatch
 		);
 
-		let token_balances = action_transfer.quantity.amount as u128;
+		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
 		// todo, according convert price to save as vEOS
-		let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+		let vtoken_balances: T::Balance = {
+			TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?
+//			let b: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+//			b * convert_pool.vtoken_pool / convert_pool.token_pool
+		};
+//
+//		let (token_symbol, balance) = if token_symbol.is_vtoken() {
+
+//			(
+//		} else {
+//			(token_symbol, token_balances)
+//		};
 
 		// issue asset to target
 		T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
@@ -760,8 +815,19 @@ impl<T: Trait> Module<T> {
 					let token_symbol = multi_sig_tx.token_symbol;
 
 					let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
-					let token_balances = action_transfer.quantity.amount as usize;
-					let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+					let symbol = action_transfer.quantity.symbol;
+					let symbol_code = symbol.code().to_string().into_bytes();
+					let symbol_precision = symbol.precision() as u16;
+					// ensure symbol and precision matched
+					let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
+					ensure!(
+						existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+						Error::<T>::EOSSymbolMismatch
+					);
+
+					let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
+					let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
 					if all_vtoken_balances.lt(&vtoken_balances) {
 						debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
@@ -960,16 +1026,37 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
-		if let Call::bridge_tx_report(_tx_list) = call {
-			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
-			ValidTransaction::with_tag_prefix("BridgeEos")
-				.priority(TransactionPriority::max_value())
-				.and_provides(vec![(now_block).encode()])
-				.longevity(TransactionLongevity::max_value())
-				.propagate(true)
-				.build()
-		} else {
-			InvalidTransaction::Call.into()
+//		if let Call::bridge_tx_report(_tx_list) = call {
+//			let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+//			ValidTransaction::with_tag_prefix("BridgeEos")
+//				.priority(TransactionPriority::max_value())
+//				.and_provides(vec![(now_block).encode()])
+//				.longevity(TransactionLongevity::max_value())
+//				.propagate(true)
+//				.build()
+//		} else {
+//			InvalidTransaction::Call.into()
+//		}
+		match call {
+			Call::bridge_tx_report(_tx_list) => {
+				let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+				ValidTransaction::with_tag_prefix("BridgeEos")
+					.priority(TransactionPriority::max_value())
+					.and_provides(vec![(now_block).encode()])
+					.longevity(TransactionLongevity::max_value())
+					.propagate(true)
+					.build()
+			}
+			Call::save_block_num(_tx_list) => {
+				let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+				ValidTransaction::with_tag_prefix("SaveBlockNum")
+					.priority(TransactionPriority::max_value())
+					.and_provides(vec![(now_block).encode()])
+					.longevity(TransactionLongevity::max_value())
+					.propagate(true)
+					.build()
+			}
+			_ => InvalidTransaction::Call.into()
 		}
 	}
 }

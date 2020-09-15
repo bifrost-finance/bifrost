@@ -364,7 +364,7 @@ decl_module! {
 
 		fn on_finalize(now_block: T::BlockNumber) {
 			match Self::validator_deduct(now_block) {
-				Ok(_) => debug::info!("Deducted successfully."),
+				Ok(_) => (),
 				Err(e) => debug::error!("An error happened while deduct: {:?}", e),
 			}
 		}
