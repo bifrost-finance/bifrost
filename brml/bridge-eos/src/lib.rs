@@ -291,6 +291,8 @@ decl_storage! {
 
 		/// Record times of cross-chain trade, (EOS => Bifrost, Bifrost => EOS)
 		TimesOfCrossChainTrade get(fn trade_times): map hasher(blake2_128_concat) T::AccountId => (u32, u32) = (0u32, 0u32);
+		/// Set low limit amount of EOS for cross transaction, if it's bigger than this, count one.
+		LowLimitOnCrossChain get(fn cross_trade_eos_limit) config(): T::Balance;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
@@ -313,6 +315,9 @@ decl_storage! {
 			<AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
 				all.extend(all_addresses.into_iter());
 			});
+
+			// setting limit on how many eos counts one
+			LowLimitOnCrossChain::<T>::put(config.cross_trade_eos_limit);
 		});
 	}
 }
@@ -523,11 +528,14 @@ decl_module! {
 			// withdraw operation, Bifrost => EOS
 			if cross_account == action_transfer.from.to_string().into_bytes() {
 				match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
-					Ok(target) => {
+					Ok((target, eos_amount)) => {
 						// update times of trade from Bifrost => EOS
-						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
-							times.1 = times.1.saturating_add(1);
-						});
+						debug::info!("Bifrost => EOS, limit eos: {:?}, eos amount: {:?}", LowLimitOnCrossChain::<T>::get(), eos_amount);
+						if LowLimitOnCrossChain::<T>::get() >= eos_amount {
+							TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+								times.1 = times.1.saturating_add(1);
+							});
+						}
 						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
 					}
 					Err(e) => {
@@ -540,17 +548,21 @@ decl_module! {
 			// deposit operation, EOS => Bifrost
 			if cross_account == action_transfer.to.to_string().into_bytes() {
 				match Self::transaction_from_eos_to_bifrost(&action_transfer) {
-					Ok(target) => {
+					Ok((target, eos_amount)) => {
 						// update times of trade from EOS => Bifrost
-						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
-							times.0 = times.0.saturating_add(1);
-						});
+						debug::info!("EOS => Bifrost, limit eos: {:?}, eos amount: {:?}", LowLimitOnCrossChain::<T>::get(), eos_amount);
+						if LowLimitOnCrossChain::<T>::get() >= eos_amount {
+							TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
+								times.0 = times.0.saturating_add(1);
+							});
+						}
 						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
 					}
 					Err(e) => {
 						debug::info!("EOS => Bifrost failed due to {:?}", e);
 						Self::deposit_event(RawEvent::DepositFail);
 					}
+
 				}
 			}
 
@@ -723,7 +735,9 @@ impl<T: Trait> Module<T> {
 		Ok(action_transfer)
 	}
 
-	fn transaction_from_eos_to_bifrost(action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
+	fn transaction_from_eos_to_bifrost(
+		action_transfer: &ActionTransfer
+	) -> Result<(T::AccountId, T::Balance), Error<T>> {
 		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
 		let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
 
@@ -781,10 +795,13 @@ impl<T: Trait> Module<T> {
 			T::AssetTrait::asset_issue(token_symbol_pair.0, &target, new_balance);
 		}
 
-		Ok(target)
+		Ok((target, new_balance))
 	}
 
-	fn transaction_from_bifrost_to_eos(pending_trx_id: Checksum256, action_transfer: &ActionTransfer) -> Result<T::AccountId, Error<T>> {
+	fn transaction_from_bifrost_to_eos(
+		pending_trx_id: Checksum256,
+		action_transfer: &ActionTransfer
+	) -> Result<(T::AccountId, T::Balance), Error<T>> {
 		let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
 		for trx in bridge_tx_outs.iter() {
@@ -816,7 +833,7 @@ impl<T: Trait> Module<T> {
 					// the trade is verified, unlock asset
 					T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
 
-					return Ok(target.clone());
+					return Ok((target.clone(), vtoken_balances));
 				}
 				_ => continue,
 			}
