@@ -200,6 +200,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		notary_keys: vec![1u64, 2u64],
 		cross_chain_privilege: vec![(1u64, true)],
 		all_crosschain_privilege: Vec::new(),
+		cross_trade_eos_limit: 50,
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }

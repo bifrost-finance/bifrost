@@ -530,8 +530,7 @@ decl_module! {
 				match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
 					Ok((target, eos_amount)) => {
 						// update times of trade from Bifrost => EOS
-						debug::info!("Bifrost => EOS, limit eos: {:?}, eos amount: {:?}", LowLimitOnCrossChain::<T>::get(), eos_amount);
-						if LowLimitOnCrossChain::<T>::get() >= eos_amount {
+						if LowLimitOnCrossChain::<T>::get() <= eos_amount {
 							TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
 								times.1 = times.1.saturating_add(1);
 							});
@@ -550,8 +549,7 @@ decl_module! {
 				match Self::transaction_from_eos_to_bifrost(&action_transfer) {
 					Ok((target, eos_amount)) => {
 						// update times of trade from EOS => Bifrost
-						debug::info!("EOS => Bifrost, limit eos: {:?}, eos amount: {:?}", LowLimitOnCrossChain::<T>::get(), eos_amount);
-						if LowLimitOnCrossChain::<T>::get() >= eos_amount {
+						if LowLimitOnCrossChain::<T>::get() <= eos_amount {
 							TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
 								times.0 = times.0.saturating_add(1);
 							});
@@ -917,8 +915,9 @@ impl<T: Trait> Module<T> {
 					TxOut::<T::AccountId>::Generated(_) => {
 						let author = <pallet_authorship::Module<T>>::author();
 						let mut ret = bto.clone();
-						if let Some(_) = Self::local_authority_keys()
-							.find(|key| *key == author.clone().into())
+
+						// ensure current node has the right to sign a cross trade
+						if NotaryKeys::<T>::get().contains(&author)
 						{
 							match bto.sign::<T>(sk.clone(), author) {
 								Ok(signed_bto) => {
