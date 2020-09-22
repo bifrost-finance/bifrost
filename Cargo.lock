@@ -3557,7 +3557,6 @@ dependencies = [
  "pallet-democracy 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-elections-phragmen 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-finality-tracker 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
- "pallet-generic-asset 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-grandpa 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-identity 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-im-online 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3877,18 +3876,6 @@ dependencies = [
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-finality-tracker 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-inherents 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-runtime 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-std 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "pallet-generic-asset"
-version = "2.0.0-rc6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "frame-support 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
- "frame-system 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
- "parity-scale-codec 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-runtime 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-std 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -8798,7 +8785,6 @@ dependencies = [
 "checksum pallet-democracy 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "a597022b3ff3e8fc2552361a7cd4ed8bf046876c9e8fb474cba1d0f9d726e5bb"
 "checksum pallet-elections-phragmen 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "52b73d61be5a54b095c394cb71573cbd293165156af208999af72c312a4ae193"
 "checksum pallet-finality-tracker 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "25af0e96ea661bd4cf5022e3f77469be78a8eaf287d93c5b1f44248ebf79efd5"
-"checksum pallet-generic-asset 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "89d933e3b6c10aff59980a27c08605b354cc252b87e23b374a484c0099deafcd"
 "checksum pallet-grandpa 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "87d9fede55423af51a23dbdc833b0d724d1c256c74ed77806a8cf2848c0cfec1"
 "checksum pallet-identity 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "abfd6a778281555cf09d14eb59f24cd81c06dbe508ad243ca76ade3036dc081a"
 "checksum pallet-im-online 2.0.0-rc6 (registry+https://github.com/rust-lang/crates.io-index)" = "51557ca585432348ce117d01dc169575cd667b134121c4863c13722676413043"

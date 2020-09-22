@@ -922,12 +922,6 @@ impl chainlink::Trait for Runtime {
 	type Event = Event;
 }
 
-impl pallet_generic_asset::Trait for Runtime {
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Event = Event;
-}
-
 // bifrost rumtine time end
 
 construct_runtime!(
@@ -977,7 +971,6 @@ construct_runtime!(
 		// chainlink
 		Oracle: brml_oracle::{Module, Call, Storage},
 		Chainlink: chainlink::{Module, Call, Storage, Event<T>},
-		GenericAsset: pallet_generic_asset::{Module, Call, Storage, Event<T>},
 	}
 );
 

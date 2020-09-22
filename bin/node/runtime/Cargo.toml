@@ -69,9 +69,6 @@ pallet-transaction-payment = { version = "2.0.0-rc6", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0-rc6", default-features = false }
 pallet-vesting = { version = "2.0.0-rc6", default-features = false }
 
-# trial on pallet asset module
-pallet-generic-asset = { version = "2.0.0-rc6", default-features = false }
-
 brml-assets = { path = "../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../brml/assets/rpc/runtime-api", default-features = false }
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
