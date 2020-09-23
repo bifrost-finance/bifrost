@@ -8,7 +8,7 @@ members = [
 	"brml/assets",
 	"brml/assets/rpc",
 	"brml/bridge-eos",
-	"brml/bridge-iost",
+#	"brml/bridge-iost",
 	"brml/chainlink",
 	"brml/convert",
 	"brml/convert/rpc",

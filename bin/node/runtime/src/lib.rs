@@ -180,7 +180,6 @@ impl frame_system::Trait for Runtime {
 	type MaximumBlockLength = MaximumBlockLength;
 	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = Version;
-	type ModuleToIndex = ModuleToIndex;
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -525,7 +524,7 @@ parameter_types! {
 }
 
 // Make sure that there are no more than `MAX_MEMBERS` members elected via elections-phragmen.
-const_assert!(DesiredMembers::get() <= pallet_collective::MAX_MEMBERS);
+// const_assert!(DesiredMembers::get() <= pallet_collective::MAX_MEMBERS);
 
 impl pallet_elections_phragmen::Trait for Runtime {
 	type Event = Event;
@@ -607,9 +606,7 @@ impl pallet_treasury::Trait for Runtime {
 	type TipCountdown = TipCountdown;
 	type TipFindersFee = TipFindersFee;
 	type TipReportDepositBase = TipReportDepositBase;
-	type TipReportDepositPerByte = TipReportDepositPerByte;
 	type Event = Event;
-	type ProposalRejection = ();
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type SpendPeriod = SpendPeriod;
@@ -706,7 +703,6 @@ impl pallet_offences::Trait for Runtime {
 	type IdentificationTuple = pallet_session::historical::IdentificationTuple<Self>;
 	type OnOffenceHandler = Staking;
 	type WeightSoftLimit = OffencesWeightSoftLimit;
-	type WeightInfo = ();
 }
 
 impl pallet_authority_discovery::Trait for Runtime {}
