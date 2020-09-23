@@ -323,6 +323,7 @@ pub fn testnet_genesis(
 				(TokenSymbol::DOT, DOLLARS / 100),
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
+				(TokenSymbol::IOST, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
 //			pool: vec![
 //				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
@@ -338,7 +339,7 @@ pub fn testnet_genesis(
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost-iost-cross".to_vec(), 2),
+			bridge_contract_account: (b"lispczz4".to_vec(), 1),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
@@ -587,7 +588,7 @@ pub fn bifrost_genesis(
 			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost-iost-cross".to_vec(), 2),
+			bridge_contract_account: (b"lispczz4".to_vec(), 1),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),

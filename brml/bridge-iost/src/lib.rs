@@ -22,17 +22,12 @@ use core::{convert::TryFrom, fmt::Debug, ops::Div, str::FromStr};
 
 use codec::{Decode, Encode};
 
-use frame_support::traits::Get;
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage,
-    dispatch::{DispatchError, DispatchResult},
-    ensure,
-    weights::{DispatchClass, FunctionOf, Pays, Weight},
-    Parameter,
+    decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
+    dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap,
 };
 use frame_system::{
-    self as system, ensure_none, ensure_root, ensure_signed,
-    offchain::{SendTransactionTypes, SubmitTransaction},
+    self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
 use iost_chain::{Action, ActionTransfer, Read};
 use sp_core::offchain::StorageKind;
@@ -52,7 +47,6 @@ use node_primitives::{
 use sp_application_crypto::RuntimeAppPublic;
 use transaction::TxOut;
 
-// mod rpc;
 mod mock;
 mod tests;
 mod transaction;
@@ -124,9 +118,9 @@ decl_error! {
         InvalidBlockHeadersLength,
         /// Invalid transaction
         InvalidTxOutType,
-        /// Error from eos-chain crate
+        /// Error from iost-chain crate
         IostChainError,
-        /// Error from eos-key crate
+        /// Error from iost-key crate
         IostKeysError,
         /// User hasn't enough balance to trade
         InsufficientBalance,
@@ -154,6 +148,12 @@ decl_error! {
         InvalidTokenForTrade,
         /// IOSTSymbolMismatch,
         IOSTSymbolMismatch,
+        /// Bridge eos has been disabled
+		CrossChainDisabled,
+        /// Who hasn't the permission to sign a cross-chain trade
+		NoPermissionSignCrossChainTrade,
+
+		DebugReachable,
     }
 }
 
@@ -347,7 +347,8 @@ decl_module! {
             // trx_id: Checksum256
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
-            ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+            // ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
+			ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
             // ensure this transaction is unique, and ensure no duplicated transaction
             // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
@@ -450,23 +451,23 @@ decl_module! {
         ) {
             let origin = system::ensure_signed(origin)?;
             let iost_amount = amount;
-            debug::warn!("trying to send transaction to IOST node.");
 
             // check vtoken id exist or not
-            ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
+            // ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
             // ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
             ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
-
+            ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
+            //
             let token = T::AssetTrait::get_token(token_symbol);
             let symbol_code = token.symbol;
             let symbol_precise = token.precision;
-
+            //
             let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
             ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
             let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
             ensure!(balance >= amount, "amount should be less than or equal to origin balance");
             // debug::warn!("failed to send transaction to IOST node. {} - {}", symbol_precise, balance);
-
+            ensure!(balance < amount, Error::<T>::DebugReachable);
             let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
             let bridge_asset = BridgeAssetBalance {
                 symbol: asset_symbol,
@@ -475,15 +476,15 @@ decl_module! {
                 from: origin.clone(),
                 token_symbol
             };
-
-            if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-                debug::info!("sent transaction to IOST node.");
-                // locked balance until trade is verified
-                Self::deposit_event(RawEvent::SendTransactionSuccess);
-            } else {
-                debug::warn!("failed to send transaction to IOST node.");
-                Self::deposit_event(RawEvent::SendTransactionFailure);
-            }
+            //
+            // if Self::bridge_asset_to(to, bridge_asset).is_ok() {
+            //     debug::info!("sent transaction to IOST node.");
+            //     // locked balance until trade is verified
+            //     Self::deposit_event(RawEvent::SendTransactionSuccess);
+            // } else {
+            //     debug::warn!("failed to send transaction to IOST node.");
+            //     Self::deposit_event(RawEvent::SendTransactionFailure);
+            // }
         }
 
         // Runs after every block.
@@ -500,10 +501,10 @@ decl_module! {
                         Err(e) => debug::error!("A offchain worker got error: {:?}", e),
                     }
                 } else {
-                    debug::info!(target: "bridge-ioso", "Skipping send tx at {:?}. Not a validator.",now_block)
+                    debug::info!(target: "bridge-iost", "Skipping send tx at {:?}. Not a validator.",now_block)
                 }
             } else {
-                debug::info!(target: "bridge-ioso", "There's no offchain worker started.");
+                debug::info!(target: "bridge-iost", "There's no offchain worker started.");
             }
         }
     }
