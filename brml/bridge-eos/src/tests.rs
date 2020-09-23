@@ -20,8 +20,7 @@ use crate::*;
 use crate::mock::*;
 use core::{convert::From, str::FromStr};
 use eos_chain::{
-	Action, ActionReceipt, Checksum256, get_proof, ProducerAuthoritySchedule,
-	IncrementalMerkle, ProducerSchedule, SignedBlockHeader, ActionTransfer,
+	Action, ActionReceipt, Checksum256, ProducerAuthoritySchedule, IncrementalMerkle, SignedBlockHeader
 };
 #[cfg(feature = "std")]
 use std::{
@@ -47,36 +46,6 @@ fn get_latest_schedule_version_should_work() {
 		run_to_block(100); // after 100 blocks are produced
 		let ver = PendingScheduleVersion::get();
 		assert_eq!(ver, 3);
-	});
-}
-
-#[test]
-#[ignore = "need to collect data from EOS 2.0 node"]
-fn get_producer_schedules_should_work() {
-	new_test_ext().execute_with(|| {
-		assert!(ProducerSchedules::contains_key(0));
-
-		let json = "change_schedule_9313.json";
-		let signed_blocks_str = read_json_from_file(json);
-		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
-		assert!(signed_blocks.is_ok());
-		let signed_blocks_headers = signed_blocks.unwrap();
-
-		let schedule = signed_blocks_headers.first().as_ref().unwrap().block_header.new_producers.as_ref().unwrap().clone();
-		let pending_schedule_hash = schedule.schedule_hash();
-		assert!(pending_schedule_hash.is_ok());
-
-		PendingScheduleVersion::put(schedule.version);
-
-		let schedule = ProducerAuthoritySchedule::default();
-		let schedule_hash = schedule.schedule_hash();
-		ProducerSchedules::insert(schedule.version, (&schedule.producers, schedule_hash.unwrap()));
-
-		run_to_block(100); // after 100 blocks are produced
-		assert!(ProducerSchedules::contains_key(schedule.version));
-		let (producers_list, schedule_hash) = ProducerSchedules::get(schedule.version);
-		assert_eq!(producers_list, schedule.producers);
-		assert_eq!(pending_schedule_hash.unwrap(), schedule_hash);
 	});
 }
 
@@ -141,23 +110,26 @@ fn block_id_append_should_be_ok() {
 }
 
 #[test]
-#[ignore = "need to collect data from EOS 2.0 node"]
 fn verify_block_header_signature_should_succeed() {
 	new_test_ext().execute_with(|| {
-		let json = "change_schedule_9313.json";
+		let json = "v2_data/change-schedule-27776771.json";
 		let signed_blocks_str = read_json_from_file(json);
 		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
 		assert!(signed_blocks.is_ok());
 		let signed_blocks_headers = signed_blocks.unwrap();
 
+		let producers_schedule_json = "v2_data/producers-schedule-42.json";
+		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
+		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
+		assert!(producers_schedule_v2.is_ok());
+		let producers_schedule_v2 = producers_schedule_v2.unwrap();
+
+		let producers_schedule_v2_hash = producers_schedule_v2.schedule_hash().unwrap();
+
 		let signed_block_header = signed_blocks_headers.first().as_ref().unwrap().clone();
 
-		let schedule_hash_and_producer_schedule = BridgeEos::get_schedule_hash_and_public_key(signed_blocks_headers[0].block_header.new_producers.as_ref());
-		assert!(schedule_hash_and_producer_schedule.is_ok());
-		let (schedule_hash, producer_schedule) = schedule_hash_and_producer_schedule.unwrap();
-
-		let mroot: Checksum256 = "bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a".into();
-		let result = BridgeEos::verify_block_header_signature(&schedule_hash, &producer_schedule, &signed_block_header, &mroot);
+		let mroot: Checksum256 = "166c86f7ac95b10550698df6bb6741466c065e49c799a8fe92c0e293cb87a03c".into();
+		let result = BridgeEos::verify_block_header_signature(&producers_schedule_v2_hash, &producers_schedule_v2, &signed_block_header, &mroot);
 		assert!(result.is_ok());
 	});
 }
@@ -176,7 +148,7 @@ fn verify_block_headers_should_succeed() {
 		let block_ids_list: Result<Vec<Vec<String>>, _> = serde_json::from_str(&ids_str);
 		assert!(block_ids_list.is_ok());
 
-		let producers_schedule_json = "v2_data/producers-schedule.json";
+		let producers_schedule_json = "v2_data/producers-schedule-42.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
 		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
@@ -184,9 +156,6 @@ fn verify_block_headers_should_succeed() {
 
 		let producers_schedule_v2_hash = producers_schedule_v2.schedule_hash();
 		assert!(producers_schedule_v2_hash.is_ok());
-
-//		PendingScheduleVersion::put(v2_producers.version);
-//		ProducerSchedules::insert(v2_producers.version, (&v2_producers.producers, v2_schedule_hash.unwrap()));
 
 		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list.as_ref().unwrap().iter().map(|ids| {
 			ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>()
@@ -219,7 +188,7 @@ fn verify_block_headers_should_succeed() {
 fn change_schedule_should_work() {
 	new_test_ext().execute_with(|| {
 		// insert producers schedule v1 in advance.
-		let producers_schedule_json = "v2_data/producers-schedule.json";
+		let producers_schedule_json = "v2_data/producers-schedule-42.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
 		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
@@ -275,7 +244,7 @@ fn change_schedule_should_work() {
 fn prove_action_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		//	save producer schedule for block signature verification
-		let producers_schedule_json = "v2_data/producers-schedule.json";
+		let producers_schedule_json = "v2_data/producers-schedule-55.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
 		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
@@ -295,25 +264,21 @@ fn prove_action_should_be_ok() {
 		let signed_blocks_headers = signed_blocks.unwrap();
 
 		// blockroot merkle
-		let node_count = 28368574;
+		let node_count = 30294599;
 		let active_nodes: Vec<Checksum256> = vec![
-			"9576edb130fa1febd967c7b19e5f98eeef2d4b5c645fb4fa7dbe277624034645".into(),
-			"1afe8c743398800b5d87dd9abc659f9e33d8580cf797fbe99dbc90e4799e7af1".into(),
-			"6518520baee48f3a8affd087d6746e40f17d60731d071060246d5368f0a4a69f".into(),
-			"d296aa1f1f9583302687c463e63d49254de4e085937eb1bd3686f7c8e7190778".into(),
-			"0ecca194fd18724139b77b723f342081fe287ce4152c32153ad4fcd4737e09cf".into(),
-			"51e5419559d384b3b96333917a74b6897e8c6f6ea876762d7f54e701b8d14856".into(),
-			"6481f308759515f0b53c54a4eeba1be2941b22483957ea3685b427164f181ebc".into(),
-			"4e179a4ec95b67513dad6fc7929341b5e6db6c7a312368c286d68c5ea681a626".into(),
-			"0988ca2a5fb03981656b275e5224a2e720a24d6851422be2b992b48b7e2f9a48".into(),
-			"6551559542af33628cb6c72f36b85d2dca68a2988e483f13d97dcc078a6f0581".into(),
-			"230ff084b12002b38f405ff863c017b4d17fe3aae62cc1f24a5b1ab5dec7a587".into(),
-			"0fceaa9719cc21b8cd486bbacd726b689e10429632562f75d7e47b12c8bf4ceb".into(),
-			"9270007afe8d88a2c71b9668792cdf492f6aba484e63639cdf1627010c54ec6f".into(),
-			"28e66467001758a36489e45cc20f9c1812a3b853f2827a6a662fa02935b5ee59".into(),
+			"01ce42477e231bdfb1b93edf0ba675404f52001464403ef4f4b2bf4ac0724b95".into(),
+			"2b0b66f83b18d7234cbd5153473525417eada5b56d8dd039331c6018b9d404b8".into(),
+			"f4b68a787a024d30a31b16ee017ac9d136f8a8aced0c497c61e13f73969e1a95".into(),
+			"f2b8d826f2f464ad7a2349ed8a569f53f4f2f0775feafedbc76672ce6195df27".into(),
+			"965b1a8a0649a3444074c282c7d5477819312546d737b2a77ba0e06e60a11955".into(),
+			"7343399a64dc2e9b22f856cb10f73df6d660eaa65bf1758f7ea30495b7d61c97".into(),
+			"e4c06fbd91fb9a0dd6e33d7516a007e140f46aebc20df2f929be2425d5b2afe1".into(),
+			"6272eefdd706d0b6e1fccc489e293d7b277298dfd89fd624c9d15f9a545ec4aa".into(),
+			"fce2593e1cc4cc47ab31b2dbd200c65acaf7f0ceb112c640a2c5a062a898c057".into(),
+			"ca50800f17f87553c5905dcd56740e07ad8422527a9d2ca3b03a98bc2ed1aff9".into(),
 			"89c365695ac50e1342d854bf4bdb35066ca7b1954d04c6df4581915c5147b4df".into(),
 			"9292a3e4f9af07c619ba70ca31f8aef64bae7a31154369544f32874b416b2dad".into(),
-			"1ba5ceadea68853c1ca6a2d5bc4dcadc73a366dfe094e06194aef180e3989ba2".into()
+			"a40873bf277caf1bc14709cbb3f79f1391f2f7145016d8dd93e2ecf15723a007".into()
 		];
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
 
@@ -334,7 +299,7 @@ fn prove_action_should_be_ok() {
 		let action_merkle_paths: Result<Vec<String>, _> = serde_json::from_str(&action_merkle_paths_str.unwrap());
 		assert!(action_merkle_paths.is_ok());
 		let action_merkle_paths = action_merkle_paths.unwrap();
-		let action_merkle_paths = {
+		let _action_merkle_paths = {
 			let mut path: Vec<Checksum256> = Vec::with_capacity(action_merkle_paths.len());
 			for path_str in action_merkle_paths {
 				path.push(Checksum256::from_str(&path_str).unwrap());
@@ -342,14 +307,10 @@ fn prove_action_should_be_ok() {
 			path
 		};
 
-		// let proof = get_proof(15, action_merkle_paths);
-		let proof = vec![
-			"f8c2c7e7ddfd16b2bcc73f37afde7c1e0c737e94b3dd5794a5f49a0b355f6749".into(),
-			"68bbb1e6d07e12b7c87d1da92a2f4d2ff842c50390173701d78527a978d03527".into()
+		let actual_merkle_paths = vec![
+			"f33eca1a95a23a69d4bac97428c67efff07e2abf9e293740d057c686eb8c7d12".into(),
+			"4d3498e9702fd9b6d1253a996e7f56de064c1e9f54046cbcf18dce51df6c16e2".into()
 		];
-//		assert!(proof.is_ok());
-		// let actual_merkle_paths = proof.unwrap();
-		let actual_merkle_paths = proof;
 
 		// get action
 		let actions_json = "v2_data/prove-action-action.json";
@@ -358,22 +319,22 @@ fn prove_action_should_be_ok() {
 		let actions: Result<Action, _> = serde_json::from_str(actions_str.as_ref().unwrap());
 		assert!(actions.is_ok());
 		let action = actions.unwrap();
-		let action_receipt_json = "/v2_data/prove-action-action-receipts.json";
 
 		let action_receipt_str = r#"{
-			"receiver": "hh1234512345",
-			"act_digest": "569d37d66bbfaca95cbd714502871400fb94865cfedf08f5866ede3c6331ea14",
-			"global_sequence": 33534771,
-			"recv_sequence": 636,
+			"receiver": "llcllcllcllc",
+			"act_digest": "9fc13ae41b29fe5d61db11e2a7d9efe0a26d107aa0c990912ecc81923c725bdd",
+			"global_sequence": 35683388,
+			"recv_sequence": 810,
 			"auth_sequence": [
-			  [
-				"hh1234512345",
-				1522
-			  ]
+				[
+					"llcllcllcllc",
+					1942
+				]
 			],
 			"code_sequence": 1,
 			"abi_sequence": 1
-		}"#;
+		}
+		"#;
 		let action_receipt: Result<ActionReceipt, _> = serde_json::from_str(&action_receipt_str);
 		assert!(action_receipt.is_ok());
 		let action_receipt = action_receipt.unwrap();
@@ -709,23 +670,4 @@ fn lite_json_deserialize_push_transaction() {
 	let trx_id: Result<String, _> = transaction::eos_rpc::get_transaction_id::<Test>(trx_response);
 	assert!(trx_id.is_ok());
 	assert_eq!(trx_id.unwrap(), "58e71de1c3f1a93417addbf1fc79e58e4f57a0930ec9c4f294b4ad64375c9dc6");
-}
-
-
-#[test]
-fn get_action_transfer_from_action() {
-	let actions_json = "v2_data/prove-action-action.json";
-	let actions_str = read_json_from_file(actions_json);
-	assert!(actions_str.is_ok());
-	let actions: Result<Action, _> = serde_json::from_str(actions_str.as_ref().unwrap());
-	assert!(actions.is_ok());
-	let act = actions.unwrap();
-
-	let data = b"30d59dc649d730e58031bd28637a973b20a107000000000004454f530000000037667258714146564d73344147337962556b79757342635a344c4231586a656a69524e3657465a5878317439756d454140626966726f7374".to_vec();
-
-	let action_transfer = ActionTransfer::read(&data, &mut 0).unwrap();
-
-	dbg!(&action_transfer);
-	let memo = String::from_utf8(action_transfer.memo.as_bytes().to_vec());
-	dbg!(memo);
 }

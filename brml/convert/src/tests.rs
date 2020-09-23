@@ -114,6 +114,8 @@ fn to_vtoken_should_be_ok() {
 		<Pool::<Test>>::insert(dot_type, pool);
 		let rate = vtoken_pool / token_pool;
 
+		assert_ok!(Convert::set_convert_price(Origin::root(), dot_type, rate));
+
 		// convert
 		let bob_dot_convert = 10;
 		assert_ok!(Convert::to_vtoken(Origin::signed(bob), vdot_type, bob_dot_convert, None));
@@ -157,6 +159,8 @@ fn to_token_should_be_ok() {
 		let pool = ConvertPool::new(token_pool, vtoken_pool); // token => vtoken, 1token equals to 2vtoken, 4 / 2
 		<Pool::<Test>>::insert(dot_type, pool);
 		let rate = vtoken_pool / token_pool;
+
+		assert_ok!(Convert::set_convert_price(Origin::root(), dot_type, rate));
 
 		// convert
 		let bob_vdot_convert = 10;
@@ -202,6 +206,8 @@ fn add_new_refer_channel_should_be_ok() {
 		let pool = ConvertPool::new(token_pool, vtoken_pool); // token => vtoken, 1token equals to 2vtoken, 4 / 2
 		<Pool::<Test>>::insert(dot_type, pool);
 		let rate = vtoken_pool / token_pool;
+
+		assert_ok!(Convert::set_convert_price(Origin::root(), dot_type, rate));
 
 		let referer1 = 10;
 		let referer2 = 11;
