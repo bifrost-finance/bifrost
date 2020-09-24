@@ -1009,7 +1009,7 @@ impl<T: Trait> Module<T> {
 
 	fn offchain(_now_block: T::BlockNumber) -> Result<(), Error<T>> {
 		//  avoid borrow checker issue if use has_change: bool
-		let has_change = core::cell::Cell::new(false);
+		let _has_change = core::cell::Cell::new(false);
 
 //		let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
@@ -1210,19 +1210,19 @@ impl<T: Trait> Module<T> {
 		Ok(String::from_utf8(value).map_err(|_| Error::<T>::ParseUtf8Error)?)
 	}
 
-	fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
-		let authorities = NotaryKeys::<T>::get();
-		let mut local_keys = T::AuthorityId::all();
-		local_keys.sort();
-
-		authorities.into_iter()
-			.enumerate()
-			.filter_map(move |(_, authority)| {
-				local_keys.binary_search(&authority.into())
-					.ok()
-					.map(|location| local_keys[location].clone())
-			})
-	}
+	// fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
+	// 	let authorities = NotaryKeys::<T>::get();
+	// 	let mut local_keys = T::AuthorityId::all();
+	// 	local_keys.sort();
+	//
+	// 	authorities.into_iter()
+	// 		.enumerate()
+	// 		.filter_map(move |(_, authority)| {
+	// 			local_keys.binary_search(&authority.into())
+	// 				.ok()
+	// 				.map(|location| local_keys[location].clone())
+	// 		})
+	// }
 }
 
 impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
