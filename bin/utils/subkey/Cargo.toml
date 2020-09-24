@@ -1,0 +1,22 @@
+[package]
+name = "subkey"
+version = "0.4.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+frame-system = "2.0.0-rc6"
+futures = "0.1.29"
+hex = "0.4.2"
+jsonrpc-core-client = { version = "14.2.0", features = ["http"] }
+node-runtime = { version = "*", path = "../../node/runtime" }
+node-primitives = { version = "*", path = "../../node/primitives" }
+sc-cli = "0.8.0-rc6"
+sc-rpc = "2.0.0-rc6"
+sp-core = "2.0.0-rc6"
+structopt = "0.3.14"
+substrate-frame-cli = "2.0.0-rc6"
+tokio = "0.1.22"
+
+[features]
+bench = []
