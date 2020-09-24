@@ -24,8 +24,6 @@ use codec::{Decode, Encode};
 use crate::Error;
 use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use eos_keys::secret::SecretKey;
-use sp_std::if_std;
-use sp_runtime::print;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
