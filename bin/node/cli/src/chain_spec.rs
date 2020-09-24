@@ -62,10 +62,6 @@ pub type ChainSpec = sc_service::GenericChainSpec<
 	GenesisConfig,
 	Extensions,
 >;
-/// Flaming Fir testnet generator
-pub fn flaming_fir_config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../res/flaming-fir.json")[..])
-}
 
 fn session_keys(
 	grandpa: GrandpaId,
@@ -324,11 +320,11 @@ pub fn testnet_genesis(
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
-//			pool: vec![
-//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
-//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
-//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
-//			],
+			pool: vec![
+				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
@@ -336,6 +332,7 @@ pub fn testnet_genesis(
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
+			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -566,11 +563,11 @@ pub fn bifrost_genesis(
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
-//			pool: vec![
-//				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
-//				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
-//				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
-//			],
+			pool: vec![
+				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
+				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
+				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
 			bridge_contract_account: (b"bifrostcross".to_vec(), 3), // this eos account needs 3 signer to sign a trade
@@ -578,6 +575,7 @@ pub fn bifrost_genesis(
 			// root_key has the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
+			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -753,7 +751,7 @@ pub fn bifrost_chainspec_config() -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard CC2",
+		"Bifrost Asgard CC3",
 		"bifrost_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		bifrost_config_genesis,

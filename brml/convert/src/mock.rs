@@ -18,10 +18,10 @@
 
 #![cfg(test)]
 
+use frame_system as system;
 use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}};
 use sp_core::H256;
 use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
-use super::*;
 
 #[derive(Clone, Eq, PartialEq)]
 pub struct Test;
@@ -72,7 +72,6 @@ impl system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
-	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -87,11 +86,11 @@ impl system::Trait for Test {
 	type BaseCallFilter = ();
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
+	type PalletInfo = ();
 }
 
 parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
-	pub const ConvertPricePrecision: u64 = 4;
 }
 
 impl crate::Trait for Test {
@@ -104,7 +103,6 @@ impl crate::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type ConvertDuration = ConvertDuration;
-	type ConvertPricePrecision = ConvertPricePrecision;
 }
 
 pub type Convert = crate::Module<Test>;

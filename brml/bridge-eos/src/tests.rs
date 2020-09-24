@@ -467,8 +467,7 @@ fn bridge_tx_report() -> dispatch::DispatchResult {
 	#[allow(deprecated)]
 	use frame_support::unsigned::ValidateUnsigned;
 
-	let tx_outs = vec![TxOut::Success(vec![])];
-
+	let tx_outs = vec![TxOut::Success(Checksum256::default())];
 	#[allow(deprecated)]
 	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
 

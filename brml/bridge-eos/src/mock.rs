@@ -50,6 +50,7 @@ impl_outer_event! {
 		system<T>,
 		bridge_eos<T>,
 		assets<T>,
+		convert,
 	}
 }
 
@@ -76,7 +77,6 @@ impl frame_system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
-	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -91,6 +91,7 @@ impl frame_system::Trait for Test {
 	type BaseCallFilter = ();
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
+	type PalletInfo = ();
 }
 
 
@@ -143,6 +144,7 @@ impl crate::Trait for Test {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
+	type FetchConvertPool = Convert;
 }
 
 impl assets::Trait for Test {
@@ -154,13 +156,30 @@ impl assets::Trait for Test {
 	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchConvertPrice = Convert;
+}
+
+parameter_types! {
+	pub const ConvertDuration: u64 = 24 * 60 * 10;
+}
+
+impl convert::Trait for Test {
+	type ConvertPrice = u64;
+	type RatePerBlock = u64;
+	type Event = TestEvent;
+	type AssetTrait = Assets;
+	type Balance = u64;
+	type AssetId = u32;
+	type Cost = u64;
+	type Income = u64;
+	type ConvertDuration = ConvertDuration;
 }
 
 pub type BridgeEos = crate::Module<Test>;
 pub type Authorship = pallet_authorship::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
+pub type Convert = convert::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
@@ -181,6 +200,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		notary_keys: vec![1u64, 2u64],
 		cross_chain_privilege: vec![(1u64, true)],
 		all_crosschain_privilege: Vec::new(),
+		cross_trade_eos_limit: 50,
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }
