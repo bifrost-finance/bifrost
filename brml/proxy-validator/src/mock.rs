@@ -70,7 +70,7 @@ impl frame_system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
-	type ModuleToIndex = ();
+	//type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -85,6 +85,7 @@ impl frame_system::Trait for Test {
 	type BaseCallFilter = ();
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
+	type PalletInfo = ();
 }
 
 impl assets::Trait for Test {
