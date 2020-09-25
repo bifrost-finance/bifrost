@@ -24,7 +24,7 @@ use core::convert::{From, Into};
 use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
@@ -419,7 +419,7 @@ impl<T: Trait> Module<T> {
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
-			let mut reward = Zero::zero();
+			let  reward;
 			let min_reward = val.staking.saturating_mul(
 				min_reward_per_block.saturating_mul(redeem_duration.into())
 			).div(1_000_000.into()).div(1_000_000.into());
