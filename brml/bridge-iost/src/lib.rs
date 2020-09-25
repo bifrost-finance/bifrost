@@ -18,34 +18,33 @@
 extern crate alloc;
 
 use alloc::string::{String, ToString};
-use core::{convert::TryFrom, fmt::Debug, ops::Div, str::FromStr};
-
+use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
+use crate::transaction::TxOut;
 use codec::{Decode, Encode};
-
+use iost_chain::{Action, ActionTransfer, Read};
+use sp_std::prelude::*;
+use sp_std::if_std;
+use sp_runtime::print;
+use sp_core::offchain::StorageKind;
+use sp_runtime::{
+    traits::{Member, SaturatedConversion, Saturating, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
+    transaction_validity::{
+        InvalidTransaction, TransactionLongevity, TransactionPriority,
+        TransactionValidity, ValidTransaction, TransactionSource
+    },
+};
 use frame_support::{
     decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
-    dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap,
+    dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap, StorageValue,
 };
 use frame_system::{
     self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
-use iost_chain::{Action, ActionTransfer, Read};
-use sp_core::offchain::StorageKind;
-use sp_runtime::{
-    traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion},
-    transaction_validity::{
-        InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
-        TransactionValidity, ValidTransaction,
-    },
-};
-use sp_std::prelude::*;
-
 use node_primitives::{
-    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
-    BridgeAssetTo, TokenSymbol,
+    AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
+    FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
-use transaction::TxOut;
 
 mod mock;
 mod tests;
@@ -161,47 +160,33 @@ pub type VersionId = u32;
 
 pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     /// The identifier type for an authority.
-    type AuthorityId: Member
-        + Parameter
-        + RuntimeAppPublic
-        + Default
-        + Ord
-        + From<<Self as frame_system::Trait>::AccountId>;
+    type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
+    + From<<Self as frame_system::Trait>::AccountId>;
 
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// The units in which we record balances.
-    type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
+    type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// The arithmetic type of asset identifier.
-    type AssetId: Member
-        + Parameter
-        + AtLeast32Bit
-        + Default
-        + Copy
-        + From<TokenSymbol>
-        + Into<TokenSymbol>
-        + MaybeSerializeDeserialize;
+    type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
 
     /// The units in which we record costs.
-    type Cost: Member + Parameter + AtLeast32Bit + Default + Copy;
+    type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// The units in which we record incomes.
-    type Income: Member + Parameter + AtLeast32Bit + Default + Copy;
+    type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// The units in which we record asset precision.
-    type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
+    type Precision: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// Bridge asset from another blockchain.
     type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
 
-    type AssetTrait: AssetTrait<
-        Self::AssetId,
-        Self::AccountId,
-        Self::Balance,
-        Self::Cost,
-        Self::Income,
-    >;
+    type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+
+    /// Fetch convert pool from convert module
+    type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
 
     /// A dispatchable call type.
     type Call: From<Call<Self>>;

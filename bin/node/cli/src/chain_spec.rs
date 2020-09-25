@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, wasm_binary_unwrap,
-	AssetsConfig, BridgeEosConfig, BridgeIostConfig, VoucherConfig, SwapConfig, ConvertConfig,
+	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -335,13 +335,13 @@ pub fn testnet_genesis(
 			all_crosschain_privilege: Vec::new(),
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"lispczz4".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-		}),
+		// brml_bridge_iost: Some(BridgeIostConfig {
+		// 	bridge_contract_account: (b"lispczz4".to_vec(), 1),
+		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+		// 	// alice and bob have the privilege to sign cross transaction
+		// 	cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+		// 	all_crosschain_privilege: Vec::new(),
+		// }),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
@@ -585,13 +585,13 @@ pub fn bifrost_genesis(
 			all_crosschain_privilege: Vec::new(),
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"lispczz4".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-		}),
+		// brml_bridge_iost: Some(BridgeIostConfig {
+		// 	bridge_contract_account: (b"lispczz4".to_vec(), 1),
+		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+		// 	// alice and bob have the privilege to sign cross transaction
+		// 	cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+		// 	all_crosschain_privilege: Vec::new(),
+		// }),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
