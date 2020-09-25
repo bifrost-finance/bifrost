@@ -24,6 +24,8 @@ use codec::{Decode, Encode};
 use crate::Error;
 use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use eos_keys::secret::SecretKey;
+use sp_std::if_std;
+use sp_runtime::print;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -89,6 +91,7 @@ pub struct MultiSigTx<AccountId> {
 /// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub enum TxOut<AccountId> {
+	None,
 	/// Initial Eos multi-sig transaction
 	Initial(MultiSigTx<AccountId>),
 	/// Generated and signing Eos multi-sig transaction
@@ -101,13 +104,19 @@ pub enum TxOut<AccountId> {
 		multi_sig_tx: MultiSigTx<AccountId>,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
-	Success(Vec<u8>),
+	Success(Checksum256),
 	/// Eos multi-sig transaction processed failed
 	Fail {
 		tx_id: Vec<u8>,
 		reason: Vec<u8>,
 		tx: MultiSigTx<AccountId>,
 	},
+}
+
+impl<AccountId> Default for TxOut<AccountId> {
+	fn default() -> Self {
+		Self::None
+	}
 }
 
 impl<AccountId: PartialEq + Clone> TxOut<AccountId> {

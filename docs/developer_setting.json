@@ -125,6 +125,9 @@
   "TokenSymbol": {
     "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS", "IOST", "vIOST"]
   },
+  "TrxStatus": {
+    "_enum": ["Initial", "Generated", "Signed", "Processing", "Success", "Fail"]
+  },
   "Cost": "u128",
   "Income": "u128",
   "Price": "u64",

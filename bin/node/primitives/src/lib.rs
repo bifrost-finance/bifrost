@@ -115,9 +115,9 @@ impl TokenSymbol {
 		}
 	}
 
-//	pub fn is_vtoken(&self) -> bool {
-//		*self == self.paired_token().1
-//	}
+	pub fn is_vtoken(&self) -> bool {
+		*self == self.paired_token().1
+	}
 }
 
 impl From<AssetId> for TokenSymbol {
@@ -307,11 +307,11 @@ pub trait FetchConvertPrice<TokenSymbol, ConvertPrice> {
 	fn fetch_convert_price(token_symbol: TokenSymbol) -> ConvertPrice;
 }
 
-///// Fetch convert rate handler
-//pub trait FetchConvertPool<TokenSymbol, Balance> {
-//	/// fetch convert pool for calculate convert price
-//	fn fetch_convert_pool(token_symbol: TokenSymbol) -> ConvertPool<Balance>;
-//}
+/// Fetch convert rate handler
+pub trait FetchConvertPool<TokenSymbol, Balance> {
+	/// fetch convert pool for calculate convert price
+	fn fetch_convert_pool(token_symbol: TokenSymbol) -> ConvertPool<Balance>;
+}
 
 impl<TokenSymbol, ER: Default> FetchConvertPrice<TokenSymbol, ER> for () {
 	fn fetch_convert_price(_: TokenSymbol) -> ER { Default::default() }
