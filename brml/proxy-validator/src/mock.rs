@@ -26,6 +26,8 @@ use sp_core::H256;
 use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
 
+use frame_system as system;
+
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
 		brml_proxy_validator::ProxyValidator,
