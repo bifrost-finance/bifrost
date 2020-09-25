@@ -914,19 +914,19 @@ impl brml_bridge_eos::Trait for Runtime {
 	type FetchConvertPool = Convert;
 }
 
-// impl brml_bridge_iost::Trait for Runtime {
-// 	type AuthorityId = BridgeIostId;
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type AssetId = AssetId;
-// 	type Cost = Cost;
-// 	type Income = Income;
-// 	type Precision = Precision;
-// 	type BridgeAssetFrom = ();
-// 	type Call = Call;
-// 	//	type SubmitTransaction = BridgeSubmitTransaction;
-// 	type AssetTrait = Assets;
-// }
+impl brml_bridge_iost::Trait for Runtime {
+	type AuthorityId = BridgeIostId;
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
+	type Precision = Precision;
+	type BridgeAssetFrom = ();
+	type Call = Call;
+	type AssetTrait = Assets;
+	type FetchConvertPool = Convert;
+}
 
 parameter_types! {
 	pub const InitPoolSupply: Balance = 1000 * DOLLARS;
@@ -1021,7 +1021,7 @@ construct_runtime!(
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-		// BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
+		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		ProxyValidator: brml_proxy_validator::{Module, Call, Storage, Event<T>},
