@@ -24,8 +24,6 @@ use codec::{Decode, Encode};
 use crate::Error;
 use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use eos_keys::secret::SecretKey;
-use sp_std::if_std;
-use sp_runtime::print;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -44,7 +42,7 @@ pub struct MultiSig<AccountId> {
 	threshold: u8,
 }
 
-impl<AccountId: PartialEq> MultiSig<AccountId> {
+impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
 	fn new(threshold: u8) -> Self {
 		MultiSig {
 			signatures: Default::default(),
@@ -59,7 +57,7 @@ impl<AccountId: PartialEq> MultiSig<AccountId> {
 
 	/// check whether a transaction is signed twice
 	fn has_signed(&self, author: AccountId) -> bool {
-		self.signatures.iter().find(|sig| sig.author == author).is_some()
+		self.signatures.iter().any(|sig| sig.author == author)
 	}
 }
 
@@ -119,7 +117,7 @@ impl<AccountId> Default for TxOut<AccountId> {
 	}
 }
 
-impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
+impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	/// intialize a transaction
 	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
@@ -169,7 +167,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 
 				Ok(TxOut::Generated(multi_sig_tx))
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
 		}
 	}
 
@@ -186,6 +184,12 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::EosChainError)?;
 				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
+				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
+					return Ok(TxOut::Generated(multi_sig_tx));
+				}
+
+				frame_support::debug::info!(target: "bridge-eos", "signing by {:?}, {:?}, {:?}", author, sig.to_string(), multi_sig_tx.multi_sig.has_signed(author.clone()));
+
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
@@ -194,7 +198,8 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 					Ok(TxOut::Generated(multi_sig_tx))
 				}
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			TxOut::Signed(_) => Ok(self),
+			_ => Err(Error::<T>::InvalidSignedTxOutType)
 		}
 	}
 
@@ -214,7 +219,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 					multi_sig_tx,
 				})
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidSendTxOutType)
 		}
 	}
 }
@@ -346,6 +351,7 @@ pub(crate) mod eos_rpc {
 
 		let body = response.body().collect::<Vec<u8>>();
 		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		frame_support::debug::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
 		let tx_id = get_transaction_id(&body_str)?;
 
 		Ok(tx_id.into_bytes())
