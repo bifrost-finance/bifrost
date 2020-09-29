@@ -17,34 +17,41 @@
 #[macro_use]
 extern crate alloc;
 
-use alloc::string::{String, ToString};
-use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
 use crate::transaction::TxOut;
+use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
-use iost_chain::{Action, ActionTransfer, Read};
-use sp_std::prelude::*;
-use sp_std::if_std;
-use sp_runtime::print;
-use sp_core::offchain::StorageKind;
-use sp_runtime::{
-    traits::{Member, SaturatedConversion, Saturating, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
-    transaction_validity::{
-        InvalidTransaction, TransactionLongevity, TransactionPriority,
-        TransactionValidity, ValidTransaction, TransactionSource
-    },
-};
+use core::{convert::TryFrom, fmt::Debug, ops::Div, str::FromStr};
 use frame_support::{
-    decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
-    dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap, StorageValue,
+    debug, decl_error, decl_event, decl_module, decl_storage,
+    dispatch::DispatchResult,
+    ensure,
+    traits::Get,
+    weights::{DispatchClass, Pays, Weight},
+    IterableStorageMap, Parameter, StorageValue,
 };
 use frame_system::{
-    self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
+    self as system, ensure_none, ensure_root, ensure_signed,
+    offchain::{SendTransactionTypes, SubmitTransaction},
 };
+use iost_chain::{Action, ActionTransfer, Read};
 use node_primitives::{
-    AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
-    FetchConvertPool,
+    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
+    BridgeAssetTo, FetchConvertPool, TokenSymbol,
 };
 use sp_application_crypto::RuntimeAppPublic;
+use sp_core::offchain::StorageKind;
+use sp_runtime::print;
+use sp_runtime::{
+    traits::{
+        AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating, Zero,
+    },
+    transaction_validity::{
+        InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
+        TransactionValidity, ValidTransaction,
+    },
+};
+use sp_std::if_std;
+use sp_std::prelude::*;
 
 mod mock;
 mod tests;
@@ -148,13 +155,13 @@ decl_error! {
         /// IOSTSymbolMismatch,
         IOSTSymbolMismatch,
         /// Bridge eos has been disabled
-		CrossChainDisabled,
+        CrossChainDisabled,
         /// Who hasn't the permission to sign a cross-chain trade
-		NoPermissionSignCrossChainTrade,
+        NoPermissionSignCrossChainTrade,
 
-		// DebugReachable,
-		// DebugReachable_1,
-		DebugReachableOther,
+        // DebugReachable,
+        // DebugReachable_1,
+        DebugReachableOther,
     }
 }
 
@@ -162,8 +169,12 @@ pub type VersionId = u32;
 
 pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     /// The identifier type for an authority.
-    type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
-    + From<<Self as frame_system::Trait>::AccountId>;
+    type AuthorityId: Member
+        + Parameter
+        + RuntimeAppPublic
+        + Default
+        + Ord
+        + From<<Self as frame_system::Trait>::AccountId>;
 
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
@@ -171,7 +182,14 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// The arithmetic type of asset identifier.
-    type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
+    type AssetId: Member
+        + Parameter
+        + AtLeast32Bit
+        + Default
+        + Copy
+        + From<TokenSymbol>
+        + Into<TokenSymbol>
+        + MaybeSerializeDeserialize;
 
     /// The units in which we record costs.
     type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
@@ -185,7 +203,13 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     /// Bridge asset from another blockchain.
     type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
 
-    type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+    type AssetTrait: AssetTrait<
+        Self::AssetId,
+        Self::AccountId,
+        Self::Balance,
+        Self::Cost,
+        Self::Income,
+    >;
 
     /// Fetch convert pool from convert module
     type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
@@ -258,7 +282,7 @@ decl_module! {
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             // ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
-			ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
+            ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
             // ensure this transaction is unique, and ensure no duplicated transaction
             // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
@@ -392,7 +416,7 @@ decl_module! {
                 Ok(_) => {
                    debug::info!(target: "bridge-iost", "sent transaction to IOST node.");
                     // locked balance until trade is verified
-                   Self::deposit_event(RawEvent::SendTransactionSuccess);
+                   // Self::deposit_event(RawEvent::SendTransactionSuccess);
                 }
                 Err(e) => {
                     debug::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
@@ -408,11 +432,11 @@ decl_module! {
 
 
             if now_block % T::BlockNumber::from(10) == T::BlockNumber::from(2) {
-				match Self::offchain(now_block) {
-					Ok(_) => debug::info!(target: "bridge-iost", "A offchain worker started."),
-					Err(e) => debug::error!(target: "bridge-iost", "A offchain worker got error: {:?}", e),
-				}
-			}
+                match Self::offchain(now_block) {
+                    Ok(_) => debug::info!(target: "bridge-iost", "A offchain worker started."),
+                    Err(e) => debug::error!(target: "bridge-iost", "A offchain worker got error: {:?}", e),
+                }
+            }
             // It's no nessesary to start offchain worker if no any task in queue
             // if !BridgeTxOuts::<T>::get().is_empty() {
             //     // Only send messages if we are a potential validator.
@@ -640,15 +664,12 @@ impl<T: Trait> Module<T> {
         P: AtLeast32Bit + Copy,
         B: AtLeast32Bit + Copy,
     {
-        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ tx_transfer_to is called.");
-
         let (raw_from, threshold) = BridgeContractAccount::get();
         let memo = core::str::from_utf8(&bridge_asset.memo)
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
         // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
-        let amount = "100";
-        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ tx_transfer_to is called.");
+        let amount = "10";
 
         let tx_out = TxOut::<T::AccountId>::init(
             raw_from,
@@ -660,7 +681,6 @@ impl<T: Trait> Module<T> {
             bridge_asset.token_symbol,
         )?;
         BridgeTxOuts::<T>::append(&tx_out);
-        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ BridgeTxOuts.append is called.");
 
         Ok(tx_out)
     }
@@ -672,7 +692,8 @@ impl<T: Trait> Module<T> {
 
         let node_url = Self::get_offchain_storage(IOST_NODE_URL)?;
         let sk_str = Self::get_offchain_storage(IOST_SECRET_KEY)?;
-        debug::info!(target: "bridge-iost", "A offchain worker started ++++++++++++++++++++++++ offchain {:?}.", _now_block);
+        debug::info!(target: "bridge-iost", "IOST_NODE_URL ------------- {:?}.", node_url.as_str());
+        debug::info!(target: "bridge-iost", "IOST_SECRET_KEY ------------- {:?}.", sk_str.as_str());
         let bridge_tx_outs = bridge_tx_outs.into_iter()
             .map(|bto| {
                 match bto {
@@ -682,7 +703,6 @@ impl<T: Trait> Module<T> {
                             Ok(generated_bto) => {
                                 has_change.set(true);
                                 debug::info!(target: "bridge-iost", "bto.generate {:?}",generated_bto);
-                                debug::info!("bto.generate");
                                 generated_bto
                             }
                             Err(e) => {
@@ -785,11 +805,7 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
         target: Vec<u8>,
         bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>,
     ) -> Result<(), Self::Error> {
-
-        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ bridge_asset_to is called.");
-        debug::error!("A invalid token type, default token type will be vtoken");
-
-        // let _ = Self::tx_transfer_to(target, bridge_asset)?;
+        let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
         Ok(())
     }

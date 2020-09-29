@@ -141,7 +141,6 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 
                 // Construct transaction
                 let time = sp_io::offchain::timestamp().unix_millis() as i64;
-                debug::info!(target: "bridge-iost", "tx timestamp {:?}", time);
 
                 let expiration = time + Duration::from_millis(1000 * 10000).millis() as i64;
 
@@ -226,7 +225,7 @@ pub(crate) mod iost_rpc {
     const CHAIN_ID: [char; 8] = ['c', 'h', 'a', 'i', 'n', '_', 'i', 'd']; // key chain_id
     const HEAD_BLOCK_HASH: [char; 15] = [
         'h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'h', 'a', 's', 'h',
-    ]; // key head_block_id
+    ]; // key head_block_hash
     const GET_INFO_API: &'static str = "/getChainInfo";
     const GET_BLOCK_API: &'static str = "/getBlockByHash";
     const PUSH_TRANSACTION_API: &'static str = "/v1/chain/push_transaction";
@@ -240,10 +239,11 @@ pub(crate) mod iost_rpc {
         node_url: &str,
     ) -> Result<(ChainId, HeadBlockHash), Error<T>> {
         let req_api = format!("{}{}", node_url, GET_INFO_API);
-        let pending = http::Request::post(&req_api, vec![b"{}"])
-            // .add_header("Content-Type", "application/json")
+        let pending = http::Request::get(&req_api)
+            .add_header("Content-Type", "application/json")
             .send()
             .map_err(|_| Error::<T>::OffchainHttpError)?;
+        debug::info!(target: "bridge-iost", "req_api {:?}, node_url {:?}.", req_api, node_url);
 
         let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
         let body = response.body().collect::<Vec<u8>>();
@@ -252,6 +252,7 @@ pub(crate) mod iost_rpc {
         let node_info = parse_json(body_str).map_err(|_| Error::<T>::LiteJsonError)?;
         let mut chain_id = 0;
         let mut head_block_hash = Default::default();
+        debug::info!(target: "bridge-iost", "body_str {:?}.", body_str);
 
         match node_info {
             JsonValue::Object(ref json) => {
@@ -259,7 +260,7 @@ pub(crate) mod iost_rpc {
                     if item.0 == CHAIN_ID {
                         chain_id = {
                             match item.1.clone() {
-                                // JsonValue::Number(numberValue) => numberValue.into() as i32,
+                                JsonValue::Number(numberValue) => numberValue.to_f64() as i32,
                                 _ => return Err(Error::<T>::IOSTRpcError),
                             }
                         };
@@ -276,6 +277,8 @@ pub(crate) mod iost_rpc {
             }
             _ => return Err(Error::<T>::IOSTRpcError),
         }
+        debug::info!(target: "bridge-iost", "chain_id -- {:?} head_block_hash -- {:?}.", chain_id, head_block_hash);
+
         if chain_id == 0 || head_block_hash == String::default() {
             return Err(Error::<T>::IOSTRpcError);
         }
