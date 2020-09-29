@@ -152,7 +152,9 @@ decl_error! {
         /// Who hasn't the permission to sign a cross-chain trade
 		NoPermissionSignCrossChainTrade,
 
-		DebugReachable,
+		// DebugReachable,
+		// DebugReachable_1,
+		DebugReachableOther,
     }
 }
 
@@ -190,83 +192,6 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
     /// A dispatchable call type.
     type Call: From<Call<Self>>;
-}
-
-decl_event! {
-    pub enum Event<T>
-        where <T as system::Trait>::AccountId,
-    {
-        InitSchedule(VersionId),
-        ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
-        ProveAction,
-        RelayBlock,
-        Deposit(Vec<u8>, AccountId), // IOST account => Bifrost AccountId
-        DepositFail,
-        Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => IOST account
-        WithdrawFail,
-        SendTransactionSuccess,
-        SendTransactionFailure,
-        GrantedCrossChainPrivilege(AccountId),
-        RemovedCrossChainPrivilege(AccountId),
-    }
-}
-
-decl_storage! {
-    trait Store for Module<T: Trait> as BridgeIost {
-        /// The current set of notary keys that may send bridge transactions to Iost chain.
-        NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
-
-        /// Config to enable/disable this runtime
-        BridgeEnable get(fn is_bridge_enable): bool = true;
-
-        /// Eos producer list and hash which in specific version id
-        // ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
-
-        /// Initialize a producer schedule while starting a node.
-        // InitializeSchedule get(fn producer_schedule): ProducerAuthoritySchedule;
-
-        /// Save all unique transactions
-        /// Every transaction has different action receipt, but can have the same action
-        // BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
-
-        /// Current pending schedule version
-        PendingScheduleVersion: VersionId;
-
-        /// Transaction sent to Eos blockchain
-        BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::AccountId>>;
-
-        /// Account where Eos bridge contract deployed, (Account, Signature threshold)
-        BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
-
-        /// Who has the privilege to call transaction between Bifrost and EOS
-        CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
-        /// How many address has the privilege sign transaction between EOS and Bifrost
-        AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
-    }
-    add_extra_genesis {
-        build(|config: &GenesisConfig<T>| {
-            BridgeContractAccount::put(config.bridge_contract_account.clone());
-
-            NotaryKeys::<T>::put(config.notary_keys.clone());
-            //
-            // let schedule = ProducerAuthoritySchedule::default();
-            // let schedule_hash = schedule.schedule_hash();
-            // assert!(schedule_hash.is_ok());
-            // ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
-            // PendingScheduleVersion::put(schedule.version);
-            //
-            // grant privilege to sign transaction between EOS and Bifrost
-            for (who, privilege) in config.cross_chain_privilege.iter() {
-                <CrossChainPrivilege<T>>::insert(who, privilege);
-            }
-            // update to AllAddressesHaveCrossChainPrivilege
-            let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
-            <AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
-                all.extend(all_addresses.into_iter());
-            });
-        });
-    }
-
 }
 
 decl_module! {
@@ -436,23 +361,24 @@ decl_module! {
         ) {
             let origin = system::ensure_signed(origin)?;
             let iost_amount = amount;
-
+            debug::info!(target: "bridge-iost", "A offchain worker started. {:?}", token_symbol);
             // check vtoken id exist or not
-            // ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
+            ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
             // ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
             ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
-            ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
+
             //
             let token = T::AssetTrait::get_token(token_symbol);
             let symbol_code = token.symbol;
             let symbol_precise = token.precision;
             //
             let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
+            ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
             ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
             let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
             ensure!(balance >= amount, "amount should be less than or equal to origin balance");
-            // debug::warn!("failed to send transaction to IOST node. {} - {}", symbol_precise, balance);
-            ensure!(balance < amount, Error::<T>::DebugReachable);
+
+
             let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
             let bridge_asset = BridgeAssetBalance {
                 symbol: asset_symbol,
@@ -461,38 +387,126 @@ decl_module! {
                 from: origin.clone(),
                 token_symbol
             };
-            //
-            // if Self::bridge_asset_to(to, bridge_asset).is_ok() {
-            //     debug::info!("sent transaction to IOST node.");
-            //     // locked balance until trade is verified
-            //     Self::deposit_event(RawEvent::SendTransactionSuccess);
-            // } else {
-            //     debug::warn!("failed to send transaction to IOST node.");
-            //     Self::deposit_event(RawEvent::SendTransactionFailure);
-            // }
+
+            match Self::bridge_asset_to(to, bridge_asset) {
+                Ok(_) => {
+                   debug::info!(target: "bridge-iost", "sent transaction to IOST node.");
+                    // locked balance until trade is verified
+                   Self::deposit_event(RawEvent::SendTransactionSuccess);
+                }
+                Err(e) => {
+                    debug::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
+                    Self::deposit_event(RawEvent::SendTransactionFailure);
+                }
+            }
         }
 
         // Runs after every block.
         fn offchain_worker(now_block: T::BlockNumber) {
             debug::RuntimeLogger::init();
+            debug::info!(target: "bridge-iost", "A offchain worker processing.");
 
+
+            if now_block % T::BlockNumber::from(10) == T::BlockNumber::from(2) {
+				match Self::offchain(now_block) {
+					Ok(_) => debug::info!(target: "bridge-iost", "A offchain worker started."),
+					Err(e) => debug::error!(target: "bridge-iost", "A offchain worker got error: {:?}", e),
+				}
+			}
             // It's no nessesary to start offchain worker if no any task in queue
-            if !BridgeTxOuts::<T>::get().is_empty() {
-                // Only send messages if we are a potential validator.
-                if sp_io::offchain::is_validator() {
-                    debug::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
-                    match Self::offchain(now_block) {
-                        Ok(_) => debug::info!("A offchain worker started."),
-                        Err(e) => debug::error!("A offchain worker got error: {:?}", e),
-                    }
-                } else {
-                    debug::info!(target: "bridge-iost", "Skipping send tx at {:?}. Not a validator.",now_block)
-                }
-            } else {
-                debug::info!(target: "bridge-iost", "There's no offchain worker started.");
-            }
+            // if !BridgeTxOuts::<T>::get().is_empty() {
+            //     // Only send messages if we are a potential validator.
+            //     if sp_io::offchain::is_validator() {
+            //         debug::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
+            //         match Self::offchain(now_block) {
+            //             Ok(_) => debug::info!("A offchain worker started."),
+            //             Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+            //         }
+            //     } else {
+            //         debug::info!(target: "bridge-iost", "Skipping send tx at {:?}. Not a validator.",now_block)
+            //     }
+            // } else {
+            //     debug::info!(target: "bridge-iost", "There's no offchain worker started.");
+            // }
         }
     }
+}
+
+decl_event! {
+    pub enum Event<T>
+        where <T as system::Trait>::AccountId,
+    {
+        InitSchedule(VersionId),
+        ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
+        ProveAction,
+        RelayBlock,
+        Deposit(Vec<u8>, AccountId), // IOST account => Bifrost AccountId
+        DepositFail,
+        Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => IOST account
+        WithdrawFail,
+        SendTransactionSuccess,
+        SendTransactionFailure,
+        GrantedCrossChainPrivilege(AccountId),
+        RemovedCrossChainPrivilege(AccountId),
+    }
+}
+
+decl_storage! {
+    trait Store for Module<T: Trait> as BridgeIost {
+        /// The current set of notary keys that may send bridge transactions to Iost chain.
+        NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
+
+        /// Config to enable/disable this runtime
+        BridgeEnable get(fn is_bridge_enable): bool = true;
+
+        /// Eos producer list and hash which in specific version id
+        // ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
+
+        /// Initialize a producer schedule while starting a node.
+        // InitializeSchedule get(fn producer_schedule): ProducerAuthoritySchedule;
+
+        /// Save all unique transactions
+        /// Every transaction has different action receipt, but can have the same action
+        // BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
+
+        /// Current pending schedule version
+        PendingScheduleVersion: VersionId;
+
+        /// Transaction sent to Eos blockchain
+        BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::AccountId>>;
+
+        /// Account where Eos bridge contract deployed, (Account, Signature threshold)
+        BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
+
+        /// Who has the privilege to call transaction between Bifrost and EOS
+        CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
+        /// How many address has the privilege sign transaction between EOS and Bifrost
+        AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
+    }
+    add_extra_genesis {
+        build(|config: &GenesisConfig<T>| {
+            BridgeContractAccount::put(config.bridge_contract_account.clone());
+
+            NotaryKeys::<T>::put(config.notary_keys.clone());
+            //
+            // let schedule = ProducerAuthoritySchedule::default();
+            // let schedule_hash = schedule.schedule_hash();
+            // assert!(schedule_hash.is_ok());
+            // ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
+            // PendingScheduleVersion::put(schedule.version);
+            //
+            // grant privilege to sign transaction between EOS and Bifrost
+            for (who, privilege) in config.cross_chain_privilege.iter() {
+                <CrossChainPrivilege<T>>::insert(who, privilege);
+            }
+            // update to AllAddressesHaveCrossChainPrivilege
+            let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
+            <AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
+                all.extend(all_addresses.into_iter());
+            });
+        });
+    }
+
 }
 
 impl<T: Trait> Module<T> {
@@ -626,12 +640,16 @@ impl<T: Trait> Module<T> {
         P: AtLeast32Bit + Copy,
         B: AtLeast32Bit + Copy,
     {
+        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ tx_transfer_to is called.");
+
         let (raw_from, threshold) = BridgeContractAccount::get();
         let memo = core::str::from_utf8(&bridge_asset.memo)
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
         // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
         let amount = "100";
+        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ tx_transfer_to is called.");
+
         let tx_out = TxOut::<T::AccountId>::init(
             raw_from,
             raw_to,
@@ -642,6 +660,7 @@ impl<T: Trait> Module<T> {
             bridge_asset.token_symbol,
         )?;
         BridgeTxOuts::<T>::append(&tx_out);
+        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ BridgeTxOuts.append is called.");
 
         Ok(tx_out)
     }
@@ -653,7 +672,7 @@ impl<T: Trait> Module<T> {
 
         let node_url = Self::get_offchain_storage(IOST_NODE_URL)?;
         let sk_str = Self::get_offchain_storage(IOST_SECRET_KEY)?;
-
+        debug::info!(target: "bridge-iost", "A offchain worker started ++++++++++++++++++++++++ offchain {:?}.", _now_block);
         let bridge_tx_outs = bridge_tx_outs.into_iter()
             .map(|bto| {
                 match bto {
@@ -766,7 +785,11 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
         target: Vec<u8>,
         bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>,
     ) -> Result<(), Self::Error> {
-        let _ = Self::tx_transfer_to(target, bridge_asset)?;
+
+        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ bridge_asset_to is called.");
+        debug::error!("A invalid token type, default token type will be vtoken");
+
+        // let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
         Ok(())
     }

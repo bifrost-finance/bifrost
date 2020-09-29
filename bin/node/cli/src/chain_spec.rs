@@ -325,6 +325,7 @@ pub fn testnet_genesis(
 				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
 				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
 				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+				(TokenSymbol::IOST, ConvertPool::new(1, 100)),
 			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {

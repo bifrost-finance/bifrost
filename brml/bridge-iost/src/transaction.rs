@@ -120,6 +120,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         // Construct action
         let action = Action::transfer(eos_from, eos_to, amount.as_str(), memo)
             .map_err(|_| Error::<T>::IostChainError)?;
+        debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ TxOut.init is called.");
 
         let multi_sig_tx = MultiSigTx {
             chain_id: Default::default(),
