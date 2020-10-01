@@ -169,13 +169,9 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
     pub fn sign<T: crate::Trait>(self, sk: Vec<u8>, author: AccountId) -> Result<Self, Error<T>> {
         match self {
             TxOut::Generated(mut multi_sig_tx) => {
-                // if multi_sig_tx.multi_sig.has_signed(author.clone()) {
-                //     return Err(Error::<T>::AlreadySignedByAuthor);
-                // }
-
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
                     .map_err(|_| Error::<T>::IostChainError)?;
-                // let sig: Signature = tx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::IostChainError)?;
+
                 tx.sign(
                     "lispczz4".to_string(),
                     iost_keys::algorithm::SECP256K1,
@@ -201,9 +197,6 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
                 let signed_trx = iost_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
                 let tx_id = iost_rpc::push_transaction(iost_node_url, signed_trx)?;
-
-                // let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
-                // let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
                 Ok(TxOut::Processing {
                     tx_id,
@@ -243,7 +236,6 @@ pub(crate) mod iost_rpc {
             .add_header("Content-Type", "application/json")
             .send()
             .map_err(|_| Error::<T>::OffchainHttpError)?;
-        debug::info!(target: "bridge-iost", "req_api {:?}, node_url {:?}.", req_api, node_url);
 
         let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
         let body = response.body().collect::<Vec<u8>>();
@@ -252,7 +244,6 @@ pub(crate) mod iost_rpc {
         let node_info = parse_json(body_str).map_err(|_| Error::<T>::LiteJsonError)?;
         let mut chain_id = 0;
         let mut head_block_hash = Default::default();
-        debug::info!(target: "bridge-iost", "body_str {:?}.", body_str);
 
         match node_info {
             JsonValue::Object(ref json) => {
@@ -298,7 +289,7 @@ pub(crate) mod iost_rpc {
         node_url: &str,
         signed_trx: Vec<u8>,
     ) -> Result<Vec<u8>, Error<T>> {
-        debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
+        // debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
 
         let pending = http::Request::post(
             &format!("{}{}", node_url, PUSH_TRANSACTION_API),
@@ -318,7 +309,7 @@ pub(crate) mod iost_rpc {
     pub(crate) fn get_transaction_id<T: crate::Trait>(
         trx_response: &str,
     ) -> Result<String, Error<T>> {
-        debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
+        // debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
 
         // error happens while pushing transaction to EOS node
         if !trx_response.contains("hash") && !trx_response.contains("pre_tx_receipt") {
