@@ -703,6 +703,7 @@ impl<T: Trait> Module<T> {
                             Ok(generated_bto) => {
                                 has_change.set(true);
                                 debug::info!(target: "bridge-iost", "bto.generate {:?}",generated_bto);
+                                debug::info!("bto.generate");
                                 generated_bto
                             }
                             Err(e) => {
@@ -720,18 +721,20 @@ impl<T: Trait> Module<T> {
                         let author = <pallet_authorship::Module<T>>::author();
                         let mut ret = bto.clone();
                         let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
-                        if let Some(_) = Self::local_authority_keys()
-                            .find(|key| *key == author.clone().into())
-                        {
-                            match bto.sign::<T>(decoded_sk, author) {
-                                Ok(signed_bto) => {
-                                    has_change.set(true);
-                                    debug::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
-                                    ret = signed_bto;
-                                }
-                                Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
+                        debug::info!("author {:?}", author);
+
+                        // if let Some(_) = Self::local_authority_keys()
+                        //     .find(|key| *key == author.clone().into())
+                        // {
+                        match bto.sign::<T>(decoded_sk, author) {
+                            Ok(signed_bto) => {
+                                has_change.set(true);
+                                debug::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
+                                ret = signed_bto;
                             }
+                            Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
                         }
+                        // }
                         ret
                     },
                     _ => bto,

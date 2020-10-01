@@ -140,9 +140,9 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
                 let (chain_id, head_block_id) = iost_rpc::get_info(iost_node_url)?;
 
                 // Construct transaction
-                let time = sp_io::offchain::timestamp().unix_millis() as i64;
+                let time = (sp_io::offchain::timestamp().unix_millis() * 1000_000) as i64;
 
-                let expiration = time + Duration::from_millis(1000 * 10000).millis() as i64;
+                let expiration = time + Duration::from_millis(1000 * 1000_000).millis() as i64;
 
                 let tx = Tx::new(
                     time,
@@ -177,8 +177,8 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
                     .map_err(|_| Error::<T>::IostChainError)?;
                 // let sig: Signature = tx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::IostChainError)?;
                 tx.sign(
-                    "admin".to_string(),
-                    iost_keys::algorithm::ED25519,
+                    "lispczz4".to_string(),
+                    iost_keys::algorithm::SECP256K1,
                     sk.as_slice(),
                 );
                 match tx.verify() {
@@ -228,7 +228,7 @@ pub(crate) mod iost_rpc {
     ]; // key head_block_hash
     const GET_INFO_API: &'static str = "/getChainInfo";
     const GET_BLOCK_API: &'static str = "/getBlockByHash";
-    const PUSH_TRANSACTION_API: &'static str = "/v1/chain/push_transaction";
+    const PUSH_TRANSACTION_API: &'static str = "/sendTx";
 
     type ChainId = i32;
     type HeadBlockHash = String;
@@ -291,13 +291,15 @@ pub(crate) mod iost_rpc {
     ) -> Result<Vec<u8>, Error<T>> {
         let mut tx =
             Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
-        Ok(tx.no_std_serialize())
+        Ok(tx.no_std_serialize_vec())
     }
 
     pub(crate) fn push_transaction<T: crate::Trait>(
         node_url: &str,
         signed_trx: Vec<u8>,
     ) -> Result<Vec<u8>, Error<T>> {
+        debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
+
         let pending = http::Request::post(
             &format!("{}{}", node_url, PUSH_TRANSACTION_API),
             vec![signed_trx],
@@ -316,6 +318,8 @@ pub(crate) mod iost_rpc {
     pub(crate) fn get_transaction_id<T: crate::Trait>(
         trx_response: &str,
     ) -> Result<String, Error<T>> {
+        debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
+
         // error happens while pushing transaction to EOS node
         if !trx_response.contains("hash") && !trx_response.contains("pre_tx_receipt") {
             return Err(Error::<T>::IOSTRpcError);
