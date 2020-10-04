@@ -53,8 +53,6 @@ use sp_runtime::{
 use sp_std::if_std;
 use sp_std::prelude::*;
 
-mod mock;
-mod tests;
 mod transaction;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
