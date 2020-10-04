@@ -92,6 +92,7 @@ pub mod sr25519 {
 }
 
 const IOST_NODE_URL: &[u8] = b"IOST_NODE_URL";
+const IOST_ACCOUNT_NAME: &[u8] = b"IOST_ACCOUNT_NAME";
 const IOST_SECRET_KEY: &[u8] = b"IOST_SECRET_KEY";
 
 decl_error! {
@@ -669,7 +670,7 @@ impl<T: Trait> Module<T> {
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
         // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
-        let amount = "10";
+        let amount = "1";
 
         let tx_out = TxOut::<T::AccountId>::init(
             raw_from,
@@ -691,6 +692,7 @@ impl<T: Trait> Module<T> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
 
         let node_url = Self::get_offchain_storage(IOST_NODE_URL)?;
+        let account_name = Self::get_offchain_storage(IOST_ACCOUNT_NAME)?;
         let sk_str = Self::get_offchain_storage(IOST_SECRET_KEY)?;
         debug::info!(target: "bridge-iost", "IOST_NODE_URL ------------- {:?}.", node_url.as_str());
         debug::info!(target: "bridge-iost", "IOST_SECRET_KEY ------------- {:?}.", sk_str.as_str());
@@ -726,7 +728,7 @@ impl<T: Trait> Module<T> {
                         // if let Some(_) = Self::local_authority_keys()
                         //     .find(|key| *key == author.clone().into())
                         // {
-                        match bto.sign::<T>(decoded_sk, author) {
+                        match bto.sign::<T>(decoded_sk, account_name.as_str()) {
                             Ok(signed_bto) => {
                                 has_change.set(true);
                                 debug::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);

@@ -166,14 +166,14 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         }
     }
 
-    pub fn sign<T: crate::Trait>(self, sk: Vec<u8>, author: AccountId) -> Result<Self, Error<T>> {
+    pub fn sign<T: crate::Trait>(self, sk: Vec<u8>, account_name: &str) -> Result<Self, Error<T>> {
         match self {
             TxOut::Generated(mut multi_sig_tx) => {
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
                     .map_err(|_| Error::<T>::IostChainError)?;
 
                 tx.sign(
-                    "lispczz4".to_string(),
+                    account_name.to_string(),
                     iost_keys::algorithm::SECP256K1,
                     sk.as_slice(),
                 );
@@ -251,7 +251,7 @@ pub(crate) mod iost_rpc {
                     if item.0 == CHAIN_ID {
                         chain_id = {
                             match item.1.clone() {
-                                JsonValue::Number(numberValue) => numberValue.to_f64() as i32,
+                                JsonValue::Number(number_value) => number_value.to_f64() as i32,
                                 _ => return Err(Error::<T>::IOSTRpcError),
                             }
                         };
