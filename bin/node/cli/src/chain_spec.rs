@@ -23,7 +23,7 @@ use node_runtime::{
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GrandpaConfig, ImOnlineConfig, SessionConfig, SessionKeys, StakerStatus, StakingConfig,
 	IndicesConfig, SocietyConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, wasm_binary_unwrap,
-	AssetsConfig, BridgeEosConfig, VoucherConfig, SwapConfig, ConvertConfig,
+	AssetsConfig, BridgeEosConfig, BridgeIostConfig, VoucherConfig, SwapConfig, ConvertConfig,
 };
 use node_runtime::Block;
 use node_runtime::constants::currency::*;
@@ -310,7 +310,7 @@ pub fn testnet_genesis(
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
-			next_asset_id: 7u32, // start from 7, [0..6] has been reserved
+			next_asset_id: 9u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
@@ -319,11 +319,13 @@ pub fn testnet_genesis(
 				(TokenSymbol::DOT, DOLLARS / 100),
 				(TokenSymbol::KSM, DOLLARS / 100),
 				(TokenSymbol::EOS, DOLLARS / 100),
+				(TokenSymbol::IOST, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
 				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
 				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
 				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
+				(TokenSymbol::IOST, ConvertPool::new(1, 100)),
 			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
@@ -333,6 +335,13 @@ pub fn testnet_genesis(
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
+		}),
+		brml_bridge_iost: Some(BridgeIostConfig {
+			bridge_contract_account: (b"lispczz4".to_vec(), 1),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -576,6 +585,13 @@ pub fn bifrost_genesis(
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
+		}),
+		brml_bridge_iost: Some(BridgeIostConfig {
+			bridge_contract_account: (b"lispczz4".to_vec(), 1),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
