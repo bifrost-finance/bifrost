@@ -2478,7 +2478,7 @@ dependencies = [
 [[package]]
 name = "iost-chain"
 version = "0.1.0"
-source = "git+https://github.com/hsqlu/rs-iost#9665de7f3115a8181e38d2d0b84d2b43a50f4b08"
+source = "git+https://github.com/bifrost-finance/rust-iost#14ca6a5230e44d3f4a2fc874bccf4f99a892fb58"
 dependencies = [
  "async-trait",
  "base58",
@@ -2501,7 +2501,7 @@ dependencies = [
 [[package]]
 name = "iost-derive"
 version = "0.2.1"
-source = "git+https://github.com/hsqlu/rs-iost#9665de7f3115a8181e38d2d0b84d2b43a50f4b08"
+source = "git+https://github.com/bifrost-finance/rust-iost#14ca6a5230e44d3f4a2fc874bccf4f99a892fb58"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2511,7 +2511,7 @@ dependencies = [
 [[package]]
 name = "iost-keys"
 version = "0.1.0"
-source = "git+https://github.com/hsqlu/rs-iost#9665de7f3115a8181e38d2d0b84d2b43a50f4b08"
+source = "git+https://github.com/bifrost-finance/rust-iost#14ca6a5230e44d3f4a2fc874bccf4f99a892fb58"
 dependencies = [
  "base58",
  "base64 0.12.3",
