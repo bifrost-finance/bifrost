@@ -123,7 +123,7 @@
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
   "TokenSymbol": {
-    "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS"]
+    "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS", "IOST", "vIOST"]
   },
   "TrxStatus": {
     "_enum": ["Initial", "Generated", "Signed", "Processing", "Success", "Fail"]
