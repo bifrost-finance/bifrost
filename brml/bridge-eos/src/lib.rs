@@ -270,8 +270,8 @@ decl_event! {
 		DepositFail,
 		Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => EOS account
 		WithdrawFail,
-		SendTransactionSuccess,
-		SendTransactionFailure,
+		SentCrossChainTransaction,
+		FailToSendCrossChainTransaction,
 		GrantedCrossChainPrivilege(AccountId),
 		RemovedCrossChainPrivilege(AccountId),
 		UnsignedTrx,
@@ -651,9 +651,6 @@ decl_module! {
 			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= eos_amount, Error::<T>::InsufficientBalance);
 
-			debug::info!(target: "bridge-eos", "amount {:?}", amount);
-			debug::info!(target: "bridge-eos", "eos amount {:?}", eos_amount);
-
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
@@ -669,11 +666,11 @@ decl_module! {
 					// locked balance until trade is verified
 					T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
 
-					Self::deposit_event(RawEvent::SendTransactionSuccess);
+					Self::deposit_event(RawEvent::SentCrossChainTransaction);
 				}
 				Err(e) => {
 					debug::warn!("failed to send transaction to EOS node, due to {:?}", e);
-					Self::deposit_event(RawEvent::SendTransactionFailure);
+					Self::deposit_event(RawEvent::FailToSendCrossChainTransaction);
 				}
 			}
 		}
@@ -682,7 +679,8 @@ decl_module! {
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
 
-//			if now_block % T::BlockNumber::from(3u32) == T::BlockNumber::from(0u32) {
+			// trigger offchain worker by each two block
+			if now_block % T::BlockNumber::from(2u32) == T::BlockNumber::from(0u32) {
 				if BridgeTrxStatusV1::<T>::iter()
 					.any(|(_, status)|
 						status == TrxStatus::Initial ||
@@ -695,7 +693,7 @@ decl_module! {
 						Err(e) => debug::debug!("A offchain worker got error: {:?}", e),
 					}
 				}
-//			}
+			}
 		}
 	}
 }
@@ -942,15 +940,6 @@ impl<T: Trait> Module<T> {
 			*index += 1;
 		});
 
-//		CrossIndexRelatedEOSBalance::<T>::insert(
-//			current_trx_index,
-//			(
-//				T::Balance::from(core::convert::TryInto::<u32>::try_into(bridge_asset.amount).map_err(|_| Error::<T>::ParseUtf8Error)?),
-//				&bridge_asset.from,
-//				bridge_asset.token_symbol
-//			)
-//		);
-
 		CrossTradeStatus::insert(current_trx_index, false);
 
 		Ok(tx_out)
@@ -974,7 +963,7 @@ impl<T: Trait> Module<T> {
 				(TxOut::<T::AccountId>::Initial(_), TrxStatus::Initial) => {
 					match trx.clone().generate::<T>(node_url.as_str()) {
 						Ok(generated_trx) => {
-							debug::info!(target: "bridge-eos", "bto.generate {:?}", generated_trx);
+							debug::debug!(target: "bridge-eos", "bto.generate {:?}", generated_trx);
 							changed_status_trxs.push(((generated_trx, index), TrxStatus::Generated, (trx.clone(), index),  None));
 						}
 						Err(e) => {
@@ -1026,9 +1015,6 @@ impl<T: Trait> Module<T> {
 									changed_status_trxs.push(((trx.clone(), index), TrxStatus::Processing, (trx, index), None));
 								}
 								Error::<T>::TransactionExpired => {
-									// unlock the asset
-//									let (need_to_be_unlocked, from, token_symbol) = CrossIndexRelatedEOSBalance::<T>::get(index);
-//									T::AssetTrait::unlock_asset(&from, token_symbol, need_to_be_unlocked);
 									changed_status_trxs.push(((trx.clone(), index), TrxStatus::Processing, (trx, index), None));
 								}
 								_ => {}

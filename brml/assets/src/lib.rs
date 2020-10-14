@@ -285,7 +285,11 @@ decl_module! {
 			// ensure this locked amount of balance should be less than his lock balance
 			ensure!(locked >= amount, Error::<T>::InsufficientBalanceForTransaction);
 
-			Self::unlock_asset(&target, token_symbol, amount);
+			let target_asset = (token_symbol, &target);
+			<AccountAssets<T>>::mutate(target_asset, |asset| {
+				asset.available = asset.available.saturating_add(amount);
+				asset.locked -= amount;
+			});
 
 			Self::deposit_event(RawEvent::UnlockedAsset(target, token_symbol, amount));
 		}
