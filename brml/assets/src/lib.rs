@@ -94,6 +94,8 @@ decl_event! {
 		AccountAssetCreated(AccountId, AssetId),
 		/// Bind Asset with AccountId
 		AccountAssetDestroy(AccountId, AssetId),
+		/// Unlock user asset
+		UnlockedAsset(AccountId, TokenSymbol, Balance),
 	}
 }
 
@@ -112,7 +114,7 @@ decl_error! {
 		/// Transaction cannot be made if he amount of balances are 0
 		ZeroAmountOfBalance,
 		/// Amount of input should be less than or equal to origin balance
-		InvalidBalanceForTransaction,
+		InsufficientBalanceForTransaction,
 		/// Convert rate doesn't be set
 		ConvertRateDoesNotSet,
 		/// This is an invalid convert rate
@@ -219,7 +221,7 @@ decl_module! {
 			let target = T::Lookup::lookup(target)?;
 
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
-			ensure!(origin_balance >= amount, Error::<T>::InvalidBalanceForTransaction);
+			ensure!(origin_balance >= amount, Error::<T>::InsufficientBalanceForTransaction);
 
 			Self::asset_transfer(token_symbol, origin.clone(), target.clone(), amount);
 
@@ -238,7 +240,7 @@ decl_module! {
 			let origin_account = (token_symbol, origin.clone());
 
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
-			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
+			ensure!(amount <= balance , Error::<T>::InsufficientBalanceForTransaction);
 
 			Self::asset_destroy(token_symbol, &origin, amount);
 
@@ -257,11 +259,35 @@ decl_module! {
 			let origin_account = (token_symbol, origin.clone());
 
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
-			ensure!(amount <= balance , Error::<T>::InvalidBalanceForTransaction);
+			ensure!(amount <= balance , Error::<T>::InsufficientBalanceForTransaction);
 
 			T::AssetRedeem::asset_redeem(token_symbol, origin.clone(), amount, to_name);
 
 			Self::asset_destroy(token_symbol, &origin, amount);
+		}
+
+		/// Issue any amount of fungible assets.
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		pub fn unlock(
+			origin,
+			token_symbol: TokenSymbol,
+			target: <T::Lookup as StaticLookup>::Source,
+			#[compact] amount: T::Balance,
+		) {
+			ensure_root(origin)?;
+
+			ensure!(<Tokens<T>>::contains_key(token_symbol), Error::<T>::TokenNotExist);
+
+			let target = T::Lookup::lookup(target)?;
+			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
+
+			let locked = <AccountAssets<T>>::get((token_symbol, &target)).locked;
+			// ensure this locked amount of balance should be less than his lock balance
+			ensure!(locked >= amount, Error::<T>::InsufficientBalanceForTransaction);
+
+			Self::unlock_asset(&target, token_symbol, amount);
+
+			Self::deposit_event(RawEvent::UnlockedAsset(target, token_symbol, amount));
 		}
 	}
 }
@@ -412,11 +438,13 @@ impl<T: Trait> Module<T> {
 		let from_asset = (token_symbol, from);
 		<AccountAssets<T>>::mutate(&from_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
+			asset.available = asset.available.saturating_sub(amount);
 		});
 
 		let to_asset = (token_symbol, &to);
 		<AccountAssets<T>>::mutate(to_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
+			asset.available = asset.available.saturating_add(amount);
 		});
 
 		// save asset id for this account

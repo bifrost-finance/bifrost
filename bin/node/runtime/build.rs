@@ -22,5 +22,6 @@ fn main() {
 		.with_wasm_builder_from_crates("2.0.0")
 		.export_heap_base()
 		.import_memory()
+		.append_to_rust_flags("-C opt-level=z") // shrink the size of wasm binary
 		.build()
 }

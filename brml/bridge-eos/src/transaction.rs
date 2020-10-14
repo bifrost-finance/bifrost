@@ -26,6 +26,7 @@ use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Tran
 use eos_keys::secret::SecretKey;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
+use core::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Default)]
 pub struct TxSig<AccountId> {
@@ -158,12 +159,21 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 				// fetch block
 				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
 
+				static index: AtomicU64 = AtomicU64::new(0);
+
 				let actions = vec![multi_sig_tx.action.clone()];
-				// Construct transaction
-				let expiration = (sp_io::offchain::timestamp().add(Duration::from_millis(600 * 1000)).unix_millis() as f64 / 1000.0) as u32;
+				// Construct transaction, and it will expire after one hour if doesn't send it EOS network
+				let expiration = (sp_io::offchain::timestamp()
+					.add(Duration::from_millis(600 * 1000 + index.load(Ordering::Relaxed)))
+					.unix_millis() as f64 / 1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
 				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
+
+				index.fetch_add(1, Ordering::SeqCst);
+				if index.load(Ordering::Relaxed) >= 100 {
+					index.swap(0, Ordering::Relaxed);
+				}
 
 				Ok(TxOut::Generated(multi_sig_tx))
 			},
@@ -351,7 +361,14 @@ pub(crate) mod eos_rpc {
 
 		let body = response.body().collect::<Vec<u8>>();
 		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
-		frame_support::debug::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
+		// frame_support::debug::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
+
+		if body_str.as_str().contains("Expired Transaction") {
+			return Err(Error::<T>::TransactionExpired);
+		}
+		if body_str.as_str().contains("Duplicate transaction") {
+			return Err(Error::<T>::SendingDuplicatedTransaction);
+		}
 		let tx_id = get_transaction_id(&body_str)?;
 
 		Ok(tx_id.into_bytes())
