@@ -20,7 +20,7 @@ Start two Bifrost nodes.
 
 Alice node: 
 ```
-$ ./target/release/bifrost-node --base-path /tmp/alice \
+$ ./target/release/bifrost --base-path /tmp/alice \
 --rpc-port 4321 \
 --ws-port 9944 \
 --chain=dev \
@@ -32,7 +32,7 @@ $ ./target/release/bifrost-node --base-path /tmp/alice \
 
 Bob node:
 ```
-$ ./target/release/bifrost-node --base-path /tmp/bob \
+$ ./target/release/bifrost --base-path /tmp/bob \
 --rpc-port 1234 \
 --ws-port 9933 \
 --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/QmRpheLN4JWdAnY7HGJfWFNbfkQCb6tFf4vvA6hgjMZKrR \
