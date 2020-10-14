@@ -210,7 +210,6 @@ decl_module! {
 
 			// latest price should be vtoken_pool / token_pool
 			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
-			ensure!(vtoken_pool >= vtokens_buy && token_pool >= token_amount, Error::<T>::NotEnoughConvertPool);
 
 			// transfer
 			T::AssetTrait::asset_destroy(token_symbol, &converter, token_amount);
