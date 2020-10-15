@@ -219,6 +219,8 @@ decl_error! {
 		SendingDuplicatedTransaction,
 		/// Transaction expired
 		TransactionExpired,
+		/// Cross transaction back enable or not
+		CrossChainBackDisabled,
 	}
 }
 
@@ -285,6 +287,9 @@ decl_storage! {
 
 		/// Config to enable/disable this runtime
 		BridgeEnable get(fn is_bridge_enable): bool = true;
+
+		/// Cross transaction back enable or not
+		CrossChainBackEnable get(fn is_cross_back_enable): bool = false;
 
 		/// Eos producer list and hash which in specific version id
 		ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
@@ -375,6 +380,13 @@ decl_module! {
 			ensure_root(origin)?;
 
 			BridgeEnable::put(enable);
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn cross_chain_back_enable(origin, enable: bool) {
+			ensure_root(origin)?;
+
+			CrossChainBackEnable::put(enable);
 		}
 
 		#[weight = T::DbWeight::get().reads_writes(1, 2)]
@@ -636,6 +648,8 @@ decl_module! {
 		) {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
+
+			ensure!(CrossChainBackEnable::get(), Error::<T>::CrossChainBackDisabled);
 
 			// check vtoken id exist or not
 			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
