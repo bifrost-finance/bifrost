@@ -322,6 +322,7 @@ impl<TokenSymbol, ER: Default> FetchConvertPrice<TokenSymbol, ER> for () {
 pub enum BlockchainType {
 	BIFROST,
 	EOS,
+	IOST,
 }
 
 impl Default for BlockchainType {
