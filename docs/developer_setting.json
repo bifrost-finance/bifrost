@@ -11,6 +11,11 @@
     "authorization": "Vec<PermissionLevel>",
     "data": "Vec<u8>"
   },
+  "IostAction": {
+    "contract": "Vec<u8>",
+    "action_name": "Vec<u8>",
+    "data": "Vec<u8>"
+  },
   "PermissionLevel": {
     "actor": "AccountName",
     "permission": "PermissionName"
@@ -29,7 +34,8 @@
   "BlockchainType": {
     "_enum": [
       "BIFROST",
-      "EOS"
+      "EOS",
+      "IOST"
     ]
   },
   "Precision": "u32",
