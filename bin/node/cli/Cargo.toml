@@ -102,6 +102,8 @@ browser-utils = { package = "substrate-browser-utils", optional = true, version 
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
 eos-chain = { git = "https://github.com/bifrost-finance/rust-eos" }
 
+brml-bridge-iost = { path = "../../../brml/bridge-iost", default-features = false }
+
 # brml rpc crates
 brml-assets-rpc = { path = "../../../brml/assets/rpc" }
 brml-convert-rpc = { path = "../../../brml/convert/rpc" }

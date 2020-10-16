@@ -40,8 +40,8 @@ lazy_static::lazy_static! {
 		let vksm = (b"vKSM".to_vec(), 12);
 		let eos = (b"EOS".to_vec(), 4);
 		let veos = (b"vEOS".to_vec(), 4);
-		let iost = (b"IOST".to_vec(), 12);
-		let viost = (b"vIOST".to_vec(), 12);
+		let iost = (b"IOST".to_vec(), 8);
+		let viost = (b"vIOST".to_vec(), 8);
 		[ausd, dot, vdot, ksm, vksm, eos, veos, iost, viost]
 	};
 }
@@ -148,7 +148,7 @@ decl_storage! {
 			<NextAssetId<T>>::put(config.next_asset_id);
 
 			// now, not support iost, so leave 6 here.
-			for i in 0..=6 {
+			for i in 0..=8 {
 				// initialize token
 				let current_token = &TOKEN_LIST[i as usize];
 				let token = Token::new(current_token.0.clone(), current_token.1, 0.into());
