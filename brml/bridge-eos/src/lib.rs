@@ -376,6 +376,16 @@ decl_module! {
 		}
 
 		#[weight = T::DbWeight::get().writes(1)]
+		fn clear_unused_cross_back_transaction_data(origin) {
+			ensure_root(origin)?;
+
+			// clear cross trade times
+			for (key, val) in BridgeTrxStatusV1::<T>::iter() {
+				BridgeTrxStatusV1::<T>::remove(key);
+			}
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
 		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
 
