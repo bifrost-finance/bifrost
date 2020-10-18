@@ -389,17 +389,17 @@ fn bridge_eos_offchain_should_work() {
 		let transaction = pool_state.write().transactions.pop().unwrap();
 		assert_eq!(pool_state.read().transactions.len(), 1);
 		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-		let tx_outs = match ex.call {
-			crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
-			e => panic!("Unexpected call: {:?}", e),
-		};
+		// let tx_outs = match ex.call {
+		// 	crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
+		// 	e => panic!("Unexpected call: {:?}", e),
+		// };
 
-		assert_eq!(tx_outs.iter().filter(|out| {
-			match out {
-				TxOut::Processing{ .. } => true,
-				_ => false,
-			}
-		}).count(), 1);
+		// assert_eq!(tx_outs.iter().filter(|out| {
+		// 	match out {
+		// 		TxOut::Processing{ .. } => true,
+		// 		_ => false,
+		// 	}
+		// }).count(), 1);
 	});
 }
 
@@ -462,21 +462,21 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 	Ok(json_str)
 }
 
-#[allow(dead_code)]
-fn bridge_tx_report() -> dispatch::DispatchResult {
-	#[allow(deprecated)]
-	use frame_support::unsigned::ValidateUnsigned;
+// #[allow(dead_code)]
+// fn bridge_tx_report() -> dispatch::DispatchResult {
+// 	#[allow(deprecated)]
+// 	use frame_support::unsigned::ValidateUnsigned;
 
-	let tx_outs = vec![TxOut::Success(vec![])];
+// 	let tx_outs = vec![TxOut::Success(vec![])];
 
-	#[allow(deprecated)]
-	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
+// 	#[allow(deprecated)]
+// 	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
 
-	BridgeEos::bridge_tx_report(
-		Origin::none(),
-		tx_outs,
-	)
-}
+// 	BridgeEos::bridge_tx_report(
+// 		Origin::none(),
+// 		tx_outs,
+// 	)
+// }
 
 fn seal_header(mut header: Header, author: u64) -> Header {
 	{
