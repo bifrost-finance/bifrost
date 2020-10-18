@@ -155,7 +155,7 @@ fn to_token_should_be_ok() {
 		assert_ok!(assets::Module::<Test>::issue(Origin::root(), vdot_type, bob, bob_vdot_issued)); // 60 tokens to bob
 
 		// set a intialized pool
-		let (token_pool, vtoken_pool) = (2 , 4);
+		let (token_pool, vtoken_pool) = (20 , 40);
 		let pool = ConvertPool::new(token_pool, vtoken_pool); // token => vtoken, 1token equals to 2vtoken, 4 / 2
 		<Pool::<Test>>::insert(dot_type, pool);
 		let rate = vtoken_pool / token_pool;
@@ -168,7 +168,7 @@ fn to_token_should_be_ok() {
 		assert_eq!(<assets::AccountAssets<Test>>::get((vdot_type, bob)).balance, bob_vdot_issued - bob_vdot_convert); // check bob's token change
 		assert_eq!(<assets::AccountAssets<Test>>::get((dot_type, bob)).balance, bob_dot_issued + bob_vdot_convert / rate); // check bob's token change
 
-		assert_eq!(Convert::pool(dot_type), ConvertPool::new(0, 0));
+		assert_eq!(Convert::pool(dot_type), ConvertPool::new(15, 30));
 	});
 }
 
