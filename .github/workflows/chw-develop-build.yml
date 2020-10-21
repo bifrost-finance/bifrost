@@ -3,10 +3,10 @@ name: chw-build
 on:
   pull_request:
     branches:
-      - chw
+      - develop
   push:
     branches:
-      - develop
+      - chw
 
 env:
   CARGO_TERM_COLOR: always
