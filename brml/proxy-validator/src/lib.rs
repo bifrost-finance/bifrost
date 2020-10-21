@@ -23,13 +23,24 @@ use codec::{Encode, Decode};
 use core::convert::{From, Into};
 use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
-use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
+use frame_support::{weights::Weight,decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
 use core::ops::Div;
+
+pub trait WeightInfo{
+	fn set_global_asset() -> Weight;
+	fn stake() -> Weight;
+	fn unstake() -> Weight;
+	fn validator_register() -> Weight;
+	fn set_need_amount() -> Weight;
+	fn set_reward_per_block() -> Weight;
+	fn deposit() -> Weight;
+	fn withdraw() -> Weight;
+}
 
 pub type ValidatorAddress = Vec<u8>;
 
@@ -94,6 +105,8 @@ pub trait Trait: frame_system::Trait {
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
 	/// Reward handler
 	type RewardHandler: RewardHandler<TokenSymbol, Self::Balance>;
+	/// Set default weight
+	type WeightInfo : WeightInfo;
 }
 
 decl_event! {
@@ -170,7 +183,8 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = 0]
+		//#[weight = 0]
+		#[weight = T::WeightInfo::set_global_asset()]
 		fn set_global_asset(
 			origin,
 			token_symbol: TokenSymbol,
@@ -185,7 +199,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::AssetConfigSet(token_symbol, asset_config));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		// #[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::stake()]
 		fn stake(
 			origin,
 			token_symbol: TokenSymbol,
@@ -220,7 +235,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorStaked(token_symbol, target, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		// #[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::unstake()]
 		fn unstake(
 			origin,
 			token_symbol: TokenSymbol,
@@ -254,7 +270,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorUnStaked(token_symbol, target, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		// #[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::validator_register()]
 		fn validator_register(
 			origin,
 			token_symbol: TokenSymbol,
@@ -286,7 +303,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorRegistered(token_symbol, origin, validator));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		//#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::set_need_amount()]
 		fn set_need_amount(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -302,7 +320,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorNeedAmountSet(token_symbol, origin, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		//#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::set_reward_per_block()]
 		fn set_reward_per_block(origin, token_symbol: TokenSymbol, reward_per_block: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -324,7 +343,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorRewardPerBlockSet(token_symbol, origin, reward_per_block));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		// #[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::deposit()]
 		fn deposit(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -343,7 +363,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorDeposited(token_symbol, origin, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		// #[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::withdraw()]
 		fn withdraw(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
