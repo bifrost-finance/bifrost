@@ -180,7 +180,6 @@ decl_module! {
 
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::create()]
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) -> DispatchResult {
 			ensure_root(origin)?;
@@ -197,7 +196,6 @@ decl_module! {
 		}
 
 		/// Issue any amount of fungible assets.
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::issue()]
 		pub fn issue(
 			origin,
@@ -218,7 +216,6 @@ decl_module! {
 		}
 
 		/// Move some assets from one holder to another.
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::transfer()]
 		pub fn transfer(
 			origin,
@@ -241,7 +238,6 @@ decl_module! {
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::destroy()]
 		pub fn destroy(
 			origin,
@@ -260,7 +256,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::Destroyed(token_symbol, origin, amount));
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::redeem()]
 		pub fn redeem(
 			origin,

@@ -94,7 +94,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::issue_voucher()]
 		pub fn issue_voucher(
 			origin,
@@ -128,7 +127,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::IssuedVoucher(dest, amount));
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::intialize_all_voucher()]
 		fn intialize_all_voucher(origin) {
 			ensure_root(origin)?;
@@ -145,7 +143,6 @@ decl_module! {
 			}
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::destroy_voucher()]
 		pub fn destroy_voucher(
 			origin,
@@ -184,7 +181,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::DestroyedVoucher(dest, amount));
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::export_all_vouchers()]
 		pub fn export_all_vouchers(origin) {
 			ensure_root(origin)?;

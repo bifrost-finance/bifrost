@@ -213,7 +213,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// #[weight = weight_for::add_liquidity::<T>()]
 		#[weight = T::WeightInfo::add_liquidity()]
 		fn add_liquidity(
 			origin,
@@ -284,7 +283,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::AddLiquiditySuccess);
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::add_single_liquidity()]
 		fn add_single_liquidity(
 			origin,
@@ -363,7 +361,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::remove_single_asset_liquidity()]
 		fn remove_single_asset_liquidity(
 			origin,
@@ -448,7 +445,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::remove_assets_liquidity()]
 		fn remove_assets_liquidity(
 			origin,
@@ -511,7 +507,6 @@ decl_module! {
 		}
 
 		// consider maxPrice and minAmountOut
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::swap()]
 		fn swap(
 			origin,

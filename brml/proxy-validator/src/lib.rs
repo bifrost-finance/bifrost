@@ -183,7 +183,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		//#[weight = 0]
 		#[weight = T::WeightInfo::set_global_asset()]
 		fn set_global_asset(
 			origin,
@@ -199,7 +198,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::AssetConfigSet(token_symbol, asset_config));
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::stake()]
 		fn stake(
 			origin,
@@ -235,7 +233,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorStaked(token_symbol, target, amount));
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::unstake()]
 		fn unstake(
 			origin,
@@ -270,7 +267,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorUnStaked(token_symbol, target, amount));
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::validator_register()]
 		fn validator_register(
 			origin,
@@ -343,7 +339,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorRewardPerBlockSet(token_symbol, origin, reward_per_block));
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::deposit()]
 		fn deposit(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
@@ -363,7 +358,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorDeposited(token_symbol, origin, amount));
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::withdraw()]
 		fn withdraw(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
