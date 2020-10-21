@@ -237,7 +237,6 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        // #[weight = T::DbWeight::get().writes(1)]
         #[weight = T::WeightInfo::bridge_enable()]
         fn bridge_enable(origin, enable: bool) {
             ensure_root(origin)?;
@@ -245,14 +244,12 @@ decl_module! {
             BridgeEnable::put(enable);
         }
 
-        // #[weight = (0, DispatchClass::Normal, Pays::No)]
         #[weight = (T::WeightInfo::set_contract_accounts(), DispatchClass::Normal, Pays::No)]
         fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
             ensure_root(origin)?;
             BridgeContractAccount::put((account, threthold));
         }
 
-        // #[weight = T::DbWeight::get().reads_writes(1, 1)]
         #[weight = T::WeightInfo::grant_crosschain_privilege()]
         fn grant_crosschain_privilege(origin, target: T::AccountId) {
             ensure_root(origin)?;
@@ -270,7 +267,6 @@ decl_module! {
             Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
         }
 
-        // #[weight = (0, DispatchClass::Normal, Pays::No)]
         #[weight = (T::WeightInfo::remove_crosschain_privilege(), DispatchClass::Normal, Pays::No)]
         fn remove_crosschain_privilege(origin, target: T::AccountId) {
             ensure_root(origin)?;
@@ -286,7 +282,6 @@ decl_module! {
             Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
         }
 
-        // #[weight = (0, DispatchClass::Normal, Pays::No)]
         #[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
         fn prove_action(
             origin,
@@ -384,7 +379,6 @@ decl_module! {
             Ok(())
         }
 
-        // #[weight = (0, DispatchClass::Normal, Pays::No)]
         #[weight = (T::WeightInfo::bridge_tx_report(), DispatchClass::Normal, Pays::No)]
         fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
             ensure_none(origin)?;
@@ -394,7 +388,6 @@ decl_module! {
             Ok(())
         }
 
-        // #[weight = (weight_for::cross_to_iost::<T>(memo.len() as Weight), DispatchClass::Normal)]
         #[weight = (T::WeightInfo::cross_to_iost(memo.len() as Weight), DispatchClass::Normal)]
         fn cross_to_iost(
             origin,

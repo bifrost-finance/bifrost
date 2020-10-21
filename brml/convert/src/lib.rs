@@ -136,7 +136,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::set_convert_price()]
 		fn set_convert_price(
 			origin,
@@ -153,7 +152,6 @@ decl_module! {
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::set_price_per_block()]
 		fn set_price_per_block(
 			origin,
@@ -170,7 +168,6 @@ decl_module! {
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
-		// #[weight = (weight_for::convert_token_to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
 		#[weight = (T::WeightInfo::to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
 		fn to_vtoken(
 			origin,
@@ -212,7 +209,6 @@ decl_module! {
 			Self::deposit_event(Event::ConvertTokenToVTokenSuccess);
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::to_token()]
 		fn to_token(
 			origin,

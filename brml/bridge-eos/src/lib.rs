@@ -369,7 +369,6 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::clear_cross_trade_times()]
 		fn clear_cross_trade_times(origin) {
 			ensure_root(origin)?;
@@ -383,7 +382,6 @@ decl_module! {
 			}
 		}
 
-		// #[weight = T::DbWeight::get().writes(1)]
 		#[weight = T::WeightInfo::bridge_enable()]
 		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
@@ -391,7 +389,6 @@ decl_module! {
 			BridgeEnable::put(enable);
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 2)]
 		#[weight = T::WeightInfo::save_producer_schedule()]
 		fn save_producer_schedule(origin, ps: ProducerAuthoritySchedule) -> DispatchResult {
 			ensure_root(origin)?;
@@ -407,7 +404,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::init_schedule()]
 		fn init_schedule(origin, ps: ProducerAuthoritySchedule) {
 			ensure_root(origin)?;
@@ -424,7 +420,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::InitSchedule(ps.version));
 		}
 
-		// #[weight = T::DbWeight::get().reads_writes(1, 1)]
 		#[weight = T::WeightInfo::grant_crosschain_privilege()]
 		fn grant_crosschain_privilege(origin, target: T::AccountId) {
 			ensure_root(origin)?;
@@ -442,7 +437,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
 		}
 
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::remove_crosschain_privilege(), DispatchClass::Normal, Pays::No)]
 		fn remove_crosschain_privilege(origin, target: T::AccountId) {
 			ensure_root(origin)?;
@@ -458,7 +452,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
 		}
 
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::set_contract_accounts(), DispatchClass::Normal, Pays::No)]
 		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
 			ensure_root(origin)?;
@@ -470,7 +463,6 @@ decl_module! {
 		// 3. compare current schedules version with pending_schedules'.
 		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
 		// 5. save the new_producers list.
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::change_schedule(), DispatchClass::Normal, Pays::No)]
 		fn change_schedule(
 			origin,
@@ -512,7 +504,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
 		fn prove_action(
 			origin,
@@ -616,7 +607,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::bridge_tx_report(), DispatchClass::Normal, Pays::No)]
 		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
 			ensure_none(origin)?;
@@ -626,7 +616,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::update_bridge_trx_status(), DispatchClass::Normal, Pays::No)]
 		fn update_bridge_trx_status(
 			origin,
@@ -650,7 +639,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = (0, DispatchClass::Normal, Pays::No)]
 		#[weight = (T::WeightInfo::trial_on_trx_status(), DispatchClass::Normal, Pays::No)]
 		fn trial_on_trx_status(origin) -> DispatchResult {
 			let _ = ensure_signed(origin)?;
@@ -664,7 +652,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// #[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
 		#[weight = (T::WeightInfo::cross_to_eos(memo.len() as Weight), DispatchClass::Normal, Pays::No)]
 		fn cross_to_eos(
 			origin,
