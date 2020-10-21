@@ -7,3 +7,5 @@
 .vscode
 polkadot.*
 .DS_Store
+./.cargo-remote.toml
+./.gitignore
