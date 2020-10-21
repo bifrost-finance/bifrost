@@ -55,6 +55,17 @@ use sp_std::prelude::*;
 
 mod transaction;
 
+pub trait WeightInfo {
+    fn bridge_enable() -> Weight;
+    fn set_contract_accounts() -> Weight;
+    fn grant_crosschain_privilege() -> Weight;
+    fn remove_crosschain_privilege() -> Weight;
+    fn prove_action() -> Weight;
+    fn bridge_tx_report() -> Weight;
+    fn cross_to_iost(weight:Weight) -> Weight;
+
+}
+
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 enum TransactionType {
     Deposit,
@@ -215,6 +226,9 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
     /// A dispatchable call type.
     type Call: From<Call<Self>>;
+
+    /// Set default weight
+    type WeightInfo : WeightInfo;
 }
 
 decl_module! {
@@ -223,20 +237,20 @@ decl_module! {
 
         fn deposit_event() = default;
 
-        #[weight = T::DbWeight::get().writes(1)]
+        #[weight = T::WeightInfo::bridge_enable()]
         fn bridge_enable(origin, enable: bool) {
             ensure_root(origin)?;
 
             BridgeEnable::put(enable);
         }
 
-        #[weight = (0, DispatchClass::Normal, Pays::No)]
+        #[weight = (T::WeightInfo::set_contract_accounts(), DispatchClass::Normal, Pays::No)]
         fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
             ensure_root(origin)?;
             BridgeContractAccount::put((account, threthold));
         }
 
-        #[weight = T::DbWeight::get().reads_writes(1, 1)]
+        #[weight = T::WeightInfo::grant_crosschain_privilege()]
         fn grant_crosschain_privilege(origin, target: T::AccountId) {
             ensure_root(origin)?;
 
@@ -253,7 +267,7 @@ decl_module! {
             Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
         }
 
-        #[weight = (0, DispatchClass::Normal, Pays::No)]
+        #[weight = (T::WeightInfo::remove_crosschain_privilege(), DispatchClass::Normal, Pays::No)]
         fn remove_crosschain_privilege(origin, target: T::AccountId) {
             ensure_root(origin)?;
 
@@ -268,7 +282,7 @@ decl_module! {
             Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
         }
 
-        #[weight = (0, DispatchClass::Normal, Pays::No)]
+        #[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
         fn prove_action(
             origin,
             action: Action,
@@ -365,7 +379,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = (0, DispatchClass::Normal, Pays::No)]
+        #[weight = (T::WeightInfo::bridge_tx_report(), DispatchClass::Normal, Pays::No)]
         fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
             ensure_none(origin)?;
 
@@ -374,7 +388,7 @@ decl_module! {
             Ok(())
         }
 
-        #[weight = (weight_for::cross_to_iost::<T>(memo.len() as Weight), DispatchClass::Normal)]
+        #[weight = (T::WeightInfo::cross_to_iost(memo.len() as Weight), DispatchClass::Normal)]
         fn cross_to_iost(
             origin,
             to: Vec<u8>,
@@ -824,19 +838,19 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
     }
 }
 
-#[allow(dead_code)]
-mod weight_for {
-    use super::Trait;
-    use frame_support::{traits::Get, weights::Weight};
-    use sp_runtime::traits::Saturating;
-
-    /// cross_to_iost weight
-    pub(crate) fn cross_to_iost<T: Trait>(memo_len: Weight) -> Weight {
-        let db = T::DbWeight::get();
-        db.writes(1) // put task to tx_out
-            .saturating_add(db.reads(1)) // token exists or not
-            .saturating_add(db.reads(1)) // get token
-            .saturating_add(db.reads(1)) // get account asset
-            .saturating_add(memo_len.saturating_add(10000)) // memo length
-    }
-}
+// #[allow(dead_code)]
+// mod weight_for {
+//     use super::Trait;
+//     use frame_support::{traits::Get, weights::Weight};
+//     use sp_runtime::traits::Saturating;
+//
+//     /// cross_to_iost weight
+//     pub(crate) fn cross_to_iost<T: Trait>(memo_len: Weight) -> Weight {
+//         let db = T::DbWeight::get();
+//         db.writes(1) // put task to tx_out
+//             .saturating_add(db.reads(1)) // token exists or not
+//             .saturating_add(db.reads(1)) // get token
+//             .saturating_add(db.reads(1)) // get account asset
+//             .saturating_add(memo_len.saturating_add(10000)) // memo length
+//     }
+// }

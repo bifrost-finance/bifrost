@@ -26,13 +26,21 @@ use core::convert::{From, Into, TryInto};
 use core::ops::Div;
 use fixed_point::{FixedI128, types::{*, extra}, transcendental, traits::FromFixed};
 use frame_support::traits::{Get};
-use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, Parameter, dispatch::DispatchResult, StorageValue};
+use frame_support::{weights::Weight,decl_event, decl_error, decl_module, decl_storage, ensure, Parameter, dispatch::DispatchResult, StorageValue};
 use frame_system::{ensure_signed};
 use node_primitives::{AssetTrait, TokenSymbol};
 use sp_runtime::traits::{MaybeSerializeDeserialize, Member, Saturating, AtLeast32Bit, Zero};
 
 mod mock;
 mod tests;
+
+pub trait WeightInfo{
+	fn add_liquidity() -> Weight;
+	fn add_single_liquidity() -> Weight;
+	fn remove_single_asset_liquidity() -> Weight;
+	fn remove_assets_liquidity() -> Weight;
+	fn swap() -> Weight;
+}
 
 pub trait Trait: frame_system::Trait {
 	/// event
@@ -68,6 +76,9 @@ pub trait Trait: frame_system::Trait {
 	type MaximumSwapFee: Get<Self::Fee>;
 	type MinimumSwapFee: Get<Self::Fee>;
 	type FeePrecision: Get<Self::Balance>;
+
+	/// Set default weight
+	type WeightInfo : WeightInfo;
 }
 
 decl_event! {
@@ -202,7 +213,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = weight_for::add_liquidity::<T>()]
+		#[weight = T::WeightInfo::add_liquidity()]
 		fn add_liquidity(
 			origin,
 			#[compact] new_pool_token: T::Balance
@@ -272,7 +283,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::AddLiquiditySuccess);
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::add_single_liquidity()]
 		fn add_single_liquidity(
 			origin,
 			token_symbol: TokenSymbol,
@@ -350,7 +361,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::remove_single_asset_liquidity()]
 		fn remove_single_asset_liquidity(
 			origin,
 			token_symbol: TokenSymbol,
@@ -434,7 +445,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::remove_assets_liquidity()]
 		fn remove_assets_liquidity(
 			origin,
 			#[compact] pool_amount_in: T::Balance
@@ -496,7 +507,7 @@ decl_module! {
 		}
 
 		// consider maxPrice and minAmountOut
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::swap()]
 		fn swap(
 			origin,
 			token_in_type: TokenSymbol,
@@ -985,19 +996,19 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-#[allow(dead_code)]
-mod weight_for {
-	use frame_support::{traits::Get, weights::Weight};
-	use super::Trait;
-
-	/// add liquidity weight
-	pub(crate) fn add_liquidity<T: Trait>() -> Weight {
-		let reads_writes = T::DbWeight::get().reads_writes(1, 1);
-		reads_writes * 1000 as Weight
-	}
-
-	/// add single liquidity
-	pub(crate) fn add_single_liquidity<T: Trait>() -> Weight {
-		todo!();
-	}
-}
+// #[allow(dead_code)]
+// mod weight_for {
+// 	use frame_support::{traits::Get, weights::Weight};
+// 	use super::Trait;
+//
+// 	/// add liquidity weight
+// 	pub(crate) fn add_liquidity<T: Trait>() -> Weight {
+// 		let reads_writes = T::DbWeight::get().reads_writes(1, 1);
+// 		reads_writes * 1000 as Weight
+// 	}
+//
+// 	/// add single liquidity
+// 	pub(crate) fn add_single_liquidity<T: Trait>() -> Weight {
+// 		todo!();
+// 	}
+// }

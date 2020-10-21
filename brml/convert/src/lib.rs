@@ -25,10 +25,17 @@ mod tests;
 
 use frame_support::traits::Get;
 use frame_support::weights::DispatchClass;
-use frame_support::{Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
+use frame_support::{weights::Weight,Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, ConvertPool, FetchConvertPrice, FetchConvertPool, AssetReward, TokenSymbol, RewardHandler};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize};
+
+pub trait WeightInfo {
+	fn set_convert_price() -> Weight;
+	fn set_price_per_block() -> Weight;
+	fn to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight;
+	fn to_token() -> Weight;
+}
 
 pub trait Trait: frame_system::Trait {
 	/// convert rate
@@ -53,6 +60,10 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
 
 	type ConvertDuration: Get<Self::BlockNumber>;
+
+	/// Set default weight
+	type WeightInfo: WeightInfo;
+
 }
 
 decl_event! {
@@ -125,7 +136,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::set_convert_price()]
 		fn set_convert_price(
 			origin,
 			token_symbol: TokenSymbol,
@@ -141,7 +152,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdateConvertSuccess);
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::set_price_per_block()]
 		fn set_price_per_block(
 			origin,
 			token_symbol: TokenSymbol,
@@ -157,7 +168,7 @@ decl_module! {
 			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
 		}
 
-		#[weight = (weight_for::convert_token_to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
+		#[weight = (T::WeightInfo::to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
 		fn to_vtoken(
 			origin,
 			vtoken_symbol: TokenSymbol,
@@ -198,7 +209,7 @@ decl_module! {
 			Self::deposit_event(Event::ConvertTokenToVTokenSuccess);
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::to_token()]
 		fn to_token(
 			origin,
 			token_symbol: TokenSymbol,
@@ -424,16 +435,16 @@ impl<T: Trait> RewardHandler<TokenSymbol, T::Balance> for Module<T> {
 	}
 }
 
-#[allow(dead_code)]
-mod weight_for {
-	use frame_support::{traits::Get, weights::Weight};
-	use super::Trait;
-
-	/// asset_redeem weight
-	pub(crate) fn convert_token_to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight {
-		let referer_weight = referer.map_or(1000, |_| 100);
-		let db = T::DbWeight::get();
-		db.reads_writes(1, 1)
-			.saturating_add(referer_weight) // memo length
-	}
-}
+// #[allow(dead_code)]
+// mod weight_for {
+// 	use frame_support::{traits::Get, weights::Weight};
+// 	use super::Trait;
+//
+// 	/// asset_redeem weight
+// 	pub(crate) fn convert_token_to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight {
+// 		let referer_weight = referer.map_or(1000, |_| 100);
+// 		let db = T::DbWeight::get();
+// 		db.reads_writes(1, 1)
+// 			.saturating_add(referer_weight) // memo length
+// 	}
+// }

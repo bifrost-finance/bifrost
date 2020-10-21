@@ -3270,7 +3270,8 @@ dependencies = [
 [[package]]
 name = "libsecp256k1"
 version = "0.3.5"
-source = "git+https://github.com/bifrost-codes/libsecp256k1.git#62ee7e4eeb55299676c454cb9a40b1de492cadf9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fc1e2c808481a63dc6da2074752fdd4336a3c8fcc68b83db6f1fd5224ae7962"
 dependencies = [
  "arrayref",
  "crunchy",
@@ -3285,8 +3286,7 @@ dependencies = [
 [[package]]
 name = "libsecp256k1"
 version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc1e2c808481a63dc6da2074752fdd4336a3c8fcc68b83db6f1fd5224ae7962"
+source = "git+https://github.com/bifrost-codes/libsecp256k1.git#62ee7e4eeb55299676c454cb9a40b1de492cadf9"
 dependencies = [
  "arrayref",
  "crunchy",
