@@ -473,7 +473,7 @@ decl_module! {
 		// 3. compare current schedules version with pending_schedules'.
 		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
 		// 5. save the new_producers list.
-		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		#[weight = (10000, DispatchClass::Normal, Pays::Yes)]
 		fn change_schedule(
 			origin,
 			legacy_schedule_hash: Checksum256,
@@ -514,7 +514,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		#[weight = (10000, DispatchClass::Normal, Pays::Yes)]
 		fn prove_action(
 			origin,
 			action: Action,
