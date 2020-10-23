@@ -118,7 +118,38 @@ impl<AccountId> Default for TxOut<AccountId> {
 	}
 }
 
-impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
+/// Status of a transaction
+#[derive(Encode, Decode, Clone, PartialEq, Debug)]
+pub enum TxOutV1<AccountId> {
+	None,
+	/// Initial Eos multi-sig transaction
+	Initial(MultiSigTx<AccountId>),
+	/// Generated and signing Eos multi-sig transaction
+	Generated(MultiSigTx<AccountId>),
+	/// Signed Eos multi-sig transaction
+	Signed(MultiSigTx<AccountId>),
+	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
+	ProcessingV1 {
+		tx_id: Checksum256,
+		from: AccountId,
+		token_symbol: node_primitives::TokenSymbol,
+	},
+	/// Eos multi-sig transaction processed successfully, so only save tx id
+	Success(Checksum256),
+	/// Eos multi-sig transaction processed failed
+	Fail {
+		tx_id: Vec<u8>,
+		reason: Vec<u8>
+	},
+}
+
+impl<AccountId> Default for TxOutV1<AccountId> {
+	fn default() -> Self {
+		Self::None
+	}
+}
+
+impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 	/// intialize a transaction
 	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
@@ -145,13 +176,13 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 			token_symbol,
 		};
 
-		Ok(TxOut::Initial(multi_sig_tx))
+		Ok(TxOutV1::Initial(multi_sig_tx))
 	}
 
 	/// compose a transaction
 	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Initial(mut multi_sig_tx) => {
+			TxOutV1::Initial(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
 				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
@@ -175,7 +206,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 					index.swap(0, Ordering::Relaxed);
 				}
 
-				Ok(TxOut::Generated(multi_sig_tx))
+				Ok(TxOutV1::Generated(multi_sig_tx))
 			},
 			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
 		}
@@ -184,7 +215,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	/// sign the transaction
 	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Generated(mut multi_sig_tx) => {
+			TxOutV1::Generated(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
 					return Err(Error::<T>::AlreadySignedByAuthor);
 				}
@@ -195,7 +226,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
 				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
-					return Ok(TxOut::Generated(multi_sig_tx));
+					return Ok(TxOutV1::Generated(multi_sig_tx));
 				}
 
 				frame_support::debug::info!(target: "bridge-eos", "signing by {:?}, {:?}, {:?}", author, sig.to_string(), multi_sig_tx.multi_sig.has_signed(author.clone()));
@@ -203,12 +234,12 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
-					Ok(TxOut::Signed(multi_sig_tx))
+					Ok(TxOutV1::Signed(multi_sig_tx))
 				} else {
-					Ok(TxOut::Generated(multi_sig_tx))
+					Ok(TxOutV1::Generated(multi_sig_tx))
 				}
 			},
-			TxOut::Signed(_) => Ok(self),
+			TxOutV1::Signed(_) => Ok(self),
 			_ => Err(Error::<T>::InvalidSignedTxOutType)
 		}
 	}
@@ -216,7 +247,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	/// send transaction to EOS node
 	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Signed(multi_sig_tx) => {
+			TxOutV1::Signed(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
@@ -224,9 +255,10 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
-				Ok(TxOut::Processing {
+				Ok(TxOutV1::ProcessingV1 {
 					tx_id,
-					multi_sig_tx,
+					from: multi_sig_tx.from,
+					token_symbol: multi_sig_tx.token_symbol,
 				})
 			},
 			_ => Err(Error::<T>::InvalidSendTxOutType)
