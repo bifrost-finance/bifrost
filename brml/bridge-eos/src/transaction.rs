@@ -123,21 +123,23 @@ impl<AccountId> Default for TxOut<AccountId> {
 pub enum TxOutV1<AccountId> {
 	None,
 	/// Initial Eos multi-sig transaction
-	Initial(MultiSigTx<AccountId>),
+	Initialized(MultiSigTx<AccountId>),
 	/// Generated and signing Eos multi-sig transaction
-	Generated(MultiSigTx<AccountId>),
+	Created(MultiSigTx<AccountId>),
 	/// Signed Eos multi-sig transaction
-	Signed(MultiSigTx<AccountId>),
-	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
-	ProcessingV1 {
+	CompleteSigned(MultiSigTx<AccountId>),
+	/// Eos multi-sig transaction has been sent to EOS node and fetching tx id from EOS node
+	Sent {
 		tx_id: Checksum256,
 		from: AccountId,
 		token_symbol: node_primitives::TokenSymbol,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
-	Success(Checksum256),
+	Succeeded {
+		tx_id: Checksum256
+	},
 	/// Eos multi-sig transaction processed failed
-	Fail {
+	Failed {
 		tx_id: Vec<u8>,
 		reason: Vec<u8>
 	},
@@ -176,13 +178,13 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 			token_symbol,
 		};
 
-		Ok(TxOutV1::Initial(multi_sig_tx))
+		Ok(TxOutV1::Initialized(multi_sig_tx))
 	}
 
 	/// compose a transaction
 	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOutV1::Initial(mut multi_sig_tx) => {
+			TxOutV1::Initialized(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
 				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
@@ -206,7 +208,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 					index.swap(0, Ordering::Relaxed);
 				}
 
-				Ok(TxOutV1::Generated(multi_sig_tx))
+				Ok(TxOutV1::Created(multi_sig_tx))
 			},
 			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
 		}
@@ -215,7 +217,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 	/// sign the transaction
 	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
-			TxOutV1::Generated(mut multi_sig_tx) => {
+			TxOutV1::Created(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
 					return Err(Error::<T>::AlreadySignedByAuthor);
 				}
@@ -226,7 +228,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
 				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
-					return Ok(TxOutV1::Generated(multi_sig_tx));
+					return Ok(TxOutV1::Created(multi_sig_tx));
 				}
 
 				frame_support::debug::info!(target: "bridge-eos", "signing by {:?}, {:?}, {:?}", author, sig.to_string(), multi_sig_tx.multi_sig.has_signed(author.clone()));
@@ -234,12 +236,12 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
-					Ok(TxOutV1::Signed(multi_sig_tx))
+					Ok(TxOutV1::CompleteSigned(multi_sig_tx))
 				} else {
-					Ok(TxOutV1::Generated(multi_sig_tx))
+					Ok(TxOutV1::Created(multi_sig_tx))
 				}
 			},
-			TxOutV1::Signed(_) => Ok(self),
+			TxOutV1::CompleteSigned(_) => Ok(self),
 			_ => Err(Error::<T>::InvalidSignedTxOutType)
 		}
 	}
@@ -247,7 +249,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 	/// send transaction to EOS node
 	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOutV1::Signed(multi_sig_tx) => {
+			TxOutV1::CompleteSigned(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
@@ -255,7 +257,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
-				Ok(TxOutV1::ProcessingV1 {
+				Ok(TxOutV1::Sent {
 					tx_id,
 					from: multi_sig_tx.from,
 					token_symbol: multi_sig_tx.token_symbol,

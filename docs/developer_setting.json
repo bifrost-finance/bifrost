@@ -107,7 +107,7 @@
     "tx_id": "Vec<u8>",
     "multi_sig_tx": "MultiSigTx"
   },
-  "ProcessingV1": {
+  "Sent": {
     "tx_id": "Vec<u8>",
     "from": "AccountId",
     "token_symbol": "TokenSymbol"
@@ -116,6 +116,10 @@
     "tx_id": "Vec<u8>",
     "reason": "Vec<u8>",
     "tx": "MultiSigTx"
+  },
+  "Failure": {
+    "tx_id": "Vec<u8>",
+    "reason": "Vec<u8>"
   },
   "TxOut": {
     "_enum": {
@@ -129,13 +133,13 @@
   },
   "TxOutV1": {
     "_enum": {
-      "Initial": "MultiSigTx",
-      "Generated": "MultiSigTx",
-      "Signed": "MultiSigTx",
-      "ProcessingV1": "ProcessingV1",
-      "Success": "Vec<u8>",
-      "Fail": "Fail"
-    }
+      "Initialized": "MultiSigTx",
+      "Created": "MultiSigTx",
+      "CompleteSigned": "MultiSigTx",
+      "Sent": "Sent",
+      "Succeeded": "Vec<u8>",
+      "Failure": "Failure"
+    } 
   },
   "ConvertPrice": "u128",
   "RatePerBlock": "u64",
