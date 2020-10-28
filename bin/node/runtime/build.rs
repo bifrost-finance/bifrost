@@ -23,5 +23,6 @@ fn main() {
 		.export_heap_base()
 		.import_memory()
 		.append_to_rust_flags("-C opt-level=z") // shrink the size of wasm binary
+		.append_to_rust_flags("-C linker-plugin-lto") // shrink the size of wasm binary
 		.build()
 }
