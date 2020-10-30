@@ -82,8 +82,9 @@
   "Extension": "(u16, Vec<u8>)",
   "IncrementalMerkle": {
     "_node_count": "u64",
-    "_active_nodes": "Vec<Checksum256>"
+    "_active_nodes": "Checksum256Array"
   },
+  "Checksum256Array": "Vec<Checksum256>",
   "FlatMap": {
     "map": "Vec<(ActionName, u64)>"
   },
