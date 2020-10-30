@@ -67,6 +67,10 @@ enum TransactionType {
 	Withdraw,
 }
 
+pub type VersionId = u32;
+// use alias to avoid extra effort on parsing this type from front-end
+pub type Checksum256Array = Vec<Checksum256>;
+
 pub mod sr25519 {
 	pub mod app_sr25519 {
 		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, sr25519};
@@ -223,8 +227,6 @@ decl_error! {
 		CrossChainBackDisabled,
 	}
 }
-
-pub type VersionId = u32;
 
 pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 	/// The identifier type for an authority.
@@ -536,7 +538,7 @@ decl_module! {
 			origin,
 			action: Action,
 			action_receipt: ActionReceipt,
-			action_merkle_paths: Vec<Checksum256>,
+			action_merkle_paths: Checksum256Array,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>,
