@@ -20,7 +20,7 @@ extern crate alloc;
 
 use alloc::string::{String, ToString};
 use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
-use crate::transaction::{TxOut, TxOutV1};
+use crate::transaction::TxOut;
 use codec::{Decode, Encode};
 use eos_chain::{
 	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle,
@@ -139,18 +139,18 @@ const EOS_SECRET_KEY: &[u8] = b"EOS_SECRET_KEY";
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Copy)]
 #[non_exhaustive]
-pub enum TrxStatus {
-	Initial,
-	Generated,
-	Signed,
-	Processing,
-	Success,
-	Fail,
+pub enum TransactionStatus {
+	Initialized,
+	Created,
+	SignComplete,
+	Sent,
+	Succeeded,
+	Failed,
 }
 
-impl Default for TrxStatus {
+impl Default for TransactionStatus {
 	fn default() -> Self {
-		Self::Initial
+		Self::Initialized
 	}
 }
 
@@ -328,23 +328,13 @@ decl_storage! {
 		PendingScheduleVersion: VersionId;
 
 		/// Transaction sent to Eos blockchain
-		BridgeTrxStatus get(fn trx_status): map hasher(blake2_128_concat) TxOut<T::AccountId> => TrxStatus;
-		BridgeTrxStatusV1 get(fn trx_status_v1): map hasher(blake2_128_concat) (TxOut<T::AccountId>, u64) => TrxStatus;
-		CrossTradeIndex get(fn cross_trade_index): u64 = 0;
+		BridgeTrxStatus get(fn trx_status): map hasher(blake2_128_concat) (TxOut<T::AccountId>, u64) => TransactionStatus;
+		CrossTradeIndex get(fn cross_trade_index): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
 		CrossTradeStatus get(fn cross_status): map hasher(blake2_128_concat) u64 => bool;
+		EOSNodeAddress get(fn eos_node): Vec<u8> = b"http://122.51.241.19:8080".to_vec();
 		CrossIndexRelatedEOSBalance get(fn index_with_eos_balance): map hasher(blake2_128_concat) u64 => (T::Balance, T::AccountId, TokenSymbol);
 		/// According trx id to find processing trx
-		ProcessingBridgeTrx: map hasher(blake2_128_concat) Checksum256 => TxOut<T::AccountId>;
-
-		/// V2 storage
-		/// Transaction sent to Eos blockchain
-		BridgeTrxStatusV2 get(fn trx_status_v2): map hasher(blake2_128_concat) (TxOutV1<T::AccountId>, u64) => TrxStatus;
-		CrossTradeIndexV2 get(fn cross_trade_index_v2): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
-		CrossTradeStatusV2 get(fn cross_status_v2): map hasher(blake2_128_concat) u64 => bool;
-		EOSNodeAddress get(fn eos_node): Vec<u8> = b"http://122.51.241.19:8080".to_vec();
-		CrossIndexRelatedEOSBalanceV2 get(fn index_with_eos_balance_v2): map hasher(blake2_128_concat) u64 => (T::Balance, T::AccountId, TokenSymbol);
-		/// According trx id to find processing trx
-		ProcessingBridgeTrxV2: map hasher(blake2_128_concat) Checksum256 => (TxOutV1<T::AccountId>, u64);
+		ProcessingBridgeTrx: map hasher(blake2_128_concat) Checksum256 => (TxOut<T::AccountId>, u64);
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
@@ -411,8 +401,8 @@ decl_module! {
 			ensure_root(origin)?;
 
 			// clear cross trade times
-			for (key, val) in BridgeTrxStatusV2::<T>::iter() {
-				BridgeTrxStatusV2::<T>::remove(key);
+			for (key, _) in BridgeTrxStatus::<T>::iter() {
+				BridgeTrxStatus::<T>::remove(key);
 			}
 		}
 
@@ -653,7 +643,7 @@ decl_module! {
 		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn update_bridge_trx_status(
 			origin,
-			changed_trxs: Vec::<((TxOutV1<T::AccountId>, u64), TrxStatus, (TxOutV1<T::AccountId>, u64), Option<Checksum256>)>
+			changed_trxs: Vec::<((TxOut<T::AccountId>, u64), TransactionStatus, (TxOut<T::AccountId>, u64), Option<Checksum256>)>
 		) -> DispatchResult {
 			ensure_none(origin)?;
 
@@ -661,24 +651,24 @@ decl_module! {
 				let trade_index = changed_trx.0.1;
 
 				// delete last changed status of transaction
-				BridgeTrxStatusV2::<T>::remove(&changed_trx.2);
+				BridgeTrxStatus::<T>::remove(&changed_trx.2);
 
 				if let Some(id) = changed_trx.3 {
 					// insert the processing transaction to processing storage
-					ProcessingBridgeTrxV2::<T>::insert(id, (&changed_trx.0.0, trade_index));
+					ProcessingBridgeTrx::<T>::insert(id, (&changed_trx.0.0, trade_index));
 					// means that this transaction has been sent to EOS node
-					CrossTradeStatusV2::mutate(trade_index, |sent| {
+					CrossTradeStatus::mutate(trade_index, |sent| {
 						*sent = true;
 					});
 					// due to it becoming processing status, delete it from BridgeTrxStatusV1
-					BridgeTrxStatusV2::<T>::remove(&changed_trx.0);
+					BridgeTrxStatus::<T>::remove(&changed_trx.0);
 				}
 
 				// this transaction has been not in processing or signed status
-				if !CrossTradeStatusV2::get(trade_index) {
-					BridgeTrxStatusV2::<T>::insert(&changed_trx.0, changed_trx.1);
+				if !CrossTradeStatus::get(trade_index) {
+					BridgeTrxStatus::<T>::insert(&changed_trx.0, changed_trx.1);
 				} else {
-					BridgeTrxStatusV2::<T>::remove(&changed_trx.0);
+					BridgeTrxStatus::<T>::remove(&changed_trx.0);
 				}
 			}
 
@@ -710,11 +700,11 @@ decl_module! {
 
 			let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
 			ensure!(symbol_precise <= 12, Error::<T>::EOSSymbolMismatch);
-			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+			let _amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= eos_amount, Error::<T>::InsufficientBalance);
 
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
-			let memo = CrossTradeIndexV2::<T>::get(&origin).to_string().into_bytes();
+			let memo = CrossTradeIndex::<T>::get(&origin).to_string().into_bytes();
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
 				amount: eos_amount,
@@ -744,21 +734,19 @@ decl_module! {
 
 			// trigger offchain worker by each two block
 			if now_block % T::BlockNumber::from(2u32) == T::BlockNumber::from(0u32) {
-				if BridgeTrxStatusV2::<T>::iter()
+				if BridgeTrxStatus::<T>::iter()
 					.any(|(_, status)|
-						status == TrxStatus::Initial ||
-						status == TrxStatus::Generated ||
-						status == TrxStatus::Signed
+						status == TransactionStatus::Initialized ||
+						status == TransactionStatus::Created ||
+						status == TransactionStatus::SignComplete
 					)
 				{
 					match Self::offchain(now_block) {
 						Ok(_) => debug::info!("A offchain worker started."),
-						Err(e) => (),
+						Err(_) => (),
 					}
 				}
 			}
-			let author = <pallet_authorship::Module<T>>::author();
-			debug::debug!(target: "bridge-eos", "current node is: {:?}", <pallet_authorship::Module<T>>::author());
 		}
 	}
 }
@@ -915,11 +903,10 @@ impl<T: Trait> Module<T> {
 		pending_trx_id: Checksum256,
 		action_transfer: &ActionTransfer
 	) -> Result<T::AccountId, Error<T>> {
-		let (processing_trx, trade_index) = ProcessingBridgeTrxV2::<T>::get(&pending_trx_id);
-		debug::error!(target: "bridge-eos", "bifrost => eos {:?}", processing_trx);
-		debug::error!(target: "bridge-eos", "bifrost => eos index {:?}", trade_index);
+		let (processing_trx, trade_index) = ProcessingBridgeTrx::<T>::get(&pending_trx_id);
+
 		match processing_trx {
-			TxOutV1::Sent { tx_id, ref from, token_symbol } if pending_trx_id.eq(&tx_id) => {
+			TxOut::Sent { tx_id, ref from, token_symbol } if pending_trx_id.eq(&tx_id) => {
 				let target = from.clone();
 				let token_symbol = token_symbol;
 
@@ -954,10 +941,10 @@ impl<T: Trait> Module<T> {
 				}
 
 				// change status of this transction, remove it from BridgeTrxStatus
-				BridgeTrxStatusV2::<T>::remove(&(processing_trx, trade_index));
+				BridgeTrxStatus::<T>::remove(&(processing_trx, trade_index));
 
 				// delete this handled transaction
-				ProcessingBridgeTrxV2::<T>::remove(pending_trx_id);
+				ProcessingBridgeTrx::<T>::remove(pending_trx_id);
 
 				return Ok(target.clone());
 			}
@@ -990,7 +977,7 @@ impl<T: Trait> Module<T> {
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
 		bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
-	) -> Result<TxOutV1<T::AccountId>, Error<T>>
+	) -> Result<TxOut<T::AccountId>, Error<T>>
 		where
 			P: AtLeast32Bit + Copy,
 			B: AtLeast32Bit + Copy,
@@ -999,80 +986,43 @@ impl<T: Trait> Module<T> {
 		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
 		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOutV1::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from.clone(), bridge_asset.token_symbol)?;
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from.clone(), bridge_asset.token_symbol)?;
 
-		CrossTradeIndexV2::<T>::mutate(&bridge_asset.from, |index| {
+		CrossTradeIndex::<T>::mutate(&bridge_asset.from, |index| {
 			*index += 1;
 		});
 
-		BridgeTrxStatusV2::<T>::insert((&tx_out, CrossTradeIndexV2::<T>::get(&bridge_asset.from)), TrxStatus::Initial);
+		BridgeTrxStatus::<T>::insert((&tx_out, CrossTradeIndex::<T>::get(&bridge_asset.from)), TransactionStatus::Initialized);
 
 		Ok(tx_out)
 	}
 
 	fn offchain(_now_block: T::BlockNumber) -> Result<(), Error<T>> {
-		// let node_url = Self::get_offchain_storage(EOS_NODE_URL)?;
+		let node_url = Self::get_offchain_storage(EOS_NODE_URL)?;
 
-		// let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
-		// let sk = SecretKey::from_wif(&sk_str).map_err(|_| Error::<T>::ParseSecretKeyError)?;
-
-		// let alice = (
-		// 	"g2ZXjuTYMgCZdunkCLUnxHfGK7Dvus4rAzeJAcQ8ZDLq3bV",
-		// 	"http://10.115.61.83:6123",
-		// 	"5KDXMiphWpzETsNpp3eL3sjWAa4gMvMXCtMquT2PDpKtV1STbHp"
-		// );
-		// let bob = (
-		// 	"hUWrDdiLs9uu6Hu1qA6Edt9GTW3mFWXR5uEAQZZT45KJszT",
-		// 	"http://10.115.61.83:6123",
-		// 	"5JNV39rZLZWr5p1hdLXVVNvJsXpgZnzvTrcZYJggTPuv1GzChB6"
-		// );
-
-		let alice = (
-			"fw9DNydGr6yDbe4PF2yd9JX5HY7LZLFGAaRXXAJTuW3MdE7",
-			"http://122.51.241.19:8080",
-			"5KDXMiphWpzETsNpp3eL3sjWAa4gMvMXCtMquT2PDpKtV1STbHp"
-		);
-		let bob = (
-			"cgUeaC4T7BCyx4CVX3HXvee2PUqqM5bE1VFVHNccovXeJEs",
-			"http://122.51.241.19:8080",
-			"5JNV39rZLZWr5p1hdLXVVNvJsXpgZnzvTrcZYJggTPuv1GzChB6"
-		);
-
-		let node_url = String::from_utf8(EOSNodeAddress::get()).map_err(|_| Error::<T>::ParseUtf8Error)?;
-		debug::error!(target: "bridge-eos", "_node_url {:?}", node_url);
-		let mut sk_str = String::new();
-		{
-			let (alice_acc, bob_acc) = (Self::get_account_data(alice.0)?, Self::get_account_data(bob.0)?);
-			let (alice_acc, bob_acc) = (Self::into_account(alice_acc)?, Self::into_account(bob_acc)?);
-			if <pallet_authorship::Module<T>>::author() == alice_acc {
-				sk_str = alice.2.to_string();
-			}
-			if <pallet_authorship::Module<T>>::author() == bob_acc {
-				sk_str = bob.2.to_string();
-			}
-		};
+		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
 		let sk = SecretKey::from_wif(&sk_str).map_err(|_| Error::<T>::ParseSecretKeyError)?;
 
 		let mut changed_status_trxs = Vec::new();
-		for ((trx, index), status) in BridgeTrxStatusV2::<T>::iter()
+		for ((trx, index), status) in BridgeTrxStatus::<T>::iter()
 			.filter(|(_, status)|
-				status == &TrxStatus::Initial ||
-				status == &TrxStatus::Generated ||
-				status == &TrxStatus::Signed
+				status == &TransactionStatus::Initialized ||
+				status == &TransactionStatus::Created ||
+				status == &TransactionStatus::SignComplete
 			)
 		{
 			match (trx.clone(), status) {
-				(TxOutV1::<T::AccountId>::Initialized(_), TrxStatus::Initial) => {
+				(TxOut::<T::AccountId>::Initialized(_), TransactionStatus::Initialized) => {
 					match trx.clone().generate::<T>(node_url.as_str()) {
 						Ok(generated_trx) => {
-							changed_status_trxs.push(((generated_trx, index), TrxStatus::Generated, (trx.clone(), index),  None));
+							changed_status_trxs.push(((generated_trx, index), TransactionStatus::Created, (trx.clone(), index),  None));
 						}
 						Err(e) => {
 							debug::error!("failed to get latest block due to: {:?}", e);
 						}
 					}
 				}
-				(TxOutV1::<T::AccountId>::Created(_), TrxStatus::Generated) => {
+				(TxOut::<T::AccountId>::Created(_), TransactionStatus::Created) => {
 					let author = <pallet_authorship::Module<T>>::author();
 					// ensure current node has the right to sign a cross trade
 					if NotaryKeys::<T>::get().contains(&author) {
@@ -1080,10 +1030,10 @@ impl<T: Trait> Module<T> {
 							Ok(signed_trx) => {
 								// ensure this transaction collects enough signatures
 								let status = {
-									if let TxOutV1::<T::AccountId>::Created(_) = signed_trx {
-										TrxStatus::Generated
+									if let TxOut::<T::AccountId>::Created(_) = signed_trx {
+										TransactionStatus::Created
 									} else {
-										TrxStatus::Signed
+										TransactionStatus::SignComplete
 									}
 								};
 								changed_status_trxs.push(((signed_trx, index), status, (trx.clone(), index), None));
@@ -1094,26 +1044,22 @@ impl<T: Trait> Module<T> {
 						}
 					}
 				}
-				(TxOutV1::<T::AccountId>::CompleteSigned(_), TrxStatus::Signed) => {
+				(TxOut::<T::AccountId>::SignComplete(_), TransactionStatus::SignComplete) => {
 					match trx.clone().send::<T>(node_url.as_str()) {
 						Ok(processing_trx) => {
-							debug::error!(target: "bridge-eos", "bto.send {:?}", processing_trx);
 							let trx_id = match processing_trx {
-								TxOutV1::Sent { tx_id, .. } => Some(tx_id.clone()),
+								TxOut::Sent { tx_id, .. } => Some(tx_id.clone()),
 								_ => None,
 							};
-							debug::error!(target: "bridge-eos", "bto.send trx id {:?}, index: {:?}", trx_id.as_ref().unwrap().to_string(), index);
-							changed_status_trxs.push(((processing_trx, index), TrxStatus::Processing, (trx.clone(), index), trx_id));
+							changed_status_trxs.push(((processing_trx, index), TransactionStatus::Sent, (trx.clone(), index), trx_id));
 						}
 						Err(e) => {
-							debug::error!(target: "bridge-eos", "error happened while pushing transaction: {:?}", e);
-							debug::error!(target: "bridge-eos", "bto.send error {:?}, index: {:?}", trx, index);
 							match e {
 								Error::<T>::SendingDuplicatedTransaction => {
-									changed_status_trxs.push(((trx.clone(), index), TrxStatus::Processing, (trx, index), None));
+									changed_status_trxs.push(((trx.clone(), index), TransactionStatus::Sent, (trx, index), None));
 								}
 								Error::<T>::TransactionExpired => {
-									changed_status_trxs.push(((trx.clone(), index), TrxStatus::Processing, (trx, index), None));
+									changed_status_trxs.push(((trx.clone(), index), TransactionStatus::Sent, (trx, index), None));
 								}
 								_ => {}
 							}
