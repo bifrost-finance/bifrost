@@ -37,6 +37,13 @@ pub trait WeightInfo {
 	fn to_token() -> Weight;
 }
 
+impl WeightInfo for () {
+	fn set_convert_price() -> Weight { Default::default() }
+	fn set_price_per_block() -> Weight { Default::default() }
+	fn to_vtoken<T: Trait>(_: Option<&T::AccountId>) -> Weight { Default::default() }
+	fn to_token() -> Weight { Default::default() }
+}
+
 pub trait Trait: frame_system::Trait {
 	/// convert rate
 	type ConvertPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + MaybeSerializeDeserialize;

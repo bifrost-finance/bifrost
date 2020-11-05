@@ -34,12 +34,20 @@ use sp_runtime::traits::{MaybeSerializeDeserialize, Member, Saturating, AtLeast3
 mod mock;
 mod tests;
 
-pub trait WeightInfo{
+pub trait WeightInfo {
 	fn add_liquidity() -> Weight;
 	fn add_single_liquidity() -> Weight;
 	fn remove_single_asset_liquidity() -> Weight;
 	fn remove_assets_liquidity() -> Weight;
 	fn swap() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn add_liquidity() -> Weight { Default::default() }
+	fn add_single_liquidity() -> Weight { Default::default() }
+	fn remove_single_asset_liquidity() -> Weight { Default::default() }
+	fn remove_assets_liquidity() -> Weight { Default::default() }
+	fn swap() -> Weight { Default::default() }
 }
 
 pub trait Trait: frame_system::Trait {

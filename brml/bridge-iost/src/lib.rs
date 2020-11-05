@@ -62,8 +62,17 @@ pub trait WeightInfo {
     fn remove_crosschain_privilege() -> Weight;
     fn prove_action() -> Weight;
     fn bridge_tx_report() -> Weight;
-    fn cross_to_iost(weight:Weight) -> Weight;
+    fn cross_to_iost(weight: Weight) -> Weight;
+}
 
+impl WeightInfo for () {
+    fn bridge_enable() -> Weight { Default::default() }
+    fn set_contract_accounts() -> Weight { Default::default() }
+    fn grant_crosschain_privilege() -> Weight { Default::default() }
+    fn remove_crosschain_privilege() -> Weight { Default::default() }
+    fn prove_action() -> Weight { Default::default() }
+    fn bridge_tx_report() -> Weight { Default::default() }
+    fn cross_to_iost(_: Weight) -> Weight { Default::default() }
 }
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]

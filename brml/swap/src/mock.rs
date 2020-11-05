@@ -113,6 +113,7 @@ impl crate::Trait for Test {
 	type MaximumSwapFee = MaximumSwapFee;
 	type MinimumSwapFee = MinimumSwapFee;
 	type FeePrecision = FeePrecision;
+	type WeightInfo = ();
 }
 
 impl assets::Trait for Test {
@@ -125,6 +126,7 @@ impl assets::Trait for Test {
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();
+	type WeightInfo = ();
 }
 
 pub type Swap = crate::Module<Test>;

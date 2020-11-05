@@ -67,7 +67,23 @@ pub trait WeightInfo {
 	fn bridge_tx_report() -> Weight;
 	fn update_bridge_trx_status() -> Weight;
 	fn trial_on_trx_status() -> Weight;
-	fn cross_to_eos(weight:Weight) -> Weight;
+	fn cross_to_eos(weight: Weight) -> Weight;
+}
+
+impl WeightInfo for () {
+	fn clear_cross_trade_times() -> Weight { Default::default() }
+	fn bridge_enable() -> Weight { Default::default() }
+	fn save_producer_schedule() -> Weight { Default::default() }
+	fn init_schedule() -> Weight { Default::default() }
+	fn grant_crosschain_privilege() -> Weight { Default::default() }
+	fn remove_crosschain_privilege() -> Weight { Default::default() }
+	fn set_contract_accounts() -> Weight { Default::default() }
+	fn change_schedule() -> Weight { Default::default() }
+	fn prove_action() -> Weight { Default::default() }
+	fn bridge_tx_report() -> Weight { Default::default() }
+	fn update_bridge_trx_status() -> Weight { Default::default() }
+	fn trial_on_trx_status() -> Weight { Default::default() }
+	fn cross_to_eos(_: Weight) -> Weight { Default::default() }
 }
 
 lazy_static::lazy_static! {

@@ -38,6 +38,14 @@ pub trait WeightInfo {
 	fn redeem() -> Weight;
 }
 
+impl WeightInfo for () {
+	fn create() -> Weight { Default::default() }
+	fn issue() -> Weight { Default::default() }
+	fn transfer() -> Weight { Default::default() }
+	fn destroy() -> Weight { Default::default() }
+	fn redeem() -> Weight { Default::default() }
+}
+
 lazy_static::lazy_static! {
 	/// (token, precision)
 	pub static ref TOKEN_LIST: [(Vec<u8>, u16); 9] = {
