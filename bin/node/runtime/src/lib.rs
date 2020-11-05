@@ -40,7 +40,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	BridgeAssetTo, AssetId, Precision, TokenSymbol, ConvertPrice, RatePerBlock, RewardHandler
+	 AssetId, Precision, TokenSymbol, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -873,11 +873,13 @@ impl brml_assets::Trait for Runtime {
 	type Convert = ConvertPrice;
 	type AssetRedeem = ();
 	type FetchConvertPrice = Convert;
+	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
 impl brml_voucher::Trait for Runtime {
 	type Event = Event;
 	type Balance = Balance;
+	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -896,6 +898,7 @@ impl brml_convert::Trait for Runtime {
 	type Cost = Cost;
 	type Income = Income;
 	type ConvertDuration = ConvertDuration;
+	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
 }
 
 //type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
@@ -912,6 +915,7 @@ impl brml_bridge_eos::Trait for Runtime {
 	type Call = Call;
 	type AssetTrait = Assets;
 	type FetchConvertPool = Convert;
+	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
 }
 
 impl brml_bridge_iost::Trait for Runtime {
@@ -926,6 +930,7 @@ impl brml_bridge_iost::Trait for Runtime {
 	type Call = Call;
 	type AssetTrait = Assets;
 	type FetchConvertPool = Convert;
+	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -954,6 +959,7 @@ impl brml_swap::Trait for Runtime {
 	type MaximumSwapFee = MaximumSwapFee;
 	type MinimumSwapFee = MinimumSwapFee;
 	type FeePrecision = FeePrecision;
+	type WeightInfo = weights::pallet_swap::WeightInfo<Runtime>;
 }
 
 impl brml_proxy_validator::Trait for Runtime {
@@ -966,12 +972,14 @@ impl brml_proxy_validator::Trait for Runtime {
 	type AssetTrait = Assets;
 	type BridgeAssetTo = BridgeEos;
 	type RewardHandler = Convert;
+	type WeightInfo = weights::pallet_proxy_validator::WeightInfo<Runtime>;
 }
 
 impl brml_oracle::Trait for Runtime {
 	type Event = Event;
 	type Price = Price;
 	type TokenPriceHandler = Assets;
+	type WeightInfo = weights::pallet_oracle::WeightInfo<Runtime>;
 }
 
 impl chainlink::Trait for Runtime {

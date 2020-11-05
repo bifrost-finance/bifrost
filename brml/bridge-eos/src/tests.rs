@@ -393,7 +393,7 @@ fn bridge_eos_offchain_should_work() {
 		// 	crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
 		// 	e => panic!("Unexpected call: {:?}", e),
 		// };
-
+		//
 		// assert_eq!(tx_outs.iter().filter(|out| {
 		// 	match out {
 		// 		TxOut::Processing{ .. } => true,

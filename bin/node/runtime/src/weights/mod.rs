@@ -18,6 +18,15 @@
 
 //! A list of the different weight modules for our runtime.
 
+pub mod pallet_assets;
+pub mod pallet_bridge_eos;
+pub mod pallet_bridge_iost;
+pub mod pallet_convert;
+pub mod pallet_oracle;
+pub mod pallet_proxy_validator;
+pub mod pallet_swap;
+pub mod pallet_voucher;
+
 pub mod frame_system;
 pub mod pallet_balances;
 pub mod pallet_treasury;
