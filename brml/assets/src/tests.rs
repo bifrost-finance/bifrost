@@ -161,7 +161,7 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 		let (alice, bob) = (1, 2);
 		assert_noop!(
 			Assets::transfer(Origin::signed(alice), TokenSymbol::aUSD, bob, 1000),
-			AssetsError::InvalidBalanceForTransaction
+			AssetsError::InsufficientBalanceForTransaction
 		);
 	});
 }
@@ -215,7 +215,7 @@ fn destroying_asset_balance_with_zero_balance_should_not_work() {
 		assert_ok!(Assets::issue(Origin::root(), token_symbol, alice, 100));
 		assert_noop!(
 			Assets::destroy(Origin::signed(alice), token_symbol, 100 + 1),
-			AssetsError::InvalidBalanceForTransaction
+			AssetsError::InsufficientBalanceForTransaction
 		);
 	});
 }

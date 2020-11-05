@@ -29,8 +29,6 @@ use eos_chain::{
 };
 use eos_keys::secret::SecretKey;
 use sp_std::prelude::*;
-use sp_std::if_std;
-use sp_runtime::print;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
 	traits::{Member, SaturatedConversion, Saturating, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
@@ -40,7 +38,7 @@ use sp_runtime::{
 	},
 };
 use frame_support::{
-	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter,
+	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
 	dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap, StorageValue,
 };
 use frame_system::{
@@ -69,7 +67,23 @@ pub trait WeightInfo {
 	fn bridge_tx_report() -> Weight;
 	fn update_bridge_trx_status() -> Weight;
 	fn trial_on_trx_status() -> Weight;
-	fn cross_to_eos(weight:Weight) -> Weight;
+	fn cross_to_eos(weight: Weight) -> Weight;
+}
+
+impl WeightInfo for () {
+	fn clear_cross_trade_times() -> Weight { Default::default() }
+	fn bridge_enable() -> Weight { Default::default() }
+	fn save_producer_schedule() -> Weight { Default::default() }
+	fn init_schedule() -> Weight { Default::default() }
+	fn grant_crosschain_privilege() -> Weight { Default::default() }
+	fn remove_crosschain_privilege() -> Weight { Default::default() }
+	fn set_contract_accounts() -> Weight { Default::default() }
+	fn change_schedule() -> Weight { Default::default() }
+	fn prove_action() -> Weight { Default::default() }
+	fn bridge_tx_report() -> Weight { Default::default() }
+	fn update_bridge_trx_status() -> Weight { Default::default() }
+	fn trial_on_trx_status() -> Weight { Default::default() }
+	fn cross_to_eos(_: Weight) -> Weight { Default::default() }
 }
 
 lazy_static::lazy_static! {
@@ -84,6 +98,10 @@ enum TransactionType {
 	Deposit,
 	Withdraw,
 }
+
+pub type VersionId = u32;
+// use alias to avoid extra effort on parsing this type from front-end
+pub type Checksum256Array = Vec<Checksum256>;
 
 pub mod sr25519 {
 	pub mod app_sr25519 {
@@ -137,18 +155,18 @@ const EOS_SECRET_KEY: &[u8] = b"EOS_SECRET_KEY";
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Copy)]
 #[non_exhaustive]
-pub enum TrxStatus {
-	Initial,
-	Generated,
-	Signed,
-	Processing,
-	Success,
-	Fail,
+pub enum TransactionStatus {
+	Initialized,
+	Created,
+	SignComplete,
+	Sent,
+	Succeeded,
+	Failed,
 }
 
-impl Default for TrxStatus {
+impl Default for TransactionStatus {
 	fn default() -> Self {
-		Self::Initial
+		Self::Initialized
 	}
 }
 
@@ -181,7 +199,9 @@ decl_error! {
 		/// The length of block headers don't meet the size 15
 		InvalidBlockHeadersLength,
 		/// Invalid transaction
-		InvalidTxOutType,
+		InvalidGeneratedTxOutType,
+		InvalidSignedTxOutType,
+		InvalidSendTxOutType,
 		/// Error from eos-chain crate
 		EosChainError,
 		/// Error from eos-key crate
@@ -231,10 +251,14 @@ decl_error! {
 		InvalidAction,
 		/// Fail to verify transaction action
 		FailureOnVerifyingTransactionAction,
+		/// Send duplicated transaction to EOS node
+		SendingDuplicatedTransaction,
+		/// Transaction expired
+		TransactionExpired,
+		/// Cross transaction back enable or not
+		CrossChainBackDisabled,
 	}
 }
-
-pub type VersionId = u32;
 
 pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 	/// The identifier type for an authority.
@@ -270,7 +294,7 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 	type Call: From<Call<Self>>;
 
 	/// Set default weight
-	type WeightInfo : WeightInfo;
+	type WeightInfo: WeightInfo;
 }
 
 decl_event! {
@@ -285,8 +309,8 @@ decl_event! {
 		DepositFail,
 		Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => EOS account
 		WithdrawFail,
-		SendTransactionSuccess,
-		SendTransactionFailure,
+		SentCrossChainTransaction,
+		FailToSendCrossChainTransaction,
 		GrantedCrossChainPrivilege(AccountId),
 		RemovedCrossChainPrivilege(AccountId),
 		UnsignedTrx,
@@ -300,6 +324,9 @@ decl_storage! {
 
 		/// Config to enable/disable this runtime
 		BridgeEnable get(fn is_bridge_enable): bool = true;
+
+		/// Cross transaction back enable or not
+		CrossChainBackEnable get(fn is_cross_back_enable): bool = true;
 
 		/// Eos producer list and hash which in specific version id
 		ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
@@ -317,14 +344,16 @@ decl_storage! {
 		PendingScheduleVersion: VersionId;
 
 		/// Transaction sent to Eos blockchain
-		BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::AccountId>>;
-		BridgeTrxStatus get(fn trx_status): map hasher(blake2_128_concat) TxOut<T::AccountId> => TrxStatus;
+		BridgeTrxStatus get(fn trx_status): map hasher(blake2_128_concat) (TxOut<T::AccountId>, u64) => TransactionStatus;
+		CrossTradeIndex get(fn cross_trade_index): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
+		CrossTradeStatus get(fn cross_status): map hasher(blake2_128_concat) u64 => bool;
+		EOSNodeAddress get(fn eos_node): Vec<u8> = b"http://122.51.241.19:8080".to_vec();
+		CrossIndexRelatedEOSBalance get(fn index_with_eos_balance): map hasher(blake2_128_concat) u64 => (T::Balance, T::AccountId, TokenSymbol);
 		/// According trx id to find processing trx
-		ProcessingBridgeTrx: map hasher(blake2_128_concat) Checksum256 => TxOut<T::AccountId>;
+		ProcessingBridgeTrx: map hasher(blake2_128_concat) Checksum256 => (TxOut<T::AccountId>, u64);
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
-		BigBlockNumber get(fn now_block): u32 = 10;
 
 		/// Who has the privilege to call transaction between Bifrost and EOS
 		CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
@@ -369,6 +398,7 @@ decl_module! {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
+
 		#[weight = T::WeightInfo::clear_cross_trade_times()]
 		fn clear_cross_trade_times(origin) {
 			ensure_root(origin)?;
@@ -382,11 +412,35 @@ decl_module! {
 			}
 		}
 
+		#[weight = T::DbWeight::get().writes(1)]
+		fn clear_unused_cross_back_transaction_data(origin) {
+			ensure_root(origin)?;
+
+			// clear cross trade times
+			for (key, _) in BridgeTrxStatus::<T>::iter() {
+				BridgeTrxStatus::<T>::remove(key);
+			}
+		}
+
 		#[weight = T::WeightInfo::bridge_enable()]
 		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
 
 			BridgeEnable::put(enable);
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn change_eos_node_address(origin, address: Vec<u8>) {
+			ensure_root(origin)?;
+
+			EOSNodeAddress::put(address);
+		}
+
+		#[weight = T::DbWeight::get().writes(1)]
+		fn cross_chain_back_enable(origin, enable: bool) {
+			ensure_root(origin)?;
+
+			CrossChainBackEnable::put(enable);
 		}
 
 		#[weight = T::WeightInfo::save_producer_schedule()]
@@ -509,7 +563,7 @@ decl_module! {
 			origin,
 			action: Action,
 			action_receipt: ActionReceipt,
-			action_merkle_paths: Vec<Checksum256>,
+			action_merkle_paths: Checksum256Array,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
 			block_ids_list: Vec<Vec<Checksum256>>,
@@ -568,11 +622,6 @@ decl_module! {
 			let cross_account = BridgeContractAccount::get().0;
 			// withdraw operation, Bifrost => EOS
 			if cross_account == action_transfer.from.to_string().into_bytes() {
-				if_std! {
-					dbg!(&cross_account);
-					dbg!(&trx_id);
-				}
-
 				match Self::transaction_from_bifrost_to_eos(trx_id, &action_transfer) {
 					Ok(target) => {
 						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
@@ -607,48 +656,39 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (T::WeightInfo::bridge_tx_report(), DispatchClass::Normal, Pays::No)]
-		fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
-			ensure_none(origin)?;
-
-			BridgeTxOuts::<T>::put(tx_list);
-
-			Ok(())
-		}
-
-		#[weight = (T::WeightInfo::update_bridge_trx_status(), DispatchClass::Normal, Pays::No)]
+		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn update_bridge_trx_status(
 			origin,
-			changed_trxs: Vec::<(TxOut<T::AccountId>, TrxStatus, TxOut<T::AccountId>, Option<Checksum256>)>
+			changed_trxs: Vec::<((TxOut<T::AccountId>, u64), TransactionStatus, (TxOut<T::AccountId>, u64), Option<Checksum256>)>
 		) -> DispatchResult {
 			ensure_none(origin)?;
 
-			debug::info!("call from trx ======================");
-			debug::info!("call from trx: {:?}", changed_trxs);
-			for trx in changed_trxs.iter() {
-				BridgeTrxStatus::<T>::insert(&trx.0, trx.1);
-				BridgeTrxStatus::<T>::remove(&trx.2);
+			for changed_trx in changed_trxs.iter() {
+				let trade_index = changed_trx.0.1;
 
-				if let Some(id) = trx.3 {
-					ProcessingBridgeTrx::<T>::insert(id, &trx.0);
+				// delete last changed status of transaction
+				BridgeTrxStatus::<T>::remove(&changed_trx.2);
+
+				if let Some(id) = changed_trx.3 {
+					// insert the processing transaction to processing storage
+					ProcessingBridgeTrx::<T>::insert(id, (&changed_trx.0.0, trade_index));
+					// means that this transaction has been sent to EOS node
+					CrossTradeStatus::mutate(trade_index, |sent| {
+						*sent = true;
+					});
+					// due to it becoming processing status, delete it from BridgeTrxStatusV1
+					BridgeTrxStatus::<T>::remove(&changed_trx.0);
+				}
+
+				// this transaction has been not in processing or signed status
+				if !CrossTradeStatus::get(trade_index) {
+					BridgeTrxStatus::<T>::insert(&changed_trx.0, changed_trx.1);
+				} else {
+					BridgeTrxStatus::<T>::remove(&changed_trx.0);
 				}
 			}
 
 			Self::deposit_event(RawEvent::UnsignedTrx);
-
-			Ok(())
-		}
-
-		#[weight = (T::WeightInfo::trial_on_trx_status(), DispatchClass::Normal, Pays::No)]
-		fn trial_on_trx_status(origin) -> DispatchResult {
-			let _ = ensure_signed(origin)?;
-
-			for (trx, status) in BridgeTrxStatus::<T>::iter() {
-				debug::info!("call from trx: {:?}, status: {:?}", trx, status);
-			}
-
-			Self::deposit_event(RawEvent::UnsignedTrx);
-
 			Ok(())
 		}
 
@@ -663,8 +703,10 @@ decl_module! {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
 
+			ensure!(CrossChainBackEnable::get(), Error::<T>::CrossChainBackDisabled);
+
 			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
+			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
 			// ensure redeem EOS instead of any others tokens like vEOS, DOT, KSM etc
 			ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
 
@@ -673,11 +715,12 @@ decl_module! {
 			let symbol_precise = token.precision;
 
 			let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
-			ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-			let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-			ensure!(balance >= amount, "amount should be less than or equal to origin balance");
+			ensure!(symbol_precise <= 12, Error::<T>::EOSSymbolMismatch);
+			let _amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+			ensure!(balance >= eos_amount, Error::<T>::InsufficientBalance);
 
 			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
+			let memo = CrossTradeIndex::<T>::get(&origin).to_string().into_bytes();
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,
 				amount: eos_amount,
@@ -692,11 +735,11 @@ decl_module! {
 					// locked balance until trade is verified
 					T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
 
-					Self::deposit_event(RawEvent::SendTransactionSuccess);
+					Self::deposit_event(RawEvent::SentCrossChainTransaction);
 				}
 				Err(e) => {
 					debug::warn!("failed to send transaction to EOS node, due to {:?}", e);
-					Self::deposit_event(RawEvent::SendTransactionFailure);
+					Self::deposit_event(RawEvent::FailToSendCrossChainTransaction);
 				}
 			}
 		}
@@ -705,28 +748,21 @@ decl_module! {
 		fn offchain_worker(now_block: T::BlockNumber) {
 			debug::RuntimeLogger::init();
 
-			if now_block % T::BlockNumber::from(10) == T::BlockNumber::from(2) {
-				match Self::offchain(now_block) {
-					Ok(_) => debug::info!("A offchain worker started."),
-					Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+			// trigger offchain worker by each two block
+			if now_block % T::BlockNumber::from(2u32) == T::BlockNumber::from(0u32) {
+				if BridgeTrxStatus::<T>::iter()
+					.any(|(_, status)|
+						status == TransactionStatus::Initialized ||
+						status == TransactionStatus::Created ||
+						status == TransactionStatus::SignComplete
+					)
+				{
+					match Self::offchain(now_block) {
+						Ok(_) => debug::info!("A offchain worker started."),
+						Err(_) => (),
+					}
 				}
 			}
-
-			// It's no nessesary to start offchain worker if no any task in queue
-//			if !BridgeTxOuts::<T>::get().is_empty() {
-//				// Only send messages if we are a potential validator.
-//				if sp_io::offchain::is_validator() {
-//					debug::info!(target: "bridge-eos", "Is validator at {:?}.", now_block);
-//					match Self::offchain(now_block) {
-//						Ok(_) => debug::info!("A offchain worker started."),
-//						Err(e) => debug::error!("A offchain worker got error: {:?}", e),
-//					}
-//				} else {
-//					debug::info!(target: "bridge-eos", "Skipping send tx at {:?}. Not a validator.",now_block)
-//				}
-//			} else {
-//				();
-//			}
 		}
 	}
 }
@@ -883,20 +919,12 @@ impl<T: Trait> Module<T> {
 		pending_trx_id: Checksum256,
 		action_transfer: &ActionTransfer
 	) -> Result<T::AccountId, Error<T>> {
-		let bridge_tx_outs = BridgeTxOuts::<T>::get();
+		let (processing_trx, trade_index) = ProcessingBridgeTrx::<T>::get(&pending_trx_id);
 
-		print("before storing my_val");
-		if_std! {
-			println!("transaction id is: {:?}", pending_trx_id);
-			println!("all transaction list is: {:?}", bridge_tx_outs);
-		}
-		print("After storing my_val");
-
-		let processing_trx = ProcessingBridgeTrx::<T>::get(pending_trx_id);
 		match processing_trx {
-			TxOut::Processing { tx_id, multi_sig_tx } if pending_trx_id.eq(&tx_id) => {
-				let target = &multi_sig_tx.from;
-				let token_symbol = multi_sig_tx.token_symbol;
+			TxOut::Sent { tx_id, ref from, token_symbol } if pending_trx_id.eq(&tx_id) => {
+				let target = from.clone();
+				let token_symbol = token_symbol;
 
 				let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
 
@@ -906,9 +934,9 @@ impl<T: Trait> Module<T> {
 				// ensure symbol and precision matched
 				let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
 				ensure!(
-						existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
-						Error::<T>::EOSSymbolMismatch
-					);
+					existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
+					Error::<T>::EOSSymbolMismatch
+				);
 
 				let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
 				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
@@ -928,61 +956,18 @@ impl<T: Trait> Module<T> {
 					});
 				}
 
-				// change status of this transction
-				// trx = Success(tx_id);
+				// change status of this transction, remove it from BridgeTrxStatus
+				BridgeTrxStatus::<T>::remove(&(processing_trx, trade_index));
+
+				// delete this handled transaction
+				ProcessingBridgeTrx::<T>::remove(pending_trx_id);
+
 				return Ok(target.clone());
 			}
 			_ => (),
 		}
 
 		Err(Error::<T>::InvalidAccountId)
-
-//		for trx in bridge_tx_outs.iter() {
-//			match trx {
-//				TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
-//					let target = &multi_sig_tx.from;
-//					let token_symbol = multi_sig_tx.token_symbol;
-//
-//					let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
-//
-//					let symbol = action_transfer.quantity.symbol;
-//					let symbol_code = symbol.code().to_string().into_bytes();
-//					let symbol_precision = symbol.precision() as u16;
-//					// ensure symbol and precision matched
-//					let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
-//					ensure!(
-//						existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
-//						Error::<T>::EOSSymbolMismatch
-//					);
-//
-//					let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-//					let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
-//
-//					if all_vtoken_balances.lt(&vtoken_balances) {
-//						debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
-//						return Err(Error::<T>::InsufficientBalance);
-//					}
-//
-//					// the trade is verified, unlock asset
-//					T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
-//
-//					// update times of trade from Bifrost => EOS
-//					if LowLimitOnCrossChain::<T>::get() <= vtoken_balances {
-//						TimesOfCrossChainTrade::<T>::mutate(&target, |times| {
-//							times.1 = times.1.saturating_add(1);
-//						});
-//					}
-//
-//					// change status of this transction
-//					// trx = Success(tx_id);
-//
-//					return Ok(target.clone());
-//				}
-//				_ => continue,
-//			}
-//		}
-//
-//		Err(Error::<T>::InvalidAccountId)
 	}
 
 	/// check receiver account format
@@ -1017,103 +1002,83 @@ impl<T: Trait> Module<T> {
 		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
 		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from, bridge_asset.token_symbol)?;
-		BridgeTxOuts::<T>::append(&tx_out);
+		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from.clone(), bridge_asset.token_symbol)?;
 
-		BridgeTrxStatus::<T>::insert(&tx_out, TrxStatus::Initial);
+		CrossTradeIndex::<T>::mutate(&bridge_asset.from, |index| {
+			*index += 1;
+		});
+
+		BridgeTrxStatus::<T>::insert((&tx_out, CrossTradeIndex::<T>::get(&bridge_asset.from)), TransactionStatus::Initialized);
 
 		Ok(tx_out)
 	}
 
 	fn offchain(_now_block: T::BlockNumber) -> Result<(), Error<T>> {
-		//  avoid borrow checker issue if use has_change: bool
-		let _has_change = core::cell::Cell::new(false);
-
-//		let bridge_tx_outs = BridgeTxOuts::<T>::get();
-
 		let node_url = Self::get_offchain_storage(EOS_NODE_URL)?;
-		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
 
+		let sk_str = Self::get_offchain_storage(EOS_SECRET_KEY)?;
 		let sk = SecretKey::from_wif(&sk_str).map_err(|_| Error::<T>::ParseSecretKeyError)?;
 
 		let mut changed_status_trxs = Vec::new();
-		for (trx, status) in BridgeTrxStatus::<T>::iter() {
-			debug::info!("trx: {:?}, status: {:?}", trx, status);
-			match status {
-				TrxStatus::Initial => {
+		for ((trx, index), status) in BridgeTrxStatus::<T>::iter()
+			.filter(|(_, status)|
+				status == &TransactionStatus::Initialized ||
+				status == &TransactionStatus::Created ||
+				status == &TransactionStatus::SignComplete
+			)
+		{
+			match (trx.clone(), status) {
+				(TxOut::<T::AccountId>::Initialized(_), TransactionStatus::Initialized) => {
 					match trx.clone().generate::<T>(node_url.as_str()) {
 						Ok(generated_trx) => {
-							debug::info!(target: "bridge-eos", "bto.generate1 {:?}", generated_trx);
-
-//							let author = <pallet_authorship::Module<T>>::author();
-//							if NotaryKeys::<T>::get().contains(&author) {
-//								// sign trx
-//								if let Ok(signed_trx)  = generated_trx.sign::<T>(sk.clone(), author) {
-//									debug::info!(target: "bridge-eos", "bto.sign1 {:?}", signed_trx);
-//									// send trx
-//									if let Ok(processing_trx) = signed_trx.clone().send::<T>(node_url.as_str()) {
-//										let trx_id = match processing_trx {
-//											TxOut::Processing { tx_id, .. } => Some(tx_id.clone()),
-//											_ => None,
-//										};
-//										changed_status_trxs.push((processing_trx.clone(), TrxStatus::Processing, trx, trx_id));
-//										debug::info!(target: "bridge-eos", "bto.send1 {:?}", processing_trx);
-//									}
-//								}
-//
-//							}
-							changed_status_trxs.push((generated_trx, TrxStatus::Generated, trx, None));
-
-//							let call = Call::update_bridge_trx_status(generated_trx.clone(), TrxStatus::Generated, trx, None);
-//							match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-//								Ok(_) => debug::info!(target: "bridge-eos generate", "Call::update_bridge_trx_status {:?}", generated_trx),
-//								Err(e) => debug::warn!("Failed to generate transaction due to: {:?}", e),
-//							}
+							changed_status_trxs.push(((generated_trx, index), TransactionStatus::Created, (trx.clone(), index),  None));
 						}
 						Err(e) => {
-							debug::info!("failed to get latest block due to: {:?}", e);
+							debug::error!("failed to get latest block due to: {:?}", e);
 						}
 					}
 				}
-				TrxStatus::Generated => {
+				(TxOut::<T::AccountId>::Created(_), TransactionStatus::Created) => {
 					let author = <pallet_authorship::Module<T>>::author();
-
 					// ensure current node has the right to sign a cross trade
 					if NotaryKeys::<T>::get().contains(&author) {
-						match trx.clone().sign::<T>(sk.clone(), author) {
+						match trx.clone().sign::<T>(sk.clone(), author.clone()) {
 							Ok(signed_trx) => {
-								debug::info!(target: "bridge-eos", "bto.sign {:?}", signed_trx);
-								changed_status_trxs.push((signed_trx, TrxStatus::Signed, trx, None));
-//								let call = Call::update_bridge_trx_status(signed_trx.clone(), TrxStatus::Signed, trx, None);
-//								match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-//									Ok(_) => debug::info!(target: "bridge-eos sign", "Call::update_bridge_trx_status {:?}", signed_trx),
-//									Err(e) => debug::warn!("Failed to sign transaction due to: {:?}", e),
-//							}
+								// ensure this transaction collects enough signatures
+								let status = {
+									if let TxOut::<T::AccountId>::Created(_) = signed_trx {
+										TransactionStatus::Created
+									} else {
+										TransactionStatus::SignComplete
+									}
+								};
+								changed_status_trxs.push(((signed_trx, index), status, (trx.clone(), index), None));
 							}
 							Err(e) => {
-								debug::info!("failed to get latest block due to: {:?}", e);
+								debug::error!("failed to get latest block due to: {:?}", e);
 							}
 						}
 					}
 				}
-				TrxStatus::Signed => {
-					debug::info!(target: "bridge-eos", "before bto.send {:?}", trx);
+				(TxOut::<T::AccountId>::SignComplete(_), TransactionStatus::SignComplete) => {
 					match trx.clone().send::<T>(node_url.as_str()) {
-						Ok(sent_trx) => {
-							debug::info!(target: "bridge-eos", "bto.send {:?}", sent_trx);
-							let trx_id = match sent_trx {
-								TxOut::Processing { tx_id, .. } => Some(tx_id.clone()),
+						Ok(processing_trx) => {
+							let trx_id = match processing_trx {
+								TxOut::Sent { tx_id, .. } => Some(tx_id.clone()),
 								_ => None,
 							};
-							changed_status_trxs.push((sent_trx.clone(), TrxStatus::Processing, trx, trx_id));
-	//							let call = Call::update_bridge_trx_status(sent_trx.clone(), TrxStatus::Processing, trx, trx_id);
-	//							match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-	//								Ok(_) => debug::info!(target: "bridge-eos send", "Call::update_bridge_trx_status {:?}", sent_trx),
-	//								Err(e) => debug::warn!("Failed to sent transaction due to: {:?}", e),
-	//							}
+							changed_status_trxs.push(((processing_trx, index), TransactionStatus::Sent, (trx.clone(), index), trx_id));
 						}
 						Err(e) => {
-							debug::warn!("error happened while pushing transaction: {:?}", e);
+							match e {
+								Error::<T>::SendingDuplicatedTransaction => {
+									changed_status_trxs.push(((trx.clone(), index), TransactionStatus::Sent, (trx, index), None));
+								}
+								Error::<T>::TransactionExpired => {
+									changed_status_trxs.push(((trx.clone(), index), TransactionStatus::Sent, (trx, index), None));
+								}
+								_ => {}
+							}
 						}
 					}
 				}
@@ -1121,86 +1086,13 @@ impl<T: Trait> Module<T> {
 			}
 		}
 
-	if !changed_status_trxs.is_empty() {
-		let call = Call::update_bridge_trx_status(changed_status_trxs.clone());
-		match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-			Ok(_) => debug::info!(target: "bridge-eos submit", "Call::update_bridge_trx_status {:?}", changed_status_trxs),
-			Err(e) => debug::warn!("Failed to sent transaction due to: {:?}", e),
+		if !changed_status_trxs.is_empty() {
+			let call = Call::update_bridge_trx_status(changed_status_trxs.clone());
+			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
+				Ok(_) => debug::error!(target: "bridge-eos", "submit unsigned trxs {:?}", ()),
+				Err(e) => debug::error!("Failed to sent transaction due to: {:?}", e),
+			}
 		}
-	}
-
-//		let bridge_tx_outs = bridge_tx_outs.into_iter()
-//			.map(|bto| {
-//				match bto {
-//					// generate raw transactions
-//					TxOut::<T::AccountId>::Initial(_) => {
-//						match bto.clone().generate::<T>(node_url.as_str()) {
-//							Ok(generated_bto) => {
-//								has_change.set(true);
-//								debug::info!(target: "bridge-eos", "bto.generate {:?}",generated_bto);
-//								debug::info!("bto.generate");
-//								generated_bto
-//							}
-//							Err(e) => {
-//								debug::info!("failed to get latest block due to: {:?}", e);
-//								bto
-//							}
-//						}
-//					},
-//					_ => bto,
-//				}
-//			})
-//			.map(|bto| {
-//				match bto {
-//					TxOut::<T::AccountId>::Generated(_) => {
-//						let author = <pallet_authorship::Module<T>>::author();
-//						let mut ret = bto.clone();
-//
-//						// ensure current node has the right to sign a cross trade
-//						if NotaryKeys::<T>::get().contains(&author)
-//						{
-//							match bto.sign::<T>(sk.clone(), author) {
-//								Ok(signed_bto) => {
-//									has_change.set(true);
-//									debug::info!(target: "bridge-eos", "bto.sign {:?}", signed_bto);
-//									ret = signed_bto;
-//								}
-//								Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
-//							}
-//						}
-//						ret
-//					},
-//					_ => bto,
-//				}
-//			})
-//			.map(|bto| {
-//				match bto {
-//					TxOut::<T::AccountId>::Signed(_) => {
-//						match bto.clone().send::<T>(node_url.as_str()) {
-//							Ok(sent_bto) => {
-//								has_change.set(true);
-//								debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
-//								debug::info!("bto.send");
-//								sent_bto
-//							}
-//							Err(e) => {
-//								debug::warn!("error happened while pushing transaction: {:?}", e);
-//								bto
-//							}
-//						}
-//					},
-//					_ => bto,
-//				}
-//			}).collect::<Vec<_>>();
-//
-//		if has_change.get() {
-////			BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
-//			let call = Call::bridge_tx_report(bridge_tx_outs.clone());
-//			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-//				Ok(_) => debug::info!(target: "bridge-eos", "Call::bridge_tx_report {:?}", bridge_tx_outs),
-//				Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
-//			}
-//		}
 
 		Ok(())
 	}
@@ -1227,20 +1119,6 @@ impl<T: Trait> Module<T> {
 
 		Ok(String::from_utf8(value).map_err(|_| Error::<T>::ParseUtf8Error)?)
 	}
-
-	// fn local_authority_keys() -> impl Iterator<Item=T::AuthorityId> {
-	// 	let authorities = NotaryKeys::<T>::get();
-	// 	let mut local_keys = T::AuthorityId::all();
-	// 	local_keys.sort();
-	//
-	// 	authorities.into_iter()
-	// 		.enumerate()
-	// 		.filter_map(move |(_, authority)| {
-	// 			local_keys.binary_search(&authority.into())
-	// 				.ok()
-	// 				.map(|location| local_keys[location].clone())
-	// 		})
-	// }
 }
 
 impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
@@ -1274,20 +1152,3 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 		}
 	}
 }
-
-// #[allow(dead_code)]
-// mod weight_for {
-// 	use frame_support::{traits::Get, weights::Weight};
-// 	use super::Trait;
-//
-// 	/// cross_to_eos weight
-// 	pub(crate) fn cross_to_eos<T: Trait>(memo_len: Weight) -> Weight {
-// 		let db = T::DbWeight::get();
-// 		db.writes(1) // put task to tx_out
-// 			.saturating_add(db.reads(1)) // token exists or not
-// 			.saturating_add(db.reads(1)) // get token
-// 			.saturating_add(db.reads(1)) // get account asset
-// 			.saturating_add(memo_len.saturating_add(10000)) // memo length
-// 			.saturating_mul(1000)
-// 	}
-// }

@@ -42,7 +42,7 @@ pub struct MultiSig<AccountId> {
 	threshold: u8,
 }
 
-impl<AccountId: PartialEq> MultiSig<AccountId> {
+impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
 	fn new(threshold: u8) -> Self {
 		MultiSig {
 			signatures: Default::default(),
@@ -57,7 +57,7 @@ impl<AccountId: PartialEq> MultiSig<AccountId> {
 
 	/// check whether a transaction is signed twice
 	fn has_signed(&self, author: AccountId) -> bool {
-		self.signatures.iter().find(|sig| sig.author == author).is_some()
+		self.signatures.iter().any(|sig| sig.author == author)
 	}
 }
 
@@ -91,23 +91,25 @@ pub struct MultiSigTx<AccountId> {
 pub enum TxOut<AccountId> {
 	None,
 	/// Initial Eos multi-sig transaction
-	Initial(MultiSigTx<AccountId>),
+	Initialized(MultiSigTx<AccountId>),
 	/// Generated and signing Eos multi-sig transaction
-	Generated(MultiSigTx<AccountId>),
+	Created(MultiSigTx<AccountId>),
 	/// Signed Eos multi-sig transaction
-	Signed(MultiSigTx<AccountId>),
-	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
-	Processing {
+	SignComplete(MultiSigTx<AccountId>),
+	/// Eos multi-sig transaction has been sent to EOS node and fetching tx id from EOS node
+	Sent {
 		tx_id: Checksum256,
-		multi_sig_tx: MultiSigTx<AccountId>,
+		from: AccountId,
+		token_symbol: node_primitives::TokenSymbol,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
-	Success(Checksum256),
+	Succeeded {
+		tx_id: Checksum256
+	},
 	/// Eos multi-sig transaction processed failed
-	Fail {
+	Failed {
 		tx_id: Vec<u8>,
-		reason: Vec<u8>,
-		tx: MultiSigTx<AccountId>,
+		reason: Vec<u8>
 	},
 }
 
@@ -117,7 +119,7 @@ impl<AccountId> Default for TxOut<AccountId> {
 	}
 }
 
-impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
+impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	/// intialize a transaction
 	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
@@ -144,37 +146,39 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 			token_symbol,
 		};
 
-		Ok(TxOut::Initial(multi_sig_tx))
+		Ok(TxOut::Initialized(multi_sig_tx))
 	}
 
 	/// compose a transaction
 	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Initial(mut multi_sig_tx) => {
+			TxOut::Initialized(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
 				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
 
 				// fetch block
 				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
-
+				
 				let actions = vec![multi_sig_tx.action.clone()];
-				// Construct transaction
-				let expiration = (sp_io::offchain::timestamp().add(Duration::from_millis(600 * 1000)).unix_millis() as f64 / 1000.0) as u32;
+				// Construct transaction, and it will expire after one hour if doesn't send it EOS network
+				let expiration = (sp_io::offchain::timestamp()
+					.add(Duration::from_millis(600 * 1000))
+					.unix_millis() as f64 / 1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
 				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
-				Ok(TxOut::Generated(multi_sig_tx))
+				Ok(TxOut::Created(multi_sig_tx))
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
 		}
 	}
 
 	/// sign the transaction
 	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Generated(mut multi_sig_tx) => {
+			TxOut::Created(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
 					return Err(Error::<T>::AlreadySignedByAuthor);
 				}
@@ -184,22 +188,27 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::EosChainError)?;
 				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
+				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
+					return Ok(TxOut::Created(multi_sig_tx));
+				}
+				
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
-					Ok(TxOut::Signed(multi_sig_tx))
+					Ok(TxOut::SignComplete(multi_sig_tx))
 				} else {
-					Ok(TxOut::Generated(multi_sig_tx))
+					Ok(TxOut::Created(multi_sig_tx))
 				}
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			TxOut::SignComplete(_) => Ok(self),
+			_ => Err(Error::<T>::InvalidSignedTxOutType)
 		}
 	}
 
 	/// send transaction to EOS node
 	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Signed(multi_sig_tx) => {
+			TxOut::SignComplete(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
@@ -207,12 +216,13 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
-				Ok(TxOut::Processing {
+				Ok(TxOut::Sent {
 					tx_id,
-					multi_sig_tx,
+					from: multi_sig_tx.from,
+					token_symbol: multi_sig_tx.token_symbol,
 				})
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidSendTxOutType)
 		}
 	}
 }
@@ -344,6 +354,14 @@ pub(crate) mod eos_rpc {
 
 		let body = response.body().collect::<Vec<u8>>();
 		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		// frame_support::debug::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
+
+		if body_str.as_str().contains("Expired Transaction") {
+			return Err(Error::<T>::TransactionExpired);
+		}
+		if body_str.as_str().contains("Duplicate transaction") {
+			return Err(Error::<T>::SendingDuplicatedTransaction);
+		}
 		let tx_id = get_transaction_id(&body_str)?;
 
 		Ok(tx_id.into_bytes())
