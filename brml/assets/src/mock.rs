@@ -79,6 +79,7 @@ impl Trait for Test {
 	type Convert = u128;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();
+	type WeightInfo = ();
 }
 
 mod assets {

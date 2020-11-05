@@ -37,7 +37,7 @@ use sp_core::offchain::{
 use sp_runtime::traits::Header as HeaderT;
 use sp_runtime::{generic::DigestItem, testing::Header};
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
-use frame_support::{assert_ok, dispatch};
+use frame_support::assert_ok;
 
 #[test]
 fn get_latest_schedule_version_should_work() {
@@ -388,18 +388,7 @@ fn bridge_eos_offchain_should_work() {
 		use codec::Decode;
 		let transaction = pool_state.write().transactions.pop().unwrap();
 		assert_eq!(pool_state.read().transactions.len(), 1);
-		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-		// let tx_outs = match ex.call {
-		// 	crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
-		// 	e => panic!("Unexpected call: {:?}", e),
-		// };
-		//
-		// assert_eq!(tx_outs.iter().filter(|out| {
-		// 	match out {
-		// 		TxOut::Processing{ .. } => true,
-		// 		_ => false,
-		// 	}
-		// }).count(), 1);
+		let _: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
 	});
 }
 
@@ -461,22 +450,6 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 	file.read_to_string(&mut json_str)?;
 	Ok(json_str)
 }
-
-// #[allow(dead_code)]
-// fn bridge_tx_report() -> dispatch::DispatchResult {
-// 	#[allow(deprecated)]
-// 	use frame_support::unsigned::ValidateUnsigned;
-
-// 	let tx_outs = vec![TxOut::Success(vec![])];
-
-// 	#[allow(deprecated)]
-// 	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
-
-// 	BridgeEos::bridge_tx_report(
-// 		Origin::none(),
-// 		tx_outs,
-// 	)
-// }
 
 fn seal_header(mut header: Header, author: u64) -> Header {
 	{

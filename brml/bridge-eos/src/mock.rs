@@ -145,6 +145,7 @@ impl crate::Trait for Test {
 	type Call = Call;
 	type AssetTrait = Assets;
 	type FetchConvertPool = Convert;
+	type WeightInfo = ();
 }
 
 impl assets::Trait for Test {
@@ -157,6 +158,7 @@ impl assets::Trait for Test {
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = Convert;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -173,6 +175,7 @@ impl convert::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type ConvertDuration = ConvertDuration;
+	type WeightInfo = ();
 }
 
 pub type BridgeEos = crate::Module<Test>;
