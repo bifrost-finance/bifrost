@@ -4,11 +4,11 @@ version = "0.5.0"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
-default-run = "bifrost-node"
+default-run = "bifrost"
 edition = "2018"
 
 [[bin]]
-name = "bifrost-node"
+name = "bifrost"
 path = "bin/main.rs"
 required-features = ["cli"]
 
@@ -100,8 +100,9 @@ browser-utils = { package = "substrate-browser-utils", optional = true, version 
 
 # for initialize producer schedule
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
-brml-bridge-iost = { path = "../../../brml/bridge-iost", default-features = false }
 eos-chain = { git = "https://github.com/bifrost-finance/rust-eos" }
+
+brml-bridge-iost = { path = "../../../brml/bridge-iost", default-features = false }
 
 # brml rpc crates
 brml-assets-rpc = { path = "../../../brml/assets/rpc" }

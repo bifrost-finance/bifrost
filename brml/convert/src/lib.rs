@@ -37,6 +37,13 @@ pub trait WeightInfo {
 	fn to_token() -> Weight;
 }
 
+impl WeightInfo for () {
+	fn set_convert_price() -> Weight { Default::default() }
+	fn set_price_per_block() -> Weight { Default::default() }
+	fn to_vtoken<T: Trait>(_: Option<&T::AccountId>) -> Weight { Default::default() }
+	fn to_token() -> Weight { Default::default() }
+}
+
 pub trait Trait: frame_system::Trait {
 	/// convert rate
 	type ConvertPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + MaybeSerializeDeserialize;
@@ -69,10 +76,11 @@ pub trait Trait: frame_system::Trait {
 decl_event! {
 	pub enum Event {
 		UpdateConvertSuccess,
-		UpdatezRatePerBlockSuccess,
+		UpdateRatePerBlockSuccess,
 		ConvertTokenToVTokenSuccess,
 		ConvertVTokenToTokenSuccess,
 		RedeemedPointsSuccess,
+		UpdateConvertPoolSuccess,
 	}
 }
 
@@ -81,7 +89,7 @@ decl_error! {
 		/// Asset id doesn't exist
 		TokenNotExist,
 		/// Amount of input should be less than or equal to origin balance
-		InvalidBalanceForTransaction,
+		InsufficientBalanceForTransaction,
 		/// Convert price doesn't be set
 		ConvertPriceIsNotSet,
 		/// This is an invalid convert rate
@@ -92,6 +100,10 @@ decl_error! {
 		ConvertWithTheSameToken,
 		/// Empty convert pool, cause there's no price at all
 		EmptyConvertPool,
+		/// The amount of token you want to convert is bigger than the convert poll
+		NotEnoughConvertPool,
+		/// No need to set new convert pool
+		NotEmptyPool,
 	}
 }
 
@@ -165,7 +177,28 @@ decl_module! {
 			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
 			<RatePerBlock<T>>::insert(token_symbol, rate_per_block);
 
-			Self::deposit_event(Event::UpdatezRatePerBlockSuccess);
+			Self::deposit_event(Event::UpdateRatePerBlockSuccess);
+		}
+
+		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		fn set_convert_pool(
+			origin,
+			token_symbol: TokenSymbol,
+			#[compact] new_token_pool: T::Balance,
+			#[compact] new_vtoken_pool: T::Balance
+		) {
+			ensure_root(origin)?;
+
+			let ConvertPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_symbol);
+			ensure!(token_pool.is_zero() && vtoken_pool.is_zero(), Error::<T>::NotEmptyPool);
+			ensure!(new_vtoken_pool / new_token_pool == T::Balance::from(100), Error::<T>::NotEmptyPool);
+
+			<Pool<T>>::mutate(token_symbol, |pool| {
+				pool.token_pool = new_token_pool;
+				pool.vtoken_pool = new_vtoken_pool;
+			});
+
+			Self::deposit_event(Event::UpdateConvertPoolSuccess);
 		}
 
 		#[weight = (T::WeightInfo::to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
@@ -187,7 +220,7 @@ decl_module! {
 			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
 
 			let token_balances = T::AssetTrait::get_account_asset(token_symbol, &converter).balance;
-			ensure!(token_balances >= token_amount, Error::<T>::InvalidBalanceForTransaction);
+			ensure!(token_balances >= token_amount, Error::<T>::InsufficientBalanceForTransaction);
 
 			// use current covert pool to get latest price
 			let ConvertPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_symbol);
@@ -227,13 +260,14 @@ decl_module! {
 			ensure!(T::AssetTrait::token_exists(vtoken_symbol), Error::<T>::TokenNotExist);
 
 			let vtoken_balances = T::AssetTrait::get_account_asset(vtoken_symbol, &converter).balance;
-			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InvalidBalanceForTransaction);
+			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InsufficientBalanceForTransaction);
 
 			// use current covert pool to get latest price
 			let ConvertPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_symbol);
 			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyConvertPool);
 
 			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
+			ensure!(vtoken_pool >= tokens_buy && vtoken_pool >= vtoken_amount, Error::<T>::NotEnoughConvertPool);
 
 			T::AssetTrait::asset_destroy(vtoken_symbol, &converter, vtoken_amount);
 			T::AssetTrait::asset_issue(token_symbol, &converter, tokens_buy);

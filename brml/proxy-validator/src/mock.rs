@@ -99,6 +99,7 @@ impl assets::Trait for Test {
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();
+	type WeightInfo = ();
 }
 
 impl crate::Trait for Test {
@@ -111,6 +112,7 @@ impl crate::Trait for Test {
 	type AssetTrait = Assets;
 	type BridgeAssetTo = ();
 	type RewardHandler = ();
+	type WeightInfo = ();
 }
 
 pub type ProxyValidator = crate::Module<Test>;

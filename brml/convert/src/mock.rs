@@ -59,6 +59,7 @@ impl assets::Trait for Test {
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();
+	type WeightInfo = ();
 }
 
 impl system::Trait for Test {
@@ -103,6 +104,7 @@ impl crate::Trait for Test {
 	type Cost = u64;
 	type Income = u64;
 	type ConvertDuration = ConvertDuration;
+	type WeightInfo = ();
 }
 
 pub type Convert = crate::Module<Test>;

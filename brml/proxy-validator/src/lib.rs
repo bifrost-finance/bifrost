@@ -21,7 +21,6 @@ mod tests;
 
 use codec::{Encode, Decode};
 use core::convert::{From, Into};
-use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
 use frame_support::{weights::Weight,decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
 use frame_system::{ensure_root, ensure_signed};
@@ -31,7 +30,7 @@ use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
 use core::ops::Div;
 
-pub trait WeightInfo{
+pub trait WeightInfo {
 	fn set_global_asset() -> Weight;
 	fn stake() -> Weight;
 	fn unstake() -> Weight;
@@ -40,6 +39,17 @@ pub trait WeightInfo{
 	fn set_reward_per_block() -> Weight;
 	fn deposit() -> Weight;
 	fn withdraw() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn set_global_asset() -> Weight { Default::default() }
+	fn stake() -> Weight { Default::default() }
+	fn unstake() -> Weight { Default::default() }
+	fn validator_register() -> Weight { Default::default() }
+	fn set_need_amount() -> Weight { Default::default() }
+	fn set_reward_per_block() -> Weight { Default::default() }
+	fn deposit() -> Weight { Default::default() }
+	fn withdraw() -> Weight { Default::default() }
 }
 
 pub type ValidatorAddress = Vec<u8>;

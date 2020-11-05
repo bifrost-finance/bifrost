@@ -1,14 +1,12 @@
 [package]
 name = "brml-bridge-iost"
-version = "0.1.0"
+version = "0.5.0"
 authors = ["Qiannan Lyu <lvqiannan@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
-#iost-chain = { path = "/Users/qiannan/workspace/blockchain/rs-iost/chain", default-features = false }
-#iost-keys = { path = "/Users/qiannan/workspace/blockchain/rs-iost/keys", default-features = false }
 iost-chain = { git = "https://github.com/bifrost-finance/rust-iost", branch = "master", default-features = false }
 iost-keys = { git = "https://github.com/bifrost-finance/rust-iost", branch = "master", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }

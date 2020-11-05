@@ -62,8 +62,17 @@ pub trait WeightInfo {
     fn remove_crosschain_privilege() -> Weight;
     fn prove_action() -> Weight;
     fn bridge_tx_report() -> Weight;
-    fn cross_to_iost(weight:Weight) -> Weight;
+    fn cross_to_iost(weight: Weight) -> Weight;
+}
 
+impl WeightInfo for () {
+    fn bridge_enable() -> Weight { Default::default() }
+    fn set_contract_accounts() -> Weight { Default::default() }
+    fn grant_crosschain_privilege() -> Weight { Default::default() }
+    fn remove_crosschain_privilege() -> Weight { Default::default() }
+    fn prove_action() -> Weight { Default::default() }
+    fn bridge_tx_report() -> Weight { Default::default() }
+    fn cross_to_iost(_: Weight) -> Weight { Default::default() }
 }
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
@@ -837,20 +846,3 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
         Ok(())
     }
 }
-
-// #[allow(dead_code)]
-// mod weight_for {
-//     use super::Trait;
-//     use frame_support::{traits::Get, weights::Weight};
-//     use sp_runtime::traits::Saturating;
-//
-//     /// cross_to_iost weight
-//     pub(crate) fn cross_to_iost<T: Trait>(memo_len: Weight) -> Weight {
-//         let db = T::DbWeight::get();
-//         db.writes(1) // put task to tx_out
-//             .saturating_add(db.reads(1)) // token exists or not
-//             .saturating_add(db.reads(1)) // get token
-//             .saturating_add(db.reads(1)) // get account asset
-//             .saturating_add(memo_len.saturating_add(10000)) // memo length
-//     }
-// }
