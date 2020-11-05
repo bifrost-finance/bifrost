@@ -19,7 +19,7 @@
 
 use core::convert::TryInto;
 use frame_support::traits::{Get};
-use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage, ensure, dispatch::DispatchResult, IterableStorageMap};
+use frame_support::{weights::Weight,Parameter, decl_module, decl_event, decl_error, decl_storage, ensure, dispatch::DispatchResult, IterableStorageMap};
 use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup, MaybeSerializeDeserialize};
 use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed, ensure_root};
@@ -29,6 +29,14 @@ use node_primitives::{
 
 mod mock;
 mod tests;
+
+pub trait WeightInfo {
+	fn create() -> Weight;
+	fn issue() -> Weight;
+	fn transfer() -> Weight;
+	fn destroy() -> Weight;
+	fn redeem() -> Weight;
+}
 
 lazy_static::lazy_static! {
 	/// (token, precision)
@@ -74,6 +82,9 @@ pub trait Trait: system::Trait {
 
 	/// Handler for fetch convert rate from convert runtime
 	type FetchConvertPrice: FetchConvertPrice<TokenSymbol, Self::Convert>;
+
+	/// Set default weight
+	type WeightInfo: WeightInfo;
 }
 
 decl_event! {
@@ -171,7 +182,7 @@ decl_module! {
 
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::create()]
 		pub fn create(origin, symbol: Vec<u8>, precision: u16) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -187,7 +198,7 @@ decl_module! {
 		}
 
 		/// Issue any amount of fungible assets.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::issue()]
 		pub fn issue(
 			origin,
 			token_symbol: TokenSymbol,
@@ -207,7 +218,7 @@ decl_module! {
 		}
 
 		/// Move some assets from one holder to another.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::transfer()]
 		pub fn transfer(
 			origin,
 			token_symbol: TokenSymbol,
@@ -229,7 +240,7 @@ decl_module! {
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::destroy()]
 		pub fn destroy(
 			origin,
 			token_symbol: TokenSymbol,
@@ -247,7 +258,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::Destroyed(token_symbol, origin, amount));
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::redeem()]
 		pub fn redeem(
 			origin,
 			token_symbol: TokenSymbol,

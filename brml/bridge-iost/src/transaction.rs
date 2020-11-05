@@ -19,7 +19,7 @@ use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{iter::FromIterator, str::FromStr};
 use frame_support::debug;
-use iost_chain::{IostAction, Read, SerializeData, Tx};
+use iost_chain::{Action, Read, SerializeData, Tx};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -75,7 +75,7 @@ pub struct MultiSigTx<AccountId> {
     /// Signatures of transaction
     multi_sig: MultiSig<AccountId>,
     // IOST transaction action
-    action: IostAction,
+    action: Action,
     /// Who sends Transaction to EOS
     pub from: AccountId,
     /// token type
@@ -118,7 +118,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
         // Construct action
-        let action = IostAction::transfer(eos_from, eos_to, amount.as_str(), memo)
+        let action = Action::transfer(eos_from, eos_to, amount.as_str(), memo)
             .map_err(|_| Error::<T>::IostChainError)?;
         debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ TxOut.init is called.");
 

@@ -3,7 +3,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{decl_event, decl_module, decl_storage};
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_system::{self as system};
 use codec::Encode;
 use sp_std::prelude::Vec;
 

@@ -54,6 +54,22 @@ mod transaction;
 mod mock;
 mod tests;
 
+pub trait WeightInfo {
+	fn clear_cross_trade_times() -> Weight;
+	fn bridge_enable() -> Weight;
+	fn save_producer_schedule() -> Weight;
+	fn init_schedule() -> Weight;
+	fn grant_crosschain_privilege() -> Weight;
+	fn remove_crosschain_privilege() -> Weight;
+	fn set_contract_accounts() -> Weight;
+	fn change_schedule() -> Weight;
+	fn prove_action() -> Weight;
+	fn bridge_tx_report() -> Weight;
+	fn update_bridge_trx_status() -> Weight;
+	fn trial_on_trx_status() -> Weight;
+	fn cross_to_eos(weight:Weight) -> Weight;
+}
+
 lazy_static::lazy_static! {
 	pub static ref ACTION_NAMES: [ActionName; 1] = {
 		let name = ActionName::from_str("transfer").unwrap();
@@ -260,6 +276,9 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
+
+	/// Set default weight
+	type WeightInfo: WeightInfo;
 }
 
 decl_event! {
@@ -374,7 +393,7 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::clear_cross_trade_times()]
 		fn clear_cross_trade_times(origin) {
 			ensure_root(origin)?;
 
@@ -397,7 +416,7 @@ decl_module! {
 			}
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::bridge_enable()]
 		fn bridge_enable(origin, enable: bool) {
 			ensure_root(origin)?;
 
@@ -418,7 +437,7 @@ decl_module! {
 			CrossChainBackEnable::put(enable);
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 2)]
+		#[weight = T::WeightInfo::save_producer_schedule()]
 		fn save_producer_schedule(origin, ps: ProducerAuthoritySchedule) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -433,7 +452,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::init_schedule()]
 		fn init_schedule(origin, ps: ProducerAuthoritySchedule) {
 			ensure_root(origin)?;
 
@@ -449,7 +468,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::InitSchedule(ps.version));
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::grant_crosschain_privilege()]
 		fn grant_crosschain_privilege(origin, target: T::AccountId) {
 			ensure_root(origin)?;
 
@@ -466,7 +485,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::GrantedCrossChainPrivilege(target));
 		}
 
-		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		#[weight = (T::WeightInfo::remove_crosschain_privilege(), DispatchClass::Normal, Pays::No)]
 		fn remove_crosschain_privilege(origin, target: T::AccountId) {
 			ensure_root(origin)?;
 
@@ -481,7 +500,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
 		}
 
-		#[weight = (0, DispatchClass::Normal, Pays::No)]
+		#[weight = (T::WeightInfo::set_contract_accounts(), DispatchClass::Normal, Pays::No)]
 		fn set_contract_accounts(origin, account: Vec<u8>, threthold: u8) {
 			ensure_root(origin)?;
 			BridgeContractAccount::put((account, threthold));
@@ -492,7 +511,7 @@ decl_module! {
 		// 3. compare current schedules version with pending_schedules'.
 		// 4. verify incoming 180 block_headers to prove this new_producers list is valid.
 		// 5. save the new_producers list.
-		#[weight = (10000, DispatchClass::Normal, Pays::Yes)]
+		#[weight = (T::WeightInfo::change_schedule(), DispatchClass::Normal, Pays::No)]
 		fn change_schedule(
 			origin,
 			legacy_schedule_hash: Checksum256,
@@ -533,7 +552,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (10000, DispatchClass::Normal, Pays::Yes)]
+		#[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
 		fn prove_action(
 			origin,
 			action: Action,
@@ -667,7 +686,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (weight_for::cross_to_eos::<T>(memo.len() as Weight), DispatchClass::Normal)]
+		#[weight = (T::WeightInfo::cross_to_eos(memo.len() as Weight), DispatchClass::Normal, Pays::No)]
 		fn cross_to_eos(
 			origin,
 			to: Vec<u8>,
@@ -985,7 +1004,7 @@ impl<T: Trait> Module<T> {
 		CrossTradeIndexV2::<T>::mutate(&bridge_asset.from, |index| {
 			*index += 1;
 		});
-		
+
 		BridgeTrxStatusV2::<T>::insert((&tx_out, CrossTradeIndexV2::<T>::get(&bridge_asset.from)), TrxStatus::Initial);
 
 		Ok(tx_out)
@@ -1034,7 +1053,6 @@ impl<T: Trait> Module<T> {
 		};
 		let sk = SecretKey::from_wif(&sk_str).map_err(|_| Error::<T>::ParseSecretKeyError)?;
 
-	
 		let mut changed_status_trxs = Vec::new();
 		for ((trx, index), status) in BridgeTrxStatusV2::<T>::iter()
 			.filter(|(_, status)|
@@ -1170,22 +1188,5 @@ impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
 		} else {
 			InvalidTransaction::Call.into()
 		}
-	}
-}
-
-#[allow(dead_code)]
-mod weight_for {
-	use frame_support::{traits::Get, weights::Weight};
-	use super::Trait;
-
-	/// cross_to_eos weight
-	pub(crate) fn cross_to_eos<T: Trait>(memo_len: Weight) -> Weight {
-		let db = T::DbWeight::get();
-		db.writes(1) // put task to tx_out
-			.saturating_add(db.reads(1)) // token exists or not
-			.saturating_add(db.reads(1)) // get token
-			.saturating_add(db.reads(1)) // get account asset
-			.saturating_add(memo_len.saturating_add(10000)) // memo length
-			.saturating_mul(1000)
 	}
 }

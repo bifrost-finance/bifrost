@@ -337,7 +337,7 @@ pub fn testnet_genesis(
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 		}),
 		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost".to_vec(), 1),
+			bridge_contract_account: (b"lispczz4".to_vec(), 1),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
@@ -379,8 +379,6 @@ fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
 			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance, 20), // 155038.7596899225
 			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance, 10), // 2544.529262086514
 			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance, 10), // 254452.9262086514
-			(TokenSymbol::IOST, (2544.529262086514f64 * DOLLARS as f64) as Balance, 10), // 2544.529262086514
-			(TokenSymbol::vIOST, (254452.9262086514f64 * DOLLARS as f64) as Balance, 10), // 254452.9262086514
 		];
 		(pool, 0)
 	};
@@ -393,8 +391,6 @@ fn initialize_swap_module(sudo: AccountId) -> Option<SwapConfig> {
 			(TokenSymbol::vKSM, (155038.75968992253f64 * DOLLARS as f64) as Balance),
 			(TokenSymbol::EOS, (2544.529262086514f64 * DOLLARS as f64) as Balance),
 			(TokenSymbol::vEOS, (254452.9262086514f64 * DOLLARS as f64) as Balance),
-			(TokenSymbol::IOST, (2544.529262086514f64 * DOLLARS as f64) as Balance),
-			(TokenSymbol::vIOST, (254452.9262086514f64 * DOLLARS as f64) as Balance),
 		];
 		vec![(sudo, (pool, all_pool_token))]
 	};
@@ -591,7 +587,7 @@ pub fn bifrost_genesis(
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 		}),
 		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost".to_vec(), 1),
+			bridge_contract_account: (b"lispczz4".to_vec(), 1),
 			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
