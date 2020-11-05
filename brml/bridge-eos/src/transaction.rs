@@ -26,7 +26,6 @@ use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Tran
 use eos_keys::secret::SecretKey;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
-use core::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Default)]
 pub struct TxSig<AccountId> {
@@ -92,42 +91,11 @@ pub struct MultiSigTx<AccountId> {
 pub enum TxOut<AccountId> {
 	None,
 	/// Initial Eos multi-sig transaction
-	Initial(MultiSigTx<AccountId>),
-	/// Generated and signing Eos multi-sig transaction
-	Generated(MultiSigTx<AccountId>),
-	/// Signed Eos multi-sig transaction
-	Signed(MultiSigTx<AccountId>),
-	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
-	Processing {
-		tx_id: Checksum256,
-		multi_sig_tx: MultiSigTx<AccountId>,
-	},
-	/// Eos multi-sig transaction processed successfully, so only save tx id
-	Success(Checksum256),
-	/// Eos multi-sig transaction processed failed
-	Fail {
-		tx_id: Vec<u8>,
-		reason: Vec<u8>,
-		tx: MultiSigTx<AccountId>,
-	},
-}
-
-impl<AccountId> Default for TxOut<AccountId> {
-	fn default() -> Self {
-		Self::None
-	}
-}
-
-/// Status of a transaction
-#[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub enum TxOutV1<AccountId> {
-	None,
-	/// Initial Eos multi-sig transaction
 	Initialized(MultiSigTx<AccountId>),
 	/// Generated and signing Eos multi-sig transaction
 	Created(MultiSigTx<AccountId>),
 	/// Signed Eos multi-sig transaction
-	CompleteSigned(MultiSigTx<AccountId>),
+	SignComplete(MultiSigTx<AccountId>),
 	/// Eos multi-sig transaction has been sent to EOS node and fetching tx id from EOS node
 	Sent {
 		tx_id: Checksum256,
@@ -145,13 +113,13 @@ pub enum TxOutV1<AccountId> {
 	},
 }
 
-impl<AccountId> Default for TxOutV1<AccountId> {
+impl<AccountId> Default for TxOut<AccountId> {
 	fn default() -> Self {
 		Self::None
 	}
 }
 
-impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
+impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	/// intialize a transaction
 	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
@@ -178,37 +146,30 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 			token_symbol,
 		};
 
-		Ok(TxOutV1::Initialized(multi_sig_tx))
+		Ok(TxOut::Initialized(multi_sig_tx))
 	}
 
 	/// compose a transaction
 	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOutV1::Initialized(mut multi_sig_tx) => {
+			TxOut::Initialized(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
 				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
 
 				// fetch block
 				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
-
-				static index: AtomicU64 = AtomicU64::new(0);
-
+				
 				let actions = vec![multi_sig_tx.action.clone()];
 				// Construct transaction, and it will expire after one hour if doesn't send it EOS network
 				let expiration = (sp_io::offchain::timestamp()
-					.add(Duration::from_millis(600 * 1000 + index.load(Ordering::Relaxed)))
+					.add(Duration::from_millis(600 * 1000))
 					.unix_millis() as f64 / 1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
 				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
-				index.fetch_add(1, Ordering::SeqCst);
-				if index.load(Ordering::Relaxed) >= 100 {
-					index.swap(0, Ordering::Relaxed);
-				}
-
-				Ok(TxOutV1::Created(multi_sig_tx))
+				Ok(TxOut::Created(multi_sig_tx))
 			},
 			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
 		}
@@ -217,7 +178,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 	/// sign the transaction
 	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
-			TxOutV1::Created(mut multi_sig_tx) => {
+			TxOut::Created(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
 					return Err(Error::<T>::AlreadySignedByAuthor);
 				}
@@ -228,20 +189,18 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
 				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
-					return Ok(TxOutV1::Created(multi_sig_tx));
+					return Ok(TxOut::Created(multi_sig_tx));
 				}
-
-				frame_support::debug::info!(target: "bridge-eos", "signing by {:?}, {:?}, {:?}", author, sig.to_string(), multi_sig_tx.multi_sig.has_signed(author.clone()));
-
+				
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
-					Ok(TxOutV1::CompleteSigned(multi_sig_tx))
+					Ok(TxOut::SignComplete(multi_sig_tx))
 				} else {
-					Ok(TxOutV1::Created(multi_sig_tx))
+					Ok(TxOut::Created(multi_sig_tx))
 				}
 			},
-			TxOutV1::CompleteSigned(_) => Ok(self),
+			TxOut::SignComplete(_) => Ok(self),
 			_ => Err(Error::<T>::InvalidSignedTxOutType)
 		}
 	}
@@ -249,7 +208,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 	/// send transaction to EOS node
 	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOutV1::CompleteSigned(multi_sig_tx) => {
+			TxOut::SignComplete(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
@@ -257,7 +216,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOutV1<AccountId> {
 				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
-				Ok(TxOutV1::Sent {
+				Ok(TxOut::Sent {
 					tx_id,
 					from: multi_sig_tx.from,
 					token_symbol: multi_sig_tx.token_symbol,

@@ -104,42 +104,26 @@
     "from": "AccountId",
     "token_symbol": "TokenSymbol"
   },
-  "Processing": {
-    "tx_id": "Vec<u8>",
-    "multi_sig_tx": "MultiSigTx"
-  },
   "Sent": {
     "tx_id": "Vec<u8>",
     "from": "AccountId",
     "token_symbol": "TokenSymbol"
   },
-  "Fail": {
-    "tx_id": "Vec<u8>",
-    "reason": "Vec<u8>",
-    "tx": "MultiSigTx"
+  "Succeeded": {
+    "tx_id": "Vec<u8>"
   },
-  "Failure": {
+  "Failed": {
     "tx_id": "Vec<u8>",
     "reason": "Vec<u8>"
   },
   "TxOut": {
     "_enum": {
-      "Initial": "MultiSigTx",
-      "Generated": "MultiSigTx",
-      "Signed": "MultiSigTx",
-      "Processing": "Processing",
-      "Success": "Vec<u8>",
-      "Fail": "Fail"
-    }
-  },
-  "TxOutV1": {
-    "_enum": {
       "Initialized": "MultiSigTx",
       "Created": "MultiSigTx",
-      "CompleteSigned": "MultiSigTx",
+      "SignComplete": "MultiSigTx",
       "Sent": "Sent",
-      "Succeeded": "Vec<u8>",
-      "Failure": "Failure"
+      "Succeeded": "Succeeded",
+      "Failed": "Failed"
     } 
   },
   "ConvertPrice": "u128",
@@ -151,8 +135,8 @@
   "TokenSymbol": {
     "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS", "IOST", "vIOST"]
   },
-  "TrxStatus": {
-    "_enum": ["Initial", "Generated", "Signed", "Processing", "Success", "Fail"]
+  "TransactionStatus": {
+    "_enum": ["Initialized", "Created", "SignComplete", "Sent", "Succeeded", "Failed"]
   },
   "Cost": "u128",
   "Income": "u128",
