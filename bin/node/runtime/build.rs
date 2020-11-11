@@ -19,7 +19,7 @@ use wasm_builder_runner::WasmBuilder;
 fn main() {
 	WasmBuilder::new()
 		.with_current_project()
-		.with_wasm_builder_from_crates("2.0.0")
+		.with_wasm_builder_from_crates("2.0.1")
 		.export_heap_base()
 		.import_memory()
 		.append_to_rust_flags("-C opt-level=z") // shrink the size of wasm binary

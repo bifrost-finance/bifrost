@@ -719,7 +719,7 @@ decl_module! {
 			let _amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= eos_amount, Error::<T>::InsufficientBalance);
 
-			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise.into()));
+			let asset_symbol = BridgeAssetSymbol::new(BlockchainType::EOS, symbol_code, T::Precision::from(symbol_precise as u32));
 			let memo = CrossTradeIndex::<T>::get(&origin).to_string().into_bytes();
 			let bridge_asset = BridgeAssetBalance {
 				symbol: asset_symbol,

@@ -76,7 +76,7 @@ decl_storage! {
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
 			// initialize all vouchers for each register
-			let mut total = 0.into();
+			let mut total = Zero::zero();
 			for (who, balance) in &config.voucher {
 				<BalancesVoucher<T>>::insert(who, balance);
 				total += *balance;
@@ -137,7 +137,7 @@ decl_module! {
 
 			for (who, _) in <BalancesVoucher<T>>::iter() {
 				<BalancesVoucher<T>>::mutate(&who, |balance| {
-					*balance = 0.into();
+					*balance = Zero::zero();
 				});
 			}
 		}

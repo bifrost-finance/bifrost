@@ -191,7 +191,7 @@ decl_module! {
 
 			let ConvertPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_symbol);
 			ensure!(token_pool.is_zero() && vtoken_pool.is_zero(), Error::<T>::NotEmptyPool);
-			ensure!(new_vtoken_pool / new_token_pool == T::Balance::from(100), Error::<T>::NotEmptyPool);
+			ensure!(new_vtoken_pool / new_token_pool == T::Balance::from(100u32), Error::<T>::NotEmptyPool);
 
 			<Pool<T>>::mutate(token_symbol, |pool| {
 				pool.token_pool = new_token_pool;
@@ -398,10 +398,10 @@ impl<T: Trait> Module<T> {
 					// update user's channels
 					if income.1 > rest {
 						income.1 -= rest;
-						rest = 0.into();
+						rest = Zero::zero();
 					} else {
 						rest -= income.1;
-						income.1 = 0.into();
+						income.1 = Zero::zero();
 					}
 
 					// update all channels
@@ -409,15 +409,15 @@ impl<T: Trait> Module<T> {
 						if let Some(b) = channels.get_mut(&income.0) {
 							if *b > all_rest {
 								*b -= all_rest;
-								all_rest = 0.into();
+								all_rest = Zero::zero();
 							} else {
 								all_rest -= *b;
-								*b = 0.into();
+								*b = Zero::zero();
 							}
 						}
 					});
 
-					if rest > 0.into() {
+					if rest > Zero::zero() {
 						continue;
 					}
 				}
