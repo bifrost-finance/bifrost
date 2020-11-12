@@ -14,12 +14,16 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{chain_spec, service, Cli, Subcommand};
-use crate::executor::Executor;
-use node_runtime::{Block, RuntimeApi};
-use sc_cli::{Result, SubstrateCli, RuntimeVersion, Role, ChainSpec};
-use sc_service::PartialComponents;
-use crate::service::new_partial;
+use crate::{Cli, Subcommand};
+use sc_cli::{Result, SubstrateCli, RuntimeVersion, ChainSpec, Role};
+use node_service::{IdentifyVariant, self as service};
+
+fn get_exec_name() -> Option<String> {
+	std::env::current_exe()
+		.ok()
+		.and_then(|pb| pb.file_name().map(|s| s.to_os_string()))
+		.and_then(|s| s.into_string().ok())
+}
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
@@ -47,20 +51,54 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+		let id = if id == "" {
+			let n = get_exec_name().unwrap_or_default();
+			["asgard", "bifrost"].iter()
+				.cloned()
+				.find(|&chain| n.starts_with(chain))
+				.unwrap_or("bifrost")
+		} else { id };
 		Ok(match id {
-			"dev" => Box::new(chain_spec::development_config()),
-			"local" => Box::new(chain_spec::local_testnet_config()),
-			"staging" => Box::new(chain_spec::staging_testnet_config()),
-			"" | "bifrost" => Box::new(chain_spec::bifrost_chainspec_config()),
-			path => Box::new(chain_spec::ChainSpec::from_json_file(
-				std::path::PathBuf::from(path),
-			)?),
+			"asgard" => Box::new(service::chain_spec::asgard_chainspec_config()),
+			"asgard-dev" => Box::new(service::chain_spec::asgard_development_config()?),
+			"asgard-local" => Box::new(service::chain_spec::asgard_local_testnet_config()?),
+			"asgard-staging" => Box::new(service::chain_spec::asgard_staging_testnet_config()),
+			"bifrost" | "" => Box::new(service::chain_spec::bifrost_chainspec_config()),
+			"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost_development_config()?),
+			"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost_local_testnet_config()?),
+			"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost_staging_testnet_config()),
+			path => {
+				let path = std::path::PathBuf::from(path);
+				Box::new(service::BifrostChainSpec::from_json_file(path)?)
+			},
 		})
 	}
 
-	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&node_runtime::VERSION
+	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		if spec.is_asgard() {
+			&service::asgard_runtime::VERSION
+		} else if spec.is_bifrost() {
+			&service::bifrost_runtime::VERSION
+		} else if spec.is_rococo() {
+			&service::rococo_runtime::VERSION
+		} else {
+			&service::bifrost_runtime::VERSION
+		}
 	}
+}
+
+fn set_default_ss58_version(spec: &Box<dyn service::ChainSpec>) {
+	use sp_core::crypto::Ss58AddressFormat;
+
+	let ss58_version = if spec.is_asgard() {
+		Ss58AddressFormat::BifrostAccount
+	} else if spec.is_bifrost() {
+		Ss58AddressFormat::BifrostAccount
+	} else {
+		Ss58AddressFormat::BifrostAccount
+	};
+
+	sp_core::crypto::set_default_ss58_version(ss58_version);
 }
 
 /// Parse command line arguments into service configuration.
@@ -72,21 +110,35 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&cli.run)?;
 			runner.run_node_until_exit(|config| async move {
 				match config.role {
-					Role::Light => service::new_light(config),
-					_ => service::new_full(config),
+					Role::Light => service::build_light(config),
+					_ => service::build_full(config),
 				}
 			})
 		}
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
 
-			runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config))
+			set_default_ss58_version(chain_spec);
+
+			runner.sync_run(|config| {
+				cmd.run::<
+					service::bifrost_runtime::Block,
+					service::bifrost_runtime::RuntimeApi,
+					service::BifrostExecutor
+				>(config)
+			})
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
+				let chain_spec = &runner.config().chain_spec;
 
-				runner.sync_run(|config| cmd.run::<Block, Executor>(config))
+				set_default_ss58_version(chain_spec);
+
+				runner.sync_run(|config| {
+					cmd.run::<service::bifrost_runtime::Block, service::BifrostExecutor>(config)
+				})
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`.".into())
@@ -102,33 +154,45 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
@@ -138,9 +202,12 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, backend, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, backend), task_manager))
 			})
 		},

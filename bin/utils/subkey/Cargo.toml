@@ -16,7 +16,7 @@ frame-system = "2.0.0"
 futures = "0.1.29"
 hex = "0.4.2"
 jsonrpc-core-client = { version = "15", features = ["http"] }
-node-runtime = { path = "../../node/runtime" }
+node-runtime = { package = "bifrost-runtime", path = "../../node/runtime/bifrost" }
 node-primitives = { path = "../../node/primitives" }
 sc-cli = "0.8.0"
 sc-rpc = "2.0.0"
