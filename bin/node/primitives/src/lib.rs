@@ -75,12 +75,18 @@ pub type Timestamp = u64;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
+
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+
 /// Block type.
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
+
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
+
+/// Index of a transaction in the chain. 32-bit should be plenty.
+pub type Nonce = u32;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
