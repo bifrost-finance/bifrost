@@ -28,10 +28,6 @@
 
 #![warn(missing_docs)]
 
-pub mod chain_spec;
-
-#[macro_use]
-mod service;
 #[cfg(feature = "browser")]
 mod browser;
 #[cfg(feature = "cli")]
@@ -45,7 +41,3 @@ pub use browser::*;
 pub use cli::*;
 #[cfg(feature = "cli")]
 pub use command::*;
-
-// replaced local crate node-primitives and node-rpc
-mod executor;
-mod rpc;

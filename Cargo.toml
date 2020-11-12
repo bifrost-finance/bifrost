@@ -3,7 +3,11 @@ members = [
 	"bin/node/cli",
 	"bin/node/inspect",
 	"bin/node/primitives",
-	"bin/node/runtime",
+	"bin/node/rpc",
+	"bin/node/runtime/asgard",
+	"bin/node/runtime/bifrost",
+	"bin/node/runtime/rococo",
+	"bin/node/service",
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
@@ -102,6 +106,7 @@ sp-runtime-interface = { git = "https://github.com/paritytech/substrate.git", re
 sp-sandbox = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
 sp-session = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
 sp-staking = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
+sp-state-machine = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
 sp-std = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
 sp-storage = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate.git", rev = "bf78c1655b7e49503a11cb070235089ea1e2455e" }
