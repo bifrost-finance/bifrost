@@ -74,7 +74,7 @@ pallet-staking = { version = "2.0.0" }
 pallet-grandpa = { version = "2.0.0" }
 
 # node-specific dependencies
-node-runtime = { path = "../runtime" }
+node-service = { path = "../service" }
 node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
@@ -158,6 +158,5 @@ cli = [
 	"substrate-build-script-utils",
 ]
 runtime-benchmarks = [
-	"node-runtime/runtime-benchmarks",
 	"frame-benchmarking-cli",
 ]
