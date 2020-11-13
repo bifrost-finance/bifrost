@@ -42,7 +42,6 @@ use sp_trie::PrefixedMemoryDB;
 pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, RuntimeApiCollection};
 pub use sp_api::{ApiRef, Core as CoreApi, ConstructRuntimeApi, ProvideRuntimeApi, StateBackend};
 pub use sc_executor::NativeExecutionDispatch;
-pub use chain_spec::{AsgardChainSpec, BifrostChainSpec, RococoChainSpec};
 
 pub use asgard_runtime;
 pub use bifrost_runtime;
@@ -100,9 +99,7 @@ type FullGrandpaBlockImport<RuntimeApi, Executor> = grandpa::GrandpaBlockImport<
 	FullBackend, Block, FullClient<RuntimeApi, Executor>, FullSelectChain
 >;
 
-// type LightClient = sc_service::TLightClient<Block, RuntimeApi, Executor>;
 type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
-
 type LightClient<RuntimeApi, Executor> =
 	sc_service::TLightClientWithBackend<Block, RuntimeApi, Executor, LightBackend>;
 
