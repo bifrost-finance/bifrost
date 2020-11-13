@@ -714,6 +714,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-rebate"
+version = "0.5.0"
+dependencies = [
+ "brml-assets",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "brml-swap"
 version = "0.5.0"
 dependencies = [
@@ -3857,6 +3873,7 @@ dependencies = [
  "brml-convert-rpc-runtime-api",
  "brml-oracle",
  "brml-proxy-validator",
+ "brml-rebate",
  "brml-swap",
  "brml-voucher",
  "frame-benchmarking",

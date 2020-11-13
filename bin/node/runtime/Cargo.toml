@@ -79,6 +79,7 @@ brml-oracle = { path = "../../../brml/oracle", default-features = false }
 brml-proxy-validator = { path = "../../../brml/proxy-validator", default-features = false }
 brml-swap = { path = "../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../brml/voucher", default-features = false }
+brml-rebate = { path = "../../../brml/rebate", default-features = false }
 chainlink = { package = "pallet-chainlink", path = "../../../brml/chainlink", default-features = false }
 node-primitives = { default-features = false, path = "../primitives" }
 
@@ -152,5 +153,6 @@ std = [
 	'brml-proxy-validator/std',
 	"brml-swap/std",
 	'brml-voucher/std',
+	'brml-rebate/std',
 	'chainlink/std',
 ]

@@ -16,6 +16,7 @@ members = [
 	"brml/proxy-validator",
 	"brml/swap",
 	"brml/voucher",
+	"brml/rebate",
 ]
 
 [profile.release]

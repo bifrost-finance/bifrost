@@ -16,32 +16,18 @@
 
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
 
-//! A list of the different weight modules for our runtime.
-
-pub mod brml_assets;
-pub mod brml_bridge_eos;
-pub mod brml_bridge_iost;
-pub mod brml_convert;
-pub mod brml_oracle;
-pub mod brml_proxy_validator;
-pub mod brml_swap;
-pub mod brml_voucher;
-pub mod brml_rebate;
-
-pub mod frame_system;
-pub mod pallet_balances;
-pub mod pallet_treasury;
-pub mod pallet_collective;
-pub mod pallet_democracy;
-pub mod pallet_identity;
-pub mod pallet_indices;
-pub mod pallet_im_online;
-pub mod pallet_multisig;
-pub mod pallet_proxy;
-pub mod pallet_scheduler;
-pub mod pallet_session;
-pub mod pallet_staking;
-pub mod pallet_timestamp;
-pub mod pallet_utility;
-pub mod pallet_vesting;
-pub mod pallet_elections_phragmen;
+use frame_support::{traits::Get, weights::Weight};
+use sp_std::marker::PhantomData;
+pub struct WeightInfo<T>(PhantomData<T>);
+impl<T: frame_system::Trait> brml_rebate::WeightInfo for WeightInfo<T> {
+    fn sum_reward() -> Weight {
+        (39_603_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn dispatch_reward() -> Weight {
+        (39_603_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+}
