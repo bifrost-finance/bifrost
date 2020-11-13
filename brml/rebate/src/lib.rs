@@ -197,7 +197,7 @@ impl<T: Trait> Module<T> {
             length = 256
         }
         for i in 0..length {
-            // TODO
+            // TODO wait wallet address
             let _rebate_money = record_vec[i].amount / sum * staking_amount;
         }
 
