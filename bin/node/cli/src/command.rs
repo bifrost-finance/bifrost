@@ -67,6 +67,10 @@ impl SubstrateCli for Cli {
 			"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost_development_config()?),
 			"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost_local_testnet_config()?),
 			"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost_staging_testnet_config()),
+			"rococo" => Box::new(service::chain_spec::rococo_chainspec_config()),
+			"rococo-dev" => Box::new(service::chain_spec::rococo_development_config()?),
+			"rococo-local" => Box::new(service::chain_spec::rococo_local_testnet_config()?),
+			"rococo-staging" => Box::new(service::chain_spec::rococo_staging_testnet_config()),
 			path => {
 				let path = std::path::PathBuf::from(path);
 				Box::new(service::BifrostChainSpec::from_json_file(path)?)
@@ -87,7 +91,7 @@ impl SubstrateCli for Cli {
 	}
 }
 
-fn set_default_ss58_version(spec: &Box<dyn service::ChainSpec>) {
+fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
 	use sp_core::crypto::Ss58AddressFormat;
 
 	let ss58_version = if spec.is_asgard() {
