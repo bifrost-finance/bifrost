@@ -59,21 +59,21 @@ impl SubstrateCli for Cli {
 				.unwrap_or("bifrost")
 		} else { id };
 		Ok(match id {
-			"asgard" => Box::new(service::chain_spec::asgard_chainspec_config()),
-			"asgard-dev" => Box::new(service::chain_spec::asgard_development_config()?),
-			"asgard-local" => Box::new(service::chain_spec::asgard_local_testnet_config()?),
-			"asgard-staging" => Box::new(service::chain_spec::asgard_staging_testnet_config()),
-			"bifrost" | "" => Box::new(service::chain_spec::bifrost_chainspec_config()),
-			"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost_development_config()?),
-			"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost_local_testnet_config()?),
-			"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost_staging_testnet_config()),
-			"rococo" => Box::new(service::chain_spec::rococo_chainspec_config()),
-			"rococo-dev" => Box::new(service::chain_spec::rococo_development_config()?),
-			"rococo-local" => Box::new(service::chain_spec::rococo_local_testnet_config()?),
-			"rococo-staging" => Box::new(service::chain_spec::rococo_staging_testnet_config()),
+			"asgard" => Box::new(service::chain_spec::asgard::chainspec_config()),
+			"asgard-dev" => Box::new(service::chain_spec::asgard::development_config()?),
+			"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config()?),
+			"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config()),
+			"bifrost" | "" => Box::new(service::chain_spec::bifrost::chainspec_config()),
+			"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost::development_config()?),
+			"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost::local_testnet_config()?),
+			"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost::staging_testnet_config()),
+			"rococo" => Box::new(service::chain_spec::rococo::chainspec_config()),
+			"rococo-dev" => Box::new(service::chain_spec::rococo::development_config()?),
+			"rococo-local" => Box::new(service::chain_spec::rococo::local_testnet_config()?),
+			"rococo-staging" => Box::new(service::chain_spec::rococo::staging_testnet_config()),
 			path => {
 				let path = std::path::PathBuf::from(path);
-				Box::new(service::BifrostChainSpec::from_json_file(path)?)
+				Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
 			},
 		})
 	}
