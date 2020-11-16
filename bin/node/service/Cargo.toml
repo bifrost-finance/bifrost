@@ -15,6 +15,7 @@ sc-chain-spec = { version = "2.0.0" }
 sc-client-api = { version = "2.0.0" }
 sc-client-db = { version = "0.8.0" }
 sc-consensus = { version = "0.8.0" }
+sc-consensus-slots = { version = "0.8.0" }
 sc-executor = { version = "0.8.0" }
 sc-network = { version = "0.8.0" }
 sc-transaction-pool = { version = "2.0.0" }
