@@ -971,6 +971,15 @@ impl brml_swap::Trait for Runtime {
 }
 // bifrost runtime end
 
+// culumus runtime start
+impl cumulus_parachain_upgrade::Trait for Runtime {
+	type Event = Event;
+	type OnValidationData = ();
+}
+
+impl parachain_info::Trait for Runtime {}
+// culumus runtime end
+
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -984,7 +993,9 @@ construct_runtime!(
 		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
 		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
+		ParachainInfo: parachain_info::{Module, Storage, Config},
 		Staking: pallet_staking::{Module, Call, Config<T>, Storage, Event<T>, ValidateUnsigned},
 		Session: pallet_session::{Module, Call, Storage, Event, Config<T>},
 		Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
@@ -1297,6 +1308,8 @@ impl_runtime_apis! {
 		}
 	}
 }
+
+cumulus_runtime::register_validate_block!(Block, Executive);
 
 #[cfg(test)]
 mod tests {
