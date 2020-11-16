@@ -42,7 +42,6 @@ use sp_trie::PrefixedMemoryDB;
 pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, RuntimeApiCollection};
 pub use sp_api::{ApiRef, Core as CoreApi, ConstructRuntimeApi, ProvideRuntimeApi, StateBackend};
 pub use sc_executor::NativeExecutionDispatch;
-pub use chain_spec::{AsgardChainSpec, BifrostChainSpec, RococoChainSpec};
 
 pub use asgard_runtime;
 pub use bifrost_runtime;
@@ -100,9 +99,7 @@ type FullGrandpaBlockImport<RuntimeApi, Executor> = grandpa::GrandpaBlockImport<
 	FullBackend, Block, FullClient<RuntimeApi, Executor>, FullSelectChain
 >;
 
-// type LightClient = sc_service::TLightClient<Block, RuntimeApi, Executor>;
 type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
-
 type LightClient<RuntimeApi, Executor> =
 	sc_service::TLightClientWithBackend<Block, RuntimeApi, Executor, LightBackend>;
 
@@ -282,6 +279,8 @@ pub fn new_full_base<RuntimeApi, Executor>(
 
 	let role = config.role.clone();
 	let force_authoring = config.force_authoring;
+	let backoff_authoring_blocks =
+		Some(sc_consensus_slots::BackoffAuthoringOnFinalizedHeadLagging::default());
 	let name = config.network.node_name.clone();
 	let enable_grandpa = !config.disable_grandpa;
 	let prometheus_registry = config.prometheus_registry().cloned();
@@ -325,6 +324,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			sync_oracle: network.clone(),
 			inherent_data_providers: inherent_data_providers.clone(),
 			force_authoring,
+			backoff_authoring_blocks,
 			babe_link,
 			can_author_with,
 		};
