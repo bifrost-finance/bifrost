@@ -88,6 +88,7 @@ sc-service = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43
 sc-sync-state-rpc = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }
 sc-telemetry = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }
 sc-transaction-pool = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }
+sc-tracing = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }
 sp-api = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate.git", rev = "9ec43d880823e9ad082de7e3038ac9777613fa15" }

@@ -4291,7 +4291,7 @@ dependencies = [
  "sc-service",
  "sc-sync-state-rpc",
  "sc-telemetry 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
- "sc-tracing 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sc-tracing",
  "sc-transaction-pool",
  "serde",
  "serde_json",
@@ -6294,9 +6294,6 @@ dependencies = [
  "brml-convert-rpc-runtime-api",
  "brml-swap",
  "brml-voucher",
- "cumulus-parachain-upgrade",
- "cumulus-primitives",
- "cumulus-runtime",
  "frame-benchmarking",
  "frame-executive 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
  "frame-support 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
@@ -6336,7 +6333,6 @@ dependencies = [
  "pallet-treasury",
  "pallet-utility",
  "pallet-vesting",
- "parachain-info",
  "parity-scale-codec",
  "serde",
  "sp-api 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
@@ -6668,7 +6664,7 @@ dependencies = [
  "sc-network 0.8.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
  "sc-service",
  "sc-telemetry 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
- "sc-tracing 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
+ "sc-tracing",
  "serde",
  "serde_json",
  "sp-blockchain 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
@@ -7663,7 +7659,7 @@ dependencies = [
  "sc-rpc",
  "sc-rpc-server",
  "sc-telemetry 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
- "sc-tracing 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
+ "sc-tracing",
  "sc-transaction-pool",
  "serde",
  "serde_json",
@@ -7766,26 +7762,6 @@ dependencies = [
  "take_mut",
  "void",
  "wasm-timer",
-]
-
-[[package]]
-name = "sc-tracing"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "695f005588c8b6957e56c86bc4624969a0c1a8e4e4d2f4fe0bb4039a26a10503"
-dependencies = [
- "erased-serde",
- "log",
- "parking_lot 0.10.2",
- "rustc-hash",
- "sc-telemetry 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
- "serde",
- "serde_json",
- "slog",
- "sp-tracing 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=9ec43d880823e9ad082de7e3038ac9777613fa15)",
- "tracing",
- "tracing-core",
- "tracing-subscriber",
 ]
 
 [[package]]
