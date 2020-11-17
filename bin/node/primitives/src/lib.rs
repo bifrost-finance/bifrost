@@ -82,7 +82,7 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
-#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug, Ord, PartialOrd)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
