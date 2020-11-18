@@ -110,6 +110,20 @@ brml-assets-rpc = { path = "../../../brml/assets/rpc" }
 brml-convert-rpc = { path = "../../../brml/convert/rpc" }
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 
+# Cumulus dependencies
+cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-collator = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-network = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-service = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+
+# Polkadot dependencies
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-test-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.8.0", optional = true, features = [ "wasmtime" ] }
 sc-service = { version = "0.8.0", default-features = false, features = [ "wasmtime" ] }

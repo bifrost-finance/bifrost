@@ -19,6 +19,7 @@
 //! Service implementation. Specialized wrapper over substrate service.
 
 pub mod chain_spec;
+pub mod collator;
 mod client;
 
 use std::sync::Arc;
