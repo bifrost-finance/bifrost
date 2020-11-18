@@ -488,6 +488,7 @@ dependencies = [
  "brml-bridge-iost",
  "brml-convert",
  "brml-convert-rpc-runtime-api",
+ "brml-reward",
  "brml-swap",
  "brml-voucher",
  "frame-benchmarking",
@@ -850,6 +851,21 @@ version = "0.5.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
+]
+
+[[package]]
+name = "brml-reward"
+version = "0.5.0"
+dependencies = [
+ "brml-assets",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

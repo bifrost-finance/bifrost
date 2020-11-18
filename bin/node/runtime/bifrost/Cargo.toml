@@ -77,6 +77,7 @@ brml-convert = { path = "../../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+brml-reward = { path = "../../../../brml/reward", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { version = "2.0.0", package = "substrate-wasm-builder-runner" }
@@ -146,6 +147,7 @@ std = [
 	"brml-convert-rpc-runtime-api/std",
 	"brml-swap/std",
 	'brml-voucher/std',
+	'brml-reward/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

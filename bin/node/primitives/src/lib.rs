@@ -444,3 +444,13 @@ pub mod report {
 		type GenericPublic = sp_core::sr25519::Public;
 	}
 }
+
+pub trait RewardTrait<Balance,AccountId> {
+	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: Balance, referer: AccountId);
+	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: Balance);
+}
+
+impl<A, B> RewardTrait<A, B> for () {
+	fn record_reward(_: TokenSymbol, _: A, _: B) {}
+	fn dispatch_reward(_: TokenSymbol, _: A) {}
+}
