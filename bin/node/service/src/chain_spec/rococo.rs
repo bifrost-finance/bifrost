@@ -19,6 +19,7 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
+use cumulus_primitives::ParaId;
 use node_primitives::{AccountId, TokenSymbol, ConvertPool};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
@@ -30,7 +31,7 @@ use rococo_runtime::{
 	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
 };
 use crate::chain_spec::{
-	Extensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
+	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
 	get_authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers, testnet_accounts
 };
 
@@ -38,7 +39,7 @@ const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const DEFAULT_PROTOCOL_ID: &str = "rco";
 
 /// The `ChainSpec` parametrized for the rococo runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
 pub fn config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../../res/rococo.json")[..])
@@ -58,7 +59,7 @@ fn session_keys(
 	}
 }
 
-fn staging_testnet_config_genesis() -> GenesisConfig {
+fn staging_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 	// stash, controller, session-key
 	// generated with secret:
 	// for i in 1 2 3 4 ; do for j in stash controller; do subkey inspect "$secret"/fir/$j/$i; done; done
@@ -131,22 +132,28 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 		initial_authorities,
 		root_key,
 		Some(endowed_accounts),
+		id,
 	)
 }
 
-pub fn staging_testnet_config() -> ChainSpec {
+pub fn staging_testnet_config(id: ParaId) -> ChainSpec {
 	let boot_nodes = vec![];
 	ChainSpec::from_genesis(
-		"Rococo Staging Testnet",
+		"Bifrost Rococo Staging Testnet",
 		"rococo_staging_testnet",
 		ChainType::Live,
-		staging_testnet_config_genesis,
+		move || {
+			staging_testnet_config_genesis(id)
+		},
 		boot_nodes,
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Staging telemetry url is valid; qed")),
 		None,
 		None,
-		Default::default(),
+		RelayExtensions {
+			relay_chain: "westend-dev".into(),
+			para_id: id.into(),
+		},
 	)
 }
 
@@ -162,6 +169,7 @@ pub fn testnet_genesis(
 	)>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
+	id: ParaId,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
@@ -289,36 +297,40 @@ pub fn testnet_genesis(
 		},
 		// brml_swap: initialize_swap_module(root_key),
 		brml_swap: None,
-		parachain_info: Some(ParachainInfoConfig { parachain_id: 200u32.into() }),
+		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
 	}
 }
 
-fn development_config_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
+fn development_config_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	testnet_genesis(
 		vec![get_authority_keys_from_seed("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
+		id,
 	)
 }
 
 /// Rococo development config (single validator Alice)
-pub fn development_config() -> Result<ChainSpec, String> {
+pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or("Rococo development wasm not available")?;
 
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
 		ChainType::Development,
-		move || development_config_genesis(wasm_binary),
+		move || development_config_genesis(wasm_binary, id),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
-		Default::default(),
+		RelayExtensions {
+			relay_chain: "westend-dev".into(),
+			para_id: id.into(),
+		},
 	))
 }
 
-fn local_testnet_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
+fn local_testnet_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	testnet_genesis(
 		vec![
 			get_authority_keys_from_seed("Alice"),
@@ -326,27 +338,31 @@ fn local_testnet_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
+		id,
 	)
 }
 
 /// Rococo local testnet config (multivalidator Alice + Bob)
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
+pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or("Rococo development wasm not available")?;
 
 	Ok(ChainSpec::from_genesis(
-		"Rococo Local Testnet",
+		"Bifrost Rococo Local Testnet",
 		"rococo_local_testnet",
 		ChainType::Local,
-		move || local_testnet_genesis(wasm_binary),
+		move || local_testnet_genesis(wasm_binary, id),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
-		Default::default(),
+		RelayExtensions {
+			relay_chain: "westend-dev".into(),
+			para_id: id.into(),
+		},
 	))
 }
 
-pub fn chainspec_config() -> ChainSpec {
+pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let properties = {
 		let mut props = serde_json::Map::new();
 
@@ -370,7 +386,9 @@ pub fn chainspec_config() -> ChainSpec {
 		"Bifrost Rococo Parachain",
 		"rococo_testnet",
 		ChainType::Custom("Bifrost Rococo Testnet".into()),
-		staging_testnet_config_genesis,
+		move || {
+			staging_testnet_config_genesis(id)
+		},
 		vec![
 			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
 			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWBMjifHHUZxbQaQZS9t5jMmTDtZbugAtJ8TG9RuX4umEY".parse().expect("failed to parse multiaddress."),
@@ -382,6 +400,9 @@ pub fn chainspec_config() -> ChainSpec {
 			.expect("Rococo Testnet telemetry url is valid; qed")),
 		protocol_id,
 		properties,
-		Default::default(),
+		RelayExtensions {
+			relay_chain: "westend-dev".into(),
+			para_id: id.into(),
+		},
 	)
 }

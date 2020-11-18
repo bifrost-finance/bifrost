@@ -15,25 +15,15 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::path::PathBuf;
-use sc_cli::{RunCmd, KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
-use structopt::StructOpt;
 
-/// An overarching CLI command definition.
-#[derive(Debug, StructOpt)]
-pub struct Cli {
-	/// Possible subcommand with parameters.
-	#[structopt(subcommand)]
-	pub subcommand: Option<Subcommand>,
-	#[allow(missing_docs)]
-	#[structopt(flatten)]
-	pub run: RunCmd,
-}
+use sc_cli;
+use structopt::StructOpt;
 
 /// Possible subcommands of the main binary.
 #[derive(Debug, StructOpt)]
 pub enum Subcommand {
 	/// Key management cli utilities
-	Key(KeySubcommand),
+	Key(sc_cli::KeySubcommand),
 
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
 	#[structopt(
@@ -47,13 +37,13 @@ pub enum Subcommand {
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
 	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
-	Verify(VerifyCmd),
+	Verify(sc_cli::VerifyCmd),
 
 	/// Generate a seed that provides a vanity address.
-	Vanity(VanityCmd),
+	Vanity(sc_cli::VanityCmd),
 
 	/// Sign a message, with a given (secret) key.
-	Sign(SignCmd),
+	Sign(sc_cli::SignCmd),
 
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
@@ -119,4 +109,73 @@ pub struct ExportGenesisWasmCommand {
 	/// The name of the chain for that the genesis wasm file should be exported.
 	#[structopt(long)]
 	pub chain: Option<String>,
+}
+
+#[derive(Debug, StructOpt)]
+pub struct RunCmd {
+	#[structopt(flatten)]
+	pub base: sc_cli::RunCmd,
+
+	/// Id of the parachain this collator collates for.
+	#[structopt(long)]
+	pub parachain_id: Option<u32>,
+}
+
+impl std::ops::Deref for RunCmd {
+	type Target = sc_cli::RunCmd;
+
+	fn deref(&self) -> &Self::Target {
+		&self.base
+	}
+}
+
+#[derive(Debug, StructOpt)]
+#[structopt(settings = &[
+	structopt::clap::AppSettings::GlobalVersion,
+	structopt::clap::AppSettings::ArgsNegateSubcommands,
+	structopt::clap::AppSettings::SubcommandsNegateReqs,
+])]
+pub struct Cli {
+	#[structopt(subcommand)]
+	pub subcommand: Option<Subcommand>,
+
+	#[structopt(flatten)]
+	pub run: RunCmd,
+
+	/// Run node as collator.
+	///
+	/// Note that this is the same as running with `--validator`.
+	#[structopt(long, conflicts_with = "validator")]
+	pub collator: bool,
+
+	/// Relaychain arguments
+	#[structopt(raw = true)]
+	pub relaychain_args: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct RelayChainCli {
+	/// The actual relay chain cli object.
+	pub base: polkadot_cli::RunCmd,
+
+	/// Optional chain id that should be passed to the relay chain.
+	pub chain_id: Option<String>,
+
+	/// The base path that should be used by the relay chain.
+	pub base_path: Option<PathBuf>,
+}
+
+impl RelayChainCli {
+	/// Create a new instance of `Self`.
+	pub fn new<'a>(
+		base_path: Option<PathBuf>,
+		chain_id: Option<String>,
+		relay_chain_args: impl Iterator<Item = &'a String>,
+	) -> Self {
+		Self {
+			base_path,
+			chain_id,
+			base: polkadot_cli::RunCmd::from_iter(relay_chain_args),
+		}
+	}
 }
