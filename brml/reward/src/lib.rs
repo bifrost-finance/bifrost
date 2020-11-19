@@ -19,10 +19,8 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use frame_support::{Parameter, decl_module, decl_storage};
-use node_primitives::{
-    RewardTrait, AssetTrait, TokenSymbol,
-};
-use sp_runtime::traits::{AtLeast32Bit, Member, MaybeSerializeDeserialize};
+use node_primitives::{RewardTrait, AssetTrait, TokenSymbol};
+use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
 
 mod mock;
@@ -41,6 +39,7 @@ pub trait Trait: frame_system::Trait {
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 }
 
+
 #[derive(Encode, Decode, Default, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct RewardRecord<AccountId, Balance> {
@@ -50,28 +49,23 @@ pub struct RewardRecord<AccountId, Balance> {
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Reward {
-        Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
-                           => Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(256);
+		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
+			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(512);
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-
-	}
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
 impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: T::Balance, referer: T::AccountId) {
-		// ensure vtoken is exist
-		if Reward::<T>::get(vtoken_symbol).capacity() == 0 {
-			return;
-		}
-		// Traverse
+		// Traverse (if map doesn't contains vtoken_symbol, the system will be initial)
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
 			let mut flag = true;
 			for item in vec.iter_mut() {
 				if item.account_id.eq(&referer) {
+					// Update the referer's record_amount
 					item.record_amount += convert_amount;
 					flag = false;
 					break;
@@ -87,7 +81,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 				vec.push(new_referer);
 			}
 			// Sort vec
-			vec.sort_by(|a, b| b.record_amount.partial_cmp(&a.record_amount).unwrap());
+			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
 		});
 	}
 	
@@ -110,10 +104,9 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		if length > 256 {
 			length = 256
 		}
-		for i in 0..length {
-			let account_id = &record_vec[i].account_id;
-			let reward = record_vec[i].record_amount * staking_profit / sum;
-			T::AssetTrait::asset_issue(vtoken_symbol, account_id, reward);
+		for referer in record_vec[0..length].iter() {
+			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
+			T::AssetTrait::asset_issue(vtoken_symbol, &referer.account_id, reward);
 		}
 		// Clear vec
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
