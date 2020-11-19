@@ -37,23 +37,32 @@ pub fn common() {
 	let (referer_one, referer_two) = (168 as u64, 100 as u64);
 	
 	// Add new referer
-	<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one);
+	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one) {
+		dbg!(" ====== record_reward Execute Err : \n ", e);
+	};
 	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vtoken_symbol).len());
 	dbg!("=====One vDot: 1 referer=====",<crate::Module<Test>>::vtoken_reward(vtoken_symbol));
 	
 	// Increate different referer
-	<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two);
+	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two) {
+		dbg!(" ====== record_reward Execute Err : \n ", e);
+	};
 	assert_eq!(2, crate::Reward::<Test>::get(vtoken_symbol).len());
 	dbg!("=====Two vDot: 2 referer=====", <crate::Module<Test>>::vtoken_reward(vtoken_symbol));
 	
 	// Append exist referer
-	<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one);
+	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one) {
+		dbg!(" ====== record_reward Execute Err : \n ", e);
+	};
+	
 	assert_eq!(2, <crate::Reward<Test>>::get(vtoken_symbol).len());
 	dbg!("=====Three vDot: 2 referer=====", <crate::Module<Test>>::vtoken_reward(vtoken_symbol));
 	
 	// // Different vtoken （another table）
 	let vtoken_symbol = TokenSymbol::vEOS;
-	<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one);
+	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one) {
+		dbg!(" ====== record_reward Execute Err : \n ", e);
+	};
 	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(vtoken_symbol).len());
 	dbg!("======vEos 1 referer======\n ", <crate::Module<Test>>::vtoken_reward(vtoken_symbol));
 }
@@ -76,7 +85,9 @@ fn dispatch_reward_is_be_ok() {
 		assert_eq!(0, referer_two_assets.balance);
 		
 		// Dispatch reward:
-		crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit);
+		if let Err(e) = crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit) {
+			dbg!(" ====== dispatch_reward Execute Err : \n ", e);
+		};
 		
 		// The second query asset
 		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));

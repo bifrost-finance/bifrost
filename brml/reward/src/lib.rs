@@ -18,10 +18,11 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use frame_support::{Parameter, decl_module, decl_storage};
+use frame_support::{Parameter, decl_module, decl_event, decl_error, decl_storage};
 use node_primitives::{RewardTrait, AssetTrait, TokenSymbol};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
+use sp_arithmetic::{FixedPointOperand, FixedPointNumber};
 
 mod mock;
 mod tests;
@@ -54,12 +55,29 @@ decl_storage! {
 	}
 }
 
+decl_event! {
+	pub enum Event {
+		QueryRefererAmountSuccess,
+	}
+}
+
+decl_error! {
+	pub enum Error for Module<T: Trait> {
+		/// Asset id doesn't exist
+		TokenNotExist,
+		/// No included referer
+		NoIncludedReferer
+	}
+}
+
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
 }
 
 impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
-	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: T::Balance, referer: T::AccountId) {
+	type Error = Error<T>;
+	
+	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: T::Balance, referer: T::AccountId) -> Result<(), Self::Error> {
 		// Traverse (if map doesn't contains vtoken_symbol, the system will be initial)
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
 			let mut flag = true;
@@ -83,13 +101,14 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			// Sort vec
 			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
 		});
+		Ok(())
 	}
 	
-	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: T::Balance) {
+	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: T::Balance) -> Result<(), Self::Error> {
 		// Obtain vec
 		let record_vec = Self::vtoken_reward(vtoken_symbol);
 		if record_vec.is_empty() {
-			return;
+			return Err(Error::<T>::TokenNotExist);
 		}
 		// The total statistics
 		let sum: T::Balance = {
@@ -99,6 +118,10 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 				record_vec.iter().fold(T::Balance::from(0u32), |acc, x| acc + x.record_amount)
 			}
 		};
+		// Check sum
+		if sum.eq(&T::Balance::from(0u32)) {
+			return Err(Error::<T>::NoIncludedReferer);
+		}
 		// Dispatch reward
 		let mut length = record_vec.len();
 		if length > 256 {
@@ -112,6 +135,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
 			vec.clear();
 		});
+		Ok(())
 	}
 }
 

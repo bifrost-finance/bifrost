@@ -20,7 +20,7 @@
 
 use codec::{Encode, Decode};
 use sp_runtime::{
-	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
+	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature,
 };
 use sp_std::prelude::*;
 
@@ -120,7 +120,7 @@ impl TokenSymbol {
 			_ => unimplemented!("aUSD or this token is not sopported now."),
 		}
 	}
-
+	
 	pub fn is_vtoken(&self) -> bool {
 		*self == self.paired_token().1
 	}
@@ -209,7 +209,7 @@ impl<Balance: Default + Copy> ConvertPool<Balance> {
 			..Default::default()
 		}
 	}
-
+	
 	pub fn new_round(&mut self) {
 		self.current_reward = self.pending_reward;
 		self.pending_reward = Default::default();
@@ -226,7 +226,7 @@ pub trait ClearingHandler<AssetId, AccountId, BlockNumber, Balance> {
 		prev_amount: Balance,
 		curr_amount: Balance,
 	);
-
+	
 	/// Clearing for token change
 	fn token_clearing(
 		asset_id: AssetId,
@@ -244,23 +244,23 @@ impl<A, AC, BN, B> ClearingHandler<A, AC, BN, B> for () {
 pub trait AssetTrait<AssetId, AccountId, Balance, Cost, Income> {
 	type Error;
 	fn asset_create(symbol: Vec<u8>, precision: u16) -> Result<(AssetId, Token<Balance>), Self::Error>;
-
+	
 	fn asset_issue(token_symbol: TokenSymbol, target: &AccountId, amount: Balance);
-
+	
 	fn asset_redeem(token_symbol: TokenSymbol, target: &AccountId, amount: Balance);
-
+	
 	fn asset_destroy(token_symbol: TokenSymbol, target: &AccountId, amount: Balance);
-
+	
 	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<TokenSymbol>;
-
+	
 	fn token_exists(token_symbol: TokenSymbol) -> bool;
-
+	
 	fn get_account_asset(token_symbol: TokenSymbol, target: &AccountId) -> AccountAsset<Balance, Cost, Income>;
-
+	
 	fn get_token(token_symbol: TokenSymbol) -> Token<Balance>;
-
+	
 	fn lock_asset(who: &AccountId, token_symbol: TokenSymbol, locked: Balance);
-
+	
 	fn unlock_asset(who: &AccountId, token_symbol: TokenSymbol, unlocked: Balance);
 }
 
@@ -269,24 +269,24 @@ impl<AssetId, AccountId, Balance, Cost, Income> AssetTrait<AssetId, AccountId, B
 {
 	type Error = core::convert::Infallible;
 	fn asset_create(_: Vec<u8>, _: u16) -> Result<(AssetId, Token<Balance>), Self::Error> { Ok(Default::default()) }
-
+	
 	fn asset_issue(_: TokenSymbol, _: &AccountId, _: Balance) {}
-
+	
 	fn asset_redeem(_: TokenSymbol, _: &AccountId, _: Balance) {}
-
+	
 	fn asset_destroy(_: TokenSymbol, _: &AccountId, _: Balance) {}
-
+	
 	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<TokenSymbol> { Default::default() }
-
+	
 	fn token_exists(_: TokenSymbol) -> bool { Default::default() }
-
-	fn get_account_asset(_: TokenSymbol, _: &AccountId) -> AccountAsset<Balance, Cost , Income> { Default::default() }
-
+	
+	fn get_account_asset(_: TokenSymbol, _: &AccountId) -> AccountAsset<Balance, Cost, Income> { Default::default() }
+	
 	fn get_token(_: TokenSymbol) -> Token<Balance> { Default::default() }
-
-	fn lock_asset( _: &AccountId, _: TokenSymbol, _: Balance) {}
-
-	fn unlock_asset( _: &AccountId, _: TokenSymbol, _: Balance) {}
+	
+	fn lock_asset(_: &AccountId, _: TokenSymbol, _: Balance) {}
+	
+	fn unlock_asset(_: &AccountId, _: TokenSymbol, _: Balance) {}
 }
 
 pub trait TokenPriceHandler<Price> {
@@ -379,7 +379,7 @@ impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
 /// Bridge asset from Bifrost to other blockchain
 pub trait BridgeAssetTo<AccountId, Precision, Balance> {
 	type Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>) -> Result<(), Self::Error>;
 	fn redeem(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 	fn stake(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 	fn unstake(token_symbol: TokenSymbol, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
@@ -421,23 +421,23 @@ pub mod report {
 	use super::{Signature, Verify};
 	use frame_system::offchain::AppCrypto;
 	use sp_core::crypto::{key_types, KeyTypeId};
-
+	
 	/// Key type for the reporting module. Used for reporting BABE and GRANDPA
 	/// equivocations.
 	pub const KEY_TYPE: KeyTypeId = key_types::REPORTING;
-
+	
 	mod app {
 		use sp_application_crypto::{app_crypto, sr25519};
 		app_crypto!(sr25519, super::KEY_TYPE);
 	}
-
+	
 	/// Identity of the equivocation/misbehavior reporter.
 	pub type ReporterId = app::Public;
-
+	
 	/// An `AppCrypto` type to allow submitting signed transactions using the reporting
 	/// application key as signer.
 	pub struct ReporterAppCrypto;
-
+	
 	impl AppCrypto<<Signature as Verify>::Signer, Signature> for ReporterAppCrypto {
 		type RuntimeAppPublic = ReporterId;
 		type GenericSignature = sp_core::sr25519::Signature;
@@ -445,12 +445,14 @@ pub mod report {
 	}
 }
 
-pub trait RewardTrait<Balance,AccountId> {
-	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: Balance, referer: AccountId);
-	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: Balance);
+pub trait RewardTrait<Balance, AccountId> {
+	type Error;
+	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: Balance, referer: AccountId) -> Result<(), Self::Error>;
+	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: Balance) -> Result<(), Self::Error>;
 }
 
 impl<A, B> RewardTrait<A, B> for () {
-	fn record_reward(_: TokenSymbol, _: A, _: B) {}
-	fn dispatch_reward(_: TokenSymbol, _: A) {}
+	type Error = core::convert::Infallible;
+	fn record_reward(_: TokenSymbol, _: A, _: B) -> Result<(), Self::Error> { Ok(Default::default()) }
+	fn dispatch_reward(_: TokenSymbol, _: A) -> Result<(), Self::Error> { Ok(Default::default()) }
 }
