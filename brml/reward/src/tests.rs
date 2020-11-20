@@ -20,6 +20,7 @@
 use crate::*;
 use crate::mock::*;
 use node_primitives::{TokenSymbol, RewardTrait};
+use frame_support::{assert_noop, assert_ok};
 
 #[test]
 fn record_reward_should_be_ok() {
@@ -33,38 +34,30 @@ pub fn common() {
 	let vdot_id = assets::Module::<Test>::next_asset_id();
 	let vtoken_symbol = TokenSymbol::from(vdot_id + 2);
 	assert_eq!(vtoken_symbol, TokenSymbol::vDOT);
+	// Bind value:" convert_amount、 referer_one、referer_two "
 	let convert_amount = 100 as u64;
-	let (referer_one, referer_two) = (168 as u64, 100 as u64);
+	let (referer_one, referer_two) = (11111111 as u64, 22222222 as u64);
 	
 	// Add new referer
-	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one) {
-		dbg!(" ====== record_reward Execute Err : \n ", e);
-	};
+	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
 	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vtoken_symbol).len());
-	dbg!("=====One vDot: 1 referer=====",<crate::Module<Test>>::vtoken_reward(vtoken_symbol));
+	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vtoken_symbol)[0].record_amount);
 	
 	// Increate different referer
-	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two) {
-		dbg!(" ====== record_reward Execute Err : \n ", e);
-	};
+	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two));
 	assert_eq!(2, crate::Reward::<Test>::get(vtoken_symbol).len());
-	dbg!("=====Two vDot: 2 referer=====", <crate::Module<Test>>::vtoken_reward(vtoken_symbol));
+	assert_eq!(100, crate::Reward::<Test>::get(vtoken_symbol)[1].record_amount);
 	
 	// Append exist referer
-	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one) {
-		dbg!(" ====== record_reward Execute Err : \n ", e);
-	};
-	
+	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
 	assert_eq!(2, <crate::Reward<Test>>::get(vtoken_symbol).len());
-	dbg!("=====Three vDot: 2 referer=====", <crate::Module<Test>>::vtoken_reward(vtoken_symbol));
+	assert_eq!(200, crate::Reward::<Test>::get(vtoken_symbol)[0].record_amount);
 	
-	// // Different vtoken （another table）
+	// Increate Different vtoken （another one vec）
 	let vtoken_symbol = TokenSymbol::vEOS;
-	if let Err(e) = <crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one) {
-		dbg!(" ====== record_reward Execute Err : \n ", e);
-	};
+	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
 	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(vtoken_symbol).len());
-	dbg!("======vEos 1 referer======\n ", <crate::Module<Test>>::vtoken_reward(vtoken_symbol));
+	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vtoken_symbol)[0].record_amount);
 }
 
 #[test]
@@ -76,7 +69,7 @@ fn dispatch_reward_is_be_ok() {
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (TokenSymbol::vDOT, 168 as u64, 100 as u64, 60 as u64);
+		) = (TokenSymbol::vDOT, 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
 		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
@@ -84,18 +77,22 @@ fn dispatch_reward_is_be_ok() {
 		let referer_two_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two));
 		assert_eq!(0, referer_two_assets.balance);
 		
-		// Dispatch reward:
-		if let Err(e) = crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit) {
-			dbg!(" ====== dispatch_reward Execute Err : \n ", e);
-		};
+		// Dispatch TokenSymbol::vDOT reward Success:
+		assert_ok!(crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit));
+		
+		// Dispatch TokenSymbol::vIOST reward Failure:
+		assert_noop!(
+			crate::Module::<Test>::dispatch_reward(TokenSymbol::vIOST, staking_profit),
+			Error::<Test>::RefererNotExist,
+		);
 		
 		// The second query asset
 		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
-		debug_assert_eq!(40, referer_one_assets.balance);
+		assert_eq!(40, referer_one_assets.balance);
 		let referer_two_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two));
-		debug_assert_eq!(20, referer_two_assets.balance);
+		assert_eq!(20, referer_two_assets.balance);
 		
 		// Judge vtoken table whether be clear
-		debug_assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).is_empty());
 	});
 }

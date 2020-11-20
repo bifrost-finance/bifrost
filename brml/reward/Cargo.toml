@@ -12,7 +12,6 @@ frame-system = { version = "2.0.0", default-features = false }
 serde = { version = "1.0.106", optional = true }
 sp-runtime = { version = "2.0.0", default-features = false }
 sp-core = { version = "2.0.0", default-features = false }
-sp-arithmetic = { version = "2.0.0", default-features = false }
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }

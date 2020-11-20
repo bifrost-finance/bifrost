@@ -863,7 +863,6 @@ dependencies = [
  "node-primitives",
  "parity-scale-codec",
  "serde",
- "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -4339,6 +4338,7 @@ dependencies = [
 name = "node-primitives"
 version = "0.5.0"
 dependencies = [
+ "frame-support",
  "frame-system",
  "parity-scale-codec",
  "pretty_assertions",
