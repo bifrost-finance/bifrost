@@ -39,7 +39,6 @@ pub trait Trait: frame_system::Trait {
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
 }
 
-
 #[derive(Encode, Decode, Default, Clone)]
 #[cfg_attr(feature = "std", derive(Debug))]
 pub struct RewardRecord<AccountId, Balance> {
@@ -95,6 +94,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			// Sort vec
 			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
 		});
+		
 		Ok(())
 	}
 	
@@ -104,10 +104,10 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		ensure!(!record_vec.is_empty(), Error::<T>::RefererNotExist);
 		// The total statistics
 		let sum: T::Balance = {
-			if record_vec.len() > LEN {
-				record_vec[..LEN].iter().fold(T::Balance::from(0u32), |acc, x| acc + x.record_amount)
+			if record_vec.len() >= LEN {
+				record_vec[..LEN].iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			} else {
-				record_vec.iter().fold(T::Balance::from(0u32), |acc, x| acc + x.record_amount)
+				record_vec.iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			}
 		};
 		// Dispatch reward
@@ -126,6 +126,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
 			vec.clear();
 		});
+		
 		Ok(())
 	}
 }
