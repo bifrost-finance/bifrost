@@ -139,8 +139,8 @@ fn staging_testnet_config_genesis(id: ParaId) -> GenesisConfig {
 pub fn staging_testnet_config(id: ParaId) -> ChainSpec {
 	let boot_nodes = vec![];
 	ChainSpec::from_genesis(
-		"Bifrost Rococo Staging Testnet",
-		"rococo_staging_testnet",
+		"Bifrost PC1 Staging Testnet",
+		"bifrost_pc1_staging_testnet",
 		ChainType::Live,
 		move || {
 			staging_testnet_config_genesis(id)
@@ -310,9 +310,9 @@ fn development_config_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig 
 	)
 }
 
-/// Rococo development config (single validator Alice)
+/// Bifrost PC1 development config (single validator Alice)
 pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Rococo development wasm not available")?;
+	let wasm_binary = WASM_BINARY.ok_or("Bifrost PC1 development wasm not available")?;
 
 	Ok(ChainSpec::from_genesis(
 		"Development",
@@ -342,13 +342,13 @@ fn local_testnet_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	)
 }
 
-/// Rococo local testnet config (multivalidator Alice + Bob)
+/// Bifrost PC1 local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Rococo development wasm not available")?;
+	let wasm_binary = WASM_BINARY.ok_or("Bifrost PC1 development wasm not available")?;
 
 	Ok(ChainSpec::from_genesis(
-		"Bifrost Rococo Local Testnet",
-		"rococo_local_testnet",
+		"Bifrost PC1 Local Testnet",
+		"bifrost_pc1_local_testnet",
 		ChainType::Local,
 		move || local_testnet_genesis(wasm_binary, id),
 		vec![],
@@ -383,9 +383,9 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let protocol_id = Some("rococo");
 
 	ChainSpec::from_genesis(
-		"Bifrost Rococo Parachain",
-		"rococo_testnet",
-		ChainType::Custom("Bifrost Rococo Testnet".into()),
+		"Bifrost PC1",
+		"bifrost_pc1_testnet",
+		ChainType::Custom("Bifrost PC1 Testnet".into()),
 		move || {
 			staging_testnet_config_genesis(id)
 		},
@@ -397,7 +397,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-			.expect("Rococo Testnet telemetry url is valid; qed")),
+			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),
 		protocol_id,
 		properties,
 		RelayExtensions {

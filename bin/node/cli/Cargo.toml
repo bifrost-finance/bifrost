@@ -98,7 +98,6 @@ frame-benchmarking = "2.0.0"
 # WASM-specific dependencies
 wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.7", optional = true }
-browser-utils = { package = "substrate-browser-utils", optional = true, version = "0.8.0"}
 
 # for initialize producer schedule
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
@@ -157,11 +156,6 @@ optional = true
 
 [features]
 default = [ "cli" ]
-browser = [
-	"browser-utils",
-	"wasm-bindgen",
-	"wasm-bindgen-futures",
-]
 cli = [
 	"node-inspect",
 	"sc-cli",
