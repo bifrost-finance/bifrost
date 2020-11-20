@@ -26,10 +26,9 @@ use sc_cli::{
 };
 use sc_service::{
 	config::{BasePath, PrometheusConfig},
-	PartialComponents,
 };
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::{Block as BlockT, Hash as HashT, Header as HeaderT, Zero};
+use sp_runtime::traits::{Block as BlockT};
 
 use node_primitives::Block;
 use node_service::{self as service, IdentifyVariant};
