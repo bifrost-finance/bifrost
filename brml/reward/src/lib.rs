@@ -18,7 +18,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use frame_support::{Parameter, decl_module, decl_error, decl_storage, dispatch::DispatchResult, dispatch::DispatchError};
+use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage, dispatch::DispatchResult};
 use node_primitives::{RewardTrait, AssetTrait, TokenSymbol};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
@@ -47,10 +47,13 @@ pub struct RewardRecord<AccountId, Balance> {
 	pub record_amount: Balance,
 }
 
+pub const CAPACITY: usize = 512;
+pub const LEN: usize = 256;
+
 decl_storage! {
 	trait Store for Module<T: Trait> as Reward {
 		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
-			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(512);
+			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
 	}
 }
 
@@ -98,21 +101,19 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: T::Balance) -> DispatchResult {
 		// Obtain vec
 		let record_vec = Self::vtoken_reward(vtoken_symbol);
-		if record_vec.is_empty() {
-			return Err(DispatchError::Module { index: 0, error: 0, message: Some("RefererNotExist") });
-		}
+		ensure!(!record_vec.is_empty(), Error::<T>::RefererNotExist);
 		// The total statistics
 		let sum: T::Balance = {
-			if record_vec.len() > 256 {
-				record_vec[..256].iter().fold(T::Balance::from(0u32), |acc, x| acc + x.record_amount)
+			if record_vec.len() > LEN {
+				record_vec[..LEN].iter().fold(T::Balance::from(0u32), |acc, x| acc + x.record_amount)
 			} else {
 				record_vec.iter().fold(T::Balance::from(0u32), |acc, x| acc + x.record_amount)
 			}
 		};
 		// Dispatch reward
 		let mut length = record_vec.len();
-		if length > 256 {
-			length = 256
+		if length > LEN {
+			length = LEN
 		}
 		for referer in record_vec[0..length].iter() {
 			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
