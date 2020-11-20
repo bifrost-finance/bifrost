@@ -16,13 +16,18 @@
 
 #![cfg(test)]
 
-use frame_support::{
-	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}
-};
-use sp_core::H256;
-use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
 use crate as swap;
+use frame_support::{
+	impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types,
+	traits::{OnFinalize, OnInitialize},
+};
+use sp_core::H256;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+	Perbill,
+};
 
 use frame_system as system;
 
@@ -47,7 +52,6 @@ impl_outer_event! {
 	}
 }
 
-
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const MaximumBlockWeight: u32 = 4 * 1024 * 1024;
@@ -56,7 +60,8 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl system::Trait for Test {  //配置各个type的类型，再加上上面定义好的常量。类型+常量
+impl system::Trait for Test {
+	//配置各个type的类型，再加上上面定义好的常量。类型+常量
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -91,14 +96,13 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 10_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: TokenSymbol = TokenSymbol::aUSD;
+	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
 	pub const InitialPoolSupply: u64 = 1_000;
 
 	pub const NumberOfSupportedTokens: u8 = 8;
 	pub const BonusClaimAgeDenominator: u64 = 14_400;
 	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
-
 
 impl crate::Trait for Test {
 	type Event = TestEvent;
@@ -153,5 +157,8 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap()
+		.into()
 }
