@@ -19,7 +19,7 @@ use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{iter::FromIterator, str::FromStr};
 use frame_support::debug;
-use iost_chain::{Action, Read, SerializeData, Tx};
+use iost_chain::{IostAction, Read, SerializeData, Tx};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
 
@@ -75,7 +75,7 @@ pub struct MultiSigTx<AccountId> {
     /// Signatures of transaction
     multi_sig: MultiSig<AccountId>,
     // IOST transaction action
-    action: Action,
+    action: IostAction,
     /// Who sends Transaction to EOS
     pub from: AccountId,
     /// token type
@@ -118,7 +118,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
         // Construct action
-        let action = Action::transfer(eos_from, eos_to, amount.as_str(), memo)
+        let action = IostAction::transfer(eos_from, eos_to, amount.as_str(), memo)
             .map_err(|_| Error::<T>::IostChainError)?;
         debug::info!(target: "bridge-iost", "++++++++++++++++++++++++ TxOut.init is called.");
 
@@ -220,13 +220,10 @@ pub(crate) mod iost_rpc {
         'h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'h', 'a', 's', 'h',
     ]; // key head_block_hash
     const GET_INFO_API: &'static str = "/getChainInfo";
-    const GET_BLOCK_API: &'static str = "/getBlockByHash";
     const PUSH_TRANSACTION_API: &'static str = "/sendTx";
 
     type ChainId = i32;
     type HeadBlockHash = String;
-    type BlockNum = u16;
-    type RefBlockPrefix = u32;
 
     pub(crate) fn get_info<T: crate::Config>(
         node_url: &str,
