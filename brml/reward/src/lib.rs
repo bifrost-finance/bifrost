@@ -99,7 +99,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 					for item in tup.1.iter_mut() {
 						if item.account_id.eq(&referer) {
 							// Update the referer's record_amount
-							item.record_amount += convert_amount;
+							item.record_amount = item.record_amount.saturating_add(convert_amount);
 							flag = false;
 							break;
 						}
@@ -168,7 +168,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		// Get tup
 		let tup = Module::<T>::vtoken_reward(vtoken_symbol);
 		ensure!(!tup.0.is_empty(), Error::<T>::RefererNotExist);
-		ensure!(!tup.0.is_empty(), Error::<T>::RefererNotExist);
+		ensure!(tup.0.contains_key(&referer), Error::<T>::RefererNotExist);
 		match tup.0.get(&referer) {
 			Some(integral) => Ok(*integral),
 			None => Err(Error::<T>::RefererNotExist)
