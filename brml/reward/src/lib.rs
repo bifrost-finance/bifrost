@@ -18,6 +18,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use alloc::collections::btree_map::BTreeMap;
 use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage, dispatch::DispatchResult};
 use node_primitives::{RewardTrait, AssetTrait, TokenSymbol};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
@@ -52,7 +53,7 @@ pub const LEN: usize = 256;
 decl_storage! {
 	trait Store for Module<T: Trait> as Reward {
 		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
-			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
+			=> (BTreeMap<T::AccountId, T::Balance>, Vec<RewardRecord<T::AccountId, T::Balance>>);
 	}
 }
 
@@ -70,63 +71,117 @@ decl_module! {
 impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 	type Error = Error<T>;
 	
-	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: T::Balance, referer: T::AccountId) -> DispatchResult {
+	fn record_integral(vtoken_symbol: TokenSymbol, convert_amount: T::Balance, referer: T::AccountId) -> DispatchResult {
 		// Traverse (if map doesn't contains vtoken_symbol, the system will be initial)
-		Reward::<T>::mutate(vtoken_symbol, |vec| {
-			let mut flag = true;
-			for item in vec.iter_mut() {
-				if item.account_id.eq(&referer) {
-					// Update the referer's record_amount
-					item.record_amount += convert_amount;
-					flag = false;
-					break;
+		Reward::<T>::mutate(vtoken_symbol, |tup| {
+			if tup.0.contains_key(&referer) {
+				if let Some(x) = tup.0.get_mut(&referer) {
+					*x += convert_amount;
 				}
+			} else {
+				tup.0.insert(referer.clone(), convert_amount);
 			}
-			if flag {
-				// Create new account
-				let new_referer = RewardRecord::<T::AccountId, T::Balance> {
-					account_id: referer,
-					record_amount: convert_amount,
-				};
-				// Append to vec
-				vec.push(new_referer);
+			match tup.0.len() {
+				// Referer amount = 256
+				LEN => {
+					// Initial capacity = 512
+					tup.1 = Vec::<RewardRecord<T::AccountId, T::Balance>>::with_capacity(CAPACITY);
+					for (key, value) in tup.0.iter() {
+						// Append new account
+						append_referer::<T>(&mut tup.1, key.clone(), value.clone());
+					}
+					// Vec sort
+					tup.1.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
+				}
+				// Referer amount > 256
+				x  if x > LEN => {
+					let mut flag = true;
+					for item in tup.1.iter_mut() {
+						if item.account_id.eq(&referer) {
+							// Update the referer's record_amount
+							item.record_amount += convert_amount;
+							flag = false;
+							break;
+						}
+					}
+					if flag {
+						append_referer::<T>(&mut tup.1, referer, convert_amount);
+					}
+					// Vec sort
+					tup.1.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
+				}
+				_ => ()
 			}
-			// Sort vec
-			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
 		});
 		
 		Ok(())
 	}
 	
 	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: T::Balance) -> DispatchResult {
-		// Obtain vec
-		let record_vec = Self::vtoken_reward(vtoken_symbol);
-		ensure!(!record_vec.is_empty(), Error::<T>::RefererNotExist);
+		// Obtain tup
+		let tup = Module::<T>::vtoken_reward(vtoken_symbol);
+		ensure!(!tup.0.is_empty(), Error::<T>::RefererNotExist);
 		// The total statistics
-		let sum: T::Balance = {
-			if record_vec.len() >= LEN {
-				record_vec[..LEN].iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
-			} else {
-				record_vec.iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
+		let mut sum = T::Balance::from(0u32);
+		match tup.0.len() {
+			len if len <= LEN => {
+				sum = tup.0.values().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(*x))
 			}
-		};
+			len if len > LEN => {
+				sum = tup.1[..LEN].iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
+			}
+			_ => ()
+		}
 		// Dispatch reward
-		let mut length = record_vec.len();
-		if length > LEN {
-			length = LEN
-		}
-		for referer in record_vec[0..length].iter() {
-			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
-			// Check dispatch reward
-			if reward.ne(&T::Balance::from(0u32)) {
-				T::AssetTrait::asset_issue(vtoken_symbol, &referer.account_id, reward);
+		ensure!(sum.ne(&T::Balance::from(0u32)), Error::<T>::RefererNotExist);
+		match tup.0.len() {
+			len if len <= LEN => {
+				for (key, value) in tup.0.iter() {
+					let reward = value.saturating_mul(staking_profit) / sum;
+					// Check dispatch reward
+					if reward.ne(&T::Balance::from(0u32)) {
+						T::AssetTrait::asset_issue(vtoken_symbol, key, reward);
+					}
+				}
 			}
+			len if len > LEN => {
+				for referer in tup.1[0..LEN].iter() {
+					let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
+					// Check dispatch reward
+					if reward.ne(&T::Balance::from(0u32)) {
+						T::AssetTrait::asset_issue(vtoken_symbol, &referer.account_id, reward);
+					}
+				}
+			}
+			_ => ()
 		}
-		// Clear vec
-		Reward::<T>::mutate(vtoken_symbol, |vec| {
-			vec.clear();
+		// Clear BTreeMap and Vec
+		Reward::<T>::mutate(vtoken_symbol, |tup| {
+			tup.0.clear();
+			tup.1.clear();
 		});
 		
 		Ok(())
 	}
+	
+	fn query_integral(vtoken_symbol: TokenSymbol, referer: T::AccountId) -> Result<T::Balance, Self::Error> {
+		// Get tup
+		let tup = Module::<T>::vtoken_reward(vtoken_symbol);
+		ensure!(!tup.0.is_empty(), Error::<T>::RefererNotExist);
+		ensure!(!tup.0.is_empty(), Error::<T>::RefererNotExist);
+		match tup.0.get(&referer) {
+			Some(integral) => Ok(*integral),
+			None => Err(Error::<T>::RefererNotExist)
+		}
+	}
+}
+
+fn append_referer<T: Trait>(vec: &mut Vec<RewardRecord<T::AccountId, T::Balance>>, referer: T::AccountId, convert_amount: T::Balance) {
+	// Create new account
+	let new_referer = RewardRecord::<T::AccountId, T::Balance> {
+		account_id: referer,
+		record_amount: convert_amount,
+	};
+	// Append to vec
+	vec.push(new_referer);
 }

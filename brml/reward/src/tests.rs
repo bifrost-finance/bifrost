@@ -23,9 +23,26 @@ use node_primitives::{TokenSymbol, RewardTrait};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
-fn record_reward_should_be_ok() {
+fn record_integral_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		common();
+	});
+}
+
+#[test]
+fn query_integral_should_be_ok() {
+	new_test_ext().execute_with(|| {
+		common();
+		let (vtoken_symbol, referer_one, referer_two,_referer_three) =
+			(TokenSymbol::vDOT, 11111111 as u64, 22222222 as u64, 33333333 as u64);
+		assert_ok!(crate::Module::<Test>::query_integral(vtoken_symbol, referer_one));
+		if let Ok(integral) = crate::Module::<Test>::query_integral(vtoken_symbol, referer_one){
+			assert_eq!(100,integral);
+		};
+		assert_ok!(crate::Module::<Test>::query_integral(vtoken_symbol, referer_two));
+		if let Ok(integral) = crate::Module::<Test>::query_integral(vtoken_symbol, referer_two){
+			assert_eq!(200,integral);
+		};
 	});
 }
 
@@ -39,25 +56,25 @@ pub fn common() {
 	let (referer_one, referer_two) = (11111111 as u64, 22222222 as u64);
 	
 	// Add new referer
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
-	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vtoken_symbol).len());
-	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vtoken_symbol)[0].record_amount);
+	assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, convert_amount, referer_one));
+	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.len());
+	assert_eq!(Some(&100), crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.get(&referer_one));
 	
 	// Increate different referer
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two));
-	assert_eq!(2, crate::Reward::<Test>::get(vtoken_symbol).len());
-	assert_eq!(100, crate::Reward::<Test>::get(vtoken_symbol)[1].record_amount);
+	assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, convert_amount, referer_two));
+	assert_eq!(2, crate::Reward::<Test>::get(vtoken_symbol).0.len());
+	assert_eq!(Some(&100), crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.get(&referer_two));
 	
 	// Append exist referer
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two));
-	assert_eq!(2, <crate::Reward<Test>>::get(vtoken_symbol).len());
-	assert_eq!(200, crate::Reward::<Test>::get(vtoken_symbol)[0].record_amount);
+	assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, convert_amount, referer_two));
+	assert_eq!(2, crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.len());
+	assert_eq!(Some(&200), crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.get(&referer_two));
 	
 	// Increate Different vtoken （another one vec）
 	let vtoken_symbol = TokenSymbol::vEOS;
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
-	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(vtoken_symbol).len());
-	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vtoken_symbol)[0].record_amount);
+	assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, convert_amount, referer_one));
+	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.len());
+	assert_eq!(Some(&100), crate::Module::<Test>::vtoken_reward(vtoken_symbol).0.get(&referer_one));
 }
 
 #[test]
@@ -93,7 +110,8 @@ fn dispatch_reward_is_be_ok() {
 		assert_eq!(40, referer_two_assets.balance);
 		
 		// Judge vtoken table whether be clear
-		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).0.is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).1.is_empty());
 	});
 }
 
@@ -114,11 +132,11 @@ fn more_than_256_dispatch_reward_is_be_ok() {
 		assert_eq!(0, referer_two_assets.balance);
 		
 		// Add referer_one referer_two data
-		assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, 100, referer_one));
-		assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, 100, referer_two));
+		assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, 100, referer_one));
+		assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, 100, referer_two));
 		// Add other referer data
 		for i in 1..300 {
-			assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, 100, referer_two + i));
+			assert_ok!(<crate::Module<Test>>::record_integral(vtoken_symbol, 100, referer_two + i));
 		}
 		
 		// Dispatch TokenSymbol::vDOT reward Success:
@@ -135,6 +153,7 @@ fn more_than_256_dispatch_reward_is_be_ok() {
 		assert_eq!(0, referer_254_assets.balance);
 		
 		// Judge vtoken table whether be clear
-		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).0.is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).1.is_empty());
 	});
 }

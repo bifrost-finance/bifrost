@@ -448,12 +448,14 @@ pub mod report {
 
 pub trait RewardTrait<Balance, AccountId> {
 	type Error;
-	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: Balance, referer: AccountId) -> DispatchResult;
+	fn record_integral(vtoken_symbol: TokenSymbol, convert_amount: Balance, referer: AccountId) -> DispatchResult;
 	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: Balance) -> DispatchResult;
+	fn query_integral(vtoken_symbol: TokenSymbol, referer: AccountId) -> Result<Balance, Self::Error>;
 }
 
-impl<A, B> RewardTrait<A, B> for () {
+impl<A: Default, B> RewardTrait<A, B> for () {
 	type Error = core::convert::Infallible;
-	fn record_reward(_: TokenSymbol, _: A, _: B) -> DispatchResult { Ok(Default::default()) }
+	fn record_integral(_: TokenSymbol, _: A, _: B) -> DispatchResult { Ok(Default::default()) }
 	fn dispatch_reward(_: TokenSymbol, _: A) -> DispatchResult { Ok(Default::default()) }
+	fn query_integral(_: TokenSymbol, _: B) -> Result<A, Self::Error> { Ok(Default::default()) }
 }
