@@ -170,7 +170,7 @@ decl_storage! {
 			for i in 0..=8 {
 				// initialize token
 				let current_token = &TOKEN_LIST[i as usize];
-				let token = Token::new(current_token.0.clone(), current_token.1, 0.into());
+				let token = Token::new(current_token.0.clone(), current_token.1, Zero::zero());
 
 				let token_symbol = TokenSymbol::from(i as u32);
 				<Tokens<T>>::insert(token_symbol, token);
@@ -328,7 +328,7 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		<NextAssetId<T>>::mutate(|id| *id += One::one());
 
 		// Initial total supply is zero.
-		let total_supply: T::Balance = 0.into();
+		let total_supply: T::Balance = Zero::zero();
 
 		// Create token
 		let token = Token::new(symbol.clone(), precision, total_supply);

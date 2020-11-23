@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::path::PathBuf;
 use sc_cli::{RunCmd, KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 use structopt::StructOpt;
 
@@ -41,6 +42,10 @@ pub enum Subcommand {
 	)]
 	Inspect(node_inspect::cli::InspectCmd),
 
+	/// The custom benchmark subcommmand benchmarking runtime pallets.
+	#[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
+
 	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
 	Verify(VerifyCmd),
 
@@ -52,9 +57,6 @@ pub enum Subcommand {
 
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
-
-	/// Build a chain specification with a light client sync state.
-	BuildSyncSpec(sc_cli::BuildSyncSpecCmd),
 
 	/// Validate blocks.
 	CheckBlock(sc_cli::CheckBlockCmd),
@@ -73,4 +75,48 @@ pub enum Subcommand {
 
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
+
+	/// Export the genesis state of the parachain.
+	#[structopt(name = "export-genesis-state")]
+	ExportGenesisState(ExportGenesisStateCommand),
+
+	/// Export the genesis wasm of the parachain.
+	#[structopt(name = "export-genesis-wasm")]
+	ExportGenesisWasm(ExportGenesisWasmCommand),
+}
+
+/// Command for exporting the genesis state of the parachain
+#[derive(Debug, StructOpt)]
+pub struct ExportGenesisStateCommand {
+	/// Output file name or stdout if unspecified.
+	#[structopt(parse(from_os_str))]
+	pub output: Option<PathBuf>,
+
+	/// Id of the parachain this state is for.
+	#[structopt(long, default_value = "100")]
+	pub parachain_id: u32,
+
+	/// Write output in binary. Default is to write in hex.
+	#[structopt(short, long)]
+	pub raw: bool,
+
+	/// The name of the chain for that the genesis state should be exported.
+	#[structopt(long)]
+	pub chain: Option<String>,
+}
+
+/// Command for exporting the genesis wasm file.
+#[derive(Debug, StructOpt)]
+pub struct ExportGenesisWasmCommand {
+	/// Output file name or stdout if unspecified.
+	#[structopt(parse(from_os_str))]
+	pub output: Option<PathBuf>,
+
+	/// Write output in binary. Default is to write in hex.
+	#[structopt(short, long)]
+	pub raw: bool,
+
+	/// The name of the chain for that the genesis wasm file should be exported.
+	#[structopt(long)]
+	pub chain: Option<String>,
 }

@@ -14,12 +14,54 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{chain_spec, service, Cli, Subcommand};
-use crate::executor::Executor;
-use node_runtime::{Block, RuntimeApi};
-use sc_cli::{Result, SubstrateCli, RuntimeVersion, Role, ChainSpec};
-use sc_service::PartialComponents;
-use crate::service::{new_partial, new_full_base, NewFullBase};
+use std::io::Write;
+
+use codec::Encode;
+use sc_cli::{ChainSpec, Result, Role, RuntimeVersion, SubstrateCli};
+use sp_core::hexdisplay::HexDisplay;
+use sp_runtime::traits::{Block as BlockT, Hash as HashT, Header as HeaderT, Zero};
+
+use node_primitives::Block;
+use node_service::{self as service, IdentifyVariant};
+
+use crate::{Cli, Subcommand};
+
+fn get_exec_name() -> Option<String> {
+	std::env::current_exe()
+		.ok()
+		.and_then(|pb| pb.file_name().map(|s| s.to_os_string()))
+		.and_then(|s| s.into_string().ok())
+}
+
+fn load_spec(
+	id: &str,
+) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+	let id = if id == "" {
+		let n = get_exec_name().unwrap_or_default();
+		["asgard", "bifrost"].iter()
+			.cloned()
+			.find(|&chain| n.starts_with(chain))
+			.unwrap_or("bifrost")
+	} else { id };
+	Ok(match id {
+		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config()),
+		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config()?),
+		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config()?),
+		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config()),
+		"bifrost" | "" => Box::new(service::chain_spec::bifrost::chainspec_config()),
+		"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost::development_config()?),
+		"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost::local_testnet_config()?),
+		"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost::staging_testnet_config()),
+		"rococo" => Box::new(service::chain_spec::rococo::chainspec_config()),
+		"rococo-dev" => Box::new(service::chain_spec::rococo::development_config()?),
+		"rococo-local" => Box::new(service::chain_spec::rococo::local_testnet_config()?),
+		"rococo-staging" => Box::new(service::chain_spec::rococo::staging_testnet_config()),
+		path => {
+			let path = std::path::PathBuf::from(path);
+			Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+		}
+	})
+}
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
@@ -27,7 +69,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn impl_version() -> String {
-		env!("CARGO_PKG_VERSION").into()
+		env!("SUBSTRATE_CLI_IMPL_VERSION").into()
 	}
 
 	fn description() -> String {
@@ -47,20 +89,74 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		Ok(match id {
-			"dev" => Box::new(chain_spec::development_config()),
-			"local" => Box::new(chain_spec::local_testnet_config()),
-			"staging" => Box::new(chain_spec::staging_testnet_config()),
-			"" | "bifrost" => Box::new(chain_spec::bifrost_chainspec_config()),
-			path => Box::new(chain_spec::ChainSpec::from_json_file(
-				std::path::PathBuf::from(path),
-			)?),
-		})
+		load_spec(id)
 	}
 
-	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&node_runtime::VERSION
+	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		if spec.is_asgard() {
+			&service::asgard_runtime::VERSION
+		} else if spec.is_bifrost() {
+			&service::bifrost_runtime::VERSION
+		} else if spec.is_rococo() {
+			&service::rococo_runtime::VERSION
+		} else {
+			&service::bifrost_runtime::VERSION
+		}
 	}
+}
+
+fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
+	use sp_core::crypto::Ss58AddressFormat;
+
+	let ss58_version = if spec.is_asgard() {
+		Ss58AddressFormat::BifrostAccount
+	} else if spec.is_bifrost() {
+		Ss58AddressFormat::BifrostAccount
+	} else {
+		Ss58AddressFormat::BifrostAccount
+	};
+
+	sp_core::crypto::set_default_ss58_version(ss58_version);
+}
+
+fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
+	let mut storage = chain_spec.build_storage()?;
+
+	storage
+		.top
+		.remove(sp_core::storage::well_known_keys::CODE)
+		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
+}
+
+/// Generate the genesis state for a given ChainSpec.
+fn generate_genesis_block<Block: BlockT>(
+	chain_spec: &Box<dyn ChainSpec>,
+) -> Result<Block> {
+	let storage = chain_spec.build_storage()?;
+
+	let child_roots = storage.children_default.iter().map(|(sk, child_content)| {
+		let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+			child_content.data.clone().into_iter().collect(),
+		);
+		(sk.clone(), state_root.encode())
+	});
+	let state_root = <<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(
+		storage.top.clone().into_iter().chain(child_roots).collect(),
+	);
+
+	let extrinsics_root =
+		<<<Block as BlockT>::Header as HeaderT>::Hashing as HashT>::trie_root(Vec::new());
+
+	Ok(Block::new(
+		<<Block as BlockT>::Header as HeaderT>::new(
+			Zero::zero(),
+			extrinsics_root,
+			state_root,
+			Default::default(),
+			Default::default(),
+		),
+		Default::default(),
+	))
 }
 
 /// Parse command line arguments into service configuration.
@@ -70,15 +166,41 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		None => {
 			let runner = cli.create_runner(&cli.run)?;
-			runner.run_node_until_exit(|config| match config.role {
-				Role::Light => service::new_light(config),
-				_ => service::new_full(config),
+			runner.run_node_until_exit(|config| async move {
+				match config.role {
+					Role::Light => service::build_light(config),
+					_ => service::build_full(config),
+				}
 			})
 		}
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
 
-			runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config))
+			set_default_ss58_version(chain_spec);
+
+			runner.sync_run(|config| {
+				cmd.run::<
+					service::bifrost_runtime::Block,
+					service::bifrost_runtime::RuntimeApi,
+					service::BifrostExecutor
+				>(config)
+			})
+		}
+		Some(Subcommand::Benchmark(cmd)) => {
+			if cfg!(feature = "runtime-benchmarks") {
+				let runner = cli.create_runner(cmd)?;
+				let chain_spec = &runner.config().chain_spec;
+
+				set_default_ss58_version(chain_spec);
+
+				runner.sync_run(|config| {
+					cmd.run::<service::bifrost_runtime::Block, service::BifrostExecutor>(config)
+				})
+			} else {
+				Err("Benchmarking wasn't enabled when building the node. \
+				You can enable it with `--features runtime-benchmarks`.".into())
+			}
 		}
 		Some(Subcommand::Key(cmd)) => cmd.run(),
 		Some(Subcommand::Sign(cmd)) => cmd.run(),
@@ -88,46 +210,47 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		},
-		Some(Subcommand::BuildSyncSpec(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let chain_spec = config.chain_spec.cloned_box();
-				let network_config = config.network.clone();
-				let NewFullBase { task_manager, client, network_status_sinks, .. }
-					= new_full_base(config, |_, _| ())?;
-
-				Ok((cmd.run(chain_spec, network_config, client, network_status_sinks), task_manager))
-			})
-		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.database), task_manager))
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, import_queue, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
@@ -137,11 +260,54 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents { client, task_manager, backend, ..}
-					= new_partial(&config)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, backend), task_manager))
 			})
+		}
+		Some(Subcommand::ExportGenesisState(params)) => {
+			sc_cli::init_logger("", sc_tracing::TracingReceiver::Log, None)?;
+
+			let block: Block = generate_genesis_block(&load_spec(
+				&params.chain.clone().unwrap_or_default(),
+			)?)?;
+			let raw_header = block.header().encode();
+			let output_buf = if params.raw {
+				raw_header
+			} else {
+				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+			};
+
+			if let Some(output) = &params.output {
+				std::fs::write(output, output_buf)?;
+			} else {
+				std::io::stdout().write_all(&output_buf)?;
+			}
+
+			Ok(())
+		}
+		Some(Subcommand::ExportGenesisWasm(params)) => {
+			sc_cli::init_logger("", sc_tracing::TracingReceiver::Log, None)?;
+
+			let raw_wasm_blob =
+				extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
+			let output_buf = if params.raw {
+				raw_wasm_blob
+			} else {
+				format!("0x{:?}", HexDisplay::from(&raw_wasm_blob)).into_bytes()
+			};
+
+			if let Some(output) = &params.output {
+				std::fs::write(output, output_buf)?;
+			} else {
+				std::io::stdout().write_all(&output_buf)?;
+			}
+
+			Ok(())
 		},
 	}
 }

@@ -36,7 +36,6 @@ use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
 
-//pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol, ConvertPool};
 pub use node_primitives::{AccountId, AccountAsset, Balance, Cost, Income, Signature, TokenSymbol, ConvertPool};
 pub use node_runtime::GenesisConfig;
 

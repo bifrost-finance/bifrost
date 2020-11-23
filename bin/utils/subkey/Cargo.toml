@@ -4,13 +4,20 @@ version = "0.5.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
+[[bin]]
+path = "src/main.rs"
+name = "subkey"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
 [dependencies]
 frame-system = "2.0.0"
 futures = "0.1.29"
 hex = "0.4.2"
 jsonrpc-core-client = { version = "15", features = ["http"] }
-node-runtime = { version = "*", path = "../../node/runtime" }
-node-primitives = { version = "*", path = "../../node/primitives" }
+node-runtime = { package = "bifrost-runtime", path = "../../node/runtime/bifrost" }
+node-primitives = { path = "../../node/primitives" }
 sc-cli = "0.8.0"
 sc-rpc = "2.0.0"
 sp-core = "2.0.0"
