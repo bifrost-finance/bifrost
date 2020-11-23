@@ -22,8 +22,7 @@ use crate::mock::*;
 use crate::*;
 use fixed_point::{
     traits::FromFixed,
-    transcendental,
-    types::{extra, *},
+    types::extra,
     FixedI128,
 };
 use float_cmp::approx_eq;
@@ -698,8 +697,8 @@ fn add_single_liquidity_given_shares_in_should_work() {
             ),
             Err(DispatchError::Module {
                 index: 0,
-                error: 13,
-                message: Some("AmountBelowZero")
+                error: 5,
+                message: Some("LessThanMinimumPassedInPoolTokenShares")
             })
         );
 
