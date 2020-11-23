@@ -766,7 +766,7 @@ decl_module! {
 				let user_token_balance = T::AssetTrait::get_account_asset(token_info.token_id, &creator).balance;
 				ensure!(user_token_balance >= token_info.token_balance, Error::<T>::NotEnoughBalance);
 				// Add up the total weight
-				total_weight = total_weight + token_info.token_weight;
+				total_weight += token_info.token_weight;
 			}
 
 			// set up the new pool.
@@ -775,7 +775,7 @@ decl_module! {
 
 			let new_pool = PoolDetails::<T> {
 				owner: creator.clone(),
-				swap_fee_rate: swap_fee_rate,
+				swap_fee_rate,
 				active: false,
 			};
 
@@ -829,7 +829,7 @@ decl_module! {
 			let pool_owner = pool_details.owner;
 			ensure!(setter == pool_owner, Error::<T>::NotPoolOwner);
 
-			if new_status == false || new_status == true {
+			if !new_status || new_status {
 				Pools::<T>::mutate(pool_id, |pool_details| {
 					pool_details.active = new_status;
 				});
@@ -931,9 +931,6 @@ impl<T: Trait> Module<T> {
 			Self::convert_float(amount)?
 		};
 
-
-		println!("unclaimed_amount: {:?}", unclaimed_amount);
-
 		//get current block number update unclaimed bonus in pool.
 		let current_block_num = <frame_system::Module<T>>::block_number();
 		if UserUnclaimedBonusInPool::<T>::contains_key(&account_id, pool_id) {
@@ -961,11 +958,11 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	/// ***********************************************************************************
-	///			 user_pool_token			 not calculated bonus block number
-	///  ratio =  -----------------  *   ----------------------------------------------
-	///			   total_supply		   constant denominator for block number
-	/// ***********************************************************************************
+	/// ***********************************************************************************************************//
+	///            user_pool_token              not calculated bonus block number                                  //
+	///  ratio =  -----------------  *   ----------------------------------------------                            //
+	///              total_supply            constant denominator for block number                                 //
+	/// ***********************************************************************************************************//
 	/// calculate the un-calculated bonus and update it to the unclaimed bonus storage for the user 
 	/// whenever the liquidity share of the user changes.
 	/// This requires a user to claim bonus every (constant block number). Otherwise, the user will lose the chance.
@@ -1033,14 +1030,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	///**********************************************************************************************
-	/// calcInGivenOut																			//
-	/// aI = tokenAmountIn																		//
-	/// bO = tokenBalanceOut			   /  /	 bO	  \	(wO / wI)	  \				 //
-	/// bI = tokenBalanceIn		  bI * |  | ------------  | ^			- 1  |				//
-	/// aO = tokenAmountOut	aI =		\  \ ( bO - aO ) /				   /				 //
-	/// wI = tokenWeightIn		   --------------------------------------------				 //
-	/// wO = tokenWeightOut						  ( 1 - sF )								   //
-	/// sF = swapFee																			  //
+	/// calcInGivenOut                                                                               //
+	/// aI = tokenAmountIn                                                                           //
+	/// bO = tokenBalanceOut            /  /     bO      \    (wO / wI)     \                        //
+	/// bI = tokenBalanceIn       bI * |  | ------------  | ^           - 1  |                       //
+	/// aO = tokenAmountOut aI =        \  \ ( bO - aO ) /                   /                       //
+	/// wI = tokenWeightIn        --------------------------------------------                       //
+	/// wO = tokenWeightOut                   ( 1 - sF )                                             //
+	/// sF = swapFee                                                                                 //
 	/// **********************************************************************************************/
 	pub(crate) fn calculate_in_given_out(
 		token_balance_in: T::Balance,
@@ -1090,14 +1087,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	///**********************************************************************************************
-	/// calcOutGivenIn																			//
-	/// aO = tokenAmountOut																	   //
-	/// bO = tokenBalanceOut																	  //
-	/// bI = tokenBalanceIn			  /	  /			bI			 \	(wI / wO) \	  //
-	/// aI = tokenAmountIn	aO = bO * |  1 - | --------------------------  | ^			|	 //
-	/// wI = tokenWeightIn			   \	  \ ( bI + ( aI * ( 1 - sF )) /			  /	  //
-	/// wO = tokenWeightOut																	   //
-	/// sF = swapFee																			  //
+	/// calcOutGivenIn                                                                              //
+	/// aO = tokenAmountOut                                                                         //
+	/// bO = tokenBalanceOut                                                                        //
+	/// bI = tokenBalanceIn            /      /              bI            \     (wI / wO) \        //
+	/// aI = tokenAmountIn  aO = bO * |  1 - | --------------------------  | ^             |        //
+	/// wI = tokenWeightIn             \      \ ( bI + ( aI * ( 1 - sF )) /               /         //
+	/// wO = tokenWeightOut                                                                         //
+	/// sF = swapFee                                                                                //
 	///**********************************************************************************************/
 	pub(crate) fn calculate_out_given_in(
 		token_balance_in: T::Balance,
@@ -1147,14 +1144,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	///**********************************************************************************************
-	/// calcPoolOutGivenSingleIn																  //
-	/// pAo = poolAmountOut		 /											  \			  //
-	/// tAi = tokenAmountIn		///	  /	 //	wI \	  \\	   \	 wI \			 //
-	/// wI = tokenWeightIn		//| tAi *| 1 - || 1 - --  | * sF || + tBi \	--  \			//
-	/// tW = totalWeight	 pAo=||  \	  \	 \\	tW /	  //		 | ^ tW   | * pS - pS //
-	/// tBi = tokenBalanceIn	  \\  ------------------------------------- /		/			//
-	/// pS = poolSupply			\\					tBi			   /		/			 //
-	/// sF = swapFee				\											  /			  //
+	/// calcPoolOutGivenSingleIn                                                                   //
+	/// pAo = poolAmountOut      /                                              \                  //
+	/// tAi = tokenAmountIn     ///      /     //    wI \      \\       \     wI \                 //
+	/// wI = tokenWeightIn     //| tAi *| 1 - || 1 - --  | * sF || + tBi \    --  \                //
+	/// tW = totalWeight   pAo=||  \     \     \\    tW /      //         | ^ tW   | * pS - pS     //
+	/// tBi = tokenBalanceIn   \\  ------------------------------------- /        /                //
+	/// pS = poolSupply         \\                    tBi               /        /                 //
+	/// sF = swapFee             \                                              /                  //
 	///**********************************************************************************************/
 	pub(crate) fn calculate_pool_out_given_single_in(
 		token_balance_in: T::Balance,
@@ -1203,14 +1200,14 @@ impl<T: Trait> Module<T> {
 	}
 
 	///**********************************************************************************************
-	/// calcSingleInGivenPoolOut																  //
-	/// tAi = tokenAmountIn			  //(pS + pAo)\	 /	1	\\						   //
-	/// pS = poolSupply				 || ---------  | ^ | --------- || * bI - bI				//
-	/// pAo = poolAmountOut			  \\	pS	/	 \(wI / tW)//						   //
-	/// bI = balanceIn		  tAi =  --------------------------------------------			   //
-	/// wI = weightIn							  /	  wI  \								   //
-	/// tW = totalWeight						  |  1 - ----  |  * sF							//
-	/// sF = swapFee							   \	  tW  /								   //
+	/// calcSingleInGivenPoolOut                                                                  //
+	/// tAi = tokenAmountIn           //(pS + pAo)\     /    1    \\                              //
+	/// pS = poolSupply              || ---------  | ^ | --------- || * bI - bI                   //
+	/// pAo = poolAmountOut           \\    pS    /     \(wI / tW)//                              //
+	/// bI = balanceIn          tAi =  --------------------------------------------               //
+	/// wI = weightIn                             /       wI  \                                   //
+	/// tW = totalWeight                          |  1 - ----  |  * sF                            //
+	/// sF = swapFee                               \      tW  /                                   //
 	///**********************************************************************************************/
 	pub(crate) fn calculate_single_in_given_pool_out(
 		token_balance_in: T::Balance,
@@ -1262,15 +1259,15 @@ impl<T: Trait> Module<T> {
 	}
 
 	///**********************************************************************************************
-	/// calcSingleOutGivenPoolIn																  //
-	/// tAo = tokenAmountOut			/	  /											 \\   //
-	/// bO = tokenBalanceOut		   /	  // pS - (pAi * (1 - eF)) \	 /	1	\	  \\  //
-	/// pAi = poolAmountIn			| bO - || ----------------------- | ^ | --------- | * b0 || //
-	/// ps = poolSupply				\	  \\		  pS		   /	 \(wO / tW)/	  //  //
-	/// wI = tokenWeightIn	  tAo =   \	  \											 //   //
-	/// tW = totalWeight					/	 /	  wO \	   \							 //
-	/// sF = swapFee					*  | 1 - |  1 - ---- | * sF  |							//
-	///									 \	 \	  tW /	   /							 //
+	/// calcSingleOutGivenPoolIn                                                                    //
+	/// tAo = tokenAmountOut          /      /                                             \\       //
+	/// bO = tokenBalanceOut         /      // pS - (pAi * (1 - eF)) \     /    1    \      \\      //
+	/// pAi = poolAmountIn          | bO - || ----------------------- | ^ | --------- | * b0 ||     //
+	/// ps = poolSupply              \      \\          pS           /     \(wO / tW)/      //      //
+	/// wI = tokenWeightIn    tAo =   \      \                                            //        //
+	/// tW = totalWeight                    /    /      wO \       \                                //
+	/// sF = swapFee                    *  | 1 -|  1 - ---- | * sF  |                               //
+	///                                     \    \      tW /       /                                //
 	///**********************************************************************************************/
 	pub(crate) fn calculate_single_out_given_pool_in(
 		token_weight_in: T::PoolWeight,
@@ -1324,11 +1321,11 @@ impl<T: Trait> Module<T> {
 
 	///*************************************************************************************************/
 	/// calcPoolInGivenSingleOut
-	/// tAo = tokenAmountOut			/	 /							\			  \
-	/// bO = tokenBalanceOut		   /	 /  /		  tAo			 \\			  \
-	/// pAo = poolAmountOut	pAo =  | 1 - |1-| -------------------------- || ^  (wO / tW) | * ps
-	/// ps = poolSupply				\	 \  \ bO * (1-(1- wO/tW) * sF) //			  /
-	/// wO = tokenWeightOut			  \	\							/			  /
+	/// tAo = tokenAmountOut         /    /                            \               \
+	/// bO = tokenBalanceOut        /    /  /           tAo            \\              \
+	/// pAo = poolAmountOut pAo =  | 1 -|1-| -------------------------- || ^  (wO / tW) | * ps
+	/// ps = poolSupply             \    \  \ bO * (1-(1- wO/tW) * sF) //              /
+	/// wO = tokenWeightOut          \    \                            /              /
 	/// tW = totalWeight
 	/// sF = swapFee
 	///
