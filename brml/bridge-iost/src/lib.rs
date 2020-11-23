@@ -425,7 +425,7 @@ decl_module! {
             ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
 
-            let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise.into()));
+            let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise as u32));
             let bridge_asset = BridgeAssetBalance {
                 symbol: asset_symbol,
                 amount: iost_amount,
@@ -453,7 +453,7 @@ decl_module! {
             debug::info!(target: "bridge-iost", "A offchain worker processing.");
 
 
-            if now_block % T::BlockNumber::from(10) == T::BlockNumber::from(2) {
+            if now_block % T::BlockNumber::from(10u32) == T::BlockNumber::from(2u32) {
                 match Self::offchain(now_block) {
                     Ok(_) => debug::info!(target: "bridge-iost", "A offchain worker started."),
                     Err(e) => debug::error!(target: "bridge-iost", "A offchain worker got error: {:?}", e),
