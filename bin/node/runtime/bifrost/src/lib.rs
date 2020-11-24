@@ -44,7 +44,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	 AssetId, Precision, TokenSymbol, ConvertPrice, RatePerBlock
+	 AssetId, Precision, Fee, PoolId, PoolWeight, TokenSymbol, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -942,32 +942,42 @@ impl brml_bridge_iost::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const InitPoolSupply: Balance = 1000 * DOLLARS;
-	// when in a trade, trade_amount / all_amount <= 1 / 2
-	pub const MaximumSwapInRatio: Balance = 2;
-	pub const MinimumBalance: Balance = 1 * DOLLARS;
-	pub const MaximumSwapFee: Balance = 10_000; // 10%
-	pub const MinimumSwapFee: Balance = 1; // 0.0001%
-	pub const FeePrecision: Balance = DOLLARS / 10_000_000;
+	pub const MaximumSwapInRatio: u64 = 2;
+	pub const MinimumPassedInPoolTokenShares: u64 = 2;
+	pub const MinimumSwapFee: u64 = 1; // 0.001%
+	pub const MaximumSwapFee: u64 = 10_000; // 10%
+	pub const FeePrecision: u64 = 10_000;
+	pub const WeightPrecision: u64 = 100_000;
+	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const InitialPoolSupply: u64 = 1_000;
+
+	pub const NumberOfSupportedTokens: u8 = 8;
+	pub const BonusClaimAgeDenominator: u32 = 14_400;
+	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
 impl brml_swap::Trait for Runtime {
-	type Fee = Balance;
 	type Event = Event;
-	type AssetTrait = Assets;
-	type Balance = Balance;
+	type Fee = Fee;
 	type AssetId = AssetId;
+	type PoolId = PoolId;
+	type Balance = Balance;
 	type Cost = Cost;
 	type Income = Income;
-	type InvariantValue = Balance;
-	type PoolWeight = Balance;
-	type InitPoolSupply = InitPoolSupply;
+	type AssetTrait = Assets;
+	type PoolWeight = PoolWeight;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
-	type MinimumBalance = MinimumBalance;
-	type MaximumSwapFee = MaximumSwapFee;
+	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
+	type MaximumSwapFee = MaximumSwapFee;
 	type FeePrecision = FeePrecision;
-	type WeightInfo = weights::pallet_swap::WeightInfo<Runtime>;
+	type WeightPrecision = WeightPrecision;
+	type BNCAssetId = BNCAssetId;
+	type InitialPoolSupply = InitialPoolSupply;
+	type NumberOfSupportedTokens = NumberOfSupportedTokens;
+	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
+	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+
 }
 // bifrost runtime end
 
@@ -1012,7 +1022,7 @@ construct_runtime!(
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
-		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
+		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 	}
 );
