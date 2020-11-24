@@ -65,25 +65,25 @@ fn initialize_pool_for_dispatches() {
     let creator = Origin::signed(alice);
     let swap_fee_rate = 500;
 
-    let vec_node_1 = PoolCreateTokenDetails::<Test> {
+    let vec_node_1 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
         token_id: ausd_type,
         token_balance: 500,
         token_weight: 20,
     };
 
-    let vec_node_2 = PoolCreateTokenDetails::<Test> {
+    let vec_node_2 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
         token_id: dot_type,
         token_balance: 1_000,
         token_weight: 40,
     };
 
-    let vec_node_3 = PoolCreateTokenDetails::<Test> {
+    let vec_node_3 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>{
         token_id: ksm_type,
         token_balance: 400,
         token_weight: 40,
     };
 
-    let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
+    let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> =
         vec![vec_node_1, vec_node_2, vec_node_3];
     run_to_block(2); // set the block number to 2.
                      // Dispatch the create_pool call to create a new pool.
@@ -178,25 +178,25 @@ fn create_pool_should_work() {
         let creator = Origin::signed(alice);
         let swap_fee_rate = 500;
 
-        let vec_node_1 = PoolCreateTokenDetails::<Test> {
+        let vec_node_1 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
             token_id: ausd_type,
             token_balance: 500,
             token_weight: 20,
         };
 
-        let vec_node_2 = PoolCreateTokenDetails::<Test> {
+        let vec_node_2 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
             token_id: dot_type,
             token_balance: 1_000,
             token_weight: 40,
         };
 
-        let vec_node_3 = PoolCreateTokenDetails::<Test> {
+        let vec_node_3 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
             token_id: ksm_type,
             token_balance: 400,
             token_weight: 40,
         };
 
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
+        let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> =
             vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         run_to_block(2); // set the block number to 2.
 
@@ -246,7 +246,7 @@ fn create_pool_should_work() {
 
         // swap fee rate exceeds 100%.
         let swap_fee_rate = 500_000;
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
+        let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> =
             vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
@@ -259,7 +259,7 @@ fn create_pool_should_work() {
 
         // swap fee rate is below 0%.
         let swap_fee_rate = 0;
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
+        let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> =
             vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
@@ -272,7 +272,7 @@ fn create_pool_should_work() {
 
         // the length of the vector is 9, which exceeds the biggest supported token number in the pool.
         let swap_fee_rate = 1_000;
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> = vec![
+        let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> = vec![
             vec_node_1.clone(),
             vec_node_1.clone(),
             vec_node_1.clone(),
@@ -294,7 +294,7 @@ fn create_pool_should_work() {
 
         // validate the tokens used in creating a pool exist. Right now it doesn't work for the type TokenSymbol.
         // When id changes to asset id in the later version, this test should work.
-        // let vec_node_4 = PoolCreateTokenDetails::<Test> {
+        // let vec_node_4 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
         // 	token_id: TokenSymbol::from(78),
         // 	token_balance: 400,
         // 	token_weight: 40,
@@ -306,7 +306,7 @@ fn create_pool_should_work() {
         // Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
 
         // validate token amount used to create a pool must be bigger than zero.
-        let vec_node_4 = PoolCreateTokenDetails::<Test> {
+        let vec_node_4 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>{
             token_id: dot_type,
             token_balance: 0,
             token_weight: 40,
@@ -314,7 +314,7 @@ fn create_pool_should_work() {
         let swap_fee_rate = 1_000;
         assert_ok!(Assets::issue(Origin::root(), ausd_type, bob, 1_000));
         assert_ok!(Assets::issue(Origin::root(), dot_type, bob, 100));
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
+        let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> =
             vec![vec_node_1.clone(), vec_node_4.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
@@ -326,7 +326,7 @@ fn create_pool_should_work() {
         );
 
         // validate token amount used to create a pool must not exceed user's balance.
-        let vec_node_4 = PoolCreateTokenDetails::<Test> {
+        let vec_node_4 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
             token_id: dot_type,
             token_balance: 1_000,
             token_weight: 40,
@@ -334,7 +334,7 @@ fn create_pool_should_work() {
         let swap_fee_rate = 1_000;
         assert_ok!(Assets::issue(Origin::root(), ausd_type, bob, 1_000));
         assert_ok!(Assets::issue(Origin::root(), dot_type, bob, 100));
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
+        let token_for_pool_vec: Vec<PoolCreateTokenDetails<<Test as Trait>::Balance, <Test as Trait>::PoolWeight>> =
             vec![vec_node_1.clone(), vec_node_4.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),

@@ -44,7 +44,7 @@ use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Satura
 mod mock;
 mod tests;
 
-pub trait Trait: frame_system::Trait + Debug + Default {
+pub trait Trait: frame_system::Trait {
 	/// event
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
@@ -165,11 +165,11 @@ decl_error! {
 
 /// struct for pool details
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug, Copy)]
-pub struct PoolDetails<T: Trait> {
+pub struct PoolDetails<AccountId, Fee> {
 	///The owner of the pool, who has the privileges to set or change the parameters of the pool.
-	owner: T::AccountId,
+	owner: AccountId,
 	/// The current swap rate of the pool.
-	swap_fee_rate: T::Fee,
+	swap_fee_rate: Fee,
 	/// Pool status. If is true, users can add liquidity into or swap in the pool.
 	/// Otherwise, user operations will be prevented.
 	active: bool,
@@ -177,19 +177,19 @@ pub struct PoolDetails<T: Trait> {
 
 /// struct for pool creating token info.
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug, Copy)]
-pub struct PoolCreateTokenDetails<T: Trait> {
+pub struct PoolCreateTokenDetails<Balance, PoolWeight> {
 	/// token asset id
 	token_id: TokenSymbol,
 	/// token balance that the pool creator wants to deposit into the pool for the first time.
-	token_balance: T::Balance,
+	token_balance: Balance,
 	/// token weight that the pool creator wants to give to the token
-	token_weight: T::PoolWeight,
+	token_weight: PoolWeight,
 }
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
 		/// Pool info
-		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T>;
+		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T::AccountId, T::Fee>;
 
 		/// Token weights info for pools. Weights must be normalized at the beginning.
 		/// Sum of all the token weights for a pool must be 1 * WeightPrecision. Should be ensured when set up the pool.
@@ -253,7 +253,7 @@ decl_module! {
 		/// The user inputs a pool token share in the front end, and the front end will automatically calculate the
 		/// amount of each asset that should be provided liquidity with.
 		/// (add liquidity)(many assets) given share in => amount out
-		#[weight = weight_for::add_liquidity::<T>()]
+		#[weight = 1_000]
 		fn add_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
@@ -310,7 +310,7 @@ decl_module! {
 		/// A user adds liquidity by depositing only one kind of token.
 		/// So we need to calculate the corresponding pool token share the user should get.
 		/// (add liquidity)(single asset) given amount in => share out
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn add_single_liquidity_given_amount_in(
 			origin,
 			pool_id: T::PoolId,
@@ -364,7 +364,7 @@ decl_module! {
 		/// A user adds liquidity by depositing only one kind of token.
 		/// So we need to calculate the corresponding pool token share the user should get.
 		/// (add liquidity)(single asset) given share in => amount out
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn add_single_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
@@ -416,7 +416,7 @@ decl_module! {
 		// ****************************************************************************
 		/// User remove liquidity with only one kind of token
 		/// (remove liquidity)(single asset) given share in => amount out
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn remove_single_asset_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
@@ -468,7 +468,7 @@ decl_module! {
 		// ****************************************************************************
 		/// User remove liquidity with only one kind of token
 		/// (remove liquidity)(single asset) given amount in => shares out
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn remove_single_asset_liquidity_given_amount_in(
 			origin,
 			pool_id: T::PoolId,
@@ -523,7 +523,7 @@ decl_module! {
 		// ****************************************************************************
 		/// User removes all the tokens in the pool in proportion of his pool token shares.
 		/// (remove liquidity)(many assets) given share in => amount out
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn remove_assets_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
@@ -566,7 +566,7 @@ decl_module! {
 
 		// ****************************************************************************
 		/// User swap one token for another kind of token, given an exact amount for token-in.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn swap_exact_in(
 			origin,
 			pool_id: T::PoolId,
@@ -637,7 +637,7 @@ decl_module! {
 
 		// ****************************************************************************
 		/// User swap one token for another kind of token, given an exact amount for token-out.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		fn swap_exact_out(
 			origin,
 			pool_id: T::PoolId,
@@ -709,7 +709,7 @@ decl_module! {
 		}
 
 		/// User claims bonus from only one pool
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		pub fn claim_bonus(
 			origin,
 			pool_id: T::PoolId
@@ -737,11 +737,11 @@ decl_module! {
 		/// ***  Above are the exchange functions.			  ***
 		/// ***  Below are the exchange management functions. ***
 		/// ******************************************************
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		pub fn create_pool(
 			origin,
 			swap_fee_rate: T::Fee,  // this number is an integer to avoid precision loss, should be divided by fee precision constant when used.
-			token_for_pool_vec: Vec<PoolCreateTokenDetails<T>>,
+			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::Balance, T::PoolWeight>>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
 
@@ -773,7 +773,7 @@ decl_module! {
 			// get the current length of the pool map
 			let new_pool_id: T::PoolId = T::PoolId::from(Pools::<T>::iter().count() as u32);
 
-			let new_pool = PoolDetails::<T> {
+			let new_pool = PoolDetails::<T::AccountId, T::Fee> {
 				owner: creator.clone(),
 				swap_fee_rate,
 				active: false,
@@ -818,7 +818,7 @@ decl_module! {
 		}
 
 		/// set the pool status to be true or false.
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = 1_000]
 		pub fn set_pool_status(
 			origin,
 			pool_id: T::PoolId,
