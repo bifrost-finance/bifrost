@@ -283,7 +283,7 @@ decl_module! {
 				// the balance of a specific token in a pool
 				let token_pool_balance = TokenBalancesInPool::<T>::get(pool_id, token_id);
 				// the amount of the token that the user should deposit
-				let should_deposit_amount = token_pool_balance * new_pool_token / all_pool_tokens;
+				let should_deposit_amount = token_pool_balance.saturating_mul(new_pool_token) / all_pool_tokens;
 				// ensure the user has enough balances for all kinds of tokens in the pool
 				ensure!(user_token_pool_balance >= should_deposit_amount, Error::<T>::NotEnoughBalance);
 				// record the should-be-deposited amount each of the token
@@ -369,7 +369,7 @@ decl_module! {
 			origin,
 			pool_id: T::PoolId,
 			asset_id: TokenSymbol,
-			new_pool_token: T::Balance,
+			#[compact] new_pool_token: T::Balance,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
@@ -473,7 +473,7 @@ decl_module! {
 			origin,
 			pool_id: T::PoolId,
 			asset_id: TokenSymbol,
-			token_amount: T::Balance  // The number of out-token that the user want to remove liquidity with from the pool.
+			#[compact] token_amount: T::Balance  // The number of out-token that the user want to remove liquidity with from the pool.
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
 			// out-token's balance in the pool, which is the number of the specific token.
@@ -550,7 +550,7 @@ decl_module! {
 				// the balance of a specific token in a pool
 				let token_pool_balance = TokenBalancesInPool::<T>::get(pool_id, token_id);
 				// the amount of the token that the user should deposit
-				let can_withdraw_amount = token_pool_balance * pool_amount_out / all_pool_tokens;
+				let can_withdraw_amount = token_pool_balance.saturating_mul(pool_amount_out) / all_pool_tokens;
 				// issue money to user's account
 				T::AssetTrait::asset_issue(token_id, &remover, can_withdraw_amount);
 
@@ -766,7 +766,7 @@ decl_module! {
 				let user_token_balance = T::AssetTrait::get_account_asset(token_info.token_id, &creator).balance;
 				ensure!(user_token_balance >= token_info.token_balance, Error::<T>::NotEnoughBalance);
 				// Add up the total weight
-				total_weight += token_info.token_weight;
+				total_weight = total_weight.saturating_add(token_info.token_weight);
 			}
 
 			// set up the new pool.
@@ -788,7 +788,7 @@ decl_module! {
 				T::AssetTrait::asset_redeem(token_info.token_id, &creator, token_info.token_balance);
 
 				// insert TokenWeightsInPool
-				let token_normalized_weight = token_info.token_weight * T::WeightPrecision::get() / total_weight;
+				let token_normalized_weight = token_info.token_weight.saturating_mul(T::WeightPrecision::get()) / total_weight;
 				TokenWeightsInPool::<T>::insert(new_pool_id, token_info.token_id, token_normalized_weight);
 
 				// insert TokenBalancesInPool
@@ -822,7 +822,8 @@ decl_module! {
 		pub fn set_pool_status(
 			origin,
 			pool_id: T::PoolId,
-			new_status: bool) -> DispatchResult {
+			new_status: bool
+		) -> DispatchResult {
 			let setter = ensure_signed(origin)?;
 
 			let pool_details = Pools::<T>::get(pool_id);
@@ -1379,22 +1380,5 @@ impl<T: Trait> Module<T> {
 	// Query for the current bonus balance for the pool
 	pub(crate) fn get_bonus_pool_balance(_pool_id: T::PoolId) -> T::Balance {
 		T::Balance::from(1_000_000) // to get from other pallets. Not yet implemented
-	}
-}
-
-#[allow(dead_code)]
-mod weight_for {
-	use super::Trait;
-	use frame_support::{traits::Get, weights::Weight};
-
-	/// add liquidity weight
-	pub(crate) fn add_liquidity<T: Trait>() -> Weight {
-		let reads_writes = T::DbWeight::get().reads_writes(1, 1);
-		reads_writes * 1000 as Weight
-	}
-
-	/// add single liquidity
-	pub(crate) fn add_single_liquidity<T: Trait>() -> Weight {
-		todo!();
 	}
 }
