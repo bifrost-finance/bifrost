@@ -49,7 +49,6 @@ pub struct RewardRecord<AccountId, Balance> {
 
 pub const CAPACITY: usize = 512;
 pub const LEN: usize = 256;
-
 decl_storage! {
 	trait Store for Module<T: Trait> as Reward {
 		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
@@ -76,7 +75,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		Reward::<T>::mutate(vtoken_symbol, |tup| {
 			if tup.0.contains_key(&referer) {
 				if let Some(x) = tup.0.get_mut(&referer) {
-					*x += convert_amount;
+					*x = x.saturating_add(convert_amount);
 				}
 			} else {
 				tup.0.insert(referer.clone(), convert_amount);
@@ -88,7 +87,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 					tup.1 = Vec::<RewardRecord<T::AccountId, T::Balance>>::with_capacity(CAPACITY);
 					for (key, value) in tup.0.iter() {
 						// Append new account
-						append_referer::<T>(&mut tup.1, key.clone(), value.clone());
+						append_referer::<T>(&mut tup.1, key.clone(), *value);
 					}
 					// Vec sort
 					tup.1.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));

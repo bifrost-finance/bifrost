@@ -455,7 +455,30 @@ pub trait RewardTrait<Balance, AccountId> {
 
 impl<A: Default, B> RewardTrait<A, B> for () {
 	type Error = core::convert::Infallible;
-	fn record_integral(_: TokenSymbol, _: A, _: B) -> DispatchResult { Ok(Default::default()) }
-	fn dispatch_reward(_: TokenSymbol, _: A) -> DispatchResult { Ok(Default::default()) }
+	fn record_integral(_: TokenSymbol, _: A, _: B) -> DispatchResult { Ok(()) }
+	fn dispatch_reward(_: TokenSymbol, _: A) -> DispatchResult { Ok(()) }
 	fn query_integral(_: TokenSymbol, _: B) -> Result<A, Self::Error> { Ok(Default::default()) }
+}
+
+pub trait CoinTrait<AccountId,Balance> {
+	type Error;
+	fn monitor() -> DispatchResult;
+	fn calculate_bnc(generate_amount: Balance) -> DispatchResult;
+	fn coin_bnc(coiner: AccountId, coin_amount: Balance) -> DispatchResult;
+	fn issue_bnc() -> DispatchResult;
+	fn query_bnc(coiner: AccountId) -> Result<Balance, Self::Error>;
+}
+
+impl<A, B: Default> CoinTrait<A, B> for () {
+	type Error = core::convert::Infallible;
+	
+	fn monitor() -> DispatchResult { Ok(()) }
+	
+	fn calculate_bnc(_: B) -> DispatchResult { Ok(()) }
+	
+	fn coin_bnc(_: A, _: B) -> DispatchResult { Ok(()) }
+	
+	fn issue_bnc() -> DispatchResult { Ok(()) }
+	
+	fn query_bnc(_: A) -> Result<B, Self::Error> { Ok(Default::default()) }
 }

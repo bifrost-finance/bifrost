@@ -817,6 +817,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-coin"
+version = "0.5.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "brml-convert"
 version = "0.5.0"
 dependencies = [
