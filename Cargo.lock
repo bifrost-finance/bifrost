@@ -488,7 +488,7 @@ dependencies = [
  "brml-bridge-iost",
  "brml-convert",
  "brml-convert-rpc-runtime-api",
- "brml-reward",
+ "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
  "frame-benchmarking",
@@ -854,7 +854,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-reward"
+name = "brml-staking-reward"
 version = "0.5.0"
 dependencies = [
  "brml-assets",

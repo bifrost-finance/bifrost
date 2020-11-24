@@ -17,7 +17,7 @@ members = [
 	"brml/convert/rpc",
 	"brml/swap",
 	"brml/voucher",
-	"brml/reward",
+	"brml/staking-reward",
 ]
 
 [profile.release]

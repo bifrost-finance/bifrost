@@ -23,6 +23,34 @@ use node_primitives::{TokenSymbol, RewardTrait};
 use frame_support::{assert_noop, assert_ok};
 
 #[test]
+fn query_vtoken_should_be_ok() {
+	new_test_ext().execute_with(|| {
+		common();
+		let (vtoken_symbol,
+			referer_one,
+			referer_two,
+			staking_profit
+		) = (TokenSymbol::vDOT, 11111111 as u64, 22222222 as u64, 60 as u64);
+		
+		// The first query asset
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_one));
+		assert_eq!(100, referer_one_vtoken_amount);
+		let referer_two_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_two));
+		assert_eq!(200, referer_two_vtoken_amount);
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((TokenSymbol::vEOS, referer_one));
+		assert_eq!(100, referer_one_vtoken_amount);
+		
+		// Dispatch TokenSymbol::vDOT reward Success:
+		assert_ok!(crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit));
+		
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_one));
+		assert_eq!(0, referer_one_vtoken_amount);
+		let referer_two_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_two));
+		assert_eq!(0, referer_two_vtoken_amount);
+	});
+}
+
+#[test]
 fn record_reward_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		common();

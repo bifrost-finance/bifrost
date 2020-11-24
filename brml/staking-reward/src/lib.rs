@@ -51,8 +51,8 @@ pub const LEN: usize = 256;
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Reward {
-		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
-			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
+		Point get(fn query_point): map hasher(blake2_128_concat) (TokenSymbol, T::AccountId) => T::Balance;
+		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol => Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
 	}
 }
 
@@ -77,7 +77,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			for item in vec.iter_mut() {
 				if item.account_id.eq(&referer) {
 					// Update the referer's record_amount
-					item.record_amount += convert_amount;
+					item.record_amount = item.record_amount.saturating_add(convert_amount);
 					flag = false;
 					break;
 				}
@@ -85,7 +85,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			if flag {
 				// Create new account
 				let new_referer = RewardRecord::<T::AccountId, T::Balance> {
-					account_id: referer,
+					account_id: referer.clone(),
 					record_amount: convert_amount,
 				};
 				// Append to vec
@@ -93,6 +93,10 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			}
 			// Sort vec
 			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
+		});
+		
+		Point::<T>::mutate((vtoken_symbol, referer), |val| {
+			*val = val.saturating_add(convert_amount);
 		});
 		
 		Ok(())
@@ -122,8 +126,11 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 				T::AssetTrait::asset_issue(vtoken_symbol, &referer.account_id, reward);
 			}
 		}
-		// Clear vec
+		// Clear vec and point
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
+			for item in vec.iter() {
+				Point::<T>::remove((vtoken_symbol, &item.account_id));
+			}
 			vec.clear();
 		});
 		

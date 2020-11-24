@@ -909,7 +909,7 @@ impl brml_convert::Trait for Runtime {
 	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
 }
 
-impl brml_reward::Trait for Runtime {
+impl brml_staking_reward::Trait for Runtime {
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -1020,7 +1020,7 @@ construct_runtime!(
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
-		Reward: brml_reward::{Module, Storage},
+		Reward: brml_staking_reward::{Module, Storage},
 	}
 );
 
