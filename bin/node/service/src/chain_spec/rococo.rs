@@ -295,7 +295,7 @@ pub fn testnet_genesis(
 				None
 			}
 		},
-		parachain_info: Some(ParachainInfoConfig { parachain_id: 200u32.into() }),
+		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
 	}
 }
 

@@ -79,7 +79,7 @@ brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 
 [build-dependencies]
-wasm-builder-runner = { version = "2.0.0", package = "substrate-wasm-builder-runner" }
+substrate-wasm-builder = { version = "3.0.0" }
 
 [dev-dependencies]
 sp-io = { version = "2.0.0" }
