@@ -18,7 +18,7 @@ pub mod asgard;
 pub mod bifrost;
 pub mod rococo;
 
-use sc_chain_spec::ChainSpecExtension;
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
@@ -43,6 +43,23 @@ pub struct Extensions {
 	pub fork_blocks: sc_client_api::ForkBlocks<node_primitives::Block>,
 	/// Known bad block hashes.
 	pub bad_blocks: sc_client_api::BadBlocks<node_primitives::Block>,
+}
+
+/// The extensions for the [`ChainSpec`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
+#[serde(deny_unknown_fields)]
+pub struct RelayExtensions {
+	/// The relay chain of the Parachain.
+	pub relay_chain: String,
+	/// The id of the Parachain.
+	pub para_id: u32,
+}
+
+impl RelayExtensions {
+	/// Try to get the extension from the given `ChainSpec`.
+	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+		sc_chain_spec::get_extension(chain_spec.extensions())
+	}
 }
 
 /// Helper function to generate a crypto pair from seed
