@@ -754,7 +754,7 @@ decl_module! {
 			let map_iter = token_for_pool_vec.iter();
 			ensure!(map_iter.len() <= T::NumberOfSupportedTokens::get() as usize, Error::<T>::TooManyTokensToPool);
 
-			let mut total_weight = T::PoolWeight::from(0);
+			let mut total_weight: T::PoolWeight = Zero::zero();
 
 			let map_iter_1 = token_for_pool_vec.iter();
 			// ensure all the elements of the tokenForPoolMap are ok.
@@ -806,10 +806,10 @@ decl_module! {
 			let current_block_num = <frame_system::Module<T>>::block_number();
 			
 			// update UserUnclaimedBonusInPool
-			UserUnclaimedBonusInPool::<T>::insert(&creator, new_pool_id, (T::Balance::from(0), current_block_num));
+			UserUnclaimedBonusInPool::<T>::insert(&creator, new_pool_id, (T::Balance::from(0u32), current_block_num));
 
 			// create a new entry for DeductedBonusAmountInPool
-			DeductedBonusAmountInPool::<T>::insert(new_pool_id, T::Balance::from(0));
+			DeductedBonusAmountInPool::<T>::insert(new_pool_id, T::Balance::from(0u32));
 
 			// deposit pool created successfully event
 			Self::deposit_event(RawEvent::CreatePoolSuccess);
@@ -1379,6 +1379,6 @@ impl<T: Trait> Module<T> {
 	// below are the interfaces needed from other pallets.
 	// Query for the current bonus balance for the pool
 	pub(crate) fn get_bonus_pool_balance(_pool_id: T::PoolId) -> T::Balance {
-		T::Balance::from(1_000_000) // to get from other pallets. Not yet implemented
+		T::Balance::from(1_000_000_u32) // to get from other pallets. Not yet implemented
 	}
 }

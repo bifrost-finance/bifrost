@@ -24,7 +24,7 @@ mod client;
 
 use std::sync::Arc;
 use sc_consensus_babe;
-use sc_finality_grandpa::{self as grandpa, FinalityProofProvider as GrandpaFinalityProofProvider};
+use sc_finality_grandpa::{self as grandpa};
 use node_primitives::Block;
 pub use sc_service::{
 	Role, PruningMode, TransactionPoolOptions, RuntimeGenesis,
@@ -120,10 +120,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 			grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
 			sc_consensus_babe::BabeLink<Block>,
 		),
-		(
-			grandpa::SharedVoterState,
-			Arc<GrandpaFinalityProofProvider<FullBackend, Block>>,
-		),
+		grandpa::SharedVoterState,
 	)
 >, ServiceError>
 	where
@@ -162,7 +159,6 @@ pub fn new_partial<RuntimeApi, Executor>(
 		babe_link.clone(),
 		block_import.clone(),
 		Some(Box::new(justification_import)),
-		None,
 		client.clone(),
 		select_chain.clone(),
 		inherent_data_providers.clone(),
@@ -179,10 +175,10 @@ pub fn new_partial<RuntimeApi, Executor>(
 		let justification_stream = grandpa_link.justification_stream();
 		let shared_authority_set = grandpa_link.shared_authority_set().clone();
 		let shared_voter_state = grandpa::SharedVoterState::empty();
-		let finality_proof_provider =
-			GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone());
+		let rpc_setup = shared_voter_state.clone();
 
-		let rpc_setup = (shared_voter_state.clone(), finality_proof_provider.clone());
+		let finality_proof_provider =
+			grandpa::FinalityProofProvider::new_for_service(backend.clone(), client.clone());
 
 		let babe_config = babe_link.config().clone();
 		let shared_epoch_changes = babe_link.epoch_changes().clone();
@@ -257,7 +253,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 		other: (rpc_extensions_builder, import_setup, rpc_setup),
 	} = new_partial::<RuntimeApi, Executor>(&config)?;
 
-	let (shared_voter_state, finality_proof_provider) = rpc_setup;
+	let shared_voter_state = rpc_setup;
 
 	let (network, network_status_sinks, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -268,8 +264,6 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			import_queue,
 			on_demand: None,
 			block_announce_validator_builder: None,
-			finality_proof_request_builder: None,
-			finality_proof_provider: Some(finality_proof_provider.clone()),
 		})?;
 
 	if config.offchain_worker.enabled {
@@ -454,14 +448,12 @@ pub fn new_light_base<RuntimeApi, Executor>(
 		on_demand.clone(),
 	));
 
-	let grandpa_block_import = grandpa::light_block_import(
-		client.clone(), backend.clone(), &(client.clone() as Arc<_>),
-		Arc::new(on_demand.checker().clone()),
+	let (grandpa_block_import, _) = grandpa::block_import(
+		client.clone(),
+		&(client.clone() as Arc<_>),
+		select_chain.clone(),
 	)?;
-
-	let finality_proof_import = grandpa_block_import.clone();
-	let finality_proof_request_builder =
-		finality_proof_import.create_finality_proof_request_builder();
+	let justification_import = grandpa_block_import.clone();
 
 	let (babe_block_import, babe_link) = sc_consensus_babe::block_import(
 		sc_consensus_babe::Config::get_or_compute(&*client)?,
@@ -474,8 +466,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 	let import_queue = sc_consensus_babe::import_queue(
 		babe_link,
 		babe_block_import,
-		None,
-		Some(Box::new(finality_proof_import)),
+		Some(Box::new(justification_import)),
 		client.clone(),
 		select_chain.clone(),
 		inherent_data_providers.clone(),
@@ -483,9 +474,6 @@ pub fn new_light_base<RuntimeApi, Executor>(
 		config.prometheus_registry(),
 		sp_consensus::NeverCanAuthor,
 	)?;
-
-	let finality_proof_provider =
-		GrandpaFinalityProofProvider::new_for_service(backend.clone(), client.clone());
 
 	let (network, network_status_sinks, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -496,8 +484,6 @@ pub fn new_light_base<RuntimeApi, Executor>(
 			import_queue,
 			on_demand: Some(on_demand.clone()),
 			block_announce_validator_builder: None,
-			finality_proof_request_builder: Some(finality_proof_request_builder),
-			finality_proof_provider: Some(finality_proof_provider),
 		})?;
 	network_starter.start_network();
 

@@ -40,7 +40,6 @@ pallet-contracts-rpc = { git = "https://github.com/paritytech/substrate.git", br
 pallet-contracts-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-democracy = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-pallet-evm = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-identity = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-im-online = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -119,5 +118,5 @@ sp-transaction-pool = { git = "https://github.com/paritytech/substrate.git", bra
 sp-trie = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 sp-version = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
-substrate-wasm-builder-runner = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 substrate-test-runtime-client = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
