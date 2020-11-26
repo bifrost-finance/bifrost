@@ -20,7 +20,7 @@ extern crate alloc;
 use crate::transaction::TxOut;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
-use core::{convert::TryFrom, fmt::Debug, ops::Div, str::FromStr};
+use core::{convert::TryFrom, fmt::Debug, iter::FromIterator, ops::Div, str::FromStr};
 use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
@@ -33,7 +33,8 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::{Action, ActionTransfer, Read};
+use iost_chain::{ActionTransfer, IostAction, Read};
+use lite_json::{parse_json, JsonValue, Serialize};
 use node_primitives::{
     AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
     BridgeAssetTo, FetchConvertPool, TokenSymbol,
@@ -66,13 +67,27 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-    fn bridge_enable() -> Weight { Default::default() }
-    fn set_contract_accounts() -> Weight { Default::default() }
-    fn grant_crosschain_privilege() -> Weight { Default::default() }
-    fn remove_crosschain_privilege() -> Weight { Default::default() }
-    fn prove_action() -> Weight { Default::default() }
-    fn bridge_tx_report() -> Weight { Default::default() }
-    fn cross_to_iost(_: Weight) -> Weight { Default::default() }
+    fn bridge_enable() -> Weight {
+        Default::default()
+    }
+    fn set_contract_accounts() -> Weight {
+        Default::default()
+    }
+    fn grant_crosschain_privilege() -> Weight {
+        Default::default()
+    }
+    fn remove_crosschain_privilege() -> Weight {
+        Default::default()
+    }
+    fn prove_action() -> Weight {
+        Default::default()
+    }
+    fn bridge_tx_report() -> Weight {
+        Default::default()
+    }
+    fn cross_to_iost(_: Weight) -> Weight {
+        Default::default()
+    }
 }
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
@@ -198,7 +213,13 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 
     /// The units in which we record balances.
-    type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+    type Balance: Member
+        + Parameter
+        + AtLeast32Bit
+        + Default
+        + Copy
+        + MaybeSerializeDeserialize
+        + core::fmt::Display;
 
     /// The arithmetic type of asset identifier.
     type AssetId: Member
@@ -237,7 +258,7 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
     type Call: From<Call<Self>>;
 
     /// Set default weight
-    type WeightInfo : WeightInfo;
+    type WeightInfo: WeightInfo;
 }
 
 decl_module! {
@@ -294,71 +315,23 @@ decl_module! {
         #[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
         fn prove_action(
             origin,
-            action: Action,
-            // action_receipt: ActionReceipt,
-            // action_merkle_paths: Vec<Checksum256>,
-            // merkle: IncrementalMerkle,
-            // block_headers: Vec<SignedBlockHeader>,
-            // block_ids_list: Vec<Vec<Checksum256>>,
-            // trx_id: Checksum256
+            action: IostAction,
         ) -> DispatchResult {
+
             let origin = ensure_signed(origin)?;
-            // ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
             ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
             // ensure this transaction is unique, and ensure no duplicated transaction
-            // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
+            // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
             // ensure action is what we want
             // ensure!(action.action_name == "transfer", "This is an invalid action to Bifrost");
 
-            ensure!(BridgeEnable::get(), "This call is not enable now!");
-            // ensure!(
-            // 	!block_headers.is_empty(),
-            // 	"The signed block headers cannot be empty."
-            // );
-            // ensure!(
-            // 	block_ids_list.len() ==  block_headers.len(),
-            // 	"The block ids list cannot be empty."
-            // );
-            //
-            // let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
-            // ensure!(
-            // 	action_hash == action_receipt.act_digest,
-            // 	"current action hash isn't equal to act_digest from action_receipt."
-            // );
-            //
-            // let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
-            //
-            // let block_under_verification = &block_headers[0];
-            // ensure!(
-            // 	verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
-            // 	"failed to prove action."
-            // );
-            //
-            // let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
-            // // this is for testing due to there's a default producer schedule on standalone eos node.
-            // let schedule_hash = {
-            // 	if producer_schedule.version == 0 {
-            // 		ProducerSchedule::default().schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?
-            // 	} else {
-            // 		schedule_hash
-            // 	}
-            // };
-            //
-            // ensure!(
-            // 	Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-            // 	"Failed to verify blocks."
-            // );
-            //
-            // // save proves for this transaction
-            // BridgeActionReceipt::insert(&action_receipt, &action);
-            //
             Self::deposit_event(RawEvent::ProveAction);
 
             let action_transfer = Self::get_action_transfer_from_action(&action)?;
-
             let cross_account = BridgeContractAccount::get().0;
+
             // withdraw operation, Bifrost => IOST
             if cross_account == action_transfer.from.to_string().into_bytes() {
                 match Self::transaction_from_bifrost_to_iost(&action_transfer) {
@@ -406,8 +379,6 @@ decl_module! {
             memo: Vec<u8>
         ) {
             let origin = system::ensure_signed(origin)?;
-            let iost_amount = amount;
-            debug::info!(target: "bridge-iost", "A offchain worker started. {:?}", token_symbol);
             // check vtoken id exist or not
             ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
             // ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
@@ -420,15 +391,11 @@ decl_module! {
             //
             let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
             ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
-            ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-            let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-            ensure!(balance >= amount, "amount should be less than or equal to origin balance");
-
 
             let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise as u32));
             let bridge_asset = BridgeAssetBalance {
                 symbol: asset_symbol,
-                amount: iost_amount,
+                amount: amount,
                 memo,
                 from: origin.clone(),
                 token_symbol
@@ -438,7 +405,8 @@ decl_module! {
                 Ok(_) => {
                    debug::info!(target: "bridge-iost", "sent transaction to IOST node.");
                     // locked balance until trade is verified
-                   // Self::deposit_event(RawEvent::SendTransactionSuccess);
+                    T::AssetTrait::lock_asset(&origin, token_symbol, amount);
+                   Self::deposit_event(RawEvent::SendTransactionSuccess);
                 }
                 Err(e) => {
                     debug::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
@@ -555,10 +523,8 @@ decl_storage! {
 
 }
 
-impl<T: Config> Module<T> {
+impl<T: Trait> Module<T> {
     fn get_action_transfer_from_action(act: &IostAction) -> Result<ActionTransfer, Error<T>> {
-        // let action_transfer =
-        //     ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
         let data = core::str::from_utf8(&act.data).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
         let mut action_transfer: ActionTransfer = Default::default();
@@ -591,7 +557,7 @@ impl<T: Config> Module<T> {
     fn transaction_from_iost_to_bifrost(
         action_transfer: &ActionTransfer,
     ) -> Result<T::AccountId, Error<T>> {
-        // check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
+        // check memo, example like "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:IOST", the formatter: {receiver}@{chain}:{token_symbol}
         let split_memo = action_transfer
             .memo
             .as_str()
@@ -653,27 +619,43 @@ impl<T: Config> Module<T> {
         action_transfer: &ActionTransfer,
     ) -> Result<T::AccountId, Error<T>> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
+        let pending_tx_id = "".to_string();
 
         for trx in bridge_tx_outs.iter() {
             match trx {
-                // TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
-                //     let target = &multi_sig_tx.from;
-                //     let token_symbol = multi_sig_tx.token_symbol;
-                //
-                //     let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
-                //     let token_balances = action_transfer.quantity.amount as usize;
-                //     let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
-                //
-                //     if all_vtoken_balances.lt(&vtoken_balances) {
-                //         debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
-                //         return Err(Error::<T>::InsufficientBalance);
-                //     }
-                //
-                //     // the trade is verified, unlock asset
-                //     T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
-                //
-                //     return Ok(target.clone());
-                // }
+                TxOut::Processing {
+                    tx_id,
+                    multi_sig_tx,
+                } => {
+                    let tx_id = String::from_utf8(tx_id.to_vec())
+                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
+                    // if pending_tx_id.ne(tx_id.as_str()) {
+                    //     continue;
+                    // }
+                    let target = &multi_sig_tx.from;
+                    let token_symbol = multi_sig_tx.token_type;
+
+                    let all_vtoken_balances =
+                        T::AssetTrait::get_account_asset(token_symbol, &target).balance;
+
+                    // let amount = action_transfer.amount.clone();
+                    let token_balances: u128 = action_transfer
+                        .amount
+                        .parse::<u128>()
+                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
+                    let vtoken_balances = TryFrom::<u128>::try_from(token_balances)
+                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+                    if all_vtoken_balances.lt(&vtoken_balances) {
+                        debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+                        return Err(Error::<T>::InsufficientBalance);
+                    }
+
+                    // the trade is verified, unlock asset
+                    T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
+
+                    return Ok(target.clone());
+                }
                 _ => continue,
             }
         }
@@ -703,7 +685,7 @@ impl<T: Config> Module<T> {
     }
 
     /// generate transaction for transfer amount to
-    fn tx_transfer_to<P, B>(
+    fn tx_transfer_to<P, B: AtLeast32Bit + Copy + core::fmt::Display>(
         raw_to: Vec<u8>,
         bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
     ) -> Result<TxOut<T::AccountId>, Error<T>>
@@ -715,13 +697,12 @@ impl<T: Config> Module<T> {
         let memo = core::str::from_utf8(&bridge_asset.memo)
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
-        // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
-        let amount = "1";
-
+        // let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+        let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(15))) as i64;
         let tx_out = TxOut::<T::AccountId>::init(
             raw_from,
             raw_to,
-            String::from(amount),
+            amount.to_string(),
             threshold,
             &memo,
             bridge_asset.from,
