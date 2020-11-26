@@ -295,9 +295,7 @@ pub fn testnet_genesis(
 				None
 			}
 		},
-		// brml_swap: initialize_swap_module(root_key),
-		brml_swap: None,
-		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
+		parachain_info: Some(ParachainInfoConfig { parachain_id: 200u32.into() }),
 	}
 }
 

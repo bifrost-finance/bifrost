@@ -286,8 +286,6 @@ pub fn testnet_genesis(
 				None
 			}
 		},
-		// brml_swap: initialize_swap_module(root_key),
-		brml_swap: None,
 	}
 }
 

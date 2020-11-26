@@ -16,16 +16,20 @@
 
 #![cfg(test)]
 
+use super::*;
+use crate as swap;
 use frame_support::{
-	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}
+	impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types,
+	traits::{OnFinalize, OnInitialize},
 };
 use sp_core::H256;
-use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
-use super::*;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+	Perbill,
+};
 
 use frame_system as system;
-
-const DOLLARS: u64 = 1_000_000_000_000u64;
 
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
@@ -33,7 +37,7 @@ impl_outer_dispatch! {
 	}
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Test;
 
 impl_outer_origin! {
@@ -43,13 +47,9 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_swap<T>,
+		swap<T>,
 		assets<T>,
 	}
-}
-
-mod brml_swap {
-	pub use crate::Event;
 }
 
 parameter_types! {
@@ -60,7 +60,8 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl system::Trait for Test {
+	//配置各个type的类型，再加上上面定义好的常量。类型+常量
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -89,31 +90,41 @@ impl frame_system::Trait for Test {
 }
 
 parameter_types! {
-	pub const InitPoolSupply: u64 = 1000;
 	pub const MaximumSwapInRatio: u64 = 2;
-	pub const MinimumBalance: u64 = 10;
+	pub const MinimumPassedInPoolTokenShares: u64 = 2;
+	pub const MinimumSwapFee: u64 = 1; // 0.001%
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const MinimumSwapFee: u64 = 1; // 0.0001%
-	pub const FeePrecision: u64 = DOLLARS / 10_000_000;
+	pub const FeePrecision: u64 = 10_000;
+	pub const WeightPrecision: u64 = 100_000;
+	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const InitialPoolSupply: u64 = 1_000;
+
+	pub const NumberOfSupportedTokens: u8 = 8;
+	pub const BonusClaimAgeDenominator: u64 = 14_400;
+	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
 impl crate::Trait for Test {
-	type Fee = u64;
 	type Event = TestEvent;
-	type AssetTrait = Assets;
-	type Balance = u64;
+	type Fee = u64;
 	type AssetId = u32;
+	type PoolId = u32;
+	type Balance = u64;
 	type Cost = u64;
 	type Income = u64;
-	type InvariantValue = u64;
+	type AssetTrait = Assets;
 	type PoolWeight = u64;
-	type InitPoolSupply = InitPoolSupply;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
-	type MinimumBalance = MinimumBalance;
-	type MaximumSwapFee = MaximumSwapFee;
+	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
+	type MaximumSwapFee = MaximumSwapFee;
 	type FeePrecision = FeePrecision;
-	type WeightInfo = ();
+	type WeightPrecision = WeightPrecision;
+	type BNCAssetId = BNCAssetId;
+	type InitialPoolSupply = InitialPoolSupply;
+	type NumberOfSupportedTokens = NumberOfSupportedTokens;
+	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
+	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
 impl assets::Trait for Test {
@@ -129,7 +140,7 @@ impl assets::Trait for Test {
 	type WeightInfo = ();
 }
 
-pub type Swap = crate::Module<Test>;
+pub type Swap = swap::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
 
@@ -146,5 +157,8 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap()
+		.into()
 }

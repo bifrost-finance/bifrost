@@ -85,10 +85,19 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 
+/// Balancer pool swap fee.
+pub type Fee = u128;
+
+/// Balancer pool ID.
+pub type PoolId = u32;
+
+/// Balancer pool weight.
+pub type PoolWeight = u128;
+
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
 
-#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug, Ord, PartialOrd)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
