@@ -98,7 +98,6 @@ frame-benchmarking = "2.0.0"
 # WASM-specific dependencies
 wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.7", optional = true }
-browser-utils = { package = "substrate-browser-utils", optional = true, version = "0.8.0"}
 
 # for initialize producer schedule
 brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
@@ -109,6 +108,20 @@ eos-chain = { git = "https://github.com/bifrost-finance/rust-eos" }
 brml-assets-rpc = { path = "../../../brml/assets/rpc" }
 brml-convert-rpc = { path = "../../../brml/convert/rpc" }
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
+
+# Cumulus dependencies
+cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-collator = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-network = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-service = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+
+# Polkadot dependencies
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-test-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master" }
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.8.0", optional = true, features = [ "wasmtime" ] }
@@ -143,11 +156,6 @@ optional = true
 
 [features]
 default = [ "cli" ]
-browser = [
-	"browser-utils",
-	"wasm-bindgen",
-	"wasm-bindgen-futures",
-]
 cli = [
 	"node-inspect",
 	"sc-cli",
