@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2020 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -137,7 +137,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         match self {
             TxOut::Initial(mut multi_sig_tx) => {
                 // fetch info
-                let (chain_id, head_block_id) = iost_rpc::get_info(iost_node_url)?;
+                let (chain_id, _head_block_id) = iost_rpc::get_info(iost_node_url)?;
 
                 // Construct transaction
                 let time = (sp_io::offchain::timestamp().unix_millis() * 1000_000) as i64;
@@ -286,7 +286,7 @@ pub(crate) mod iost_rpc {
         node_url: &str,
         signed_trx: Vec<u8>,
     ) -> Result<Vec<u8>, Error<T>> {
-        // debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
+        debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
 
         let pending = http::Request::post(
             &format!("{}{}", node_url, PUSH_TRANSACTION_API),
@@ -306,7 +306,7 @@ pub(crate) mod iost_rpc {
     pub(crate) fn get_transaction_id<T: crate::Config>(
         trx_response: &str,
     ) -> Result<String, Error<T>> {
-        // debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
+        debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
 
         // error happens while pushing transaction to EOS node
         if !trx_response.contains("hash") && !trx_response.contains("pre_tx_receipt") {
