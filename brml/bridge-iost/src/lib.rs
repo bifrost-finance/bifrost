@@ -473,16 +473,6 @@ decl_storage! {
         /// Config to enable/disable this runtime
         BridgeEnable get(fn is_bridge_enable): bool = true;
 
-        /// Eos producer list and hash which in specific version id
-        // ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
-
-        /// Initialize a producer schedule while starting a node.
-        // InitializeSchedule get(fn producer_schedule): ProducerAuthoritySchedule;
-
-        /// Save all unique transactions
-        /// Every transaction has different action receipt, but can have the same action
-        // BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
-
         /// Current pending schedule version
         PendingScheduleVersion: VersionId;
 
@@ -502,13 +492,7 @@ decl_storage! {
             BridgeContractAccount::put(config.bridge_contract_account.clone());
 
             NotaryKeys::<T>::put(config.notary_keys.clone());
-            //
-            // let schedule = ProducerAuthoritySchedule::default();
-            // let schedule_hash = schedule.schedule_hash();
-            // assert!(schedule_hash.is_ok());
-            // ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
-            // PendingScheduleVersion::put(schedule.version);
-            //
+
             // grant privilege to sign transaction between EOS and Bifrost
             for (who, privilege) in config.cross_chain_privilege.iter() {
                 <CrossChainPrivilege<T>>::insert(who, privilege);
@@ -590,7 +574,6 @@ impl<T: Trait> Module<T> {
         // todo, vIOST or IOST, all asset will be added to IOST asset, instead of vIOST or IOST
         // but in the future, we will support both token, let user to which token he wants to get
         // according to the convert price
-        let token_symbol = TokenSymbol::IOST;
 
         // let symbol = action_transfer.quantity.symbol;
         let symbol_code = "IOST".to_string().into_bytes();
@@ -604,13 +587,15 @@ impl<T: Trait> Module<T> {
             Error::<T>::IOSTSymbolMismatch
         );
 
-        let token_balances = 100 as u128;
+        let token_balances = action_transfer
+            .amount
+            .parse::<u128>()
+            .map_err(|_| Error::<T>::ConvertBalanceError)?;
         // todo, according convert price to save as vIOST
         let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances)
             .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
-        // issue asset to target
-        T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
+        T::AssetTrait::asset_issue(token_symbol_pair.0, &target, vtoken_balances);
 
         Ok(target)
     }
@@ -750,11 +735,7 @@ impl<T: Trait> Module<T> {
                         let author = <pallet_authorship::Module<T>>::author();
                         let mut ret = bto.clone();
                         let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
-                        debug::info!("author {:?}", author);
 
-                        // if let Some(_) = Self::local_authority_keys()
-                        //     .find(|key| *key == author.clone().into())
-                        // {
                         match bto.sign::<T>(decoded_sk, account_name.as_str()) {
                             Ok(signed_bto) => {
                                 has_change.set(true);
@@ -790,7 +771,7 @@ impl<T: Trait> Module<T> {
             }).collect::<Vec<_>>();
 
         if has_change.get() {
-            // BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
+            BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
             let call = Call::bridge_tx_report(bridge_tx_outs.clone());
             match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
                 Ok(_) => {
@@ -860,5 +841,24 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<
     }
     fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
+    }
+}
+
+#[allow(deprecated)]
+impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
+    type Call = Call<T>;
+
+    fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+        if let Call::bridge_tx_report(_) = call {
+            let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+            ValidTransaction::with_tag_prefix("BridgeIost")
+                .priority(TransactionPriority::max_value())
+                .and_provides(vec![(now_block).encode()])
+                .longevity(TransactionLongevity::max_value())
+                .propagate(true)
+                .build()
+        } else {
+            InvalidTransaction::Call.into()
+        }
     }
 }
