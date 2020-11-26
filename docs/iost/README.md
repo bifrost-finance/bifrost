@@ -116,7 +116,7 @@ $ cleos get currency balance eosio.token jim
 $ cleos get currency balance eosio.token bifrostcross
 ```
 
-### Bifrost to EOS
+### Bifrost to IOST
 
 Before testing, you have to setup some necessary steps.
 
