@@ -115,10 +115,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			}
 		};
 		// Dispatch reward
-		let mut length = record_vec.len();
-		if length > LEN {
-			length = LEN
-		}
+		let length = if record_vec.len() < LEN { record_vec.len() } else { LEN };
 		for referer in record_vec[0..length].iter() {
 			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
 			// Check dispatch reward

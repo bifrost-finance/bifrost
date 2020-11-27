@@ -917,6 +917,12 @@ impl brml_staking_reward::Trait for Runtime {
 	type Income = Income;
 }
 
+
+
+impl brml_vtoken_mint::Trait for Runtime {
+	type Balance = Balance;
+}
+
 impl brml_bridge_eos::Trait for Runtime {
 	type AuthorityId = BridgeEosId;
 	type Event = Event;
@@ -1020,7 +1026,8 @@ construct_runtime!(
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
-		Reward: brml_staking_reward::{Module, Storage},
+		StakingReward: brml_staking_reward::{Module, Storage},
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Config<T>},
 	}
 );
 

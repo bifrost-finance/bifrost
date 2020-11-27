@@ -457,3 +457,19 @@ impl<A, B> RewardTrait<A, B> for () {
 	fn record_reward(_: TokenSymbol, _: A, _: B) -> DispatchResult { Ok(()) }
 	fn dispatch_reward(_: TokenSymbol, _: A) -> DispatchResult { Ok(()) }
 }
+
+pub trait MintTrait<AccountId, Balance> {
+	type Error;
+	fn generate_bnc(generate_amount: Balance) -> bool;
+	fn mint_bnc(minter: AccountId, mint_amount: Balance) -> DispatchResult;
+	fn issue_bnc() -> bool;
+	fn query_bnc(minter: AccountId) -> Result<Balance, Self::Error>;
+}
+
+impl<A, B: Default> MintTrait<A, B> for () {
+	type Error = ();
+	fn generate_bnc(_: B) -> bool { true }
+	fn mint_bnc(_: A, _: B) -> DispatchResult { Ok(()) }
+	fn issue_bnc() -> bool { true }
+	fn query_bnc(_: A) -> Result<B, Self::Error> { Ok(Default::default()) }
+}
