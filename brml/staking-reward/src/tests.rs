@@ -20,7 +20,7 @@
 use crate::*;
 use crate::mock::*;
 use node_primitives::{TokenSymbol, RewardTrait};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::assert_ok;
 
 #[test]
 fn query_vtoken_should_be_ok() {
@@ -109,10 +109,7 @@ fn dispatch_reward_is_be_ok() {
 		assert_ok!(crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit));
 		
 		// Dispatch TokenSymbol::vIOST reward Failure:
-		assert_noop!(
-			crate::Module::<Test>::dispatch_reward(TokenSymbol::vIOST, staking_profit),
-			Error::<Test>::RefererNotExist,
-		);
+		assert!(crate::Module::<Test>::dispatch_reward(TokenSymbol::vIOST, staking_profit).is_err());
 		
 		// The second query asset
 		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
