@@ -78,7 +78,7 @@ brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-ap
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
-brml-vtoken-mint = { path = "../../../../brml/vtoken_mint", default-features = false }
+brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
 
 [build-dependencies]
 wasm-builder-runner = { version = "2.0.0", package = "substrate-wasm-builder-runner" }

@@ -1,6 +1,6 @@
 [package]
 name = "brml-staking-reward"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["chw"]
 edition = "2018"
 

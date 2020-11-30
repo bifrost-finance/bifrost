@@ -18,7 +18,7 @@ members = [
 	"brml/swap",
 	"brml/voucher",
 	"brml/staking-reward",
-	"brml/vtoken_mint",
+	"brml/vtoken-mint",
 ]
 
 [profile.release]
