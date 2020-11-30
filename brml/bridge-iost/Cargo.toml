@@ -1,6 +1,6 @@
 [package]
 name = "brml-bridge-iost"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Qiannan Lyu <lvqiannan@gmail.com>"]
 edition = "2018"
 
