@@ -18,7 +18,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage, dispatch::DispatchResult};
+use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage};
 use node_primitives::{RewardTrait, AssetTrait, TokenSymbol};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
@@ -28,7 +28,13 @@ mod tests;
 
 pub trait Trait: frame_system::Trait {
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize + From<Self::BlockNumber>;
+	type Balance: Member
+		+ Parameter
+		+ AtLeast32Bit
+		+ Default
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ From<Self::BlockNumber>;
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 	/// The units in which we record costs.
@@ -52,14 +58,15 @@ pub const LEN: usize = 256;
 decl_storage! {
 	trait Store for Module<T: Trait> as Reward {
 		Point get(fn query_point): map hasher(blake2_128_concat) (TokenSymbol, T::AccountId) => T::Balance;
-		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol => Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
+		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
+			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
 	}
 }
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// No included referer
-		RefererNotExist
+		RefererNotExist,
 	}
 }
 
@@ -70,7 +77,11 @@ decl_module! {
 impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 	type Error = Error<T>;
 	
-	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: T::Balance, referer: T::AccountId) -> DispatchResult {
+	fn record_reward(
+		vtoken_symbol: TokenSymbol,
+		convert_amount: T::Balance,
+		referer: T::AccountId
+	) -> Result<(), Self::Error> {
 		// Traverse (if map doesn't contains vtoken_symbol, the system will be initial)
 		Reward::<T>::mutate(vtoken_symbol, |vec| {
 			let mut flag = true;
@@ -102,16 +113,21 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 		Ok(())
 	}
 	
-	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: T::Balance) -> DispatchResult {
+	fn dispatch_reward(
+		vtoken_symbol: TokenSymbol,
+		staking_profit: T::Balance
+	) -> Result<(), Self::Error> {
 		// Obtain vec
 		let record_vec = Self::vtoken_reward(vtoken_symbol);
 		ensure!(!record_vec.is_empty(), Error::<T>::RefererNotExist);
 		// The total statistics
 		let sum: T::Balance = {
 			if record_vec.len() >= LEN {
-				record_vec[..LEN].iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
+				record_vec[..LEN].iter()
+					.fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			} else {
-				record_vec.iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
+				record_vec.iter()
+					.fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			}
 		};
 		// Dispatch reward

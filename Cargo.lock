@@ -4318,7 +4318,6 @@ dependencies = [
 name = "node-primitives"
 version = "0.6.0"
 dependencies = [
- "frame-support",
  "frame-system",
  "parity-scale-codec",
  "pretty_assertions",
