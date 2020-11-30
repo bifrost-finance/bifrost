@@ -453,3 +453,19 @@ pub mod report {
 		type GenericPublic = sp_core::sr25519::Public;
 	}
 }
+
+pub trait MintTrait<AccountId, Balance> {
+	type Error;
+	fn generate_bnc(generate_amount: Balance) -> bool;
+	fn mint_bnc(minter: AccountId, mint_amount: Balance) -> Result<(), Self::Error>;
+	fn issue_bnc() -> bool;
+	fn query_bnc(minter: AccountId) -> Result<Balance, Self::Error>;
+}
+
+impl<A, B: Default> MintTrait<A, B> for () {
+	type Error = ();
+	fn generate_bnc(_: B) -> bool { true }
+	fn mint_bnc(_: A, _: B) -> Result<(), Self::Error> { Ok(()) }
+	fn issue_bnc() -> bool { true }
+	fn query_bnc(_: A) -> Result<B, Self::Error> { Ok(Default::default()) }
+}

@@ -17,6 +17,7 @@ members = [
 	"brml/convert/rpc",
 	"brml/swap",
 	"brml/voucher",
+	"brml/vtoken-mint",
 ]
 
 [profile.release]

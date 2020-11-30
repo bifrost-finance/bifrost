@@ -26,7 +26,7 @@ use bifrost_runtime::{
 	BridgeIostConfig, ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
-	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
+	StakerStatus, WASM_BINARY, wasm_binary_unwrap, VtokenMintConfig
 };
 use crate::chain_spec::{
 	Extensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -287,6 +287,9 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		brml_vtoken_mint: Some(VtokenMintConfig {
+			number_price: (0, 770547945200u128),
+		}),
 	}
 }
 

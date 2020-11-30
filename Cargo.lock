@@ -464,6 +464,7 @@ dependencies = [
  "brml-convert-rpc-runtime-api",
  "brml-swap",
  "brml-voucher",
+ "brml-vtoken-mint",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -837,6 +838,20 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "serde_json",
+ "sp-runtime",
+]
+
+[[package]]
+name = "brml-vtoken-mint"
+version = "0.6.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
 ]
 
