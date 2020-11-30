@@ -162,7 +162,7 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 
 [[package]]
 name = "asgard-runtime"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
@@ -454,7 +454,7 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bifrost-runtime"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
@@ -685,7 +685,7 @@ dependencies = [
 
 [[package]]
 name = "brml-assets"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -701,7 +701,7 @@ dependencies = [
 
 [[package]]
 name = "brml-assets-rpc"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets-rpc-runtime-api",
  "jsonrpc-core",
@@ -715,7 +715,7 @@ dependencies = [
 
 [[package]]
 name = "brml-assets-rpc-runtime-api"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -723,7 +723,7 @@ dependencies = [
 
 [[package]]
 name = "brml-bridge-eos"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-convert",
@@ -750,7 +750,7 @@ dependencies = [
 
 [[package]]
 name = "brml-bridge-iost"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "bs58 0.3.1",
@@ -776,7 +776,7 @@ dependencies = [
 
 [[package]]
 name = "brml-convert"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "frame-support",
@@ -791,7 +791,7 @@ dependencies = [
 
 [[package]]
 name = "brml-convert-rpc"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-convert-rpc-runtime-api",
  "jsonrpc-core",
@@ -805,7 +805,7 @@ dependencies = [
 
 [[package]]
 name = "brml-convert-rpc-runtime-api"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -813,7 +813,7 @@ dependencies = [
 
 [[package]]
 name = "brml-swap"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "float-cmp",
@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "brml-voucher"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4169,7 +4169,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "assert_cmd",
  "brml-assets-rpc",
@@ -4267,7 +4267,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "derive_more",
  "log",
@@ -4300,7 +4300,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -4345,7 +4345,7 @@ dependencies = [
 
 [[package]]
 name = "node-service"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "asgard-runtime",
  "bifrost-runtime",
@@ -4376,7 +4376,7 @@ dependencies = [
  "polkadot-service",
  "polkadot-test-service",
  "rococo-parachain-primitives",
- "rococo-runtime 0.5.0",
+ "rococo-runtime 0.6.0",
  "sc-authority-discovery",
  "sc-basic-authorship",
  "sc-block-builder 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6984,7 +6984,7 @@ dependencies = [
 
 [[package]]
 name = "rococo-runtime"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
@@ -9364,7 +9364,7 @@ dependencies = [
 
 [[package]]
 name = "subkey"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "bifrost-runtime",
  "frame-system",

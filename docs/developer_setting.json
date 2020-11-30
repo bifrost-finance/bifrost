@@ -124,11 +124,27 @@
       "Sent": "Sent",
       "Succeeded": "Succeeded",
       "Failed": "Failed"
-    } 
+    }
+  },
+  "RewardRecord": {
+    "account_id": "AccountId",
+    "record_amount": "Balance"
   },
   "ConvertPrice": "u128",
   "RatePerBlock": "u64",
   "Fee": "u64",
+  "PoolId": "u32",
+  "Nonce": "u32",
+  "PoolDetails": {
+    "owner": "AccountId",
+    "swap_fee_rate": "Fee",
+    "active": "bool"
+  },
+  "PoolCreateTokenDetails": {
+    "token_id": "TokenSymbol",
+    "token_balance": "Balance",
+    "token_weight": "PoolWeight"
+  },
   "TokenPool": "Balance",
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
