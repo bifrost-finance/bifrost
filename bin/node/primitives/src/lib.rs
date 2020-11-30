@@ -23,6 +23,7 @@ use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
 use sp_std::prelude::*;
+use frame_support::dispatch::DispatchResult;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -452,4 +453,16 @@ pub mod report {
 		type GenericSignature = sp_core::sr25519::Signature;
 		type GenericPublic = sp_core::sr25519::Public;
 	}
+}
+
+pub trait RewardTrait<Balance, AccountId> {
+	type Error;
+	fn record_reward(vtoken_symbol: TokenSymbol, convert_amount: Balance, referer: AccountId) -> DispatchResult;
+	fn dispatch_reward(vtoken_symbol: TokenSymbol, staking_profit: Balance) -> DispatchResult;
+}
+
+impl<A, B> RewardTrait<A, B> for () {
+	type Error = core::convert::Infallible;
+	fn record_reward(_: TokenSymbol, _: A, _: B) -> DispatchResult { Ok(()) }
+	fn dispatch_reward(_: TokenSymbol, _: A) -> DispatchResult { Ok(()) }
 }

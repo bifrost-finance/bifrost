@@ -979,6 +979,15 @@ impl brml_swap::Trait for Runtime {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 
 }
+
+impl brml_staking_reward::Trait for Runtime {
+	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
+}
+
 // bifrost runtime end
 
 construct_runtime!(
@@ -1024,6 +1033,7 @@ construct_runtime!(
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		StakingReward: brml_staking_reward::{Module, Storage},
 	}
 );
 
