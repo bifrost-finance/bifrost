@@ -579,21 +579,22 @@ impl<T: Trait> Module<T> {
         let symbol_code = "IOST".to_string().into_bytes();
         let symbol_precision = 8 as u16;
         // // ensure symbol and precision matched
-        let (_token_symbol, _) = token_symbol.paired_token();
-        let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
+        let token_symbol_pair = token_symbol.paired_token();
+        let existed_token_symbol = T::AssetTrait::get_token(token_symbol_pair.0);
         ensure!(
             existed_token_symbol.symbol == symbol_code
                 && existed_token_symbol.precision == symbol_precision,
             Error::<T>::IOSTSymbolMismatch
         );
 
+
         let token_balances = action_transfer
             .amount
             .parse::<u128>()
             .map_err(|_| Error::<T>::ConvertBalanceError)?;
         // todo, according convert price to save as vIOST
-        let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances)
-            .map_err(|_| Error::<T>::ConvertBalanceError)?;
+        // let vtoken_balances: T::Balance =
+        //     TryFrom::<u128>::try_from(11).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
         T::AssetTrait::asset_issue(token_symbol_pair.0, &target, vtoken_balances);
 
