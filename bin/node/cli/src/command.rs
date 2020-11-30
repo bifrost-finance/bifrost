@@ -75,7 +75,7 @@ fn load_spec(
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Bifrost".into()
+		"bifrost-node".into()
 	}
 
 	fn impl_version() -> String {
