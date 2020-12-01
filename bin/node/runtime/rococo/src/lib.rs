@@ -43,8 +43,8 @@ use sp_core::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	 AssetId, Precision, Fee, PoolId, PoolWeight, TokenSymbol, ConvertPrice, RatePerBlock
+	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
+	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -63,8 +63,8 @@ use sp_version::NativeVersion;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
-use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
+// use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
+// use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment, CurrencyAdapter};
@@ -881,8 +881,6 @@ impl brml_assets::Trait for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Price;
-	type Cost = Cost;
-	type Income = Income;
 	type Convert = ConvertPrice;
 	type AssetRedeem = ();
 	type FetchConvertPrice = Convert;
@@ -901,7 +899,6 @@ parameter_types! {
 	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
 }
 
-
 impl brml_convert::Trait for Runtime {
 	type Event = Event;
 	type ConvertPrice = ConvertPrice;
@@ -909,43 +906,37 @@ impl brml_convert::Trait for Runtime {
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
 	type ConvertDuration = ConvertDuration;
 	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
 }
 
 //type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
 
-impl brml_bridge_eos::Trait for Runtime {
-	type AuthorityId = BridgeEosId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
-}
-
-impl brml_bridge_iost::Trait for Runtime {
-	type AuthorityId = BridgeIostId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
-}
+// impl brml_bridge_eos::Trait for Runtime {
+// 	type AuthorityId = BridgeEosId;
+// 	type Event = Event;
+// 	type Balance = Balance;
+// 	type AssetId = AssetId;
+// 	type Precision = Precision;
+// 	type BridgeAssetFrom = ();
+// 	type Call = Call;
+// 	type AssetTrait = Assets;
+// 	type FetchConvertPool = Convert;
+// 	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
+// }
+//
+// impl brml_bridge_iost::Trait for Runtime {
+// 	type AuthorityId = BridgeIostId;
+// 	type Event = Event;
+// 	type Balance = Balance;
+// 	type AssetId = AssetId;
+// 	type Precision = Precision;
+// 	type BridgeAssetFrom = ();
+// 	type Call = Call;
+// 	type AssetTrait = Assets;
+// 	type FetchConvertPool = Convert;
+// 	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
+// }
 
 parameter_types! {
 	pub const MaximumSwapInRatio: u64 = 2;
@@ -954,9 +945,8 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 10_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const BNCAssetId: AssetId = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
-
 	pub const NumberOfSupportedTokens: u8 = 8;
 	pub const BonusClaimAgeDenominator: u32 = 14_400;
 	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
@@ -968,8 +958,6 @@ impl brml_swap::Trait for Runtime {
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;
-	type Cost = Cost;
-	type Income = Income;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
@@ -1036,8 +1024,8 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
+		// BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+		// BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 	}
@@ -1307,19 +1295,19 @@ impl_runtime_apis! {
 	}
 
 	// impl asset rpc methods for runtime
-	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, TokenSymbol, AccountId, Balance> for Runtime {
-		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64 {
-			Assets::asset_balances(token_symbol, who)
+	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
+		fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
+			Assets::asset_balances(asset_id, who)
 		}
 
-		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol> {
+		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
 			Assets::asset_tokens(who)
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, TokenSymbol, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(token_symbol: TokenSymbol) -> node_primitives::ConvertPrice {
-			Convert::get_convert(token_symbol)
+	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
+		fn get_convert_rate(asset_id: AssetId) -> node_primitives::ConvertPrice {
+			Convert::get_convert(asset_id)
 		}
 	}
 }

@@ -99,16 +99,6 @@ frame-benchmarking = "2.0.0"
 wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.7", optional = true }
 
-# for initialize producer schedule
-brml-bridge-eos = { path = "../../../brml/bridge-eos", default-features = false }
-brml-bridge-iost = { path = "../../../brml/bridge-iost", default-features = false }
-eos-chain = { git = "https://github.com/bifrost-finance/rust-eos" }
-
-# brml rpc crates
-brml-assets-rpc = { path = "../../../brml/assets/rpc" }
-brml-convert-rpc = { path = "../../../brml/convert/rpc" }
-bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
-
 # Cumulus dependencies
 cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "master" }
 cumulus-collator = { git = "https://github.com/paritytech/cumulus", branch = "master" }
