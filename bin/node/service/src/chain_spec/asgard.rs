@@ -19,11 +19,12 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, TokenSymbol, ConvertPool};
+use node_primitives::{AccountId, ConvertPool};
 use asgard_runtime::{
 	constants::currency::{BNCS as ASG, DOLLARS},
-	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeEosConfig,
-	BridgeIostConfig, ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
+	// BridgeEosConfig, BridgeIostConfig,
+	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
 	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
@@ -243,39 +244,38 @@ pub fn testnet_genesis(
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
-			next_asset_id: 9u32, // start from 7, [0..6] has been reserved
 			token_details: vec![],
 			prices: vec![],
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
-				(TokenSymbol::DOT, DOLLARS / 100),
-				(TokenSymbol::KSM, DOLLARS / 100),
-				(TokenSymbol::EOS, DOLLARS / 100),
-				(TokenSymbol::IOST, DOLLARS / 100),
+				// (TokenSymbol::DOT, DOLLARS / 100),
+				// (TokenSymbol::KSM, DOLLARS / 100),
+				// (TokenSymbol::EOS, DOLLARS / 100),
+				// (TokenSymbol::IOST, DOLLARS / 100),
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
-				(TokenSymbol::DOT, ConvertPool::new(1, 100)),
-				(TokenSymbol::KSM, ConvertPool::new(1, 100)),
-				(TokenSymbol::EOS, ConvertPool::new(1, 100)),
-				(TokenSymbol::IOST, ConvertPool::new(1, 100)),
+				// (TokenSymbol::DOT, ConvertPool::new(1, 100)),
+				// (TokenSymbol::KSM, ConvertPool::new(1, 100)),
+				// (TokenSymbol::EOS, ConvertPool::new(1, 100)),
+				// (TokenSymbol::IOST, ConvertPool::new(1, 100)),
 			],
 		}),
-		brml_bridge_eos: Some(BridgeEosConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
-		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"lispczz4".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-		}),
+		// brml_bridge_eos: Some(BridgeEosConfig {
+		// 	bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+		// 	// alice and bob have the privilege to sign cross transaction
+		// 	cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+		// 	all_crosschain_privilege: Vec::new(),
+		// 	cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
+		// }),
+		// brml_bridge_iost: Some(BridgeIostConfig {
+		// 	bridge_contract_account: (b"lispczz4".to_vec(), 1),
+		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+		// 	// alice and bob have the privilege to sign cross transaction
+		// 	cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+		// 	all_crosschain_privilege: Vec::new(),
+		// }),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })

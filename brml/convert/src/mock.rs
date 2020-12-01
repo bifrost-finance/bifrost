@@ -54,8 +54,6 @@ impl assets::Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();
@@ -101,8 +99,6 @@ impl crate::Trait for Test {
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type ConvertDuration = ConvertDuration;
 	type WeightInfo = ();
 }

@@ -24,7 +24,7 @@ use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLook
 use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetRedeem, AssetTrait, FetchConvertPrice, Token, TokenPriceHandler, TokenSymbol,
+	AccountAsset, AssetRedeem, AssetTrait, FetchConvertPrice, Token, TokenPriceHandler, TokenType,
 };
 
 mod mock;
@@ -47,18 +47,15 @@ impl WeightInfo for () {
 }
 
 lazy_static::lazy_static! {
-	/// (token, precision)
-	pub static ref TOKEN_LIST: [(Vec<u8>, u16); 9] = {
-		let ausd = (b"aUSD".to_vec(), 18);
-		let dot = (b"DOT".to_vec(), 12);
-		let vdot = (b"vDOT".to_vec(), 12);
-		let ksm = (b"KSM".to_vec(), 12);
-		let vksm = (b"vKSM".to_vec(), 12);
-		let eos = (b"EOS".to_vec(), 4);
-		let veos = (b"vEOS".to_vec(), 4);
-		let iost = (b"IOST".to_vec(), 8);
-		let viost = (b"vIOST".to_vec(), 8);
-		[ausd, dot, vdot, ksm, vksm, eos, veos, iost, viost]
+	/// (token, precision, token_type)
+	pub static ref TOKEN_LIST: [(Vec<u8>, u16, TokenType); 6] = {
+		let bnc = (b"BNC".to_vec(), 12, TokenType::Base);
+		let ausd = (b"aUSD".to_vec(), 18, TokenType::Stable);
+		let dot = (b"DOT".to_vec(), 12, TokenType::Token);
+		let ksm = (b"KSM".to_vec(), 12, TokenType::Token);
+		let eos = (b"EOS".to_vec(), 4, TokenType::Token);
+		let iost = (b"IOST".to_vec(), 8, TokenType::Token);
+		[bnc, ausd, dot, ksm, eos, iost]
 	};
 }
 
@@ -76,20 +73,14 @@ pub trait Trait: system::Trait {
 	/// The units in which we record convert rate.
 	type Convert: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + MaybeSerializeDeserialize;
 
-	/// The units in which we record costs.
-	type Cost: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Balance> + MaybeSerializeDeserialize;
-
-	/// The units in which we record incomes.
-	type Income: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Balance> + MaybeSerializeDeserialize;
-
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + Default + AtLeast32Bit + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
+	type AssetId: Member + Parameter + Default + AtLeast32Bit + Copy + MaybeSerializeDeserialize;
 
 	/// Handler for asset redeem
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// Handler for fetch convert rate from convert runtime
-	type FetchConvertPrice: FetchConvertPrice<TokenSymbol, Self::Convert>;
+	type FetchConvertPrice: FetchConvertPrice<Self::AssetId, Self::Convert>;
 
 	/// Set default weight
 	type WeightInfo: WeightInfo;
@@ -102,19 +93,19 @@ decl_event! {
 			<T as Trait>::AssetId,
 	{
 		/// Some assets were created.
-		Created(AssetId, Token<Balance>),
+		Created(AssetId, Token<AssetId, Balance>),
 		/// Some assets were issued.
-		Issued(TokenSymbol, AccountId, Balance),
+		Issued(AssetId, AccountId, Balance),
 		/// Some assets were transferred.
-		Transferred(TokenSymbol, AccountId, AccountId, Balance),
+		Transferred(AssetId, AccountId, AccountId, Balance),
 		/// Some assets were destroyed.
-		Destroyed(TokenSymbol, AccountId, Balance),
+		Destroyed(AssetId, AccountId, Balance),
 		/// Bind Asset with AccountId
 		AccountAssetCreated(AccountId, AssetId),
 		/// Bind Asset with AccountId
 		AccountAssetDestroy(AccountId, AssetId),
 		/// Unlock user asset
-		UnlockedAsset(AccountId, TokenSymbol, Balance),
+		UnlockedAsset(AccountId, AssetId, Balance),
 	}
 }
 
@@ -146,37 +137,33 @@ decl_error! {
 decl_storage! {
 	trait Store for Module<T: Trait> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
-		pub AccountAssets get(fn account_assets) config(): map hasher(blake2_128_concat) (TokenSymbol, T::AccountId)
-			=> AccountAsset<T::Balance, T::Cost, T::Income>;
+		pub AccountAssets get(fn account_assets) config(): map hasher(blake2_128_concat) (T::AssetId, T::AccountId)
+			=> AccountAsset<T::Balance>;
 		/// The number of units of prices held by any given asset.
-		pub Prices get(fn prices) config(): map hasher(blake2_128_concat) TokenSymbol => T::Price;
+		pub Prices get(fn prices) config(): map hasher(blake2_128_concat) T::AssetId => T::Price;
 		/// The next asset identifier up for grabs.
-		pub NextAssetId get(fn next_asset_id) config(): T::AssetId;
+		pub NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
-		pub Tokens get(fn token_details) config(): map hasher(blake2_128_concat) TokenSymbol => Token<T::Balance>;
+		pub Tokens get(fn token_details) config(): map hasher(blake2_128_concat) T::AssetId => Token<T::AssetId, T::Balance>;
 		/// A collection of asset which an account owned
-		pub AccountAssetIds get(fn account_asset_ids): map hasher(blake2_128_concat) T::AccountId => Vec<TokenSymbol>;
+		pub AccountAssetIds get(fn account_asset_ids): map hasher(blake2_128_concat) T::AccountId => Vec<T::AssetId>;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
-			// initalize assets for account
-			for ((token_symbol, who), asset) in config.account_assets.iter() {
-				<AccountAssets<T>>::insert((token_symbol, who), asset);
+			// initialize assets for account
+			for ((asset_id, who), asset) in config.account_assets.iter() {
+				<AccountAssets<T>>::insert((asset_id, who), asset);
 			}
-			// initialze three assets id for these tokens
-			<NextAssetId<T>>::put(config.next_asset_id);
-
-			// now, not support iost, so leave 6 here.
-			for i in 0..=8 {
+			for i in 0..TOKEN_LIST.len() {
 				// initialize token
-				let current_token = &TOKEN_LIST[i as usize];
-				let token = Token::new(current_token.0.clone(), current_token.1, Zero::zero());
-
-				let token_symbol = TokenSymbol::from(i as u32);
-				<Tokens<T>>::insert(token_symbol, token);
-
+				let (symbol, precision, token_type) = &TOKEN_LIST[i as usize];
+				if *token_type == TokenType::Token {
+					<Module<T>>::asset_create_pair(symbol.to_vec(), *precision).unwrap();
+				} else {
+					<Module<T>>::asset_create(symbol.to_vec(), *precision, *token_type).unwrap();
+				}
 				// initialize price
-				<Prices<T>>::insert(token_symbol, T::Price::from(0u32));
+				<Prices<T>>::insert(T::AssetId::from(i as u32), T::Price::from(0u32));
 			}
 		});
 	}
@@ -191,14 +178,14 @@ decl_module! {
 		/// Create a new class of fungible assets. It will have an
 		/// identifier `AssetId` instance: this will be specified in the `Created` event.
 		#[weight = T::WeightInfo::create()]
-		pub fn create(origin, symbol: Vec<u8>, precision: u16) -> DispatchResult {
+		pub fn create(origin, symbol: Vec<u8>, precision: u16, token_type: TokenType) -> DispatchResult {
 			ensure_root(origin)?;
 
 			ensure!(!symbol.is_empty(), Error::<T>::EmptyTokenSymbol);
 			ensure!(symbol.len() <= 32, Error::<T>::TokenSymbolTooLong);
 			ensure!(precision <= 18, Error::<T>::InvalidPrecision); // increase to precision 18
 
-			let (id, token) = Self::asset_create(symbol, precision)?;
+			let (id, token) = Self::asset_create(symbol, precision, token_type)?;
 
 			Self::deposit_event(RawEvent::Created(id, token));
 
@@ -209,115 +196,115 @@ decl_module! {
 		#[weight = T::WeightInfo::issue()]
 		pub fn issue(
 			origin,
-			token_symbol: TokenSymbol,
+			asset_id: T::AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance,
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<Tokens<T>>::contains_key(token_symbol), Error::<T>::TokenNotExist);
+			ensure!(<Tokens<T>>::contains_key(asset_id), Error::<T>::TokenNotExist);
 
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 
-			Self::asset_issue(token_symbol, &target, amount);
+			Self::asset_issue(asset_id, &target, amount);
 
-			Self::deposit_event(RawEvent::Issued(token_symbol, target, amount));
+			Self::deposit_event(RawEvent::Issued(asset_id, target, amount));
 		}
 
 		/// Move some assets from one holder to another.
 		#[weight = T::WeightInfo::transfer()]
 		pub fn transfer(
 			origin,
-			token_symbol: TokenSymbol,
+			asset_id: T::AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance,
 		) {
 			let origin = ensure_signed(origin)?;
 
-			let origin_account = (token_symbol, origin.clone());
+			let origin_account = (asset_id, origin.clone());
 			let origin_balance = <AccountAssets<T>>::get(&origin_account).balance;
 			let target = T::Lookup::lookup(target)?;
 
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 			ensure!(origin_balance >= amount, Error::<T>::InsufficientBalanceForTransaction);
 
-			Self::asset_transfer(token_symbol, origin.clone(), target.clone(), amount);
+			Self::asset_transfer(asset_id, origin.clone(), target.clone(), amount);
 
-			Self::deposit_event(RawEvent::Transferred(token_symbol, origin, target, amount));
+			Self::deposit_event(RawEvent::Transferred(asset_id, origin, target, amount));
 		}
 
 		/// Destroy any amount of assets of `id` owned by `origin`.
 		#[weight = T::WeightInfo::destroy()]
 		pub fn destroy(
 			origin,
-			token_symbol: TokenSymbol,
+			asset_id: T::AssetId,
 			#[compact] amount: T::Balance,
 		) {
 			let origin = ensure_signed(origin)?;
 
-			let origin_account = (token_symbol, origin.clone());
+			let origin_account = (asset_id, origin.clone());
 
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
 			ensure!(amount <= balance , Error::<T>::InsufficientBalanceForTransaction);
 
-			Self::asset_destroy(token_symbol, &origin, amount);
+			Self::asset_destroy(asset_id, &origin, amount);
 
-			Self::deposit_event(RawEvent::Destroyed(token_symbol, origin, amount));
+			Self::deposit_event(RawEvent::Destroyed(asset_id, origin, amount));
 		}
 
 		#[weight = T::WeightInfo::redeem()]
 		pub fn redeem(
 			origin,
-			token_symbol: TokenSymbol,
+			asset_id: T::AssetId,
 			#[compact] amount: T::Balance,
 			to_name: Option<Vec<u8>>,
 		) {
 			let origin = ensure_signed(origin)?;
 
-			let origin_account = (token_symbol, origin.clone());
+			let origin_account = (asset_id, origin.clone());
 
 			let balance = <AccountAssets<T>>::get(&origin_account).balance;
 			ensure!(amount <= balance , Error::<T>::InsufficientBalanceForTransaction);
 
-			T::AssetRedeem::asset_redeem(token_symbol, origin.clone(), amount, to_name);
+			T::AssetRedeem::asset_redeem(asset_id, origin.clone(), amount, to_name);
 
-			Self::asset_destroy(token_symbol, &origin, amount);
+			Self::asset_destroy(asset_id, &origin, amount);
 		}
 
 		/// Issue any amount of fungible assets.
 		#[weight = T::DbWeight::get().reads_writes(1, 1)]
 		pub fn unlock(
 			origin,
-			token_symbol: TokenSymbol,
+			asset_id: T::AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
 			#[compact] amount: T::Balance,
 		) {
 			ensure_root(origin)?;
 
-			ensure!(<Tokens<T>>::contains_key(token_symbol), Error::<T>::TokenNotExist);
+			ensure!(<Tokens<T>>::contains_key(asset_id), Error::<T>::TokenNotExist);
 
 			let target = T::Lookup::lookup(target)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmountOfBalance);
 
-			let locked = <AccountAssets<T>>::get((token_symbol, &target)).locked;
+			let locked = <AccountAssets<T>>::get((asset_id, &target)).locked;
 			// ensure this locked amount of balance should be less than his lock balance
 			ensure!(locked >= amount, Error::<T>::InsufficientBalanceForTransaction);
 
-			let target_asset = (token_symbol, &target);
+			let target_asset = (asset_id, &target);
 			<AccountAssets<T>>::mutate(target_asset, |asset| {
 				asset.available = asset.available.saturating_add(amount);
 				asset.locked -= amount;
 			});
 
-			Self::deposit_event(RawEvent::UnlockedAsset(target, token_symbol, amount));
+			Self::deposit_event(RawEvent::UnlockedAsset(target, asset_id, amount));
 		}
 	}
 }
 
-impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Income> for Module<T> {
+impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
-	fn asset_create(symbol: Vec<u8>, precision: u16) -> Result<(T::AssetId, Token<T::Balance>), Self::Error> {
+	fn asset_create(symbol: Vec<u8>, precision: u16, token_type: TokenType) -> Result<(T::AssetId, Token<T::AssetId, T::Balance>), Self::Error> {
 		for (_, token) in <Tokens<T>>::iter() {
 			if token.symbol.eq(&symbol) {
 				return Err(Error::<T>::TokenExisted);
@@ -331,22 +318,31 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		let total_supply: T::Balance = Zero::zero();
 
 		// Create token
-		let token = Token::new(symbol.clone(), precision, total_supply);
-		let token_symbol: TokenSymbol = id.into();
+		let token = Token::new(symbol.clone(), precision, total_supply, token_type);
+		let asset_id: T::AssetId = id.into();
 
 		// Insert to storage
-		<Tokens<T>>::insert(token_symbol, token.clone());
+		<Tokens<T>>::insert(asset_id, token.clone());
 
 		Ok((id, token))
 	}
 
+	fn asset_create_pair(symbol: Vec<u8>, precision: u16) -> Result<(T::AssetId, T::AssetId), Self::Error> {
+		let (token_id, mut token) = Self::asset_create(symbol.clone(), precision, TokenType::Token)?;
+		let (vtoken_id, mut vtoken) = Self::asset_create(symbol, precision, TokenType::VToken)?;
+		token.add_pair(vtoken_id);
+		vtoken.add_pair(token_id);
+
+		Ok((token_id, vtoken_id))
+	}
+
 	fn asset_issue(
-		token_symbol: TokenSymbol,
+		asset_id: T::AssetId,
 		target: &T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertPrice::fetch_convert_price(token_symbol);
-		let target_asset = (token_symbol, target.clone());
+		let convert_rate = T::FetchConvertPrice::fetch_convert_price(asset_id);
+		let target_asset = (asset_id, target.clone());
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
 			asset.available = asset.available.saturating_add(amount);
@@ -356,46 +352,46 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		// save asset id for this account
 		if <AccountAssetIds<T>>::contains_key(&target) {
 			<AccountAssetIds<T>>::mutate(&target, |ids| {
-				if !ids.contains(&token_symbol) { // do not push a duplicated asset id to list
-					ids.push(token_symbol);
+				if !ids.contains(&asset_id) { // do not push a duplicated asset id to list
+					ids.push(asset_id);
 				}
 			});
 		} else {
-			<AccountAssetIds<T>>::insert(&target, vec![token_symbol]);
+			<AccountAssetIds<T>>::insert(&target, vec![asset_id]);
 		}
 
-		<Tokens<T>>::mutate(token_symbol, |token| {
+		<Tokens<T>>::mutate(asset_id, |token| {
 			token.total_supply = token.total_supply.saturating_add(amount);
 		});
 	}
 
 	fn asset_redeem(
-		token_symbol: TokenSymbol,
+		asset_id: T::AssetId,
 		target: &T::AccountId,
 		amount: T::Balance,
 	) {
-		Self::asset_destroy(token_symbol, &target, amount);
+		Self::asset_destroy(asset_id, &target, amount);
 	}
 
 	fn asset_destroy(
-		token_symbol: TokenSymbol,
+		asset_id: T::AssetId,
 		target: &T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertPrice::fetch_convert_price(token_symbol);
-		let target_asset = (token_symbol, target);
+		let convert_rate = T::FetchConvertPrice::fetch_convert_price(asset_id);
+		let target_asset = (asset_id, target);
 		<AccountAssets<T>>::mutate(target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
 			asset.available = asset.available.saturating_sub(amount);
 			asset.income = asset.income.saturating_add(amount.saturating_mul(convert_rate.into()).into());
 		});
 
-		<Tokens<T>>::mutate(token_symbol, |token| {
+		<Tokens<T>>::mutate(asset_id, |token| {
 			token.total_supply = token.total_supply.saturating_sub(amount);
 		});
 	}
 
-	fn asset_id_exists(who: &T::AccountId, symbol: &[u8], precision: u16) -> Option<TokenSymbol> {
+	fn asset_id_exists(who: &T::AccountId, symbol: &[u8], precision: u16) -> Option<T::AssetId> {
 		let all_ids = <AccountAssetIds<T>>::get(who);
 		for id in all_ids {
 			let token = <Tokens<T>>::get(id);
@@ -406,35 +402,47 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance, T::Cost, T::Inco
 		None
 	}
 
-	fn token_exists(token_symbol: TokenSymbol) -> bool {
-		<Tokens<T>>::contains_key(&token_symbol)
+	fn token_exists(asset_id: T::AssetId) -> bool {
+		<Tokens<T>>::contains_key(&asset_id)
 	}
 
 	fn get_account_asset(
-		token_symbol: TokenSymbol,
+		asset_id: T::AssetId,
 		target: &T::AccountId,
-	) -> AccountAsset<T::Balance, T::Cost, T::Income> {
-		<AccountAssets<T>>::get((token_symbol, &target))
+	) -> AccountAsset<T::Balance> {
+		<AccountAssets<T>>::get((asset_id, &target))
 	}
 
-	fn get_token(token_symbol: TokenSymbol) -> Token<T::Balance> {
-		<Tokens<T>>::get(&token_symbol)
+	fn get_token(asset_id: T::AssetId) -> Token<T::AssetId, T::Balance> {
+		<Tokens<T>>::get(&asset_id)
 	}
 
-	fn lock_asset(who: &T::AccountId, token_symbol: TokenSymbol, locked: T::Balance) {
-		let target_asset = (token_symbol, who);
+	fn lock_asset(who: &T::AccountId, asset_id: T::AssetId, locked: T::Balance) {
+		let target_asset = (asset_id, who);
 		<AccountAssets<T>>::mutate(target_asset, |asset| {
 			asset.locked += locked;
 			asset.available = asset.balance.saturating_sub(asset.locked);
 		});
 	}
 
-	fn unlock_asset(who: &T::AccountId, token_symbol: TokenSymbol, locked: T::Balance) {
-		let target_asset = (token_symbol, who);
+	fn unlock_asset(who: &T::AccountId, asset_id: T::AssetId, locked: T::Balance) {
+		let target_asset = (asset_id, who);
 		<AccountAssets<T>>::mutate(target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(locked);
 			asset.locked -= locked;
 		});
+	}
+
+	fn is_token(asset_id: T::AssetId) -> bool {
+		<Tokens<T>>::get(asset_id).token_type == TokenType::Token
+	}
+
+	fn is_v_token(asset_id: T::AssetId) -> bool {
+		<Tokens<T>>::get(asset_id).token_type == TokenType::VToken
+	}
+
+	fn get_pair(asset_id: T::AssetId) -> Option<T::AssetId> {
+		<Tokens<T>>::get(asset_id).pair
 	}
 }
 
@@ -442,8 +450,8 @@ impl<T: Trait> TokenPriceHandler<T::Price> for Module<T> {
 	fn set_token_price(symbol: Vec<u8>, price: T::Price) {
 		match TOKEN_LIST.iter().position(|s| s.0 == symbol) {
 			Some(id) => {
-				let token_symbol = TokenSymbol::from(id as u32 + 1); // skip aUSD
-				<Prices<T>>::mutate(token_symbol, |p| *p = price);
+				let asset_id = T::AssetId::from(id as u32 + 1); // skip aUSD
+				<Prices<T>>::mutate(asset_id, |p| *p = price);
 			},
 			_ => {},
 		}
@@ -453,18 +461,18 @@ impl<T: Trait> TokenPriceHandler<T::Price> for Module<T> {
 // The main implementation block for the module.
 impl<T: Trait> Module<T> {
 	fn asset_transfer(
-		token_symbol: TokenSymbol,
+		asset_id: T::AssetId,
 		from: T::AccountId,
 		to: T::AccountId,
 		amount: T::Balance,
 	) {
-		let from_asset = (token_symbol, from);
+		let from_asset = (asset_id, from);
 		<AccountAssets<T>>::mutate(&from_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
 			asset.available = asset.available.saturating_sub(amount);
 		});
 
-		let to_asset = (token_symbol, &to);
+		let to_asset = (asset_id, &to);
 		<AccountAssets<T>>::mutate(to_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
 			asset.available = asset.available.saturating_add(amount);
@@ -474,15 +482,15 @@ impl<T: Trait> Module<T> {
 		if <AccountAssetIds<T>>::contains_key(&to) {
 			<AccountAssetIds<T>>::mutate(&to, |ids| {
 				// do not push a duplicated asset id to list
-				if !ids.contains(&token_symbol) { ids.push(token_symbol); }
+				if !ids.contains(&asset_id) { ids.push(asset_id); }
 			});
 		} else {
-			<AccountAssetIds<T>>::insert(&to, vec![token_symbol]);
+			<AccountAssetIds<T>>::insert(&to, vec![asset_id]);
 		}
 	}
 
-	pub fn asset_balances(token_symbol: TokenSymbol, target: T::AccountId) -> u64 {
-		let origin_account = (token_symbol, target);
+	pub fn asset_balances(asset_id: T::AssetId, target: T::AccountId) -> u64 {
+		let origin_account = (asset_id, target);
 		let balance_u128 = <AccountAssets<T>>::get(origin_account).balance;
 
 		// balance type is u128, but serde cannot serialize u128.
@@ -493,7 +501,7 @@ impl<T: Trait> Module<T> {
 		balance_u64
 	}
 
-	pub fn asset_tokens(target: T::AccountId) -> Vec<TokenSymbol> {
+	pub fn asset_tokens(target: T::AccountId) -> Vec<T::AssetId> {
 		<AccountAssetIds<T>>::get(target)
 	}
 }

@@ -21,7 +21,7 @@ use alloc::collections::btree_map::BTreeMap;
 use crate::*;
 use crate::mock::*;
 use frame_support::assert_ok;
-use node_primitives::{ConvertPool, TokenSymbol};
+use node_primitives::{AssetId, ConvertPool};
 
 #[test]
 #[ignore]

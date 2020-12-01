@@ -154,15 +154,11 @@
   "TransactionStatus": {
     "_enum": ["Initialized", "Created", "SignComplete", "Sent", "Succeeded", "Failed"]
   },
-  "Cost": "u128",
-  "Income": "u128",
   "Price": "u64",
   "AccountAsset": {
     "balance": "Balance",
     "locked": "Balance",
-    "available": "Balance",
-    "cost": "Cost",
-    "income": "Income"
+    "available": "Balance"
   },
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",
