@@ -55,6 +55,7 @@ decl_storage! {
 			BncPrice::<T>::put(config.number_price);
 		});
 	}
+	
 }
 
 decl_module! {
@@ -90,6 +91,7 @@ decl_module! {
 				});
 			}
 		}
+		
 	}
 }
 
@@ -134,15 +136,15 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	fn issue_bnc() -> bool {
 		assert!(BncSum::<T>::exists());
 		let bnc_amount = BncSum::<T>::get();
-		// Get total integral
+		// Get total point
 		let mut sum = T::Balance::from(0u32);
 		for (_, val) in BncMint::<T>::iter() {
 			sum = sum.saturating_add(val);
 		}
 		assert!(sum.ne(&T::Balance::from(0u32)));
 		// Traverse dispatch BNC reward
-		for (minter, integral) in BncMint::<T>::iter() {
-			let bnc_reward = integral.saturating_mul(bnc_amount) / sum;
+		for (minter, point) in BncMint::<T>::iter() {
+			let bnc_reward = point.saturating_mul(bnc_amount) / sum;
 			if bnc_reward.ne(&T::Balance::from(0u32)) {
 				if BncReward::<T>::contains_key(&minter) {
 					BncReward::<T>::mutate(minter, |v| {
@@ -166,5 +168,6 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 		ensure!(BncMint::<T>::contains_key(&minter), Error::<T>::MinterNotExist);
 		Ok(BncMint::<T>::get(&minter))
 	}
+	
 }
 

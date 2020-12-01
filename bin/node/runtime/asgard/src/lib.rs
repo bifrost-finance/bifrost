@@ -978,6 +978,11 @@ impl brml_swap::Trait for Runtime {
 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
+
+impl brml_vtoken_mint::Trait for Runtime {
+	type Balance = Balance;
+}
+
 // asgard runtime end
 
 construct_runtime!(
@@ -1023,6 +1028,7 @@ construct_runtime!(
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		VtokenMint: brml_vtoken_mint::{Module, Storage, Config<T>},
 	}
 );
 

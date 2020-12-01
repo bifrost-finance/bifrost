@@ -77,6 +77,7 @@ brml-convert = { path = "../../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "3.0.0" }
@@ -146,6 +147,7 @@ std = [
 	"brml-convert-rpc-runtime-api/std",
 	"brml-swap/std",
 	'brml-voucher/std',
+	'brml-vtoken-mint/std',
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",
