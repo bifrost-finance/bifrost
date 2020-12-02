@@ -19,7 +19,7 @@
 
 use core::convert::TryInto;
 use frame_support::traits::{Get};
-use frame_support::{weights::Weight,Parameter, decl_module, decl_event, decl_error, decl_storage, ensure, dispatch::DispatchResult, IterableStorageMap};
+use frame_support::{weights::Weight,Parameter, decl_module, decl_event, decl_error, decl_storage, ensure, dispatch::DispatchResult};
 use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLookup, MaybeSerializeDeserialize};
 use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed, ensure_root};
@@ -32,6 +32,7 @@ mod tests;
 
 pub trait WeightInfo {
 	fn create() -> Weight;
+	fn create_pair() -> Weight;
 	fn issue() -> Weight;
 	fn transfer() -> Weight;
 	fn destroy() -> Weight;
@@ -40,6 +41,7 @@ pub trait WeightInfo {
 
 impl WeightInfo for () {
 	fn create() -> Weight { Default::default() }
+	fn create_pair() -> Weight { Default::default() }
 	fn issue() -> Weight { Default::default() }
 	fn transfer() -> Weight { Default::default() }
 	fn destroy() -> Weight { Default::default() }
@@ -49,7 +51,7 @@ impl WeightInfo for () {
 lazy_static::lazy_static! {
 	/// (token, precision, token_type)
 	pub static ref TOKEN_LIST: [(Vec<u8>, u16, TokenType); 6] = {
-		let bnc = (b"BNC".to_vec(), 12, TokenType::Base);
+		let bnc = (b"BNC".to_vec(), 12, TokenType::Native);
 		let ausd = (b"aUSD".to_vec(), 18, TokenType::Stable);
 		let dot = (b"DOT".to_vec(), 12, TokenType::Token);
 		let ksm = (b"KSM".to_vec(), 12, TokenType::Token);
@@ -192,6 +194,22 @@ decl_module! {
 			Ok(())
 		}
 
+		#[weight = T::WeightInfo::create_pair()]
+		pub fn create_pair(origin, symbol: Vec<u8>, precision: u16) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ensure!(!symbol.is_empty(), Error::<T>::EmptyTokenSymbol);
+			ensure!(symbol.len() <= 32, Error::<T>::TokenSymbolTooLong);
+			ensure!(precision <= 18, Error::<T>::InvalidPrecision);
+
+			let (token_id, v_token_id) = Self::asset_create_pair(symbol, precision)?;
+
+			Self::deposit_event(RawEvent::Created(token_id, Self::get_token(token_id)));
+			Self::deposit_event(RawEvent::Created(v_token_id, Self::get_token(v_token_id)));
+
+			Ok(())
+		}
+
 		/// Issue any amount of fungible assets.
 		#[weight = T::WeightInfo::issue()]
 		pub fn issue(
@@ -305,12 +323,6 @@ decl_module! {
 impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
 	fn asset_create(symbol: Vec<u8>, precision: u16, token_type: TokenType) -> Result<(T::AssetId, Token<T::AssetId, T::Balance>), Self::Error> {
-		for (_, token) in <Tokens<T>>::iter() {
-			if token.symbol.eq(&symbol) {
-				return Err(Error::<T>::TokenExisted);
-			}
-		}
-
 		let id = Self::next_asset_id();
 		<NextAssetId<T>>::mutate(|id| *id += One::one());
 
@@ -328,10 +340,15 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	}
 
 	fn asset_create_pair(symbol: Vec<u8>, precision: u16) -> Result<(T::AssetId, T::AssetId), Self::Error> {
-		let (token_id, mut token) = Self::asset_create(symbol.clone(), precision, TokenType::Token)?;
-		let (vtoken_id, mut vtoken) = Self::asset_create(symbol, precision, TokenType::VToken)?;
-		token.add_pair(vtoken_id);
-		vtoken.add_pair(token_id);
+		let (token_id, _) = Self::asset_create(symbol.clone(), precision, TokenType::Token)?;
+		let (vtoken_id, _) = Self::asset_create(symbol, precision, TokenType::VToken)?;
+
+		<Tokens<T>>::mutate(&token_id, |token| {
+			token.pair = Some(vtoken_id);
+		});
+		<Tokens<T>>::mutate(&vtoken_id, |vtoken| {
+			vtoken.pair = Some(token_id);
+		});
 
 		Ok((token_id, vtoken_id))
 	}

@@ -20,7 +20,7 @@
 
 use super::*;
 use crate::mock::*;
-use frame_support::{assert_ok, assert_noop, dispatch::DispatchError};
+use frame_support::{assert_ok, assert_noop};
 use system::{EventRecord, Phase};
 
 #[test]
@@ -30,7 +30,7 @@ fn create_asset_should_work() {
 			symbol: vec![0x12, 0x34],
 			precision: 8,
 			total_supply: 0,
-			token_type: TokenType::Base,
+			token_type: TokenType::Native,
 			pair: None,
 		};
 
@@ -38,7 +38,7 @@ fn create_asset_should_work() {
 
 		System::set_block_number(1);
 
-		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8, TokenType::Base));
+		assert_ok!(Assets::create(Origin::root(), vec![0x12, 0x34], 8, TokenType::Native));
 		assert_eq!(Assets::next_asset_id(), id1 + 1);
 		assert_eq!(Assets::token_details(id1), token1);
 
@@ -46,12 +46,12 @@ fn create_asset_should_work() {
 			symbol: vec![0x56, 0x68, 0x90],
 			precision: 4,
 			total_supply: 0,
-			token_type: TokenType::Base,
+			token_type: TokenType::Native,
 			pair: None,
 		};
 
 		let id2 = Assets::next_asset_id();
-		assert_ok!(Assets::create(Origin::root(), vec![0x56, 0x68, 0x90], 4, TokenType::Base)); // take 2 as asset id
+		assert_ok!(Assets::create(Origin::root(), vec![0x56, 0x68, 0x90], 4, TokenType::Native)); // take 2 as asset id
 		assert_eq!(Assets::next_asset_id(), id2 + 1);
 		assert_eq!(Assets::token_details(id2), token2);
 
@@ -100,12 +100,6 @@ fn issuing_asset_units_to_issuer_should_work() {
 		assert_ok!(Assets::issue(Origin::root(), ausd_id, bob, 30000));
 		assert_eq!(Assets::token_details(ausd_id), Token::new(b"aUSD".to_vec(), 18, 50000, TokenType::Stable));
 		assert_eq!(Assets::account_assets((ausd_id, bob)).balance, 50000);
-
-		// creare a exsited token
-		assert_eq!(
-			Assets::create(Origin::root(), b"vDOT".to_vec(), 12, TokenType::VToken),
-			Err(DispatchError::Module { index: 0, error: 0, message: Some("TokenExisted") })
-		);
 
 		assert_eq!(System::events(), vec![
 			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(dot_id, 1, 10000)), topics: vec![] },

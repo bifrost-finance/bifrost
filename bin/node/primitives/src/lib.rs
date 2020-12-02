@@ -94,8 +94,8 @@ pub type Nonce = u32;
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub enum TokenType {
-	/// Mainnet token, only used by BNC
-	Base,
+	/// Native token, only used by BNC
+	Native,
 	/// Stable token
 	Stable,
 	/// Origin token from bridge
@@ -106,13 +106,13 @@ pub enum TokenType {
 
 impl Default for TokenType {
 	fn default() -> Self {
-		Self::Base
+		Self::Native
 	}
 }
 
 impl TokenType {
 	pub fn is_base_token(&self) -> bool {
-		*self == TokenType::Base
+		*self == TokenType::Native
 	}
 
 	pub fn is_stable_token(&self) -> bool {
@@ -128,7 +128,7 @@ impl TokenType {
 	}
 }
 
-/// Token type
+/// Token struct
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub struct Token<AssetId, Balance> {
@@ -325,7 +325,7 @@ impl<Precision> BridgeAssetSymbol<Precision> {
 
 /// Bridge asset type
 #[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetBalance<AccountId, Precision, Balance> {
+pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 	pub symbol: BridgeAssetSymbol<Precision>,
 	pub amount: Balance,
 	pub memo: Vec<u8>,
@@ -336,29 +336,29 @@ pub struct BridgeAssetBalance<AccountId, Precision, Balance> {
 }
 
 /// Bridge asset from other blockchain to Bifrost
-pub trait BridgeAssetFrom<AccountId, Precision, Balance> {
-	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>);
+pub trait BridgeAssetFrom<AccountId, AssetId, Precision, Balance> {
+	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<AccountId, AssetId, Precision, Balance>);
 }
 
-impl<A, P, B> BridgeAssetFrom<A, P, B> for () {
-	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, P, B>) {}
+impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {
+	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, AI, P, B>) {}
 }
 
 /// Bridge asset from Bifrost to other blockchain
-pub trait BridgeAssetTo<AccountId, Precision, Balance> {
+pub trait BridgeAssetTo<AccountId, AssetId, Precision, Balance> {
 	type Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, Precision, Balance>, ) -> Result<(), Self::Error>;
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, AssetId, Precision, Balance>, ) -> Result<(), Self::Error>;
 	fn redeem(asset_id: AssetId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 	fn stake(asset_id: AssetId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 	fn unstake(asset_id: AssetId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
 }
 
-impl<A, P, B> BridgeAssetTo<A, P, B> for () {
+impl<A, AI, P, B> BridgeAssetTo<A, AI, P, B> for () {
 	type Error = core::convert::Infallible;
-	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, P, B>) -> Result<(), Self::Error> { Ok(()) }
-	fn redeem(_: AssetId, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: AssetId, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: AssetId, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, AI, P, B>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 pub trait AssetReward<AssetId, Balance> {

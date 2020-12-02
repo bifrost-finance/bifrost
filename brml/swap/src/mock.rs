@@ -96,7 +96,7 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 10_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const BNCAssetId: u32 = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
 
 	pub const NumberOfSupportedTokens: u8 = 8;
