@@ -138,8 +138,6 @@ impl crate::Trait for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
@@ -153,8 +151,6 @@ impl assets::Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = Convert;
@@ -172,8 +168,6 @@ impl convert::Trait for Test {
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type ConvertDuration = ConvertDuration;
 	type WeightInfo = ();
 }
@@ -204,6 +198,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		cross_chain_privilege: vec![(1u64, true)],
 		all_crosschain_privilege: Vec::new(),
 		cross_trade_eos_limit: 50,
+		eos_asset_id: 6,
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }

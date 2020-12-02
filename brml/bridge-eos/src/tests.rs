@@ -374,7 +374,7 @@ fn bridge_eos_offchain_should_work() {
 			amount: 1 * 10u64.pow(8),
 			memo: vec![],
 			from: 1,
-			token_symbol: TokenSymbol::EOS,
+			asset_id: 6,
 		};
 		assert_ok!(BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset));
 		assert_ok!(BridgeEos::offchain(1));
