@@ -75,6 +75,7 @@ brml-bridge-eos = { path = "../../../../brml/bridge-eos", default-features = fal
 brml-bridge-iost = { path = "../../../../brml/bridge-iost", default-features = false }
 brml-convert = { path = "../../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-api", default-features = false }
+brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
@@ -145,6 +146,7 @@ std = [
 	"brml-bridge-iost/std",
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
+	'brml-staking-reward/std',
 	"brml-swap/std",
 	'brml-voucher/std',
 	'brml-vtoken-mint/std',
