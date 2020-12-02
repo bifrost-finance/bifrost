@@ -169,6 +169,7 @@ dependencies = [
  "brml-bridge-eos",
  "brml-convert",
  "brml-convert-rpc-runtime-api",
+ "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
  "frame-benchmarking",
@@ -460,6 +461,7 @@ dependencies = [
  "brml-bridge-eos",
  "brml-convert",
  "brml-convert-rpc-runtime-api",
+ "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
  "frame-benchmarking",
@@ -780,6 +782,21 @@ version = "0.6.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
+]
+
+[[package]]
+name = "brml-staking-reward"
+version = "0.6.0"
+dependencies = [
+ "brml-assets",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -6900,6 +6917,7 @@ dependencies = [
  "brml-bridge-eos",
  "brml-convert",
  "brml-convert-rpc-runtime-api",
+ "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
  "cumulus-parachain-upgrade",

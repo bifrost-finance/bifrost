@@ -970,6 +970,12 @@ impl brml_swap::Trait for Runtime {
 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
+
+impl brml_staking_reward::Trait for Runtime {
+	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+}
 // bifrost runtime end
 
 // culumus runtime start
@@ -1025,6 +1031,7 @@ construct_runtime!(
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		// BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
+		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 	}
 );

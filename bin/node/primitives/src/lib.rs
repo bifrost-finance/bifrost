@@ -412,3 +412,15 @@ pub mod report {
 		type GenericPublic = sp_core::sr25519::Public;
 	}
 }
+
+pub trait RewardTrait<Balance, AccountId, AssetId> {
+	type Error;
+	fn record_reward(v_token_id: AssetId, convert_amount: Balance, referer: AccountId) -> Result<(), Self::Error>;
+	fn dispatch_reward(v_token_id: AssetId, staking_profit: Balance) -> Result<(), Self::Error>;
+}
+
+impl<A, B, AI> RewardTrait<A, B, AI> for () {
+	type Error = core::convert::Infallible;
+	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
+	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
+}
