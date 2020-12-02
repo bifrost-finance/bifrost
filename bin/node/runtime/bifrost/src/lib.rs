@@ -956,6 +956,14 @@ parameter_types! {
 	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
+impl brml_staking_reward::Trait for Runtime {
+	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Cost = Cost;
+	type Income = Income;
+}
+
 impl brml_swap::Trait for Runtime {
 	type Event = Event;
 	type Fee = Fee;
@@ -979,6 +987,7 @@ impl brml_swap::Trait for Runtime {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 
 }
+
 // bifrost runtime end
 
 construct_runtime!(
@@ -1022,6 +1031,7 @@ construct_runtime!(
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
+		StakingReward: brml_staking_reward::{Module, Storage},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 	}
