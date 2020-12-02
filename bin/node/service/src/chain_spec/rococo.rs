@@ -20,7 +20,7 @@ use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
 use cumulus_primitives::ParaId;
-use node_primitives::{AccountId, ConvertPool};
+use node_primitives::{AccountId, ConvertPool, TokenType, Token};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
@@ -257,8 +257,14 @@ pub fn testnet_genesis(
 		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
-			token_details: vec![],
-			prices: vec![],
+			token_details: vec![
+				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
+				(1, Token::new(b"aUSD".to_vec(), 18, 0, TokenType::Stable)),
+				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
+				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
+				(6, Token::new(b"EOS".to_vec(), 4, 0, TokenType::Token)),
+				(8, Token::new(b"IOST".to_vec(), 8, 0, TokenType::Token)),
+			],
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
