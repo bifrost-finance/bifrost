@@ -15,7 +15,6 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::assert;
 use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage};
 use node_primitives::MintTrait;
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
@@ -72,7 +71,7 @@ decl_module! {
 				 current_bnc_price = BncPrice::<T>::get().1;
 			}
 			// BNC stimulate
-			assert!(Self::generate_bnc(current_bnc_price));
+			Self::generate_bnc(current_bnc_price);
 			// Obtain monitor data
 			let ((previous_block_numer, bnc_mint_amount), max_bnc_mint_amount) = BncMonitor::<T>::get();
 			// Check issue condition
@@ -80,8 +79,9 @@ decl_module! {
 				&& BncSum::<T>::get().ne(&T::Balance::from(0u32))
 				&& max_bnc_mint_amount.ne(&T::Balance::from(0u32)) {
 				// issue
-				assert!(Self::issue_bnc());
-				return;
+				if Self::issue_bnc().is_ok() {
+					return;
+				}
 			}
 			// Update  block_number and max_bnc_mint_amount
 			if max_bnc_mint_amount.gt(&bnc_mint_amount) {
@@ -98,7 +98,9 @@ decl_module! {
 decl_error! {
 	pub enum Error for Module<T: Trait> {
 		/// No included referer
-		MinterNotExist
+		MinterNotExist,
+		/// Bnc total amount is zero
+		BncAmountNotExist,
 	}
 }
 
@@ -106,12 +108,10 @@ decl_error! {
 impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
 	
-	fn generate_bnc(generate_amount: T::Balance) -> bool {
+	fn generate_bnc(generate_amount: T::Balance) {
 		BncSum::<T>::mutate(|bnc_amount| {
 			*bnc_amount = bnc_amount.saturating_add(generate_amount);
 		});
-		
-		true
 	}
 	
 	fn mint_bnc(minter: T::AccountId, mint_amount: T::Balance) -> Result<(), Self::Error> {
@@ -133,15 +133,15 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 		Ok(())
 	}
 	
-	fn issue_bnc() -> bool {
-		assert!(BncSum::<T>::exists());
+	fn issue_bnc() -> Result<(), Self::Error> {
+		ensure!(BncSum::<T>::get().ne(&T::Balance::from(0u32)), Error::<T>::BncAmountNotExist);
 		let bnc_amount = BncSum::<T>::get();
 		// Get total point
 		let mut sum = T::Balance::from(0u32);
 		for (_, val) in BncMint::<T>::iter() {
 			sum = sum.saturating_add(val);
 		}
-		assert!(sum.ne(&T::Balance::from(0u32)));
+		ensure!(sum.ne(&T::Balance::from(0u32)), Error::<T>::MinterNotExist);
 		// Traverse dispatch BNC reward
 		for (minter, point) in BncMint::<T>::iter() {
 			let bnc_reward = point.saturating_mul(bnc_amount) / sum;
@@ -155,17 +155,19 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 				}
 			}
 		}
-		// Clear BncSum and BncMint
-		BncSum::<T>::kill();
+		// Reset BncSum
+		BncSum::<T>::put(T::Balance::from(0u32));
+		// Clear BncMint
 		for _ in BncMint::<T>::drain() {};
 		// Clear Monitor data
 		BncMonitor::<T>::kill();
 		
-		true
+		Ok(())
 	}
 	
 	fn query_bnc(minter: T::AccountId) -> Result<T::Balance, Self::Error> {
 		ensure!(BncMint::<T>::contains_key(&minter), Error::<T>::MinterNotExist);
+		
 		Ok(BncMint::<T>::get(&minter))
 	}
 	

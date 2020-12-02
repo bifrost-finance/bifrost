@@ -23,9 +23,9 @@ use node_primitives::MintTrait;
 use frame_support::{assert_ok, traits::OnFinalize};
 
 fn generate() {
-	assert!(crate::Module::<Test>::generate_bnc(10));
-	assert!(crate::Module::<Test>::generate_bnc(20));
-	assert!(crate::Module::<Test>::generate_bnc(30));
+	crate::Module::<Test>::generate_bnc(10);
+	crate::Module::<Test>::generate_bnc(20);
+	crate::Module::<Test>::generate_bnc(30);
 	
 	assert_eq!(60, BncSum::<Test>::get());
 }
@@ -111,7 +111,7 @@ fn issue_bnc_should_be_ok() {
 		let (_, max_bnc_amount) = BncMonitor::<Test>::get();
 		assert_eq!(150, max_bnc_amount);
 		// issue bnc
-		assert!(crate::Module::<Test>::issue_bnc());
+		assert_ok!(crate::Module::<Test>::issue_bnc());
 		assert_eq!(20, BncReward::<Test>::get(alice));
 		assert_eq!(40, BncReward::<Test>::get(bob));
 		
