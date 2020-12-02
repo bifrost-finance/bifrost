@@ -24,7 +24,8 @@ use node_primitives::{AccountId, ConvertPool};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	// BridgeEosConfig, BridgeIostConfig,
+	BridgeEosConfig,
+	// BridgeIostConfig,
 	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
@@ -261,26 +262,27 @@ pub fn testnet_genesis(
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
-				// (TokenSymbol::DOT, DOLLARS / 100),
-				// (TokenSymbol::KSM, DOLLARS / 100),
-				// (TokenSymbol::EOS, DOLLARS / 100),
-				// (TokenSymbol::IOST, DOLLARS / 100),
+				(2, DOLLARS / 100), // DOT
+				(4, DOLLARS / 100), // KSM
+				(6, DOLLARS / 100), // EOS
+				(8, DOLLARS / 100), // IOST
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
-				// (TokenSymbol::DOT, ConvertPool::new(1, 100)),
-				// (TokenSymbol::KSM, ConvertPool::new(1, 100)),
-				// (TokenSymbol::EOS, ConvertPool::new(1, 100)),
-				// (TokenSymbol::IOST, ConvertPool::new(1, 100)),
+				(2, ConvertPool::new(1, 100)), // DOT
+				(4, ConvertPool::new(1, 100)), // KSM
+				(6, ConvertPool::new(1, 100)), // EOS
+				(8, ConvertPool::new(1, 100)), // IOST
 			],
 		}),
-		// brml_bridge_eos: Some(BridgeEosConfig {
-		// 	bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-		// 	// alice and bob have the privilege to sign cross transaction
-		// 	cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-		// 	all_crosschain_privilege: Vec::new(),
-		// 	cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
-		// }),
+		brml_bridge_eos: Some(BridgeEosConfig {
+			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
+			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
+			eos_asset_id: 6,
+		}),
 		// brml_bridge_iost: Some(BridgeIostConfig {
 		// 	bridge_contract_account: (b"lispczz4".to_vec(), 1),
 		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),

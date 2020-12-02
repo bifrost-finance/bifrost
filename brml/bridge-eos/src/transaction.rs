@@ -71,7 +71,7 @@ impl<AccountId> Default for MultiSig<AccountId> {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub struct MultiSigTx<AccountId> {
+pub struct MultiSigTx<AccountId, AssetId> {
 	/// Chain id of Eos node that transaction will be sent
 	chain_id: Vec<u8>,
 	/// Transaction raw data for signing
@@ -82,25 +82,25 @@ pub struct MultiSigTx<AccountId> {
 	action: Action,
 	/// Who sends Transaction to EOS
 	pub from: AccountId,
-	/// token type
-	pub token_symbol: node_primitives::TokenSymbol,
+	/// Asset Id
+	pub asset_id: AssetId,
 }
 
 /// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub enum TxOut<AccountId> {
+pub enum TxOut<AccountId, AssetId> {
 	None,
 	/// Initial Eos multi-sig transaction
-	Initialized(MultiSigTx<AccountId>),
+	Initialized(MultiSigTx<AccountId, AssetId>),
 	/// Generated and signing Eos multi-sig transaction
-	Created(MultiSigTx<AccountId>),
+	Created(MultiSigTx<AccountId, AssetId>),
 	/// Signed Eos multi-sig transaction
-	SignComplete(MultiSigTx<AccountId>),
+	SignComplete(MultiSigTx<AccountId, AssetId>),
 	/// Eos multi-sig transaction has been sent to EOS node and fetching tx id from EOS node
 	Sent {
 		tx_id: Checksum256,
 		from: AccountId,
-		token_symbol: node_primitives::TokenSymbol,
+		asset_id: AssetId,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
 	Succeeded {
@@ -113,14 +113,14 @@ pub enum TxOut<AccountId> {
 	},
 }
 
-impl<AccountId> Default for TxOut<AccountId> {
+impl<AccountId, AssetId> Default for TxOut<AccountId, AssetId> {
 	fn default() -> Self {
 		Self::None
 	}
 }
 
-impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
-	/// intialize a transaction
+impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, AssetId> {
+	/// initialize a transaction
 	pub fn init<T: crate::Trait>(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
@@ -128,7 +128,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 		threshold: u8,
 		memo: &str,
 		from: AccountId,
-		token_symbol: node_primitives::TokenSymbol
+		asset_id: AssetId
 	) -> Result<Self, Error<T>> {
 		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -143,7 +143,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 			multi_sig: MultiSig::new(threshold),
 			action,
 			from,
-			token_symbol,
+			asset_id,
 		};
 
 		Ok(TxOut::Initialized(multi_sig_tx))
@@ -219,7 +219,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 				Ok(TxOut::Sent {
 					tx_id,
 					from: multi_sig_tx.from,
-					token_symbol: multi_sig_tx.token_symbol,
+					asset_id: multi_sig_tx.asset_id,
 				})
 			},
 			_ => Err(Error::<T>::InvalidSendTxOutType)
@@ -367,7 +367,7 @@ pub(crate) mod eos_rpc {
 		Ok(tx_id.into_bytes())
 	}
 
-	pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(multi_sig_tx: &MultiSigTx<AccountId>) -> Result<Vec<u8>, Error<T>> {
+	pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId, AssetId>(multi_sig_tx: &MultiSigTx<AccountId, AssetId>) -> Result<Vec<u8>, Error<T>> {
 		let serialized_signatures = {
 			let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
 			for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
