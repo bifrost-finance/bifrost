@@ -71,7 +71,7 @@ decl_module! {
 				 current_bnc_price = BncPrice::<T>::get().1;
 			}
 			// BNC stimulate
-			Self::generate_bnc(current_bnc_price);
+			Self::count_bnc(current_bnc_price);
 			// Obtain monitor data
 			let ((previous_block_numer, bnc_mint_amount), max_bnc_mint_amount) = BncMonitor::<T>::get();
 			// Check issue condition
@@ -108,13 +108,14 @@ decl_error! {
 impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
 	
-	fn generate_bnc(generate_amount: T::Balance) {
+	fn count_bnc(generate_amount: T::Balance) {
 		BncSum::<T>::mutate(|bnc_amount| {
 			*bnc_amount = bnc_amount.saturating_add(generate_amount);
 		});
 	}
 	
 	fn mint_bnc(minter: T::AccountId, mint_amount: T::Balance) -> Result<(), Self::Error> {
+		// Judge
 		if BncMint::<T>::contains_key(&minter) {
 			BncMint::<T>::mutate(minter, |v| {
 				*v = v.saturating_add(mint_amount)
@@ -134,13 +135,13 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	}
 	
 	fn issue_bnc() -> Result<(), Self::Error> {
+		// Check Bnc total amount
 		ensure!(BncSum::<T>::get().ne(&T::Balance::from(0u32)), Error::<T>::BncAmountNotExist);
 		let bnc_amount = BncSum::<T>::get();
 		// Get total point
-		let mut sum = T::Balance::from(0u32);
-		for (_, val) in BncMint::<T>::iter() {
-			sum = sum.saturating_add(val);
-		}
+		let sum: T::Balance =
+			BncMint::<T>::iter().fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.1));
+		// Check minter point
 		ensure!(sum.ne(&T::Balance::from(0u32)), Error::<T>::MinterNotExist);
 		// Traverse dispatch BNC reward
 		for (minter, point) in BncMint::<T>::iter() {
@@ -166,6 +167,7 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	}
 	
 	fn query_bnc(minter: T::AccountId) -> Result<T::Balance, Self::Error> {
+		// Check
 		ensure!(BncMint::<T>::contains_key(&minter), Error::<T>::MinterNotExist);
 		
 		Ok(BncMint::<T>::get(&minter))

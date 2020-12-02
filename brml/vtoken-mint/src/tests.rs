@@ -23,9 +23,9 @@ use node_primitives::MintTrait;
 use frame_support::{assert_ok, traits::OnFinalize};
 
 fn generate() {
-	crate::Module::<Test>::generate_bnc(10);
-	crate::Module::<Test>::generate_bnc(20);
-	crate::Module::<Test>::generate_bnc(30);
+	crate::Module::<Test>::count_bnc(10);
+	crate::Module::<Test>::count_bnc(20);
+	crate::Module::<Test>::count_bnc(30);
 	
 	assert_eq!(60, BncSum::<Test>::get());
 }
@@ -86,7 +86,7 @@ fn on_finalize_should_ok() {
 }
 
 #[test]
-fn generate_bnc_should_be_ok() {
+fn count_bnc_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		generate();
 	});

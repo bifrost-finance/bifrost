@@ -456,7 +456,7 @@ pub mod report {
 
 pub trait MintTrait<AccountId, Balance> {
 	type Error;
-	fn generate_bnc(generate_amount: Balance);
+	fn count_bnc(generate_amount: Balance);
 	fn mint_bnc(minter: AccountId, mint_amount: Balance) -> Result<(), Self::Error>;
 	fn issue_bnc() -> Result<(), Self::Error>;
 	fn query_bnc(minter: AccountId) -> Result<Balance, Self::Error>;
@@ -464,7 +464,7 @@ pub trait MintTrait<AccountId, Balance> {
 
 impl<A, B: Default> MintTrait<A, B> for () {
 	type Error = ();
-	fn generate_bnc(_: B) {}
+	fn count_bnc(_: B) {}
 	fn mint_bnc(_: A, _: B) -> Result<(), Self::Error> { Ok(()) }
 	fn issue_bnc() -> Result<(), Self::Error> { Ok(()) }
 	fn query_bnc(_: A) -> Result<B, Self::Error> { Ok(Default::default()) }
