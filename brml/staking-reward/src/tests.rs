@@ -42,7 +42,7 @@ fn query_vtoken_should_be_ok() {
 		let referer_one_vtoken_amount = crate::Point::<Test>::get((veos_id, referer_one));
 		assert_eq!(100, referer_one_vtoken_amount);
 		
-		// Dispatch TokenSymbol::vDOT reward Success:
+		// Dispatch vDOT reward Success:
 		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
 		
 		let referer_one_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_one));
@@ -107,10 +107,10 @@ fn dispatch_reward_is_be_ok() {
 		let referer_two_assets = assets::Module::<Test>::account_assets((vdot_id, referer_two));
 		assert_eq!(0, referer_two_assets.balance);
 		
-		// Dispatch TokenSymbol::vDOT reward Success:
+		// Dispatch vDOT reward Success:
 		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
 		
-		// Dispatch TokenSymbol::vIOST reward Failure:
+		// Dispatch vIOST reward Failure:
 		assert!(crate::Module::<Test>::dispatch_reward(viost_id, staking_profit).is_err());
 		
 		// The second query asset
@@ -149,7 +149,7 @@ fn more_than_256_dispatch_reward_is_be_ok() {
 			assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_two + i));
 		}
 
-		// Dispatch TokenSymbol::vDOT reward Success:
+		// Dispatch vDOT reward Success:
 		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
 
 		// The second query asset
