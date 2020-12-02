@@ -296,7 +296,7 @@ pub fn testnet_genesis(
 			}
 		},
 		brml_vtoken_mint: Some(VtokenMintConfig {
-			number_price: (0, 770547945200u128),
+			number_price: (0, 770_547_945_200u128),
 		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
 	}

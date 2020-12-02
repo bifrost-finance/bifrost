@@ -23,7 +23,7 @@ use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeseria
 mod mock;
 mod tests;
 
-pub const INTERVAL: u32 = 10519200u32;
+pub const INTERVAL: u32 = 10_519_200u32;
 
 pub trait Trait: frame_system::Trait {
 	/// The units in which we record balances.
