@@ -257,12 +257,12 @@ impl<AssetId, AccountId, Balance> AssetTrait<AssetId, AccountId, Balance> for ()
 	fn get_pair(_: AssetId) -> Option<AssetId> { Default::default() }
 }
 
-pub trait TokenPriceHandler<Price> {
-	fn set_token_price(symbol: Vec<u8>, price: Price);
+pub trait TokenPriceHandler<AssetId, Price> {
+	fn set_token_price(asset_id: AssetId, price: Price);
 }
 
-impl<Price> TokenPriceHandler<Price> for () {
-	fn set_token_price(_: Vec<u8>, _: Price) {}
+impl<Price> TokenPriceHandler<AssetId, Price> for () {
+	fn set_token_price(_: AssetId, _: Price) {}
 }
 
 /// Asset redeem handler

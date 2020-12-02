@@ -48,19 +48,6 @@ impl WeightInfo for () {
 	fn redeem() -> Weight { Default::default() }
 }
 
-lazy_static::lazy_static! {
-	/// (token, precision, token_type)
-	pub static ref TOKEN_LIST: [(Vec<u8>, u16, TokenType); 6] = {
-		let bnc = (b"BNC".to_vec(), 12, TokenType::Native);
-		let ausd = (b"aUSD".to_vec(), 18, TokenType::Stable);
-		let dot = (b"DOT".to_vec(), 12, TokenType::Token);
-		let ksm = (b"KSM".to_vec(), 12, TokenType::Token);
-		let eos = (b"EOS".to_vec(), 4, TokenType::Token);
-		let iost = (b"IOST".to_vec(), 8, TokenType::Token);
-		[bnc, ausd, dot, ksm, eos, iost]
-	};
-}
-
 /// The module configuration trait.
 pub trait Trait: system::Trait {
 	/// The overarching event type.
@@ -142,7 +129,7 @@ decl_storage! {
 		pub AccountAssets get(fn account_assets) config(): map hasher(blake2_128_concat) (T::AssetId, T::AccountId)
 			=> AccountAsset<T::Balance>;
 		/// The number of units of prices held by any given asset.
-		pub Prices get(fn prices) config(): map hasher(blake2_128_concat) T::AssetId => T::Price;
+		pub Prices get(fn prices): map hasher(blake2_128_concat) T::AssetId => T::Price;
 		/// The next asset identifier up for grabs.
 		pub NextAssetId get(fn next_asset_id): T::AssetId;
 		/// Details of the token corresponding to an asset id.
@@ -156,16 +143,14 @@ decl_storage! {
 			for ((asset_id, who), asset) in config.account_assets.iter() {
 				<AccountAssets<T>>::insert((asset_id, who), asset);
 			}
-			for i in 0..TOKEN_LIST.len() {
-				// initialize token
-				let (symbol, precision, token_type) = &TOKEN_LIST[i as usize];
-				if *token_type == TokenType::Token {
-					<Module<T>>::asset_create_pair(symbol.to_vec(), *precision).unwrap();
+			// initialize tokens
+			for (asset_id, token) in config.token_details.iter() {
+				assert!(*asset_id == <NextAssetId<T>>::get());
+				if token.token_type == TokenType::Token {
+					<Module<T>>::asset_create_pair(token.symbol.clone(), token.precision).unwrap();
 				} else {
-					<Module<T>>::asset_create(symbol.to_vec(), *precision, *token_type).unwrap();
+					<Module<T>>::asset_create(token.symbol.clone(), token.precision, token.token_type).unwrap();
 				}
-				// initialize price
-				<Prices<T>>::insert(T::AssetId::from(i as u32), T::Price::from(0u32));
 			}
 		});
 	}
@@ -463,15 +448,9 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	}
 }
 
-impl<T: Trait> TokenPriceHandler<T::Price> for Module<T> {
-	fn set_token_price(symbol: Vec<u8>, price: T::Price) {
-		match TOKEN_LIST.iter().position(|s| s.0 == symbol) {
-			Some(id) => {
-				let asset_id = T::AssetId::from(id as u32 + 1); // skip aUSD
-				<Prices<T>>::mutate(asset_id, |p| *p = price);
-			},
-			_ => {},
-		}
+impl<T: Trait> TokenPriceHandler<T::AssetId, T::Price> for Module<T> {
+	fn set_token_price(asset_id: T::AssetId, price: T::Price) {
+		<Prices<T>>::mutate(asset_id, |p| *p = price);
 	}
 }
 

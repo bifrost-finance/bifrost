@@ -687,7 +687,6 @@ version = "0.6.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "lazy_static",
  "node-primitives",
  "parity-scale-codec",
  "serde",
