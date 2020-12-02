@@ -18,7 +18,6 @@ sc-consensus-epochs = { version = "0.8.0" }
 sc-chain-spec = { version = "2.0.0" }
 sc-finality-grandpa = { version = "0.8.0" }
 sc-finality-grandpa-rpc = { version = "0.8.0" }
-sc-keystore = { version = "2.0.0" }
 sc-rpc-api = { version = "0.8.0" }
 sc-rpc = { version = "2.0.0" }
 sc-sync-state-rpc = { version = "0.8.0" }

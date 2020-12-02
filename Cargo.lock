@@ -172,7 +172,6 @@ dependencies = [
  "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
- "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -220,7 +219,6 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keyring 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -464,7 +462,6 @@ dependencies = [
  "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
- "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -512,7 +509,6 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keyring 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -4138,7 +4134,6 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-primitives",
  "polkadot-service",
- "polkadot-test-service",
  "rand 0.7.3",
  "regex",
  "sc-authority-discovery",
@@ -4184,7 +4179,6 @@ dependencies = [
  "sp-trie",
  "structopt",
  "substrate-build-script-utils 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-frame-cli",
  "substrate-frame-rpc-system",
  "tempfile",
  "tracing",
@@ -4254,7 +4248,6 @@ dependencies = [
  "sc-consensus-epochs",
  "sc-finality-grandpa",
  "sc-finality-grandpa-rpc",
- "sc-keystore",
  "sc-rpc",
  "sc-rpc-api",
  "sc-sync-state-rpc",
@@ -4297,11 +4290,8 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
  "parking_lot 0.9.0",
- "polkadot-cli",
  "polkadot-primitives",
  "polkadot-service",
- "polkadot-test-service",
- "rococo-parachain-primitives",
  "rococo-runtime 0.6.0",
  "sc-authority-discovery",
  "sc-basic-authorship",
@@ -6206,112 +6196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "polkadot-test-runtime"
-version = "0.8.26"
-source = "git+https://github.com/paritytech/polkadot?branch=master#9a32ab1d9f22386dedc9a7e65aeb5e07949f26f3"
-dependencies = [
- "bitvec",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-rpc-runtime-api",
- "log",
- "pallet-authority-discovery 2.0.0 (git+https://github.com/paritytech/substrate)",
- "pallet-authorship",
- "pallet-babe",
- "pallet-balances",
- "pallet-grandpa",
- "pallet-indices",
- "pallet-nicks",
- "pallet-offences",
- "pallet-randomness-collective-flip",
- "pallet-session",
- "pallet-staking",
- "pallet-staking-reward-curve",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-vesting",
- "parity-scale-codec",
- "polkadot-parachain",
- "polkadot-primitives",
- "polkadot-runtime-common",
- "polkadot-runtime-parachains",
- "rustc-hex",
- "serde",
- "serde_derive",
- "smallvec 1.5.0",
- "sp-api",
- "sp-authority-discovery",
- "sp-block-builder",
- "sp-consensus-babe",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-staking",
- "sp-std",
- "sp-transaction-pool",
- "sp-version",
- "substrate-wasm-builder",
-]
-
-[[package]]
-name = "polkadot-test-service"
-version = "0.8.26"
-source = "git+https://github.com/paritytech/polkadot?branch=master#9a32ab1d9f22386dedc9a7e65aeb5e07949f26f3"
-dependencies = [
- "frame-benchmarking",
- "frame-system",
- "futures 0.1.30",
- "futures 0.3.8",
- "hex",
- "pallet-balances",
- "pallet-staking",
- "pallet-transaction-payment",
- "polkadot-node-primitives",
- "polkadot-node-subsystem",
- "polkadot-overseer",
- "polkadot-parachain",
- "polkadot-primitives",
- "polkadot-rpc",
- "polkadot-runtime-common",
- "polkadot-runtime-parachains",
- "polkadot-service",
- "polkadot-test-runtime",
- "rand 0.7.3",
- "sc-authority-discovery",
- "sc-chain-spec",
- "sc-cli",
- "sc-client-api",
- "sc-consensus",
- "sc-consensus-babe",
- "sc-executor",
- "sc-finality-grandpa",
- "sc-network",
- "sc-service",
- "sc-transaction-pool",
- "sp-arithmetic",
- "sp-authority-discovery",
- "sp-blockchain",
- "sp-consensus",
- "sp-consensus-babe",
- "sp-core",
- "sp-finality-grandpa",
- "sp-inherents",
- "sp-keyring 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-runtime",
- "sp-state-machine",
- "substrate-test-client",
- "tempfile",
- "tracing",
- "tracing-futures",
-]
-
-[[package]]
 name = "polkadot-validation"
 version = "0.8.26"
 source = "git+https://github.com/paritytech/polkadot?branch=master#9a32ab1d9f22386dedc9a7e65aeb5e07949f26f3"
@@ -6900,15 +6784,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rococo-parachain-primitives"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c75b59758d7f0ac479ab8e36299f5cfe4770132e"
-dependencies = [
- "sp-core",
- "sp-runtime",
-]
-
-[[package]]
 name = "rococo-runtime"
 version = "0.6.0"
 dependencies = [
@@ -6923,7 +6798,6 @@ dependencies = [
  "cumulus-parachain-upgrade",
  "cumulus-primitives",
  "cumulus-runtime",
- "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -6972,7 +6846,6 @@ dependencies = [
  "sp-core",
  "sp-inherents",
  "sp-io",
- "sp-keyring 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -9395,33 +9268,6 @@ dependencies = [
  "log",
  "prometheus",
  "tokio 0.2.23",
-]
-
-[[package]]
-name = "substrate-test-client"
-version = "2.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=master#cff25fbc37c9fc564f8816eefdcd8dce15e1606b"
-dependencies = [
- "futures 0.1.30",
- "futures 0.3.8",
- "hash-db",
- "hex",
- "parity-scale-codec",
- "sc-client-api",
- "sc-client-db",
- "sc-consensus",
- "sc-executor",
- "sc-light",
- "sc-service",
- "serde",
- "serde_json",
- "sp-blockchain",
- "sp-consensus",
- "sp-core",
- "sp-keyring 2.0.0 (git+https://github.com/paritytech/substrate)",
- "sp-keystore",
- "sp-runtime",
- "sp-state-machine",
 ]
 
 [[package]]
