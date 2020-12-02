@@ -96,7 +96,7 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 10_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const BNCAssetId: u32 = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
 
 	pub const NumberOfSupportedTokens: u8 = 8;
@@ -110,8 +110,6 @@ impl crate::Trait for Test {
 	type AssetId = u32;
 	type PoolId = u32;
 	type Balance = u64;
-	type Cost = u64;
-	type Income = u64;
 	type AssetTrait = Assets;
 	type PoolWeight = u64;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
@@ -132,8 +130,6 @@ impl assets::Trait for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();

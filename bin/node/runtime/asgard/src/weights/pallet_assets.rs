@@ -25,6 +25,10 @@ impl<T: frame_system::Trait> brml_assets::WeightInfo for WeightInfo<T> {
             //.saturating_add(T::DbWeight::get().reads(0 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+    fn create_pair() -> Weight {
+        (65949000 as Weight)
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
     fn issue() -> Weight {
         (46665000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
