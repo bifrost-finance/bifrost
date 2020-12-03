@@ -18,8 +18,8 @@ pub trait WeightInfo{
 }
 
 
-pub trait Trait: system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The units in which we record prices.
 	type Price: Member + Parameter + AtLeast32Bit + Default + Copy + Zero;
@@ -32,13 +32,13 @@ pub trait Trait: system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Oracle {
+	trait Store for Module<T: Config> as Oracle {
 		pub Result: u128;
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		fn deposit_event() = default;
 
 		#[weight = T::WeightInfo::send_request()]
@@ -46,42 +46,42 @@ decl_module! {
 			// TODO Investigate if Enum can be safely used to refer to a callback
 			// let name: &str = stringify!(Call::<T>::callback); 'Example :: callback'
 			// For now , simply rely on a string to identify the callback
-			let who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+			let who : <T as system::Config>::AccountId = ensure_signed(origin)?;
 			Self::deposit_event(create_request_event_from_parameters::<T, (&[u8], &[u8], &[u8], &[u8], &[u8], &[u8])>(1, 0, who, 0, (b"get", b"https://min-api.cryptocompare.com/data/pricemultifull?fsyms=ETH&tsyms=USD", b"path", b"RAW.ETH.USD.PRICE", b"times", b"100000000"), "Oracle.callback".into()));
 			Ok(())
 		}
 
 		#[weight = T::WeightInfo::callback()]
 		pub fn callback(origin, result: u128) -> DispatchResult {
-			let _who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+			let _who : <T as system::Config>::AccountId = ensure_signed(origin)?;
 			<Result>::put(result);
 			Ok(())
 		}
 
 		#[weight = T::WeightInfo::send_request_price_eos()]
 		pub fn send_request_price_eos(origin) -> DispatchResult {
-			let who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+			let who : <T as system::Config>::AccountId = ensure_signed(origin)?;
 			Self::deposit_event(create_request_event_from_parameters::<T, (&[u8], &[u8], &[u8], &[u8], &[u8], &[u8])>(1, 0, who.clone(), 0, (b"get", b"https://api.huobi.pro/market/detail/merged?symbol=eosusdt", b"path", b"tick.close", b"times", b"100000000"), "Oracle.callback_price_eos".into()));
 			Ok(())
 		}
 
 		#[weight = T::WeightInfo::send_request_price_iost()]
 		pub fn send_request_price_iost(origin) -> DispatchResult {
-			let who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+			let who : <T as system::Config>::AccountId = ensure_signed(origin)?;
 			Self::deposit_event(create_request_event_from_parameters::<T, (&[u8], &[u8], &[u8], &[u8], &[u8], &[u8])>(1, 0, who.clone(), 0, (b"get", b"https://api.huobi.pro/market/detail/merged?symbol=iostusdt", b"path", b"tick.close", b"times", b"100000000"), "Oracle.callback_price_iost".into()));
 			Ok(())
 		}
 
 		#[weight = T::WeightInfo::callback_price_eos()]
 		pub fn callback_price_eos(origin, result: u128) -> DispatchResult {
-			let _who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+			let _who : <T as system::Config>::AccountId = ensure_signed(origin)?;
 			T::TokenPriceHandler::set_token_price(b"EOS".to_vec(), result.saturated_into());
 			Ok(())
 		}
 
 		#[weight = T::WeightInfo::callback_price_iost()]
 		pub fn callback_price_iost(origin, result: u128) -> DispatchResult {
-			let _who : <T as system::Trait>::AccountId = ensure_signed(origin)?;
+			let _who : <T as system::Config>::AccountId = ensure_signed(origin)?;
 			T::TokenPriceHandler::set_token_price(b"IOST".to_vec(), result.saturated_into());
 			Ok(())
 		}

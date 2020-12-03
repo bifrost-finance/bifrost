@@ -60,7 +60,7 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	//配置各个type的类型，再加上上面定义好的常量。类型+常量
 	type Origin = Origin;
 	type Index = u64;
@@ -104,7 +104,7 @@ parameter_types! {
 	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type Event = TestEvent;
 	type Fee = u64;
 	type AssetId = u32;
@@ -125,7 +125,7 @@ impl crate::Trait for Test {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;

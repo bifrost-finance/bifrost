@@ -75,9 +75,9 @@ impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Durat
 }
 
 /// The module configuration trait.
-pub trait Trait: system::Trait + brml_assets::Trait {
+pub trait Config: system::Config + brml_assets::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// Settlement id
 	type SettlementId: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::BlockNumber>;
@@ -93,7 +93,7 @@ pub trait Trait: system::Trait + brml_assets::Trait {
 }
 
 decl_event!(
-	pub enum Event<T> where <T as Trait>::SettlementId,
+	pub enum Event<T> where <T as Config>::SettlementId,
 	{
 		/// New Settlement Started.
 		NewSettlement(SettlementId),
@@ -101,7 +101,7 @@ decl_event!(
 );
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Settlement {
+	trait Store for Module<T: Config> as Settlement {
 		/// Records for asset clearing corresponding to an account id
 		ClearingAssets get(fn clearing_assets): linked_map hasher(blake2_128_concat) (T::AssetId, T::AccountId, T::SettlementId)
 			=> BalanceDuration<T::BlockNumber, T::Balance, T::Duration>;
@@ -118,7 +118,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		/// How often (in blocks) new settlement are started.
 		const SettlementPeriod: T::BlockNumber = T::SettlementPeriod::get();
 
@@ -137,7 +137,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Balance> for Module<T> {
+impl<T: Config> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Balance> for Module<T> {
 	fn asset_clearing(
 		asset_id: T::AssetId,
 		target: T::AccountId,
@@ -189,7 +189,7 @@ impl<T: Trait> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Bala
 }
 
 // The main implementation block for the module.
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn current_settlement_id() -> T::SettlementId {
 		Self::next_settlement_id().saturating_sub(1.into())
 	}

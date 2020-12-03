@@ -21,7 +21,7 @@ use frame_support::{
 };
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Trait> brml_bridge_iost::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> brml_bridge_iost::WeightInfo for WeightInfo<T> {
     fn bridge_enable() -> Weight {
         (46665000 as Weight)
         // .saturating_add(T::DbWeight::get().reads(0 as Weight))
