@@ -19,10 +19,14 @@
 use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Trait> brml_assets::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> brml_assets::WeightInfo for WeightInfo<T> {
     fn create() -> Weight {
         (65949000 as Weight)
             //.saturating_add(T::DbWeight::get().reads(0 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
+    fn create_pair() -> Weight {
+        (65949000 as Weight)
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
     fn issue() -> Weight {

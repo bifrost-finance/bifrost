@@ -71,7 +71,7 @@ impl<AccountId> Default for MultiSig<AccountId> {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub struct MultiSigTx<AccountId> {
+pub struct MultiSigTx<AccountId, AssetId> {
 	/// Chain id of Eos node that transaction will be sent
 	chain_id: Vec<u8>,
 	/// Transaction raw data for signing
@@ -82,25 +82,25 @@ pub struct MultiSigTx<AccountId> {
 	action: Action,
 	/// Who sends Transaction to EOS
 	pub from: AccountId,
-	/// token type
-	pub token_symbol: node_primitives::TokenSymbol,
+	/// Asset Id
+	pub asset_id: AssetId,
 }
 
 /// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub enum TxOut<AccountId> {
+pub enum TxOut<AccountId, AssetId> {
 	None,
 	/// Initial Eos multi-sig transaction
-	Initialized(MultiSigTx<AccountId>),
+	Initialized(MultiSigTx<AccountId, AssetId>),
 	/// Generated and signing Eos multi-sig transaction
-	Created(MultiSigTx<AccountId>),
+	Created(MultiSigTx<AccountId, AssetId>),
 	/// Signed Eos multi-sig transaction
-	SignComplete(MultiSigTx<AccountId>),
+	SignComplete(MultiSigTx<AccountId, AssetId>),
 	/// Eos multi-sig transaction has been sent to EOS node and fetching tx id from EOS node
 	Sent {
 		tx_id: Checksum256,
 		from: AccountId,
-		token_symbol: node_primitives::TokenSymbol,
+		asset_id: AssetId,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
 	Succeeded {
@@ -113,22 +113,22 @@ pub enum TxOut<AccountId> {
 	},
 }
 
-impl<AccountId> Default for TxOut<AccountId> {
+impl<AccountId, AssetId> Default for TxOut<AccountId, AssetId> {
 	fn default() -> Self {
 		Self::None
 	}
 }
 
-impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
-	/// intialize a transaction
-	pub fn init<T: crate::Trait>(
+impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, AssetId> {
+	/// initialize a transaction
+	pub fn init<T: crate::Config>(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
 		amount: Asset,
 		threshold: u8,
 		memo: &str,
 		from: AccountId,
-		token_symbol: node_primitives::TokenSymbol
+		asset_id: AssetId
 	) -> Result<Self, Error<T>> {
 		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -143,14 +143,14 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 			multi_sig: MultiSig::new(threshold),
 			action,
 			from,
-			token_symbol,
+			asset_id,
 		};
 
 		Ok(TxOut::Initialized(multi_sig_tx))
 	}
 
 	/// compose a transaction
-	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
+	pub fn generate<T: crate::Config>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Initialized(mut multi_sig_tx) => {
 				// fetch info
@@ -176,7 +176,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	}
 
 	/// sign the transaction
-	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
+	pub fn sign<T: crate::Config>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Created(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
@@ -206,7 +206,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 	}
 
 	/// send transaction to EOS node
-	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
+	pub fn send<T: crate::Config>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::SignComplete(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
@@ -219,7 +219,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug> TxOut<AccountId> {
 				Ok(TxOut::Sent {
 					tx_id,
 					from: multi_sig_tx.from,
-					token_symbol: multi_sig_tx.token_symbol,
+					asset_id: multi_sig_tx.asset_id,
 				})
 			},
 			_ => Err(Error::<T>::InvalidSendTxOutType)
@@ -255,7 +255,7 @@ pub(crate) mod eos_rpc {
 	type RefBlockPrefix = u32;
 
 	/// Get EOS node information
-	pub(crate) fn get_info<T: crate::Trait>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
+	pub(crate) fn get_info<T: crate::Config>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
 		let req_api = format!("{}{}", node_url, GET_INFO_API);
 		let pending = http::Request::post(&req_api, vec![b"{}"])
 			.add_header("Content-Type", "application/json")
@@ -300,7 +300,7 @@ pub(crate) mod eos_rpc {
 	}
 
 	/// Get current highest block from EOS net
-	pub(crate) fn get_block<T: crate::Trait>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
+	pub(crate) fn get_block<T: crate::Config>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
 		let req_body = {
 			JsonValue::Object(vec![
 				(
@@ -348,7 +348,7 @@ pub(crate) mod eos_rpc {
 	}
 
 	/// Push transaction to EOS net
-	pub(crate) fn push_transaction<T: crate::Trait>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
+	pub(crate) fn push_transaction<T: crate::Config>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
 		let pending = http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx]).send().map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
@@ -367,7 +367,7 @@ pub(crate) mod eos_rpc {
 		Ok(tx_id.into_bytes())
 	}
 
-	pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(multi_sig_tx: &MultiSigTx<AccountId>) -> Result<Vec<u8>, Error<T>> {
+	pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(multi_sig_tx: &MultiSigTx<AccountId, AssetId>) -> Result<Vec<u8>, Error<T>> {
 		let serialized_signatures = {
 			let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
 			for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
@@ -402,7 +402,7 @@ pub(crate) mod eos_rpc {
 		Ok(signed_trx)
 	}
 
-	pub(crate) fn get_transaction_id<T: crate::Trait>(trx_response: &str) -> Result<String, Error<T>> {
+	pub(crate) fn get_transaction_id<T: crate::Config>(trx_response: &str) -> Result<String, Error<T>> {
 		// error happens while pushing transaction to EOS node
 		if !trx_response.contains("transaction_id") && !trx_response.contains("processed") {
 			return Err(Error::<T>::EOSRpcError);

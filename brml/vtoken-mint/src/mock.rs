@@ -41,7 +41,7 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -73,7 +73,7 @@ parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type Balance = u64;
 }
 

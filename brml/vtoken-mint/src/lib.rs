@@ -24,7 +24,7 @@ mod tests;
 
 pub const INTERVAL: u32 = 10_519_200u32;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// The units in which we record balances.
 	type Balance: Member
 		+ Parameter
@@ -36,7 +36,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Mint {
+	trait Store for Module<T: Config> as Mint {
 		/// bnc total stimulate amount
 		BncSum: T::Balance;
 		/// record block_number and price for caculate bnc_price
@@ -58,7 +58,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		fn on_finalize(current_block_number: T::BlockNumber) {
 			// Get current block generates bnc stimulate
@@ -96,7 +96,7 @@ decl_module! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// No included referer
 		MinterNotExist,
 		/// Bnc total amount is zero
@@ -105,7 +105,7 @@ decl_error! {
 }
 
 
-impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
+impl<T: Config> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
 
 	fn count_bnc(generate_amount: T::Balance) {

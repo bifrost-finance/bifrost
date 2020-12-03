@@ -66,7 +66,7 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -113,7 +113,7 @@ impl FindAuthor<u64> for AuthorGiven {
 	}
 }
 
-impl pallet_authorship::Trait for Test {
+impl pallet_authorship::Config for Test {
 	type FindAuthor = AuthorGiven;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
@@ -133,13 +133,11 @@ impl From<u64> for sr25519::AuthorityId {
 	}
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type AuthorityId = sr25519::AuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
@@ -148,13 +146,11 @@ impl crate::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = Convert;
@@ -165,15 +161,13 @@ parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
-impl convert::Trait for Test {
+impl convert::Config for Test {
 	type ConvertPrice = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type ConvertDuration = ConvertDuration;
 	type WeightInfo = ();
 }
@@ -204,6 +198,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		cross_chain_privilege: vec![(1u64, true)],
 		all_crosschain_privilege: Vec::new(),
 		cross_trade_eos_limit: 50,
+		eos_asset_id: 6,
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }

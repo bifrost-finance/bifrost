@@ -60,7 +60,7 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	//配置各个type的类型，再加上上面定义好的常量。类型+常量
 	type Origin = Origin;
 	type Index = u64;
@@ -96,7 +96,7 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 10_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const BNCAssetId: u32 = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
 
 	pub const NumberOfSupportedTokens: u8 = 8;
@@ -104,14 +104,12 @@ parameter_types! {
 	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type Event = TestEvent;
 	type Fee = u64;
 	type AssetId = u32;
 	type PoolId = u32;
 	type Balance = u64;
-	type Cost = u64;
-	type Income = u64;
 	type AssetTrait = Assets;
 	type PoolWeight = u64;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
@@ -127,13 +125,11 @@ impl crate::Trait for Test {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();

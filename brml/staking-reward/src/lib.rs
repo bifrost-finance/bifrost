@@ -19,14 +19,14 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage};
-use node_primitives::{RewardTrait, AssetTrait, TokenSymbol};
+use node_primitives::{RewardTrait, AssetTrait};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
 
 mod mock;
 mod tests;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// The units in which we record balances.
 	type Balance: Member
 		+ Parameter
@@ -37,12 +37,8 @@ pub trait Trait: frame_system::Trait {
 		+ From<Self::BlockNumber>;
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-	/// The units in which we record costs.
-	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-	/// The units in which we record incomes.
-	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 	/// Assets
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 }
 
 #[derive(Encode, Decode, Default, Clone)]
@@ -56,34 +52,34 @@ pub const CAPACITY: usize = 512;
 pub const LEN: usize = 256;
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Reward {
-		Point get(fn query_point): map hasher(blake2_128_concat) (TokenSymbol, T::AccountId) => T::Balance;
-		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) TokenSymbol
+	trait Store for Module<T: Config> as Reward {
+		Point get(fn query_point): map hasher(blake2_128_concat) (T::AssetId, T::AccountId) => T::Balance;
+		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) T::AssetId
 			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
 	}
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// No included referer
 		RefererNotExist,
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {}
 }
 
-impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
+impl<T: Config> RewardTrait<T::Balance, T::AccountId, T::AssetId> for Module<T> {
 	type Error = Error<T>;
 	
 	fn record_reward(
-		vtoken_symbol: TokenSymbol,
+		v_token_id: T::AssetId,
 		convert_amount: T::Balance,
 		referer: T::AccountId
 	) -> Result<(), Self::Error> {
-		// Traverse (if map doesn't contains vtoken_symbol, the system will be initial)
-		Reward::<T>::mutate(vtoken_symbol, |vec| {
+		// Traverse (if map doesn't contains v_token_id, the system will be initial)
+		Reward::<T>::mutate(v_token_id, |vec| {
 			let mut flag = true;
 			for item in vec.iter_mut() {
 				if item.account_id.eq(&referer) {
@@ -106,7 +102,7 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
 		});
 		
-		Point::<T>::mutate((vtoken_symbol, referer), |val| {
+		Point::<T>::mutate((v_token_id, referer), |val| {
 			*val = val.saturating_add(convert_amount);
 		});
 		
@@ -114,11 +110,11 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 	}
 	
 	fn dispatch_reward(
-		vtoken_symbol: TokenSymbol,
+		v_token_id: T::AssetId,
 		staking_profit: T::Balance
 	) -> Result<(), Self::Error> {
 		// Obtain vec
-		let record_vec = Self::vtoken_reward(vtoken_symbol);
+		let record_vec = Self::vtoken_reward(v_token_id);
 		ensure!(!record_vec.is_empty(), Error::<T>::RefererNotExist);
 		// The total statistics
 		let sum: T::Balance = {
@@ -136,13 +132,13 @@ impl<T: Trait> RewardTrait<T::Balance, T::AccountId> for Module<T> {
 			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
 			// Check dispatch reward
 			if reward.ne(&T::Balance::from(0u32)) {
-				T::AssetTrait::asset_issue(vtoken_symbol, &referer.account_id, reward);
+				T::AssetTrait::asset_issue(v_token_id, &referer.account_id, reward);
 			}
 		}
 		// Clear vec and point
-		Reward::<T>::mutate(vtoken_symbol, |vec| {
+		Reward::<T>::mutate(v_token_id, |vec| {
 			for item in vec.iter() {
-				Point::<T>::remove((vtoken_symbol, &item.account_id));
+				Point::<T>::remove((v_token_id, &item.account_id));
 			}
 			vec.clear();
 		});

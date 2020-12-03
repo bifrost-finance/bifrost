@@ -38,15 +38,15 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
 };
 use frame_system::ensure_signed;
-use node_primitives::{AssetTrait, TokenSymbol};
+use node_primitives::AssetTrait;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
 
 mod mock;
 mod tests;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// event
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// fee
 	type Fee: Member
@@ -67,19 +67,11 @@ pub trait Trait: frame_system::Trait {
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-	/// The units in which we record costs.
-	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
-	/// The units in which we record incomes.
-	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
 	/// AssetTrait to handle assets
 	type AssetTrait: AssetTrait<
 		Self::AssetId,
 		Self::AccountId,
 		Self::Balance,
-		Self::Cost,
-		Self::Income,
 	>;
 
 	/// Weight
@@ -114,7 +106,7 @@ pub trait Trait: frame_system::Trait {
 	type WeightPrecision: Get<Self::PoolWeight>;
 
 	/// The up-limit of tokens supported.
-	type BNCAssetId: Get<TokenSymbol>;
+	type BNCAssetId: Get<Self::AssetId>;
 
 	/// the asset id of BNC
 	type InitialPoolSupply: Get<Self::Balance>;
@@ -130,7 +122,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_event! {
-	pub enum Event<T> where <T as Trait>::Balance, {
+	pub enum Event<T> where <T as Config>::Balance, {
 		AddLiquiditySuccess,
 		RemoveLiquiditySuccess,
 		AddSingleLiquiditySuccess,
@@ -141,7 +133,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		PoolNotExist,
 		PoolNotActive,
 		TokenNotExist,
@@ -177,9 +169,9 @@ pub struct PoolDetails<AccountId, Fee> {
 
 /// struct for pool creating token info.
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug, Copy)]
-pub struct PoolCreateTokenDetails<Balance, PoolWeight> {
+pub struct PoolCreateTokenDetails<AssetId, Balance, PoolWeight> {
 	/// token asset id
-	token_id: TokenSymbol,
+	token_id: AssetId,
 	/// token balance that the pool creator wants to deposit into the pool for the first time.
 	token_balance: Balance,
 	/// token weight that the pool creator wants to give to the token
@@ -187,7 +179,7 @@ pub struct PoolCreateTokenDetails<Balance, PoolWeight> {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Swap {
+	trait Store for Module<T: Config> as Swap {
 		/// Pool info
 		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T::AccountId, T::Fee>;
 
@@ -195,13 +187,13 @@ decl_storage! {
 		/// Sum of all the token weights for a pool must be 1 * WeightPrecision. Should be ensured when set up the pool.
 		TokenWeightsInPool get(fn token_weights_in_pool): double_map
 			hasher(blake2_128_concat) T::PoolId,
-			hasher(blake2_128_concat) TokenSymbol
+			hasher(blake2_128_concat) T::AssetId
 			=> T::PoolWeight;
 
 		/// Token balance info for pools
 		TokenBalancesInPool get(fn token_balances_in_pool): double_map
 			hasher(blake2_128_concat) T::PoolId,
-			hasher(blake2_128_concat) TokenSymbol
+			hasher(blake2_128_concat) T::AssetId
 			=> T::Balance;
 
 		/// total pool tokens in pool.
@@ -231,7 +223,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		const MaximumSwapInRatio: T::Balance = T::MaximumSwapInRatio::get();
@@ -241,7 +233,7 @@ decl_module! {
 		const FeePrecision: T::Fee = T::FeePrecision::get();
 		const WeightPrecision: T::PoolWeight = T::WeightPrecision::get();
 		const NumberOfSupportedTokens: u8 = T::NumberOfSupportedTokens::get();
-		const BNCAssetId: TokenSymbol = T::BNCAssetId::get();
+		const BNCAssetId: T::AssetId = T::BNCAssetId::get();
 		const BonusClaimAgeDenominator: T::BlockNumber = T::BonusClaimAgeDenominator::get();
 		const InitialPoolSupply: T::Balance = T::InitialPoolSupply::get();
 		const MaximumPassedInPoolTokenShares: T::Balance = T::MaximumPassedInPoolTokenShares::get();
@@ -314,7 +306,7 @@ decl_module! {
 		fn add_single_liquidity_given_amount_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: TokenSymbol,
+			asset_id: T::AssetId,
 			#[compact] token_amount_in: T::Balance,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
@@ -368,7 +360,7 @@ decl_module! {
 		fn add_single_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: TokenSymbol,
+			asset_id: T::AssetId,
 			#[compact] new_pool_token: T::Balance,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
@@ -420,7 +412,7 @@ decl_module! {
 		fn remove_single_asset_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: TokenSymbol,
+			asset_id: T::AssetId,
 			#[compact] pool_token_out: T::Balance  // The pool token that the user want to remove liquidity with from the pool.
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
@@ -472,7 +464,7 @@ decl_module! {
 		fn remove_single_asset_liquidity_given_amount_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: TokenSymbol,
+			asset_id: T::AssetId,
 			#[compact] token_amount: T::Balance  // The number of out-token that the user want to remove liquidity with from the pool.
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
@@ -570,10 +562,10 @@ decl_module! {
 		fn swap_exact_in(
 			origin,
 			pool_id: T::PoolId,
-			token_in_asset_id: TokenSymbol,
+			token_in_asset_id: T::AssetId,
 			#[compact]token_amount_in: T::Balance, // the input token amount that the user is willing to pay.
 			min_token_amount_out: Option<T::Balance>,  // The least output token amount that the user can accept
-			token_out_asset_id: TokenSymbol,
+			token_out_asset_id: T::AssetId,
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
 
@@ -641,10 +633,10 @@ decl_module! {
 		fn swap_exact_out(
 			origin,
 			pool_id: T::PoolId,
-			token_out_asset_id: TokenSymbol,
+			token_out_asset_id: T::AssetId,
 			#[compact]token_amount_out: T::Balance, // the out token amount that the user wants to get.
 			max_token_amount_in: Option<T::Balance>,  // The most input token amount that the user can accept to get the token amount out.
-			token_in_asset_id: TokenSymbol,
+			token_in_asset_id: T::AssetId,
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
 			
@@ -670,8 +662,7 @@ decl_module! {
 				let weight_out = TokenWeightsInPool::<T>::get(pool_id, token_out_asset_id);
 				// Pool swap fee rate, which is an integer, should be divided by rate precision when being used.
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
-				
-				
+
 				let fixed_token_amount_in = Self::calculate_in_given_out(token_in_pool_amount, weight_in, 
 					token_out_pool_amount, weight_out, token_amount_out, swap_fee_rate)?;
 
@@ -741,7 +732,7 @@ decl_module! {
 		pub fn create_pool(
 			origin,
 			swap_fee_rate: T::Fee,  // this number is an integer to avoid precision loss, should be divided by fee precision constant when used.
-			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::Balance, T::PoolWeight>>,
+			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::AssetId, T::Balance, T::PoolWeight>>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
 
@@ -865,7 +856,7 @@ decl_module! {
 }
 
 #[allow(dead_code)]
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub(crate) fn convert_float(input: I64F64) -> Result<T::Balance, Error<T>> {
 		let converted = u128::from_fixed(input);
 		TryInto::<T::Balance>::try_into(converted).map_err(|_| Error::<T>::ConvertFailure)

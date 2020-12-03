@@ -43,8 +43,8 @@ use sp_core::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Balance, BlockNumber, Cost, Hash, Income, Index, Moment, Price,
-	 AssetId, Precision, Fee, PoolId, PoolWeight, TokenSymbol, ConvertPrice, RatePerBlock
+	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
+	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -64,7 +64,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
-use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
+// use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment, CurrencyAdapter};
@@ -162,7 +162,7 @@ parameter_types! {
 
 const_assert!(AvailableBlockRatio::get().deconstruct() >= AVERAGE_ON_INITIALIZE_WEIGHT.deconstruct());
 
-impl frame_system::Trait for Runtime {
+impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
 	type Origin = Origin;
 	type Call = Call;
@@ -190,7 +190,7 @@ impl frame_system::Trait for Runtime {
 	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_utility::Trait for Runtime {
+impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
@@ -204,7 +204,7 @@ parameter_types! {
 	pub const MaxSignatories: u16 = 100;
 }
 
-impl pallet_multisig::Trait for Runtime {
+impl pallet_multisig::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type Currency = Balances;
@@ -267,7 +267,7 @@ impl InstanceFilter<Call> for ProxyType {
 	}
 }
 
-impl pallet_proxy::Trait for Runtime {
+impl pallet_proxy::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type Currency = Balances;
@@ -287,7 +287,7 @@ parameter_types! {
 	pub const MaxScheduledPerBlock: u32 = 50;
 }
 
-impl pallet_scheduler::Trait for Runtime {
+impl pallet_scheduler::Config for Runtime {
 	type Event = Event;
 	type Origin = Origin;
 	type PalletsOrigin = OriginCaller;
@@ -303,7 +303,7 @@ parameter_types! {
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
 }
 
-impl pallet_babe::Trait for Runtime {
+impl pallet_babe::Config for Runtime {
 	type EpochDuration = EpochDuration;
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type EpochChangeTrigger = pallet_babe::ExternalTrigger;
@@ -330,7 +330,7 @@ parameter_types! {
 	pub const IndexDeposit: Balance = 1 * DOLLARS;
 }
 
-impl pallet_indices::Trait for Runtime {
+impl pallet_indices::Config for Runtime {
 	type AccountIndex = AccountIndex;
 	type Currency = Balances;
 	type Deposit = IndexDeposit;
@@ -345,7 +345,7 @@ parameter_types! {
 	pub const MaxLocks: u32 = 50;
 }
 
-impl pallet_balances::Trait for Runtime {
+impl pallet_balances::Config for Runtime {
 	type MaxLocks = MaxLocks;
 	type Balance = Balance;
 	type DustRemoval = ();
@@ -362,7 +362,7 @@ parameter_types! {
 	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
 
-impl pallet_transaction_payment::Trait for Runtime {
+impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
@@ -374,7 +374,7 @@ parameter_types! {
 	pub const MinimumPeriod: Moment = SLOT_DURATION / 2;
 }
 
-impl pallet_timestamp::Trait for Runtime {
+impl pallet_timestamp::Config for Runtime {
 	type Moment = Moment;
 	type OnTimestampSet = Babe;
 	type MinimumPeriod = MinimumPeriod;
@@ -385,7 +385,7 @@ parameter_types! {
 	pub const UncleGenerations: BlockNumber = 5;
 }
 
-impl pallet_authorship::Trait for Runtime {
+impl pallet_authorship::Config for Runtime {
 	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Babe>;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
@@ -405,9 +405,9 @@ parameter_types! {
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(17);
 }
 
-impl pallet_session::Trait for Runtime {
+impl pallet_session::Config for Runtime {
 	type Event = Event;
-	type ValidatorId = <Self as frame_system::Trait>::AccountId;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_staking::StashOf<Self>;
 	type ShouldEndSession = Babe;
 	type NextSessionRotation = Babe;
@@ -418,7 +418,7 @@ impl pallet_session::Trait for Runtime {
 	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_session::historical::Trait for Runtime {
+impl pallet_session::historical::Config for Runtime {
 	type FullIdentification = pallet_staking::Exposure<AccountId, Balance>;
 	type FullIdentificationOf = pallet_staking::ExposureOf<Runtime>;
 }
@@ -449,7 +449,7 @@ parameter_types! {
 		.saturating_sub(ExtrinsicBaseWeight::get());
 }
 
-impl pallet_staking::Trait for Runtime {
+impl pallet_staking::Config for Runtime {
 	type Currency = Balances;
 	type UnixTime = Timestamp;
 	type CurrencyToVote = U128CurrencyToVote;
@@ -495,7 +495,7 @@ parameter_types! {
 	pub const MaxProposals: u32 = 100;
 }
 
-impl pallet_democracy::Trait for Runtime {
+impl pallet_democracy::Config for Runtime {
 	type Proposal = Call;
 	type Event = Event;
 	type Currency = Balances;
@@ -547,7 +547,7 @@ parameter_types! {
 }
 
 type CouncilCollective = pallet_collective::Instance1;
-impl pallet_collective::Trait<CouncilCollective> for Runtime {
+impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
@@ -570,7 +570,7 @@ parameter_types! {
 // Make sure that there are no more than `MaxMembers` members elected via elections-phragmen.
 const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
 
-impl pallet_elections_phragmen::Trait for Runtime {
+impl pallet_elections_phragmen::Config for Runtime {
 	type Event = Event;
 	type ModuleId = ElectionsPhragmenModuleId;
 	type Currency = Balances;
@@ -597,7 +597,7 @@ parameter_types! {
 }
 
 type TechnicalCollective = pallet_collective::Instance2;
-impl pallet_collective::Trait<TechnicalCollective> for Runtime {
+impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type Origin = Origin;
 	type Proposal = Call;
 	type Event = Event;
@@ -613,7 +613,7 @@ type EnsureRootOrHalfCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>
 >;
-impl pallet_membership::Trait<pallet_membership::Instance1> for Runtime {
+impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type Event = Event;
 	type AddOrigin = EnsureRootOrHalfCouncil;
 	type RemoveOrigin = EnsureRootOrHalfCouncil;
@@ -642,7 +642,7 @@ parameter_types! {
 	pub const BountyValueMinimum: Balance = 5 * DOLLARS;
 }
 
-impl pallet_treasury::Trait for Runtime {
+impl pallet_treasury::Config for Runtime {
 	type ModuleId = TreasuryModuleId;
 	type Currency = Balances;
 	type ApproveOrigin = EnsureOneOf<
@@ -676,7 +676,7 @@ impl pallet_treasury::Trait for Runtime {
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_sudo::Trait for Runtime {
+impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 }
@@ -746,7 +746,7 @@ impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime where
 	type OverarchingCall = Call;
 }
 
-impl pallet_im_online::Trait for Runtime {
+impl pallet_im_online::Config for Runtime {
 	type AuthorityId = ImOnlineId;
 	type Event = Event;
 	type SessionDuration = SessionDuration;
@@ -759,16 +759,16 @@ parameter_types! {
 	pub OffencesWeightSoftLimit: Weight = Perbill::from_percent(60) * MaximumBlockWeight::get();
 }
 
-impl pallet_offences::Trait for Runtime {
+impl pallet_offences::Config for Runtime {
 	type Event = Event;
 	type IdentificationTuple = pallet_session::historical::IdentificationTuple<Self>;
 	type OnOffenceHandler = Staking;
 	type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
-impl pallet_authority_discovery::Trait for Runtime {}
+impl pallet_authority_discovery::Config for Runtime {}
 
-impl pallet_grandpa::Trait for Runtime {
+impl pallet_grandpa::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 
@@ -797,7 +797,7 @@ parameter_types! {
 	pub const MaxRegistrars: u32 = 20;
 }
 
-impl pallet_identity::Trait for Runtime {
+impl pallet_identity::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type BasicDeposit = BasicDeposit;
@@ -819,7 +819,7 @@ parameter_types! {
 	pub const RecoveryDeposit: Balance = 5 * DOLLARS;
 }
 
-impl pallet_recovery::Trait for Runtime {
+impl pallet_recovery::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
 	type Currency = Balances;
@@ -840,7 +840,7 @@ parameter_types! {
 	pub const SocietyModuleId: ModuleId = ModuleId(*b"py/socie");
 }
 
-impl pallet_society::Trait for Runtime {
+impl pallet_society::Config for Runtime {
 	type Event = Event;
 	type ModuleId = SocietyModuleId;
 	type Currency = Balances;
@@ -861,7 +861,7 @@ parameter_types! {
 	pub const MinVestedTransfer: Balance = 100 * DOLLARS;
 }
 
-impl pallet_vesting::Trait for Runtime {
+impl pallet_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type BlockNumberToBalance = ConvertInto;
@@ -870,20 +870,18 @@ impl pallet_vesting::Trait for Runtime {
 }
 
 // asgard runtime start
-impl brml_assets::Trait for Runtime {
+impl brml_assets::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Price;
-	type Cost = Cost;
-	type Income = Income;
 	type Convert = ConvertPrice;
 	type AssetRedeem = ();
 	type FetchConvertPrice = Convert;
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
-impl brml_voucher::Trait for Runtime {
+impl brml_voucher::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
@@ -895,29 +893,22 @@ parameter_types! {
 	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
 }
 
-
-impl brml_convert::Trait for Runtime {
+impl brml_convert::Config for Runtime {
 	type Event = Event;
 	type ConvertPrice = ConvertPrice;
 	type RatePerBlock = RatePerBlock;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
 	type ConvertDuration = ConvertDuration;
 	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
 }
 
-//type BridgeSubmitTransaction = TransactionSubmitter<BridgeEosId, Runtime, UncheckedExtrinsic>;
-
-impl brml_bridge_eos::Trait for Runtime {
+impl brml_bridge_eos::Config for Runtime {
 	type AuthorityId = BridgeEosId;
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
 	type Precision = Precision;
 	type BridgeAssetFrom = ();
 	type Call = Call;
@@ -926,20 +917,18 @@ impl brml_bridge_eos::Trait for Runtime {
 	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
 }
 
-impl brml_bridge_iost::Trait for Runtime {
-	type AuthorityId = BridgeIostId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
-}
+// impl brml_bridge_iost::Config for Runtime {
+// 	type AuthorityId = BridgeIostId;
+// 	type Event = Event;
+// 	type Balance = Balance;
+// 	type AssetId = AssetId;
+// 	type Precision = Precision;
+// 	type BridgeAssetFrom = ();
+// 	type Call = Call;
+// 	type AssetTrait = Assets;
+// 	type FetchConvertPool = Convert;
+// 	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
+// }
 
 parameter_types! {
 	pub const MaximumSwapInRatio: u64 = 2;
@@ -948,30 +937,19 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 10_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: TokenSymbol = TokenSymbol::IOST;
+	pub const BNCAssetId: AssetId = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
-
 	pub const NumberOfSupportedTokens: u8 = 8;
 	pub const BonusClaimAgeDenominator: u32 = 14_400;
 	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
-impl brml_staking_reward::Trait for Runtime {
-	type AssetTrait = Assets;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Cost = Cost;
-	type Income = Income;
-}
-
-impl brml_swap::Trait for Runtime {
+impl brml_swap::Config for Runtime {
 	type Event = Event;
 	type Fee = Fee;
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;
-	type Cost = Cost;
-	type Income = Income;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
@@ -987,7 +965,13 @@ impl brml_swap::Trait for Runtime {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
-impl brml_vtoken_mint::Trait for Runtime {
+impl brml_staking_reward::Config for Runtime {
+	type AssetTrait = Assets;
+	type Balance = Balance;
+	type AssetId = AssetId;
+}
+
+impl brml_vtoken_mint::Config for Runtime {
 	type Balance = Balance;
 }
 
@@ -1033,9 +1017,9 @@ construct_runtime!(
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
-		StakingReward: brml_staking_reward::{Module, Storage},
+		// BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
+		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Storage, Config<T>},
 	}
@@ -1255,9 +1239,9 @@ impl_runtime_apis! {
 			use pallet_offences_benchmarking::Module as OffencesBench;
 			use frame_system_benchmarking::Module as SystemBench;
 
-			impl pallet_session_benchmarking::Trait for Runtime {}
-			impl pallet_offences_benchmarking::Trait for Runtime {}
-			impl frame_system_benchmarking::Trait for Runtime {}
+			impl pallet_session_benchmarking::Config for Runtime {}
+			impl pallet_offences_benchmarking::Config for Runtime {}
+			impl frame_system_benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -1305,19 +1289,19 @@ impl_runtime_apis! {
 	}
 
 	// impl asset rpc methods for runtime
-	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, TokenSymbol, AccountId, Balance> for Runtime {
-		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64 {
-			Assets::asset_balances(token_symbol, who)
+	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
+		fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
+			Assets::asset_balances(asset_id, who)
 		}
 
-		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol> {
+		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
 			Assets::asset_tokens(who)
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, TokenSymbol, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(token_symbol: TokenSymbol) -> node_primitives::ConvertPrice {
-			Convert::get_convert(token_symbol)
+	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
+		fn get_convert_rate(asset_id: AssetId) -> node_primitives::ConvertPrice {
+			Convert::get_convert(asset_id)
 		}
 	}
 }

@@ -102,12 +102,12 @@
     "multi_sig": "MultiSig",
     "action": "Action",
     "from": "AccountId",
-    "token_symbol": "TokenSymbol"
+    "asset_id": "AssetId"
   },
   "Sent": {
     "tx_id": "Vec<u8>",
     "from": "AccountId",
-    "token_symbol": "TokenSymbol"
+    "asset_id": "AssetId"
   },
   "Succeeded": {
     "tx_id": "Vec<u8>"
@@ -141,28 +141,21 @@
     "active": "bool"
   },
   "PoolCreateTokenDetails": {
-    "token_id": "TokenSymbol",
+    "token_id": "AssetId",
     "token_balance": "Balance",
     "token_weight": "PoolWeight"
   },
   "TokenPool": "Balance",
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
-  "TokenSymbol": {
-    "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS", "IOST", "vIOST"]
-  },
   "TransactionStatus": {
     "_enum": ["Initialized", "Created", "SignComplete", "Sent", "Succeeded", "Failed"]
   },
-  "Cost": "u128",
-  "Income": "u128",
   "Price": "u64",
   "AccountAsset": {
     "balance": "Balance",
     "locked": "Balance",
-    "available": "Balance",
-    "cost": "Cost",
-    "income": "Income"
+    "available": "Balance"
   },
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",

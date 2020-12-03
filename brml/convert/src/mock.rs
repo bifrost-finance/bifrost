@@ -49,20 +49,18 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type Convert = u64;
 	type AssetRedeem = ();
 	type FetchConvertPrice = ();
 	type WeightInfo = ();
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -94,15 +92,13 @@ parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type ConvertPrice = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type ConvertDuration = ConvertDuration;
 	type WeightInfo = ();
 }

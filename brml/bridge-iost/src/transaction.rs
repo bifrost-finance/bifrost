@@ -105,7 +105,7 @@ pub enum TxOut<AccountId> {
     },
 }
 impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
-    pub fn init<T: crate::Trait>(
+    pub fn init<T: crate::Config>(
         raw_from: Vec<u8>,
         raw_to: Vec<u8>,
         amount: String,
@@ -133,7 +133,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         Ok(TxOut::Initial(multi_sig_tx))
     }
 
-    pub fn generate<T: crate::Trait>(self, iost_node_url: &str) -> Result<Self, Error<T>> {
+    pub fn generate<T: crate::Config>(self, iost_node_url: &str) -> Result<Self, Error<T>> {
         match self {
             TxOut::Initial(mut multi_sig_tx) => {
                 // fetch info
@@ -166,7 +166,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         }
     }
 
-    pub fn sign<T: crate::Trait>(self, sk: Vec<u8>, account_name: &str) -> Result<Self, Error<T>> {
+    pub fn sign<T: crate::Config>(self, sk: Vec<u8>, account_name: &str) -> Result<Self, Error<T>> {
         match self {
             TxOut::Generated(mut multi_sig_tx) => {
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
@@ -191,7 +191,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         }
     }
 
-    pub fn send<T: crate::Trait>(self, iost_node_url: &str) -> Result<Self, Error<T>> {
+    pub fn send<T: crate::Config>(self, iost_node_url: &str) -> Result<Self, Error<T>> {
         match self {
             TxOut::Signed(multi_sig_tx) => {
                 let signed_trx = iost_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
@@ -228,7 +228,7 @@ pub(crate) mod iost_rpc {
     type BlockNum = u16;
     type RefBlockPrefix = u32;
 
-    pub(crate) fn get_info<T: crate::Trait>(
+    pub(crate) fn get_info<T: crate::Config>(
         node_url: &str,
     ) -> Result<(ChainId, HeadBlockHash), Error<T>> {
         let req_api = format!("{}{}", node_url, GET_INFO_API);
@@ -277,7 +277,7 @@ pub(crate) mod iost_rpc {
         Ok((chain_id, head_block_hash))
     }
 
-    pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(
+    pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId>(
         multi_sig_tx: &MultiSigTx<AccountId>,
     ) -> Result<Vec<u8>, Error<T>> {
         let mut tx =
@@ -285,7 +285,7 @@ pub(crate) mod iost_rpc {
         Ok(tx.no_std_serialize_vec())
     }
 
-    pub(crate) fn push_transaction<T: crate::Trait>(
+    pub(crate) fn push_transaction<T: crate::Config>(
         node_url: &str,
         signed_trx: Vec<u8>,
     ) -> Result<Vec<u8>, Error<T>> {
@@ -306,7 +306,7 @@ pub(crate) mod iost_rpc {
         Ok(tx_id.into_bytes())
     }
 
-    pub(crate) fn get_transaction_id<T: crate::Trait>(
+    pub(crate) fn get_transaction_id<T: crate::Config>(
         trx_response: &str,
     ) -> Result<String, Error<T>> {
         // debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);

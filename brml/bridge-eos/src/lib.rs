@@ -45,7 +45,7 @@ use frame_system::{
 	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
 };
 use node_primitives::{
-	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType, TokenSymbol,
+	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType,
 	FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
@@ -171,7 +171,7 @@ impl Default for TransactionStatus {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Use has no privilege to execute cross transaction
 		NoCrossChainPrivilege,
 		/// EOS node address or private key is not set
@@ -260,35 +260,29 @@ decl_error! {
 	}
 }
 
-pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
+pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
-		+ From<<Self as frame_system::Trait>::AccountId>;
+		+ From<<Self as frame_system::Config>::AccountId>;
 
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + From<TokenSymbol> + Into<TokenSymbol> + MaybeSerializeDeserialize;
-
-	/// The units in which we record costs.
-	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
-	/// The units in which we record incomes.
-	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The units in which we record asset precision.
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// Bridge asset from another blockchain.
-	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
+	type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::AssetId, Self::Precision, Self::Balance>;
 
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// Fetch convert pool from convert module
-	type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
+	type FetchConvertPool: FetchConvertPool<Self::AssetId, Self::Balance>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -299,7 +293,7 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
 decl_event! {
 	pub enum Event<T>
-		where <T as system::Trait>::AccountId,
+		where <T as system::Config>::AccountId,
 	{
 		InitSchedule(VersionId),
 		ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
@@ -318,7 +312,7 @@ decl_event! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as BridgeEos {
+	trait Store for Module<T: Config> as BridgeEos {
 		/// The current set of notary keys that may send bridge transactions to Eos chain.
 		NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
 
@@ -344,13 +338,13 @@ decl_storage! {
 		PendingScheduleVersion: VersionId;
 
 		/// Transaction sent to Eos blockchain
-		BridgeTrxStatus get(fn trx_status): map hasher(blake2_128_concat) (TxOut<T::AccountId>, u64) => TransactionStatus;
+		BridgeTrxStatus get(fn trx_status): map hasher(blake2_128_concat) (TxOut<T::AccountId, T::AssetId>, u64) => TransactionStatus;
 		CrossTradeIndex get(fn cross_trade_index): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
 		CrossTradeStatus get(fn cross_status): map hasher(blake2_128_concat) u64 => bool;
 		EOSNodeAddress get(fn eos_node): Vec<u8> = b"http://122.51.241.19:8080".to_vec();
-		CrossIndexRelatedEOSBalance get(fn index_with_eos_balance): map hasher(blake2_128_concat) u64 => (T::Balance, T::AccountId, TokenSymbol);
+		CrossIndexRelatedEOSBalance get(fn index_with_eos_balance): map hasher(blake2_128_concat) u64 => (T::Balance, T::AccountId, T::AssetId);
 		/// According trx id to find processing trx
-		ProcessingBridgeTrx: map hasher(blake2_128_concat) Checksum256 => (TxOut<T::AccountId>, u64);
+		ProcessingBridgeTrx: map hasher(blake2_128_concat) Checksum256 => (TxOut<T::AccountId, T::AssetId>, u64);
 
 		/// Account where Eos bridge contract deployed, (Account, Signature threshold)
 		BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
@@ -364,6 +358,8 @@ decl_storage! {
 		TimesOfCrossChainTrade get(fn trade_times): map hasher(blake2_128_concat) T::AccountId => (u32, u32) = (0u32, 0u32);
 		/// Set low limit amount of EOS for cross transaction, if it's bigger than this, count one.
 		LowLimitOnCrossChain get(fn cross_trade_eos_limit) config(): T::Balance;
+		/// Set Eos asset id
+		EosAssetId get(fn eos_asset_id) config(): T::AssetId;
 	}
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
@@ -389,12 +385,15 @@ decl_storage! {
 
 			// setting limit on how many eos counts one
 			LowLimitOnCrossChain::<T>::put(config.cross_trade_eos_limit);
+
+			// set eos asset id
+			EosAssetId::<T>::put(config.eos_asset_id);
 		});
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -659,7 +658,7 @@ decl_module! {
 		#[weight = (0, DispatchClass::Normal, Pays::No)]
 		fn update_bridge_trx_status(
 			origin,
-			changed_trxs: Vec::<((TxOut<T::AccountId>, u64), TransactionStatus, (TxOut<T::AccountId>, u64), Option<Checksum256>)>
+			changed_trxs: Vec::<((TxOut<T::AccountId, T::AssetId>, u64), TransactionStatus, (TxOut<T::AccountId, T::AssetId>, u64), Option<Checksum256>)>
 		) -> DispatchResult {
 			ensure_none(origin)?;
 
@@ -696,7 +695,6 @@ decl_module! {
 		fn cross_to_eos(
 			origin,
 			to: Vec<u8>,
-			token_symbol: TokenSymbol,
 			#[compact] amount: T::Balance,
 			memo: Vec<u8>
 		) {
@@ -705,16 +703,12 @@ decl_module! {
 
 			ensure!(CrossChainBackEnable::get(), Error::<T>::CrossChainBackDisabled);
 
-			// check vtoken id exist or not
-			ensure!(T::AssetTrait::token_exists(token_symbol), Error::<T>::TokenNotExist);
-			// ensure redeem EOS instead of any others tokens like vEOS, DOT, KSM etc
-			ensure!(token_symbol == TokenSymbol::EOS, Error::<T>::InvalidTokenForTrade);
-
-			let token = T::AssetTrait::get_token(token_symbol);
+			let asset_id = Self::eos_asset_id();
+			let token = T::AssetTrait::get_token(Self::eos_asset_id());
 			let symbol_code = token.symbol;
 			let symbol_precise = token.precision;
 
-			let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
+			let balance = T::AssetTrait::get_account_asset(asset_id, &origin).balance;
 			ensure!(symbol_precise <= 12, Error::<T>::EOSSymbolMismatch);
 			let _amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
 			ensure!(balance >= eos_amount, Error::<T>::InsufficientBalance);
@@ -726,14 +720,14 @@ decl_module! {
 				amount: eos_amount,
 				memo,
 				from: origin.clone(),
-				token_symbol
+				asset_id
 			};
 
 			match Self::bridge_asset_to(to, bridge_asset) {
 				Ok(_) => {
 					debug::info!("sent transaction to EOS node.");
 					// locked balance until trade is verified
-					T::AssetTrait::lock_asset(&origin, token_symbol, eos_amount);
+					T::AssetTrait::lock_asset(&origin, asset_id, eos_amount);
 
 					Self::deposit_event(RawEvent::SentCrossChainTransaction);
 				}
@@ -767,7 +761,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
 		schedule_hash: &Checksum256,
@@ -867,13 +861,15 @@ impl<T: Trait> Module<T> {
 		let account_data = Self::get_account_data(split_memo[0])?;
 		let target = Self::into_account(account_data)?;
 
-		let token_symbol = {
+		let eos_id = Self::eos_asset_id();
+		let v_eos_id = T::AssetTrait::get_pair(eos_id).ok_or(Error::<T>::TokenNotExist)?;
+		let token_id = {
 			match split_memo.len() {
-				2 => TokenSymbol::vEOS,
+				2 => eos_id,
 				3 => {
 					match split_memo[2] {
-						"" | "vEOS" => TokenSymbol::vEOS,
-						"EOS" => TokenSymbol::EOS,
+						"" | "vEOS" => v_eos_id,
+						"EOS" => eos_id,
 						_ => {
 							debug::error!("A invalid token type, default token type will be vtoken");
 							return Err(Error::<T>::InvalidMemo);
@@ -886,14 +882,13 @@ impl<T: Trait> Module<T> {
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
 		// but in the future, we will support both token, let user to which token he wants to get
 		// according to the convert price
-		let token_symbol_pair = token_symbol.paired_token(); // return (token_symbol, vtoken_symbol)
-		let convert_pool = T::FetchConvertPool::fetch_convert_pool(token_symbol_pair.0);
+		let convert_pool = T::FetchConvertPool::fetch_convert_pool(eos_id);
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
 		let symbol_precision = symbol.precision() as u16;
 		// ensure symbol and precision matched
-		let existed_token_symbol = T::AssetTrait::get_token(token_symbol_pair.0);
+		let existed_token_symbol = T::AssetTrait::get_token(eos_id);
 		ensure!(
 			existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
 			Error::<T>::EOSSymbolMismatch
@@ -902,14 +897,14 @@ impl<T: Trait> Module<T> {
 		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
 		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
 
-		if token_symbol.is_vtoken() {
+		if T::AssetTrait::is_v_token(token_id) {
 			// according convert pool to convert EOS to vEOS
 			let vtoken_balances: T::Balance = {
 				new_balance.saturating_mul(convert_pool.vtoken_pool) / convert_pool.token_pool
 			};
-			T::AssetTrait::asset_issue(token_symbol_pair.1, &target, vtoken_balances);
+			T::AssetTrait::asset_issue(v_eos_id, &target, vtoken_balances);
 		} else {
-			T::AssetTrait::asset_issue(token_symbol_pair.0, &target, new_balance);
+			T::AssetTrait::asset_issue(eos_id, &target, new_balance);
 		}
 
 		Ok((target, new_balance))
@@ -922,17 +917,16 @@ impl<T: Trait> Module<T> {
 		let (processing_trx, trade_index) = ProcessingBridgeTrx::<T>::get(&pending_trx_id);
 
 		match processing_trx {
-			TxOut::Sent { tx_id, ref from, token_symbol } if pending_trx_id.eq(&tx_id) => {
+			TxOut::Sent { tx_id, ref from, asset_id } if pending_trx_id.eq(&tx_id) => {
 				let target = from.clone();
-				let token_symbol = token_symbol;
 
-				let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
+				let all_vtoken_balances = T::AssetTrait::get_account_asset(asset_id, &target).balance;
 
 				let symbol = action_transfer.quantity.symbol;
 				let symbol_code = symbol.code().to_string().into_bytes();
 				let symbol_precision = symbol.precision() as u16;
 				// ensure symbol and precision matched
-				let existed_token_symbol = T::AssetTrait::get_token(token_symbol);
+				let existed_token_symbol = T::AssetTrait::get_token(asset_id);
 				ensure!(
 					existed_token_symbol.symbol == symbol_code && existed_token_symbol.precision == symbol_precision,
 					Error::<T>::EOSSymbolMismatch
@@ -947,7 +941,7 @@ impl<T: Trait> Module<T> {
 				}
 
 				// the trade is verified, unlock asset
-				T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
+				T::AssetTrait::unlock_asset(&target, asset_id, vtoken_balances);
 
 				// update times of trade from Bifrost => EOS
 				if LowLimitOnCrossChain::<T>::get() <= vtoken_balances {
@@ -992,17 +986,17 @@ impl<T: Trait> Module<T> {
 	/// generate transaction for transfer amount to
 	fn tx_transfer_to<P, B>(
 		raw_to: Vec<u8>,
-		bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
-	) -> Result<TxOut<T::AccountId>, Error<T>>
+		bridge_asset: BridgeAssetBalance<T::AccountId, T::AssetId, P, B>,
+	) -> Result<TxOut<T::AccountId, T::AssetId>, Error<T>>
 		where
 			P: AtLeast32Bit + Copy,
 			B: AtLeast32Bit + Copy,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
 		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
-		let amount = Self::convert_to_eos_asset::<T::AccountId, P, B>(&bridge_asset)?;
+		let amount = Self::convert_to_eos_asset::<T::AccountId, T::AssetId, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOut::<T::AccountId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from.clone(), bridge_asset.token_symbol)?;
+		let tx_out = TxOut::<T::AccountId, T::AssetId>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from.clone(), bridge_asset.asset_id)?;
 
 		CrossTradeIndex::<T>::mutate(&bridge_asset.from, |index| {
 			*index += 1;
@@ -1028,7 +1022,7 @@ impl<T: Trait> Module<T> {
 			)
 		{
 			match (trx.clone(), status) {
-				(TxOut::<T::AccountId>::Initialized(_), TransactionStatus::Initialized) => {
+				(TxOut::<T::AccountId, T::AssetId>::Initialized(_), TransactionStatus::Initialized) => {
 					match trx.clone().generate::<T>(node_url.as_str()) {
 						Ok(generated_trx) => {
 							changed_status_trxs.push(((generated_trx, index), TransactionStatus::Created, (trx.clone(), index),  None));
@@ -1038,7 +1032,7 @@ impl<T: Trait> Module<T> {
 						}
 					}
 				}
-				(TxOut::<T::AccountId>::Created(_), TransactionStatus::Created) => {
+				(TxOut::<T::AccountId, T::AssetId>::Created(_), TransactionStatus::Created) => {
 					let author = <pallet_authorship::Module<T>>::author();
 					// ensure current node has the right to sign a cross trade
 					if NotaryKeys::<T>::get().contains(&author) {
@@ -1046,7 +1040,7 @@ impl<T: Trait> Module<T> {
 							Ok(signed_trx) => {
 								// ensure this transaction collects enough signatures
 								let status = {
-									if let TxOut::<T::AccountId>::Created(_) = signed_trx {
+									if let TxOut::<T::AccountId, T::AssetId>::Created(_) = signed_trx {
 										TransactionStatus::Created
 									} else {
 										TransactionStatus::SignComplete
@@ -1060,7 +1054,7 @@ impl<T: Trait> Module<T> {
 						}
 					}
 				}
-				(TxOut::<T::AccountId>::SignComplete(_), TransactionStatus::SignComplete) => {
+				(TxOut::<T::AccountId, T::AssetId>::SignComplete(_), TransactionStatus::SignComplete) => {
 					match trx.clone().send::<T>(node_url.as_str()) {
 						Ok(processing_trx) => {
 							let trx_id = match processing_trx {
@@ -1097,8 +1091,8 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	fn convert_to_eos_asset<A, P, B>(
-		bridge_asset: &BridgeAssetBalance<A, P, B>
+	fn convert_to_eos_asset<A, AI, P, B>(
+		bridge_asset: &BridgeAssetBalance<A, AI, P, B>
 	) -> Result<Asset, Error<T>>
 		where
 			P: AtLeast32Bit + Copy,
@@ -1121,21 +1115,21 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
+impl<T: Config> BridgeAssetTo<T::AccountId, T::AssetId, T::Precision, T::Balance> for Module<T> {
 	type Error = crate::Error<T>;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>) -> Result<(), Self::Error> {
+	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::AccountId, T::AssetId, T::Precision, T::Balance>) -> Result<(), Self::Error> {
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
 		Ok(())
 	}
 
-	fn redeem(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: T::AssetId, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn stake(_: T::AssetId, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn unstake(_: T::AssetId, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 }
 
 #[allow(deprecated)]
-impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
+impl<T: Config> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {

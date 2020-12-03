@@ -19,33 +19,35 @@
 
 use crate::*;
 use crate::mock::*;
-use node_primitives::{TokenSymbol, RewardTrait};
+use node_primitives::RewardTrait;
 use frame_support::assert_ok;
 
 #[test]
 fn query_vtoken_should_be_ok() {
 	new_test_ext().execute_with(|| {
 		common();
-		let (vtoken_symbol,
+		let (
+			vdot_id,
+			veos_id,
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (TokenSymbol::vDOT, 11111111 as u64, 22222222 as u64, 60 as u64);
+		) = (1, 7, 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
-		let referer_one_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_one));
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_one));
 		assert_eq!(100, referer_one_vtoken_amount);
-		let referer_two_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_two));
+		let referer_two_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_two));
 		assert_eq!(200, referer_two_vtoken_amount);
-		let referer_one_vtoken_amount = crate::Point::<Test>::get((TokenSymbol::vEOS, referer_one));
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((veos_id, referer_one));
 		assert_eq!(100, referer_one_vtoken_amount);
 		
-		// Dispatch TokenSymbol::vDOT reward Success:
-		assert_ok!(crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit));
+		// Dispatch vDOT reward Success:
+		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
 		
-		let referer_one_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_one));
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_one));
 		assert_eq!(0, referer_one_vtoken_amount);
-		let referer_two_vtoken_amount = crate::Point::<Test>::get((vtoken_symbol, referer_two));
+		let referer_two_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_two));
 		assert_eq!(0, referer_two_vtoken_amount);
 	});
 }
@@ -59,33 +61,31 @@ fn record_reward_should_be_ok() {
 
 pub fn common() {
 	// Ready data
-	let vdot_id = assets::Module::<Test>::next_asset_id();
-	let vtoken_symbol = TokenSymbol::from(vdot_id + 2);
-	assert_eq!(vtoken_symbol, TokenSymbol::vDOT);
+	let vdot_id = 1;
 	// Bind value:" convert_amount、 referer_one、referer_two "
 	let convert_amount = 100 as u64;
 	let (referer_one, referer_two) = (11111111 as u64, 22222222 as u64);
 	
 	// Add new referer
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
-	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vtoken_symbol).len());
-	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vtoken_symbol)[0].record_amount);
+	assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, convert_amount, referer_one));
+	assert_eq!(1, crate::Module::<Test>::vtoken_reward(vdot_id).len());
+	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vdot_id)[0].record_amount);
 	
-	// Increate different referer
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two));
-	assert_eq!(2, crate::Reward::<Test>::get(vtoken_symbol).len());
-	assert_eq!(100, crate::Reward::<Test>::get(vtoken_symbol)[1].record_amount);
+	// Increase different referer
+	assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, convert_amount, referer_two));
+	assert_eq!(2, crate::Reward::<Test>::get(vdot_id).len());
+	assert_eq!(100, crate::Reward::<Test>::get(vdot_id)[1].record_amount);
 	
 	// Append exist referer
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_two));
-	assert_eq!(2, <crate::Reward<Test>>::get(vtoken_symbol).len());
-	assert_eq!(200, crate::Reward::<Test>::get(vtoken_symbol)[0].record_amount);
+	assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, convert_amount, referer_two));
+	assert_eq!(2, <crate::Reward<Test>>::get(vdot_id).len());
+	assert_eq!(200, crate::Reward::<Test>::get(vdot_id)[0].record_amount);
 	
-	// Increate Different vtoken （another one vec）
-	let vtoken_symbol = TokenSymbol::vEOS;
-	assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, convert_amount, referer_one));
-	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(vtoken_symbol).len());
-	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vtoken_symbol)[0].record_amount);
+	// Increase different vtoken （another one vec）
+	let veos_id = 7;
+	assert_ok!(<crate::Module<Test>>::record_reward(veos_id, convert_amount, referer_one));
+	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(veos_id).len());
+	assert_eq!(100, crate::Module::<Test>::vtoken_reward(veos_id)[0].record_amount);
 }
 
 #[test]
@@ -93,32 +93,34 @@ fn dispatch_reward_is_be_ok() {
 	new_test_ext().execute_with(|| {
 		// Condition initial
 		common();
-		let (vtoken_symbol,
+		let (
+			vdot_id,
+			viost_id,
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (TokenSymbol::vDOT, 11111111 as u64, 22222222 as u64, 60 as u64);
+		) = (1, 9, 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
-		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
+		let referer_one_assets = assets::Module::<Test>::account_assets((vdot_id, referer_one));
 		assert_eq!(0, referer_one_assets.balance);
-		let referer_two_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two));
+		let referer_two_assets = assets::Module::<Test>::account_assets((vdot_id, referer_two));
 		assert_eq!(0, referer_two_assets.balance);
 		
-		// Dispatch TokenSymbol::vDOT reward Success:
-		assert_ok!(crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit));
+		// Dispatch vDOT reward Success:
+		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
 		
-		// Dispatch TokenSymbol::vIOST reward Failure:
-		assert!(crate::Module::<Test>::dispatch_reward(TokenSymbol::vIOST, staking_profit).is_err());
+		// Dispatch vIOST reward Failure:
+		assert!(crate::Module::<Test>::dispatch_reward(viost_id, staking_profit).is_err());
 		
 		// The second query asset
-		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
+		let referer_one_assets = assets::Module::<Test>::account_assets((vdot_id, referer_one));
 		assert_eq!(20, referer_one_assets.balance);
-		let referer_two_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two));
+		let referer_two_assets = assets::Module::<Test>::account_assets((vdot_id, referer_two));
 		assert_eq!(40, referer_two_assets.balance);
 		
 		// Judge vtoken table whether be clear
-		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vdot_id).is_empty());
 	});
 }
 
@@ -126,40 +128,41 @@ fn dispatch_reward_is_be_ok() {
 fn more_than_256_dispatch_reward_is_be_ok() {
 	new_test_ext().execute_with(|| {
 		// Condition initial
-		let (vtoken_symbol,
+		let (
+			vdot_id,
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (TokenSymbol::vDOT, 11111111 as u64, 22222222 as u64, 2560 as u64);
+		) = (1, 11111111 as u64, 22222222 as u64, 2560 as u64);
 		
 		// The first query asset
-		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
+		let referer_one_assets = assets::Module::<Test>::account_assets((vdot_id, referer_one));
 		assert_eq!(0, referer_one_assets.balance);
-		let referer_two_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two));
+		let referer_two_assets = assets::Module::<Test>::account_assets((vdot_id, referer_two));
 		assert_eq!(0, referer_two_assets.balance);
 		
 		// Add referer_one referer_two data
-		assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, 100, referer_one));
-		assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, 100, referer_two));
+		assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_one));
+		assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_two));
 		// Add other referer data
 		for i in 1..300 {
-			assert_ok!(<crate::Module<Test>>::record_reward(vtoken_symbol, 100, referer_two + i));
+			assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_two + i));
 		}
-		
-		// Dispatch TokenSymbol::vDOT reward Success:
-		assert_ok!(crate::Module::<Test>::dispatch_reward(vtoken_symbol, staking_profit));
-		
+
+		// Dispatch vDOT reward Success:
+		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
+
 		// The second query asset
-		let referer_one_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_one));
+		let referer_one_assets = assets::Module::<Test>::account_assets((vdot_id, referer_one));
 		assert_eq!(10, referer_one_assets.balance);
-		let referer_two_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two));
+		let referer_two_assets = assets::Module::<Test>::account_assets((vdot_id, referer_two));
 		assert_eq!(10, referer_two_assets.balance);
 		
 		// The referer After 256 doesn't reward
-		let referer_254_assets = assets::Module::<Test>::account_assets((vtoken_symbol, referer_two + 255));
+		let referer_254_assets = assets::Module::<Test>::account_assets((vdot_id, referer_two + 255));
 		assert_eq!(0, referer_254_assets.balance);
 		
 		// Judge vtoken table whether be clear
-		assert!(<crate::Module<Test>>::vtoken_reward(vtoken_symbol).is_empty());
+		assert!(<crate::Module<Test>>::vtoken_reward(vdot_id).is_empty());
 	});
 }
