@@ -49,7 +49,7 @@ pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
 
 	/// fee
-	type Fee: Member
+	type SwapFee: Member
 		+ Parameter
 		+ AtLeast32Bit
 		+ Default
@@ -68,11 +68,7 @@ pub trait Trait: frame_system::Trait {
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// AssetTrait to handle assets
-	type AssetTrait: AssetTrait<
-		Self::AssetId,
-		Self::AccountId,
-		Self::Balance,
-	>;
+	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// Weight
 	type PoolWeight: Member
@@ -94,13 +90,13 @@ pub trait Trait: frame_system::Trait {
 	type MinimumPassedInPoolTokenShares: Get<Self::Balance>;
 
 	/// Minimum percentage of fee that the pool owner can set.
-	type MinimumSwapFee: Get<Self::Fee>;
+	type MinimumSwapFee: Get<Self::SwapFee>;
 
 	/// Maximum percentage of fee that the pool owner can set.
-	type MaximumSwapFee: Get<Self::Fee>;
+	type MaximumSwapFee: Get<Self::SwapFee>;
 
 	/// Used to calculate fee rate to prevent precision lost in float type.
-	type FeePrecision: Get<Self::Fee>;
+	type FeePrecision: Get<Self::SwapFee>;
 
 	/// Used to calculate weight in percentage to prevent precision lost in float type.
 	type WeightPrecision: Get<Self::PoolWeight>;
@@ -129,6 +125,8 @@ decl_event! {
 		RemoveSingleLiquiditySuccess,
 		SwapTokenSuccess(Balance, Balance),
 		CreatePoolSuccess,
+		SetPoolStatusSuccess,
+		SetSwapFeeSuccess,
 	}
 }
 
@@ -157,11 +155,11 @@ decl_error! {
 
 /// struct for pool details
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug, Copy)]
-pub struct PoolDetails<AccountId, Fee> {
+pub struct PoolDetails<AccountId, SwapFee> {
 	///The owner of the pool, who has the privileges to set or change the parameters of the pool.
 	owner: AccountId,
 	/// The current swap rate of the pool.
-	swap_fee_rate: Fee,
+	swap_fee_rate: SwapFee,
 	/// Pool status. If is true, users can add liquidity into or swap in the pool.
 	/// Otherwise, user operations will be prevented.
 	active: bool,
@@ -181,7 +179,7 @@ pub struct PoolCreateTokenDetails<AssetId, Balance, PoolWeight> {
 decl_storage! {
 	trait Store for Module<T: Trait> as Swap {
 		/// Pool info
-		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T::AccountId, T::Fee>;
+		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T::AccountId, T::SwapFee>;
 
 		/// Token weights info for pools. Weights must be normalized at the beginning.
 		/// Sum of all the token weights for a pool must be 1 * WeightPrecision. Should be ensured when set up the pool.
@@ -228,9 +226,9 @@ decl_module! {
 
 		const MaximumSwapInRatio: T::Balance = T::MaximumSwapInRatio::get();
 		const MinimumPassedInPoolTokenShares: T::Balance = T::MinimumPassedInPoolTokenShares::get();
-		const MinimumSwapFee: T::Fee = T::MinimumSwapFee::get();
-		const MaximumSwapFee: T::Fee = T::MaximumSwapFee::get();
-		const FeePrecision: T::Fee = T::FeePrecision::get();
+		const MinimumSwapFee: T::SwapFee = T::MinimumSwapFee::get();
+		const MaximumSwapFee: T::SwapFee = T::MaximumSwapFee::get();
+		const FeePrecision: T::SwapFee = T::FeePrecision::get();
 		const WeightPrecision: T::PoolWeight = T::WeightPrecision::get();
 		const NumberOfSupportedTokens: u8 = T::NumberOfSupportedTokens::get();
 		const BNCAssetId: T::AssetId = T::BNCAssetId::get();
@@ -271,7 +269,7 @@ decl_module! {
 				// Asset id
 				let token_id = tk.0;
 				// get the user's balance for a specific token
-				let user_token_pool_balance = T::AssetTrait::get_account_asset(token_id, &provider).balance;
+				let user_token_pool_balance = T::AssetTrait::get_account_asset(token_id, &provider).available;
 				// the balance of a specific token in a pool
 				let token_pool_balance = TokenBalancesInPool::<T>::get(pool_id, token_id);
 				// the amount of the token that the user should deposit
@@ -315,9 +313,8 @@ decl_module! {
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(token_amount_in > Zero::zero(), Error::<T>::AmountBelowZero);
-			
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(asset_id, &provider).balance;
+			let user_token_balance = T::AssetTrait::get_account_asset(asset_id, &provider).available;
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			// calculate how many pool token will be issued to user
@@ -329,7 +326,7 @@ decl_module! {
 				let pool_supply = PoolTokensInPool::<T>::get(pool_id);
 				// get the swap fee rate of the pool
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
-				let issued_pool_token = Self::calculate_pool_out_given_single_in(token_balance_in, token_weight_in, 
+				let issued_pool_token = Self::calculate_pool_out_given_single_in(token_balance_in, token_weight_in,
 					token_amount_in, pool_supply, swap_fee_rate)?;
 				let pool_token_issued = u128::from_fixed(issued_pool_token);
 				TryInto::<T::Balance>::try_into(pool_token_issued).map_err(|_| Error::<T>::ConvertFailure)?
@@ -380,7 +377,7 @@ decl_module! {
 				let pool_supply = PoolTokensInPool::<T>::get(pool_id);
 				// get the swap fee rate of the pool
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
-				let should_token_amount_in = Self::calculate_single_in_given_pool_out(token_balance_in, token_weight_in, 
+				let should_token_amount_in = Self::calculate_single_in_given_pool_out(token_balance_in, token_weight_in,
 					new_pool_token, pool_supply, swap_fee_rate)?;
 
 				let should_token_amount_in = u128::from_fixed(should_token_amount_in);
@@ -388,7 +385,7 @@ decl_module! {
 			};
 
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(asset_id, &provider).balance;
+			let user_token_balance = T::AssetTrait::get_account_asset(asset_id, &provider).available;
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			Self::revise_storages_except_token_balances_when_adding_liquidity(pool_id, new_pool_token, &provider)?;
@@ -429,14 +426,14 @@ decl_module! {
 			let token_amount = {
 				// Pool swap fee rate, which is an integer, should be divided by rate precision when being used.
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
-				// out-token's weight in the pool, which is an normalized integer, 
+				// out-token's weight in the pool, which is an normalized integer,
 				//should be divided by weight precision when being used.
 				let out_token_weight = TokenWeightsInPool::<T>::get(pool_id, asset_id);
 				// out-token's balance in the pool, which is the number of the specific token.
 				let out_token_balance_in_pool = TokenBalancesInPool::<T>::get(pool_id, asset_id);
 				// total pool token that the specific pool has issued.
 				let pool_supply = PoolTokensInPool::<T>::get(pool_id);
-				let token_amount_out = Self::calculate_single_out_given_pool_in(out_token_weight, pool_token_out, 
+				let token_amount_out = Self::calculate_single_out_given_pool_in(out_token_weight, pool_token_out,
 					out_token_balance_in_pool, pool_supply, swap_fee_rate)?;
 				let token_amount_out = u128::from_fixed(token_amount_out);
 
@@ -482,13 +479,13 @@ decl_module! {
 			let pool_token_out = {
 				// Pool swap fee rate, which is an integer, should be divided by rate precision when being used.
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
-				// out-token's weight in the pool, which is an normalized integer, 
+				// out-token's weight in the pool, which is an normalized integer,
 				// should be divided by weight precision when being used.
 				let out_token_weight = TokenWeightsInPool::<T>::get(pool_id, asset_id);
 				// total pool token that the specific pool has issued.
 				let pool_supply = PoolTokensInPool::<T>::get(pool_id);
 
-				let pool_token_out = Self::calculate_pool_in_given_single_out(out_token_weight, token_amount, 
+				let pool_token_out = Self::calculate_pool_in_given_single_out(out_token_weight, token_amount,
 					out_token_balance_in_pool, pool_supply, swap_fee_rate)?;
 				let pool_token_out = u128::from_fixed(pool_token_out);
 
@@ -532,7 +529,7 @@ decl_module! {
 			ensure!(pool_amount_out <= user_pool_token_in_pool, Error::<T>::NotEnoughBalance);
 			// get the iterator of the items(asset_id => balance) with the same first key(pool_id)
 			let token_balances_in_pool_iter = TokenBalancesInPool::<T>::iter_prefix(pool_id);
-			// calculate how many tokens for each of the assets that user can withdraw. 
+			// calculate how many tokens for each of the assets that user can withdraw.
 			// Meanwhile, issue money to user's account and deducted from the pool.
 			for tk in token_balances_in_pool_iter {  //0 position is asset_id, 1 position is balance
 				// get the total pool token shares for the specific pool
@@ -574,9 +571,8 @@ decl_module! {
 			ensure!(T::AssetTrait::token_exists(token_out_asset_id), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
-			
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(token_in_asset_id, &swapper).balance;
+			let user_token_balance = T::AssetTrait::get_account_asset(token_in_asset_id, &swapper).available;
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			// get the total token-in token amount for the specific pool
@@ -595,7 +591,7 @@ decl_module! {
 				// Pool swap fee rate, which is an integer, should be divided by rate precision when being used.
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
 
-				let fixed_token_amount_out = Self::calculate_out_given_in(token_in_pool_amount, weight_in, 
+				let fixed_token_amount_out = Self::calculate_out_given_in(token_in_pool_amount, weight_in,
 					token_amount_in, token_out_pool_amount, weight_out, swap_fee_rate)?;
 				let token_amount_out = u128::from_fixed(fixed_token_amount_out);
 
@@ -639,7 +635,6 @@ decl_module! {
 			token_in_asset_id: T::AssetId,
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
-			
 			ensure!(token_in_asset_id != token_out_asset_id, Error::<T>::ForbidSameTokenSwap);
 			ensure!(T::AssetTrait::token_exists(token_in_asset_id), Error::<T>::TokenNotExist);
 			ensure!(T::AssetTrait::token_exists(token_out_asset_id), Error::<T>::TokenNotExist);
@@ -648,7 +643,6 @@ decl_module! {
 
 			// get the total token-out token amount for the specific pool
 			let token_out_pool_amount = TokenBalancesInPool::<T>::get(pool_id, token_out_asset_id);
-			
 			// MaximumSwapInRatio is a reverse number.(2 => 1/2), trade less half of pool balances.
 			ensure!(token_out_pool_amount >= token_amount_out.saturating_mul(T::MaximumSwapInRatio::get()), Error::<T>::ExceedMaximumSwapInRatio);
 
@@ -663,7 +657,7 @@ decl_module! {
 				// Pool swap fee rate, which is an integer, should be divided by rate precision when being used.
 				let swap_fee_rate = Pools::<T>::get(pool_id).swap_fee_rate;
 
-				let fixed_token_amount_in = Self::calculate_in_given_out(token_in_pool_amount, weight_in, 
+				let fixed_token_amount_in = Self::calculate_in_given_out(token_in_pool_amount, weight_in,
 					token_out_pool_amount, weight_out, token_amount_out, swap_fee_rate)?;
 
 				let token_amount_in = u128::from_fixed(fixed_token_amount_in);
@@ -676,7 +670,7 @@ decl_module! {
 			}
 
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(token_in_asset_id, &swapper).balance;
+			let user_token_balance = T::AssetTrait::get_account_asset(token_in_asset_id, &swapper).available;
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			// deducted token-in amount from the user account
@@ -731,7 +725,7 @@ decl_module! {
 		#[weight = 1_000]
 		pub fn create_pool(
 			origin,
-			swap_fee_rate: T::Fee,  // this number is an integer to avoid precision loss, should be divided by fee precision constant when used.
+			swap_fee_rate: T::SwapFee,  // this number is an integer to avoid precision loss, should be divided by fee precision constant when used.
 			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::AssetId, T::Balance, T::PoolWeight>>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
@@ -754,7 +748,7 @@ decl_module! {
 				ensure!(token_info.token_balance > Zero::zero(), Error::<T>::AmountBelowZero);
 
 				// get the user's balance for a specific token
-				let user_token_balance = T::AssetTrait::get_account_asset(token_info.token_id, &creator).balance;
+				let user_token_balance = T::AssetTrait::get_account_asset(token_info.token_id, &creator).available;
 				ensure!(user_token_balance >= token_info.token_balance, Error::<T>::NotEnoughBalance);
 				// Add up the total weight
 				total_weight = total_weight.saturating_add(token_info.token_weight);
@@ -764,7 +758,7 @@ decl_module! {
 			// get the current length of the pool map
 			let new_pool_id: T::PoolId = T::PoolId::from(Pools::<T>::iter().count() as u32);
 
-			let new_pool = PoolDetails::<T::AccountId, T::Fee> {
+			let new_pool = PoolDetails::<T::AccountId, T::SwapFee> {
 				owner: creator.clone(),
 				swap_fee_rate,
 				active: false,
@@ -795,7 +789,6 @@ decl_module! {
 
 			// get current block number
 			let current_block_num = <frame_system::Module<T>>::block_number();
-			
 			// update UserUnclaimedBonusInPool
 			UserUnclaimedBonusInPool::<T>::insert(&creator, new_pool_id, (T::Balance::from(0u32), current_block_num));
 
@@ -821,11 +814,13 @@ decl_module! {
 			let pool_owner = pool_details.owner;
 			ensure!(setter == pool_owner, Error::<T>::NotPoolOwner);
 
-			if !new_status || new_status {
-				Pools::<T>::mutate(pool_id, |pool_details| {
+			Pools::<T>::mutate(pool_id, |pool_details| {
+				if pool_details.active != new_status {
 					pool_details.active = new_status;
-				});
-			}
+				}
+			});
+
+			Self::deposit_event(RawEvent::SetPoolStatusSuccess);
 			Ok(())
 		}
 
@@ -834,7 +829,7 @@ decl_module! {
 		pub fn set_swap_fee(
 			origin,
 			pool_id: T::PoolId,
-			new_swap_fee: T::Fee,
+			new_swap_fee: T::SwapFee,
 		) -> DispatchResult {
 			let setter = ensure_signed(origin)?;
 
@@ -847,8 +842,12 @@ decl_module! {
 
 			// set the new swap fee
 			Pools::<T>::mutate(pool_id, |pool_details| {
-				pool_details.swap_fee_rate = new_swap_fee;
+				if pool_details.swap_fee_rate != new_swap_fee {
+					pool_details.swap_fee_rate = new_swap_fee;
+				}
 			});
+
+			Self::deposit_event(RawEvent::SetSwapFeeSuccess);
 
 			Ok(())
 		}
@@ -863,9 +862,9 @@ impl<T: Trait> Module<T> {
 	}
 
 	pub(crate) fn revise_storages_except_token_balances_when_adding_liquidity(
-		pool_id: T::PoolId,		 // pool id
+		pool_id: T::PoolId,         // pool id
 		new_pool_token: T::Balance, // to-be-issued pool token share to the user
-		provider: &T::AccountId,	// the user account_id
+		provider: &T::AccountId,    // the user account_id
 	) -> DispatchResult {
 		// update the pool token amount of the specific pool
 		PoolTokensInPool::<T>::mutate(pool_id, |pool_token_num| {
@@ -881,9 +880,9 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 	pub(crate) fn revise_storages_except_token_balances_when_removing_liquidity(
-		pool_id: T::PoolId,		 // pool id
+		pool_id: T::PoolId,         // pool id
 		pool_token_out: T::Balance, // to-be-issued pool token share to the user
-		remover: &T::AccountId,	 // the user account_id
+		remover: &T::AccountId,     // the user account_id
 	) -> DispatchResult {
 		// Calculate and update user's unclaimed bonus in the pool.
 		Self::update_unclaimed_bonus_related_states(&remover, pool_id)?;
@@ -908,9 +907,8 @@ impl<T: Trait> Module<T> {
 
 	pub(crate) fn update_unclaimed_bonus_related_states(
 		account_id: &T::AccountId, // the user account_id
-		pool_id: T::PoolId,		// pool id
+		pool_id: T::PoolId,        // pool id
 	) -> DispatchResult {
-
 		// Calculate the unclaimed bonus amount and update the UserUnclaimedBonusInPool map.
 		let unclaimed_amount = {
 			// Get the total amount of BNC bonus for the pool without consideration of the amount users have claimed.
@@ -919,7 +917,6 @@ impl<T: Trait> Module<T> {
 			let remained_bonus_pool = bonus_pool_total_balance - already_claimed_bonus_amount;
 			let amount =
 				Self::calculate_unclaimed_bonus(&account_id, pool_id, remained_bonus_pool)?;
-				
 			Self::convert_float(amount)?
 		};
 
@@ -951,11 +948,11 @@ impl<T: Trait> Module<T> {
 	}
 
 	/// ***********************************************************************************************************//
-	///            user_pool_token              not calculated bonus block number                                  //
+	///            user_pool_token    min(not calculated bonus block number, constant denominator for block number)//
 	///  ratio =  -----------------  *   ----------------------------------------------                            //
 	///              total_supply            constant denominator for block number                                 //
 	/// ***********************************************************************************************************//
-	/// calculate the un-calculated bonus and update it to the unclaimed bonus storage for the user 
+	/// calculate the un-calculated bonus and update it to the unclaimed bonus storage for the user
 	/// whenever the liquidity share of the user changes.
 	/// This requires a user to claim bonus every (constant block number). Otherwise, the user will lose the chance.
 	pub(crate) fn calculate_unclaimed_bonus(
@@ -970,9 +967,13 @@ impl<T: Trait> Module<T> {
 		// get last unclaimed bonus information for the user
 		let (_last_unclaimed_amount, last_calculate_block_num) =
 			UserUnclaimedBonusInPool::<T>::get(&account_id, pool_id);
-			// the block number between last calculation time and now.
-			let unclaimed_bonus = {
-		let pool_token_age = current_block_num - last_calculate_block_num;
+		// the block number between last calculation time and now.
+		let unclaimed_bonus = {
+			let mut pool_token_age = current_block_num - last_calculate_block_num;
+			if pool_token_age > T::BonusClaimAgeDenominator::get() {
+				pool_token_age = T::BonusClaimAgeDenominator::get();
+			}
+
 			// below are the data format transforming stuff.
 			// u128 format.
 			let user_pool_token = TryInto::<u128>::try_into(user_pool_token)
@@ -1037,7 +1038,7 @@ impl<T: Trait> Module<T> {
 		token_balance_out: T::Balance,
 		token_weight_out: T::PoolWeight,
 		token_amount_out: T::Balance,
-		swap_fee: T::Fee,
+		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in =
@@ -1068,10 +1069,8 @@ impl<T: Trait> Module<T> {
 		let fixed_token_amount_in = {
 			let fixed_power: FixedI128<extra::U64> =
 				transcendental::pow(base, weight_ratio).map_err(|_| Error::<T>::FixedPointError)?;
-			let upper =
-				token_balance_in.saturating_mul(
-					fixed_power.saturating_sub(FixedI128::<extra::U64>::from_num(1)),
-				);
+			let upper = token_balance_in
+				.saturating_mul(fixed_power.saturating_sub(FixedI128::<extra::U64>::from_num(1)));
 			upper.saturating_div(swap_fee)
 		};
 
@@ -1094,7 +1093,7 @@ impl<T: Trait> Module<T> {
 		token_amount_in: T::Balance,
 		token_balance_out: T::Balance,
 		token_weight_out: T::PoolWeight,
-		swap_fee: T::Fee,
+		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in =
@@ -1150,7 +1149,7 @@ impl<T: Trait> Module<T> {
 		token_weight_in: T::PoolWeight,
 		token_amount_in: T::Balance,
 		pool_supply: T::Balance,
-		swap_fee: T::Fee,
+		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in =
@@ -1206,7 +1205,7 @@ impl<T: Trait> Module<T> {
 		token_weight_in: T::PoolWeight,
 		pool_amount_out: T::Balance,
 		pool_supply: T::Balance,
-		swap_fee: T::Fee,
+		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_in =
@@ -1266,7 +1265,7 @@ impl<T: Trait> Module<T> {
 		pool_amount_in: T::Balance,
 		token_balance_out: T::Balance,
 		pool_supply: T::Balance,
-		swap_fee: T::Fee,
+		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_balance_out =
@@ -1327,7 +1326,7 @@ impl<T: Trait> Module<T> {
 		token_amount_out: T::Balance,
 		token_balance_out: T::Balance,
 		pool_supply: T::Balance,
-		swap_fee: T::Fee,
+		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
 		let token_amount_out =

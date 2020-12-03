@@ -44,7 +44,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Precision, SwapFee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -935,7 +935,7 @@ parameter_types! {
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
 	pub const MinimumSwapFee: u64 = 1; // 0.001%
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
+	pub const FeePrecision: u64 = 100_000;
 	pub const WeightPrecision: u64 = 100_000;
 	pub const BNCAssetId: AssetId = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
@@ -946,7 +946,7 @@ parameter_types! {
 
 impl brml_swap::Trait for Runtime {
 	type Event = Event;
-	type Fee = Fee;
+	type SwapFee = SwapFee;
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;

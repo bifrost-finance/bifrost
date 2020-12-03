@@ -80,7 +80,7 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 
 /// Balancer pool swap fee.
-pub type Fee = u128;
+pub type SwapFee = u128;
 
 /// Balancer pool ID.
 pub type PoolId = u32;

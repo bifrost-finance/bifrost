@@ -20,19 +20,25 @@
 
 use crate::mock::*;
 use crate::*;
-use fixed_point::{
-    traits::FromFixed,
-    types::extra,
-    FixedI128,
-};
+use fixed_point::{traits::FromFixed, types::extra, FixedI128};
 use float_cmp::approx_eq;
 use frame_support::{assert_ok, dispatch::DispatchError};
 use node_primitives::TokenType;
 
 fn initialize_pool_for_dispatches() {
     // initialize token asset types.
-    assert_ok!(Assets::create(Origin::root(), b"BNC".to_vec(), 18, TokenType::Stable)); // Asset Id 0
-    assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18, TokenType::Stable)); // Asset Id 1
+    assert_ok!(Assets::create(
+        Origin::root(),
+        b"BNC".to_vec(),
+        18,
+        TokenType::Stable
+    )); // Asset Id 0
+    assert_ok!(Assets::create(
+        Origin::root(),
+        b"aUSD".to_vec(),
+        18,
+        TokenType::Stable
+    )); // Asset Id 1
     assert_ok!(Assets::create_pair(Origin::root(), b"DOT".to_vec(), 18)); // Asset Id id 2,3
     assert_ok!(Assets::create_pair(Origin::root(), b"KSM".to_vec(), 18)); // Asset Id id 4,5
     assert_ok!(Assets::create_pair(Origin::root(), b"EOS".to_vec(), 18)); // Asset Id id 6,7
@@ -57,7 +63,7 @@ fn initialize_pool_for_dispatches() {
 
     // initialize the parameters for create_pool.
     let creator = Origin::signed(alice);
-    let swap_fee_rate = 500;
+    let swap_fee_rate = 5_000;
 
     let vec_node_1 = PoolCreateTokenDetails {
         token_id: asud_id,
@@ -71,18 +77,19 @@ fn initialize_pool_for_dispatches() {
         token_weight: 40,
     };
 
-    let vec_node_3 = PoolCreateTokenDetails{
+    let vec_node_3 = PoolCreateTokenDetails {
         token_id: ksm_id,
         token_balance: 400,
         token_weight: 40,
     };
 
-    let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-        <Test as Trait>::AssetId,
-        <Test as Trait>::Balance,
-        <Test as Trait>::PoolWeight>,
-    > =
-        vec![vec_node_1, vec_node_2, vec_node_3];
+    let token_for_pool_vec: Vec<
+        PoolCreateTokenDetails<
+            <Test as Trait>::AssetId,
+            <Test as Trait>::Balance,
+            <Test as Trait>::PoolWeight,
+        >,
+    > = vec![vec_node_1, vec_node_2, vec_node_3];
     run_to_block(2); // set the block number to 2.
                      // Dispatch the create_pool call to create a new pool.
     assert_ok!(Swap::create_pool(
@@ -127,7 +134,7 @@ fn calculate_out_given_in_should_work() {
     let token_amount_in = 1_000;
     let token_balance_out = 50_000_000;
     let token_weight_out = 40_000;
-    let swap_fee = 500;
+    let swap_fee = 5_000;
 
     let target = 6_450_675.3_655f32;
     let to_buy = Swap::calculate_out_given_in(
@@ -154,8 +161,18 @@ fn create_pool_should_work() {
         let ksm_id = 4;
 
         // initialize token asset types.
-        assert_ok!(Assets::create(Origin::root(), b"BNC".to_vec(), 18, TokenType::Stable)); // Asset Id 0
-        assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18, TokenType::Stable)); // Asset Id 1
+        assert_ok!(Assets::create(
+            Origin::root(),
+            b"BNC".to_vec(),
+            18,
+            TokenType::Stable
+        )); // Asset Id 0
+        assert_ok!(Assets::create(
+            Origin::root(),
+            b"aUSD".to_vec(),
+            18,
+            TokenType::Stable
+        )); // Asset Id 1
         assert_ok!(Assets::create_pair(Origin::root(), b"DOT".to_vec(), 18)); // Asset Id id 2,3
         assert_ok!(Assets::create_pair(Origin::root(), b"KSM".to_vec(), 18)); // Asset Id id 4,5
         assert_ok!(Assets::create_pair(Origin::root(), b"EOS".to_vec(), 18)); // Asset Id id 6,7
@@ -168,7 +185,7 @@ fn create_pool_should_work() {
 
         // initialize the parameters for create_pool.
         let creator = Origin::signed(alice);
-        let swap_fee_rate = 500;
+        let swap_fee_rate = 5_000;
 
         let vec_node_1 = PoolCreateTokenDetails {
             token_id: asud_id,
@@ -188,12 +205,13 @@ fn create_pool_should_work() {
             token_weight: 40,
         };
 
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
-        > =
-            vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
+        > = vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         run_to_block(2); // set the block number to 2.
 
         // Dispatch the create_pool call to create a new pool.
@@ -206,7 +224,7 @@ fn create_pool_should_work() {
         // validate the value of storage Pools.
         let result = Swap::pools(0);
         assert_eq!(result.owner, alice); // Validate that the pool owner is Alice.
-        assert_eq!(result.swap_fee_rate, 500); // Validate the swap fee is 500.
+        assert_eq!(result.swap_fee_rate, 5_000); // Validate the swap fee is 5000.
         assert_eq!(result.active, false); // Validate the initial value of pool state is inactive.
 
         // validate the value of storage TokenWeightsInPool.
@@ -242,12 +260,13 @@ fn create_pool_should_work() {
 
         // swap fee rate exceeds 100%.
         let swap_fee_rate = 500_000;
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
-        > =
-            vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
+        > = vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
             Err(DispatchError::Module {
@@ -259,12 +278,13 @@ fn create_pool_should_work() {
 
         // swap fee rate is below 0%.
         let swap_fee_rate = 0;
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
-        > =
-            vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
+        > = vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
             Err(DispatchError::Module {
@@ -275,11 +295,13 @@ fn create_pool_should_work() {
         );
 
         // the length of the vector is 9, which exceeds the biggest supported token number in the pool.
-        let swap_fee_rate = 1_000;
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+        let swap_fee_rate = 10_000;
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
         > = vec![
             vec_node_1.clone(),
             vec_node_1.clone(),
@@ -302,32 +324,49 @@ fn create_pool_should_work() {
 
         // validate the tokens used in creating a pool exist. Right now it doesn't work for the type Asset Id.
         // When id changes to asset id in the later version, this test should work.
-        // let vec_node_4 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
-        // 	token_id: TokenSymbol::from(78),
-        // 	token_balance: 400,
-        // 	token_weight: 40,
-        // };
-        // let swap_fee_rate = 1_000;
-        // let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
-        // vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone(), vec_node_4.clone()] ;
-        // assert_eq!(Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
-        // Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        let vec_node_4 = PoolCreateTokenDetails {
+            token_id: 78,
+            token_balance: 400,
+            token_weight: 40,
+        };
+        let swap_fee_rate = 10_000;
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
+        > = vec![
+            vec_node_1.clone(),
+            vec_node_2.clone(),
+            vec_node_3.clone(),
+            vec_node_4.clone(),
+        ];
+        assert_eq!(
+            Swap::create_pool(Origin::signed(alice), swap_fee_rate, token_for_pool_vec),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // validate token amount used to create a pool must be bigger than zero.
-        let vec_node_4 = PoolCreateTokenDetails{
+        let vec_node_4 = PoolCreateTokenDetails {
             token_id: dot_id,
             token_balance: 0,
             token_weight: 40,
         };
-        let swap_fee_rate = 1_000;
+        let swap_fee_rate = 10_000;
         assert_ok!(Assets::issue(Origin::root(), asud_id, bob, 1_000));
         assert_ok!(Assets::issue(Origin::root(), dot_id, bob, 100));
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
-        > =
-            vec![vec_node_1.clone(), vec_node_4.clone()];
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
+        > = vec![vec_node_1.clone(), vec_node_4.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
             Err(DispatchError::Module {
@@ -343,15 +382,16 @@ fn create_pool_should_work() {
             token_balance: 1_000,
             token_weight: 40,
         };
-        let swap_fee_rate = 1_000;
+        let swap_fee_rate = 10_000;
         assert_ok!(Assets::issue(Origin::root(), asud_id, bob, 1_000));
         assert_ok!(Assets::issue(Origin::root(), dot_id, bob, 100));
-        let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
-        > =
-            vec![vec_node_1.clone(), vec_node_4.clone()];
+        let token_for_pool_vec: Vec<
+            PoolCreateTokenDetails<
+                <Test as Trait>::AssetId,
+                <Test as Trait>::Balance,
+                <Test as Trait>::PoolWeight,
+            >,
+        > = vec![vec_node_1.clone(), vec_node_4.clone()];
         assert_eq!(
             Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
             Err(DispatchError::Module {
@@ -398,15 +438,15 @@ fn add_liquidity_given_shares_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for different tokens.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).available,
             999_900
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).available,
             999_800
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).available,
             999_920
         ); // get the user's balance for ksm
 
@@ -504,22 +544,33 @@ fn add_single_liquidity_given_amount_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for ausd.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).available,
             995_000
         ); // get the user's balance for ausd
 
         // Below are the incorrect operations.
 
-        // // no such token. Right now it doesn't work for the type TokenSymbol.
         // When id changes to asset id in the later version, this test should work.
-        // let creator = Origin::signed(bob);
-        // let asset_id = TokenSymbol::from(100);
-        // assert_eq!(Swap::add_single_liquidity_given_amount_in(creator.clone(), pool_id, asset_id, token_amount_in),
-        // Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        let creator = Origin::signed(bob);
+        let asset_id = 100;
+        assert_eq!(
+            Swap::add_single_liquidity_given_amount_in(
+                creator.clone(),
+                pool_id,
+                asset_id,
+                token_amount_in
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // no such pool.
         let creator = Origin::signed(bob);
         let pool_id = 1;
+        let asset_id = asud_id;
         assert_eq!(
             Swap::add_single_liquidity_given_amount_in(
                 creator.clone(),
@@ -639,30 +690,41 @@ fn add_single_liquidity_given_shares_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for different tokens.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).available,
             981_396
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).available,
             1_000_000
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).available,
             1_000_000
         ); // get the user's balance for ksm
 
         // Below are the incorrect operations.
 
-        // // no such token. Right now it doesn't work for the type TokenSymbol.
         // When id changes to asset id in the later version, this test should work.
-        // let creator = Origin::signed(bob);
-        // let asset_id = TokenSymbol::from(100);
-        // assert_eq!(Swap::add_single_liquidity_given_shares_in(creator.clone(), pool_id, asset_id, new_pool_token),
-        // Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        let creator = Origin::signed(bob);
+        let asset_id = 100;
+        assert_eq!(
+            Swap::add_single_liquidity_given_shares_in(
+                creator.clone(),
+                pool_id,
+                asset_id,
+                new_pool_token
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // no such pool.
         let creator = Origin::signed(bob);
         let pool_id = 1;
+        let asset_id = asud_id;
         assert_eq!(
             Swap::add_single_liquidity_given_shares_in(
                 creator.clone(),
@@ -781,30 +843,41 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 
         // check wether Alice's account has been added by corresponding amount for ausd.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).available,
             9_822
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &alice).available,
             29_000
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &alice).available,
             29_600
         ); // get the user's balance for ksm
 
         // Below are the incorrect operations.
 
-        // // no such token. Right now it doesn't work for the type TokenSymbol.
-        // // When id changes to asset id in the later version, this test should work.
-        // let creator = Origin::signed(alice);
-        // let asset_id = TokenSymbol::from(100);
-        // assert_eq!(Swap::remove_single_asset_liquidity_given_shares_in(creator.clone(), pool_id, asset_id, pool_token_out),
-        // Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        // When id changes to asset id in the later version, this test should work.
+        let creator = Origin::signed(alice);
+        let asset_id = 100;
+        assert_eq!(
+            Swap::remove_single_asset_liquidity_given_shares_in(
+                creator.clone(),
+                pool_id,
+                asset_id,
+                pool_token_out
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // no such pool.
         let remover = Origin::signed(alice);
         let pool_id = 1;
+        let asset_id = asud_id;
         assert_eq!(
             Swap::remove_single_asset_liquidity_given_shares_in(
                 remover.clone(),
@@ -934,22 +1007,33 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for ausd.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).available,
             9_900
         ); // get the user's balance for ausd
 
         // Below are the incorrect operations.
 
-        // // no such token. Right now it doesn't work for the type TokenSymbol.
-        // // When id changes to asset id in the later version, this test should work.
-        // let remover = Origin::signed(alice);
-        // let asset_id = TokenSymbol::from(100);
-        // assert_eq!(Swap::remove_single_asset_liquidity_given_amount_in(remover, pool_id, asset_id, token_amount),
-        // Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        // When id changes to asset id in the later version, this test should work.
+        let remover = Origin::signed(alice);
+        let asset_id = 100;
+        assert_eq!(
+            Swap::remove_single_asset_liquidity_given_amount_in(
+                remover,
+                pool_id,
+                asset_id,
+                token_amount
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // no such pool.
         let remover = Origin::signed(alice);
         let pool_id = 1;
+        let asset_id = asud_id;
         assert_eq!(
             Swap::remove_single_asset_liquidity_given_amount_in(
                 remover.clone(),
@@ -1100,15 +1184,15 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 
         // check wether Alice's account has been added corresponding amount for different tokens.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).available,
             9_750
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &alice).available,
             29_500
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &alice).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &alice).available,
             29_800
         ); // get the user's balance for ksm
 
@@ -1237,15 +1321,15 @@ fn swap_exact_in_should_work() {
 
         // check whether bob's account has been added and deducted with corresponding amounts.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).available,
             999_900
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).available,
             1_000_083
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).available,
             1_000_000
         ); // get the user's balance for dot
 
@@ -1269,13 +1353,38 @@ fn swap_exact_in_should_work() {
             })
         );
 
-        // // no such token. Right now it doesn't work for the type TokenSymbol.
-        // //  When id changes to asset id in the later version, this test should work.
-        // let asset_id = TokenSymbol::from(100);
-        // assert_eq!(Swap::swap_exact_in(swapper.clone(), pool_id, asset_id, token_amount_in, min_token_amount_out,
-        // token_in_asset_id), Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
-        // assert_eq!(Swap::swap_exact_in(swapper.clone(), pool_id, token_in_asset_id, token_amount_in,
-        // min_token_amount_out, asset_id), Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        //  When id changes to asset id in the later version, this test should work.
+        let asset_id = 100;
+        assert_eq!(
+            Swap::swap_exact_in(
+                swapper.clone(),
+                pool_id,
+                asset_id,
+                token_amount_in,
+                min_token_amount_out,
+                token_in_asset_id
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
+        assert_eq!(
+            Swap::swap_exact_in(
+                swapper.clone(),
+                pool_id,
+                token_in_asset_id,
+                token_amount_in,
+                min_token_amount_out,
+                asset_id
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // no such pool_id
         let pool_id = 1;
@@ -1414,15 +1523,15 @@ fn swap_exact_out_should_work() {
 
         // check whether bob's account has been added and deducted with corresponding amounts.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).available,
             999_938
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).available,
             1_000_200
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).available,
             1_000_000
         ); // get the user's balance for ksm
 
@@ -1446,13 +1555,38 @@ fn swap_exact_out_should_work() {
             })
         );
 
-        // // no such token. Right now it doesn't work for the type TokenSymbol.
-        // //  When id changes to asset id in the later version, this test should work.
-        // let asset_id = TokenSymbol::from(100);
-		// assert_eq!(Swap::swap_exact_out(swapper.clone(), pool_id, token_out_asset_id, token_amount_out, 
-		// max_token_amount_in, asset_id), Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
-		// assert_eq!(Swap::swap_exact_out(swapper.clone(), pool_id, asset_id, token_amount_out, max_token_amount_in, 
-		// token_in_asset_id), Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+        //  When id changes to asset id in the later version, this test should work.
+        let asset_id = 100;
+        assert_eq!(
+            Swap::swap_exact_out(
+                swapper.clone(),
+                pool_id,
+                token_out_asset_id,
+                token_amount_out,
+                max_token_amount_in,
+                asset_id
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
+        assert_eq!(
+            Swap::swap_exact_out(
+                swapper.clone(),
+                pool_id,
+                asset_id,
+                token_amount_out,
+                max_token_amount_in,
+                token_in_asset_id
+            ),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 2,
+                message: Some("TokenNotExist")
+            })
+        );
 
         // no such pool_id
         let pool_id = 1;
@@ -1586,8 +1720,7 @@ fn claim_bonus_should_work() {
         // approx_eq!(f32, 23_148.15f32, f32::from_fixed(result), epsilon = 0.000_000_000_001);
 
         // check user's BNC account to see whether the amount issued is right.
-        let result =
-            <Test as Trait>::AssetTrait::get_account_asset(bnc_id, &bob).balance;
+        let result = <Test as Trait>::AssetTrait::get_account_asset(bnc_id, &bob).available;
         assert_eq!(result, 23_198u64);
 
         // Below are the incorrect operations.
@@ -1638,7 +1771,7 @@ fn set_swap_fee_should_work() {
         let bob = 2;
         let setter = Origin::signed(alice);
         let pool_id = 0;
-        let new_swap_fee = 1000;
+        let new_swap_fee = 10_000;
 
         assert_ok!(Swap::set_swap_fee(setter, pool_id, new_swap_fee));
         // check if the pool has new swap fee rate
@@ -1656,7 +1789,7 @@ fn set_swap_fee_should_work() {
         );
 
         // swap fee rate exceed maximum limit.
-        let new_swap_fee = 100_000;
+        let new_swap_fee = 1_000_000;
         let setter = Origin::signed(alice);
         assert_eq!(
             Swap::set_swap_fee(setter.clone(), pool_id, new_swap_fee),
