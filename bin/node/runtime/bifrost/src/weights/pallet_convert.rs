@@ -19,7 +19,7 @@
 use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Trait> brml_convert::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> brml_convert::WeightInfo for WeightInfo<T> {
     fn set_convert_price() -> Weight {
         (65949000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
@@ -30,7 +30,7 @@ impl<T: frame_system::Trait> brml_convert::WeightInfo for WeightInfo<T> {
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
-    fn to_vtoken<U: brml_convert::Trait>(referer: Option<&U::AccountId>) -> Weight {
+    fn to_vtoken<U: brml_convert::Config>(referer: Option<&U::AccountId>) -> Weight {
         let referer_weight = referer.map_or(1000, |_| 100);
         let db = T::DbWeight::get();
         db.reads_writes(1, 1)

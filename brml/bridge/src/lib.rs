@@ -39,9 +39,9 @@ pub struct Bank {
 }
 
 /// The module configuration trait.
-pub trait Trait: system::Trait {
+pub trait Config: system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy;
@@ -63,7 +63,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_event!(
-	pub enum Event<T> where <T as Trait>::AssetId {
+	pub enum Event<T> where <T as Config>::AssetId {
 		/// Transaction from another blockchain was mapped.
 		BridgeTxMapped,
 		/// Transaction from another blockchain was received.
@@ -78,7 +78,7 @@ decl_event!(
 );
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Bridge {
+	trait Store for Module<T: Config> as Bridge {
 		// Associate account id in Bifrost to account in other blockchain
 		BridgeAccountIdToAccount get(fn bridge_account): map hasher(blake2_128_concat) T::AccountId => Vec<u8>;
 
@@ -94,7 +94,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 
 		fn deposit_event() = default;
 
@@ -120,7 +120,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+impl<T: Config> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	fn asset_redeem(asset_id: T::AssetId, target: T::AccountId, amount: T::Balance, to_name: Option<Vec<u8>>) {
 		let account = <BridgeAccountIdToAccount<T>>::get(target);
 		let symbol = <BridgeAssetIdToAsset<T>>::get(asset_id);
@@ -132,7 +132,7 @@ impl<T: Trait> AssetRedeem<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetFrom<T::AccountId, T::Precision, T::Balance> for Module<T> {
+impl<T: Config> BridgeAssetFrom<T::AccountId, T::Precision, T::Balance> for Module<T> {
 	fn bridge_asset_from(target: T::AccountId, bridge_asset: BridgeAssetBalance<T::Precision, T::Balance>) {
 		let asset_id = <BridgeAssetToAssetId<T>>::get(bridge_asset.symbol);
 		T::AssetIssue::asset_issue(asset_id, TokenSymbol::VToken, target.clone(), bridge_asset.amount);
@@ -140,6 +140,6 @@ impl<T: Trait> BridgeAssetFrom<T::AccountId, T::Precision, T::Balance> for Modul
 }
 
 // The main implementation block for the module.
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 
 }

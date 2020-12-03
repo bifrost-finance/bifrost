@@ -66,7 +66,7 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -113,7 +113,7 @@ impl FindAuthor<u64> for AuthorGiven {
 	}
 }
 
-impl pallet_authorship::Trait for Test {
+impl pallet_authorship::Config for Test {
 	type FindAuthor = AuthorGiven;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
@@ -133,7 +133,7 @@ impl From<u64> for sr25519::AuthorityId {
 	}
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type AuthorityId = sr25519::AuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
@@ -146,7 +146,7 @@ impl crate::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
@@ -161,7 +161,7 @@ parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
-impl convert::Trait for Test {
+impl convert::Config for Test {
 	type ConvertPrice = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;

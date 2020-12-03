@@ -49,7 +49,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
@@ -60,7 +60,7 @@ impl assets::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -92,7 +92,7 @@ parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type ConvertPrice = u64;
 	type RatePerBlock = u64;
 	type Event = TestEvent;

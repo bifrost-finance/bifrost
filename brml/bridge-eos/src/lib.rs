@@ -171,7 +171,7 @@ impl Default for TransactionStatus {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Use has no privilege to execute cross transaction
 		NoCrossChainPrivilege,
 		/// EOS node address or private key is not set
@@ -260,12 +260,12 @@ decl_error! {
 	}
 }
 
-pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
+pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 	/// The identifier type for an authority.
 	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
-		+ From<<Self as frame_system::Trait>::AccountId>;
+		+ From<<Self as frame_system::Config>::AccountId>;
 
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
@@ -293,7 +293,7 @@ pub trait Trait: SendTransactionTypes<Call<Self>> + pallet_authorship::Trait {
 
 decl_event! {
 	pub enum Event<T>
-		where <T as system::Trait>::AccountId,
+		where <T as system::Config>::AccountId,
 	{
 		InitSchedule(VersionId),
 		ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
@@ -312,7 +312,7 @@ decl_event! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as BridgeEos {
+	trait Store for Module<T: Config> as BridgeEos {
 		/// The current set of notary keys that may send bridge transactions to Eos chain.
 		NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
 
@@ -393,7 +393,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -761,7 +761,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn verify_block_headers(
 		mut merkle: IncrementalMerkle,
 		schedule_hash: &Checksum256,
@@ -1115,7 +1115,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> BridgeAssetTo<T::AccountId, T::AssetId, T::Precision, T::Balance> for Module<T> {
+impl<T: Config> BridgeAssetTo<T::AccountId, T::AssetId, T::Precision, T::Balance> for Module<T> {
 	type Error = crate::Error<T>;
 	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::AccountId, T::AssetId, T::Precision, T::Balance>) -> Result<(), Self::Error> {
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
@@ -1129,7 +1129,7 @@ impl<T: Trait> BridgeAssetTo<T::AccountId, T::AssetId, T::Precision, T::Balance>
 }
 
 #[allow(deprecated)]
-impl<T: Trait> frame_support::unsigned::ValidateUnsigned for Module<T> {
+impl<T: Config> frame_support::unsigned::ValidateUnsigned for Module<T> {
 	type Call = Call<T>;
 
 	fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
