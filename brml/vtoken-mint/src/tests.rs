@@ -26,7 +26,7 @@ fn generate() {
 	crate::Module::<Test>::count_bnc(10);
 	crate::Module::<Test>::count_bnc(20);
 	crate::Module::<Test>::count_bnc(30);
-	
+
 	assert_eq!(60, BncSum::<Test>::get());
 }
 
@@ -35,22 +35,22 @@ fn mint() {
 	let (bob, b_count) = (22222222 as u64, 100);
 	assert_eq!(0, BncMint::<Test>::get(&alice));
 	assert_eq!(0, BncMint::<Test>::get(&bob));
-	
+
 	let (_, max_bnc_amount) = BncMonitor::<Test>::get();
 	assert_eq!(0, max_bnc_amount);
-	
+
 	assert_ok!(crate::Module::<Test>::mint_bnc(alice, a_count));
 	let (_, max_bnc_amount) = BncMonitor::<Test>::get();
 	assert_eq!(100, max_bnc_amount);
-	
+
 	assert_ok!(crate::Module::<Test>::mint_bnc(bob, b_count - 50));
 	let (_, max_bnc_amount) = BncMonitor::<Test>::get();
 	assert_eq!(100, max_bnc_amount);
-	
+
 	assert_ok!(crate::Module::<Test>::mint_bnc(bob, b_count + 50));
 	let (_, max_bnc_amount) = BncMonitor::<Test>::get();
 	assert_eq!(150, max_bnc_amount);
-	
+
 	assert_eq!(100, BncMint::<Test>::get(&alice));
 	assert_eq!(200, BncMint::<Test>::get(&bob));
 }
@@ -67,7 +67,7 @@ fn on_finalize_should_ok() {
 		assert_eq!(0, block_numer);
 		assert_eq!(0, bnc_amount);
 		assert_eq!(0, max_bnc_amount);
-		
+
 		// mint but no issue
 		mint();
 		crate::Module::<Test>::on_finalize(INTERVAL.into());
@@ -75,7 +75,7 @@ fn on_finalize_should_ok() {
 		assert_eq!(10519200, block_numer);
 		assert_eq!(150, bnc_amount);
 		assert_eq!(150, max_bnc_amount);
-		
+
 		// issue
 		crate::Module::<Test>::on_finalize((INTERVAL + 50).into());
 		let ((block_numer, bnc_amount), max_bnc_amount) = BncMonitor::<Test>::get();
@@ -114,12 +114,12 @@ fn issue_bnc_should_be_ok() {
 		assert_ok!(crate::Module::<Test>::issue_bnc());
 		assert_eq!(20, BncReward::<Test>::get(alice));
 		assert_eq!(40, BncReward::<Test>::get(bob));
-		
+
 		assert_eq!(0, BncSum::<Test>::get());
 		assert_eq!(0, BncMint::<Test>::get(alice));
 		assert_eq!(0, BncMint::<Test>::get(bob));
 		assert_eq!(0, BncMint::<Test>::get(bob));
-		
+
 		let ((block_numer, bnc_amount), max_bnc_amount) = BncMonitor::<Test>::get();
 		assert_eq!(0, block_numer);
 		assert_eq!(0, bnc_amount);
@@ -133,10 +133,10 @@ fn query_bnc_should_be_ok() {
 		let (alice, bob) = (11111111, 22222222);
 		generate();
 		mint();
-		
+
 		assert_ok!(crate::Module::<Test>::query_bnc(alice));
 		assert_ok!(Result::<u64, Test>::Ok(100), crate::Module::<Test>::query_bnc(alice).unwrap());
-		
+
 		assert_ok!(crate::Module::<Test>::query_bnc(bob));
 		assert_ok!(Result::<u64, Test>::Ok(200), crate::Module::<Test>::query_bnc(bob).unwrap());
 	});

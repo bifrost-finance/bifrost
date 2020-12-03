@@ -48,27 +48,27 @@ decl_storage! {
 		/// bnc reward
 		BncReward get(fn bnc_reward): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 	}
-	
+
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
 			BncPrice::<T>::put(config.number_price);
 		});
 	}
-	
+
 }
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
-		
+
 		fn on_finalize(current_block_number: T::BlockNumber) {
 			// Get current block generates bnc stimulate
 			let (record_block_number, mut current_bnc_price) = BncPrice::<T>::get();
 			if current_block_number.saturating_sub(record_block_number).eq(&T::BlockNumber::from(INTERVAL)) {
-				 BncPrice::<T>::mutate (|(record_block_number, bnc_price)| {
+				BncPrice::<T>::mutate (|(record_block_number, bnc_price)| {
 					*record_block_number = current_block_number;
 					*bnc_price /= T::Balance::from(2u32);
-				 });
-				 current_bnc_price = BncPrice::<T>::get().1;
+				});
+				current_bnc_price = BncPrice::<T>::get().1;
 			}
 			// BNC stimulate
 			Self::count_bnc(current_bnc_price);
@@ -86,12 +86,12 @@ decl_module! {
 			// Update  block_number and max_bnc_mint_amount
 			if max_bnc_mint_amount.gt(&bnc_mint_amount) {
 				BncMonitor::<T>::mutate(|(tup, _)|{
-				   tup.0 = current_block_number;
-				   tup.1 = max_bnc_mint_amount;
+					tup.0 = current_block_number;
+					tup.1 = max_bnc_mint_amount;
 				});
 			}
 		}
-		
+
 	}
 }
 
@@ -107,13 +107,13 @@ decl_error! {
 
 impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
-	
+
 	fn count_bnc(generate_amount: T::Balance) {
 		BncSum::<T>::mutate(|bnc_amount| {
 			*bnc_amount = bnc_amount.saturating_add(generate_amount);
 		});
 	}
-	
+
 	fn mint_bnc(minter: T::AccountId, mint_amount: T::Balance) -> Result<(), Self::Error> {
 		// Judge
 		if BncMint::<T>::contains_key(&minter) {
@@ -130,10 +130,10 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 				*max_val = mint_amount;
 			})
 		}
-		
+
 		Ok(())
 	}
-	
+
 	fn issue_bnc() -> Result<(), Self::Error> {
 		// Check Bnc total amount
 		ensure!(BncSum::<T>::get().ne(&T::Balance::from(0u32)), Error::<T>::BncAmountNotExist);
@@ -162,16 +162,16 @@ impl<T: Trait> MintTrait<T::AccountId, T::Balance> for Module<T> {
 		for _ in BncMint::<T>::drain() {};
 		// Clear Monitor data
 		BncMonitor::<T>::kill();
-		
+
 		Ok(())
 	}
-	
+
 	fn query_bnc(minter: T::AccountId) -> Result<T::Balance, Self::Error> {
 		// Check
 		ensure!(BncMint::<T>::contains_key(&minter), Error::<T>::MinterNotExist);
-		
+
 		Ok(BncMint::<T>::get(&minter))
 	}
-	
+
 }
 
