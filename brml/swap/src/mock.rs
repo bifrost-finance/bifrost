@@ -94,7 +94,7 @@ parameter_types! {
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
 	pub const MinimumSwapFee: u64 = 1; // 0.001%
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
+	pub const FeePrecision: u64 = 100_000;
 	pub const WeightPrecision: u64 = 100_000;
 	pub const BNCAssetId: u32 = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
@@ -106,12 +106,12 @@ parameter_types! {
 
 impl crate::Trait for Test {
 	type Event = TestEvent;
-	type Fee = u64;
+	type SwapFee = u128;
 	type AssetId = u32;
 	type PoolId = u32;
 	type Balance = u64;
 	type AssetTrait = Assets;
-	type PoolWeight = u64;
+	type PoolWeight = u128;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
