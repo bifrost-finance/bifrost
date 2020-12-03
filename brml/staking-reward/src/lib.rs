@@ -26,7 +26,7 @@ use codec::{Encode, Decode};
 mod mock;
 mod tests;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// The units in which we record balances.
 	type Balance: Member
 		+ Parameter
@@ -52,7 +52,7 @@ pub const CAPACITY: usize = 512;
 pub const LEN: usize = 256;
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Reward {
+	trait Store for Module<T: Config> as Reward {
 		Point get(fn query_point): map hasher(blake2_128_concat) (T::AssetId, T::AccountId) => T::Balance;
 		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) T::AssetId
 			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
@@ -60,17 +60,17 @@ decl_storage! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// No included referer
 		RefererNotExist,
 	}
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {}
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {}
 }
 
-impl<T: Trait> RewardTrait<T::Balance, T::AccountId, T::AssetId> for Module<T> {
+impl<T: Config> RewardTrait<T::Balance, T::AccountId, T::AssetId> for Module<T> {
 	type Error = Error<T>;
 	
 	fn record_reward(

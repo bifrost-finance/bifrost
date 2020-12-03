@@ -49,9 +49,9 @@ impl WeightInfo for () {
 }
 
 /// The module configuration trait.
-pub trait Trait: system::Trait {
+pub trait Config: system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Convert> + MaybeSerializeDeserialize;
@@ -77,9 +77,9 @@ pub trait Trait: system::Trait {
 
 decl_event! {
 	pub enum Event<T>
-		where <T as system::Trait>::AccountId,
-			<T as Trait>::Balance,
-			<T as Trait>::AssetId,
+		where <T as system::Config>::AccountId,
+			<T as Config>::Balance,
+			<T as Config>::AssetId,
 	{
 		/// Some assets were created.
 		Created(AssetId, Token<AssetId, Balance>),
@@ -99,7 +99,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Cannot create a token existed
 		TokenExisted,
 		/// Token symbol is too long
@@ -124,7 +124,7 @@ decl_error! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Assets {
+	trait Store for Module<T: Config> as Assets {
 		/// The number of units of assets held by any given asset ans given account.
 		pub AccountAssets get(fn account_assets) config(): map hasher(blake2_128_concat) (T::AssetId, T::AccountId)
 			=> AccountAsset<T::Balance>;
@@ -157,7 +157,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -305,7 +305,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
+impl<T: Config> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	type Error = Error<T>;
 	fn asset_create(symbol: Vec<u8>, precision: u16, token_type: TokenType) -> Result<(T::AssetId, Token<T::AssetId, T::Balance>), Self::Error> {
 		let id = Self::next_asset_id();
@@ -448,14 +448,14 @@ impl<T: Trait> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 	}
 }
 
-impl<T: Trait> TokenPriceHandler<T::AssetId, T::Price> for Module<T> {
+impl<T: Config> TokenPriceHandler<T::AssetId, T::Price> for Module<T> {
 	fn set_token_price(asset_id: T::AssetId, price: T::Price) {
 		<Prices<T>>::mutate(asset_id, |p| *p = price);
 	}
 }
 
 // The main implementation block for the module.
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn asset_transfer(
 		asset_id: T::AssetId,
 		from: T::AccountId,

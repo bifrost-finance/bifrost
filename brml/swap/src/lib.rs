@@ -44,9 +44,9 @@ use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Satura
 mod mock;
 mod tests;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// event
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// fee
 	type Fee: Member
@@ -122,7 +122,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_event! {
-	pub enum Event<T> where <T as Trait>::Balance, {
+	pub enum Event<T> where <T as Config>::Balance, {
 		AddLiquiditySuccess,
 		RemoveLiquiditySuccess,
 		AddSingleLiquiditySuccess,
@@ -133,7 +133,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		PoolNotExist,
 		PoolNotActive,
 		TokenNotExist,
@@ -179,7 +179,7 @@ pub struct PoolCreateTokenDetails<AssetId, Balance, PoolWeight> {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Swap {
+	trait Store for Module<T: Config> as Swap {
 		/// Pool info
 		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T::AccountId, T::Fee>;
 
@@ -223,7 +223,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		const MaximumSwapInRatio: T::Balance = T::MaximumSwapInRatio::get();
@@ -856,7 +856,7 @@ decl_module! {
 }
 
 #[allow(dead_code)]
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub(crate) fn convert_float(input: I64F64) -> Result<T::Balance, Error<T>> {
 		let converted = u128::from_fixed(input);
 		TryInto::<T::Balance>::try_into(converted).map_err(|_| Error::<T>::ConvertFailure)

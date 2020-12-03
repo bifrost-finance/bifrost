@@ -33,18 +33,18 @@ use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeD
 pub trait WeightInfo {
 	fn set_convert_price() -> Weight;
 	fn set_price_per_block() -> Weight;
-	fn to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight;
+	fn to_vtoken<T: Config>(referer: Option<&T::AccountId>) -> Weight;
 	fn to_token() -> Weight;
 }
 
 impl WeightInfo for () {
 	fn set_convert_price() -> Weight { Default::default() }
 	fn set_price_per_block() -> Weight { Default::default() }
-	fn to_vtoken<T: Trait>(_: Option<&T::AccountId>) -> Weight { Default::default() }
+	fn to_vtoken<T: Config>(_: Option<&T::AccountId>) -> Weight { Default::default() }
 	fn to_token() -> Weight { Default::default() }
 }
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// convert rate
 	type ConvertPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + MaybeSerializeDeserialize;
 	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::ConvertPrice> + MaybeSerializeDeserialize;
@@ -58,7 +58,7 @@ pub trait Trait: frame_system::Trait {
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// event
-	type Event: From<Event> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
 
 	type ConvertDuration: Get<Self::BlockNumber>;
 
@@ -79,7 +79,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Asset id doesn't exist
 		TokenNotExist,
 		/// Amount of input should be less than or equal to origin balance
@@ -102,7 +102,7 @@ decl_error! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Convert {
+	trait Store for Module<T: Config> as Convert {
 		/// convert price between two tokens, vtoken => (token, convert_price)
 		ConvertPrice get(fn convert_price) config(): map hasher(blake2_128_concat) T::AssetId => T::ConvertPrice;
 		/// change rate per block, vtoken => (token, rate_per_block)
@@ -134,7 +134,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		const ConvertDuration: T::BlockNumber = T::ConvertDuration::get();
@@ -310,7 +310,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub fn get_convert(asset_id: T::AssetId) -> T::ConvertPrice {
 		<ConvertPrice<T>>::get(asset_id)
 	}
@@ -423,7 +423,7 @@ impl<T: Trait> Module<T> {
 	}
 }
 
-impl<T: Trait> FetchConvertPrice<T::AssetId, T::ConvertPrice> for Module<T> {
+impl<T: Config> FetchConvertPrice<T::AssetId, T::ConvertPrice> for Module<T> {
 	fn fetch_convert_price(asset_id: T::AssetId) -> T::ConvertPrice {
 		let price = <ConvertPrice<T>>::get(asset_id);
 
@@ -431,11 +431,11 @@ impl<T: Trait> FetchConvertPrice<T::AssetId, T::ConvertPrice> for Module<T> {
 	}
 }
 
-impl<T: Trait> FetchConvertPool<T::AssetId, T::Balance> for Module<T> {
+impl<T: Config> FetchConvertPool<T::AssetId, T::Balance> for Module<T> {
 	fn fetch_convert_pool(asset_id: T::AssetId) -> ConvertPool<T::Balance> { Pool::<T>::get(asset_id) }
 }
 
-impl<T: Trait> AssetReward<T::AssetId, T::Balance> for Module<T> {
+impl<T: Config> AssetReward<T::AssetId, T::Balance> for Module<T> {
 	type Output = ();
 	type Error = ();
 	fn set_asset_reward(asset_id: T::AssetId, reward: T::Balance) -> Result<(), ()> {
@@ -450,7 +450,7 @@ impl<T: Trait> AssetReward<T::AssetId, T::Balance> for Module<T> {
 	}
 }
 
-impl<T: Trait> RewardHandler<T::AssetId, T::Balance> for Module<T> {
+impl<T: Config> RewardHandler<T::AssetId, T::Balance> for Module<T> {
 	fn send_reward(asset_id: T::AssetId, reward: T::Balance) {
 		if <Pool<T>>::contains_key(asset_id) {
 			<Pool<T>>::mutate(asset_id, |pool| {
@@ -463,10 +463,10 @@ impl<T: Trait> RewardHandler<T::AssetId, T::Balance> for Module<T> {
 // #[allow(dead_code)]
 // mod weight_for {
 // 	use frame_support::{traits::Get, weights::Weight};
-// 	use super::Trait;
+// 	use super::Config;
 //
 // 	/// asset_redeem weight
-// 	pub(crate) fn convert_token_to_vtoken<T: Trait>(referer: Option<&T::AccountId>) -> Weight {
+// 	pub(crate) fn convert_token_to_vtoken<T: Config>(referer: Option<&T::AccountId>) -> Weight {
 // 		let referer_weight = referer.map_or(1000, |_| 100);
 // 		let db = T::DbWeight::get();
 // 		db.reads_writes(1, 1)

@@ -78,9 +78,9 @@ fn initialize_pool_for_dispatches() {
     };
 
     let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-        <Test as Trait>::AssetId,
-        <Test as Trait>::Balance,
-        <Test as Trait>::PoolWeight>,
+        <Test as Config>::AssetId,
+        <Test as Config>::Balance,
+        <Test as Config>::PoolWeight>,
     > =
         vec![vec_node_1, vec_node_2, vec_node_3];
     run_to_block(2); // set the block number to 2.
@@ -189,9 +189,9 @@ fn create_pool_should_work() {
         };
 
         let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+            <Test as Config>::AssetId,
+            <Test as Config>::Balance,
+            <Test as Config>::PoolWeight>,
         > =
             vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         run_to_block(2); // set the block number to 2.
@@ -243,9 +243,9 @@ fn create_pool_should_work() {
         // swap fee rate exceeds 100%.
         let swap_fee_rate = 500_000;
         let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+            <Test as Config>::AssetId,
+            <Test as Config>::Balance,
+            <Test as Config>::PoolWeight>,
         > =
             vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         assert_eq!(
@@ -260,9 +260,9 @@ fn create_pool_should_work() {
         // swap fee rate is below 0%.
         let swap_fee_rate = 0;
         let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+            <Test as Config>::AssetId,
+            <Test as Config>::Balance,
+            <Test as Config>::PoolWeight>,
         > =
             vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
         assert_eq!(
@@ -277,9 +277,9 @@ fn create_pool_should_work() {
         // the length of the vector is 9, which exceeds the biggest supported token number in the pool.
         let swap_fee_rate = 1_000;
         let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+            <Test as Config>::AssetId,
+            <Test as Config>::Balance,
+            <Test as Config>::PoolWeight>,
         > = vec![
             vec_node_1.clone(),
             vec_node_1.clone(),
@@ -302,7 +302,7 @@ fn create_pool_should_work() {
 
         // validate the tokens used in creating a pool exist. Right now it doesn't work for the type Asset Id.
         // When id changes to asset id in the later version, this test should work.
-        // let vec_node_4 = PoolCreateTokenDetails::<<Test as Trait>::Balance, <Test as Trait>::PoolWeight> {
+        // let vec_node_4 = PoolCreateTokenDetails::<<Test as Config>::Balance, <Test as Config>::PoolWeight> {
         // 	token_id: TokenSymbol::from(78),
         // 	token_balance: 400,
         // 	token_weight: 40,
@@ -323,9 +323,9 @@ fn create_pool_should_work() {
         assert_ok!(Assets::issue(Origin::root(), asud_id, bob, 1_000));
         assert_ok!(Assets::issue(Origin::root(), dot_id, bob, 100));
         let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+            <Test as Config>::AssetId,
+            <Test as Config>::Balance,
+            <Test as Config>::PoolWeight>,
         > =
             vec![vec_node_1.clone(), vec_node_4.clone()];
         assert_eq!(
@@ -347,9 +347,9 @@ fn create_pool_should_work() {
         assert_ok!(Assets::issue(Origin::root(), asud_id, bob, 1_000));
         assert_ok!(Assets::issue(Origin::root(), dot_id, bob, 100));
         let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-            <Test as Trait>::AssetId,
-            <Test as Trait>::Balance,
-            <Test as Trait>::PoolWeight>,
+            <Test as Config>::AssetId,
+            <Test as Config>::Balance,
+            <Test as Config>::PoolWeight>,
         > =
             vec![vec_node_1.clone(), vec_node_4.clone()];
         assert_eq!(
@@ -398,15 +398,15 @@ fn add_liquidity_given_shares_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for different tokens.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &bob).balance,
             999_900
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(dot_id, &bob).balance,
             999_800
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
             999_920
         ); // get the user's balance for ksm
 
@@ -504,7 +504,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for ausd.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &bob).balance,
             995_000
         ); // get the user's balance for ausd
 
@@ -639,15 +639,15 @@ fn add_single_liquidity_given_shares_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for different tokens.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &bob).balance,
             981_396
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(dot_id, &bob).balance,
             1_000_000
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
             1_000_000
         ); // get the user's balance for ksm
 
@@ -781,15 +781,15 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 
         // check wether Alice's account has been added by corresponding amount for ausd.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &alice).balance,
             9_822
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(dot_id, &alice).balance,
             29_000
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(ksm_id, &alice).balance,
             29_600
         ); // get the user's balance for ksm
 
@@ -934,7 +934,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 
         // check wether bob's account has been deducted corresponding amount for ausd.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &alice).balance,
             9_900
         ); // get the user's balance for ausd
 
@@ -1100,15 +1100,15 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 
         // check wether Alice's account has been added corresponding amount for different tokens.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &alice).balance,
             9_750
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(dot_id, &alice).balance,
             29_500
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &alice).balance,
+            <Test as Config>::AssetTrait::get_account_asset(ksm_id, &alice).balance,
             29_800
         ); // get the user's balance for ksm
 
@@ -1237,15 +1237,15 @@ fn swap_exact_in_should_work() {
 
         // check whether bob's account has been added and deducted with corresponding amounts.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &bob).balance,
             999_900
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(dot_id, &bob).balance,
             1_000_083
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
             1_000_000
         ); // get the user's balance for dot
 
@@ -1414,15 +1414,15 @@ fn swap_exact_out_should_work() {
 
         // check whether bob's account has been added and deducted with corresponding amounts.
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(asud_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(asud_id, &bob).balance,
             999_938
         ); // get the user's balance for ausd
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(dot_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(dot_id, &bob).balance,
             1_000_200
         ); // get the user's balance for dot
         assert_eq!(
-            <Test as Trait>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
+            <Test as Config>::AssetTrait::get_account_asset(ksm_id, &bob).balance,
             1_000_000
         ); // get the user's balance for ksm
 
@@ -1532,7 +1532,7 @@ fn swap_exact_out_should_work() {
         // swap more than the user has
         let max_token_amount_in = Some(2000);
         let token_amount_out = 400;
-        <Test as Trait>::AssetTrait::asset_redeem(token_in_asset_id, &bob, 999_800); // destroy most of bob's ausd
+        <Test as Config>::AssetTrait::asset_redeem(token_in_asset_id, &bob, 999_800); // destroy most of bob's ausd
         assert_eq!(
             Swap::swap_exact_out(
                 swapper.clone(),
@@ -1587,7 +1587,7 @@ fn claim_bonus_should_work() {
 
         // check user's BNC account to see whether the amount issued is right.
         let result =
-            <Test as Trait>::AssetTrait::get_account_asset(bnc_id, &bob).balance;
+            <Test as Config>::AssetTrait::get_account_asset(bnc_id, &bob).balance;
         assert_eq!(result, 23_198u64);
 
         // Below are the incorrect operations.

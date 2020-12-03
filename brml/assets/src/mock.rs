@@ -37,7 +37,7 @@ parameter_types! {
 	pub const AvailableBlockRatio: Perbill = Perbill::one();
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -69,7 +69,7 @@ parameter_types! {
 	pub const SettlementPeriod: u64 = 24 * 60 * 10;
 }
 
-impl Trait for Test {
+impl Config for Test {
 	type Event = TestEvent;
 	type Balance = u128;
 	type AssetId = u32;
