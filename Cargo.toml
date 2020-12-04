@@ -11,6 +11,7 @@ members = [
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
+	"brml/bid",
 	"brml/bridge-eos",
 #	"brml/bridge-iost",
 	"brml/convert",

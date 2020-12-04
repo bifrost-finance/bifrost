@@ -717,6 +717,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-bid"
+version = "0.5.0"
+dependencies = [
+ "brml-assets",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
 name = "brml-bridge-eos"
 version = "0.6.0"
 dependencies = [
