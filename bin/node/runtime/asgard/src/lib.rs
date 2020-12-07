@@ -941,7 +941,7 @@ parameter_types! {
 	pub const InitialPoolSupply: Balance = 1_000;
 	pub const NumberOfSupportedTokens: u8 = 8;
 	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
-	pub const MaximumPassedInPoolTokenShares: Balance = 1_000_000;
+	pub const MaximumPassedInPoolTokenShares: Balance = 1_000_000 * BNCS;
 }
 
 impl brml_swap::Trait for Runtime {
