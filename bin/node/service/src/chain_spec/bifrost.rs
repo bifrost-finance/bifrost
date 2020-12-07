@@ -287,6 +287,7 @@ pub fn testnet_genesis(
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
+			iost_asset_id: 8,
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {

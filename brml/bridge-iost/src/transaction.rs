@@ -37,7 +37,7 @@ pub struct MultiSig<AccountId> {
     threshold: u8,
 }
 
-impl<AccountId: PartialEq> MultiSig<AccountId> {
+impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
     fn new(threshold: u8) -> Self {
         MultiSig {
             signatures: Default::default(),
@@ -67,7 +67,7 @@ impl<AccountId> Default for MultiSig<AccountId> {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub struct MultiSigTx<AccountId> {
+pub struct MultiSigTx<AccountId, AssetId> {
     /// Chain id of Eos node that transaction will be sent
     chain_id: i32,
     /// Transaction raw data for signing
@@ -79,21 +79,23 @@ pub struct MultiSigTx<AccountId> {
     /// Who sends Transaction to EOS
     pub from: AccountId,
     /// token type
-    pub token_type: node_primitives::TokenSymbol,
+    pub token_type: AssetId,
 }
 
+/// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub enum TxOut<AccountId> {
+pub enum TxOut<AccountId, AssetId> {
+    None,
     /// Initial Eos multi-sig transaction
-    Initial(MultiSigTx<AccountId>),
+    Initial(MultiSigTx<AccountId, AssetId>),
     /// Generated and signing Eos multi-sig transaction
-    Generated(MultiSigTx<AccountId>),
+    Generated(MultiSigTx<AccountId, AssetId>),
     /// Signed Eos multi-sig transaction
-    Signed(MultiSigTx<AccountId>),
+    Signed(MultiSigTx<AccountId, AssetId>),
     /// Sending Eos multi-sig transaction to and fetching tx id from Eos node
     Processing {
         tx_id: Vec<u8>,
-        multi_sig_tx: MultiSigTx<AccountId>,
+        multi_sig_tx: MultiSigTx<AccountId, AssetId>,
     },
     /// Eos multi-sig transaction processed successfully, so only save tx id
     Success(Vec<u8>),
@@ -101,10 +103,17 @@ pub enum TxOut<AccountId> {
     Fail {
         tx_id: Vec<u8>,
         reason: Vec<u8>,
-        tx: MultiSigTx<AccountId>,
+        tx: MultiSigTx<AccountId, AssetId>,
     },
 }
-impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
+
+impl<AccountId, AssetId> Default for TxOut<AccountId, AssetId> {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, AssetId> {
     pub fn init<T: crate::Config>(
         raw_from: Vec<u8>,
         raw_to: Vec<u8>,
@@ -112,7 +121,7 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
         threshold: u8,
         memo: &str,
         from: AccountId,
-        token_type: node_primitives::TokenSymbol,
+        token_type: AssetId,
     ) -> Result<Self, Error<T>> {
         let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
         let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -274,8 +283,8 @@ pub(crate) mod iost_rpc {
         Ok((chain_id, head_block_hash))
     }
 
-    pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId>(
-        multi_sig_tx: &MultiSigTx<AccountId>,
+    pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(
+        multi_sig_tx: &MultiSigTx<AccountId, AssetId>,
     ) -> Result<Vec<u8>, Error<T>> {
         let mut tx =
             Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
@@ -286,7 +295,7 @@ pub(crate) mod iost_rpc {
         node_url: &str,
         signed_trx: Vec<u8>,
     ) -> Result<Vec<u8>, Error<T>> {
-        debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
+        // debug::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
 
         let pending = http::Request::post(
             &format!("{}{}", node_url, PUSH_TRANSACTION_API),
@@ -306,7 +315,7 @@ pub(crate) mod iost_rpc {
     pub(crate) fn get_transaction_id<T: crate::Config>(
         trx_response: &str,
     ) -> Result<String, Error<T>> {
-        debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
+        // debug::info!(target: "bridge-iost", "trx_response -- {:?}.", trx_response);
 
         // error happens while pushing transaction to EOS node
         if !trx_response.contains("hash") && !trx_response.contains("pre_tx_receipt") {
