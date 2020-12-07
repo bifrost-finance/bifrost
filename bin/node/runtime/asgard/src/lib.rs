@@ -932,13 +932,13 @@ impl brml_bridge_eos::Trait for Runtime {
 
 parameter_types! {
 	pub const MaximumSwapInRatio: Balance = 2;
-	pub const MinimumPassedInPoolTokenShares: Balance = 2;
-	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
-	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
-	pub const FeePrecision: SwapFee = 100_000;
-	pub const WeightPrecision: PoolWeight = 100_000;
+	pub const MinimumPassedInPoolTokenShares: Balance = 2 * BNCS;
+	pub const MinimumSwapFee: SwapFee = 1 * BNCS; // 0.001%
+	pub const MaximumSwapFee: SwapFee = 10_000 * BNCS; // 10%
+	pub const FeePrecision: SwapFee = 100_000 * BNCS;
+	pub const WeightPrecision: PoolWeight = 100_000 * BNCS;
 	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: Balance = 1_000;
+	pub const InitialPoolSupply: Balance = 1_000 * BNCS;
 	pub const NumberOfSupportedTokens: u8 = 8;
 	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
 	pub const MaximumPassedInPoolTokenShares: Balance = 1_000_000 * BNCS;
