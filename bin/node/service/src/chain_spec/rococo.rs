@@ -25,7 +25,7 @@ use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
 	BridgeEosConfig,
-	// BridgeIostConfig,
+	BridgeIostConfig,
 	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
@@ -295,6 +295,7 @@ pub fn testnet_genesis(
 			// alice and bob have the privilege to sign cross transaction
 			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
 			all_crosschain_privilege: Vec::new(),
+			iost_asset_id: 8,
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
