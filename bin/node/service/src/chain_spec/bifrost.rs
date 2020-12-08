@@ -197,7 +197,7 @@ pub fn testnet_genesis(
 		pallet_staking: Some(StakingConfig {
 			validator_count: 30,
 			minimum_validator_count: 3,
-			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
+			stakers: initial_authorities[..].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
@@ -310,6 +310,25 @@ fn development_config_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or("Bifrost development wasm not available")?;
 
+	let properties = {
+		let mut props = serde_json::Map::new();
+
+		props.insert(
+			"ss58Format".to_owned(),
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenDecimals".to_owned(),
+			serde_json::value::to_value(12u8).expect("The tokenDecimals cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenSymbol".to_owned(),
+			serde_json::value::to_value("BNC".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+		);
+		Some(props)
+	};
+	let protocol_id = Some("bifrost");
+
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
@@ -317,8 +336,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		move || development_config_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		protocol_id,
+		properties,
 		Default::default(),
 	))
 }

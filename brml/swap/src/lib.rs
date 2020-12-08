@@ -729,7 +729,7 @@ decl_module! {
 			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::AssetId, T::Balance, T::PoolWeight>>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
-
+			
 			// swap fee rate should be greater or equals to MinimumSwapFee.
 			ensure!(swap_fee_rate >= T::MinimumSwapFee::get(), Error::<T>::FeeRateExceedMinimumLimit);
 			// swap fee rate should be greater or equals to MaximumSwapFee.
