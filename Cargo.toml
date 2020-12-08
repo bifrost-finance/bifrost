@@ -23,6 +23,7 @@ members = [
 
 [profile.release]
 panic = "unwind"
+incremental = true
 
 [patch.crates-io]
 node-inspect = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
