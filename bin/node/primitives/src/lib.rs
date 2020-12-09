@@ -413,20 +413,28 @@ pub mod report {
 	}
 }
 
-pub trait MintTrait<AccountId, Balance> {
+pub trait MintTrait<AccountId, Balance, AssetId> {
 	type Error;
 	fn count_bnc(generate_amount: Balance);
 	fn mint_bnc(minter: AccountId, mint_amount: Balance) -> Result<(), Self::Error>;
 	fn issue_bnc() -> Result<(), Self::Error>;
-	fn query_bnc(minter: AccountId) -> Result<Balance, Self::Error>;
+	fn v_token_score_exists(asset_id: AssetId) -> bool;
+	fn init_v_token_score(asset_id: AssetId, score: Balance);
+	fn mint_bnc_by_weight(minter: AccountId, mint_amount: Balance, asset_id: AssetId) -> Result<(), Self::Error>;
+	fn issue_bnc_by_weight() -> Result<(), Self::Error>;
+	fn adjust_v_token_weight(asset_id: AssetId, pledge_amount: Balance) -> Result<(), Self::Error>;
 }
 
-impl<A, B: Default> MintTrait<A, B> for () {
+impl<A, B: Default, C> MintTrait<A, B, C> for () {
 	type Error = ();
 	fn count_bnc(_: B) {}
 	fn mint_bnc(_: A, _: B) -> Result<(), Self::Error> { Ok(()) }
 	fn issue_bnc() -> Result<(), Self::Error> { Ok(()) }
-	fn query_bnc(_: A) -> Result<B, Self::Error> { Ok(Default::default()) }
+	fn v_token_score_exists(_: C) -> bool { true }
+	fn init_v_token_score(_: C, _: B) {}
+	fn mint_bnc_by_weight(_: A, _: B, _: C) -> Result<(), Self::Error> { Ok(()) }
+	fn issue_bnc_by_weight() -> Result<(), Self::Error> { Ok(()) }
+	fn adjust_v_token_weight(_: C, _: B) -> Result<(), Self::Error> { Ok(()) }
 }
 
 pub trait RewardTrait<Balance, AccountId, AssetId> {

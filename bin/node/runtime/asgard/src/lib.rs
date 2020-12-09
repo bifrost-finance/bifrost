@@ -972,6 +972,7 @@ impl brml_staking_reward::Config for Runtime {
 }
 
 impl brml_vtoken_mint::Config for Runtime {
+	type AssetId = AssetId;
 	type Balance = Balance;
 }
 

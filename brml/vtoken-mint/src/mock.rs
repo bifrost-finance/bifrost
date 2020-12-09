@@ -74,6 +74,7 @@ parameter_types! {
 }
 
 impl crate::Config for Test {
+	type AssetId = u32;
 	type Balance = u64;
 }
 
