@@ -18,8 +18,8 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
-mod mock;
-mod tests;
+// mod mock;
+// mod tests;
 
 use codec::{Decode, Encode};
 use frame_support::traits::Get;
@@ -30,6 +30,15 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::AssetTrait;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
+use sp_runtime::PerThing;
+
+type BiddingOrderUnitOf<T> = BiddingOrderUnit<
+	<T as frame_system::Trait>::AccountId,
+	<T as Trait>::AssetId,
+	<T as frame_system::Trait>::BlockNumber,
+	<T as Trait>::Balance,
+	<T as Trait>::FractionalType,
+>;
 
 pub trait Trait: frame_system::Trait {
 	/// The arithmetic type of asset identifier.
@@ -42,6 +51,16 @@ pub trait Trait: frame_system::Trait {
 	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
+
+	type FractionalType: Member
+		+ Parameter
+		+ AtLeast32Bit
+		+ Default
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ PerThing
+		+ From<Self::Balance>
+		+ Into<Self::Balance>;
 
 	/// Bidding order id.
 	type BiddingOrderId: Member
@@ -77,9 +96,6 @@ pub trait Trait: frame_system::Trait {
 	/// the number of records that the order roi list should keep
 	type TokenOrderROIListLength: Get<u8>;
 
-	/// Rate precision
-	type BidRatePrecision: Get<Self::Balance>;
-
 	/// the minimum number of votes for a bidding proposal
 	type MinimumVotes: Get<Self::Balance>;
 
@@ -98,7 +114,7 @@ decl_event! {
 		AssetId = <T as Trait>::AssetId,
 		BlockNumber = <T as frame_system::Trait>::BlockNumber,
 		BiddingOrderId = <T as Trait>::BiddingOrderId,
-		Balance = <T as Trait>::Balance,
+		FractionalType = <T as Trait>::FractionalType,
 		{
 			SetOrderEndTimeSuccess(BiddingOrderId, BlockNumber),
 			CreateProposalSuccess,
@@ -106,7 +122,7 @@ decl_event! {
 			SetMinMaxOrderLastingBlockNumSuccess(AssetId, BlockNumber, BlockNumber),
 			SetBlockNumberPerEraSuccess(AssetId, BlockNumber),
 			SetServiceStopBlockNumLagSuccess(AssetId, BlockNumber),
-			SetSlashMarginRatesSuccess(AssetId, Balance),
+			SetSlashMarginRatesSuccess(AssetId, FractionalType),
 	}
 }
 
@@ -136,7 +152,7 @@ decl_error! {
 
 /// struct for matched order in service
 #[derive(Default, Clone, Eq, PartialEq, Debug, Encode, Decode)]
-pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance> {
+pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance, FractionalType> {
 	/// bidder id
 	bidder_id: AccountId,
 	/// token id
@@ -148,7 +164,7 @@ pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance> {
 	/// If it's an order in service unit, then votes field means the votes in service.
 	votes: Balance,
 	/// the annual rate of return that the bidder provides to the vtoken holder
-	annual_roi: Balance,
+	annual_roi: FractionalType,
 	/// the validator address that these votes will goes to
 	validator: AccountId,
 }
@@ -157,12 +173,12 @@ decl_storage! {
 	trait Store for Module<T: Trait> as Bid {
 		/// queue for unmatched bidding proposals
 		BiddingQueues get(fn bidding_queues): map hasher(blake2_128_concat) T::AssetId
-						=> Vec<(T::Balance, T::BiddingOrderId)>;
+						=> Vec<(T::FractionalType, T::BiddingOrderId)>;
 		/// proposal Id
 		ProposalNextId get(fn proposal_next_id): T::BiddingOrderId;
 		/// Proposals map, recording all the proposals. key is id, value is proposal detail.
 		ProposalsInQueue get(fn proposals_in_queue): map hasher(blake2_128_concat) T::BiddingOrderId
-							=> BiddingOrderUnit<T::AccountId, T::AssetId, T::BlockNumber, T::Balance>;
+							=> BiddingOrderUnitOf<T>;
 		/// Bidder proposals in queue which haven't been matched.
 		BidderProposalInQueue get(fn bidder_proposal_in_queue): double_map
 			hasher(blake2_128_concat) T::AccountId,
@@ -172,7 +188,7 @@ decl_storage! {
 		TotalProposalsInQueue get(fn total_proposals_in_queue): map hasher(blake2_128_concat) T::AssetId => T::Balance;
 		/// map for recording orders in service. key is id, value is BiddingOrderUnit struct.
 		OrdersInService get(fn orders_in_service): map hasher(blake2_128_concat) T::BiddingOrderId
-													=> BiddingOrderUnit<T::AccountId, T::AssetId, T::BlockNumber, T::Balance>;
+													=> BiddingOrderUnitOf<T>;
 		/// Recording the orders in service ids for every end block number.
 		OrderEndBlockNumMap get(fn order_end_block_num_map): map hasher(blake2_128_concat) T::BlockNumber
 																=> Vec<T::BiddingOrderId>;
@@ -184,7 +200,7 @@ decl_storage! {
 		/// maintain a list of order id for each token in the order of ROI increasing. Every Vec constrain to a constant length
 		/// token => (annual roi, order id), order by annual roi ascending.
 		TokenOrderROIList get(fn token_order_roi_list): map hasher(blake2_128_concat) T::AssetId
-															 => Vec<(T::Balance, T::BiddingOrderId)>;
+															 => Vec<(T::FractionalType, T::BiddingOrderId)>;
 		/// total votes which are already in service
 		TotalVotesInService get(fn total_votes_in_service): map hasher(blake2_128_concat) T::AssetId => T::Balance;
 		/// Record the releasing votes from now to the end of current era.
@@ -196,7 +212,7 @@ decl_storage! {
 		MinMaxOrderLastingBlockNum get(fn max_order_lasting_block_num): map hasher(blake2_128_concat) T::AssetId
 		=> (T::BlockNumber, T::BlockNumber);
 		/// slash margin rates for each type of token
-		SlashMarginRates get(fn slash_margin_rates): map hasher(blake2_128_concat) T::AssetId => T::Balance;
+		SlashMarginRates get(fn slash_margin_rates): map hasher(blake2_128_concat) T::AssetId => T::FractionalType;
 		/// Block number per era for each vtoken
 		BlockNumberPerEra get(fn block_number_per_era): map hasher(blake2_128_concat) T::AssetId => T::BlockNumber;
 		/// the block number lag before we can vote for another validator when we stop a staking
@@ -223,7 +239,6 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		const TokenOrderROIListLength: u8 = T::TokenOrderROIListLength::get();
-		const BidRatePrecision: T::Balance = T::BidRatePrecision::get();
 		const MinimumVotes: T::Balance = T::MinimumVotes::get();
 		const MaximumVotes: T::Balance = T::MaximumVotes::get();
 		const BlocksPerYear: T::BlockNumber = T::BlocksPerYear::get();
@@ -245,21 +260,21 @@ decl_module! {
 			for vtoken in vtoken_list.iter() {
 				// We compare only one storage to see it the token has been initialized. If not, do it.
 				if !TotalVotesInService::<T>::contains_key(&vtoken) {
-					if let Err(_rs) = Self::vtoken_empty_storage_initialization(vtoken.clone()){
+					if let Err(_rs) = Self::vtoken_empty_storage_initialization(*vtoken){
 						return 0;
 					};
 				}
 
-				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(vtoken.clone(), n, false) {
+				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n, false) {
 
 					// release the votes difference from bidders who provide least roi rate.
 					if !available_flag {
-						if let Err(_rs) = Self::release_votes_from_bidder(vtoken.clone(), available_votes) {
+						if let Err(_rs) = Self::release_votes_from_bidder(*vtoken, available_votes) {
 							return 0;
 						};
 					} else {
 						// if there are unmatched bidding proposals as well as available votes, match proposals to orders in service.
-						if let Err(_rs) = Self::check_and_match_unsatisfied_bidding_proposal(vtoken.clone(), n){
+						if let Err(_rs) = Self::check_and_match_unsatisfied_bidding_proposal(*vtoken, n){
 							return 0;
 						};
 					}
@@ -322,7 +337,7 @@ decl_module! {
 				if let Ok(index) =
 				bidding_proposal_vec.binary_search_by(|(_roi, pro_id)| pro_id.cmp(&proposal_id))
 				{
-					&bidding_proposal_vec.remove(index);
+					bidding_proposal_vec.remove(index);
 				}
 			});
 
@@ -335,7 +350,7 @@ decl_module! {
 				vtoken,
 				|proposal_vec| {
 					let index = proposal_vec.binary_search(&proposal_id).unwrap();
-					&proposal_vec.remove(index);
+					proposal_vec.remove(index);
 				},
 			);
 
@@ -357,7 +372,7 @@ decl_module! {
 			let order_owner = OrdersInService::<T>::get(order_id).bidder_id;
 
 			// only root or the bidder himself can reset the bidding order end time
-			if &setter != &order_owner {
+			if setter != order_owner {
 				ensure_root(origin)?
 			}
 			ensure!(OrdersInService::<T>::contains_key(order_id), Error::<T>::OrderNotExist);  //ensure the order exists
@@ -373,7 +388,7 @@ decl_module! {
 
 		/// create a bidding proposal and update it to the corresponding storage
 		#[weight = 1_000]
-		fn create_bidding_proposal(origin, vtoken: T::AssetId, votes_needed: T::Balance, annual_roi: T::Balance, validator: T::AccountId
+		fn create_bidding_proposal(origin, vtoken: T::AssetId, #[compact] votes_needed: T::Balance, annual_roi: T::FractionalType, validator: T::AccountId
 		) -> DispatchResult {
 			let bidder = ensure_signed(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
@@ -422,7 +437,7 @@ decl_module! {
 					.binary_search_by_key(&annual_roi, |(roi, _pro_id)| *roi)
 					.unwrap();
 
-				&bidding_proposal_vec.insert(index, (annual_roi, new_proposal_id));
+				bidding_proposal_vec.insert(index, (annual_roi, new_proposal_id));
 			});
 
 			if !BidderProposalInQueue::<T>::contains_key(&bidder, vtoken) {
@@ -430,7 +445,7 @@ decl_module! {
 				BidderProposalInQueue::<T>::insert(&bidder, vtoken, new_vec);
 			} else {
 				BidderProposalInQueue::<T>::mutate(&bidder, vtoken, |bidder_order_vec| {
-					&bidder_order_vec.push(new_proposal_id);
+					bidder_order_vec.push(new_proposal_id);
 				});
 			}
 
@@ -508,10 +523,10 @@ decl_module! {
 
 		/// set slash margin rate for each vtoken.
 		#[weight = 1_000]
-		fn set_slash_margin_rates(origin, vtoken: T::AssetId, slash_margin_rate: T::Balance) -> DispatchResult {
+		fn set_slash_margin_rates(origin, vtoken: T::AssetId, slash_margin_rate: T::FractionalType) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
-			ensure!(slash_margin_rate< T::BidRatePrecision::get(), Error::<T>::RateExceedUpperBound);
+			ensure!(slash_margin_rate< T::FractionalType::one(), Error::<T>::RateExceedUpperBound);
 
 			if !SlashMarginRates::<T>::contains_key(vtoken) {
 				SlashMarginRates::<T>::insert(vtoken, slash_margin_rate);
@@ -575,7 +590,7 @@ impl<T: Trait> Module<T> {
 							// remove the proposal id from the bidder's list of proposals
 							BidderProposalInQueue::<T>::mutate(bidder_id, vtoken, |proposal_vec| {
 								let index = proposal_vec.binary_search(&proposal_id).unwrap();
-								&proposal_vec.remove(index);
+								proposal_vec.remove(index);
 							});
 						} else {
 							// deduct the needed votes of original proposal
@@ -608,7 +623,7 @@ impl<T: Trait> Module<T> {
 
 	/// create an order in service. The votes_matched might be less than the needed votes in the proposal.
 	fn create_order_in_service(
-		proposal: &BiddingOrderUnit<T::AccountId, T::AssetId, T::BlockNumber, T::Balance>,
+		proposal: &BiddingOrderUnitOf<T>,
 		order_end_block_num: T::BlockNumber,
 		votes_matched: T::Balance,
 	) -> DispatchResult {
@@ -669,7 +684,7 @@ impl<T: Trait> Module<T> {
 			OrderEndBlockNumMap::<T>::insert(order_end_block_num, new_vec);
 		} else {
 			OrderEndBlockNumMap::<T>::mutate(order_end_block_num, |order_end_block_num_vec| {
-				&order_end_block_num_vec.push(new_order_id);
+				order_end_block_num_vec.push(new_order_id);
 			});
 		}
 
@@ -678,7 +693,7 @@ impl<T: Trait> Module<T> {
 			BidderTokenOrdersInService::<T>::insert(&bidder, vtoken, new_vec);
 		} else {
 			BidderTokenOrdersInService::<T>::mutate(&bidder, vtoken, |bidder_order_vec| {
-				&bidder_order_vec.push(new_order_id);
+				bidder_order_vec.push(new_order_id);
 			});
 		}
 
@@ -687,12 +702,12 @@ impl<T: Trait> Module<T> {
 				.binary_search_by_key(&annual_roi, |(roi, _odr_id)| roi)
 				.unwrap();
 			if index < (T::TokenOrderROIListLength::get() as usize) {
-				&balance_order_vec.insert(index, (*annual_roi, new_order_id));
+				balance_order_vec.insert(index, (*annual_roi, new_order_id));
 			}
 
-			if &balance_order_vec.len() > &(T::TokenOrderROIListLength::get() as usize) {
+			if balance_order_vec.len() > (T::TokenOrderROIListLength::get() as usize) {
 				// shrink the vec to maximum size
-				&balance_order_vec.resize(
+				balance_order_vec.resize(
 					T::TokenOrderROIListLength::get() as usize,
 					(Zero::zero(), Zero::zero()),
 				);
@@ -755,23 +770,23 @@ impl<T: Trait> Module<T> {
 		});
 
 		OrderEndBlockNumMap::<T>::mutate(block_num, |ord_id_vec| {
-			&ord_id_vec.push(new_order_id);
+			ord_id_vec.push(new_order_id);
 		});
 
 		BidderTokenOrdersInService::<T>::mutate(bidder_id, token_id, |ord_id_vec| {
-			&ord_id_vec.push(new_order_id);
+			ord_id_vec.push(new_order_id);
 		});
 		TokenOrderROIList::<T>::mutate(token_id, |balance_order_vec| {
 			let index = balance_order_vec
 				.binary_search_by_key(&annual_roi, |(roi, _odr_id)| *roi)
 				.unwrap();
 			if index < (T::TokenOrderROIListLength::get() as usize) {
-				&balance_order_vec.insert(index, (annual_roi, new_order_id));
+				balance_order_vec.insert(index, (annual_roi, new_order_id));
 			}
 
-			if &balance_order_vec.len() > &(T::TokenOrderROIListLength::get() as usize) {
+			if balance_order_vec.len() > (T::TokenOrderROIListLength::get() as usize) {
 				// shrink the vec to maximum size
-				&balance_order_vec.resize(
+				balance_order_vec.resize(
 					T::TokenOrderROIListLength::get() as usize,
 					(Zero::zero(), Zero::zero()),
 				);
@@ -831,7 +846,7 @@ impl<T: Trait> Module<T> {
 		let original_end_era: T::EraId = (original_end_block_num / block_num_per_era).into();
 		OrderEndBlockNumMap::<T>::mutate(original_end_block_num, |order_id_vec| {
 			if let Ok(index) = order_id_vec.binary_search(&order_id) {
-				&order_id_vec.remove(index);
+				order_id_vec.remove(index);
 			}
 		});
 
@@ -840,7 +855,7 @@ impl<T: Trait> Module<T> {
 			OrderEndBlockNumMap::<T>::insert(end_block_num, new_vec);
 		} else {
 			OrderEndBlockNumMap::<T>::mutate(end_block_num, |order_id_vec| {
-				&order_id_vec.push(order_id);
+				order_id_vec.push(order_id);
 			});
 		}
 
@@ -860,7 +875,7 @@ impl<T: Trait> Module<T> {
 
 	/// initialize empty storage for each vtoken
 	fn vtoken_empty_storage_initialization(vtoken: T::AssetId) -> DispatchResult {
-		let empty_bidding_order_unit_vec: Vec<(T::Balance, T::BiddingOrderId)> = Vec::new();
+		let empty_bidding_order_unit_vec: Vec<(T::FractionalType, T::BiddingOrderId)> = Vec::new();
 
 		// initialize proposal related storage
 		BiddingQueues::<T>::insert(vtoken, empty_bidding_order_unit_vec);
@@ -868,12 +883,12 @@ impl<T: Trait> Module<T> {
 		TotalProposalsInQueue::<T>::insert(vtoken, zero_balance);
 
 		// initialize order related storage
-		let empty_token_order_roi_vec: Vec<(T::Balance, T::BiddingOrderId)> = Vec::new();
+		let empty_token_order_roi_vec: Vec<(T::FractionalType, T::BiddingOrderId)> = Vec::new();
 		TokenOrderROIList::<T>::insert(vtoken, empty_token_order_roi_vec);
 
 		let zero_votes: T::Balance = Zero::zero();
-		TotalVotesInService::<T>::insert(vtoken, zero_votes.clone());
-		WithdrawReservedVotes::<T>::insert(vtoken, zero_votes.clone());
+		TotalVotesInService::<T>::insert(vtoken, zero_votes);
+		WithdrawReservedVotes::<T>::insert(vtoken, zero_votes);
 
 		Ok(())
 	}
@@ -899,7 +914,7 @@ impl<T: Trait> Module<T> {
 		let to_release_votes_til_end_of_era = {
 			if !ToReleaseVotesTilEndOfEra::<T>::contains_key((vtoken, era_id)) {
 				let new_votes: T::Balance = Zero::zero();
-				ToReleaseVotesTilEndOfEra::<T>::insert((vtoken, era_id), new_votes.clone());
+				ToReleaseVotesTilEndOfEra::<T>::insert((vtoken, era_id), new_votes);
 				new_votes
 			} else {
 				ToReleaseVotesTilEndOfEra::<T>::get((vtoken, era_id))
@@ -979,14 +994,15 @@ impl<T: Trait> Module<T> {
 		);
 
 		let slash_rate = SlashMarginRates::<T>::get(vtoken);
-		Ok(votes_matched.saturating_mul(slash_rate) / T::BidRatePrecision::get())
+		// Ok(votes_matched.saturating_mul(slash_rate))
+		Ok(slash_rate.into().saturating_mul(votes_matched))
 	}
 
 	/// calculate the minimum one time payment the bidder should pay for his votes needed.
 	fn calculate_order_onetime_payment(
 		vtoken: T::AssetId,
 		votes_matched: T::Balance,
-		roi_rate: T::Balance,
+		roi_rate: T::FractionalType,
 	) -> Result<T::Balance, Error<T>> {
 		ensure!(
 			MinMaxOrderLastingBlockNum::<T>::contains_key(vtoken),
@@ -1003,8 +1019,9 @@ impl<T: Trait> Module<T> {
 		let base: T::Balance =
 			(minimum_order_lasting_block_num.saturating_add(stop_lag_block_num)).into();
 
-		Ok(base.saturating_mul(roi_rate).saturating_mul(votes_matched)
-			/ T::BidRatePrecision::get()
+		Ok(base
+			.saturating_mul(roi_rate.into())
+			.saturating_mul(votes_matched)
 			/ T::BlocksPerYear::get().into())
 	}
 
@@ -1042,14 +1059,14 @@ impl<T: Trait> Module<T> {
 			order_detail.token_id,
 			|bidder_order_vec| {
 				let index = bidder_order_vec.binary_search(&order_id).unwrap();
-				&bidder_order_vec.remove(index);
+				bidder_order_vec.remove(index);
 			},
 		);
 		TokenOrderROIList::<T>::mutate(&order_detail.token_id, |order_roi_vec| {
 			if let Ok(index) =
 				order_roi_vec.binary_search_by(|(_votes, ord_id)| ord_id.cmp(&order_id))
 			{
-				&order_roi_vec.remove(index);
+				order_roi_vec.remove(index);
 			}
 		});
 
@@ -1127,17 +1144,16 @@ impl<T: Trait> Module<T> {
 			if !deduct_mode {
 				WithdrawReservedVotes::<T>::insert(token_id, amount);
 			}
+		} else if !deduct_mode {
+			WithdrawReservedVotes::<T>::mutate(token_id, |old_amount| {
+				*old_amount = old_amount.saturating_add(amount);
+			});
 		} else {
-			if !deduct_mode {
-				WithdrawReservedVotes::<T>::mutate(token_id, |old_amount| {
-					*old_amount = old_amount.saturating_add(amount);
-				});
-			} else {
-				WithdrawReservedVotes::<T>::mutate(token_id, |old_amount| {
-					*old_amount = old_amount.saturating_sub(amount);
-				});
-			}
+			WithdrawReservedVotes::<T>::mutate(token_id, |old_amount| {
+				*old_amount = old_amount.saturating_sub(amount);
+			});
 		}
+
 		Ok(())
 	}
 
