@@ -24,7 +24,7 @@ use asgard_runtime::{
 	constants::currency::{BNCS as ASG, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
 	BridgeEosConfig,
-	// BridgeIostConfig,
+	BridgeIostConfig,
 	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,

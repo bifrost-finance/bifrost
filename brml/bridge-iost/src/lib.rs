@@ -18,7 +18,7 @@
 #[macro_use]
 extern crate alloc;
 
-use crate::transaction::TxOut;
+use crate::transaction::IostTxOut;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
 use core::{convert::TryFrom, fmt::Debug, iter::FromIterator, ops::Div, str::FromStr};
@@ -228,9 +228,6 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
     /// The arithmetic type of asset identifier.
     type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-    /// The units in which we record costs.
-    type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
     /// The units in which we record asset precision.
     type Precision: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
@@ -291,7 +288,7 @@ decl_storage! {
         PendingScheduleVersion: VersionId;
 
         /// Transaction sent to Eos blockchain
-        BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::AccountId, T::AssetId>>;
+        BridgeTxOuts get(fn bridge_tx_outs): Vec<IostTxOut<T::AccountId, T::AssetId>>;
 
         /// Account where Eos bridge contract deployed, (Account, Signature threshold)
         BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
@@ -432,7 +429,7 @@ decl_module! {
         }
 
         #[weight = (T::WeightInfo::bridge_tx_report(), DispatchClass::Normal, Pays::No)]
-        fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId, T::AssetId>>) -> DispatchResult {
+        fn bridge_tx_report(origin, tx_list: Vec<IostTxOut<T::AccountId, T::AssetId>>) -> DispatchResult {
             ensure_none(origin)?;
 
             BridgeTxOuts::<T>::put(tx_list);
@@ -583,22 +580,18 @@ impl<T: Config> Module<T> {
         // todo, vIOST or IOST, all asset will be added to IOST asset, instead of vIOST or IOST
         // but in the future, we will support both token, let user to which token he wants to get
         // according to the convert price
+        let token = T::AssetTrait::get_token(Self::iost_asset_id());
+        let symbol_code = token.symbol;
+        let symbol_precise = token.precision;
+        let align_precision = 12 - symbol_precise;
 
-        let existed_token_symbol = T::AssetTrait::get_token(iost_id);
-        // ensure!(
-        //     existed_token_symbol.symbol == symbol_code
-        //         && existed_token_symbol.precision == symbol_precision,
-        //     Error::<T>::IOSTSymbolMismatch
-        // );
+        let transfer_amount = action_transfer
+            .amount
+            .parse::<f64>()
+            .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
-        // let transfer_amount = action_transfer
-        //     .amount
-        //     .parse::<f64>()
-        //     .map_err(|_| Error::<T>::ConvertBalanceError)?;
-
-        let token_balances = (1.0 * 10u128.pow(existed_token_symbol.precision as u32) as f64)
-            as u128
-            * 10u128.pow(12 - existed_token_symbol.precision as u32);
+        let token_balances =
+            (transfer_amount * 10u128.pow(8) as f64) as u128 * 10u128.pow(align_precision as u32);
 
         let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances)
             .map_err(|_| Error::<T>::ConvertBalanceError)?;
@@ -620,7 +613,7 @@ impl<T: Config> Module<T> {
 
         for trx in bridge_tx_outs.iter() {
             match trx {
-                TxOut::Processing {
+                IostTxOut::Processing {
                     tx_id,
                     multi_sig_tx,
                 } => {
@@ -685,7 +678,7 @@ impl<T: Config> Module<T> {
     fn tx_transfer_to<P, B: AtLeast32Bit + Copy + core::fmt::Display>(
         raw_to: Vec<u8>,
         bridge_asset: BridgeAssetBalance<T::AccountId, T::AssetId, P, B>,
-    ) -> Result<TxOut<T::AccountId, T::AssetId>, Error<T>>
+    ) -> Result<IostTxOut<T::AccountId, T::AssetId>, Error<T>>
     where
         P: AtLeast32Bit + Copy,
         B: AtLeast32Bit + Copy,
@@ -696,7 +689,7 @@ impl<T: Config> Module<T> {
             .to_string();
         // let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
         let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(15))) as i64;
-        let tx_out = TxOut::<T::AccountId, T::AssetId>::init(
+        let tx_out = IostTxOut::<T::AccountId, T::AssetId>::init(
             raw_from,
             raw_to,
             amount.to_string(),
@@ -724,7 +717,7 @@ impl<T: Config> Module<T> {
             .map(|bto| {
                 match bto {
                     // generate raw transactions
-                    TxOut::<T::AccountId, T::AssetId>::Initial(_) => {
+                    IostTxOut::<T::AccountId, T::AssetId>::Initial(_) => {
                         match bto.clone().generate::<T>(node_url.as_str()) {
                             Ok(generated_bto) => {
                                 has_change.set(true);
@@ -743,7 +736,7 @@ impl<T: Config> Module<T> {
             })
             .map(|bto| {
                 match bto {
-                    TxOut::<T::AccountId, T::AssetId>::Generated(_) => {
+                    IostTxOut::<T::AccountId, T::AssetId>::Generated(_) => {
                         let author = <pallet_authorship::Module<T>>::author();
                         let mut ret = bto.clone();
                         let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
@@ -756,7 +749,6 @@ impl<T: Config> Module<T> {
                             }
                             Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
                         }
-                        // }
                         ret
                     },
                     _ => bto,
@@ -764,11 +756,11 @@ impl<T: Config> Module<T> {
             })
             .map(|bto| {
                 match bto {
-                    TxOut::<T::AccountId, T::AssetId>::Signed(_) => {
+                    IostTxOut::<T::AccountId, T::AssetId>::Signed(_) => {
                         match bto.clone().send::<T>(node_url.as_str()) {
                             Ok(sent_bto) => {
                                 has_change.set(true);
-                                debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
+                                debug::info!(target: "bridge-iost", "bto.send {:?}", sent_bto,);
                                 debug::info!("bto.send");
                                 sent_bto
                             }
@@ -783,11 +775,12 @@ impl<T: Config> Module<T> {
             }).collect::<Vec<_>>();
 
         if has_change.get() {
-            BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
+            // BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
+
             let call = Call::bridge_tx_report(bridge_tx_outs.clone());
             match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
                 Ok(_) => {
-                    debug::info!(target: "bridge-eos", "Call::bridge_tx_report {:?}", bridge_tx_outs)
+                    debug::info!(target: "bridge-iost", "Call::bridge_tx_report {:?}", bridge_tx_outs)
                 }
                 Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
             }
