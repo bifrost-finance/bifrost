@@ -24,7 +24,7 @@ use bifrost_runtime::{
 	constants::currency::{BNCS as BNC, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
 	BridgeEosConfig,
-	// BridgeIostConfig,
+	BridgeIostConfig,
 	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
@@ -197,7 +197,7 @@ pub fn testnet_genesis(
 		pallet_staking: Some(StakingConfig {
 			validator_count: 30,
 			minimum_validator_count: 3,
-			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
+			stakers: initial_authorities[..].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
