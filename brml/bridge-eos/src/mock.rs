@@ -23,7 +23,6 @@ use frame_support::{
 };
 use sp_core::H256;
 use sp_runtime::{
-	Perbill,
 	testing::{Header, TestXt},
 	traits::{BlakeTwo256, IdentityLookup},
 };
@@ -60,13 +59,13 @@ mod bridge_eos {
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 4 * 1024 * 1024;
-	pub const MaximumBlockLength: u32 = 4 * 1024 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-	pub const UncleGenerations: u32 = 5;
 }
 
 impl frame_system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -78,18 +77,10 @@ impl frame_system::Config for Test {
 	type Header = Header;
 	type Event = TestEvent;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type BaseCallFilter = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
 }
@@ -111,6 +102,10 @@ impl FindAuthor<u64> for AuthorGiven {
 
 		None
 	}
+}
+
+parameter_types! {
+	pub const UncleGenerations: u64 = 5;
 }
 
 impl pallet_authorship::Config for Test {
