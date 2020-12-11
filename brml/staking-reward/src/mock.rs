@@ -42,6 +42,10 @@ parameter_types! {
 }
 
 impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -56,17 +60,9 @@ impl system::Config for Test {
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
 	type BlockHashCount = ();
-	type MaximumBlockWeight = ();
-	type MaximumExtrinsicWeight = ();
-	type MaximumBlockLength = ();
-	type AvailableBlockRatio = ();
 }
 
 parameter_types! {

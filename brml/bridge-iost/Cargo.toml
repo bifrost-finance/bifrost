@@ -20,8 +20,8 @@ sp-core = { version = "2.0.0", default-features = false }
 sp-io = { version = "2.0.0", default-features = false }
 sp-runtime = { version = "2.0.0", default-features = false }
 sp-std = { version = "2.0.0", default-features = false }
-serde = { version = "1.0.106", optional = true }
-serde_json = { version = "1.0.52", default-features = false, features = ["alloc"] }
+serde = { version = "1.0.118", optional = true }
+serde_json = { version = "1.0.60", default-features = false, features = ["alloc"] }
 lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", default-features = false, features = ["float"]}
 
 [dev-dependencies]
