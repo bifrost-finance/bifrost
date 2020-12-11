@@ -724,6 +724,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
+ "num-traits 0.2.14",
  "parity-scale-codec",
  "serde",
  "sp-core",

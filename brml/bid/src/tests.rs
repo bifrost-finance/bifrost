@@ -107,8 +107,8 @@ fn storages_initialization() {
         maximum_lasting_block_num_vdot,
     )
     .unwrap_or_default();
-    let minimum_lasting_block_num_vksm = 14_400;
-    let maximum_lasting_block_num_vksm = 144_000;
+    let minimum_lasting_block_num_vksm = 7;
+    let maximum_lasting_block_num_vksm = 21;
     Bid::set_min_max_order_lasting_block_num(
         origin_root.clone(),
         vksm_id,
@@ -116,11 +116,13 @@ fn storages_initialization() {
         maximum_lasting_block_num_vksm,
     )
     .unwrap_or_default();
+
+
     let minimum_lasting_block_num_veos = 3_600;
     let maximum_lasting_block_num_veos = 36_000;
     Bid::set_min_max_order_lasting_block_num(
         origin_root.clone(),
-        vksm_id,
+        veos_id,
         minimum_lasting_block_num_veos,
         maximum_lasting_block_num_veos,
     )
@@ -130,7 +132,7 @@ fn storages_initialization() {
     let maximum_lasting_block_num_viost = 36_000;
     Bid::set_min_max_order_lasting_block_num(
         origin_root.clone(),
-        vksm_id,
+        viost_id,
         minimum_lasting_block_num_viost,
         maximum_lasting_block_num_viost,
     )
@@ -141,7 +143,7 @@ fn storages_initialization() {
     Bid::set_block_number_per_era(origin_root.clone(), vdot_id, block_num_per_era_vdot)
         .unwrap_or_default();
 
-    let block_num_per_era_vksm = 4_800;
+    let block_num_per_era_vksm = 7;
     Bid::set_block_number_per_era(origin_root.clone(), vksm_id, block_num_per_era_vksm)
         .unwrap_or_default();
 
@@ -202,6 +204,21 @@ fn storages_initialization() {
     let set_slash_margin_rates_viost = 30;
     Bid::set_slash_margin_rates(origin_root.clone(), viost_id, set_slash_margin_rates_viost)
         .unwrap_or_default();
+
+    // create a proposal for Bob
+    let bob = 2;
+    let origin_bob = Origin::signed(bob);
+    let votes_needed_bob = 200;
+    let annual_roi_bob = 60;
+    let validator_bob = bob;
+    Bid::create_bidding_proposal(
+        origin_bob,
+        vksm_id,
+        votes_needed_bob,
+        annual_roi_bob,
+        validator_bob,
+    )
+    .unwrap_or_default();
 }
 
 #[test]
@@ -773,8 +790,148 @@ fn create_bidding_proposal_should_work() {
         // proposal_id = 4, roi = 44
         // So the correct order is [1, 0, 4, 2, 3]
 
-        assert_eq!(BiddingQueues::<Test>::get(vdot_id).get(0).unwrap(), &(Permill::from_parts(10 * 10_000), 1));
-        assert_eq!(BiddingQueues::<Test>::get(vdot_id).get(1).unwrap(), &(Permill::from_parts(15 * 10_000), 0));
+        assert_eq!(
+            BiddingQueues::<Test>::get(vdot_id).get(0).unwrap(),
+            &(Permill::from_parts(10 * 10_000), 1)
+        );
+        assert_eq!(
+            BiddingQueues::<Test>::get(vdot_id).get(1).unwrap(),
+            &(Permill::from_parts(15 * 10_000), 0)
+        );
+        assert_eq!(
+            BiddingQueues::<Test>::get(vdot_id).get(2).unwrap(),
+            &(Permill::from_parts(44 * 10_000), 4)
+        );
+        assert_eq!(
+            BiddingQueues::<Test>::get(vdot_id).get(3).unwrap(),
+            &(Permill::from_parts(70 * 10_000), 2)
+        );
+        assert_eq!(
+            BiddingQueues::<Test>::get(vdot_id).get(4).unwrap(),
+            &(Permill::from_parts(90 * 10_000), 3)
+        );
+    });
+}
+
+#[test]
+fn cancel_a_bidding_proposal_should_work() {
+    new_test_ext().execute_with(|| {
+        // initialization
+        storages_initialization();
+
+        let alice = 1;
+        let bob = 2;
+        let vksm_id = 5;
+        let origin_bob = Origin::signed(bob);
+        let origin_alice = Origin::signed(alice);
+        // make sure bob's proposal exists
+        assert_eq!(
+            BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0),
+            true
+        );
+
+        // proposal not exist
+        assert_eq!(
+            Bid::cancel_a_bidding_proposal(origin_bob.clone(), 8),
+            Err(DispatchError::Module { index: 0, error: 16, message: Some("ProposalNotExist") })
+        );
+
+        // cancel the proposal
+        assert_eq!(
+            Bid::cancel_a_bidding_proposal(origin_alice.clone(), 0),
+            Err(DispatchError::Module {
+                index: 0,
+                error: 17,
+                message: Some("NotProposalOwner",),
+            },)
+        ); // not the owner
+
+        assert_ok!(Bid::cancel_a_bidding_proposal(origin_bob.clone(), 0));
+        assert_eq!(
+            BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0),
+            false
+        );
+    });
+}
+
+#[test]
+fn check_overall_proposal_matching_to_orders_should_work() {
+    new_test_ext().execute_with(|| {
+        // initialization
+        storages_initialization();
+
+        run_to_block(3); // 4000 vtoken votes are supplied
+
+        // Bob 要有200 票vksm的订单，池子里还剩 3800票
+        // There was an vksm order of 200 votes from Bob in the storage initialization. So the pool should has only 3800
+        // votes left and Bob should have a 200 vksm order.Decode
+        let bob = 2;
+        let vksm_id = 5;
+        // BiddingQueues::<Test>::get(vksm_id)
+        // assert_eq!(ProposalsInQueue::<Test>::get(0).votes, 3800);
+
+        assert_eq!(
+            BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&0),
+            true
+        );
+
+        // 总服务票数改了，对
+        assert_eq!(
+            TotalVotesInService::<Test>::get(vksm_id),
+            200
+        );
+
+        // // 维护列表有点问题
+        // assert_eq!(
+        //     TokenOrderROIList::<Test>::get(vksm_id).len(),
+        //     1
+        // );
+
+        // 挂单已经不存在了，是对的
+        assert_eq!(BiddingQueues::<Test>::contains_key(0), false);
+
+        // 竞拍订单队列也已经没有了作何挂单，是对的
+        assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 0);
+
+        assert_eq!(BiddingQueues::<Test>::get(vksm_id).is_empty(), true);
+
+        assert_eq!(ProposalsInQueue::<Test>::contains_key(0), false);
+
+        assert_eq!(BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0), false);
+
+        assert_eq!(TotalProposalsInQueue::<Test>::get(vksm_id), 0);
+
+        assert_eq!(OrdersInService::<Test>::get(0).votes, 200);
+
+
+        
+        // Alice再下一个 4500票 vksm订章，只有 3800票成交，剩下 700票依然挂在上面
+
+        // 30天后， Bob的票到期自动删除。释放出订单。Alice的剩余订单是否会自动成交200
+
+        // 看是否成功匹配订单，各storage数字是否正确
+
+        // 如果用户抽走vtoken，池子里不够的话，是否会自动拆单，其中一单撤走，另一单是否还留在那里。释放出来后，这些空票是否被保留着，还是又被匹配掉了？
+
+        // 订单到期会不会被自动删除，并释放出票出来，是否还会重新匹配
+
+        run_to_block(5); // 订单只能剩下5，要到本era结束才能释放
+        assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
+
+        // 已经进行了2个订单了。哪里出了问题。在第五个区块不够用户抽走，拆单了，拆成了 195和5两个订单
+        assert_eq!(OrderNextId::<Test>::get(), 2);
+
+        // 订单0是到期区块是6，订单1到期区块是20
+        assert_eq!(OrdersInService::<Test>::get(0).votes, 195);
+        assert_eq!(OrdersInService::<Test>::get(1).votes, 5);
+
+        assert_eq!(OrdersInService::<Test>::get(0).block_num, 6);
+        assert_eq!(OrdersInService::<Test>::get(1).block_num, 21);  // 创建时间1+21-1= 21
+        assert_eq!(WithdrawReservedVotes::<Test>::get(vksm_id), 195);
+
+        run_to_block(6); // 订单与区块一样，虽然有更多供应了，但
+        // assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 5);
+        // // assert_eq!(OrdersInService::<Test>::get(0).votes, 200);
 
     });
 }
