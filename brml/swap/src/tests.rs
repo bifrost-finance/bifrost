@@ -588,6 +588,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
         // pool not active.
         let pool_id = 0;
         assert_ok!(Swap::set_pool_status(Origin::signed(alice), pool_id, false));
+        
         assert_eq!(
             Swap::add_single_liquidity_given_amount_in(
                 creator.clone(),

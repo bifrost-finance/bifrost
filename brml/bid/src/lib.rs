@@ -248,14 +248,16 @@ decl_module! {
 		/// 	votes in service, release the difference from the bidder who provides the lowest roi rate.
 		/// 3. check if there is unsatisfied bidding proposal. If yes, match it with available votes.
 		fn on_initialize(n: T::BlockNumber) -> Weight {
-
 			let vtoken_list = VtokensRegisteredForBidding::<T>::get();
 			for vtoken in vtoken_list.iter() {
 				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n, false) {
-
+					if vtoken == &T::AssetId::from(5) {
+						println!("i am block {:?}, my available votes is {:?}",n, available_votes);
+					}
 					// release the votes difference from bidders who provide least roi rate.
 					if !available_flag {
 						if let Err(_rs) = Self::release_votes_from_bidder(*vtoken, available_votes) {
+							println!("我要跑release啦");
 							return 0;
 						};
 					} else {
@@ -428,8 +430,6 @@ decl_module! {
 				}
 			});
 
-			// println!("index is :{}", a);
-
 			if !BidderProposalInQueue::<T>::contains_key(&bidder, vtoken) {
 				let new_vec: Vec<T::BiddingOrderId> = vec![new_proposal_id];
 				BidderProposalInQueue::<T>::insert(&bidder, vtoken, new_vec);
@@ -562,13 +562,13 @@ impl<T: Trait> Module<T> {
 					let mut votes_avail = available_votes;
 					let mut vec_pointer = bidding_proposal_vec.len();
 
-					while (vec_pointer >= Zero::zero()) & (votes_avail > Zero::zero()) {
+					while (vec_pointer > Zero::zero()) & (votes_avail > Zero::zero()) {
 						vec_pointer = vec_pointer.saturating_sub(1);
 						let order_end_block_num =
-							current_block_num.saturating_add(max_order_lasting_block_num);
-						// let mut votes_matched = bidding_proposal_vec[vec_pointer].1.votes;
+							current_block_num.saturating_add(max_order_lasting_block_num).saturating_sub(T::BlockNumber::from(1));
 
 						let (_, proposal_id) = bidding_proposal_vec[vec_pointer];
+
 						let proposal = ProposalsInQueue::<T>::get(proposal_id);
 
 						let bidder_id = &proposal.bidder_id;
@@ -576,7 +576,7 @@ impl<T: Trait> Module<T> {
 
 						if votes_matched <= &votes_avail {
 							bidding_proposal_vec.pop(); // delete this proposal
-
+							
 							// remove the proposal in bidding queue
 							ProposalsInQueue::<T>::remove(proposal_id);
 
@@ -621,6 +621,8 @@ impl<T: Trait> Module<T> {
 		order_end_block_num: T::BlockNumber,
 		votes_matched: T::Balance,
 	) -> DispatchResult {
+
+		println!("votes_matched {:?}", votes_matched);
 		// current block number
 		let current_block_num = <frame_system::Module<T>>::block_number();
 		ensure!(
@@ -705,10 +707,12 @@ impl<T: Trait> Module<T> {
 
 			if balance_order_vec.len() > (T::TokenOrderROIListLength::get() as usize) {
 				// shrink the vec to maximum size
-				balance_order_vec.resize(
-					T::TokenOrderROIListLength::get() as usize,
-					(Permill::zero(), Zero::zero()),
-				);
+				// balance_order_vec.resize(
+				// 	T::TokenOrderROIListLength::get() as usize,
+				// 	(Permill::zero(), Zero::zero()),
+				// );
+
+				balance_order_vec.pop();
 			}
 		});
 
@@ -788,10 +792,12 @@ impl<T: Trait> Module<T> {
 
 			if balance_order_vec.len() > (T::TokenOrderROIListLength::get() as usize) {
 				// shrink the vec to maximum size
-				balance_order_vec.resize(
-					T::TokenOrderROIListLength::get() as usize,
-					(Permill::zero(), Zero::zero()),
-				);
+				// balance_order_vec.resize(
+				// 	T::TokenOrderROIListLength::get() as usize,
+				// 	(Permill::zero(), Zero::zero()),
+				// );
+
+				balance_order_vec.pop();
 			}
 		});
 
@@ -831,12 +837,15 @@ impl<T: Trait> Module<T> {
 			annual_roi: _annual_roi,
 			validator: _validator,
 		} = OrdersInService::<T>::get(order_id);
-
+		
 		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+		println!("current_block_number: {:?}", current_block_number);
+		println!("end_block_num: {:?}", end_block_num);
 		ensure!(
-			end_block_num <= current_block_number,
+			end_block_num >= current_block_number,
 			Error::<T>::BlockNumberNotValid
 		);
+
 
 		let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
 		let era_id: T::EraId = (end_block_num / block_num_per_era).into();
@@ -966,17 +975,25 @@ impl<T: Trait> Module<T> {
 				let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
 				let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
 				let era_id = current_block_number / block_num_per_era;
+				println!("era_id: {:?}", era_id);
+				println!("block_num_per_era: {:?}", block_num_per_era);
 				let end_block_num = era_id
 					.saturating_add(1.into())
 					.saturating_mul(block_num_per_era)
 					.saturating_sub(1.into());
+
+				println!("end_block_num: {:?}", end_block_num);
 				let mut should_deduct = votes;
 
 				if remained_to_release_vote < votes {
+					
 					Self::split_order_in_service(*order_id, remained_to_release_vote)?;
+					
 					should_deduct = remained_to_release_vote;
 				}
+
 				Self::set_order_end_block(*order_id, end_block_num)?;
+
 				remained_to_release_vote = remained_to_release_vote.saturating_sub(should_deduct);
 				i = i.saturating_add(1);
 			}
@@ -1162,7 +1179,7 @@ impl<T: Trait> Module<T> {
 	/// get the current total votes from convert pool
 	fn get_total_votes(_vtoken: T::AssetId) -> T::Balance {
 		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
-		let mock_total_votes = current_block_number % T::BlockNumber::from(10_000);
+		let mock_total_votes = current_block_number * T::BlockNumber::from(201) % T::BlockNumber::from(1_000);
 		mock_total_votes.into()
 	}
 }
