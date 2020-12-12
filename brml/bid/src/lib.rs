@@ -107,6 +107,8 @@ decl_event! {
 			SetBlockNumberPerEraSuccess(AssetId, BlockNumber),
 			SetServiceStopBlockNumLagSuccess(AssetId, BlockNumber),
 			SetSlashMarginRatesSuccess(AssetId, Permill),
+			DeleteOrderSuccess(AssetId, BiddingOrderId),
+			CreateOrderSuccess(AssetId, BiddingOrderId),
 	}
 }
 
@@ -589,13 +591,17 @@ impl<T: Trait> Module<T> {
 								deleted_order_vec.remove(vec_pointer);
 							} else {
 								let remained_deleted_votes = votes_restore - votes_avail;
-								let new_order_id = Self::split_order_in_service(
+								let (order1_id, order2_id) = Self::split_order_in_service(
 									deleted_order_id,
 									remained_deleted_votes,
 								)?;
-								Self::set_order_end_block(new_order_id, original_end_block_num)?;
+								
+								Self::set_order_end_block(order2_id, original_end_block_num)?;
+								deleted_order_vec[vec_pointer].0 = order1_id;
+
 								votes_restore = votes_avail;
 							}
+							
 							votes_avail = votes_avail.saturating_sub(votes_restore);
 						}
 						Ok(())
@@ -666,7 +672,7 @@ impl<T: Trait> Module<T> {
 		proposal: &BiddingOrderUnitOf<T>,
 		order_end_block_num: T::BlockNumber,
 		votes_matched: T::Balance,
-	) -> DispatchResult {
+	) -> Result<T::BiddingOrderId, Error<T>> {
 		// current block number
 		let current_block_num = <frame_system::Module<T>>::block_number();
 		ensure!(
@@ -773,6 +779,16 @@ impl<T: Trait> Module<T> {
 				*votes_released = votes_released.saturating_add(votes_matched);
 			});
 		}
+
+		Self::deposit_event(RawEvent::CreateOrderSuccess(vtoken, new_order_id));
+		Ok(new_order_id)
+	}
+
+	/// delete an order in service. Set the to-be-deleted order's end block time to be current block.
+	fn delete_order_in_service(vtoken: T::AssetId, order_id: T::BiddingOrderId) -> DispatchResult {
+		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+		Self::set_order_end_block(order_id, current_block_number)?;
+		Self::deposit_event(RawEvent::DeleteOrderSuccess(vtoken, order_id));
 		Ok(())
 	}
 
@@ -780,87 +796,35 @@ impl<T: Trait> Module<T> {
 	/// order1 gets the original order id. order2 gets a new order id.
 	fn split_order_in_service(
 		order_id: T::BiddingOrderId,
-		order1_votes_amount: T::Balance,
-	) -> Result<T::BiddingOrderId, Error<T>> {
+		order1_votes: T::Balance,
+	) -> Result<(T::BiddingOrderId, T::BiddingOrderId), Error<T>> {
 		ensure!(
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
 		);
-		let BiddingOrderUnit {
-			bidder_id,
-			token_id,
-			block_num,
-			votes,
-			annual_roi,
-			validator,
-		} = OrdersInService::<T>::get(order_id);
-		let order2_votes = votes.saturating_sub(order1_votes_amount);
 
-		let new_order = BiddingOrderUnit {
-			bidder_id: bidder_id.clone(),
-			token_id,
-			block_num,
-			votes: order2_votes,
-			annual_roi,
-			validator,
-		};
+		let original_order = OrdersInService::<T>::get(order_id);
+		let order2_votes = original_order.votes.saturating_sub(order1_votes);
 
-		let new_order_id = OrderNextId::<T>::get();
-		OrderNextId::<T>::mutate(|odr_id| {
-			*odr_id = new_order_id.saturating_add(1.into());
-		});
+		// delete the original order
+		Self::delete_order_in_service(original_order.token_id, order_id);
 
-		OrdersInService::<T>::insert(new_order_id, new_order);
-		OrdersInService::<T>::mutate(order_id, |order_detail| {
-			order_detail.votes = order1_votes_amount;
-		});
+		// create two new orders
+		let order1_id = Self::create_order_in_service(&original_order, original_order.block_num, order1_votes)?;
+		let order2_id = Self::create_order_in_service(&original_order, original_order.block_num, order2_votes)?;
 
-		OrderEndBlockNumMap::<T>::mutate(block_num, |ord_id_vec| {
-			ord_id_vec.push(new_order_id);
-		});
+		// calculate order1 and order2 slash amount according to their proportion
+		let slash_amount = SlashForOrdersInService::<T>::get(order_id);
+		let order1_slash_amount = order1_votes.saturating_mul(slash_amount)
+			/ (order1_votes.saturating_add(order2_votes));
+		let order2_slash_amount = slash_amount.saturating_sub(order1_slash_amount);
 
-		BidderTokenOrdersInService::<T>::mutate(bidder_id, token_id, |ord_id_vec| {
-			ord_id_vec.push(new_order_id);
-		});
-		TokenOrderROIList::<T>::mutate(token_id, |balance_order_vec| {
-			let index_wrapped =
-				balance_order_vec.binary_search_by_key(&annual_roi, |(roi, _odr_id)| *roi);
-
-			match index_wrapped {
-				Ok(index) | Err(index) => {
-					if index < (T::TokenOrderROIListLength::get() as usize) {
-						balance_order_vec.insert(index, (annual_roi, new_order_id));
-					}
-				}
-			}
-
-			if balance_order_vec.len() > (T::TokenOrderROIListLength::get() as usize) {
-				// shrink the vec to maximum size
-				// balance_order_vec.resize(
-				// 	T::TokenOrderROIListLength::get() as usize,
-				// 	(Permill::zero(), Zero::zero()),
-				// );
-
-				balance_order_vec.pop();
-			}
-		});
-
-		if SlashForOrdersInService::<T>::contains_key(order_id) {
-			let slash_amount = SlashForOrdersInService::<T>::get(order_id);
-
-			// calculate order1 and order2 slash amount according to their proportion
-			let order1_slash_amount = order1_votes_amount.saturating_mul(slash_amount)
-				/ (order1_votes_amount.saturating_add(order2_votes));
-			let order2_slash_amount = slash_amount.saturating_sub(order1_slash_amount);
-
-			// change order1 slash amount and insert order2 slash amount
-			SlashForOrdersInService::<T>::mutate(order_id, |old_slash_amount| {
-				*old_slash_amount = order1_slash_amount;
-			});
-			SlashForOrdersInService::<T>::insert(new_order_id, order2_slash_amount);
-		}
-
-		Ok(new_order_id)
+		// delete original order slash deposit record, create order1 and order2 slash deposit records.
+		SlashForOrdersInService::<T>::remove(order_id);
+		SlashForOrdersInService::<T>::insert(order1_id, order1_slash_amount);
+		SlashForOrdersInService::<T>::insert(order2_id, order2_slash_amount);
+	
+		Ok((order1_id, order2_id))
 	}
 
 	/// change the order in service's end block time.
@@ -1015,14 +979,20 @@ impl<T: Trait> Module<T> {
 				let mut should_deduct = votes;
 
 				if remained_to_release_vote < votes {
-					Self::split_order_in_service(*order_id, remained_to_release_vote)?;
+					let (order1_id, order2_id) = Self::split_order_in_service(*order_id, remained_to_release_vote)?;
 					should_deduct = remained_to_release_vote;
-				}
+					Self::set_order_end_block(order1_id, current_block_number)?;  // order1 ends in current block
 
-				Self::set_order_end_block(*order_id, end_block_num)?;
-				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
-					deleted_order_vec.push((*order_id, block_num));
-				});
+					ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
+						deleted_order_vec.push((order1_id, block_num));
+					});
+				} else {
+					Self::set_order_end_block(*order_id, current_block_number)?;
+
+					ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
+						deleted_order_vec.push((*order_id, block_num));
+					});
+				}
 
 				remained_to_release_vote = remained_to_release_vote.saturating_sub(should_deduct);
 				i = i.saturating_add(1);
