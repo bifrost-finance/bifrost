@@ -31,7 +31,7 @@ use frame_system::{ensure_root, ensure_signed};
 use node_primitives::AssetTrait;
 use num_traits::sign::Unsigned;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
-use sp_runtime::Permill;
+use sp_runtime::{DispatchError, Permill};
 
 pub trait Trait: frame_system::Trait {
 	/// The arithmetic type of asset identifier.
@@ -218,7 +218,6 @@ decl_storage! {
 		/// within current era, the deleted orders recorded in this storage can restore. vtoken => (deleted_order_id, original_end_block_number)
 		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) T::AssetId => Vec<(T::BiddingOrderId, T::BlockNumber)>;
 
-
 		// **********************************************************************************************************
 		// Below storage should be called by other pallets to update data, and then used by this bid pallet.       //
 		// **********************************************************************************************************
@@ -241,9 +240,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// ****************************************************************************************
-		//  注意，用户如果要提币，把vtoken转换成token的话，需要等到本era结束之后，金额才能准备好，才能开始流程。//
-		// ****************************************************************************************
 		/// What on_initialize function does?
 		/// 1. query for current available votes.
 		/// 2. compare available votes and total votes in service for each vtoken. If available votes are less than total
@@ -595,13 +591,12 @@ impl<T: Trait> Module<T> {
 									deleted_order_id,
 									remained_deleted_votes,
 								)?;
-								
+
 								Self::set_order_end_block(order2_id, original_end_block_num)?;
 								deleted_order_vec[vec_pointer].0 = order1_id;
 
 								votes_restore = votes_avail;
 							}
-							
 							votes_avail = votes_avail.saturating_sub(votes_restore);
 						}
 						Ok(())
@@ -780,7 +775,7 @@ impl<T: Trait> Module<T> {
 			});
 		}
 
-		Self::deposit_event(RawEvent::CreateOrderSuccess(vtoken, new_order_id));
+		Self::deposit_event(RawEvent::CreateOrderSuccess(*vtoken, new_order_id));
 		Ok(new_order_id)
 	}
 
@@ -797,7 +792,7 @@ impl<T: Trait> Module<T> {
 	fn split_order_in_service(
 		order_id: T::BiddingOrderId,
 		order1_votes: T::Balance,
-	) -> Result<(T::BiddingOrderId, T::BiddingOrderId), Error<T>> {
+	) -> Result<(T::BiddingOrderId, T::BiddingOrderId), DispatchError> {
 		ensure!(
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
@@ -807,23 +802,24 @@ impl<T: Trait> Module<T> {
 		let order2_votes = original_order.votes.saturating_sub(order1_votes);
 
 		// delete the original order
-		Self::delete_order_in_service(original_order.token_id, order_id);
+		Self::delete_order_in_service(original_order.token_id, order_id)?;
 
 		// create two new orders
-		let order1_id = Self::create_order_in_service(&original_order, original_order.block_num, order1_votes)?;
-		let order2_id = Self::create_order_in_service(&original_order, original_order.block_num, order2_votes)?;
+		let order1_id =
+			Self::create_order_in_service(&original_order, original_order.block_num, order1_votes)?;
+		let order2_id =
+			Self::create_order_in_service(&original_order, original_order.block_num, order2_votes)?;
 
 		// calculate order1 and order2 slash amount according to their proportion
 		let slash_amount = SlashForOrdersInService::<T>::get(order_id);
-		let order1_slash_amount = order1_votes.saturating_mul(slash_amount)
-			/ (order1_votes.saturating_add(order2_votes));
+		let order1_slash_amount =
+			order1_votes.saturating_mul(slash_amount) / (order1_votes.saturating_add(order2_votes));
 		let order2_slash_amount = slash_amount.saturating_sub(order1_slash_amount);
 
 		// delete original order slash deposit record, create order1 and order2 slash deposit records.
 		SlashForOrdersInService::<T>::remove(order_id);
 		SlashForOrdersInService::<T>::insert(order1_id, order1_slash_amount);
 		SlashForOrdersInService::<T>::insert(order2_id, order2_slash_amount);
-	
 		Ok((order1_id, order2_id))
 	}
 
@@ -968,20 +964,13 @@ impl<T: Trait> Module<T> {
 				} = OrdersInService::<T>::get(order_id);
 
 				let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
-				let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
-				let era_id = current_block_number / block_num_per_era;
-
-				let end_block_num = era_id
-					.saturating_add(1.into())
-					.saturating_mul(block_num_per_era)
-					.saturating_sub(1.into());
-
 				let mut should_deduct = votes;
 
 				if remained_to_release_vote < votes {
-					let (order1_id, order2_id) = Self::split_order_in_service(*order_id, remained_to_release_vote)?;
+					let (order1_id, _order2_id) =
+						Self::split_order_in_service(*order_id, remained_to_release_vote)?;
 					should_deduct = remained_to_release_vote;
-					Self::set_order_end_block(order1_id, current_block_number)?;  // order1 ends in current block
+					Self::set_order_end_block(order1_id, current_block_number)?; // order1 ends in current block
 
 					ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
 						deleted_order_vec.push((order1_id, block_num));
