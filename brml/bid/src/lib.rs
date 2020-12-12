@@ -566,7 +566,7 @@ impl<T: Trait> Module<T> {
 			// if we have more than enough votes. Then we should first look at those forcibly deleted orders and restore
 			// them first. If we have even more votes, we'll consider match new orders.
 
-			if ForciblyUnbondOrdersInCurrentEra::<T>::get(vtoken).is_empty() {
+			if !ForciblyUnbondOrdersInCurrentEra::<T>::get(vtoken).is_empty() {
 				// TO-DO
 				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(
 					vtoken,
