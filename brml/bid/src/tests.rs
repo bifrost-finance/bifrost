@@ -284,9 +284,6 @@ fn register_vtoken_for_bidding_should_work() {
 
         // vtoken is already in the TotalVotesInService storage.
         assert_eq!(TotalVotesInService::<Test>::contains_key(vtoken_id), true);
-
-        // vtoken is already in the WithdrawReservedVotes storage.
-        assert_eq!(WithdrawReservedVotes::<Test>::contains_key(vtoken_id), true);
     });
 }
 
@@ -927,7 +924,6 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
         assert_eq!(OrdersInService::<Test>::get(0).block_num, 6);
         assert_eq!(OrdersInService::<Test>::get(1).block_num, 21);  // 创建时间1+21-1= 21
-        assert_eq!(WithdrawReservedVotes::<Test>::get(vksm_id), 195);
 
         run_to_block(6); // 订单与区块一样，虽然有更多供应了，但
         // assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 5);
