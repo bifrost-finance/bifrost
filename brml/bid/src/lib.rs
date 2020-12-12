@@ -29,9 +29,9 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::AssetTrait;
+use num_traits::sign::Unsigned;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
 use sp_runtime::Permill;
-use num_traits::sign::Unsigned;
 
 pub trait Trait: frame_system::Trait {
 	/// The arithmetic type of asset identifier.
@@ -75,7 +75,7 @@ pub trait Trait: frame_system::Trait {
 		+ Unsigned
 		+ MaybeSerializeDeserialize
 		+ From<Self::BlockNumber>;
-		// + Into<Self::BlockNumber>;
+	// + Into<Self::BlockNumber>;
 
 	/// the number of records that the order roi list should keep
 	type TokenOrderROIListLength: Get<u8>;
@@ -212,6 +212,9 @@ decl_storage! {
 		ServiceStopBlockNumLag get(fn service_stop_block_num_lag): map hasher(blake2_128_concat) T::AssetId => T::BlockNumber;
 		/// vtokens that have been registered for bidding marketplace
 		VtokensRegisteredForBidding get(fn vtoken_registered_for_bidding): Vec<T::AssetId>;
+		/// Orders have been unbonded because of user withdrawing within current era. If vtoken supply increase later
+		/// within current era, the deleted orders recorded in this storage can restore. vtoken => (deleted_order_id, original_end_block_number)
+		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) T::AssetId => Vec<(T::BiddingOrderId, T::BlockNumber)>;
 
 
 		// **********************************************************************************************************
@@ -222,9 +225,6 @@ decl_storage! {
 		/// bidder and the record in this storage should be deleted.
 		SlashForOrdersInService get(fn slash_for_orders_in_service): map hasher(blake2_128_concat) T::BiddingOrderId
 																		=> T::Balance;
-		/// Record the reserved votes for users to withdraw at the end of this era. Whenever a user initiate a withdrawing,
-		/// a record should be added here to preserve token amount to the end of the era to be withdrew.
-		WithdrawReservedVotes get(fn withdraw_reserved_votes): map hasher(blake2_128_concat) T::AssetId => T::Balance;
 	}
 }
 
@@ -250,14 +250,13 @@ decl_module! {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let vtoken_list = VtokensRegisteredForBidding::<T>::get();
 			for vtoken in vtoken_list.iter() {
-				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n, false) {
+				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n) {
 					if vtoken == &T::AssetId::from(5) {
 						println!("i am block {:?}, my available votes is {:?}",n, available_votes);
 					}
 					// release the votes difference from bidders who provide least roi rate.
 					if !available_flag {
 						if let Err(_rs) = Self::release_votes_from_bidder(*vtoken, available_votes) {
-							println!("我要跑release啦");
 							return 0;
 						};
 					} else {
@@ -282,15 +281,22 @@ decl_module! {
 				};
 			}
 
-
 			let vtoken_list = VtokensRegisteredForBidding::<T>::get();
 			for vtoken in vtoken_list.iter(){
 				// delete record in ToReleaseVotesTilEndOfEra of current era.
 				let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
-				let era_id: T::EraId = (n / block_num_per_era).into();
 
-				if ToReleaseVotesTilEndOfEra::<T>::contains_key((vtoken, era_id)) {
-					ToReleaseVotesTilEndOfEra::<T>::remove((vtoken, era_id));
+				// end of this era
+				if n.saturating_add(1.into()) % block_num_per_era == 0.into() {
+					let era_id: T::EraId = (n / block_num_per_era).into();
+
+					if ToReleaseVotesTilEndOfEra::<T>::contains_key((vtoken, era_id)) {
+						ToReleaseVotesTilEndOfEra::<T>::remove((vtoken, era_id));
+					}
+
+					ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
+						deleted_order_vec.clear();
+					});
 				}
 			}
 		}
@@ -544,9 +550,10 @@ impl<T: Trait> Module<T> {
 		vtoken: T::AssetId,
 		current_block_num: T::BlockNumber,
 	) -> DispatchResult {
-		// current mode for checking votes availability, not end of era future mode.
 		let (available_flag, available_votes) =
-			Self::calculate_available_votes(vtoken, current_block_num, true)?;
+			Self::calculate_available_votes(vtoken, current_block_num)?;
+
+		let mut votes_avail = available_votes;
 
 		ensure!(
 			MinMaxOrderLastingBlockNum::<T>::contains_key(vtoken),
@@ -556,16 +563,56 @@ impl<T: Trait> Module<T> {
 
 		// if there are unmatched bidding proposals as well as available votes, match proposals to orders in service.
 		if available_flag {
+			// if we have more than enough votes. Then we should first look at those forcibly deleted orders and restore
+			// them first. If we have even more votes, we'll consider match new orders.
+
+			if ForciblyUnbondOrdersInCurrentEra::<T>::get(vtoken).is_empty() {
+				// TO-DO
+				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(
+					vtoken,
+					|deleted_order_vec| -> DispatchResult {
+						let mut vec_pointer = deleted_order_vec.len();
+
+						while (vec_pointer > Zero::zero()) & (votes_avail > Zero::zero()) {
+							vec_pointer = vec_pointer.saturating_sub(1);
+							let (deleted_order_id, original_end_block_num) =
+								deleted_order_vec[vec_pointer];
+							let deleted_order = OrdersInService::<T>::get(deleted_order_id);
+							let mut votes_restore = deleted_order.votes;
+
+							if votes_restore <= votes_avail {
+								// restore the whole deleted order
+								Self::set_order_end_block(
+									deleted_order_id,
+									original_end_block_num,
+								)?;
+								deleted_order_vec.remove(vec_pointer);
+							} else {
+								let remained_deleted_votes = votes_restore - votes_avail;
+								let new_order_id = Self::split_order_in_service(
+									deleted_order_id,
+									remained_deleted_votes,
+								)?;
+								Self::set_order_end_block(new_order_id, original_end_block_num)?;
+								votes_restore = votes_avail;
+							}
+							votes_avail = votes_avail.saturating_sub(votes_restore);
+						}
+						Ok(())
+					},
+				)?;
+			}
+
 			BiddingQueues::<T>::mutate(vtoken, |bidding_proposal_vec| -> DispatchResult {
 				if !bidding_proposal_vec.is_empty() {
 					// There are un-matching proposals.
-					let mut votes_avail = available_votes;
 					let mut vec_pointer = bidding_proposal_vec.len();
 
 					while (vec_pointer > Zero::zero()) & (votes_avail > Zero::zero()) {
 						vec_pointer = vec_pointer.saturating_sub(1);
-						let order_end_block_num =
-							current_block_num.saturating_add(max_order_lasting_block_num).saturating_sub(T::BlockNumber::from(1));
+						let order_end_block_num = current_block_num
+							.saturating_add(max_order_lasting_block_num)
+							.saturating_sub(T::BlockNumber::from(1));
 
 						let (_, proposal_id) = bidding_proposal_vec[vec_pointer];
 
@@ -576,13 +623,12 @@ impl<T: Trait> Module<T> {
 
 						if votes_matched <= &votes_avail {
 							bidding_proposal_vec.pop(); // delete this proposal
-							
 							// remove the proposal in bidding queue
 							ProposalsInQueue::<T>::remove(proposal_id);
 
 							// remove the proposal id from the bidder's list of proposals
 							BidderProposalInQueue::<T>::mutate(bidder_id, vtoken, |proposal_vec| {
-								if let Ok(index) = proposal_vec.binary_search(&proposal_id){
+								if let Ok(index) = proposal_vec.binary_search(&proposal_id) {
 									proposal_vec.remove(index);
 								};
 							});
@@ -621,8 +667,6 @@ impl<T: Trait> Module<T> {
 		order_end_block_num: T::BlockNumber,
 		votes_matched: T::Balance,
 	) -> DispatchResult {
-
-		println!("votes_matched {:?}", votes_matched);
 		// current block number
 		let current_block_num = <frame_system::Module<T>>::block_number();
 		ensure!(
@@ -694,8 +738,8 @@ impl<T: Trait> Module<T> {
 		}
 
 		TokenOrderROIList::<T>::mutate(vtoken, |balance_order_vec| {
-			let index_wrapped = balance_order_vec
-				.binary_search_by_key(&annual_roi, |(roi, _odr_id)| roi);
+			let index_wrapped =
+				balance_order_vec.binary_search_by_key(&annual_roi, |(roi, _odr_id)| roi);
 
 			match index_wrapped {
 				Ok(index) | Err(index) => {
@@ -737,7 +781,7 @@ impl<T: Trait> Module<T> {
 	fn split_order_in_service(
 		order_id: T::BiddingOrderId,
 		order1_votes_amount: T::Balance,
-	) -> DispatchResult {
+	) -> Result<T::BiddingOrderId, Error<T>> {
 		ensure!(
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
@@ -779,8 +823,8 @@ impl<T: Trait> Module<T> {
 			ord_id_vec.push(new_order_id);
 		});
 		TokenOrderROIList::<T>::mutate(token_id, |balance_order_vec| {
-			let index_wrapped = balance_order_vec
-				.binary_search_by_key(&annual_roi, |(roi, _odr_id)| *roi);
+			let index_wrapped =
+				balance_order_vec.binary_search_by_key(&annual_roi, |(roi, _odr_id)| *roi);
 
 			match index_wrapped {
 				Ok(index) | Err(index) => {
@@ -816,7 +860,7 @@ impl<T: Trait> Module<T> {
 			SlashForOrdersInService::<T>::insert(new_order_id, order2_slash_amount);
 		}
 
-		Ok(())
+		Ok(new_order_id)
 	}
 
 	/// change the order in service's end block time.
@@ -837,15 +881,11 @@ impl<T: Trait> Module<T> {
 			annual_roi: _annual_roi,
 			validator: _validator,
 		} = OrdersInService::<T>::get(order_id);
-		
 		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
-		println!("current_block_number: {:?}", current_block_number);
-		println!("end_block_num: {:?}", end_block_num);
 		ensure!(
 			end_block_num >= current_block_number,
 			Error::<T>::BlockNumberNotValid
 		);
-
 
 		let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
 		let era_id: T::EraId = (end_block_num / block_num_per_era).into();
@@ -899,7 +939,9 @@ impl<T: Trait> Module<T> {
 
 		let zero_votes: T::Balance = Zero::zero();
 		TotalVotesInService::<T>::insert(vtoken, zero_votes);
-		WithdrawReservedVotes::<T>::insert(vtoken, zero_votes);
+
+		let empty_deleted_order_vec: Vec<(T::BiddingOrderId, T::BlockNumber)> = Vec::new();
+		ForciblyUnbondOrdersInCurrentEra::<T>::insert(vtoken, empty_deleted_order_vec);
 
 		Ok(())
 	}
@@ -910,7 +952,6 @@ impl<T: Trait> Module<T> {
 	fn calculate_available_votes(
 		vtoken: T::AssetId,
 		current_block_num: T::BlockNumber,
-		current_mode: bool,
 	) -> Result<(bool, T::Balance), Error<T>> {
 		ensure!(
 			BlockNumberPerEra::<T>::contains_key(vtoken),
@@ -931,19 +972,9 @@ impl<T: Trait> Module<T> {
 				ToReleaseVotesTilEndOfEra::<T>::get((vtoken, era_id))
 			}
 		};
-		let reserved_votes = WithdrawReservedVotes::<T>::get(vtoken);
 
-		let lhs = {
-			if current_mode {
-				// if it's current mode, it means calculating current available amount.
-				total_votes_supply.saturating_add(to_release_votes_til_end_of_era)
-			} else {
-				// if it's not current mode, it means calculating the available amount by the end of current era.
-				total_votes_supply
-			}
-		};
-
-		let rhs = total_votes_in_service.saturating_add(reserved_votes);
+		let lhs = total_votes_supply.saturating_add(to_release_votes_til_end_of_era);
+		let rhs = total_votes_in_service;
 		let result = {
 			if lhs >= rhs {
 				(true, lhs.saturating_sub(rhs))
@@ -966,7 +997,7 @@ impl<T: Trait> Module<T> {
 				let BiddingOrderUnit {
 					bidder_id: _bidder_id,
 					token_id: _token_id,
-					block_num: _block_num,
+					block_num,
 					votes,
 					annual_roi: _annual_roi,
 					validator: _validator,
@@ -975,24 +1006,23 @@ impl<T: Trait> Module<T> {
 				let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
 				let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
 				let era_id = current_block_number / block_num_per_era;
-				println!("era_id: {:?}", era_id);
-				println!("block_num_per_era: {:?}", block_num_per_era);
+
 				let end_block_num = era_id
 					.saturating_add(1.into())
 					.saturating_mul(block_num_per_era)
 					.saturating_sub(1.into());
 
-				println!("end_block_num: {:?}", end_block_num);
 				let mut should_deduct = votes;
 
 				if remained_to_release_vote < votes {
-					
 					Self::split_order_in_service(*order_id, remained_to_release_vote)?;
-					
 					should_deduct = remained_to_release_vote;
 				}
 
 				Self::set_order_end_block(*order_id, end_block_num)?;
+				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
+					deleted_order_vec.push((*order_id, block_num));
+				});
 
 				remained_to_release_vote = remained_to_release_vote.saturating_sub(should_deduct);
 				i = i.saturating_add(1);
@@ -1016,7 +1046,6 @@ impl<T: Trait> Module<T> {
 		// let a = Permill::one() * 10u64;
 		// Ok(votes_matched.saturating_mul(slash_rate))
 		Ok(slash_rate * votes_matched)
-
 	}
 
 	/// calculate the minimum one time payment the bidder should pay for his votes needed.
@@ -1076,7 +1105,7 @@ impl<T: Trait> Module<T> {
 			&order_detail.bidder_id,
 			order_detail.token_id,
 			|bidder_order_vec| {
-				if let Ok(index) = bidder_order_vec.binary_search(&order_id){
+				if let Ok(index) = bidder_order_vec.binary_search(&order_id) {
 					bidder_order_vec.remove(index);
 				};
 			},
@@ -1152,34 +1181,11 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 
-	/// set the WithdrawReservedVotes storage by staking pallet. If needs to withdraw, add reserve amount. If finish
-	/// withdrawing, deduct the amount
-	fn set_withdraw_reserved_votes(
-		token_id: T::AssetId,
-		amount: T::Balance,
-		deduct_mode: bool,
-	) -> DispatchResult {
-		if !WithdrawReservedVotes::<T>::contains_key(token_id) {
-			if !deduct_mode {
-				WithdrawReservedVotes::<T>::insert(token_id, amount);
-			}
-		} else if !deduct_mode {
-			WithdrawReservedVotes::<T>::mutate(token_id, |old_amount| {
-				*old_amount = old_amount.saturating_add(amount);
-			});
-		} else {
-			WithdrawReservedVotes::<T>::mutate(token_id, |old_amount| {
-				*old_amount = old_amount.saturating_sub(amount);
-			});
-		}
-
-		Ok(())
-	}
-
 	/// get the current total votes from convert pool
 	fn get_total_votes(_vtoken: T::AssetId) -> T::Balance {
 		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
-		let mock_total_votes = current_block_number * T::BlockNumber::from(201) % T::BlockNumber::from(1_000);
+		let mock_total_votes =
+			current_block_number * T::BlockNumber::from(201) % T::BlockNumber::from(1_000);
 		mock_total_votes.into()
 	}
 }
