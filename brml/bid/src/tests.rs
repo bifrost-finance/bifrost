@@ -578,9 +578,6 @@ fn create_bidding_proposal_should_work() {
         let origin_alice = Origin::signed(alice);
         let dot_id = 2;
         let vdot_id = 3;
-        let vksm_id = 5;
-        let veos_id = 7;
-        let viost_id = 9;
         let votes_needed_alice = 10_000;
         let annual_roi_alice = 15; // 15% annual roi
         let validator = alice;
@@ -678,7 +675,7 @@ fn create_bidding_proposal_should_work() {
         ));
 
         // ProposalsInQueue storage
-        let proposal_id = 0;
+        let proposal_id = 1; // Bob has the 1st order in initialization. Alice inserts the second order.
         let roi_permill = Permill::from_parts(annual_roi_alice * 10_000);
         let proposal = ProposalsInQueue::<Test>::get(proposal_id);
         assert_eq!(proposal.bidder_id, alice);
@@ -694,8 +691,8 @@ fn create_bidding_proposal_should_work() {
             true
         );
 
-        // ProposalNextId
-        assert_eq!(ProposalNextId::<Test>::get(), 1);
+        // ProposalNextId. Bob and Alice have created an bidding proposal respectively.
+        assert_eq!(ProposalNextId::<Test>::get(), 2);
 
         // BidderProposalInQueue
         assert_eq!(
@@ -730,7 +727,7 @@ fn create_bidding_proposal_should_work() {
             })
         );
 
-        // insert 4 more proposals, so that the 6th one should not be allowed to add
+        // insert 4 more proposals for vdot proposal, so that the 6th vdot proposal should not be allowed to add
         Bid::create_bidding_proposal(
             origin_alice.clone(),
             vdot_id,
@@ -779,33 +776,33 @@ fn create_bidding_proposal_should_work() {
             })
         );
 
-        // check whether the order of proposals are correct.
-        // proposal_id = 0, roi = 15
-        // proposal_id = 1, roi = 10
-        // proposal_id = 2, roi = 70
-        // proposal_id = 3, roi = 90
-        // proposal_id = 4, roi = 44
+        // check whether the order of proposals are correct. Proposal 0 is a vksm order from Bob created in initialization.
+        // proposal_id = 1, roi = 15
+        // proposal_id = 2, roi = 10
+        // proposal_id = 3, roi = 70
+        // proposal_id = 4, roi = 90
+        // proposal_id = 5, roi = 44
         // So the correct order is [1, 0, 4, 2, 3]
 
         assert_eq!(
             BiddingQueues::<Test>::get(vdot_id).get(0).unwrap(),
-            &(Permill::from_parts(10 * 10_000), 1)
+            &(Permill::from_parts(10 * 10_000), 2)
         );
         assert_eq!(
             BiddingQueues::<Test>::get(vdot_id).get(1).unwrap(),
-            &(Permill::from_parts(15 * 10_000), 0)
+            &(Permill::from_parts(15 * 10_000), 1)
         );
         assert_eq!(
             BiddingQueues::<Test>::get(vdot_id).get(2).unwrap(),
-            &(Permill::from_parts(44 * 10_000), 4)
+            &(Permill::from_parts(44 * 10_000), 5)
         );
         assert_eq!(
             BiddingQueues::<Test>::get(vdot_id).get(3).unwrap(),
-            &(Permill::from_parts(70 * 10_000), 2)
+            &(Permill::from_parts(70 * 10_000), 3)
         );
         assert_eq!(
             BiddingQueues::<Test>::get(vdot_id).get(4).unwrap(),
-            &(Permill::from_parts(90 * 10_000), 3)
+            &(Permill::from_parts(90 * 10_000), 4)
         );
     });
 }
@@ -918,15 +915,17 @@ fn check_overall_proposal_matching_to_orders_should_work() {
         // 已经进行了2个订单了。哪里出了问题。在第五个区块不够用户抽走，拆单了，拆成了 195和5两个订单
         assert_eq!(OrderNextId::<Test>::get(), 2);
 
-        // 订单0是到期区块是6，订单1到期区块是20
+        // 订单0是到期区块是6，订单1到期区块是21
         assert_eq!(OrdersInService::<Test>::get(0).votes, 195);
         assert_eq!(OrdersInService::<Test>::get(1).votes, 5);
 
         assert_eq!(OrdersInService::<Test>::get(0).block_num, 6);
         assert_eq!(OrdersInService::<Test>::get(1).block_num, 21);  // 创建时间1+21-1= 21
 
-        run_to_block(6); // 订单与区块一样，虽然有更多供应了，但
-        // assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 5);
+        run_to_block(6); // 区块6供应 206个订单，数量足够，bob的订单0应该恢复成结束时间为 21
+        assert_eq!(OrdersInService::<Test>::get(0).votes, 195);  // 
+        assert_eq!(OrdersInService::<Test>::get(0).block_num, 21);  // 创建时间1+21-1= 21
+        assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);  // 所有在服务订单又变成了200
         // // assert_eq!(OrdersInService::<Test>::get(0).votes, 200);
 
     });
