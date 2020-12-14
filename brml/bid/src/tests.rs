@@ -209,7 +209,7 @@ fn storages_initialization() {
     let bob = 2;
     let origin_bob = Origin::signed(bob);
     let votes_needed_bob = 200;
-    let annual_roi_bob = 60;
+    let annual_roi_bob = 6000;
     let validator_bob = bob;
     Bid::create_bidding_proposal(
         origin_bob,
@@ -579,7 +579,7 @@ fn create_bidding_proposal_should_work() {
         let dot_id = 2;
         let vdot_id = 3;
         let votes_needed_alice = 10_000;
-        let annual_roi_alice = 15; // 15% annual roi
+        let annual_roi_alice = 1_500; // 15% annual roi
         let validator = alice;
 
         // un-registered token is not allowed
@@ -650,7 +650,7 @@ fn create_bidding_proposal_should_work() {
         );
 
         // annual_roi should be above zero
-        let annual_roi = 120;
+        let annual_roi = 12_000;
         assert_eq!(
             Bid::create_bidding_proposal(
                 origin_alice.clone(),
@@ -676,7 +676,7 @@ fn create_bidding_proposal_should_work() {
 
         // ProposalsInQueue storage
         let proposal_id = 1; // Bob has the 1st order in initialization. Alice inserts the second order.
-        let roi_permill = Permill::from_parts(annual_roi_alice * 10_000);
+        let roi_permill = Permill::from_parts(annual_roi_alice * 100);
         let proposal = ProposalsInQueue::<Test>::get(proposal_id);
         assert_eq!(proposal.bidder_id, alice);
         assert_eq!(proposal.token_id, vdot_id);
@@ -710,7 +710,7 @@ fn create_bidding_proposal_should_work() {
         let charlie = 3;
         let origin_charlie = Origin::signed(charlie);
         let votes_needed_charlie = 50_000;
-        let annual_roi_charlie = 10;
+        let annual_roi_charlie = 1000;
         let validator = charlie;
         assert_eq!(
             Bid::create_bidding_proposal(
@@ -732,7 +732,7 @@ fn create_bidding_proposal_should_work() {
             origin_alice.clone(),
             vdot_id,
             votes_needed_alice,
-            10,
+            1_000,
             validator,
         )
         .unwrap_or_default();
@@ -740,7 +740,7 @@ fn create_bidding_proposal_should_work() {
             origin_alice.clone(),
             vdot_id,
             votes_needed_alice,
-            70,
+            7_000,
             validator,
         )
         .unwrap_or_default();
@@ -748,7 +748,7 @@ fn create_bidding_proposal_should_work() {
             origin_alice.clone(),
             vdot_id,
             votes_needed_alice,
-            90,
+            9_000,
             validator,
         )
         .unwrap_or_default();
@@ -756,7 +756,7 @@ fn create_bidding_proposal_should_work() {
             origin_alice.clone(),
             vdot_id,
             votes_needed_alice,
-            44,
+            4_400,
             validator,
         )
         .unwrap_or_default();
@@ -865,6 +865,11 @@ fn check_overall_proposal_matching_to_orders_should_work() {
         // assert_eq!(ProposalsInQueue::<Test>::get(0).votes, 3800);
 
         assert_eq!(
+            BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
+            1
+        );
+
+        assert_eq!(
             BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&0),
             true
         );
@@ -909,24 +914,73 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
         // 订单到期会不会被自动删除，并释放出票出来，是否还会重新匹配
 
-        run_to_block(5); // 订单只能剩下5，要到本era结束才能释放
-        assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
+        run_to_block(5);
+  
+        // 订单0是到期区块是5，订单1到期区块是21
+        assert_eq!(OrdersInService::<Test>::contains_key(1), false); // order1已经被马上release了
+        assert_eq!(OrdersInService::<Test>::get(2).votes, 5); // order2是保留的不变
 
-        // 已经进行了2个订单了。哪里出了问题。在第五个区块不够用户抽走，拆单了，拆成了 195和5两个订单
-        assert_eq!(OrderNextId::<Test>::get(), 2);
+        assert_eq!(OrdersInService::<Test>::contains_key(0), false);  // 原订单已经结束,已经不在订单列表里了
+        assert_eq!(OrdersInService::<Test>::get(2).block_num, 21);  // 创建时间1+21-1= 21，不受影响订单保留原来的结束时间
 
-        // 订单0是到期区块是6，订单1到期区块是21
-        assert_eq!(OrdersInService::<Test>::get(0).votes, 195);
-        assert_eq!(OrdersInService::<Test>::get(1).votes, 5);
+        // Bidder Bob有两个订单
+        assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 1);
+        assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&1), false); // 订单1已经被结束掉了
+        assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2), true);
 
-        assert_eq!(OrdersInService::<Test>::get(0).block_num, 6);
-        assert_eq!(OrdersInService::<Test>::get(1).block_num, 21);  // 创建时间1+21-1= 21
+        // TokenOrderROIList里边应该有两条订单，订单1和订单2
+        assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 1);
+        assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).contains(&(Permill::from_parts(60 *10_000), 1)), false);
+        assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).contains(&(Permill::from_parts(60 *10_000), 2)), true);
 
-        run_to_block(6); // 区块6供应 206个订单，数量足够，bob的订单0应该恢复成结束时间为 21
-        assert_eq!(OrdersInService::<Test>::get(0).votes, 195);  // 
-        assert_eq!(OrdersInService::<Test>::get(0).block_num, 21);  // 创建时间1+21-1= 21
-        assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);  // 所有在服务订单又变成了200
-        // // assert_eq!(OrdersInService::<Test>::get(0).votes, 200);
+        // 订单剩下5 votes，已强行释放出195个votes
+        assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 5);
+
+        // 本era(era 0)会有195张票强制性到期
+        assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
+        assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 5);  // era 3有5票到期要放
+
+
+        // 在第五个区块不够用户抽走，拆单了，拆成了 195和5两个订单，加上最早的订单号，一共是3个订单，对
+        assert_eq!(OrderNextId::<Test>::get(), 3);
+
+        // 本区块ForciblyUnbondOrdersInCurrentEra应该有一个数量为195的订单1记录了强制结束，强制结束区块为5,但在等待复活列表里的区块记录为原来的区块数字21
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 1);
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].votes, 195);
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].block_num, 21);
+
+        run_to_block(6); // 区块6供应 206个订单，数量足够，bob的订单1应该恢复成结束时间为 21
+ 
+        assert_eq!(OrdersInService::<Test>::contains_key(1), false);  // 原来的订单1已经在区块5结束的时候强行结束了
+        
+        assert_eq!(OrdersInService::<Test>::contains_key(3), true);  // 但因为区块6又有多余的votes出现，已经强行删除的订单重新复活，得到一个新的订单号3
+        assert_eq!(OrdersInService::<Test>::get(3).votes, 195);  // 新订单的票数为195
+        assert_eq!(OrdersInService::<Test>::get(3).block_num, 21);  // 新订单的到期时间为第21区块
+
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 0);  // 已经复活了，所以没有这条记录了
+
+        assert_eq!(OrderEndBlockNumMap::<Test>::get(21).len(), 2);
+        assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&2), true);
+        assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&3), true);
+        
+        // Bidder Bob有两个订单2和3
+        assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 2);
+        assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2), true);
+        assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&3), true);
+
+        // TokenOrderROIList里边应该有两条订单，订单2和复活订单3
+        assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 2);
+        assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).contains(&(Permill::from_parts(60 *10_000), 2)), true);
+        assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).contains(&(Permill::from_parts(60 *10_000), 3)), true);
+
+        assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);  // 在服务的票权有200个
+        assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);  // 本era没有票要释放
+        assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200);  // era 3有200票到期要放
+        assert_eq!(OrderNextId::<Test>::get(), 4);  // 复活订单用了订单号3
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 0);  // 已经没有强行关闭订单了
+
+        run_to_block(10);  // 只有10票available
+        
 
     });
 }
