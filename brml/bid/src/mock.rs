@@ -96,6 +96,7 @@ parameter_types! {
 	pub const MaximumVotes: u64 = 50_000;
 	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
 	pub const MaxProposalNumberForBidder: u32 = 5;
+	pub const ROIPermillPrecision: u32 = 100;
 }
 
 impl crate::Trait for Test {
@@ -113,6 +114,7 @@ impl crate::Trait for Test {
 	type MaximumVotes = MaximumVotes;
 	type BlocksPerYear = BlocksPerYear;
 	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+	type ROIPermillPrecision = ROIPermillPrecision;
 }
 
 impl assets::Trait for Test {
