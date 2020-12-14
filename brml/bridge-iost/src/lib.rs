@@ -13,14 +13,15 @@
 
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #[macro_use]
 extern crate alloc;
 
-use crate::transaction::TxOut;
+use crate::transaction::IostTxOut;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
-use core::{convert::TryFrom, fmt::Debug, ops::Div, str::FromStr};
+use core::{convert::TryFrom, fmt::Debug, iter::FromIterator, ops::Div, str::FromStr};
 use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
@@ -33,10 +34,11 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::{Action, ActionTransfer, Read};
+use iost_chain::{ActionTransfer, IostAction, Read};
+use lite_json::{parse_json, JsonValue, Serialize};
 use node_primitives::{
     AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
-    BridgeAssetTo, FetchConvertPool, TokenSymbol,
+    BridgeAssetTo, FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::offchain::StorageKind;
@@ -50,7 +52,6 @@ use sp_runtime::{
         TransactionValidity, ValidTransaction,
     },
 };
-use sp_std::if_std;
 use sp_std::prelude::*;
 
 mod transaction;
@@ -66,13 +67,27 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-    fn bridge_enable() -> Weight { Default::default() }
-    fn set_contract_accounts() -> Weight { Default::default() }
-    fn grant_crosschain_privilege() -> Weight { Default::default() }
-    fn remove_crosschain_privilege() -> Weight { Default::default() }
-    fn prove_action() -> Weight { Default::default() }
-    fn bridge_tx_report() -> Weight { Default::default() }
-    fn cross_to_iost(_: Weight) -> Weight { Default::default() }
+    fn bridge_enable() -> Weight {
+        Default::default()
+    }
+    fn set_contract_accounts() -> Weight {
+        Default::default()
+    }
+    fn grant_crosschain_privilege() -> Weight {
+        Default::default()
+    }
+    fn remove_crosschain_privilege() -> Weight {
+        Default::default()
+    }
+    fn prove_action() -> Weight {
+        Default::default()
+    }
+    fn bridge_tx_report() -> Weight {
+        Default::default()
+    }
+    fn cross_to_iost(_: Weight) -> Weight {
+        Default::default()
+    }
 }
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
@@ -80,6 +95,8 @@ enum TransactionType {
     Deposit,
     Withdraw,
 }
+
+pub type VersionId = u32;
 
 pub mod sr25519 {
     pub mod app_sr25519 {
@@ -169,6 +186,8 @@ decl_error! {
         InvalidChecksum256,
         /// Initialze producer schedule multiple times
         InitMultiTimeProducerSchedules,
+        /// IOST or vIOST not existed
+        TokenNotExist,
         /// Invalid token
         InvalidTokenForTrade,
         /// IOSTSymbolMismatch,
@@ -178,13 +197,13 @@ decl_error! {
         /// Who hasn't the permission to sign a cross-chain trade
         NoPermissionSignCrossChainTrade,
 
+        /// Cross transaction back enable or not
+        CrossChainBackDisabled,
         // DebugReachable,
         // DebugReachable_1,
         DebugReachableOther,
     }
 }
-
-pub type VersionId = u32;
 
 pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
     /// The identifier type for an authority.
@@ -198,46 +217,110 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
     type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
     /// The units in which we record balances.
-    type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
-    /// The arithmetic type of asset identifier.
-    type AssetId: Member
+    type Balance: Member
         + Parameter
         + AtLeast32Bit
         + Default
         + Copy
-        + From<TokenSymbol>
-        + Into<TokenSymbol>
-        + MaybeSerializeDeserialize;
+        + MaybeSerializeDeserialize
+        + core::fmt::Display;
 
-    /// The units in which we record costs.
-    type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
-    /// The units in which we record incomes.
-    type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+    /// The arithmetic type of asset identifier.
+    type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// The units in which we record asset precision.
     type Precision: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
     /// Bridge asset from another blockchain.
-    type BridgeAssetFrom: BridgeAssetFrom<Self::AccountId, Self::Precision, Self::Balance>;
-
-    type AssetTrait: AssetTrait<
-        Self::AssetId,
+    type BridgeAssetFrom: BridgeAssetFrom<
         Self::AccountId,
+        Self::AssetId,
+        Self::Precision,
         Self::Balance,
-        Self::Cost,
-        Self::Income,
     >;
 
+    type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
+
     /// Fetch convert pool from convert module
-    type FetchConvertPool: FetchConvertPool<TokenSymbol, Self::Balance>;
+    type FetchConvertPool: FetchConvertPool<Self::AssetId, Self::Balance>;
 
     /// A dispatchable call type.
     type Call: From<Call<Self>>;
 
     /// Set default weight
-    type WeightInfo : WeightInfo;
+    type WeightInfo: WeightInfo;
+}
+
+decl_event! {
+    pub enum Event<T>
+        where <T as system::Config>::AccountId,
+    {
+        InitSchedule(VersionId),
+        ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
+        ProveAction,
+        RelayBlock,
+        Deposit(Vec<u8>, AccountId), // IOST account => Bifrost AccountId
+        DepositFail,
+        Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => IOST account
+        WithdrawFail,
+        SentCrossChainTransaction,
+        FailToSendCrossChainTransaction,
+        SendTransactionSuccess,
+        SendTransactionFailure,
+        GrantedCrossChainPrivilege(AccountId),
+        RemovedCrossChainPrivilege(AccountId),
+        UnsignedTrx,
+    }
+}
+
+decl_storage! {
+    trait Store for Module<T: Config> as BridgeIost {
+        /// The current set of notary keys that may send bridge transactions to Iost chain.
+        NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
+
+        /// Config to enable/disable this runtime
+        BridgeEnable get(fn is_bridge_enable): bool = true;
+
+        /// Cross transaction back enable or not
+        CrossChainBackEnable get(fn is_cross_back_enable): bool = true;
+
+        /// Current pending schedule version
+        PendingScheduleVersion: VersionId;
+
+        /// Transaction sent to Eos blockchain
+        BridgeTxOuts get(fn bridge_tx_outs): Vec<IostTxOut<T::AccountId, T::AssetId>>;
+
+        /// Account where Eos bridge contract deployed, (Account, Signature threshold)
+        BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
+
+        /// Who has the privilege to call transaction between Bifrost and EOS
+        CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
+        /// How many address has the privilege sign transaction between EOS and Bifrost
+        AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
+
+        /// Set IOST asset id
+        IostAssetId get(fn iost_asset_id) config(): T::AssetId;
+    }
+    add_extra_genesis {
+        build(|config: &GenesisConfig<T>| {
+            BridgeContractAccount::put(config.bridge_contract_account.clone());
+
+            NotaryKeys::<T>::put(config.notary_keys.clone());
+
+            // grant privilege to sign transaction between IOST and Bifrost
+            for (who, privilege) in config.cross_chain_privilege.iter() {
+                <CrossChainPrivilege<T>>::insert(who, privilege);
+            }
+            // update to AllAddressesHaveCrossChainPrivilege
+            let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
+            <AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
+                all.extend(all_addresses.into_iter());
+            });
+            // set IOST asset id
+            IostAssetId::<T>::put(config.iost_asset_id);
+        });
+    }
+
 }
 
 decl_module! {
@@ -251,6 +334,13 @@ decl_module! {
             ensure_root(origin)?;
 
             BridgeEnable::put(enable);
+        }
+
+        #[weight = T::DbWeight::get().writes(1)]
+        fn cross_chain_back_enable(origin, enable: bool) {
+            ensure_root(origin)?;
+
+            CrossChainBackEnable::put(enable);
         }
 
         #[weight = (T::WeightInfo::set_contract_accounts(), DispatchClass::Normal, Pays::No)]
@@ -294,70 +384,20 @@ decl_module! {
         #[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
         fn prove_action(
             origin,
-            action: Action,
-            // action_receipt: ActionReceipt,
-            // action_merkle_paths: Vec<Checksum256>,
-            // merkle: IncrementalMerkle,
-            // block_headers: Vec<SignedBlockHeader>,
-            // block_ids_list: Vec<Vec<Checksum256>>,
-            // trx_id: Checksum256
+            action: IostAction,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
-            // ensure!(CrossChainPrivilege::<T>::get(&origin), DispatchError::Other("You're not permitted to execute this call."));
             ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
             // ensure this transaction is unique, and ensure no duplicated transaction
-            // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), "This is a duplicated transaction");
+            // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
             // ensure action is what we want
             // ensure!(action.action_name == "transfer", "This is an invalid action to Bifrost");
 
-            ensure!(BridgeEnable::get(), "This call is not enable now!");
-            // ensure!(
-            // 	!block_headers.is_empty(),
-            // 	"The signed block headers cannot be empty."
-            // );
-            // ensure!(
-            // 	block_ids_list.len() ==  block_headers.len(),
-            // 	"The block ids list cannot be empty."
-            // );
-            //
-            // let action_hash = action.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionHash)?;
-            // ensure!(
-            // 	action_hash == action_receipt.act_digest,
-            // 	"current action hash isn't equal to act_digest from action_receipt."
-            // );
-            //
-            // let leaf = action_receipt.digest().map_err(|_| Error::<T>::ErrorOnCalculationActionReceiptHash)?;
-            //
-            // let block_under_verification = &block_headers[0];
-            // ensure!(
-            // 	verify_proof(&action_merkle_paths, leaf, block_under_verification.block_header.action_mroot),
-            // 	"failed to prove action."
-            // );
-            //
-            // let (schedule_hash, producer_schedule) = Self::get_schedule_hash_and_public_key(block_headers[0].block_header.new_producers.as_ref())?;
-            // // this is for testing due to there's a default producer schedule on standalone eos node.
-            // let schedule_hash = {
-            // 	if producer_schedule.version == 0 {
-            // 		ProducerSchedule::default().schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?
-            // 	} else {
-            // 		schedule_hash
-            // 	}
-            // };
-            //
-            // ensure!(
-            // 	Self::verify_block_headers(merkle, &schedule_hash, &producer_schedule, &block_headers, block_ids_list).is_ok(),
-            // 	"Failed to verify blocks."
-            // );
-            //
-            // // save proves for this transaction
-            // BridgeActionReceipt::insert(&action_receipt, &action);
-            //
             Self::deposit_event(RawEvent::ProveAction);
 
             let action_transfer = Self::get_action_transfer_from_action(&action)?;
-
             let cross_account = BridgeContractAccount::get().0;
             // withdraw operation, Bifrost => IOST
             if cross_account == action_transfer.from.to_string().into_bytes() {
@@ -389,7 +429,7 @@ decl_module! {
         }
 
         #[weight = (T::WeightInfo::bridge_tx_report(), DispatchClass::Normal, Pays::No)]
-        fn bridge_tx_report(origin, tx_list: Vec<TxOut<T::AccountId>>) -> DispatchResult {
+        fn bridge_tx_report(origin, tx_list: Vec<IostTxOut<T::AccountId, T::AssetId>>) -> DispatchResult {
             ensure_none(origin)?;
 
             BridgeTxOuts::<T>::put(tx_list);
@@ -401,44 +441,36 @@ decl_module! {
         fn cross_to_iost(
             origin,
             to: Vec<u8>,
-            token_symbol: TokenSymbol,
             #[compact] amount: T::Balance,
             memo: Vec<u8>
         ) {
             let origin = system::ensure_signed(origin)?;
-            let iost_amount = amount;
-            debug::info!(target: "bridge-iost", "A offchain worker started. {:?}", token_symbol);
-            // check vtoken id exist or not
-            ensure!(T::AssetTrait::token_exists(token_symbol), "this token doesn't exist.");
-            // ensure redeem IOST instead of any others tokens like vIOST, EOS, DOT, KSM etc
-            ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
 
-            //
-            let token = T::AssetTrait::get_token(token_symbol);
+            ensure!(CrossChainBackEnable::get(), Error::<T>::CrossChainBackDisabled);
+
+            let asset_id = Self::iost_asset_id();
+            let token = T::AssetTrait::get_token(Self::iost_asset_id());
             let symbol_code = token.symbol;
             let symbol_precise = token.precision;
-            //
-            let balance = T::AssetTrait::get_account_asset(token_symbol, &origin).balance;
-            ensure!(token_symbol == TokenSymbol::IOST, Error::<T>::InvalidTokenForTrade);
-            ensure!(symbol_precise <= 12, "symbol precise cannot bigger than 12.");
-            let amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
-            ensure!(balance >= amount, "amount should be less than or equal to origin balance");
 
+            //
+            let balance = T::AssetTrait::get_account_asset(asset_id, &origin).balance;
 
             let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise as u32));
             let bridge_asset = BridgeAssetBalance {
                 symbol: asset_symbol,
-                amount: iost_amount,
+                amount: amount,
                 memo,
                 from: origin.clone(),
-                token_symbol
+                asset_id
             };
 
             match Self::bridge_asset_to(to, bridge_asset) {
                 Ok(_) => {
                    debug::info!(target: "bridge-iost", "sent transaction to IOST node.");
                     // locked balance until trade is verified
-                   // Self::deposit_event(RawEvent::SendTransactionSuccess);
+                    T::AssetTrait::lock_asset(&origin, asset_id, amount);
+                   Self::deposit_event(RawEvent::SendTransactionSuccess);
                 }
                 Err(e) => {
                     debug::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
@@ -478,95 +510,41 @@ decl_module! {
     }
 }
 
-decl_event! {
-    pub enum Event<T>
-        where <T as system::Config>::AccountId,
-    {
-        InitSchedule(VersionId),
-        ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
-        ProveAction,
-        RelayBlock,
-        Deposit(Vec<u8>, AccountId), // IOST account => Bifrost AccountId
-        DepositFail,
-        Withdraw(AccountId, Vec<u8>), // Bifrost AccountId => IOST account
-        WithdrawFail,
-        SendTransactionSuccess,
-        SendTransactionFailure,
-        GrantedCrossChainPrivilege(AccountId),
-        RemovedCrossChainPrivilege(AccountId),
-    }
-}
-
-decl_storage! {
-    trait Store for Module<T: Config> as BridgeIost {
-        /// The current set of notary keys that may send bridge transactions to Iost chain.
-        NotaryKeys get(fn notary_keys) config(): Vec<T::AccountId>;
-
-        /// Config to enable/disable this runtime
-        BridgeEnable get(fn is_bridge_enable): bool = true;
-
-        /// Eos producer list and hash which in specific version id
-        // ProducerSchedules: map hasher(blake2_128_concat) VersionId => (Vec<ProducerAuthority>, Checksum256);
-
-        /// Initialize a producer schedule while starting a node.
-        // InitializeSchedule get(fn producer_schedule): ProducerAuthoritySchedule;
-
-        /// Save all unique transactions
-        /// Every transaction has different action receipt, but can have the same action
-        // BridgeActionReceipt: map hasher(blake2_128_concat) ActionReceipt => Action;
-
-        /// Current pending schedule version
-        PendingScheduleVersion: VersionId;
-
-        /// Transaction sent to Eos blockchain
-        BridgeTxOuts get(fn bridge_tx_outs): Vec<TxOut<T::AccountId>>;
-
-        /// Account where Eos bridge contract deployed, (Account, Signature threshold)
-        BridgeContractAccount get(fn bridge_contract_account) config(): (Vec<u8>, u8);
-
-        /// Who has the privilege to call transaction between Bifrost and EOS
-        CrossChainPrivilege get(fn cross_chain_privilege) config(): map hasher(blake2_128_concat) T::AccountId => bool;
-        /// How many address has the privilege sign transaction between EOS and Bifrost
-        AllAddressesHaveCrossChainPrivilege get(fn all_crosschain_privilege) config(): Vec<T::AccountId>;
-    }
-    add_extra_genesis {
-        build(|config: &GenesisConfig<T>| {
-            BridgeContractAccount::put(config.bridge_contract_account.clone());
-
-            NotaryKeys::<T>::put(config.notary_keys.clone());
-            //
-            // let schedule = ProducerAuthoritySchedule::default();
-            // let schedule_hash = schedule.schedule_hash();
-            // assert!(schedule_hash.is_ok());
-            // ProducerSchedules::insert(schedule.version, (schedule.producers, schedule_hash.unwrap()));
-            // PendingScheduleVersion::put(schedule.version);
-            //
-            // grant privilege to sign transaction between EOS and Bifrost
-            for (who, privilege) in config.cross_chain_privilege.iter() {
-                <CrossChainPrivilege<T>>::insert(who, privilege);
-            }
-            // update to AllAddressesHaveCrossChainPrivilege
-            let all_addresses: Vec<T::AccountId> = config.cross_chain_privilege.iter().map(|x| x.0.clone()).collect();
-            <AllAddressesHaveCrossChainPrivilege<T>>::mutate(move |all| {
-                all.extend(all_addresses.into_iter());
-            });
-        });
-    }
-
-}
-
 impl<T: Config> Module<T> {
-    fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error<T>> {
-        let action_transfer =
-            ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
+    fn get_action_transfer_from_action(act: &IostAction) -> Result<ActionTransfer, Error<T>> {
+        let data = core::str::from_utf8(&act.data).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
+        let mut action_transfer: ActionTransfer = Default::default();
+        let node_info = parse_json(data).map_err(|_| Error::<T>::LiteJsonError)?;
+
+        match node_info {
+            JsonValue::Array(ref json) => {
+                for (i, item) in json.iter().enumerate() {
+                    match item {
+                        JsonValue::String(ref chars) => {
+                            let v = String::from_iter(chars.iter());
+                            match i {
+                                0 => action_transfer.token_type = v,
+                                1 => action_transfer.from = v,
+                                2 => action_transfer.to = v,
+                                3 => action_transfer.amount = v,
+                                4 => action_transfer.memo = v,
+                                _ => (),
+                            }
+                        }
+                        _ => return Err(Error::<T>::IOSTRpcError),
+                    }
+                }
+            }
+            _ => return Err(Error::<T>::IOSTRpcError),
+        }
         Ok(action_transfer)
     }
 
     fn transaction_from_iost_to_bifrost(
         action_transfer: &ActionTransfer,
     ) -> Result<T::AccountId, Error<T>> {
-        // check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
+        // check memo, example like "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:IOST", the formatter: {receiver}@{chain}:{token_symbol}
         let split_memo = action_transfer
             .memo
             .as_str()
@@ -582,12 +560,15 @@ impl<T: Config> Module<T> {
         let account_data = Self::get_account_data(split_memo[0])?;
         let target = Self::into_account(account_data)?;
 
+        let iost_id = Self::iost_asset_id();
+        let v_iost_id = T::AssetTrait::get_pair(iost_id).ok_or(Error::<T>::TokenNotExist)?;
+
         let token_symbol = {
             match split_memo.len() {
-                2 => TokenSymbol::vIOST,
+                2 => v_iost_id,
                 3 => match split_memo[2] {
-                    "" | "vIOST" => TokenSymbol::vIOST,
-                    "IOST" => TokenSymbol::IOST,
+                    "" | "vIOST" => v_iost_id,
+                    "IOST" => iost_id,
                     _ => {
                         debug::error!("A invalid token type, default token type will be vtoken");
                         return Err(Error::<T>::InvalidMemo);
@@ -599,27 +580,27 @@ impl<T: Config> Module<T> {
         // todo, vIOST or IOST, all asset will be added to IOST asset, instead of vIOST or IOST
         // but in the future, we will support both token, let user to which token he wants to get
         // according to the convert price
-        let token_symbol = TokenSymbol::IOST;
+        let token = T::AssetTrait::get_token(Self::iost_asset_id());
+        let symbol_code = token.symbol;
+        let symbol_precise = token.precision;
+        let align_precision = 12 - symbol_precise;
 
-        // let symbol = action_transfer.quantity.symbol;
-        let symbol_code = "IOST".to_string().into_bytes();
-        let symbol_precision = 8 as u16;
-        // // ensure symbol and precision matched
-        let (_token_symbol, _) = token_symbol.paired_token();
-        let existed_token_symbol = T::AssetTrait::get_token(_token_symbol);
-        ensure!(
-            existed_token_symbol.symbol == symbol_code
-                && existed_token_symbol.precision == symbol_precision,
-            Error::<T>::IOSTSymbolMismatch
-        );
-
-        let token_balances = 100 as u128;
-        // todo, according convert price to save as vIOST
-        let vtoken_balances: T::Balance = TryFrom::<u128>::try_from(token_balances)
+        let transfer_amount = action_transfer
+            .amount
+            .parse::<f64>()
             .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
-        // issue asset to target
-        T::AssetTrait::asset_issue(token_symbol, &target, vtoken_balances);
+        let token_balances =
+            (transfer_amount * 10u128.pow(8) as f64) as u128 * 10u128.pow(align_precision as u32);
+
+        let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances)
+            .map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+        // todo, according convert price to save as vIOST
+        // let vtoken_balances: T::Balance =
+        //     TryFrom::<u128>::try_from(11).map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+        T::AssetTrait::asset_issue(iost_id, &target, new_balance);
 
         Ok(target)
     }
@@ -628,27 +609,43 @@ impl<T: Config> Module<T> {
         action_transfer: &ActionTransfer,
     ) -> Result<T::AccountId, Error<T>> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
+        let pending_tx_id = "".to_string();
 
         for trx in bridge_tx_outs.iter() {
             match trx {
-                // TxOut::Processing{ tx_id, multi_sig_tx } if pending_trx_id.eq(tx_id) => {
-                //     let target = &multi_sig_tx.from;
-                //     let token_symbol = multi_sig_tx.token_symbol;
-                //
-                //     let all_vtoken_balances = T::AssetTrait::get_account_asset(token_symbol, &target).balance;
-                //     let token_balances = action_transfer.quantity.amount as usize;
-                //     let vtoken_balances = T::Balance::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
-                //
-                //     if all_vtoken_balances.lt(&vtoken_balances) {
-                //         debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
-                //         return Err(Error::<T>::InsufficientBalance);
-                //     }
-                //
-                //     // the trade is verified, unlock asset
-                //     T::AssetTrait::unlock_asset(&target, token_symbol, vtoken_balances);
-                //
-                //     return Ok(target.clone());
-                // }
+                IostTxOut::Processing {
+                    tx_id,
+                    multi_sig_tx,
+                } => {
+                    let tx_id = String::from_utf8(tx_id.to_vec())
+                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
+                    // if pending_tx_id.ne(tx_id.as_str()) {
+                    //     continue;
+                    // }
+                    let target = &multi_sig_tx.from;
+                    let token_symbol = multi_sig_tx.token_type;
+                    let asset_id = Self::iost_asset_id();
+                    let all_vtoken_balances =
+                        T::AssetTrait::get_account_asset(asset_id, &target).balance;
+
+                    // let amount = action_transfer.amount.clone();
+                    let token_balances: u128 = action_transfer
+                        .amount
+                        .parse::<u128>()
+                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
+                    let vtoken_balances = TryFrom::<u128>::try_from(token_balances)
+                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
+
+                    if all_vtoken_balances.lt(&vtoken_balances) {
+                        debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+                        return Err(Error::<T>::InsufficientBalance);
+                    }
+
+                    // the trade is verified, unlock asset
+                    T::AssetTrait::unlock_asset(&target, asset_id, vtoken_balances);
+
+                    return Ok(target.clone());
+                }
                 _ => continue,
             }
         }
@@ -678,10 +675,10 @@ impl<T: Config> Module<T> {
     }
 
     /// generate transaction for transfer amount to
-    fn tx_transfer_to<P, B>(
+    fn tx_transfer_to<P, B: AtLeast32Bit + Copy + core::fmt::Display>(
         raw_to: Vec<u8>,
-        bridge_asset: BridgeAssetBalance<T::AccountId, P, B>,
-    ) -> Result<TxOut<T::AccountId>, Error<T>>
+        bridge_asset: BridgeAssetBalance<T::AccountId, T::AssetId, P, B>,
+    ) -> Result<IostTxOut<T::AccountId, T::AssetId>, Error<T>>
     where
         P: AtLeast32Bit + Copy,
         B: AtLeast32Bit + Copy,
@@ -690,17 +687,16 @@ impl<T: Config> Module<T> {
         let memo = core::str::from_utf8(&bridge_asset.memo)
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
-        // let amount = Self::convert_to_iost_asset::<T::AccountId, P, B>(&bridge_asset)?;
-        let amount = "1";
-
-        let tx_out = TxOut::<T::AccountId>::init(
+        // let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+        let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(15))) as i64;
+        let tx_out = IostTxOut::<T::AccountId, T::AssetId>::init(
             raw_from,
             raw_to,
-            String::from(amount),
+            amount.to_string(),
             threshold,
             &memo,
             bridge_asset.from,
-            bridge_asset.token_symbol,
+            bridge_asset.asset_id,
         )?;
         BridgeTxOuts::<T>::append(&tx_out);
 
@@ -721,7 +717,7 @@ impl<T: Config> Module<T> {
             .map(|bto| {
                 match bto {
                     // generate raw transactions
-                    TxOut::<T::AccountId>::Initial(_) => {
+                    IostTxOut::<T::AccountId, T::AssetId>::Initial(_) => {
                         match bto.clone().generate::<T>(node_url.as_str()) {
                             Ok(generated_bto) => {
                                 has_change.set(true);
@@ -740,15 +736,11 @@ impl<T: Config> Module<T> {
             })
             .map(|bto| {
                 match bto {
-                    TxOut::<T::AccountId>::Generated(_) => {
+                    IostTxOut::<T::AccountId, T::AssetId>::Generated(_) => {
                         let author = <pallet_authorship::Module<T>>::author();
                         let mut ret = bto.clone();
                         let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
-                        debug::info!("author {:?}", author);
 
-                        // if let Some(_) = Self::local_authority_keys()
-                        //     .find(|key| *key == author.clone().into())
-                        // {
                         match bto.sign::<T>(decoded_sk, account_name.as_str()) {
                             Ok(signed_bto) => {
                                 has_change.set(true);
@@ -757,7 +749,6 @@ impl<T: Config> Module<T> {
                             }
                             Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
                         }
-                        // }
                         ret
                     },
                     _ => bto,
@@ -765,11 +756,11 @@ impl<T: Config> Module<T> {
             })
             .map(|bto| {
                 match bto {
-                    TxOut::<T::AccountId>::Signed(_) => {
+                    IostTxOut::<T::AccountId, T::AssetId>::Signed(_) => {
                         match bto.clone().send::<T>(node_url.as_str()) {
                             Ok(sent_bto) => {
                                 has_change.set(true);
-                                debug::info!(target: "bridge-eos", "bto.send {:?}", sent_bto,);
+                                debug::info!(target: "bridge-iost", "bto.send {:?}", sent_bto,);
                                 debug::info!("bto.send");
                                 sent_bto
                             }
@@ -783,6 +774,17 @@ impl<T: Config> Module<T> {
                 }
             }).collect::<Vec<_>>();
 
+        if has_change.get() {
+            // BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
+
+            let call = Call::bridge_tx_report(bridge_tx_outs.clone());
+            match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
+                Ok(_) => {
+                    debug::info!(target: "bridge-iost", "Call::bridge_tx_report {:?}", bridge_tx_outs)
+                }
+                Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
+            }
+        }
         Ok(())
     }
     // fn convert_to_iost_asset<A, P, B>(
@@ -825,24 +827,43 @@ impl<T: Config> Module<T> {
     }
 }
 
-impl<T: Config> BridgeAssetTo<T::AccountId, T::Precision, T::Balance> for Module<T> {
+impl<T: Config> BridgeAssetTo<T::AccountId, T::AssetId, T::Precision, T::Balance> for Module<T> {
     type Error = crate::Error<T>;
     fn bridge_asset_to(
         target: Vec<u8>,
-        bridge_asset: BridgeAssetBalance<T::AccountId, T::Precision, T::Balance>,
+        bridge_asset: BridgeAssetBalance<T::AccountId, T::AssetId, T::Precision, T::Balance>,
     ) -> Result<(), Self::Error> {
         let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
         Ok(())
     }
 
-    fn redeem(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+    fn redeem(_: T::AssetId, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn stake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+    fn stake(_: T::AssetId, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
     }
-    fn unstake(_: TokenSymbol, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+    fn unstake(_: T::AssetId, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
         Ok(())
+    }
+}
+
+#[allow(deprecated)]
+impl<T: Config> frame_support::unsigned::ValidateUnsigned for Module<T> {
+    type Call = Call<T>;
+
+    fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
+        if let Call::bridge_tx_report(_) = call {
+            let now_block = <frame_system::Module<T>>::block_number().saturated_into::<u64>();
+            ValidTransaction::with_tag_prefix("BridgeIost")
+                .priority(TransactionPriority::max_value())
+                .and_provides(vec![(now_block).encode()])
+                .longevity(TransactionLongevity::max_value())
+                .propagate(true)
+                .build()
+        } else {
+            InvalidTransaction::Call.into()
+        }
     }
 }
