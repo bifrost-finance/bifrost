@@ -24,7 +24,7 @@ use bifrost_runtime::{
 	constants::currency::{BNCS as BNC, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
 	BridgeEosConfig,
-	// BridgeIostConfig,
+	BridgeIostConfig,
 	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
@@ -197,7 +197,7 @@ pub fn testnet_genesis(
 		pallet_staking: Some(StakingConfig {
 			validator_count: 30,
 			minimum_validator_count: 3,
-			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
+			stakers: initial_authorities[..].iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
@@ -281,13 +281,14 @@ pub fn testnet_genesis(
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 			eos_asset_id: 6,
 		}),
-		// brml_bridge_iost: Some(BridgeIostConfig {
-		// 	bridge_contract_account: (b"lispczz4".to_vec(), 1),
-		// 	notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-		// 	// alice and bob have the privilege to sign cross transaction
-		// 	cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-		// 	all_crosschain_privilege: Vec::new(),
-		// }),
+		brml_bridge_iost: Some(BridgeIostConfig {
+			bridge_contract_account: (b"bifrost".to_vec(), 1),
+			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
+			// alice and bob have the privilege to sign cross transaction
+			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
+			all_crosschain_privilege: Vec::new(),
+			iost_asset_id: 8,
+		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
