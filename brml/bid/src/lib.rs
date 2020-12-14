@@ -779,14 +779,6 @@ impl<T: Trait> Module<T> {
 		Ok(new_order_id)
 	}
 
-	/// delete an order in service. Set the to-be-deleted order's end block time to be current block.
-	fn delete_order_in_service(vtoken: T::AssetId, order_id: T::BiddingOrderId) -> DispatchResult {
-		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
-		Self::set_order_end_block(order_id, current_block_number)?;
-		Self::deposit_event(RawEvent::DeleteOrderSuccess(vtoken, order_id));
-		Ok(())
-	}
-
 	/// split an order in service into two orders with only votes_matched field different.
 	/// order1 gets the original order id. order2 gets a new order id.
 	fn split_order_in_service(
@@ -802,7 +794,8 @@ impl<T: Trait> Module<T> {
 		let order2_votes = original_order.votes.saturating_sub(order1_votes);
 
 		// delete the original order
-		Self::delete_order_in_service(original_order.token_id, order_id)?;
+		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+		Self::delete_an_order(order_id, current_block_number)?;
 
 		// create two new orders
 		let order1_id =
@@ -1052,6 +1045,19 @@ impl<T: Trait> Module<T> {
 		order_id: T::BiddingOrderId,
 		current_block_num: T::BlockNumber,
 	) -> DispatchResult {
+
+		Self::delete_an_order(order_id, current_block_num)?;
+		Self::settle_slash_deposit_for_an_order(order_id)?;  // dealing with slash deposit.
+
+		Ok(())
+	}
+
+
+	///  delete the other storages related to an order.
+	fn delete_an_order(
+		order_id: T::BiddingOrderId,
+		current_block_num: T::BlockNumber,
+	) -> DispatchResult {
 		ensure!(
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
@@ -1090,9 +1096,20 @@ impl<T: Trait> Module<T> {
 			},
 		);
 
-		// Below is code dealing with slash deposit.
+		Self::deposit_event(RawEvent::DeleteOrderSuccess(order_detail.token_id, order_id));
 
-		// release the remaining slash deposit to the bidder
+		Ok(())
+	}
+
+	/// release the remaining slash deposit to the bidder
+	fn settle_slash_deposit_for_an_order(order_id: T::BiddingOrderId) -> DispatchResult {
+		ensure!(
+			OrdersInService::<T>::contains_key(order_id),
+			Error::<T>::OrderNotExist
+		); //ensure the order exists
+
+		let order_detail = OrdersInService::<T>::get(&order_id);
+
 		let original_slash_deposit =
 			Self::calculate_order_slash_deposit(order_detail.token_id, order_detail.votes)?;
 		let mut slashed_amount = Zero::zero();
@@ -1121,6 +1138,7 @@ impl<T: Trait> Module<T> {
 
 		Ok(())
 	}
+
 
 	// *********************************************************
 	// Below is info that needs to be used by or queried from other pallets.
