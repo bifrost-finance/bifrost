@@ -19,7 +19,10 @@
 #![cfg(test)]
 
 use frame_system as system;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types};
+use frame_support::{
+	impl_outer_origin, impl_outer_event, parameter_types,
+};
+
 use sp_core::H256;
 use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 
@@ -33,12 +36,8 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
+		pallet_balances<T>,
 	}
-}
-
-
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
 }
 
 impl system::Config for Test {
@@ -53,7 +52,7 @@ impl system::Config for Test {
 	type Header = Header;
 	type Event = TestEvent;
 	type Version = ();
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type DbWeight = ();
@@ -70,12 +69,33 @@ impl system::Config for Test {
 }
 
 parameter_types! {
-	pub const ConvertDuration: u64 = 24 * 60 * 10;
+	pub const PriceHalfBlockInterval: u32 = 10_519_200;
+	pub const MaxIssueBlockInterval: u32 = 50;
+	pub const MaxTxAmount: u32 = 1_000;
+	pub const PledgeBaseAmount: u32 = 512;
+	pub const MaxLocks: u32 = 1024;
 }
+pub(crate) type Balance = u128;
+impl pallet_balances::Config for Test {
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = TestEvent;
+	type ExistentialDeposit = ();
+	type AccountStore = FrameSystem;
+	type WeightInfo = ();
+	type MaxLocks = MaxLocks;
+}
+
+pub type Balances = pallet_balances::Module<Test>;
+pub type FrameSystem = frame_system::Module<Test>;
 
 impl crate::Config for Test {
 	type AssetId = u32;
-	type Balance = u64;
+	type Currency = Balances;
+	type PriceHalfBlockInterval = PriceHalfBlockInterval;
+	type MaxIssueBlockInterval = MaxIssueBlockInterval;
+	type MaxTxAmount = MaxTxAmount;
+	type PledgeBaseAmount = PledgeBaseAmount;
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {

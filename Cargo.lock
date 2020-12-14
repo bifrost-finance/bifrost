@@ -823,6 +823,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
+ "pallet-balances",
  "parity-scale-codec",
  "serde",
  "sp-core",

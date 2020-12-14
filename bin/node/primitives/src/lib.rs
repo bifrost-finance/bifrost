@@ -422,7 +422,8 @@ pub trait MintTrait<AccountId, Balance, AssetId> {
 	fn init_v_token_score(asset_id: AssetId, score: Balance);
 	fn mint_bnc_by_weight(minter: AccountId, mint_amount: Balance, asset_id: AssetId) -> Result<(), Self::Error>;
 	fn issue_bnc_by_weight() -> Result<(), Self::Error>;
-	fn adjust_v_token_weight(asset_id: AssetId, pledge_amount: Balance) -> Result<(), Self::Error>;
+	fn improve_v_token_weight(asset_id: AssetId, pledge_amount: Balance) -> Result<(), Self::Error>;
+	fn withdraw_v_token_pledge(asset_id: AssetId, pledge_amount: Balance) -> Result<(), Self::Error>;
 }
 
 impl<A, B: Default, C> MintTrait<A, B, C> for () {
@@ -434,7 +435,8 @@ impl<A, B: Default, C> MintTrait<A, B, C> for () {
 	fn init_v_token_score(_: C, _: B) {}
 	fn mint_bnc_by_weight(_: A, _: B, _: C) -> Result<(), Self::Error> { Ok(()) }
 	fn issue_bnc_by_weight() -> Result<(), Self::Error> { Ok(()) }
-	fn adjust_v_token_weight(_: C, _: B) -> Result<(), Self::Error> { Ok(()) }
+	fn improve_v_token_weight(_: C, _: B) -> Result<(), Self::Error> { Ok(()) }
+	fn withdraw_v_token_pledge(_: C, _: B) -> Result<(), Self::Error> { Ok(()) }
 }
 
 pub trait RewardTrait<Balance, AccountId, AssetId> {
