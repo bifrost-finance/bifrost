@@ -75,6 +75,7 @@ parameter_types! {
 	pub const PledgeBaseAmount: u32 = 512;
 	pub const MaxLocks: u32 = 1024;
 }
+
 pub(crate) type Balance = u128;
 impl pallet_balances::Config for Test {
 	type Balance = Balance;

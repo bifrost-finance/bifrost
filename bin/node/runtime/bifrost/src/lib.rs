@@ -972,9 +972,20 @@ impl brml_staking_reward::Config for Runtime {
 	type AssetId = AssetId;
 }
 
+parameter_types! {
+	pub const PriceHalfBlockInterval: u32 = 10_519_200;
+	pub const MaxIssueBlockInterval: u32 = 50;
+	pub const MaxTxAmount: u32 = 1_000;
+	pub const PledgeBaseAmount: u32 = 512;
+}
+
 impl brml_vtoken_mint::Config for Runtime {
 	type AssetId = AssetId;
-	type Balance = Balance;
+	type Currency = Balances;
+	type PriceHalfBlockInterval = PriceHalfBlockInterval;
+	type MaxIssueBlockInterval = MaxIssueBlockInterval;
+	type MaxTxAmount = MaxTxAmount;
+	type PledgeBaseAmount = PledgeBaseAmount;
 }
 
 // bifrost runtime end
