@@ -946,8 +946,8 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
         // 本区块ForciblyUnbondOrdersInCurrentEra应该有一个数量为195的订单1记录了强制结束，强制结束区块为5,但在等待复活列表里的区块记录为原来的区块数字21
         assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 1);
-        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].votes, 195);
-        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].block_num, 21);
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].1.votes, 195);
+        assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].1.block_num, 21);
 
         run_to_block(6); // 区块6供应 206个订单，数量足够，bob的订单1应该恢复成结束时间为 21
  
