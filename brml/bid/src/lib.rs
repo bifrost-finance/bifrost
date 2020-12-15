@@ -336,10 +336,13 @@ decl_module! {
 			ensure!(bidder_id == canceler, Error::<T>::NotProposalOwner);
 
 			BiddingQueues::<T>::mutate(vtoken, |bidding_proposal_vec| {
-				if let Ok(index) =
-				bidding_proposal_vec.binary_search_by(|(_roi, pro_id)| pro_id.cmp(&proposal_id))
-				{
-					bidding_proposal_vec.remove(index);
+				let mut i = 0;
+				for (_prop_roi, prop_id) in bidding_proposal_vec.iter() {
+					if *prop_id == proposal_id {
+						bidding_proposal_vec.remove(i);
+						break;
+					}
+					i = i.saturating_add(1);
 				}
 			});
 
@@ -825,7 +828,7 @@ impl<T: Trait> Module<T> {
 
 		let original_order = OrdersInService::<T>::get(order_id);
 		let order2_votes = original_order.votes.saturating_sub(order1_votes);
-
+		println!("我要split order {:?}啦！", order_id);
 		// delete the original order
 		Self::delete_an_order(order_id)?;
 
@@ -1092,19 +1095,20 @@ impl<T: Trait> Module<T> {
 
 	///  delete the other storages related to an order.
 	fn delete_an_order(order_id: T::BiddingOrderId) -> DispatchResult {
+		
 		ensure!(
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
 		); //ensure the order exists
-
+		
 		let order_detail = OrdersInService::<T>::get(&order_id);
-
+		
 		OrderEndBlockNumMap::<T>::mutate(order_detail.block_num, |block_num_order_vec| {
 			if let Ok(index) = block_num_order_vec.binary_search(&order_id) {
 				block_num_order_vec.remove(index);
 			};
 		});
-
+		
 		BidderTokenOrdersInService::<T>::mutate(
 			&order_detail.bidder_id,
 			order_detail.token_id,
@@ -1115,10 +1119,13 @@ impl<T: Trait> Module<T> {
 			},
 		);
 		TokenOrderROIList::<T>::mutate(&order_detail.token_id, |order_roi_vec| {
-			if let Ok(index) =
-				order_roi_vec.binary_search_by(|(_votes, ord_id)| ord_id.cmp(&order_id))
-			{
-				order_roi_vec.remove(index);
+			let mut i = 0;
+			for (_ord_roi, ord_id) in order_roi_vec.iter() {
+				if *ord_id == order_id {
+					order_roi_vec.remove(i);
+					break;
+				}
+				i = i.saturating_add(1);
 			}
 		});
 
