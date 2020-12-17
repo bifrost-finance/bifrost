@@ -48,7 +48,7 @@ cargo build --release
 ```
 3. Generate genesis wasm file.
 ```
-./target/release/bifrost export-genesis-wasm --raw --chain rococo-local > para-600-state
+./target/release/bifrost export-genesis-wasm --raw --chain rococo-local > para-600-wasm
 ```
 4. Start a para chain node with parachain id 600.
 ```shell
