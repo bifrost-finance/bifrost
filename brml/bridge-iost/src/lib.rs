@@ -21,32 +21,29 @@ extern crate alloc;
 use crate::transaction::IostTxOut;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
-use core::{convert::TryFrom, fmt::Debug, iter::FromIterator, ops::Div, str::FromStr};
+use core::{convert::TryFrom, fmt::Debug, iter::FromIterator};
 use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
     ensure,
     traits::Get,
     weights::{DispatchClass, Pays, Weight},
-    IterableStorageMap, Parameter, StorageValue,
+    Parameter, StorageValue,
 };
 use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::{ActionTransfer, IostAction, Read};
-use lite_json::{parse_json, JsonValue, Serialize};
+use iost_chain::{ActionTransfer, IostAction};
+use lite_json::{parse_json, JsonValue};
 use node_primitives::{
     AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
     BridgeAssetTo, FetchConvertPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::offchain::StorageKind;
-use sp_runtime::print;
 use sp_runtime::{
-    traits::{
-        AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating, Zero,
-    },
+    traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating},
     transaction_validity::{
         InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
         TransactionValidity, ValidTransaction,
@@ -455,6 +452,9 @@ decl_module! {
 
             //
             let balance = T::AssetTrait::get_account_asset(asset_id, &origin).balance;
+            ensure!(symbol_precise <= 12, Error::<T>::IOSTSymbolMismatch);
+            // let _amount = amount.div(T::Balance::from(10u32.pow(12u32 - symbol_precise as u32)));
+            ensure!(balance >= amount, Error::<T>::InsufficientBalance);
 
             let asset_symbol = BridgeAssetSymbol::new(BlockchainType::IOST, symbol_code, T::Precision::from(symbol_precise as u32));
             let bridge_asset = BridgeAssetBalance {
@@ -472,7 +472,7 @@ decl_module! {
                     T::AssetTrait::lock_asset(&origin, asset_id, amount);
                    Self::deposit_event(RawEvent::SendTransactionSuccess);
                 }
-                Err(e) => {
+                Err(_) => {
                     debug::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
                     Self::deposit_event(RawEvent::SendTransactionFailure);
                 }
@@ -563,7 +563,7 @@ impl<T: Config> Module<T> {
         let iost_id = Self::iost_asset_id();
         let v_iost_id = T::AssetTrait::get_pair(iost_id).ok_or(Error::<T>::TokenNotExist)?;
 
-        let token_symbol = {
+        let token_id = {
             match split_memo.len() {
                 2 => v_iost_id,
                 3 => match split_memo[2] {
@@ -580,8 +580,10 @@ impl<T: Config> Module<T> {
         // todo, vIOST or IOST, all asset will be added to IOST asset, instead of vIOST or IOST
         // but in the future, we will support both token, let user to which token he wants to get
         // according to the convert price
+        let convert_pool = T::FetchConvertPool::fetch_convert_pool(iost_id);
+
         let token = T::AssetTrait::get_token(Self::iost_asset_id());
-        let symbol_code = token.symbol;
+        let _symbol_code = token.symbol;
         let symbol_precise = token.precision;
         let align_precision = 12 - symbol_precise;
 
@@ -596,11 +598,14 @@ impl<T: Config> Module<T> {
         let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances)
             .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
-        // todo, according convert price to save as vIOST
-        // let vtoken_balances: T::Balance =
-        //     TryFrom::<u128>::try_from(11).map_err(|_| Error::<T>::ConvertBalanceError)?;
-
-        T::AssetTrait::asset_issue(iost_id, &target, new_balance);
+        if T::AssetTrait::is_v_token(token_id) {
+            // according convert pool to convert EOS to vEOS
+            let vtoken_balances: T::Balance =
+                { new_balance.saturating_mul(convert_pool.vtoken_pool) / convert_pool.token_pool };
+            T::AssetTrait::asset_issue(v_iost_id, &target, vtoken_balances);
+        } else {
+            T::AssetTrait::asset_issue(iost_id, &target, new_balance);
+        }
 
         Ok(target)
     }
@@ -609,7 +614,7 @@ impl<T: Config> Module<T> {
         action_transfer: &ActionTransfer,
     ) -> Result<T::AccountId, Error<T>> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
-        let pending_tx_id = "".to_string();
+        // let pending_tx_id = "".to_string();
 
         for trx in bridge_tx_outs.iter() {
             match trx {
@@ -617,13 +622,13 @@ impl<T: Config> Module<T> {
                     tx_id,
                     multi_sig_tx,
                 } => {
-                    let tx_id = String::from_utf8(tx_id.to_vec())
+                    let _tx_id = String::from_utf8(tx_id.to_vec())
                         .map_err(|_| Error::<T>::ConvertBalanceError)?;
                     // if pending_tx_id.ne(tx_id.as_str()) {
                     //     continue;
                     // }
                     let target = &multi_sig_tx.from;
-                    let token_symbol = multi_sig_tx.token_type;
+                    let _token_symbol = multi_sig_tx.token_type;
                     let asset_id = Self::iost_asset_id();
                     let all_vtoken_balances =
                         T::AssetTrait::get_account_asset(asset_id, &target).balance;
@@ -737,7 +742,7 @@ impl<T: Config> Module<T> {
             .map(|bto| {
                 match bto {
                     IostTxOut::<T::AccountId, T::AssetId>::Generated(_) => {
-                        let author = <pallet_authorship::Module<T>>::author();
+                        let _author = <pallet_authorship::Module<T>>::author();
                         let mut ret = bto.clone();
                         let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
 
@@ -808,22 +813,6 @@ impl<T: Config> Module<T> {
             .ok_or(Error::<T>::NoLocalStorage)?;
 
         Ok(String::from_utf8(value).map_err(|_| Error::<T>::ParseUtf8Error)?)
-    }
-
-    fn local_authority_keys() -> impl Iterator<Item = T::AuthorityId> {
-        let authorities = NotaryKeys::<T>::get();
-        let mut local_keys = T::AuthorityId::all();
-        local_keys.sort();
-
-        authorities
-            .into_iter()
-            .enumerate()
-            .filter_map(move |(_, authority)| {
-                local_keys
-                    .binary_search(&authority.into())
-                    .ok()
-                    .map(|location| local_keys[location].clone())
-            })
     }
 }
 

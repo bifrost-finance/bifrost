@@ -17,7 +17,7 @@
 use crate::Error;
 use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
-use core::{iter::FromIterator, str::FromStr};
+use core::iter::FromIterator;
 use frame_support::debug;
 use iost_chain::{IostAction, Read, SerializeData, Tx};
 use sp_core::offchain::Duration;
@@ -43,17 +43,6 @@ impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
             signatures: Default::default(),
             threshold,
         }
-    }
-
-    fn reach_threshold(&self) -> bool {
-        self.signatures.len() >= self.threshold as usize
-    }
-
-    fn has_signed(&self, author: AccountId) -> bool {
-        self.signatures
-            .iter()
-            .find(|sig| sig.author == author)
-            .is_some()
     }
 }
 
@@ -181,7 +170,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
                     .map_err(|_| Error::<T>::IostChainError)?;
 
-                tx.sign(
+                let _ignore = tx.sign(
                     account_name.to_string(),
                     iost_keys::algorithm::SECP256K1,
                     sk.as_slice(),
@@ -220,7 +209,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
 pub(crate) mod iost_rpc {
     use super::*;
     use crate::Error;
-    use lite_json::{parse_json, JsonValue, Serialize};
+    use lite_json::{parse_json, JsonValue};
     use sp_runtime::offchain::http;
 
     const HASH: [char; 4] = ['h', 'a', 's', 'h']; // tx hash
@@ -286,8 +275,7 @@ pub(crate) mod iost_rpc {
     pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(
         multi_sig_tx: &IostMultiSigTx<AccountId, AssetId>,
     ) -> Result<Vec<u8>, Error<T>> {
-        let mut tx =
-            Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
+        let tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
         Ok(tx.no_std_serialize_vec())
     }
 
