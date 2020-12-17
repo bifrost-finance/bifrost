@@ -173,11 +173,17 @@ pub fn testnet_genesis(
 	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
+	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
 
+	initial_authorities.iter().for_each(|x|
+		if !endowed_accounts.contains(&x.0) {
+			endowed_accounts.push(x.0.clone())
+		}
+	);
+
 	const ENDOWMENT: u128 = 1_000_000 * RCO;
-	const STASH: u128 = 100 * RCO;
+	const STASH: u128 = ENDOWMENT / 1000;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -186,9 +192,8 @@ pub fn testnet_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
-				.map(|k| (k, ENDOWMENT))
-				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
-				.collect(),
+				.map(|x| (x, ENDOWMENT))
+				.collect()
 		}),
 		pallet_indices: Some(IndicesConfig {
 			indices: vec![],
