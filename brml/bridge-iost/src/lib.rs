@@ -382,6 +382,7 @@ decl_module! {
         fn prove_action(
             origin,
             action: IostAction,
+            trx_id: Vec<u8>,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
@@ -398,7 +399,7 @@ decl_module! {
             let cross_account = BridgeContractAccount::get().0;
             // withdraw operation, Bifrost => IOST
             if cross_account == action_transfer.from.to_string().into_bytes() {
-                match Self::transaction_from_bifrost_to_iost(&action_transfer) {
+                match Self::transaction_from_bifrost_to_iost(&action_transfer, trx_id) {
                     Ok(target) => {
                         Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
                     }
@@ -612,21 +613,22 @@ impl<T: Config> Module<T> {
 
     fn transaction_from_bifrost_to_iost(
         action_transfer: &ActionTransfer,
+        pending_trx_id: Vec<u8>,
     ) -> Result<T::AccountId, Error<T>> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
-        // let pending_tx_id = "".to_string();
-
+        let pending_trx =
+            core::str::from_utf8(&pending_trx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
         for trx in bridge_tx_outs.iter() {
             match trx {
                 IostTxOut::Processing {
                     tx_id,
                     multi_sig_tx,
                 } => {
-                    let _tx_id = String::from_utf8(tx_id.to_vec())
-                        .map_err(|_| Error::<T>::ConvertBalanceError)?;
-                    // if pending_tx_id.ne(tx_id.as_str()) {
-                    //     continue;
-                    // }
+                    let tx =
+                        core::str::from_utf8(&tx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
+                    if pending_trx.ne(tx) {
+                        continue;
+                    }
                     let target = &multi_sig_tx.from;
                     let _token_symbol = multi_sig_tx.token_type;
                     let asset_id = Self::iost_asset_id();
@@ -694,7 +696,8 @@ impl<T: Config> Module<T> {
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
         // let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
-        let original_amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(7))) as u128;
+        let original_amount =
+            (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(7))) as u128;
 
         let amount = (original_amount as f64) / (10u128.pow(8) as f64);
         let tx_out = IostTxOut::<T::AccountId, T::AssetId>::init(
