@@ -638,6 +638,7 @@ impl<T: Config> Module<T> {
                         .amount
                         .parse::<u128>()
                         .map_err(|_| Error::<T>::ConvertBalanceError)?;
+                    let token_balances = token_balances * 10u128.pow(15);
                     let vtoken_balances = TryFrom::<u128>::try_from(token_balances)
                         .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
@@ -693,7 +694,9 @@ impl<T: Config> Module<T> {
             .map_err(|_| Error::<T>::ParseUtf8Error)?
             .to_string();
         // let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
-        let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(15))) as i64;
+        let original_amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(7))) as u128;
+
+        let amount = (original_amount as f64) / (10u128.pow(8) as f64);
         let tx_out = IostTxOut::<T::AccountId, T::AssetId>::init(
             raw_from,
             raw_to,
