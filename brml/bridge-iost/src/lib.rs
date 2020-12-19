@@ -585,7 +585,7 @@ impl<T: Config> Module<T> {
         let token = T::AssetTrait::get_token(Self::iost_asset_id());
         let _symbol_code = token.symbol;
         let symbol_precise = token.precision;
-        let align_precision = 12 - symbol_precise;
+        let align_precision = 15 - symbol_precise;
 
         let transfer_amount = action_transfer
             .amount
