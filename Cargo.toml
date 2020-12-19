@@ -98,6 +98,7 @@ pallet-authorship = { git = "https://github.com/paritytech/substrate.git", branc
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-babe = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-balances = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+pallet-bounties = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-collective = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-democracy = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
@@ -118,6 +119,7 @@ pallet-staking = { git = "https://github.com/paritytech/substrate.git", branch =
 pallet-staking-reward-curve = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-sudo = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
+pallet-tips = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate.git", branch = "master" }
