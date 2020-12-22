@@ -1366,7 +1366,7 @@ dependencies = [
 [[package]]
 name = "cumulus-collator"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-consensus",
  "cumulus-network",
@@ -1399,7 +1399,7 @@ dependencies = [
 [[package]]
 name = "cumulus-consensus"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "futures 0.3.8",
  "log",
@@ -1421,7 +1421,7 @@ dependencies = [
 [[package]]
 name = "cumulus-message-broker"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-primitives",
  "frame-support",
@@ -1434,7 +1434,7 @@ dependencies = [
 [[package]]
 name = "cumulus-network"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-primitives",
  "derive_more",
@@ -1461,7 +1461,7 @@ dependencies = [
 [[package]]
 name = "cumulus-parachain-upgrade"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-primitives",
  "cumulus-runtime",
@@ -1475,6 +1475,7 @@ dependencies = [
  "sp-inherents",
  "sp-io",
  "sp-runtime",
+ "sp-state-machine",
  "sp-std",
  "sp-version",
 ]
@@ -1482,7 +1483,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "impl-trait-for-tuples 0.1.3",
  "parity-scale-codec",
@@ -1494,12 +1495,13 @@ dependencies = [
  "sp-inherents",
  "sp-runtime",
  "sp-std",
+ "sp-trie",
 ]
 
 [[package]]
 name = "cumulus-runtime"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-primitives",
  "frame-executive",
@@ -1520,7 +1522,7 @@ dependencies = [
 [[package]]
 name = "cumulus-service"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-collator",
  "cumulus-consensus",
@@ -3779,7 +3781,8 @@ dependencies = [
 [[package]]
 name = "librocksdb-sys"
 version = "6.11.4"
-source = "git+https://github.com/hdevalence/rust-rocksdb?rev=33cd4281570b229b628d6d827fa0053cff57000a#33cd4281570b229b628d6d827fa0053cff57000a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb5b56f651c204634b936be2f92dbb42c36867e00ff7fe2405591f3b9fa66f09"
 dependencies = [
  "bindgen",
  "cc",
@@ -4775,7 +4778,7 @@ dependencies = [
 [[package]]
 name = "pallet-bounties"
 version = "2.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=master#aa5184d709b8320aff4ca681dee6a12843a1a640"
+source = "git+https://github.com/paritytech/substrate?branch=master#330f5c0dbfdf4ffbb891251e90880757687a8a72"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5166,7 +5169,7 @@ dependencies = [
 [[package]]
 name = "pallet-tips"
 version = "2.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=master#aa5184d709b8320aff4ca681dee6a12843a1a640"
+source = "git+https://github.com/paritytech/substrate?branch=master#330f5c0dbfdf4ffbb891251e90880757687a8a72"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5276,7 +5279,7 @@ dependencies = [
 [[package]]
 name = "parachain-info"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-primitives",
  "frame-support",
@@ -10894,7 +10897,7 @@ dependencies = [
 [[package]]
 name = "xcm-handler"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=master#c5d184f748fd9eb67639e23119b7032d83d36558"
+source = "git+https://github.com/paritytech/cumulus?branch=master#0a5b53cdce0bc2929f821ef8b3ec700c1443a75e"
 dependencies = [
  "cumulus-primitives",
  "frame-support",
