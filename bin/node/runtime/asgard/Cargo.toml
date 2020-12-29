@@ -38,6 +38,7 @@ pallet-authority-discovery = { version = "2.0.0", default-features = false }
 pallet-authorship = { version = "2.0.0", default-features = false }
 pallet-babe = { version = "2.0.0", default-features = false }
 pallet-balances = { version = "2.0.0", default-features = false }
+pallet-bounties = { version = "2.0.0", default-features = false }
 pallet-collective = { version = "2.0.0", default-features = false }
 pallet-democracy = { version = "2.0.0", default-features = false }
 pallet-elections-phragmen = { version = "2.0.0", default-features = false }
@@ -60,6 +61,7 @@ pallet-scheduler = { version = "2.0.0", default-features = false }
 pallet-society = { version = "2.0.0", default-features = false }
 pallet-sudo = { version = "2.0.0", default-features = false }
 pallet-timestamp = { version = "2.0.0", default-features = false }
+pallet-tips = { version = "2.0.0", default-features = false }
 pallet-treasury = { version = "2.0.0", default-features = false }
 pallet-utility = { version = "2.0.0", default-features = false }
 pallet-transaction-payment = { version = "2.0.0", default-features = false }
@@ -93,6 +95,7 @@ std = [
 	"sp-consensus-babe/std",
 	"pallet-babe/std",
 	"pallet-balances/std",
+	"pallet-bounties/std",
 	"sp-block-builder/std",
 	"codec/std",
 	"pallet-collective/std",
@@ -129,6 +132,7 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
+	"pallet-tips/std",
 	"sp-transaction-pool/std",
 	"pallet-utility/std",
 	"sp-version/std",
@@ -151,6 +155,7 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"pallet-babe/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
+	"pallet-bounties/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-democracy/runtime-benchmarks",
 	"pallet-elections-phragmen/runtime-benchmarks",
@@ -165,6 +170,7 @@ runtime-benchmarks = [
 	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
+	"pallet-tips/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-offences-benchmarking",
