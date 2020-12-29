@@ -160,11 +160,17 @@ pub fn testnet_genesis(
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
+	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
 
+	initial_authorities.iter().for_each(|x|
+		if !endowed_accounts.contains(&x.0) {
+			endowed_accounts.push(x.0.clone())
+		}
+	);
+
 	const ENDOWMENT: u128 = 1_000_000 * ASG;
-	const STASH: u128 = 100 * ASG;
+	const STASH: u128 = ENDOWMENT / 1000;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -173,9 +179,8 @@ pub fn testnet_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
-				.map(|k| (k, ENDOWMENT))
-				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
-				.collect(),
+				.map(|x| (x, ENDOWMENT))
+				.collect()
 		}),
 		pallet_indices: Some(IndicesConfig {
 			indices: vec![],
@@ -193,7 +198,7 @@ pub fn testnet_genesis(
 		pallet_staking: Some(StakingConfig {
 			validator_count: 30,
 			minimum_validator_count: 3,
-			stakers: initial_authorities[2..5].iter().map(|x| { // we need last three addresses
+			stakers: initial_authorities.iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
