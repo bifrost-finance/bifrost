@@ -8,7 +8,7 @@ cargo build --release --features=real-overseer
 ```
 2. Generate relay chain spec.
 ```
-./target/release/polkadot build-spec --chain rococo-local --disable-default-bootnode > rococo-relay-chain-spec.json
+./target/release/polkadot build-spec --chain rococo-local --disable-default-bootnode --raw > rococo-relay-chain-spec.json
 ```
 3. Start two relay chain nodes.
 ```
