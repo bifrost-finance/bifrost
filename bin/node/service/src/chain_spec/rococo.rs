@@ -23,14 +23,11 @@ use cumulus_primitives::ParaId;
 use node_primitives::{AccountId, ConvertPool, TokenType, Token};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
-	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	BridgeEosConfig,
-	BridgeIostConfig,
-	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
-	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
-	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
-	ParachainInfoConfig,
-	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
+	AssetsConfig, BabeConfig, BalancesConfig, SessionConfig, AuthorityDiscoveryConfig,
+	BridgeEosConfig, BridgeIostConfig, ConvertConfig, CouncilConfig, ElectionsConfig,
+	GenesisConfig, GrandpaConfig, IndicesConfig, SessionKeys,
+	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
+	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
 use crate::chain_spec::{
 	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -50,13 +47,11 @@ pub fn config() -> Result<ChainSpec, String> {
 fn session_keys(
 	grandpa: GrandpaId,
 	babe: BabeId,
-	im_online: ImOnlineId,
 	authority_discovery: AuthorityDiscoveryId
 ) -> SessionKeys {
 	SessionKeys {
 		babe,
 		grandpa,
-		im_online,
 		authority_discovery,
 	}
 }
@@ -203,22 +198,10 @@ pub fn testnet_genesis(
 				(x.0.clone(), x.0.clone(), session_keys(
 					x.2.clone(),
 					x.3.clone(),
-					x.4.clone(),
 					x.5.clone(),
 				))
 			}).collect::<Vec<_>>(),
 		}),
-		pallet_staking: Some(StakingConfig {
-			validator_count: initial_authorities.len() as u32 * 2,
-			minimum_validator_count: initial_authorities.len() as u32,
-			stakers: initial_authorities.iter().map(|x| {
-				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
-			}).collect(),
-			invulnerables: initial_authorities.iter().map(|x| x.0.clone()).collect(),
-			slash_reward_fraction: Perbill::from_percent(10),
-			.. Default::default()
-		}),
-		pallet_democracy: Some(DemocracyConfig::default()),
 		pallet_elections_phragmen: Some(ElectionsConfig {
 			members: endowed_accounts.iter()
 				.take((num_endowed_accounts + 1) / 2)
@@ -240,26 +223,13 @@ pub fn testnet_genesis(
 		pallet_babe: Some(BabeConfig {
 			authorities: vec![],
 		}),
-		pallet_im_online: Some(ImOnlineConfig {
-			keys: vec![],
-		}),
 		pallet_authority_discovery: Some(AuthorityDiscoveryConfig {
 			keys: vec![],
 		}),
 		pallet_grandpa: Some(GrandpaConfig {
 			authorities: vec![],
 		}),
-		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
-		pallet_society: Some(SocietyConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
-			pot: 0,
-			max_members: 999,
-		}),
-		pallet_vesting: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
@@ -403,7 +373,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		},
 		vec![
 			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
-			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWBMjifHHUZxbQaQZS9t5jMmTDtZbugAtJ8TG9RuX4umEY".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWPbTeqZHdyTdqY14Zu2t6FVKmUkzTZc3y5GjyJ6ybbmSB".parse().expect("failed to parse multiaddress."),
 			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
 			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
 			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")

@@ -95,5 +95,4 @@ default = []
 runtime-benchmarks = [
 	"asgard-runtime/runtime-benchmarks",
 	"bifrost-runtime/runtime-benchmarks",
-	"rococo-runtime/runtime-benchmarks"
 ]
