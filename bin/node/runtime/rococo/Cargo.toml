@@ -33,19 +33,12 @@ frame-executive = { version = "2.0.0", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false }
-pallet-authority-discovery = { version = "2.0.0", default-features = false }
 pallet-authorship = { version = "2.0.0", default-features = false }
-pallet-babe = { version = "2.0.0", default-features = false }
 pallet-balances = { version = "2.0.0", default-features = false }
-pallet-collective = { version = "2.0.0", default-features = false }
-pallet-elections-phragmen = { version = "2.0.0", default-features = false }
-pallet-grandpa = { version = "2.0.0", default-features = false }
 pallet-indices = { version = "2.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false }
-pallet-session = { version = "2.0.0", features = ["historical"], default-features = false }
 pallet-sudo = { version = "2.0.0", default-features = false }
 pallet-timestamp = { version = "2.0.0", default-features = false }
-pallet-treasury = { version = "2.0.0", default-features = false }
 pallet-transaction-payment = { version = "2.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-features = false }
 
@@ -53,7 +46,6 @@ pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-featur
 brml-assets = { path = "../../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
 brml-bridge-eos = { path = "../../../../brml/bridge-eos", default-features = false }
-brml-bridge-iost = { path = "../../../../brml/bridge-iost", default-features = false }
 brml-convert = { path = "../../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
@@ -85,17 +77,12 @@ default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"sp-authority-discovery/std",
-	"pallet-authority-discovery/std",
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
-	"pallet-babe/std",
 	"pallet-balances/std",
 	"sp-block-builder/std",
 	"codec/std",
-	"pallet-collective/std",
-	"pallet-elections-phragmen/std",
 	"frame-executive/std",
-	"pallet-grandpa/std",
 	"pallet-indices/std",
 	"sp-inherents/std",
 	"node-primitives/std",
@@ -115,13 +102,11 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-	"pallet-treasury/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
 	"brml-bridge-eos/std",
-	"brml-bridge-iost/std",
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
 	'brml-staking-reward/std',
