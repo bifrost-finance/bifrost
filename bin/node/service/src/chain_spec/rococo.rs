@@ -17,16 +17,13 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
 use cumulus_primitives::ParaId;
 use node_primitives::{AccountId, ConvertPool, TokenType, Token};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
-	AssetsConfig, BabeConfig, BalancesConfig, SessionConfig, AuthorityDiscoveryConfig,
-	BridgeEosConfig, BridgeIostConfig, ConvertConfig, CouncilConfig, ElectionsConfig,
-	GenesisConfig, GrandpaConfig, IndicesConfig, SessionKeys,
-	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
+	AssetsConfig, BalancesConfig, BridgeEosConfig, ConvertConfig,
+	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
 use crate::chain_spec::{
@@ -42,18 +39,6 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 pub fn config() -> Result<ChainSpec, String> {
 	ChainSpec::from_json_bytes(&include_bytes!("../../res/rococo.json")[..])
-}
-
-fn session_keys(
-	grandpa: GrandpaId,
-	babe: BabeId,
-	authority_discovery: AuthorityDiscoveryId
-) -> SessionKeys {
-	SessionKeys {
-		babe,
-		grandpa,
-		authority_discovery,
-	}
 }
 
 fn staging_testnet_config_genesis(id: ParaId) -> GenesisConfig {
@@ -193,43 +178,9 @@ pub fn testnet_genesis(
 		pallet_indices: Some(IndicesConfig {
 			indices: vec![],
 		}),
-		pallet_session: Some(SessionConfig {
-			keys: initial_authorities.iter().map(|x| {
-				(x.0.clone(), x.0.clone(), session_keys(
-					x.2.clone(),
-					x.3.clone(),
-					x.5.clone(),
-				))
-			}).collect::<Vec<_>>(),
-		}),
-		pallet_elections_phragmen: Some(ElectionsConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.map(|member| (member, STASH))
-				.collect(),
-		}),
-		pallet_collective_Instance1: Some(CouncilConfig::default()),
-		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
-			phantom: Default::default(),
-		}),
 		pallet_sudo: Some(SudoConfig {
 			key: root_key.clone(),
 		}),
-		pallet_babe: Some(BabeConfig {
-			authorities: vec![],
-		}),
-		pallet_authority_discovery: Some(AuthorityDiscoveryConfig {
-			keys: vec![],
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
-			authorities: vec![],
-		}),
-		pallet_treasury: Some(Default::default()),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
@@ -263,14 +214,6 @@ pub fn testnet_genesis(
 			all_crosschain_privilege: Vec::new(),
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 			eos_asset_id: 6,
-		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			iost_asset_id: 8,
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {

@@ -140,7 +140,6 @@ pub trait ClientHandle {
 pub enum Client {
 	Asgard(Arc<crate::FullClient<asgard_runtime::RuntimeApi, crate::AsgardExecutor>>),
 	Bifrost(Arc<crate::FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
-	Rococo(Arc<crate::FullClient<rococo_runtime::RuntimeApi, crate::RococoExecutor>>),
 }
 
 impl ClientHandle for Client {
@@ -152,9 +151,6 @@ impl ClientHandle for Client {
 			Self::Bifrost(client) => {
 				T::execute_with_client::<_, _, crate::FullBackend>(t, client.clone())
 			},
-			Self::Rococo(client) => {
-				T::execute_with_client::<_, _, crate::FullBackend>(t, client.clone())
-			}
 		}
 	}
 }
@@ -164,7 +160,6 @@ impl sc_client_api::UsageProvider<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.usage_info(),
 			Self::Bifrost(client) => client.usage_info(),
-			Self::Rococo(client) => client.usage_info(),
 		}
 	}
 }
@@ -177,7 +172,6 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.block_body(id),
 			Self::Bifrost(client) => client.block_body(id),
-			Self::Rococo(client) => client.block_body(id),
 		}
 	}
 
@@ -185,7 +179,6 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.block(id),
 			Self::Bifrost(client) => client.block(id),
-			Self::Rococo(client) => client.block(id),
 		}
 	}
 
@@ -193,7 +186,6 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.block_status(id),
 			Self::Bifrost(client) => client.block_status(id),
-			Self::Rococo(client) => client.block_status(id),
 		}
 	}
 
@@ -204,7 +196,6 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.justification(id),
 			Self::Bifrost(client) => client.justification(id),
-			Self::Rococo(client) => client.justification(id),
 		}
 	}
 
@@ -215,7 +206,6 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.block_hash(number),
 			Self::Bifrost(client) => client.block_hash(number),
-			Self::Rococo(client) => client.block_hash(number),
 		}
 	}
 }
@@ -229,7 +219,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.storage(id, key),
 			Self::Bifrost(client) => client.storage(id, key),
-			Self::Rococo(client) => client.storage(id, key),
 		}
 	}
 
@@ -241,7 +230,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.storage_keys(id, key_prefix),
 			Self::Bifrost(client) => client.storage_keys(id, key_prefix),
-			Self::Rococo(client) => client.storage_keys(id, key_prefix),
 		}
 	}
 
@@ -253,7 +241,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.storage_hash(id, key),
 			Self::Bifrost(client) => client.storage_hash(id, key),
-			Self::Rococo(client) => client.storage_hash(id, key),
 		}
 	}
 
@@ -265,7 +252,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.storage_pairs(id, key_prefix),
 			Self::Bifrost(client) => client.storage_pairs(id, key_prefix),
-			Self::Rococo(client) => client.storage_pairs(id, key_prefix),
 		}
 	}
 
@@ -278,7 +264,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.storage_keys_iter(id, prefix, start_key),
 			Self::Bifrost(client) => client.storage_keys_iter(id, prefix, start_key),
-			Self::Rococo(client) => client.storage_keys_iter(id, prefix, start_key),
 		}
 	}
 
@@ -291,7 +276,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.child_storage(id, child_info, key),
 			Self::Bifrost(client) => client.child_storage(id, child_info, key),
-			Self::Rococo(client) => client.child_storage(id, child_info, key),
 		}
 	}
 
@@ -304,7 +288,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.child_storage_keys(id, child_info, key_prefix),
 			Self::Bifrost(client) => client.child_storage_keys(id, child_info, key_prefix),
-			Self::Rococo(client) => client.child_storage_keys(id, child_info, key_prefix),
 		}
 	}
 
@@ -317,7 +300,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.child_storage_hash(id, child_info, key),
 			Self::Bifrost(client) => client.child_storage_hash(id, child_info, key),
-			Self::Rococo(client) => client.child_storage_hash(id, child_info, key),
 		}
 	}
 
@@ -329,7 +311,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.max_key_changes_range(first, last),
 			Self::Bifrost(client) => client.max_key_changes_range(first, last),
-			Self::Rococo(client) => client.max_key_changes_range(first, last),
 		}
 	}
 
@@ -343,7 +324,6 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		match self {
 			Self::Asgard(client) => client.key_changes(first, last, storage_key, key),
 			Self::Bifrost(client) => client.key_changes(first, last, storage_key, key),
-			Self::Rococo(client) => client.key_changes(first, last, storage_key, key),
 		}
 	}
 }
@@ -353,7 +333,6 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.header(&id),
 			Self::Bifrost(client) => client.header(&id),
-			Self::Rococo(client) => client.header(&id),
 		}
 	}
 
@@ -361,7 +340,6 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.info(),
 			Self::Bifrost(client) => client.info(),
-			Self::Rococo(client) => client.info(),
 		}
 	}
 
@@ -369,7 +347,6 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.status(id),
 			Self::Bifrost(client) => client.status(id),
-			Self::Rococo(client) => client.status(id),
 		}
 	}
 
@@ -377,7 +354,6 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.number(hash),
 			Self::Bifrost(client) => client.number(hash),
-			Self::Rococo(client) => client.number(hash),
 		}
 	}
 
@@ -385,7 +361,6 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 		match self {
 			Self::Asgard(client) => client.hash(number),
 			Self::Bifrost(client) => client.hash(number),
-			Self::Rococo(client) => client.hash(number),
 		}
 	}
 }
