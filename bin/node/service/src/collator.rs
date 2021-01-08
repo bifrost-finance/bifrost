@@ -101,6 +101,7 @@ pub fn new_partial(
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
+#[sc_cli::prefix_logs_with("Parachain 🌈")]
 async fn start_node_impl<RB>(
 	parachain_config: Configuration,
 	collator_key: CollatorPair,

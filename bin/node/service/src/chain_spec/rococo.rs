@@ -154,7 +154,6 @@ pub fn testnet_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-	let num_endowed_accounts = endowed_accounts.len();
 
 	initial_authorities.iter().for_each(|x|
 		if !endowed_accounts.contains(&x.0) {
@@ -163,7 +162,6 @@ pub fn testnet_genesis(
 	);
 
 	const ENDOWMENT: u128 = 1_000_000 * RCO;
-	const STASH: u128 = ENDOWMENT / 1000;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {

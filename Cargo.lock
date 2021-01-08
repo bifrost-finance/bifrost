@@ -4488,6 +4488,7 @@ dependencies = [
  "sc-basic-authorship",
  "sc-block-builder",
  "sc-chain-spec",
+ "sc-cli",
  "sc-client-api",
  "sc-client-db",
  "sc-consensus",
