@@ -261,7 +261,7 @@ pub fn run() -> Result<()> {
 				You can enable it with `--features runtime-benchmarks`.".into())
 			}
 		}
-		Some(Subcommand::Key(cmd)) => cmd.run(),
+		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
 		Some(Subcommand::Sign(cmd)) => cmd.run(),
 		Some(Subcommand::Verify(cmd)) => cmd.run(),
 		Some(Subcommand::Vanity(cmd)) => cmd.run(),
@@ -329,7 +329,15 @@ pub fn run() -> Result<()> {
 			})
 		}
 		Some(Subcommand::ExportGenesisState(params)) => {
-			sc_cli::init_logger("", sc_tracing::TracingReceiver::Log, None, false)?;
+			sc_cli::init_logger(
+				sc_cli::InitLoggerParams {
+					pattern: "".into(),
+					tracing_receiver: Default::default(),
+					tracing_targets: None,
+					disable_log_reloading: false,
+					disable_log_color: true,
+				},
+			)?;
 
 			let block: Block = generate_genesis_block(&load_spec(
 				&params.chain.clone().unwrap_or_default(),
@@ -351,8 +359,15 @@ pub fn run() -> Result<()> {
 			Ok(())
 		}
 		Some(Subcommand::ExportGenesisWasm(params)) => {
-			sc_cli::init_logger("", sc_tracing::TracingReceiver::Log, None, false)?;
-
+			sc_cli::init_logger(
+				sc_cli::InitLoggerParams {
+					pattern: "".into(),
+					tracing_receiver: Default::default(),
+					tracing_targets: None,
+					disable_log_reloading: false,
+					disable_log_color: true,
+				},
+			)?;
 			let raw_wasm_blob =
 				extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
 			let output_buf = if params.raw {

@@ -8,7 +8,7 @@ members = [
 	"bin/node/runtime/bifrost",
 	"bin/node/runtime/rococo",
 	"bin/node/service",
-	"bin/utils/subkey",
+	# "bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
 	"brml/bridge-eos",
