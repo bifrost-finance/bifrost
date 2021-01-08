@@ -28,6 +28,7 @@ pub use sp_api::{ApiRef, ConstructRuntimeApi, Core as CoreApi, ProvideRuntimeApi
 use sp_core::Pair;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
+use rococo_runtime::RuntimeApi;
 
 use node_primitives::Block;
 pub use rococo_runtime;
@@ -45,29 +46,24 @@ native_executor_instance!(
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
-pub fn new_partial<RuntimeApi, Executor>(
+pub fn new_partial(
 	config: &Configuration,
 ) -> Result<
 	PartialComponents<
-		TFullClient<Block, RuntimeApi, Executor>,
+		TFullClient<Block, RuntimeApi, RococoExecutor>,
 		TFullBackend<Block>,
 		(),
 		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, RococoExecutor>>,
 		(),
 	>,
 	sc_service::Error,
 >
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
 {
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
 	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
+		sc_service::new_full_parts::<Block, RuntimeApi, RococoExecutor>(&config)?;
 	let client = Arc::new(client);
 
 	let registry = config.prometheus_registry();
@@ -105,24 +101,21 @@ pub fn new_partial<RuntimeApi, Executor>(
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-async fn start_node_impl<RB, RuntimeApi, Executor>(
+#[sc_cli::prefix_logs_with("Parachain 🌈")]
+async fn start_node_impl<RB>(
 	parachain_config: Configuration,
 	collator_key: CollatorPair,
 	polkadot_config: Configuration,
 	id: polkadot_primitives::v0::Id,
 	validator: bool,
 	rpc_ext_builder: RB,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
+) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, RococoExecutor>>)>
 	where
 		RB: Fn(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
+			Arc<TFullClient<Block, RuntimeApi, RococoExecutor>>,
 		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 		+ Send
 		+ 'static,
-		RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -245,7 +238,7 @@ pub async fn start_node(
 	id: polkadot_primitives::v0::Id,
 	validator: bool,
 ) -> sc_service::error::Result<TaskManager> {
-	start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
+	start_node_impl::<_>(
 		parachain_config,
 		collator_key,
 		polkadot_config,

@@ -89,7 +89,7 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
 	}
 	fn is_rococo(&self) -> bool {
-		self.id().starts_with("rococo") || self.id().starts_with("rco")
+		self.id().starts_with("bifrost") || self.id().starts_with("roc")
 	}
 }
 
@@ -561,10 +561,6 @@ pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
 		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
 			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
 		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
-	} else if config.chain_spec.is_rococo() {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<rococo_runtime::RuntimeApi, RococoExecutor>(config)?;
-		Ok((Arc::new(Client::Rococo(client)), backend, import_queue, task_manager))
 	} else {
 		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
 			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
@@ -581,10 +577,6 @@ pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
 		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_rococo() {
-		new_light_base::<rococo_runtime::RuntimeApi, RococoExecutor>(
-			config
-		).map(|full| full.task_manager)
 	} else {
 		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
@@ -599,10 +591,6 @@ pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		).map(|full| full.task_manager)
 	} else if config.chain_spec.is_bifrost() {
 		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_rococo() {
-		new_full_base::<rococo_runtime::RuntimeApi, RococoExecutor>(
 			config
 		).map(|full| full.task_manager)
 	} else {
