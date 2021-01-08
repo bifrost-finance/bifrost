@@ -19,8 +19,6 @@ use sc_cli::{
 	Error, VanityCmd, SignCmd, VerifyCmd, GenerateNodeKeyCmd, GenerateCmd, InspectKeyCmd,
 	InspectNodeKeyCmd
 };
-use substrate_frame_cli::ModuleIdCmd;
-use sp_core::crypto::Ss58Codec;
 
 mod offchain_rpc;
 
@@ -75,8 +73,6 @@ pub fn run() -> Result<(), Error> {
 		Subkey::GetLocalStorage(cmd) => cmd.run(),
 		Subkey::SetLocalStorage(cmd) => cmd.run(),
 	}
-
-	Ok(())
 }
 
 pub mod offchain_storage {

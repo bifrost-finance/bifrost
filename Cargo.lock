@@ -3065,6 +3065,7 @@ checksum = "489b9c612e60c766f751ab40fcb43cbb55a1e10bb44a9b4307ed510ca598cbd7"
 dependencies = [
  "failure",
  "futures 0.1.30",
+ "hyper 0.12.35",
  "jsonrpc-core",
  "jsonrpc-pubsub",
  "log",
@@ -9398,6 +9399,21 @@ dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
  "syn 1.0.48",
+]
+
+[[package]]
+name = "subkey"
+version = "0.6.0"
+dependencies = [
+ "frame-system",
+ "futures 0.1.30",
+ "hex",
+ "jsonrpc-core-client",
+ "sc-cli",
+ "sc-rpc",
+ "sp-core",
+ "structopt",
+ "tokio 0.1.22",
 ]
 
 [[package]]
