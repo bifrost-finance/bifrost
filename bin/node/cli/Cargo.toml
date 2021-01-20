@@ -17,17 +17,16 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "1.3.4" }
+codec = { package = "parity-scale-codec", version = "1.3.6" }
 serde = { version = "1.0.118", features = ["derive"] }
 serde_json = "1.0.60"
-futures = { version = "0.3.1", features = ["compat"] }
+futures = { version = "0.3.9", features = ["compat"] }
 hex-literal = "0.3.1"
 log = "0.4.8"
 rand = "0.7.2"
-structopt = { version = "0.3.21", optional = true }
+structopt = { version = "0.3.8", optional = true }
 tracing = "0.1.22"
-parking_lot = "0.10.0"
-jsonrpc-core = "15.1.0"
+parking_lot = "0.11.1"
 
 # primitives
 sp-authority-discovery = { version = "2.0.0" }
@@ -50,8 +49,8 @@ sc-consensus = { version = "0.8.0" }
 sc-transaction-pool = { version = "2.0.0" }
 sc-network = { version = "0.8.0" }
 sc-consensus-babe = { version = "0.8.0" }
-sc-finality-grandpa = { version = "0.8.0" }
-sc-finality-grandpa-rpc = { version = "0.8.0" }
+sc-consensus-slots = { version = "0.8.0" }
+grandpa = { version = "0.8.0", package = "sc-finality-grandpa" }
 sc-client-db = { version = "0.8.0", default-features = false }
 sc-offchain = { version = "2.0.0" }
 sc-rpc = { version = "2.0.0" }
@@ -74,43 +73,24 @@ pallet-staking = { version = "2.0.0" }
 pallet-grandpa = { version = "2.0.0" }
 
 # node-specific dependencies
-node-service = { path = "../service" }
+node-runtime = { path = "../runtime" }
+node-rpc = { path = "../rpc" }
 node-primitives = { path = "../primitives" }
+node-inspect = { optional = true, path = "../inspect" }
+bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
+
+# executor crates
+sc-executor = { version = "0.8.0" }
 
 # CLI-specific dependencies
 sc-cli = { version = "0.8.0", optional = true }
+frame-benchmarking = { version = "2.0.0", default-features = false }
 frame-benchmarking-cli = { version = "2.0.0", optional = true }
-node-inspect = { version = "0.8.0", optional = true }
-
-# new added after removed local node-rpc, node-primitives
-sc-executor = "0.8.0"
-sp-api = "2.0.0"
-pallet-transaction-payment-rpc = "2.0.0"
-substrate-frame-rpc-system = "2.0.0"
-sc-consensus-babe-rpc = "0.8.0"
-sc-consensus-epochs = "0.8.0"
-sp-blockchain = "2.0.0"
-sc-rpc-api = "0.8.0"
-sc-sync-state-rpc = "0.8.0"
-sp-block-builder = "2.0.0"
-frame-benchmarking = "2.0.0"
 
 # WASM-specific dependencies
 wasm-bindgen = { version = "0.2.57", optional = true }
-wasm-bindgen-futures = { version = "0.4.7", optional = true }
-
-# Cumulus dependencies
-cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-collator = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-network = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-service = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-
-# Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+wasm-bindgen-futures = { version = "0.4.18", optional = true }
+browser-utils = { package = "substrate-browser-utils", optional = true, version = "0.8.0"}
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.8.0", optional = true, features = [ "wasmtime" ] }
@@ -123,7 +103,7 @@ sc-consensus = { version = "0.8.0" }
 sc-consensus-babe = { version = "0.8.0", features = ["test-helpers"] }
 sc-consensus-epochs = { version = "0.8.0" }
 #sc-service-test = { version = "2.0.0" }
-futures = "0.3.4"
+futures = "0.3.9"
 tempfile = "3.1.0"
 assert_cmd = "1.0"
 nix = "0.17"
@@ -133,9 +113,10 @@ platforms = "0.2.1"
 
 [build-dependencies]
 structopt = { version = "0.3.8", optional = true }
-node-inspect = { version = "0.8.0", optional = true }
+node-inspect = { optional = true, path = "../inspect" }
 frame-benchmarking-cli = { version = "2.0.0", optional = true }
 substrate-build-script-utils = { version = "2.0.0", optional = true }
+substrate-frame-cli = { version = "2.0.0", optional = true }
 
 [build-dependencies.sc-cli]
 version = "0.8.0"
@@ -148,10 +129,12 @@ cli = [
 	"node-inspect",
 	"sc-cli",
 	"frame-benchmarking-cli",
+	"substrate-frame-cli",
 	"sc-service/db",
 	"structopt",
 	"substrate-build-script-utils",
 ]
 runtime-benchmarks = [
+	"node-runtime/runtime-benchmarks",
 	"frame-benchmarking-cli",
 ]

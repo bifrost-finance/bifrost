@@ -18,117 +18,45 @@
 
 //! Service implementation. Specialized wrapper over substrate service.
 
-pub mod chain_spec;
-pub mod collator;
-mod client;
-
 use std::sync::Arc;
 use sc_consensus_babe;
-use sc_finality_grandpa::{self as grandpa};
 use node_primitives::Block;
-pub use sc_service::{
-	Role, PruningMode, TransactionPoolOptions, RuntimeGenesis,
-	TFullClient, TLightClient, TFullBackend, TLightBackend, TFullCallExecutor, TLightCallExecutor,
-	ChainSpec, RpcHandlers, TaskManager,
+use node_runtime::RuntimeApi;
+use sc_service::{
 	config::{Configuration}, error::{Error as ServiceError},
+	RpcHandlers, TaskManager,
 };
 use sp_inherents::InherentDataProviders;
 use sc_network::{Event, NetworkService};
-use sp_runtime::traits::{Block as BlockT, BlakeTwo256};
+use sp_runtime::traits::Block as BlockT;
 use futures::prelude::*;
 use sc_client_api::{ExecutorProvider, RemoteBackend};
-use sc_executor::native_executor_instance;
+use crate::executor::Executor;
 
-use sp_trie::PrefixedMemoryDB;
-pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, RuntimeApiCollection};
-pub use sp_api::{ApiRef, Core as CoreApi, ConstructRuntimeApi, ProvideRuntimeApi, StateBackend};
-pub use sc_executor::NativeExecutionDispatch;
-
-pub use asgard_runtime;
-pub use bifrost_runtime;
-pub use rococo_runtime;
-
-native_executor_instance!(
-	pub AsgardExecutor,
-	asgard_runtime::api::dispatch,
-	asgard_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-
-native_executor_instance!(
-	pub BifrostExecutor,
-	bifrost_runtime::api::dispatch,
-	bifrost_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-
-native_executor_instance!(
-	pub RococoExecutor,
-	rococo_runtime::api::dispatch,
-	rococo_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-
-/// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
-pub trait IdentifyVariant {
-	/// Returns if this is a configuration for the `Asgard` network.
-	fn is_asgard(&self) -> bool;
-
-	/// Returns if this is a configuration for the `Bifrost` network.
-	fn is_bifrost(&self) -> bool;
-
-	/// Returns if this is a configuration for the `Rococo` network.
-	fn is_rococo(&self) -> bool;
-}
-
-impl IdentifyVariant for Box<dyn ChainSpec> {
-	fn is_asgard(&self) -> bool {
-		self.id().starts_with("asgard") || self.id().starts_with("asg")
-	}
-	fn is_bifrost(&self) -> bool {
-		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
-	}
-	fn is_rococo(&self) -> bool {
-		self.id().starts_with("bifrost") || self.id().starts_with("roc")
-	}
-}
-
-type FullClient<RuntimeApi, Executor> = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
-type FullGrandpaBlockImport<RuntimeApi, Executor> = grandpa::GrandpaBlockImport<
-	FullBackend, Block, FullClient<RuntimeApi, Executor>, FullSelectChain
->;
+type FullGrandpaBlockImport =
+	grandpa::GrandpaBlockImport<FullBackend, Block, FullClient, FullSelectChain>;
+type LightClient = sc_service::TLightClient<Block, RuntimeApi, Executor>;
 
-type LightBackend = sc_service::TLightBackendWithHash<Block, sp_runtime::traits::BlakeTwo256>;
-type LightClient<RuntimeApi, Executor> =
-	sc_service::TLightClientWithBackend<Block, RuntimeApi, Executor, LightBackend>;
-
-pub fn new_partial<RuntimeApi, Executor>(
-	config: &Configuration
-) -> Result<sc_service::PartialComponents<
-	FullClient<RuntimeApi, Executor>, FullBackend, FullSelectChain,
-	sp_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
-	sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
+pub fn new_partial(config: &Configuration) -> Result<sc_service::PartialComponents<
+	FullClient, FullBackend, FullSelectChain,
+	sp_consensus::DefaultImportQueue<Block, FullClient>,
+	sc_transaction_pool::FullPool<Block, FullClient>,
 	(
 		impl Fn(
 			node_rpc::DenyUnsafe,
 			sc_rpc::SubscriptionTaskExecutor,
 		) -> node_rpc::IoHandler,
 		(
-			sc_consensus_babe::BabeBlockImport<Block, FullClient<RuntimeApi, Executor>, FullGrandpaBlockImport<RuntimeApi, Executor>>,
-			grandpa::LinkHalf<Block, FullClient<RuntimeApi, Executor>, FullSelectChain>,
+			sc_consensus_babe::BabeBlockImport<Block, FullClient, FullGrandpaBlockImport>,
+			grandpa::LinkHalf<Block, FullClient, FullSelectChain>,
 			sc_consensus_babe::BabeLink<Block>,
 		),
 		grandpa::SharedVoterState,
 	)
->, ServiceError>
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-{
+>, ServiceError> {
 	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
@@ -223,39 +151,32 @@ pub fn new_partial<RuntimeApi, Executor>(
 	})
 }
 
-pub struct NewFullBase<RuntimeApi, Executor> {
+pub struct NewFullBase {
 	pub task_manager: TaskManager,
 	pub inherent_data_providers: InherentDataProviders,
-	pub client: Arc<FullClient<RuntimeApi, Executor>>,
+	pub client: Arc<FullClient>,
 	pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
 	pub network_status_sinks: sc_service::NetworkStatusSinks<Block>,
+	pub transaction_pool: Arc<sc_transaction_pool::FullPool<Block, FullClient>>,
 }
 
 /// Creates a full service from the configuration.
-pub fn new_full_base<RuntimeApi, Executor>(
-	mut config: Configuration
-) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError>
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-{
+pub fn new_full_base(
+	mut config: Configuration,
+	with_startup_data: impl FnOnce(
+		&sc_consensus_babe::BabeBlockImport<Block, FullClient, FullGrandpaBlockImport>,
+		&sc_consensus_babe::BabeLink<Block>,
+	)
+) -> Result<NewFullBase, ServiceError> {
 	let sc_service::PartialComponents {
-		client,
-		backend,
-		mut task_manager,
-		import_queue,
-		keystore_container,
-		select_chain,
-		transaction_pool,
-		inherent_data_providers,
+		client, backend, mut task_manager, import_queue, keystore_container,
+		select_chain, transaction_pool, inherent_data_providers,
 		other: (rpc_extensions_builder, import_setup, rpc_setup),
-	} = new_partial::<RuntimeApi, Executor>(&config)?;
+	} = new_partial(&config)?;
 
 	let shared_voter_state = rpc_setup;
 
-	config.network.notifications_protocols.push(grandpa::GRANDPA_PROTOCOL_NAME.into());
+	config.network.extra_sets.push(grandpa::grandpa_peers_set_config());
 
 	let (network, network_status_sinks, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -300,6 +221,8 @@ pub fn new_full_base<RuntimeApi, Executor>(
 	})?;
 
 	let (block_import, grandpa_link, babe_link) = import_setup;
+
+	(with_startup_data)(&block_import, &babe_link);
 
 	if let sc_service::config::Role::Authority { .. } = &role {
 		let proposer = sc_basic_authorship::ProposerFactory::new(
@@ -401,44 +324,27 @@ pub fn new_full_base<RuntimeApi, Executor>(
 		client,
 		network,
 		network_status_sinks,
+		transaction_pool,
 	})
 }
 
 /// Builds a new service for a full client.
-pub fn new_full<RuntimeApi, Executor>(
-	config: Configuration
-) -> Result<TaskManager, ServiceError>
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-{
-	new_full_base::<RuntimeApi, Executor>(config).map(|NewFullBase { task_manager, .. }| {
+pub fn new_full(config: Configuration)
+-> Result<TaskManager, ServiceError> {
+	new_full_base(config, |_, _| ()).map(|NewFullBase { task_manager, .. }| {
 		task_manager
 	})
 }
 
-pub struct NewLightBase<RuntimeApi, Executor> {
-	pub task_manager: TaskManager,
-	pub rpc_handlers: RpcHandlers,
-	pub client: Arc<LightClient<RuntimeApi, Executor>>,
-	pub network: Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
-}
-
-pub fn new_light_base<RuntimeApi, Executor>(
-	mut config: Configuration
-) -> Result<NewLightBase<RuntimeApi, Executor>, ServiceError>
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-{
+pub fn new_light_base(mut config: Configuration) -> Result<(
+	TaskManager, RpcHandlers, Arc<LightClient>,
+	Arc<NetworkService<Block, <Block as BlockT>::Hash>>,
+	Arc<sc_transaction_pool::LightPool<Block, LightClient, sc_network::config::OnDemand<Block>>>
+), ServiceError> {
 	let (client, backend, keystore_container, mut task_manager, on_demand) =
 		sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
 
-	config.network.notifications_protocols.push(grandpa::GRANDPA_PROTOCOL_NAME.into());
+	config.network.extra_sets.push(grandpa::grandpa_peers_set_config());
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
@@ -518,84 +424,258 @@ pub fn new_light_base<RuntimeApi, Executor>(
 			task_manager: &mut task_manager,
 		})?;
 
-	Ok(NewLightBase {
-		task_manager,
-		rpc_handlers,
-		client,
-		network,
-	})
+	Ok((task_manager, rpc_handlers, client, network, transaction_pool))
 }
 
 /// Builds a new service for a light client.
-pub fn new_light<RuntimeApi, Executor>(
-	config: Configuration
-) -> Result<TaskManager, ServiceError>
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
-{
-	new_light_base::<RuntimeApi, Executor>(config).map(|NewLightBase { task_manager, .. }| {
+pub fn new_light(config: Configuration) -> Result<TaskManager, ServiceError> {
+	new_light_base(config).map(|(task_manager, _, _, _, _)| {
 		task_manager
 	})
 }
 
-/// Builds a new object suitable for chain operations.
-pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
-	(
-		Arc<Client>,
-		Arc<FullBackend>,
-		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		TaskManager,
-	),
-	ServiceError
->
-{
-	config.keystore = sc_service::config::KeystoreConfig::InMemory;
-	if config.chain_spec.is_asgard() {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor>(config)?;
-		Ok((Arc::new(Client::Asgard(client)), backend, import_queue, task_manager))
-	} else if config.chain_spec.is_bifrost() {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
-		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
-	} else {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
-		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
-	}
-}
+#[cfg(test)]
+mod tests {
+	use std::{sync::Arc, borrow::Cow, any::Any, convert::TryInto};
+	use sc_consensus_babe::{CompatibleDigestItem, BabeIntermediate, INTERMEDIATE_KEY};
+	use sc_consensus_epochs::descendent_query;
+	use sp_consensus::{
+		Environment, Proposer, BlockImportParams, BlockOrigin, ForkChoiceStrategy, BlockImport,
+		RecordProof,
+	};
+	use node_primitives::{Block, DigestItem, Signature};
+	use node_runtime::{BalancesCall, Call, UncheckedExtrinsic, Address};
+	use node_runtime::constants::{currency::CENTS, time::SLOT_DURATION};
+	use codec::Encode;
+	use sp_core::{
+		crypto::Pair as CryptoPair,
+		H256,
+		Public
+	};
+	use sp_keystore::{SyncCryptoStorePtr, SyncCryptoStore};
+	use sp_runtime::{
+		generic::{BlockId, Era, Digest, SignedPayload},
+		traits::{Block as BlockT, Header as HeaderT},
+		traits::Verify,
+	};
+	use sp_timestamp;
+	use sp_keyring::AccountKeyring;
+	use sc_service_test::TestNetNode;
+	use crate::service::{new_full_base, new_light_base, NewFullBase};
+	use sp_runtime::{key_types::BABE, traits::IdentifyAccount, RuntimeAppPublic};
+	use sp_transaction_pool::{MaintainedTransactionPool, ChainEvent};
+	use sc_client_api::BlockBackend;
+	use sc_keystore::LocalKeystore;
 
-pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
-	if config.chain_spec.is_asgard() {
-		new_light_base::<asgard_runtime::RuntimeApi, AsgardExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_bifrost() {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
-	}
-}
+	type AccountPublic = <Signature as Verify>::Signer;
 
-pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
-	if config.chain_spec.is_asgard() {
-		new_full_base::<asgard_runtime::RuntimeApi, AsgardExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_bifrost() {
-		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else {
-		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
+	#[test]
+	// It is "ignored", but the node-cli ignored tests are running on the CI.
+	// This can be run locally with `cargo test --release -p node-cli test_sync -- --ignored`.
+	#[ignore]
+	fn test_sync() {
+		let keystore_path = tempfile::tempdir().expect("Creates keystore path");
+		let keystore: SyncCryptoStorePtr = Arc::new(LocalKeystore::open(keystore_path.path(), None)
+			.expect("Creates keystore"));
+		let alice: sp_consensus_babe::AuthorityId = SyncCryptoStore::sr25519_generate_new(&*keystore, BABE, Some("//Alice"))
+			.expect("Creates authority pair").into();
+
+		let chain_spec = crate::chain_spec::tests::integration_test_config_with_single_authority();
+
+		// For the block factory
+		let mut slot_num = 1u64;
+
+		// For the extrinsics factory
+		let bob = Arc::new(AccountKeyring::Bob.pair());
+		let charlie = Arc::new(AccountKeyring::Charlie.pair());
+		let mut index = 0;
+
+		sc_service_test::sync(
+			chain_spec,
+			|config| {
+				let mut setup_handles = None;
+				let NewFullBase {
+					task_manager, inherent_data_providers, client, network, transaction_pool, ..
+				} = new_full_base(config,
+					|
+						block_import: &sc_consensus_babe::BabeBlockImport<Block, _, _>,
+						babe_link: &sc_consensus_babe::BabeLink<Block>,
+					| {
+						setup_handles = Some((block_import.clone(), babe_link.clone()));
+					}
+				)?;
+
+				let node = sc_service_test::TestNetComponents::new(
+					task_manager, client, network, transaction_pool
+				);
+				Ok((node, (inherent_data_providers, setup_handles.unwrap())))
+			},
+			|config| {
+				let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
+				Ok(sc_service_test::TestNetComponents::new(keep_alive, client, network, transaction_pool))
+			},
+			|service, &mut (ref inherent_data_providers, (ref mut block_import, ref babe_link))| {
+				let mut inherent_data = inherent_data_providers
+					.create_inherent_data()
+					.expect("Creates inherent data.");
+
+				let parent_id = BlockId::number(service.client().chain_info().best_number);
+				let parent_header = service.client().header(&parent_id).unwrap().unwrap();
+				let parent_hash = parent_header.hash();
+				let parent_number = *parent_header.number();
+
+				futures::executor::block_on(
+					service.transaction_pool().maintain(
+						ChainEvent::NewBestBlock {
+							hash: parent_header.hash(),
+							tree_route: None,
+						},
+					)
+				);
+
+				let mut proposer_factory = sc_basic_authorship::ProposerFactory::new(
+					service.spawn_handle(),
+					service.client(),
+					service.transaction_pool(),
+					None,
+				);
+
+				let epoch_descriptor = babe_link.epoch_changes().lock().epoch_descriptor_for_child_of(
+					descendent_query(&*service.client()),
+					&parent_hash,
+					parent_number,
+					slot_num,
+				).unwrap().unwrap();
+
+				let mut digest = Digest::<H256>::default();
+
+				// even though there's only one authority some slots might be empty,
+				// so we must keep trying the next slots until we can claim one.
+				let babe_pre_digest = loop {
+					inherent_data.replace_data(sp_timestamp::INHERENT_IDENTIFIER, &(slot_num * SLOT_DURATION));
+					if let Some(babe_pre_digest) = sc_consensus_babe::test_helpers::claim_slot(
+						slot_num,
+						&parent_header,
+						&*service.client(),
+						keystore.clone(),
+						&babe_link,
+					) {
+						break babe_pre_digest;
+					}
+
+					slot_num += 1;
+				};
+
+				digest.push(<DigestItem as CompatibleDigestItem>::babe_pre_digest(babe_pre_digest));
+
+				let new_block = futures::executor::block_on(async move {
+					let proposer = proposer_factory.init(&parent_header).await;
+					proposer.unwrap().propose(
+						inherent_data,
+						digest,
+						std::time::Duration::from_secs(1),
+						RecordProof::Yes,
+					).await
+				}).expect("Error making test block").block;
+
+				let (new_header, new_body) = new_block.deconstruct();
+				let pre_hash = new_header.hash();
+				// sign the pre-sealed hash of the block and then
+				// add it to a digest item.
+				let to_sign = pre_hash.encode();
+				let signature = SyncCryptoStore::sign_with(
+					&*keystore,
+					sp_consensus_babe::AuthorityId::ID,
+					&alice.to_public_crypto_pair(),
+					&to_sign,
+				).unwrap()
+				 .try_into()
+				 .unwrap();
+				let item = <DigestItem as CompatibleDigestItem>::babe_seal(
+					signature,
+				);
+				slot_num += 1;
+
+				let mut params = BlockImportParams::new(BlockOrigin::File, new_header);
+				params.post_digests.push(item);
+				params.body = Some(new_body);
+				params.intermediates.insert(
+					Cow::from(INTERMEDIATE_KEY),
+					Box::new(BabeIntermediate::<Block> { epoch_descriptor }) as Box<dyn Any>,
+				);
+				params.fork_choice = Some(ForkChoiceStrategy::LongestChain);
+
+				block_import.import_block(params, Default::default())
+					.expect("error importing test block");
+			},
+			|service, _| {
+				let amount = 5 * CENTS;
+				let to: Address = AccountPublic::from(bob.public()).into_account().into();
+				let from: Address = AccountPublic::from(charlie.public()).into_account().into();
+				let genesis_hash = service.client().block_hash(0).unwrap().unwrap();
+				let best_block_id = BlockId::number(service.client().chain_info().best_number);
+				let (spec_version, transaction_version) = {
+					let version = service.client().runtime_version_at(&best_block_id).unwrap();
+					(version.spec_version, version.transaction_version)
+				};
+				let signer = charlie.clone();
+
+				let function = Call::Balances(BalancesCall::transfer(to.into(), amount));
+
+				let check_spec_version = frame_system::CheckSpecVersion::new();
+				let check_tx_version = frame_system::CheckTxVersion::new();
+				let check_genesis = frame_system::CheckGenesis::new();
+				let check_era = frame_system::CheckEra::from(Era::Immortal);
+				let check_nonce = frame_system::CheckNonce::from(index);
+				let check_weight = frame_system::CheckWeight::new();
+				let payment = pallet_transaction_payment::ChargeTransactionPayment::from(0);
+				let extra = (
+					check_spec_version,
+					check_tx_version,
+					check_genesis,
+					check_era,
+					check_nonce,
+					check_weight,
+					payment,
+				);
+				let raw_payload = SignedPayload::from_raw(
+					function,
+					extra,
+					(spec_version, transaction_version, genesis_hash, genesis_hash, (), (), ())
+				);
+				let signature = raw_payload.using_encoded(|payload|	{
+					signer.sign(payload)
+				});
+				let (function, extra, _) = raw_payload.deconstruct();
+				index += 1;
+				UncheckedExtrinsic::new_signed(
+					function,
+					from.into(),
+					signature.into(),
+					extra,
+				).into()
+			},
+		);
+	}
+
+	#[test]
+	#[ignore]
+	fn test_consensus() {
+		sc_service_test::consensus(
+			crate::chain_spec::tests::integration_test_config_with_two_authorities(),
+			|config| {
+				let NewFullBase { task_manager, client, network, transaction_pool, .. }
+					= new_full_base(config,|_, _| ())?;
+				Ok(sc_service_test::TestNetComponents::new(task_manager, client, network, transaction_pool))
+			},
+			|config| {
+				let (keep_alive, _, client, network, transaction_pool) = new_light_base(config)?;
+				Ok(sc_service_test::TestNetComponents::new(keep_alive, client, network, transaction_pool))
+			},
+			vec![
+				"//Alice".into(),
+				"//Bob".into(),
+			],
+		)
 	}
 }

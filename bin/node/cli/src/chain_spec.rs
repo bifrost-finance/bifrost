@@ -14,37 +14,50 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use hex_literal::hex;
-use sc_chain_spec::ChainType;
-use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::Perbill;
-use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, ConvertPool, TokenType, Token};
-use asgard_runtime::{
-	constants::currency::{BNCS as ASG, DOLLARS},
+use sc_chain_spec::ChainSpecExtension;
+use sp_core::{Pair, Public, crypto::UncheckedInto, sr25519};
+use serde::{Serialize, Deserialize};
+use node_runtime::{
+	constants::currency::{BNCS as BNC, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	BridgeEosConfig,
-	BridgeIostConfig,
-	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+	BridgeEosConfig, ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
-	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
+	StakerStatus, wasm_binary_unwrap,
 };
-use crate::chain_spec::{
-	Extensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
-	authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers,
-	testnet_accounts,
-};
+use node_primitives::{AccountId, ConvertPool, Signature, TokenType, Token};
+use node_runtime::Block;
+use sc_service::ChainType;
+use hex_literal::hex;
+use sc_telemetry::TelemetryEndpoints;
+use grandpa_primitives::{AuthorityId as GrandpaId};
+use sp_consensus_babe::{AuthorityId as BabeId};
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
+use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
+use sp_runtime::{Perbill, traits::{Verify, IdentifyAccount}};
+
+type AccountPublic = <Signature as Verify>::Signer;
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "asg";
 
-/// The `ChainSpec` parametrised for the asgard runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
-
-pub fn config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../../res/asgard.json")[..])
+/// Node `ChainSpec` extensions.
+///
+/// Additional parameters for some Substrate core modules,
+/// customizable from the chain spec.
+#[derive(Default, Clone, Serialize, Deserialize, ChainSpecExtension)]
+#[serde(rename_all = "camelCase")]
+pub struct Extensions {
+	/// Block numbers with known hashes.
+	pub fork_blocks: sc_client_api::ForkBlocks<Block>,
+	/// Known bad block hashes.
+	pub bad_blocks: sc_client_api::BadBlocks<Block>,
 }
+
+/// Specialized `ChainSpec`.
+pub type ChainSpec = sc_service::GenericChainSpec<
+	GenesisConfig,
+	Extensions,
+>;
 
 fn session_keys(
 	grandpa: GrandpaId,
@@ -127,15 +140,16 @@ fn staging_testnet_config_genesis() -> GenesisConfig {
 	testnet_genesis(
 		initial_authorities,
 		root_key,
-		Some(endowed_accounts)
+		Some(endowed_accounts),
 	)
 }
 
+/// Staging testnet config.
 pub fn staging_testnet_config() -> ChainSpec {
 	let boot_nodes = vec![];
 	ChainSpec::from_genesis(
-		"Asgard Staging Testnet",
-		"asgard_staging_testnet",
+		"Staging Testnet",
+		"staging_testnet",
 		ChainType::Live,
 		staging_testnet_config_genesis,
 		boot_nodes,
@@ -144,6 +158,39 @@ pub fn staging_testnet_config() -> ChainSpec {
 		None,
 		None,
 		Default::default(),
+	)
+}
+
+/// Helper function to generate a crypto pair from seed
+pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
+}
+
+/// Helper function to generate an account ID from seed
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId where
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>
+{
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
+/// Helper function to generate stash, controller and session key from seed
+pub fn authority_keys_from_seed(seed: &str) -> (
+	AccountId,
+	AccountId,
+	GrandpaId,
+	BabeId,
+	ImOnlineId,
+	AuthorityDiscoveryId,
+) {
+	(
+		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
+		get_account_id_from_seed::<sr25519::Public>(seed),
+		get_from_seed::<GrandpaId>(seed),
+		get_from_seed::<BabeId>(seed),
+		get_from_seed::<ImOnlineId>(seed),
+		get_from_seed::<AuthorityDiscoveryId>(seed),
 	)
 }
 
@@ -160,7 +207,22 @@ pub fn testnet_genesis(
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> GenesisConfig {
-	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
+	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(|| {
+		vec![
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_account_id_from_seed::<sr25519::Public>("Bob"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie"),
+			get_account_id_from_seed::<sr25519::Public>("Dave"),
+			get_account_id_from_seed::<sr25519::Public>("Eve"),
+			get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+			get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+			get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+		]
+	});
 	let num_endowed_accounts = endowed_accounts.len();
 
 	initial_authorities.iter().for_each(|x|
@@ -169,7 +231,7 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * ASG;
+	const ENDOWMENT: u128 = 1_000_000 * BNC;
 	const STASH: u128 = ENDOWMENT / 1000;
 
 	GenesisConfig {
@@ -282,14 +344,6 @@ pub fn testnet_genesis(
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 			eos_asset_id: 6,
 		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			iost_asset_id: 8,
-		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
@@ -300,32 +354,72 @@ pub fn testnet_genesis(
 	}
 }
 
-fn development_config_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
+fn parse_address(address: impl AsRef<str>) -> AccountId {
+	let decoded_ss58 = bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
+	let mut data = [0u8; 32];
+	data.copy_from_slice(&decoded_ss58[1..33]);
+
+	node_primitives::AccountId::from(data)
+}
+
+fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>> {
+	use std::collections::HashSet;
+
+	let path = std::path::Path::join(
+		&std::env::current_dir().ok()?,
+		"bnc_vouchers.json"
+	);
+
+	if !path.exists() { return None; }
+	let file = std::fs::File::open(path).ok()?;
+	let reader = std::io::BufReader::new(file);
+
+	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
+	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
+		(parse_address(&v.0), v.1.parse().expect("Balance is invalid."))
+	}).collect();
+
+	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
+	let mut final_vouchers = Vec::new();
+	for i in set.iter() {
+		let mut sum = 0;
+		for j in vouchers.iter() {
+			if *i == j.0 {
+				sum += j.1;
+			}
+		}
+		final_vouchers.push((i.clone(), sum));
+	}
+
+	Some(final_vouchers)
+}
+
+fn development_config_genesis() -> GenesisConfig {
 	testnet_genesis(
-		vec![authority_keys_from_seed("Alice")],
+		vec![
+			authority_keys_from_seed("Alice"),
+		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 	)
 }
 
-/// Asgard development config (single validator Alice)
-pub fn development_config() -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Asgard development wasm not available")?;
-
-	Ok(ChainSpec::from_genesis(
+/// Development config (single validator Alice)
+pub fn development_config() -> ChainSpec {
+	ChainSpec::from_genesis(
 		"Development",
 		"dev",
 		ChainType::Development,
-		move || development_config_genesis(wasm_binary),
+		development_config_genesis,
 		vec![],
 		None,
-		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		None,
 		Default::default(),
-	))
+	)
 }
 
-fn local_testnet_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
+fn local_testnet_genesis() -> GenesisConfig {
 	testnet_genesis(
 		vec![
 			authority_keys_from_seed("Alice"),
@@ -336,21 +430,19 @@ fn local_testnet_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
 	)
 }
 
-/// Asgard local testnet config (multivalidator Alice + Bob)
-pub fn local_testnet_config() -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Asgard development wasm not available")?;
-
-	Ok(ChainSpec::from_genesis(
-		"Asgard Local Testnet",
-		"asgard_local_testnet",
+/// Local testnet config (multivalidator Alice + Bob)
+pub fn local_testnet_config() -> ChainSpec {
+	ChainSpec::from_genesis(
+		"Local Testnet",
+		"local_testnet",
 		ChainType::Local,
-		move || local_testnet_genesis(wasm_binary),
+		local_testnet_genesis,
 		vec![],
 		None,
-		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		None,
 		Default::default(),
-	))
+	)
 }
 
 /// Configure genesis for bifrost asgard test
@@ -437,7 +529,7 @@ fn asgard_testnet_config_genesis() -> GenesisConfig {
 	)
 }
 
-pub fn chainspec_config() -> ChainSpec {
+pub fn chain_spec_config() -> ChainSpec {
 	let properties = {
 		let mut props = serde_json::Map::new();
 

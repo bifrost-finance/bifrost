@@ -69,13 +69,10 @@ pub type Timestamp = u64;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
-
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-
 /// Block type.
 pub type Block = generic::Block<Header, OpaqueExtrinsic>;
-
 /// Block ID.
 pub type BlockId = generic::BlockId<Block>;
 

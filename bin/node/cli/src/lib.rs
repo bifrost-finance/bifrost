@@ -21,6 +21,11 @@
 //! - `cli` (default): exposes functions that parse command-line options, then start and run the
 //! node as a CLI application.
 
+pub mod chain_spec;
+mod executor;
+
+#[macro_use]
+mod service;
 #[cfg(feature = "cli")]
 mod cli;
 #[cfg(feature = "cli")]

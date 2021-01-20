@@ -14,12 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+pub use sc_executor::NativeExecutor;
+use sc_executor::native_executor_instance;
 
-//! A list of the different weight modules for our runtime.
-
-pub mod pallet_assets;
-pub mod pallet_bridge_eos;
-pub mod pallet_bridge_iost;
-pub mod pallet_convert;
-pub mod pallet_voucher;
+// Declare an instance of the native executor named `Executor`. Include the wasm binary as the
+// equivalent wasm code.
+native_executor_instance!(
+	pub Executor,
+	node_runtime::api::dispatch,
+	node_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);

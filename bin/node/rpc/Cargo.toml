@@ -10,6 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 jsonrpc-core = "15.1.0"
 node-primitives = { path = "../primitives" }
+node-runtime = { path = "../runtime" }
 pallet-transaction-payment-rpc = { version = "2.0.0" }
 sc-client-api = { version = "2.0.0" }
 sc-consensus-babe = { version = "0.8.0" }
@@ -18,6 +19,7 @@ sc-consensus-epochs = { version = "0.8.0" }
 sc-chain-spec = { version = "2.0.0" }
 sc-finality-grandpa = { version = "0.8.0" }
 sc-finality-grandpa-rpc = { version = "0.8.0" }
+sc-keystore = { version = "2.0.0" }
 sc-rpc-api = { version = "0.8.0" }
 sc-rpc = { version = "2.0.0" }
 sc-sync-state-rpc = { version = "0.8.0" }
