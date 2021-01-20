@@ -1,4 +1,6 @@
 {
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
   "Token": {
     "symbol": "Vec<u8>",
     "precision": "u16",
