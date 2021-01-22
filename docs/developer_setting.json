@@ -1,10 +1,13 @@
 {
   "Address": "MultiAddress",
   "LookupSource": "MultiAddress",
+  "Balance": "u128",
   "Token": {
     "symbol": "Vec<u8>",
     "precision": "u16",
-    "totalSupply": "u128"
+    "totalSupply": "Balance",
+    "token_type": "TokenType",
+	  "pair": "Option<AssetId>"
   },
   "VersionId": "u32",
   "Action": {
@@ -154,7 +157,7 @@
     "account_id": "AccountId",
     "record_amount": "Balance"
   },
-  "ConvertPrice": "u128",
+  "ConvertPrice": "Balance",
   "RatePerBlock": "u64",
   "Fee": "u64",
   "PoolId": "u32",
@@ -179,7 +182,9 @@
   "AccountAsset": {
     "balance": "Balance",
     "locked": "Balance",
-    "available": "Balance"
+    "available": "Balance",
+    "cost": "Balance",
+	  "income": "Balance"
   },
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",

@@ -8,7 +8,7 @@
 
 ### 1. Pull the image
 ```
-$ docker pull bifrostnetwork/bifrost:web3_m1
+$ docker pull bifrostnetwork/bifrost:web3_m2
 ```
 
 ### 2. Run nodes
@@ -17,7 +17,7 @@ Start two Bifrost nodes.
 
 Alice node: 
 ```
-$ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:web3_m1 --base-path /tmp/alice \
+$ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:web3_m2 --base-path /tmp/alice \
 --unsafe-rpc-external \
 --rpc-port 4321 \
 --rpc-cors all \
@@ -32,7 +32,7 @@ $ docker run --name=alice -p 9944:9944 -p 4321:4321 bifrostnetwork/bifrost:web3_
 
 Bob node:
 ```
-$ docker run --name=bob -p 9933:9933 -p 1234:1234 bifrostnetwork/bifrost:web3_m1 --base-path /tmp/bob \
+$ docker run --name=bob -p 9933:9933 -p 1234:1234 bifrostnetwork/bifrost:web3_m2 --base-path /tmp/bob \
 --unsafe-rpc-external \
 --rpc-cors all \
 --rpc-port 1234 \
