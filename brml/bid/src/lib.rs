@@ -252,10 +252,7 @@ decl_module! {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let vtoken_list = VtokensRegisteredForBidding::<T>::get();
 			for vtoken in vtoken_list.iter() {
-				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n) {
-					if vtoken == &T::AssetId::from(5) {
-						println!("i am block {:?}, my available votes is {:?}",n, available_votes);
-					}
+				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n) {	
 					// release the votes difference from bidders who provide least roi rate.
 					if !available_flag {
 						if let Err(_rs) = Self::release_votes_from_bidder(*vtoken, available_votes) {
@@ -364,7 +361,6 @@ decl_module! {
 			TotalProposalsInQueue::<T>::mutate(vtoken, |proposal_balance| {
 				*proposal_balance = proposal_balance.saturating_sub(votes);
 			});
-
 
 			Ok(())
 		}
@@ -576,7 +572,7 @@ impl<T: Trait> Module<T> {
 		if available_flag {
 			// if we have more than enough votes. Then we should first look at those forcibly deleted orders and restore
 			// them first. If we have even more votes, we'll consider match new orders.
-
+			
 			if !ForciblyUnbondOrdersInCurrentEra::<T>::get(vtoken).is_empty() {
 				// TO-DO
 				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(
@@ -828,7 +824,7 @@ impl<T: Trait> Module<T> {
 
 		let original_order = OrdersInService::<T>::get(order_id);
 		let order2_votes = original_order.votes.saturating_sub(order1_votes);
-		println!("我要split order {:?}啦！", order_id);
+
 		// delete the original order
 		Self::delete_an_order(order_id)?;
 
@@ -1020,7 +1016,7 @@ impl<T: Trait> Module<T> {
 					deleted_order_vec.push((*order_id, to_delete_order));
 				});
 			}
-
+			
 			remained_to_release_vote = remained_to_release_vote.saturating_sub(should_deduct);
 			i = i.saturating_add(1);
 		}
@@ -1169,9 +1165,10 @@ impl<T: Trait> Module<T> {
 			SlashForOrdersInService::<T>::remove(order_id);
 		}
 
+		let token_id = T::AssetTrait::get_pair(order_detail.token_id).unwrap_or_default();
 		T::AssetTrait::unlock_asset(
 			&order_detail.bidder_id,
-			order_detail.token_id,
+			token_id,
 			original_slash_deposit,
 		);
 

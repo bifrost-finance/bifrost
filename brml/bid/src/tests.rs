@@ -1140,8 +1140,4 @@ fn check_overall_proposal_matching_to_orders_should_work() {
         assert_eq!(OrdersInService::<Test>::get(9).votes, 1);  // 第9个订单是alice roi为80%的1票订单
         assert_eq!(OrdersInService::<Test>::get(9).annual_roi, Permill::from_parts(80 * 10_000));  // 第9个订单是alice roi为80%的1票订单
     });
-
-    // 还剩下以下几样东西待处理：
-    // 1. 现在是按token vs token 1:1的价格来扣除竞拍费用的。需要改成从convert模块获取兑换价，来计算竞拍费用
-    // 2. 竞拍订单已测好。bob的钱是否有正确扣除，还需做测试用例
 }
