@@ -80,14 +80,24 @@ pub trait Trait: frame_system::Trait {
 		+ Into<Self::Balance>
 		+ From<Self::Balance>;
 
+		/// Weight
+		type PoolToken: Member
+		+ Parameter
+		+ AtLeast32Bit
+		+ Default
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ Into<Self::Balance>
+		+ From<Self::Balance>;
+
 	/// Some limitations on Balancer protocol
 
 	/// when in a trade, trade_amount / all_amount <= 1 / 2. MaximumSwapInRatio keeps a number of 2.
 	/// Reverse it to be 1/2 when using it.
-	type MaximumSwapInRatio: Get<Self::Balance>;
+	type MaximumSwapInRatio: Get<u8>;
 
 	/// when adding liquidity, deposit at least this amount of pool token shares
-	type MinimumPassedInPoolTokenShares: Get<Self::Balance>;
+	type MinimumPassedInPoolTokenShares: Get<Self::PoolToken>;
 
 	/// Minimum percentage of fee that the pool owner can set.
 	type MinimumSwapFee: Get<Self::SwapFee>;
@@ -105,7 +115,7 @@ pub trait Trait: frame_system::Trait {
 	type BNCAssetId: Get<Self::AssetId>;
 
 	/// the asset id of BNC
-	type InitialPoolSupply: Get<Self::Balance>;
+	type InitialPoolSupply: Get<Self::PoolToken>;
 
 	/// The max age denominator used in calculating unclaimed BNC bonus for liquidity providers.
 	type NumberOfSupportedTokens: Get<u8>;
@@ -114,7 +124,7 @@ pub trait Trait: frame_system::Trait {
 	type BonusClaimAgeDenominator: Get<Self::BlockNumber>;
 
 	/// passed in pool share should be no more than this number.
-	type MaximumPassedInPoolTokenShares: Get<Self::Balance>;
+	type MaximumPassedInPoolTokenShares: Get<Self::PoolToken>;
 }
 
 decl_event! {
@@ -195,13 +205,13 @@ decl_storage! {
 			=> T::Balance;
 
 		/// total pool tokens in pool.
-		PoolTokensInPool get(fn pool_tokens_in_pool): map hasher(blake2_128_concat) T::PoolId => T::Balance;
+		PoolTokensInPool get(fn pool_tokens_in_pool): map hasher(blake2_128_concat) T::PoolId => T::PoolToken;
 
 		/// Users' pool tokens in different pools
 		UserPoolTokensInPool get(fn user_pool_tokens_in_pool): double_map
 			hasher(blake2_128_concat) T::AccountId,
 			hasher(blake2_128_concat) T::PoolId
-			=> T::Balance;
+			=> T::PoolToken;
 
 		/// Record user unclaimed liquidity bonus. There are two occasions that will trigger the calculation of unclaimed bonus:
 		/// 1. The user adds or removes his liquidity to the pool.
@@ -224,8 +234,8 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
-		const MaximumSwapInRatio: T::Balance = T::MaximumSwapInRatio::get();
-		const MinimumPassedInPoolTokenShares: T::Balance = T::MinimumPassedInPoolTokenShares::get();
+		const MaximumSwapInRatio: u8 = T::MaximumSwapInRatio::get();
+		const MinimumPassedInPoolTokenShares: T::PoolToken = T::MinimumPassedInPoolTokenShares::get();
 		const MinimumSwapFee: T::SwapFee = T::MinimumSwapFee::get();
 		const MaximumSwapFee: T::SwapFee = T::MaximumSwapFee::get();
 		const FeePrecision: T::SwapFee = T::FeePrecision::get();
@@ -233,8 +243,8 @@ decl_module! {
 		const NumberOfSupportedTokens: u8 = T::NumberOfSupportedTokens::get();
 		const BNCAssetId: T::AssetId = T::BNCAssetId::get();
 		const BonusClaimAgeDenominator: T::BlockNumber = T::BonusClaimAgeDenominator::get();
-		const InitialPoolSupply: T::Balance = T::InitialPoolSupply::get();
-		const MaximumPassedInPoolTokenShares: T::Balance = T::MaximumPassedInPoolTokenShares::get();
+		const InitialPoolSupply: T::PoolToken = T::InitialPoolSupply::get();
+		const MaximumPassedInPoolTokenShares: T::PoolToken = T::MaximumPassedInPoolTokenShares::get();
 
 		fn deposit_event() = default;
 
@@ -247,7 +257,7 @@ decl_module! {
 		fn add_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
-			#[compact] new_pool_token: T::Balance,
+			#[compact] new_pool_token: T::PoolToken,
 		) {
 			let provider = ensure_signed(origin)?;
 
@@ -273,7 +283,8 @@ decl_module! {
 				// the balance of a specific token in a pool
 				let token_pool_balance = TokenBalancesInPool::<T>::get(pool_id, token_id);
 				// the amount of the token that the user should deposit
-				let should_deposit_amount = token_pool_balance.saturating_mul(new_pool_token) / all_pool_tokens;
+				let should_deposit_amount = token_pool_balance.saturating_mul(new_pool_token.into()) / all_pool_tokens.into();
+
 				// ensure the user has enough balances for all kinds of tokens in the pool
 				ensure!(user_token_pool_balance >= should_deposit_amount, Error::<T>::NotEnoughBalance);
 				// record the should-be-deposited amount each of the token
@@ -329,7 +340,7 @@ decl_module! {
 				let issued_pool_token = Self::calculate_pool_out_given_single_in(token_balance_in, token_weight_in,
 					token_amount_in, pool_supply, swap_fee_rate)?;
 				let pool_token_issued = u128::from_fixed(issued_pool_token);
-				TryInto::<T::Balance>::try_into(pool_token_issued).map_err(|_| Error::<T>::ConvertFailure)?
+				TryInto::<T::PoolToken>::try_into(pool_token_issued).map_err(|_| Error::<T>::ConvertFailure)?
 			};
 
 			// Before revising storages, we should make sure the added pool token shares meet the minimum requirement.
@@ -358,7 +369,7 @@ decl_module! {
 			origin,
 			pool_id: T::PoolId,
 			asset_id: T::AssetId,
-			#[compact] new_pool_token: T::Balance,
+			#[compact] new_pool_token: T::PoolToken,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
@@ -410,7 +421,7 @@ decl_module! {
 			origin,
 			pool_id: T::PoolId,
 			asset_id: T::AssetId,
-			#[compact] pool_token_out: T::Balance  // The pool token that the user want to remove liquidity with from the pool.
+			#[compact] pool_token_out: T::PoolToken  // The pool token that the user want to remove liquidity with from the pool.
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
 
@@ -489,7 +500,7 @@ decl_module! {
 					out_token_balance_in_pool, pool_supply, swap_fee_rate)?;
 				let pool_token_out = u128::from_fixed(pool_token_out);
 
-				TryInto::<T::Balance>::try_into(pool_token_out).map_err(|_| Error::<T>::ConvertFailure)?
+				TryInto::<T::PoolToken>::try_into(pool_token_out).map_err(|_| Error::<T>::ConvertFailure)?
 			};
 
 			ensure!(UserPoolTokensInPool::<T>::get(&remover, pool_id) >= pool_token_out, Error::<T>::NotEnoughBalance);
@@ -516,7 +527,7 @@ decl_module! {
 		fn remove_assets_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
-			#[compact] pool_amount_out: T::Balance
+			#[compact] pool_amount_out: T::PoolToken
 		) {
 			let remover = ensure_signed(origin)?;
 
@@ -539,7 +550,7 @@ decl_module! {
 				// the balance of a specific token in a pool
 				let token_pool_balance = TokenBalancesInPool::<T>::get(pool_id, token_id);
 				// the amount of the token that the user should deposit
-				let can_withdraw_amount = token_pool_balance.saturating_mul(pool_amount_out) / all_pool_tokens;
+				let can_withdraw_amount = token_pool_balance.saturating_mul(pool_amount_out.into()) / all_pool_tokens.into();
 				// issue money to user's account
 				T::AssetTrait::asset_issue(token_id, &remover, can_withdraw_amount);
 
@@ -578,7 +589,7 @@ decl_module! {
 			// get the total token-in token amount for the specific pool
 			let token_in_pool_amount = TokenBalancesInPool::<T>::get(pool_id, token_in_asset_id);
 			// MaximumSwapInRatio is a reverse number.(2 => 1/2), trade less half of pool balances.
-			ensure!(token_in_pool_amount.div(token_amount_in) >= T::MaximumSwapInRatio::get(), Error::<T>::ExceedMaximumSwapInRatio);
+			ensure!(token_in_pool_amount.div(token_amount_in) >= T::MaximumSwapInRatio::get().into(), Error::<T>::ExceedMaximumSwapInRatio);
 
 			// do a swap
 			let token_amount_out = {
@@ -644,7 +655,7 @@ decl_module! {
 			// get the total token-out token amount for the specific pool
 			let token_out_pool_amount = TokenBalancesInPool::<T>::get(pool_id, token_out_asset_id);
 			// MaximumSwapInRatio is a reverse number.(2 => 1/2), trade less half of pool balances.
-			ensure!(token_out_pool_amount >= token_amount_out.saturating_mul(T::MaximumSwapInRatio::get()), Error::<T>::ExceedMaximumSwapInRatio);
+			ensure!(token_out_pool_amount >= token_amount_out.saturating_mul(T::MaximumSwapInRatio::get().into()), Error::<T>::ExceedMaximumSwapInRatio);
 
 			// do a swap
 			let token_amount_in = {
@@ -863,7 +874,7 @@ impl<T: Trait> Module<T> {
 
 	pub(crate) fn revise_storages_except_token_balances_when_adding_liquidity(
 		pool_id: T::PoolId,         // pool id
-		new_pool_token: T::Balance, // to-be-issued pool token share to the user
+		new_pool_token: T::PoolToken, // to-be-issued pool token share to the user
 		provider: &T::AccountId,    // the user account_id
 	) -> DispatchResult {
 		// update the pool token amount of the specific pool
@@ -881,7 +892,7 @@ impl<T: Trait> Module<T> {
 	}
 	pub(crate) fn revise_storages_except_token_balances_when_removing_liquidity(
 		pool_id: T::PoolId,         // pool id
-		pool_token_out: T::Balance, // to-be-issued pool token share to the user
+		pool_token_out: T::PoolToken, // to-be-issued pool token share to the user
 		remover: &T::AccountId,     // the user account_id
 	) -> DispatchResult {
 		// Calculate and update user's unclaimed bonus in the pool.
@@ -1148,7 +1159,7 @@ impl<T: Trait> Module<T> {
 		token_balance_in: T::Balance,
 		token_weight_in: T::PoolWeight,
 		token_amount_in: T::Balance,
-		pool_supply: T::Balance,
+		pool_supply: T::PoolToken,
 		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
@@ -1203,8 +1214,8 @@ impl<T: Trait> Module<T> {
 	pub(crate) fn calculate_single_in_given_pool_out(
 		token_balance_in: T::Balance,
 		token_weight_in: T::PoolWeight,
-		pool_amount_out: T::Balance,
-		pool_supply: T::Balance,
+		pool_amount_out: T::PoolToken,
+		pool_supply: T::PoolToken,
 		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
@@ -1262,9 +1273,9 @@ impl<T: Trait> Module<T> {
 	///**********************************************************************************************/
 	pub(crate) fn calculate_single_out_given_pool_in(
 		token_weight_in: T::PoolWeight,
-		pool_amount_in: T::Balance,
+		pool_amount_in: T::PoolToken,
 		token_balance_out: T::Balance,
-		pool_supply: T::Balance,
+		pool_supply: T::PoolToken,
 		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
@@ -1325,7 +1336,7 @@ impl<T: Trait> Module<T> {
 		token_weight_out: T::PoolWeight,
 		token_amount_out: T::Balance,
 		token_balance_out: T::Balance,
-		pool_supply: T::Balance,
+		pool_supply: T::PoolToken,
 		swap_fee: T::SwapFee,
 	) -> Result<I64F64, Error<T>> {
 		// type convert to u128
