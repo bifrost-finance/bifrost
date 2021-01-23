@@ -44,7 +44,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, SwapFee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Precision, SwapFee, PoolId, PoolWeight, PoolToken, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -931,17 +931,17 @@ impl brml_bridge_eos::Trait for Runtime {
 // }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: Balance = 2 * BNCS;
-	pub const MinimumPassedInPoolTokenShares: Balance = 2 * BNCS;
-	pub const MinimumSwapFee: SwapFee = 1 * BNCS; // 0.001%
-	pub const MaximumSwapFee: SwapFee = 10_000 * BNCS; // 10%
-	pub const FeePrecision: SwapFee = 100_000 * BNCS;
-	pub const WeightPrecision: PoolWeight = 100_000 * BNCS;
+	pub const MaximumSwapInRatio: u8 = 2;
+	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
+	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
+	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
+	pub const FeePrecision: SwapFee = 100_000;
+	pub const WeightPrecision: PoolWeight = 100_000;
 	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: Balance = 1_000 * BNCS;
+	pub const InitialPoolSupply: PoolToken = 1_000;
 	pub const NumberOfSupportedTokens: u8 = 8;
 	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
-	pub const MaximumPassedInPoolTokenShares: Balance = 1_000_000 * BNCS;
+	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
 }
 
 impl brml_swap::Trait for Runtime {
@@ -952,6 +952,7 @@ impl brml_swap::Trait for Runtime {
 	type Balance = Balance;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
+	type PoolToken = PoolToken;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;

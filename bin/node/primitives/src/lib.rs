@@ -80,13 +80,16 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 
 /// Balancer pool swap fee.
-pub type SwapFee = Balance;
+pub type SwapFee = u128;
 
 /// Balancer pool ID.
 pub type PoolId = u32;
 
 /// Balancer pool weight.
-pub type PoolWeight = Balance;
+pub type PoolWeight = u128;
+
+/// Balancer pool token.
+pub type PoolToken = u128;
 
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
