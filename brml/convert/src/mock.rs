@@ -79,6 +79,7 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {

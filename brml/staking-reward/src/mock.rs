@@ -63,6 +63,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
 	type BlockHashCount = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {

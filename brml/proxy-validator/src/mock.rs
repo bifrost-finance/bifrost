@@ -87,6 +87,7 @@ impl frame_system::Config for Test {
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
+	type SS58Prefix = ();
 }
 
 impl assets::Config for Test {
