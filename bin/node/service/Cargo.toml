@@ -12,6 +12,7 @@ sc-consensus-babe = { version = "0.8.0" }
 sc-finality-grandpa = { version = "0.8.0" }
 sc-block-builder = { version = "0.8.0" }
 sc-chain-spec = { version = "2.0.0" }
+sc-cli = { version = "0.8.0" }
 sc-client-api = { version = "2.0.0" }
 sc-client-db = { version = "0.8.0" }
 sc-consensus = { version = "0.8.0" }
@@ -72,10 +73,10 @@ hex-literal = "0.2.1"
 lazy_static = "1.4.0"
 log = "0.4.8"
 parking_lot = "0.9.0"
-serde = { version = "1.0.102", features = ["derive"] }
+serde = { version = "1.0.118", features = ["derive"] }
 slog = "2.5.2"
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
-serde_json = "1.0.52"
+serde_json = "1.0.60"
 
 # Runtimes
 asgard-runtime = { path = "../runtime/asgard" }
@@ -95,5 +96,4 @@ default = []
 runtime-benchmarks = [
 	"asgard-runtime/runtime-benchmarks",
 	"bifrost-runtime/runtime-benchmarks",
-	"rococo-runtime/runtime-benchmarks"
 ]

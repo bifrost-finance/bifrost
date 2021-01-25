@@ -41,7 +41,11 @@ parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-impl system::Trait for Test {
+impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Call = ();
 	type Index = u64;
@@ -56,24 +60,16 @@ impl system::Trait for Test {
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
 	type BlockHashCount = ();
-	type MaximumBlockWeight = ();
-	type MaximumExtrinsicWeight = ();
-	type MaximumBlockLength = ();
-	type AvailableBlockRatio = ();
 }
 
 parameter_types! {
 	pub const ConvertDuration: u64 = 24 * 60 * 10;
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
@@ -84,7 +80,7 @@ impl assets::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type AssetTrait = Assets;

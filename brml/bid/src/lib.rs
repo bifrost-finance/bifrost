@@ -33,7 +33,7 @@ use num_traits::sign::Unsigned;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
 use sp_runtime::{DispatchError, Permill};
 
-pub trait Trait: frame_system::Trait {
+pub trait Trait: frame_system::Config {
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
@@ -64,7 +64,7 @@ pub trait Trait: frame_system::Trait {
 		+ Into<Self::BlockNumber>;
 
 	/// event
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The units in which we record balances.
 	type Balance: Member
@@ -99,7 +99,7 @@ pub trait Trait: frame_system::Trait {
 decl_event! {
 	pub enum Event<T> where
 		AssetId = <T as Trait>::AssetId,
-		BlockNumber = <T as frame_system::Trait>::BlockNumber,
+		BlockNumber = <T as frame_system::Config>::BlockNumber,
 		BiddingOrderId = <T as Trait>::BiddingOrderId,
 		// FractionalType = <T as Trait>::FractionalType,
 		{
@@ -160,9 +160,9 @@ pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance> {
 }
 
 type BiddingOrderUnitOf<T> = BiddingOrderUnit<
-	<T as frame_system::Trait>::AccountId,
+	<T as frame_system::Config>::AccountId,
 	<T as Trait>::AssetId,
-	<T as frame_system::Trait>::BlockNumber,
+	<T as frame_system::Config>::BlockNumber,
 	<T as Trait>::Balance,
 	// <T as Trait>::Permill,
 >;
@@ -195,8 +195,8 @@ decl_storage! {
 			hasher(blake2_128_concat) T::AccountId,
 			hasher(blake2_128_concat) T::AssetId
 			=> Vec<T::BiddingOrderId>;
-		/// maintain a list of order id for each token in the order of ROI increasing. Every Vec constrain to a constant length
-		/// token => (annual roi, order id), order by annual roi ascending.
+		/// maintain a list of order id for each token in the order of ROI increasing. Every Vec constrain 
+		/// to a constant length. token => (annual roi, order id), order by annual roi ascending.
 		TokenOrderROIList get(fn token_order_roi_list): map hasher(blake2_128_concat) T::AssetId
 															 => Vec<(Permill, T::BiddingOrderId)>;
 		/// total votes which are already in service
@@ -218,11 +218,13 @@ decl_storage! {
 		/// vtokens that have been registered for bidding marketplace
 		VtokensRegisteredForBidding get(fn vtoken_registered_for_bidding): Vec<T::AssetId>;
 		/// Orders have been unbonded because of user withdrawing within current era. If vtoken supply increase later
-		/// within current era, the deleted orders recorded in this storage can restore. vtoken => (deleted_order_id, original_end_block_number)
-		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) T::AssetId => Vec<(T::BiddingOrderId, BiddingOrderUnitOf<T>)>;
+		/// within current era, the deleted orders recorded in this storage can restore. 
+		/// vtoken => (deleted_order_id, original_end_block_number)
+		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) 
+											T::AssetId => Vec<(T::BiddingOrderId, BiddingOrderUnitOf<T>)>;
 
 		// **********************************************************************************************************
-		// Below storage should be called by other pallets to update data, and then used by this bid pallet.       //
+		// Below storage should be called by other pallets to update data, and then used by this bid pallet.	   //
 		// **********************************************************************************************************
 		/// Slash amounts for orders in service. This storage should be updated by the Staking pallet whenever there is
 		/// slash occurred for a certain order. When the order ends, remaining slash deposit should be return to the
@@ -252,14 +254,14 @@ decl_module! {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let vtoken_list = VtokensRegisteredForBidding::<T>::get();
 			for vtoken in vtoken_list.iter() {
-				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n) {	
+				if let Ok((available_flag, available_votes)) = Self::calculate_available_votes(*vtoken, n) {
 					// release the votes difference from bidders who provide least roi rate.
 					if !available_flag {
 						if let Err(_rs) = Self::release_votes_from_bidder(*vtoken, available_votes) {
 							return 0;
 						};
 					} else {
-						// if there are unmatched bidding proposals as well as available votes, match proposals to orders in service.
+						// if there are unmatched bidding proposals and available votes, match proposals to orders in service.
 						if let Err(_rs) = Self::check_and_match_unsatisfied_bidding_proposal(*vtoken, n){
 							return 0;
 						};
@@ -329,7 +331,8 @@ decl_module! {
 
 			ensure!(ProposalsInQueue::<T>::contains_key(proposal_id), Error::<T>::ProposalNotExist);
 
-			let BiddingOrderUnit {bidder_id, token_id: vtoken, block_num: _block_num, votes, annual_roi: _annual_roi, validator: _validator} = ProposalsInQueue::<T>::get(proposal_id);
+			let BiddingOrderUnit {bidder_id, token_id: vtoken, block_num: _block_num, votes, annual_roi: _annual_roi, 
+													validator: _validator} = ProposalsInQueue::<T>::get(proposal_id);
 			ensure!(bidder_id == canceler, Error::<T>::NotProposalOwner);
 
 			BiddingQueues::<T>::mutate(vtoken, |bidding_proposal_vec| {
@@ -402,7 +405,8 @@ decl_module! {
 			let annual_roi = Permill::from_parts(roi * T::ROIPermillPrecision::get());
 			// ensure the bidder's unmatched proposal for a certain vtoken is no more than the limit.
 			if BidderProposalInQueue::<T>::contains_key(&bidder, vtoken) {
-				ensure!((BidderProposalInQueue::<T>::get(&bidder, vtoken).len() as u32) < T::MaxProposalNumberForBidder::get(), Error::<T>::ProposalsExceedLimit);
+				ensure!((BidderProposalInQueue::<T>::get(&bidder, vtoken).len() as u32) < T::MaxProposalNumberForBidder::get(),
+						 Error::<T>::ProposalsExceedLimit);
 			}
 
 			// check if tokens are enough to be reserved.
@@ -572,7 +576,6 @@ impl<T: Trait> Module<T> {
 		if available_flag {
 			// if we have more than enough votes. Then we should first look at those forcibly deleted orders and restore
 			// them first. If we have even more votes, we'll consider match new orders.
-			
 			if !ForciblyUnbondOrdersInCurrentEra::<T>::get(vtoken).is_empty() {
 				// TO-DO
 				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(
@@ -1003,7 +1006,7 @@ impl<T: Trait> Module<T> {
 
 				// delete the order right away
 				Self::set_order_end_block(order1_id, current_block_number)?; // order1 ends in current block
-				Self::delete_an_order(order1_id)?; // no need to deal with slash depoist right now
+				Self::delete_an_order(order1_id)?; // no need to deal with slash deposit right now
 				to_delete_order.votes = remained_to_release_vote;
 				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
 					deleted_order_vec.push((order1_id, to_delete_order));
@@ -1011,12 +1014,11 @@ impl<T: Trait> Module<T> {
 			} else {
 				// delete the order right away
 				Self::set_order_end_block(*order_id, current_block_number)?;
-				Self::delete_an_order(*order_id)?; // no need to deal with slash depoist right now
+				Self::delete_an_order(*order_id)?; // no need to deal with slash deposit right now
 				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(vtoken, |deleted_order_vec| {
 					deleted_order_vec.push((*order_id, to_delete_order));
 				});
 			}
-			
 			remained_to_release_vote = remained_to_release_vote.saturating_sub(should_deduct);
 			i = i.saturating_add(1);
 		}
@@ -1091,20 +1093,16 @@ impl<T: Trait> Module<T> {
 
 	///  delete the other storages related to an order.
 	fn delete_an_order(order_id: T::BiddingOrderId) -> DispatchResult {
-		
 		ensure!(
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
 		); //ensure the order exists
-		
 		let order_detail = OrdersInService::<T>::get(&order_id);
-		
 		OrderEndBlockNumMap::<T>::mutate(order_detail.block_num, |block_num_order_vec| {
 			if let Ok(index) = block_num_order_vec.binary_search(&order_id) {
 				block_num_order_vec.remove(index);
 			};
 		});
-		
 		BidderTokenOrdersInService::<T>::mutate(
 			&order_detail.bidder_id,
 			order_detail.token_id,
@@ -1166,11 +1164,7 @@ impl<T: Trait> Module<T> {
 		}
 
 		let token_id = T::AssetTrait::get_pair(order_detail.token_id).unwrap_or_default();
-		T::AssetTrait::unlock_asset(
-			&order_detail.bidder_id,
-			token_id,
-			original_slash_deposit,
-		);
+		T::AssetTrait::unlock_asset(&order_detail.bidder_id, token_id, original_slash_deposit);
 
 		// unlock the remaining slash deposit.
 		if slashed_amount > original_slash_deposit {

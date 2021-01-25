@@ -31,9 +31,9 @@ pub trait WeightInfo{
 	fn export_all_vouchers() -> Weight;
 }
 
-pub trait Trait: system::Trait {
+pub trait Config: system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 	/// BNC Balance
 	type Balance: Member
 		+ Parameter
@@ -50,7 +50,7 @@ pub trait Trait: system::Trait {
 }
 
 decl_event! {
-	pub enum Event<T> where <T as system::Trait>::AccountId, <T as Trait>::Balance {
+	pub enum Event<T> where <T as system::Config>::AccountId, <T as Config>::Balance {
 		/// A event indicate user receives transaction.
 		IssuedVoucher(AccountId, Balance),
 		DestroyedVoucher(AccountId, Balance),
@@ -58,14 +58,14 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Transferring too big balance
 		TransferringTooBigBalance,
 	}
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Voucher {
+	trait Store for Module<T: Config> as Voucher {
 		/// How much voucher you have
 		pub BalancesVoucher get(fn voucher) config(): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 		/// Total BNC in mainnet
@@ -88,7 +88,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
