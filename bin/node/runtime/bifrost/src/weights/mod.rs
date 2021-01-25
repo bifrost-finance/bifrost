@@ -20,6 +20,5 @@
 
 pub mod pallet_assets;
 pub mod pallet_bridge_eos;
-pub mod pallet_bridge_iost;
 pub mod pallet_convert;
 pub mod pallet_voucher;

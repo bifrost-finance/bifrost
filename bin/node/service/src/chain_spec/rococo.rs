@@ -186,22 +186,16 @@ pub fn testnet_genesis(
 				(1, Token::new(b"aUSD".to_vec(), 18, 0, TokenType::Stable)),
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
-				(6, Token::new(b"EOS".to_vec(), 4, 0, TokenType::Token)),
-				(8, Token::new(b"IOST".to_vec(), 8, 0, TokenType::Token)),
 			],
 		}),
 		brml_convert: Some(ConvertConfig {
 			convert_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
-				(6, DOLLARS / 100), // EOS
-				(8, DOLLARS / 100), // IOST
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
 				(2, ConvertPool::new(1, 100)), // DOT
 				(4, ConvertPool::new(1, 100)), // KSM
-				(6, ConvertPool::new(1, 100)), // EOS
-				(8, ConvertPool::new(1, 100)), // IOST
 			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {

@@ -47,7 +47,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -66,8 +66,6 @@ use sp_version::NativeVersion;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
-use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment, CurrencyAdapter};
@@ -942,32 +940,6 @@ impl brml_convert::Config for Runtime {
 	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
 }
 
-impl brml_bridge_eos::Config for Runtime {
-	type AuthorityId = BridgeEosId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
-}
-
-impl brml_bridge_iost::Config for Runtime {
-	type AuthorityId = BridgeIostId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
-}
-
 parameter_types! {
 	pub const MaximumSwapInRatio: u64 = 2;
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
@@ -1052,8 +1024,6 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
