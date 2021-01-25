@@ -94,6 +94,13 @@ pub type PoolToken = u128;
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
 
+/// 
+pub type BiddingOrderId = u64;
+
+///
+pub type EraId = u32;
+
+
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub enum TokenType {

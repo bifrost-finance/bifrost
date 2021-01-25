@@ -94,8 +94,6 @@ parameter_types! {
 impl crate::Config for Test {
 	type Event = TestEvent;
 	type AssetId = AssetId;
-	type Cost = Balance;
-	type Income = Balance;
 	type AssetTrait = Assets;
 	type BiddingOrderId = u64;
 	type EraId = u64;

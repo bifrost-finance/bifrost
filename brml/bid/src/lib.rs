@@ -38,12 +38,6 @@ pub trait Config: frame_system::Config {
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-	/// The units in which we record costs.
-	type Cost: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
-	/// The units in which we record incomes.
-	type Income: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
 	/// Bidding order id.

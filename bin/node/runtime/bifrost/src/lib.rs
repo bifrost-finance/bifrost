@@ -47,7 +47,8 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, SwapFee, PoolId, PoolWeight, PoolToken, ConvertPrice, RatePerBlock
+	AssetId, Precision, SwapFee, PoolId, PoolWeight, PoolToken, ConvertPrice, RatePerBlock,
+	BiddingOrderId, EraId
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -1018,11 +1019,9 @@ parameter_types! {
 impl brml_bid::Config for Runtime {
 	type Event = Event;
 	type AssetId = AssetId;
-	type Cost = Balance;
-	type Income = Balance;
 	type AssetTrait = Assets;
-	type BiddingOrderId = u64;
-	type EraId = u32;
+	type BiddingOrderId = BiddingOrderId;
+	type EraId = EraId;
 	type Balance = Balance;
 	type TokenOrderROIListLength = TokenOrderROIListLength ;
 	type MinimumVotes = MinimumVotes;
