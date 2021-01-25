@@ -44,28 +44,12 @@ pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, 
 pub use sp_api::{ApiRef, Core as CoreApi, ConstructRuntimeApi, ProvideRuntimeApi, StateBackend};
 pub use sc_executor::NativeExecutionDispatch;
 
-pub use asgard_runtime;
 pub use bifrost_runtime;
-pub use rococo_runtime;
-
-native_executor_instance!(
-	pub AsgardExecutor,
-	asgard_runtime::api::dispatch,
-	asgard_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
 
 native_executor_instance!(
 	pub BifrostExecutor,
 	bifrost_runtime::api::dispatch,
 	bifrost_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-
-native_executor_instance!(
-	pub RococoExecutor,
-	rococo_runtime::api::dispatch,
-	rococo_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
@@ -553,11 +537,7 @@ pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
 >
 {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
-	if config.chain_spec.is_asgard() {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor>(config)?;
-		Ok((Arc::new(Client::Asgard(client)), backend, import_queue, task_manager))
-	} else if config.chain_spec.is_bifrost() {
+	if config.chain_spec.is_bifrost() {
 		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
 			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
 		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
@@ -569,11 +549,7 @@ pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
 }
 
 pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
-	if config.chain_spec.is_asgard() {
-		new_light_base::<asgard_runtime::RuntimeApi, AsgardExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_bifrost() {
+	if config.chain_spec.is_bifrost() {
 		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
 		).map(|full| full.task_manager)
@@ -585,12 +561,8 @@ pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 }
 
 pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
-	if config.chain_spec.is_asgard() {
-		new_full_base::<asgard_runtime::RuntimeApi, AsgardExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_bifrost() {
-		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+	if config.chain_spec.is_bifrost() {
+		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
 		).map(|full| full.task_manager)
 	} else {

@@ -34,39 +34,14 @@ frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 frame-system-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false }
-pallet-authority-discovery = { version = "2.0.0", default-features = false }
 pallet-authorship = { version = "2.0.0", default-features = false }
-pallet-babe = { version = "2.0.0", default-features = false }
 pallet-balances = { version = "2.0.0", default-features = false }
-pallet-bounties = { version = "2.0.0", default-features = false }
-pallet-collective = { version = "2.0.0", default-features = false }
-pallet-democracy = { version = "2.0.0", default-features = false }
-pallet-elections-phragmen = { version = "2.0.0", default-features = false }
-pallet-grandpa = { version = "2.0.0", default-features = false }
-pallet-im-online = { version = "2.0.0", default-features = false }
 pallet-indices = { version = "2.0.0", default-features = false }
-pallet-identity = { version = "2.0.0", default-features = false }
-pallet-membership = { version = "2.0.0", default-features = false }
-pallet-multisig = { version = "2.0.0", default-features = false }
-pallet-offences = { version = "2.0.0", default-features = false }
-pallet-offences-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-pallet-proxy = { version = "2.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "2.0.0", default-features = false }
-pallet-recovery = { version = "2.0.0", default-features = false }
-pallet-session = { version = "2.0.0", features = ["historical"], default-features = false }
-pallet-session-benchmarking = { version = "2.0.0", default-features = false, optional = true }
-pallet-staking = { version = "2.0.0", default-features = false }
-pallet-staking-reward-curve = { version = "2.0.0", default-features = false }
-pallet-scheduler = { version = "2.0.0", default-features = false }
-pallet-society = { version = "2.0.0", default-features = false }
 pallet-sudo = { version = "2.0.0", default-features = false }
 pallet-timestamp = { version = "2.0.0", default-features = false }
-pallet-tips = { version = "2.0.0", default-features = false }
-pallet-treasury = { version = "2.0.0", default-features = false }
-pallet-utility = { version = "2.0.0", default-features = false }
 pallet-transaction-payment = { version = "2.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-features = false }
-pallet-vesting = { version = "2.0.0", default-features = false }
 
 # bifrost pallets
 brml-assets = { path = "../../../../brml/assets", default-features = false }
@@ -76,6 +51,20 @@ brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-ap
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+
+# Cumulus dependencies
+cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-runtime = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+xcm-handler = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+
+# Polkadot dependencies
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "3.0.0" }
@@ -88,39 +77,23 @@ default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"sp-authority-discovery/std",
-	"pallet-authority-discovery/std",
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
-	"pallet-babe/std",
 	"pallet-balances/std",
-	"pallet-bounties/std",
 	"sp-block-builder/std",
 	"codec/std",
-	"pallet-collective/std",
-	"pallet-democracy/std",
-	"pallet-elections-phragmen/std",
 	"frame-executive/std",
-	"pallet-grandpa/std",
-	"pallet-im-online/std",
 	"pallet-indices/std",
 	"sp-inherents/std",
-	"pallet-membership/std",
-	"pallet-multisig/std",
-	"pallet-identity/std",
-	"pallet-scheduler/std",
 	"node-primitives/std",
 	"sp-offchain/std",
-	"pallet-offences/std",
-	"pallet-proxy/std",
 	"sp-core/std",
 	"pallet-randomness-collective-flip/std",
 	"sp-std/std",
 	"serde",
-	"pallet-session/std",
 	"sp-api/std",
 	"sp-runtime/std",
 	"sp-staking/std",
-	"pallet-staking/std",
 	"sp-session/std",
 	"pallet-sudo/std",
 	"frame-support/std",
@@ -129,14 +102,8 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-	"pallet-treasury/std",
-	"pallet-tips/std",
 	"sp-transaction-pool/std",
-	"pallet-utility/std",
 	"sp-version/std",
-	"pallet-society/std",
-	"pallet-recovery/std",
-	"pallet-vesting/std",
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
 	"brml-convert/std",
@@ -144,33 +111,24 @@ std = [
 	'brml-staking-reward/std',
 	"brml-swap/std",
 	'brml-voucher/std',
+	"parachain-info/std",
+	"cumulus-message-broker/std",
+	"cumulus-runtime/std",
+	"cumulus-parachain-upgrade/std",
+	"cumulus-primitives/std",
+	"xcm/std",
+	"xcm-builder/std",
+	"xcm-executor/std",
+	"xcm-handler/std",
 ]
+
 runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"pallet-babe/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
-	"pallet-bounties/runtime-benchmarks",
-	"pallet-collective/runtime-benchmarks",
-	"pallet-democracy/runtime-benchmarks",
-	"pallet-elections-phragmen/runtime-benchmarks",
-	"pallet-grandpa/runtime-benchmarks",
-	"pallet-identity/runtime-benchmarks",
-	"pallet-im-online/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
-	"pallet-multisig/runtime-benchmarks",
-	"pallet-proxy/runtime-benchmarks",
-	"pallet-scheduler/runtime-benchmarks",
-	"pallet-society/runtime-benchmarks",
-	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
-	"pallet-treasury/runtime-benchmarks",
-	"pallet-tips/runtime-benchmarks",
-	"pallet-utility/runtime-benchmarks",
-	"pallet-vesting/runtime-benchmarks",
-	"pallet-offences-benchmarking",
-	"pallet-session-benchmarking",
 	"frame-system-benchmarking",
 	"hex-literal",
 ]
