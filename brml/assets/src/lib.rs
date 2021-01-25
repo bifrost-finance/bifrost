@@ -24,7 +24,7 @@ use sp_runtime::traits::{Member, AtLeast32Bit, Saturating, One, Zero, StaticLook
 use sp_std::prelude::*;
 use frame_system::{self as system, ensure_signed, ensure_root};
 use node_primitives::{
-	AccountAsset, AssetRedeem, AssetTrait, FetchConvertPrice, Token, TokenPriceHandler, TokenType,
+	AccountAsset, AssetRedeem, AssetTrait, FetchVtokenMintPrice, Token, TokenPriceHandler, TokenType,
 };
 
 mod mock;
@@ -54,13 +54,13 @@ pub trait Config: system::Config {
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 
 	/// The units in which we record balances.
-	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::Convert> + MaybeSerializeDeserialize;
+	type Balance: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + From<Self::VtokenMint> + MaybeSerializeDeserialize;
 
 	/// The units in which we record prices.
 	type Price: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + MaybeSerializeDeserialize;
 
-	/// The units in which we record convert rate.
-	type Convert: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + MaybeSerializeDeserialize;
+	/// The units in which we record vtoken mint rate.
+	type VtokenMint: Member + Parameter + Default + AtLeast32Bit + Copy + Zero + MaybeSerializeDeserialize;
 
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + Default + AtLeast32Bit + Copy + MaybeSerializeDeserialize;
@@ -68,8 +68,8 @@ pub trait Config: system::Config {
 	/// Handler for asset redeem
 	type AssetRedeem: AssetRedeem<Self::AssetId, Self::AccountId, Self::Balance>;
 
-	/// Handler for fetch convert rate from convert runtime
-	type FetchConvertPrice: FetchConvertPrice<Self::AssetId, Self::Convert>;
+	/// Handler for fetch vtoken mint rate from vtoken mint runtime
+	type FetchVtokenMintPrice: FetchVtokenMintPrice<Self::AssetId, Self::VtokenMint>;
 
 	/// Set default weight
 	type WeightInfo: WeightInfo;
@@ -114,10 +114,10 @@ decl_error! {
 		ZeroAmountOfBalance,
 		/// Amount of input should be less than or equal to origin balance
 		InsufficientBalanceForTransaction,
-		/// Convert rate doesn't be set
-		ConvertRateDoesNotSet,
-		/// This is an invalid convert rate
-		InvalidConvertRate,
+		/// vtoken mint rate doesn't be set
+		VtokenMintRateDoesNotSet,
+		/// This is an invalid vtoken mint rate
+		InvalidVtokenMintRate,
 		/// Vtoken id is not equal to token id
 		InvalidTokenPair,
 	}
@@ -343,12 +343,12 @@ impl<T: Config> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 		target: &T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertPrice::fetch_convert_price(asset_id);
+		let vtoken_mint_rate = T::FetchVtokenMintPrice::fetch_vtoken_price(asset_id);
 		let target_asset = (asset_id, target.clone());
 		<AccountAssets<T>>::mutate(&target_asset, |asset| {
 			asset.balance = asset.balance.saturating_add(amount);
 			asset.available = asset.available.saturating_add(amount);
-			asset.cost = asset.cost.saturating_add(amount.saturating_mul(convert_rate.into()).into());
+			asset.cost = asset.cost.saturating_add(amount.saturating_mul(vtoken_mint_rate.into()).into());
 		});
 
 		// save asset id for this account
@@ -380,12 +380,12 @@ impl<T: Config> AssetTrait<T::AssetId, T::AccountId, T::Balance> for Module<T> {
 		target: &T::AccountId,
 		amount: T::Balance,
 	) {
-		let convert_rate = T::FetchConvertPrice::fetch_convert_price(asset_id);
+		let vtoken_mint_rate = T::FetchVtokenMintPrice::fetch_vtoken_price(asset_id);
 		let target_asset = (asset_id, target);
 		<AccountAssets<T>>::mutate(target_asset, |asset| {
 			asset.balance = asset.balance.saturating_sub(amount);
 			asset.available = asset.available.saturating_sub(amount);
-			asset.income = asset.income.saturating_add(amount.saturating_mul(convert_rate.into()).into());
+			asset.income = asset.income.saturating_add(amount.saturating_mul(vtoken_mint_rate.into()).into());
 		});
 
 		<Tokens<T>>::mutate(asset_id, |token| {
