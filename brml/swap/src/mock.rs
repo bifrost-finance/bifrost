@@ -77,10 +77,11 @@ impl system::Config for Test {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: u64 = 2;
+	pub const MaximumSwapInRatio: u8 = 2;
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
 	pub const MinimumSwapFee: u64 = 1; // 0.001%
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
@@ -96,12 +97,13 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type Event = TestEvent;
-	type SwapFee = u128;
+	type SwapFee = u64;
 	type AssetId = u32;
 	type PoolId = u32;
 	type Balance = u64;
 	type AssetTrait = Assets;
-	type PoolWeight = u128;
+	type PoolWeight = u64;
+	type PoolToken = u64;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;

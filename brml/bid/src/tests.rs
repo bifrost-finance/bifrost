@@ -27,28 +27,28 @@ fn storages_initialization() {
 	let symbol0 = b"BNC".to_vec();
 	let precision0 = 12;
 	let token_type0 = TokenType::Native;
-	<Test as Trait>::AssetTrait::asset_create(symbol0, precision0, token_type0).unwrap_or_default();
+	<Test as Config>::AssetTrait::asset_create(symbol0, precision0, token_type0).unwrap_or_default();
 
 	let symbol1 = b"aUSD".to_vec();
 	let precision1 = 12;
 	let token_type1 = TokenType::Stable;
-	<Test as Trait>::AssetTrait::asset_create(symbol1, precision1, token_type1).unwrap_or_default();
+	<Test as Config>::AssetTrait::asset_create(symbol1, precision1, token_type1).unwrap_or_default();
 
 	let symbol2 = b"DOT".to_vec();
 	let precision2 = 12;
-	<Test as Trait>::AssetTrait::asset_create_pair(symbol2, precision2).unwrap_or_default();
+	<Test as Config>::AssetTrait::asset_create_pair(symbol2, precision2).unwrap_or_default();
 
 	let symbol3 = b"KSM".to_vec();
 	let precision3 = 12;
-	<Test as Trait>::AssetTrait::asset_create_pair(symbol3, precision3).unwrap_or_default();
+	<Test as Config>::AssetTrait::asset_create_pair(symbol3, precision3).unwrap_or_default();
 
 	let symbol4 = b"EOS".to_vec();
 	let precision4 = 12;
-	<Test as Trait>::AssetTrait::asset_create_pair(symbol4, precision4).unwrap_or_default();
+	<Test as Config>::AssetTrait::asset_create_pair(symbol4, precision4).unwrap_or_default();
 
 	let symbol5 = b"IOST".to_vec();
 	let precision5 = 12;
-	<Test as Trait>::AssetTrait::asset_create_pair(symbol5, precision5).unwrap_or_default();
+	<Test as Config>::AssetTrait::asset_create_pair(symbol5, precision5).unwrap_or_default();
 
 	let alice = 1;
 	let bob = 2;
@@ -68,24 +68,24 @@ fn storages_initialization() {
 
 	let amount = 100_000_000;
 	// create some assets for bidder Alice
-	<Test as Trait>::AssetTrait::asset_issue(dot_id, &alice, amount);
-	<Test as Trait>::AssetTrait::asset_issue(ksm_id, &alice, amount);
-	<Test as Trait>::AssetTrait::asset_issue(eos_id, &alice, amount);
-	<Test as Trait>::AssetTrait::asset_issue(iost_id, &alice, amount);
+	<Test as Config>::AssetTrait::asset_issue(dot_id, &alice, amount);
+	<Test as Config>::AssetTrait::asset_issue(ksm_id, &alice, amount);
+	<Test as Config>::AssetTrait::asset_issue(eos_id, &alice, amount);
+	<Test as Config>::AssetTrait::asset_issue(iost_id, &alice, amount);
 
 	let amount = 10_000;
 	// create some assets for bidder Bob
-	<Test as Trait>::AssetTrait::asset_issue(dot_id, &bob, amount);
-	<Test as Trait>::AssetTrait::asset_issue(ksm_id, &bob, amount);
-	<Test as Trait>::AssetTrait::asset_issue(eos_id, &bob, amount);
-	<Test as Trait>::AssetTrait::asset_issue(iost_id, &bob, amount);
+	<Test as Config>::AssetTrait::asset_issue(dot_id, &bob, amount);
+	<Test as Config>::AssetTrait::asset_issue(ksm_id, &bob, amount);
+	<Test as Config>::AssetTrait::asset_issue(eos_id, &bob, amount);
+	<Test as Config>::AssetTrait::asset_issue(iost_id, &bob, amount);
 
 	let amount = 100;
 	// create some assets for bidder Charlie
-	<Test as Trait>::AssetTrait::asset_issue(dot_id, &charlie, amount);
-	<Test as Trait>::AssetTrait::asset_issue(ksm_id, &charlie, amount);
-	<Test as Trait>::AssetTrait::asset_issue(eos_id, &charlie, amount);
-	<Test as Trait>::AssetTrait::asset_issue(iost_id, &charlie, amount);
+	<Test as Config>::AssetTrait::asset_issue(dot_id, &charlie, amount);
+	<Test as Config>::AssetTrait::asset_issue(ksm_id, &charlie, amount);
+	<Test as Config>::AssetTrait::asset_issue(eos_id, &charlie, amount);
+	<Test as Config>::AssetTrait::asset_issue(iost_id, &charlie, amount);
 
 	// register vtokens
 	let origin_root = Origin::root();
@@ -231,10 +231,10 @@ fn register_vtoken_for_bidding_should_work() {
 		let precision = 12;
 		// create assets
 		let (token_id, vtoken_id) =
-			<Test as Trait>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
 
-		assert_eq!(<Test as Trait>::AssetTrait::is_token(token_id), true);
-		assert_eq!(<Test as Trait>::AssetTrait::is_v_token(vtoken_id), true);
+		assert_eq!(<Test as Config>::AssetTrait::is_token(token_id), true);
+		assert_eq!(<Test as Config>::AssetTrait::is_v_token(vtoken_id), true);
 
 		// a user cannot register a vtoken for bidding
 		assert_eq!(
@@ -300,7 +300,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 		let maximum_lasting_block_num = 432_000;
 		// create assets
 		let (token_id, vtoken_id) =
-			<Test as Trait>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -387,7 +387,7 @@ fn set_block_number_per_era_should_work() {
 
 		// create assets
 		let (token_id, vtoken_id) =
-			<Test as Trait>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -442,7 +442,7 @@ fn set_service_stop_block_num_lag_should_work() {
 
 		// create assets
 		let (token_id, vtoken_id) =
-			<Test as Trait>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -508,7 +508,7 @@ fn set_slash_margin_rates_should_work() {
 
 		// create assets
 		let (token_id, vtoken_id) =
-			<Test as Trait>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();

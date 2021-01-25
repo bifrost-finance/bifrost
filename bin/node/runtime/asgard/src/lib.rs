@@ -1004,6 +1004,32 @@ impl brml_swap::Config for Runtime {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
+parameter_types! {
+	pub const TokenOrderROIListLength: u8 = 200u8;
+	pub const MinimumVotes: u64 = 100;
+	pub const MaximumVotes: u64 = 50_000;
+	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
+	pub const MaxProposalNumberForBidder: u32 = 5;
+	pub const ROIPermillPrecision: u32 = 100;
+}
+
+impl brml_bid::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type Cost = Balance;
+	type Income = Balance;
+	type AssetTrait = Assets;
+	type BiddingOrderId = u64;
+	type EraId = u32;
+	type Balance = Balance;
+	type TokenOrderROIListLength = TokenOrderROIListLength ;
+	type MinimumVotes = MinimumVotes;
+	type MaximumVotes = MaximumVotes;
+	type BlocksPerYear = BlocksPerYear;
+	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+	type ROIPermillPrecision = ROIPermillPrecision;
+}
+
 impl brml_staking_reward::Config for Runtime {
 	type AssetTrait = Assets;
 	type Balance = Balance;
@@ -1053,6 +1079,7 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
+		Bid: brml_bid::{Module, Call, Storage, Event<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},

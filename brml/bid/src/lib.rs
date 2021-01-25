@@ -17,6 +17,7 @@
 
 extern crate alloc;
 use alloc::vec::Vec;
+use alloc::vec;
 
 mod mock;
 mod tests;
@@ -33,7 +34,7 @@ use num_traits::sign::Unsigned;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
 use sp_runtime::{DispatchError, Permill};
 
-pub trait Trait: frame_system::Config {
+pub trait Config: frame_system::Config {
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
@@ -98,10 +99,10 @@ pub trait Trait: frame_system::Config {
 
 decl_event! {
 	pub enum Event<T> where
-		AssetId = <T as Trait>::AssetId,
+		AssetId = <T as Config>::AssetId,
 		BlockNumber = <T as frame_system::Config>::BlockNumber,
-		BiddingOrderId = <T as Trait>::BiddingOrderId,
-		// FractionalType = <T as Trait>::FractionalType,
+		BiddingOrderId = <T as Config>::BiddingOrderId,
+		// FractionalType = <T as Config>::FractionalType,
 		{
 			SetOrderEndTimeSuccess(BiddingOrderId, BlockNumber),
 			CreateProposalSuccess,
@@ -116,7 +117,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		TokenNotExist,
 		NotValidVtoken,
 		NotEnoughBalance,
@@ -161,14 +162,14 @@ pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance> {
 
 type BiddingOrderUnitOf<T> = BiddingOrderUnit<
 	<T as frame_system::Config>::AccountId,
-	<T as Trait>::AssetId,
+	<T as Config>::AssetId,
 	<T as frame_system::Config>::BlockNumber,
-	<T as Trait>::Balance,
-	// <T as Trait>::Permill,
+	<T as Config>::Balance,
+	// <T as Config>::Permill,
 >;
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Bid {
+	trait Store for Module<T: Config> as Bid {
 		/// queue for unmatched bidding proposals
 		BiddingQueues get(fn bidding_queues): map hasher(blake2_128_concat) T::AssetId
 						=> Vec<(Permill, T::BiddingOrderId)>;
@@ -235,7 +236,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		const TokenOrderROIListLength: u8 = T::TokenOrderROIListLength::get();
 		const MinimumVotes: T::Balance = T::MinimumVotes::get();
@@ -288,7 +289,7 @@ decl_module! {
 				let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
 
 				// end of this era
-				if n.saturating_add(1.into()) % block_num_per_era == 0.into() {
+				if n.saturating_add(T::BlockNumber::from(1 as u32)) % block_num_per_era == T::BlockNumber::from(0 as u32) {
 					let era_id: T::EraId = (n / block_num_per_era).into();
 
 					if ToReleaseVotesTilEndOfEra::<T>::contains_key((vtoken, era_id)) {
@@ -432,7 +433,7 @@ decl_module! {
 
 			let new_proposal_id = ProposalNextId::<T>::get();
 			ProposalNextId::<T>::mutate(|proposal_id| {
-				*proposal_id = proposal_id.saturating_add(1.into());
+				*proposal_id = proposal_id.saturating_add((1 as u32).into());
 			});
 
 			ProposalsInQueue::<T>::insert(new_proposal_id, new_proposal);
@@ -553,7 +554,7 @@ decl_module! {
 }
 
 #[allow(dead_code)]
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	/// read BiddingQueues storage to see if there are unsatisfied proposals, and match them with available votes.
 	/// If the available votes are less than needed, an order in service will be created with the available votes.
 	/// Meanwhile a new bidding proposal will be issued with the remained unmet votes.
@@ -623,7 +624,7 @@ impl<T: Trait> Module<T> {
 						vec_pointer = vec_pointer.saturating_sub(1);
 						let order_end_block_num = current_block_num
 							.saturating_add(max_order_lasting_block_num)
-							.saturating_sub(T::BlockNumber::from(1));
+							.saturating_sub(T::BlockNumber::from(1 as u32));
 
 						let (_, proposal_id) = bidding_proposal_vec[vec_pointer];
 
@@ -756,7 +757,7 @@ impl<T: Trait> Module<T> {
 
 		let new_order_id = OrderNextId::<T>::get();
 		OrderNextId::<T>::mutate(|odr_id| {
-			*odr_id = new_order_id.saturating_add(1.into());
+			*odr_id = new_order_id.saturating_add((1 as u32).into());
 		});
 		// Below are code adding this order to corresponding storage.
 		OrdersInService::<T>::insert(new_order_id, new_order);
@@ -1204,7 +1205,7 @@ impl<T: Trait> Module<T> {
 	fn get_total_votes(_vtoken: T::AssetId) -> T::Balance {
 		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
 		let mock_total_votes =
-			current_block_number * T::BlockNumber::from(201) % T::BlockNumber::from(1_000);
+			current_block_number * T::BlockNumber::from(201 as u32) % T::BlockNumber::from(1_000 as u32);
 		mock_total_votes.into()
 	}
 }
