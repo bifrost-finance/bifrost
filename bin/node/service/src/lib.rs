@@ -89,7 +89,7 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
 	}
 	fn is_rococo(&self) -> bool {
-		self.id().starts_with("rococo") || self.id().starts_with("rco")
+		self.id().starts_with("bifrost") || self.id().starts_with("roc")
 	}
 }
 
@@ -233,7 +233,7 @@ pub struct NewFullBase<RuntimeApi, Executor> {
 
 /// Creates a full service from the configuration.
 pub fn new_full_base<RuntimeApi, Executor>(
-	config: Configuration
+	mut config: Configuration
 ) -> Result<NewFullBase<RuntimeApi, Executor>, ServiceError>
 	where
 		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
@@ -254,6 +254,8 @@ pub fn new_full_base<RuntimeApi, Executor>(
 	} = new_partial::<RuntimeApi, Executor>(&config)?;
 
 	let shared_voter_state = rpc_setup;
+
+	config.network.notifications_protocols.push(grandpa::GRANDPA_PROTOCOL_NAME.into());
 
 	let (network, network_status_sinks, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -390,8 +392,6 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			"grandpa-voter",
 			grandpa::run_grandpa_voter(grandpa_config)?
 		);
-	} else {
-		grandpa::setup_disabled_grandpa(network.clone())?;
 	}
 
 	network_starter.start_network();
@@ -427,7 +427,7 @@ pub struct NewLightBase<RuntimeApi, Executor> {
 }
 
 pub fn new_light_base<RuntimeApi, Executor>(
-	config: Configuration
+	mut config: Configuration
 ) -> Result<NewLightBase<RuntimeApi, Executor>, ServiceError>
 	where
 		RuntimeApi: ConstructRuntimeApi<Block, LightClient<RuntimeApi, Executor>> + Send + Sync + 'static,
@@ -437,6 +437,8 @@ pub fn new_light_base<RuntimeApi, Executor>(
 {
 	let (client, backend, keystore_container, mut task_manager, on_demand) =
 		sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
+
+	config.network.notifications_protocols.push(grandpa::GRANDPA_PROTOCOL_NAME.into());
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
@@ -559,10 +561,6 @@ pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
 		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
 			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
 		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
-	} else if config.chain_spec.is_rococo() {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<rococo_runtime::RuntimeApi, RococoExecutor>(config)?;
-		Ok((Arc::new(Client::Rococo(client)), backend, import_queue, task_manager))
 	} else {
 		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
 			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
@@ -579,10 +577,6 @@ pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
 		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_rococo() {
-		new_light_base::<rococo_runtime::RuntimeApi, RococoExecutor>(
-			config
-		).map(|full| full.task_manager)
 	} else {
 		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
@@ -597,10 +591,6 @@ pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		).map(|full| full.task_manager)
 	} else if config.chain_spec.is_bifrost() {
 		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
-	} else if config.chain_spec.is_rococo() {
-		new_full_base::<rococo_runtime::RuntimeApi, RococoExecutor>(
 			config
 		).map(|full| full.task_manager)
 	} else {

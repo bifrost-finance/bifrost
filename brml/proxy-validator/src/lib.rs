@@ -96,9 +96,9 @@ impl<Balance: Default, BlockNumber: Default> ProxyValidatorRegister<Balance, Blo
 	}
 }
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// event
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber>;
 	/// The arithmetic type of asset identifier.
@@ -121,9 +121,9 @@ pub trait Trait: frame_system::Trait {
 
 decl_event! {
 	pub enum Event<T> where
-		<T as Trait>::Balance,
-		<T as frame_system::Trait>::AccountId,
-		<T as frame_system::Trait>::BlockNumber,
+		<T as Config>::Balance,
+		<T as frame_system::Config>::AccountId,
+		<T as frame_system::Config>::BlockNumber,
 	{
 		/// A new asset config has been set.
 		AssetConfigSet(TokenSymbol, AssetConfig<BlockNumber, Balance>),
@@ -145,7 +145,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// The asset config has not been set.
 		AssetConfigNotSet,
 		/// The proxy validator has been registered.
@@ -174,7 +174,7 @@ decl_error! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as ProxyValidator {
+	trait Store for Module<T: Config> as ProxyValidator {
 		/// Asset config data.
 		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) TokenSymbol => AssetConfig<T::BlockNumber, T::Balance>;
 		/// The total amount of asset has been locked for staking.
@@ -188,7 +188,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -396,7 +396,7 @@ decl_module! {
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn asset_lock(
 		account_id: T::AccountId,
 		token_symbol: TokenSymbol,

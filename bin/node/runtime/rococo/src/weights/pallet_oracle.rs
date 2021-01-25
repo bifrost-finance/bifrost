@@ -19,7 +19,7 @@
 use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Trait> brml_oracle::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> brml_oracle::WeightInfo for WeightInfo<T> {
     fn send_request() -> Weight {
         (65949000 as Weight)
             .saturating_add(T::DbWeight::get().reads(1 as Weight))

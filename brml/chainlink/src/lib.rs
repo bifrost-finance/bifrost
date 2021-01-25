@@ -7,34 +7,34 @@ use frame_system::{self as system};
 use codec::Encode;
 use sp_std::prelude::Vec;
 
-pub trait Trait: system::Trait {
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+pub trait Config: system::Config {
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 }
 
 pub type SpecIndex = u32;
 pub type RequestIdentifier = u64;
 pub type DataVersion = u64;
 
-pub fn create_request_event_from_parameters<T: system::Trait, U: Encode>(spec_index: SpecIndex, request_id: RequestIdentifier, requester: T::AccountId, data_version: DataVersion, parameters: U, callback: Vec<u8>) -> Event<T> {
+pub fn create_request_event_from_parameters<T: system::Config, U: Encode>(spec_index: SpecIndex, request_id: RequestIdentifier, requester: T::AccountId, data_version: DataVersion, parameters: U, callback: Vec<u8>) -> Event<T> {
 	create_request_event::<T>(spec_index, request_id, requester, data_version, parameters.encode(), callback)
 }
 
-pub fn create_request_event<T: system::Trait>(spec_index: SpecIndex, request_id: RequestIdentifier, requester: T::AccountId, data_version: DataVersion, data: Vec<u8>, callback: Vec<u8>) -> Event<T> {
+pub fn create_request_event<T: system::Config>(spec_index: SpecIndex, request_id: RequestIdentifier, requester: T::AccountId, data_version: DataVersion, data: Vec<u8>, callback: Vec<u8>) -> Event<T> {
 	RawEvent::OracleRequest(spec_index, request_id, requester, data_version, data, callback)
 }
 
 decl_storage! {
-    trait Store for Module<T: Trait> as ChainlinkStorage {
+    trait Store for Module<T: Config> as ChainlinkStorage {
     }
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 	}
 }
 
 decl_event!(
-	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
+	pub enum Event<T> where AccountId = <T as system::Config>::AccountId {
 		OracleRequest(SpecIndex, RequestIdentifier, AccountId, DataVersion, Vec<u8>, Vec<u8>),
 	}
 );
@@ -61,7 +61,7 @@ decl_event!(
 // 		pub const MaximumBlockLength: u32 = 2 * 1024;
 // 		pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
 // 	}
-// 	impl system::Trait for Test {
+// 	impl system::Config for Test {
 // 		type Origin = Origin;
 // 		type Call = ();
 // 		type Index = u64;
@@ -79,7 +79,7 @@ decl_event!(
 // 		type Version = ();
 // 		type ModuleToIndex = ();
 // 	}
-// 	impl Trait for Test {
+// 	impl Config for Test {
 // 		type Event = ();
 // 	}
 // 	type Chainlink = Module<Test>;

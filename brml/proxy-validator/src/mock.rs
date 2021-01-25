@@ -61,7 +61,7 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -89,7 +89,7 @@ impl frame_system::Trait for Test {
 	type PalletInfo = ();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
@@ -102,7 +102,7 @@ impl assets::Trait for Test {
 	type WeightInfo = ();
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;

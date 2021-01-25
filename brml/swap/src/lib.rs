@@ -44,9 +44,9 @@ use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Satura
 mod mock;
 mod tests;
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// event
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// fee
 	type SwapFee: Member
@@ -80,8 +80,8 @@ pub trait Trait: frame_system::Trait {
 		+ Into<Self::Balance>
 		+ From<Self::Balance>;
 
-		/// Weight
-		type PoolToken: Member
+	/// Weight
+	type PoolToken: Member
 		+ Parameter
 		+ AtLeast32Bit
 		+ Default
@@ -128,7 +128,7 @@ pub trait Trait: frame_system::Trait {
 }
 
 decl_event! {
-	pub enum Event<T> where <T as Trait>::Balance, {
+	pub enum Event<T> where <T as Config>::Balance, {
 		AddLiquiditySuccess,
 		RemoveLiquiditySuccess,
 		AddSingleLiquiditySuccess,
@@ -141,7 +141,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		PoolNotExist,
 		PoolNotActive,
 		TokenNotExist,
@@ -187,7 +187,7 @@ pub struct PoolCreateTokenDetails<AssetId, Balance, PoolWeight> {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Swap {
+	trait Store for Module<T: Config> as Swap {
 		/// Pool info
 		Pools get(fn pools): map hasher(blake2_128_concat) T::PoolId => PoolDetails<T::AccountId, T::SwapFee>;
 
@@ -231,7 +231,7 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		const MaximumSwapInRatio: u8 = T::MaximumSwapInRatio::get();
@@ -248,7 +248,6 @@ decl_module! {
 
 		fn deposit_event() = default;
 
-		// ****************************************************************************
 		/// Add liquidity by providing all of the tokens in proportion.
 		/// The user inputs a pool token share in the front end, and the front end will automatically calculate the
 		/// amount of each asset that should be provided liquidity with.
@@ -307,7 +306,6 @@ decl_module! {
 			Self::deposit_event(RawEvent::AddLiquiditySuccess);
 		}
 
-		// ****************************************************************************
 		/// A user adds liquidity by depositing only one kind of token.
 		/// So we need to calculate the corresponding pool token share the user should get.
 		/// (add liquidity)(single asset) given amount in => share out
@@ -360,7 +358,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// ****************************************************************************
 		/// A user adds liquidity by depositing only one kind of token.
 		/// So we need to calculate the corresponding pool token share the user should get.
 		/// (add liquidity)(single asset) given share in => amount out
@@ -413,7 +410,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// ****************************************************************************
 		/// User remove liquidity with only one kind of token
 		/// (remove liquidity)(single asset) given share in => amount out
 		#[weight = 1_000]
@@ -465,7 +461,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// ****************************************************************************
 		/// User remove liquidity with only one kind of token
 		/// (remove liquidity)(single asset) given amount in => shares out
 		#[weight = 1_000]
@@ -520,7 +515,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// ****************************************************************************
 		/// User removes all the tokens in the pool in proportion of his pool token shares.
 		/// (remove liquidity)(many assets) given share in => amount out
 		#[weight = 1_000]
@@ -634,7 +628,6 @@ decl_module! {
 			Ok(())
 		}
 
-		// ****************************************************************************
 		/// User swap one token for another kind of token, given an exact amount for token-out.
 		#[weight = 1_000]
 		fn swap_exact_out(
@@ -642,7 +635,7 @@ decl_module! {
 			pool_id: T::PoolId,
 			token_out_asset_id: T::AssetId,
 			#[compact]token_amount_out: T::Balance, // the out token amount that the user wants to get.
-			max_token_amount_in: Option<T::Balance>,  // The most input token amount that the user can accept to get the token amount out.
+			max_token_amount_in: Option<T::Balance>,  // most input token amount user can accept to get token amount out.
 			token_in_asset_id: T::AssetId,
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
@@ -729,10 +722,8 @@ decl_module! {
 			Ok(())
 		}
 
-		/// ******************************************************
-		/// ***  Above are the exchange functions.			  ***
-		/// ***  Below are the exchange management functions. ***
-		/// ******************************************************
+		/// Above are the exchange functions.
+		/// Below are the exchange management functions.
 		#[weight = 1_000]
 		pub fn create_pool(
 			origin,
@@ -740,7 +731,6 @@ decl_module! {
 			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::AssetId, T::Balance, T::PoolWeight>>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
-			
 			// swap fee rate should be greater or equals to MinimumSwapFee.
 			ensure!(swap_fee_rate >= T::MinimumSwapFee::get(), Error::<T>::FeeRateExceedMinimumLimit);
 			// swap fee rate should be greater or equals to MaximumSwapFee.
@@ -866,16 +856,16 @@ decl_module! {
 }
 
 #[allow(dead_code)]
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	pub(crate) fn convert_float(input: I64F64) -> Result<T::Balance, Error<T>> {
 		let converted = u128::from_fixed(input);
 		TryInto::<T::Balance>::try_into(converted).map_err(|_| Error::<T>::ConvertFailure)
 	}
 
 	pub(crate) fn revise_storages_except_token_balances_when_adding_liquidity(
-		pool_id: T::PoolId,         // pool id
+		pool_id: T::PoolId,		   // pool id
 		new_pool_token: T::PoolToken, // to-be-issued pool token share to the user
-		provider: &T::AccountId,    // the user account_id
+		provider: &T::AccountId,	  // the user account_id
 	) -> DispatchResult {
 		// update the pool token amount of the specific pool
 		PoolTokensInPool::<T>::mutate(pool_id, |pool_token_num| {
@@ -891,9 +881,9 @@ impl<T: Trait> Module<T> {
 		Ok(())
 	}
 	pub(crate) fn revise_storages_except_token_balances_when_removing_liquidity(
-		pool_id: T::PoolId,         // pool id
+		pool_id: T::PoolId,		   // pool id
 		pool_token_out: T::PoolToken, // to-be-issued pool token share to the user
-		remover: &T::AccountId,     // the user account_id
+		remover: &T::AccountId,	   // the user account_id
 	) -> DispatchResult {
 		// Calculate and update user's unclaimed bonus in the pool.
 		Self::update_unclaimed_bonus_related_states(&remover, pool_id)?;
@@ -918,7 +908,7 @@ impl<T: Trait> Module<T> {
 
 	pub(crate) fn update_unclaimed_bonus_related_states(
 		account_id: &T::AccountId, // the user account_id
-		pool_id: T::PoolId,        // pool id
+		pool_id: T::PoolId,		// pool id
 	) -> DispatchResult {
 		// Calculate the unclaimed bonus amount and update the UserUnclaimedBonusInPool map.
 		let unclaimed_amount = {
