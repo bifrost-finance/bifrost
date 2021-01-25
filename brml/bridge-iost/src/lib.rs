@@ -38,7 +38,7 @@ use iost_chain::{ActionTransfer, IostAction, Read};
 use lite_json::{parse_json, JsonValue, Serialize};
 use node_primitives::{
     AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
-    BridgeAssetTo, FetchConvertPool,
+    BridgeAssetTo, FetchVtokenMintPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::offchain::StorageKind;
@@ -242,7 +242,7 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
     type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
     /// Fetch convert pool from convert module
-    type FetchConvertPool: FetchConvertPool<Self::AssetId, Self::Balance>;
+    type FetchVtokenMintPool: FetchVtokenMintPool<Self::AssetId, Self::Balance>;
 
     /// A dispatchable call type.
     type Call: From<Call<Self>>;

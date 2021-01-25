@@ -47,7 +47,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Precision, Fee, PoolId, PoolWeight, VtokenMintPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -907,15 +907,15 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 }
 
-// asgard runtime start
+// bifrost runtime start
 impl brml_assets::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Price;
-	type Convert = ConvertPrice;
+	type VtokenMint = VtokenMintPrice;
 	type AssetRedeem = ();
-	type FetchConvertPrice = Convert;
+	type FetchVtokenMintPrice = VtokenMint;
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
@@ -927,19 +927,19 @@ impl brml_voucher::Config for Runtime {
 
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
-	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
-	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
+	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const VtokenMintPricePrecision: Balance = 1 * DOLLARS;
 }
 
-impl brml_convert::Config for Runtime {
+impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type ConvertPrice = ConvertPrice;
+	type MintPrice = VtokenMintPrice;
 	type RatePerBlock = RatePerBlock;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type ConvertDuration = ConvertDuration;
-	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
+	type VtokenMintDuration = VtokenMintDuration;
+	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
 impl brml_bridge_eos::Config for Runtime {
@@ -951,7 +951,7 @@ impl brml_bridge_eos::Config for Runtime {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
+	type FetchVtokenMintPool = VtokenMint;
 	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
 }
 
@@ -964,7 +964,7 @@ impl brml_bridge_iost::Config for Runtime {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
+	type FetchVtokenMintPool = VtokenMint;
 	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
 }
 
@@ -1008,8 +1008,7 @@ impl brml_staking_reward::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 }
-
-// asgard runtime end
+// bifrost runtime end
 
 construct_runtime!(
 	pub enum Runtime where
@@ -1051,7 +1050,7 @@ construct_runtime!(
 		Tips: pallet_tips::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
 		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
@@ -1340,9 +1339,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(asset_id: AssetId) -> node_primitives::ConvertPrice {
-			Convert::get_convert(asset_id)
+	impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
+		fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
+			VtokenMint::get_vtoken_mint_price(asset_id)
 		}
 	}
 }

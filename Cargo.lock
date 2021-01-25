@@ -168,11 +168,11 @@ dependencies = [
  "brml-assets-rpc-runtime-api",
  "brml-bridge-eos",
  "brml-bridge-iost",
- "brml-convert",
- "brml-convert-rpc-runtime-api",
  "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
+ "brml-vtoken-mint",
+ "brml-vtoken-mint-rpc-runtime-api",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -479,11 +479,11 @@ dependencies = [
  "brml-assets-rpc-runtime-api",
  "brml-bridge-eos",
  "brml-bridge-iost",
- "brml-convert",
- "brml-convert-rpc-runtime-api",
  "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
+ "brml-vtoken-mint",
+ "brml-vtoken-mint-rpc-runtime-api",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -734,7 +734,7 @@ name = "brml-bridge-eos"
 version = "0.6.0"
 dependencies = [
  "brml-assets",
- "brml-convert",
+ "brml-vtoken-mint",
  "bs58 0.3.1",
  "eos-chain",
  "eos-keys",
@@ -783,43 +783,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-convert"
-version = "0.6.0"
-dependencies = [
- "brml-assets",
- "frame-support",
- "frame-system",
- "node-primitives",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-convert-rpc"
-version = "0.6.0"
-dependencies = [
- "brml-convert-rpc-runtime-api",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive 14.2.2",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-convert-rpc-runtime-api"
-version = "0.6.0"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
-]
-
-[[package]]
 name = "brml-staking-reward"
 version = "0.6.0"
 dependencies = [
@@ -861,6 +824,43 @@ dependencies = [
  "serde",
  "serde_json",
  "sp-runtime",
+]
+
+[[package]]
+name = "brml-vtoken-mint"
+version = "0.6.0"
+dependencies = [
+ "brml-assets",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "brml-vtoken-mint-rpc"
+version = "0.6.0"
+dependencies = [
+ "brml-vtoken-mint-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive 14.2.2",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "brml-vtoken-mint-rpc-runtime-api"
+version = "0.6.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
@@ -7027,11 +7027,11 @@ dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
  "brml-bridge-eos",
- "brml-convert",
- "brml-convert-rpc-runtime-api",
  "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
+ "brml-vtoken-mint",
+ "brml-vtoken-mint-rpc-runtime-api",
  "cumulus-message-broker",
  "cumulus-parachain-upgrade",
  "cumulus-primitives",
