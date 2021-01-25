@@ -22,9 +22,7 @@ use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, ConvertPool, TokenType, Token};
 use bifrost_runtime::{
 	constants::currency::{BNCS as BNC, DOLLARS},
-	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	BridgeEosConfig,
-	BridgeIostConfig,
+	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig, BridgeEosConfig,
 	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
@@ -260,7 +258,6 @@ pub fn testnet_genesis(
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 				(6, Token::new(b"EOS".to_vec(), 4, 0, TokenType::Token)),
-				(8, Token::new(b"IOST".to_vec(), 8, 0, TokenType::Token)),
 			],
 		}),
 		brml_convert: Some(ConvertConfig {
@@ -268,13 +265,11 @@ pub fn testnet_genesis(
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
 				(6, DOLLARS / 100), // EOS
-				(8, DOLLARS / 100), // IOST
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
 				(2, ConvertPool::new(1, 100)), // DOT
 				(4, ConvertPool::new(1, 100)), // KSM
 				(6, ConvertPool::new(1, 100)), // EOS
-				(8, ConvertPool::new(1, 100)), // IOST
 			],
 		}),
 		brml_bridge_eos: Some(BridgeEosConfig {
@@ -285,14 +280,6 @@ pub fn testnet_genesis(
 			all_crosschain_privilege: Vec::new(),
 			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
 			eos_asset_id: 6,
-		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			iost_asset_id: 8,
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
