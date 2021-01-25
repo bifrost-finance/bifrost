@@ -152,7 +152,7 @@
     "account_id": "AccountId",
     "record_amount": "Balance"
   },
-  "ConvertPrice": "u128",
+  "VtokenMintPrice": "u128",
   "RatePerBlock": "u64",
   "Fee": "u64",
   "PoolId": "u32",
@@ -182,7 +182,7 @@
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
-  "ConvertPool": {
+  "VtokenPool": {
     "token_pool": "Balance",
     "vtoken_pool": "Balance",
     "current_reward": "Balance",
