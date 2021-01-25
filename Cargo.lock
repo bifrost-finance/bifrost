@@ -166,6 +166,7 @@ version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
+ "brml-bid",
  "brml-bridge-eos",
  "brml-bridge-iost",
  "brml-convert",
@@ -477,6 +478,7 @@ version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
+ "brml-bid",
  "brml-bridge-eos",
  "brml-bridge-iost",
  "brml-convert",
@@ -7042,6 +7044,7 @@ version = "0.6.0"
 dependencies = [
  "brml-assets",
  "brml-assets-rpc-runtime-api",
+ "brml-bid",
  "brml-bridge-eos",
  "brml-convert",
  "brml-convert-rpc-runtime-api",

@@ -71,6 +71,7 @@ pallet-vesting = { version = "2.0.0", default-features = false }
 # bifrost pallets
 brml-assets = { path = "../../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
+brml-bid = { path = "../../../../brml/bid", default-features = false }
 brml-bridge-eos = { path = "../../../../brml/bridge-eos", default-features = false }
 brml-bridge-iost = { path = "../../../../brml/bridge-iost", default-features = false }
 brml-convert = { path = "../../../../brml/convert", default-features = false }
@@ -141,6 +142,7 @@ std = [
 	"pallet-vesting/std",
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
+	"brml-bid/std",
 	"brml-bridge-eos/std",
 	"brml-bridge-iost/std",
 	"brml-convert/std",
