@@ -54,10 +54,10 @@ fn load_spec(
 			.unwrap_or("bifrost")
 	} else { id };
 	Ok(match id {
-		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config()),
-		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config()?),
-		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config()?),
-		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config()),
+		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
+		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
+		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
+		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config(para_id)),
 		"bifrost" | "" => Box::new(service::chain_spec::bifrost::chainspec_config()),
 		"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost::development_config()?),
 		"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost::local_testnet_config()?),
@@ -104,11 +104,11 @@ impl SubstrateCli for Cli {
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if spec.is_asgard() {
-			&service::asgard_runtime::VERSION
+			&service::collator::asgard_runtime::VERSION
 		} else if spec.is_bifrost() {
 			&service::bifrost_runtime::VERSION
 		} else if spec.is_rococo() {
-			&service::rococo_runtime::VERSION
+			&service::collator::rococo_runtime::VERSION
 		} else {
 			&service::bifrost_runtime::VERSION
 		}

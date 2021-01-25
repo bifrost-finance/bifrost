@@ -39,7 +39,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -52,7 +52,6 @@ use sp_runtime::traits::{
 use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
-use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
 use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
@@ -368,19 +367,6 @@ impl brml_convert::Config for Runtime {
 	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
 }
 
-impl brml_bridge_eos::Config for Runtime {
-	type AuthorityId = BridgeEosId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
-}
-
 parameter_types! {
 	pub const MaximumSwapInRatio: u64 = 2;
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
@@ -511,7 +497,6 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},

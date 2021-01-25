@@ -22,7 +22,7 @@ use cumulus_primitives::ParaId;
 use node_primitives::{AccountId, ConvertPool, TokenType, Token};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
-	AssetsConfig, BalancesConfig, BridgeEosConfig, ConvertConfig,
+	AssetsConfig, BalancesConfig, ConvertConfig,
 	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
@@ -32,7 +32,7 @@ use crate::chain_spec::{
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "rco";
+const DEFAULT_PROTOCOL_ID: &str = "roc";
 
 /// The `ChainSpec` parametrized for the rococo runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
@@ -197,15 +197,6 @@ pub fn testnet_genesis(
 				(2, ConvertPool::new(1, 100)), // DOT
 				(4, ConvertPool::new(1, 100)), // KSM
 			],
-		}),
-		brml_bridge_eos: Some(BridgeEosConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
-			eos_asset_id: 6,
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
