@@ -154,8 +154,8 @@
     "account_id": "AccountId",
     "record_amount": "Balance"
   },
-  "VtokenMintPrice": "u128",
-  "RatePerBlock": "u64",
+  "VtokenMintPrice": "Balance",
+  "MintPrice": "Balance",
   "Fee": "u64",
   "PoolId": "u32",
   "Nonce": "u32",

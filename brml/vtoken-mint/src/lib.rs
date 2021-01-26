@@ -43,7 +43,6 @@ impl WeightInfo for () {
 pub trait Config: frame_system::Config {
 	/// vtoken mint rate
 	type MintPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + MaybeSerializeDeserialize;
-	type RatePerBlock: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + Into<Self::MintPrice> + MaybeSerializeDeserialize;
 
 	/// The arithmetic type of asset identifier.
 	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
@@ -100,8 +99,6 @@ decl_storage! {
 	trait Store for Module<T: Config> as VtokenMint {
 		/// mint price between two tokens, vtoken => (token, mint_price)
 		MintPrice get(fn mint_price) config(): map hasher(blake2_128_concat) T::AssetId => T::MintPrice;
-		/// change rate per block, vtoken => (token, rate_per_block)
-		RatePerBlock get(fn rate_per_block): map hasher(blake2_128_concat) T::AssetId => T::RatePerBlock;
 		/// collect referrer, minter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 		/// total_point = 1000 + 2000 + ...
 		/// referrer must be unique, so check it unique while a new referrer incoming.

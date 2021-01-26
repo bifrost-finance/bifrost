@@ -33,12 +33,12 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_convert,
+		brml_vtoken_mint,
 		assets<T>,
 	}
 }
 
-mod brml_convert {
+mod brml_vtoken_mint {
 	pub use crate::Event;
 }
 
@@ -88,7 +88,6 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type MintPrice = u64;
-	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;

@@ -47,7 +47,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, VtokenMintPrice, RatePerBlock
+	AssetId, Precision, Fee, PoolId, PoolWeight, VtokenMintPrice
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -934,7 +934,6 @@ parameter_types! {
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MintPrice = VtokenMintPrice;
-	type RatePerBlock = RatePerBlock;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
