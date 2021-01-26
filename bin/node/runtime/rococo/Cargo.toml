@@ -52,9 +52,8 @@ brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 
 # Cumulus dependencies
-cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
 cumulus-runtime = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
 cumulus-primitives = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
 parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
 xcm-handler = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
@@ -111,9 +110,8 @@ std = [
 	"brml-swap/std",
 	'brml-voucher/std',
 	"parachain-info/std",
-	"cumulus-message-broker/std",
 	"cumulus-runtime/std",
-	"cumulus-parachain-upgrade/std",
+	"cumulus-parachain-system/std",
 	"cumulus-primitives/std",
 	"xcm/std",
 	"xcm-builder/std",
