@@ -68,7 +68,7 @@ polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch =
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
 
 # External Crates
-codec = { package = "parity-scale-codec", version = "1.3.4" }
+codec = { package = "parity-scale-codec", version = "1.3.6" }
 futures = "0.3.4"
 hex-literal = "0.2.1"
 lazy_static = "1.4.0"
@@ -95,6 +95,6 @@ env_logger = "0.8.1"
 [features]
 default = []
 runtime-benchmarks = [
-	"asgard-runtime/runtime-benchmarks",
+#	"asgard-runtime/runtime-benchmarks",
 	"bifrost-runtime/runtime-benchmarks",
 ]
