@@ -158,7 +158,6 @@ parameter_types! {
 
 impl vtoken_mint::Config for Test {
 	type MintPrice = u64;
-	type RatePerBlock = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;

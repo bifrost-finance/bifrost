@@ -42,7 +42,6 @@ pub type AssetId = u32;
 
 /// Vtoken Mint type
 pub type VtokenMintPrice = u128;
-pub type RatePerBlock = u64;
 
 /// Balance of an account.
 pub type Balance = u128;
