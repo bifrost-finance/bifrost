@@ -188,7 +188,7 @@ pub fn run() -> Result<()> {
 				match config.role {
 					Role::Light => service::build_light(config).map_err(Into::into),
 					_ => {
-						if config.chain_spec.is_rococo() {
+						if config.chain_spec.is_asgard() || config.chain_spec.is_rococo() {
 							let key = sp_core::Pair::generate().0;
 
 							let extension = service::chain_spec::RelayExtensions::try_get(&config.chain_spec);

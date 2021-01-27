@@ -101,17 +101,17 @@ wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.7", optional = true }
 
 # Cumulus dependencies
-cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-collator = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-network = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "master" }
-cumulus-service = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-consensus = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-collator = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-network = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-service = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "master" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "master" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
+polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.8.0", optional = true, features = [ "wasmtime" ] }
