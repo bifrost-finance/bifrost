@@ -228,7 +228,8 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		ChainType::Development,
 		move || development_config_genesis(wasm_binary, id),
 		vec![],
-		None,
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		RelayExtensions {
