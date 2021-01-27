@@ -31,8 +31,10 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::AssetTrait;
 use num_traits::sign::Unsigned;
-use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
+use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero, One};
 use sp_runtime::{DispatchError, Permill};
+
+const PERMILL_INPUT_MAXIMUM_NUM: u32 = 10_000;
 
 pub trait Config: frame_system::Config {
 	/// The arithmetic type of asset identifier.
@@ -58,7 +60,6 @@ pub trait Config: frame_system::Config {
 		+ From<Self::BlockNumber>
 		+ Into<Self::BlockNumber>;
 
-	/// event
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
 	/// The units in which we record balances.
@@ -70,21 +71,20 @@ pub trait Config: frame_system::Config {
 		+ Unsigned
 		+ MaybeSerializeDeserialize
 		+ From<Self::BlockNumber>;
-	// + Into<Self::BlockNumber>;
 
-	/// the number of records that the order roi list should keep
+	/// The number of records that the order roi list should keep
 	type TokenOrderROIListLength: Get<u8>;
 
-	/// the minimum number of votes for a bidding proposal
+	/// The minimum number of votes for a bidding proposal
 	type MinimumVotes: Get<Self::Balance>;
 
-	/// the maximum number of votes for a bidding proposal to prevent from attack
+	/// The maximum number of votes for a bidding proposal to prevent from attack
 	type MaximumVotes: Get<Self::Balance>;
 
-	/// how many blocks per year
+	/// How many blocks per year
 	type BlocksPerYear: Get<Self::BlockNumber>;
 
-	/// the maximum proposals in queue for a bidder
+	/// The maximum proposals in queue for a bidder
 	type MaxProposalNumberForBidder: Get<u32>;
 
 	/// Roi permill precision, 100
@@ -96,7 +96,6 @@ decl_event! {
 		AssetId = <T as Config>::AssetId,
 		BlockNumber = <T as frame_system::Config>::BlockNumber,
 		BiddingOrderId = <T as Config>::BiddingOrderId,
-		// FractionalType = <T as Config>::FractionalType,
 		{
 			SetOrderEndTimeSuccess(BiddingOrderId, BlockNumber),
 			CreateProposalSuccess,
@@ -159,7 +158,6 @@ type BiddingOrderUnitOf<T> = BiddingOrderUnit<
 	<T as Config>::AssetId,
 	<T as frame_system::Config>::BlockNumber,
 	<T as Config>::Balance,
-	// <T as Config>::Permill,
 >;
 
 decl_storage! {
@@ -218,25 +216,28 @@ decl_storage! {
 		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) 
 											T::AssetId => Vec<(T::BiddingOrderId, BiddingOrderUnitOf<T>)>;
 
-		// **********************************************************************************************************
-		// Below storage should be called by other pallets to update data, and then used by this bid pallet.	   //
-		// **********************************************************************************************************
 		/// Slash amounts for orders in service. This storage should be updated by the Staking pallet whenever there is
 		/// slash occurred for a certain order. When the order ends, remaining slash deposit should be return to the
 		/// bidder and the record in this storage should be deleted.
 		SlashForOrdersInService get(fn slash_for_orders_in_service): map hasher(blake2_128_concat) T::BiddingOrderId
 																		=> T::Balance;
+		// **********************************************************************************************************
+		// The above storage should be called by other pallets to update data, and then used by this bid pallet.   //
+		// **********************************************************************************************************
 	}
 }
 
 decl_module! {
 	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
+
 		const TokenOrderROIListLength: u8 = T::TokenOrderROIListLength::get();
 		const MinimumVotes: T::Balance = T::MinimumVotes::get();
 		const MaximumVotes: T::Balance = T::MaximumVotes::get();
 		const BlocksPerYear: T::BlockNumber = T::BlocksPerYear::get();
 		const MaxProposalNumberForBidder: u32 = T::MaxProposalNumberForBidder::get();
+		// This is for multiplication of ROI input from the user end. If a user wants an ROI of 60%, he will enter 6000 instead,
+		// then the function will multiply this 6000 by ROIPermillPrecision of 100, then convert the number in to Permill format.
 		const ROIPermillPrecision: u32 = T::ROIPermillPrecision::get();
 
 		fn deposit_event() = default;
@@ -244,7 +245,7 @@ decl_module! {
 		/// What on_initialize function does?
 		/// 1. query for current available votes.
 		/// 2. compare available votes and total votes in service for each vtoken. If available votes are less than total
-		/// 	votes in service, release the difference from the bidder who provides the lowest roi rate.
+		///    votes in service, release the difference from the bidder who provides the lowest roi rate.
 		/// 3. check if there is unsatisfied bidding proposal. If yes, match it with available votes.
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let vtoken_list = VtokensRegisteredForBidding::<T>::get();
@@ -319,25 +320,22 @@ decl_module! {
 			Ok(())
 		}
 
-		/// cancel a bidding proposal
+		/// Cancel a bidding proposal
 		#[weight = 1_000]
 		fn cancel_a_bidding_proposal(origin, proposal_id: T::BiddingOrderId) -> DispatchResult {
 			let canceler = ensure_signed(origin)?;
 
 			ensure!(ProposalsInQueue::<T>::contains_key(proposal_id), Error::<T>::ProposalNotExist);
 
-			let BiddingOrderUnit {bidder_id, token_id: vtoken, block_num: _block_num, votes, annual_roi: _annual_roi, 
-													validator: _validator} = ProposalsInQueue::<T>::get(proposal_id);
+			let BiddingOrderUnit {bidder_id, token_id: vtoken, votes, .. } = ProposalsInQueue::<T>::get(proposal_id);
 			ensure!(bidder_id == canceler, Error::<T>::NotProposalOwner);
 
 			BiddingQueues::<T>::mutate(vtoken, |bidding_proposal_vec| {
-				let mut i = 0;
-				for (_prop_roi, prop_id) in bidding_proposal_vec.iter() {
+				for (i, (_, prop_id)) in bidding_proposal_vec.iter().enumerate() {
 					if *prop_id == proposal_id {
 						bidding_proposal_vec.remove(i);
 						break;
 					}
-					i = i.saturating_add(1);
 				}
 			});
 
@@ -346,12 +344,10 @@ decl_module! {
 
 			// remove the proposal id from the bidder's list of proposals
 			BidderProposalInQueue::<T>::mutate(
-				bidder_id,
-				vtoken,
-				|proposal_vec| {
+				bidder_id, vtoken, |proposal_vec| {
 					if let Ok(index) = proposal_vec.binary_search(&proposal_id) {
 						proposal_vec.remove(index);
-					};
+					}
 				},
 			);
 
@@ -364,7 +360,7 @@ decl_module! {
 		}
 
 
-		/// this function is call by outer pallets.
+		/// This function is call by outer pallets.
 		#[weight = 1_000]
 		fn set_bidding_order_end_time(origin, order_id: T::BiddingOrderId, end_block_num: T::BlockNumber) -> DispatchResult {
 			let setter = ensure_signed(origin.clone())?;
@@ -386,7 +382,7 @@ decl_module! {
 			Ok(())
 		}
 
-		/// create a bidding proposal and update it to the corresponding storage
+		/// Create a bidding proposal and update it to the corresponding storage
 		#[weight = 1_000]
 		fn create_bidding_proposal(origin, vtoken: T::AssetId, #[compact] votes_needed: T::Balance, roi: u32, validator: T::AccountId
 		) -> DispatchResult {
@@ -394,8 +390,8 @@ decl_module! {
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
 			ensure!(votes_needed >= T::MinimumVotes::get(), Error::<T>::VotesExceedLowerBound); // ensure votes_needed valid
 			ensure!(votes_needed <= T::MaximumVotes::get(), Error::<T>::VotesExceedUpperBound); // ensure votes_needed valid
-			ensure!(roi > 0, Error::<T>::AmountNotAboveZero); // ensure annual_roi is valid
-			ensure!(roi <= 10_000, Error::<T>::ROIExceedOneHundredPercent); // ensure annual_roi is valid
+			ensure!(roi > Zero::zero(), Error::<T>::AmountNotAboveZero); // ensure annual_roi is valid
+			ensure!(roi <= PERMILL_INPUT_MAXIMUM_NUM, Error::<T>::ROIExceedOneHundredPercent); // ensure annual_roi is valid
 
 			let annual_roi = Permill::from_parts(roi * T::ROIPermillPrecision::get());
 			// ensure the bidder's unmatched proposal for a certain vtoken is no more than the limit.
@@ -427,12 +423,11 @@ decl_module! {
 
 			let new_proposal_id = ProposalNextId::<T>::get();
 			ProposalNextId::<T>::mutate(|proposal_id| {
-				*proposal_id = proposal_id.saturating_add((1 as u32).into());
+				*proposal_id = proposal_id.saturating_add(One::one());
 			});
 
 			ProposalsInQueue::<T>::insert(new_proposal_id, new_proposal);
 
-			// let mut a:usize = 0;
 			// insert a new proposal record into BiddingQueues storage
 			BiddingQueues::<T>::mutate(vtoken, |bidding_proposal_vec| {
 				let index_wrapped = bidding_proposal_vec
@@ -485,7 +480,7 @@ decl_module! {
 			Ok(())
 		}
 
-		/// set the default block number per era for each vtoken according to its original token chain
+		/// Set the default block number per era for each vtoken according to its original token chain
 		#[weight = 1_000]
 		fn set_block_number_per_era(origin, vtoken: T::AssetId, block_num_per_era: T::BlockNumber) -> DispatchResult {
 			ensure_root(origin)?;
@@ -524,14 +519,14 @@ decl_module! {
 			Ok(())
 		}
 
-		/// set slash margin rate for each vtoken.
+		/// Set slash margin rate for each vtoken.
 		#[weight = 1_000]
 		fn set_slash_margin_rates(origin, vtoken: T::AssetId, slash_margin: u32) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
 			ensure!(slash_margin <= 100, Error::<T>::RateExceedUpperBound); // not allowed to be higher than 100% roi
 
-			let slash_margin_rate: Permill = Permill::from_parts(slash_margin * 10_000);
+			let slash_margin_rate: Permill = Permill::from_parts(slash_margin * PERMILL_INPUT_MAXIMUM_NUM);
 
 			if !SlashMarginRates::<T>::contains_key(vtoken) {
 				SlashMarginRates::<T>::insert(vtoken, slash_margin_rate);
@@ -549,7 +544,7 @@ decl_module! {
 
 #[allow(dead_code)]
 impl<T: Config> Module<T> {
-	/// read BiddingQueues storage to see if there are unsatisfied proposals, and match them with available votes.
+	/// Read BiddingQueues storage to see if there are unsatisfied proposals, and match them with available votes.
 	/// If the available votes are less than needed, an order in service will be created with the available votes.
 	/// Meanwhile a new bidding proposal will be issued with the remained unmet votes.
 	fn check_and_match_unsatisfied_bidding_proposal(
@@ -667,7 +662,7 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// deducting slash deposit and onetime payment for a newly created order
+	/// Deducting slash deposit and onetime payment for a newly created order
 	fn deduct_slash_deposit_and_onetime_payment(
 		proposal: &BiddingOrderUnitOf<T>,
 		votes_matched: T::Balance,
@@ -675,10 +670,8 @@ impl<T: Config> Module<T> {
 		let BiddingOrderUnit {
 			bidder_id: bidder,
 			token_id: vtoken,
-			block_num: _block_num,
-			votes: _votes,
 			annual_roi,
-			validator: _validator,
+			..
 		} = proposal;
 
 		// ensure the bidder has enough balance
@@ -704,7 +697,7 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// create an order in service. The votes_matched might be less than the needed votes in the proposal.
+	/// Create an order in service. The votes_matched might be less than the needed votes in the proposal.
 	fn create_order_in_service(
 		proposal: &BiddingOrderUnitOf<T>,
 		order_end_block_num: T::BlockNumber,
@@ -717,7 +710,7 @@ impl<T: Config> Module<T> {
 		Ok(new_order_id)
 	}
 
-	/// create an order without deducting tokens from the bidder
+	/// Create an order without deducting tokens from the bidder
 	fn create_order_actions(
 		proposal: &BiddingOrderUnitOf<T>,
 		order_end_block_num: T::BlockNumber,
@@ -731,13 +724,13 @@ impl<T: Config> Module<T> {
 		);
 		ensure!(votes_matched > Zero::zero(), Error::<T>::AmountNotAboveZero);
 
+		// ? ..
 		let BiddingOrderUnit {
 			bidder_id: bidder,
 			token_id: vtoken,
-			block_num: _block_num,
-			votes: _votes,
 			annual_roi,
 			validator,
+			..
 		} = proposal;
 
 		let new_order = BiddingOrderUnit {
@@ -806,10 +799,11 @@ impl<T: Config> Module<T> {
 		}
 
 		Self::deposit_event(RawEvent::CreateOrderSuccess(*vtoken, new_order_id));
+
 		Ok(new_order_id)
 	}
 
-	/// split an order in service into two orders with only votes_matched field different.
+	/// Split an order in service into two orders with only votes_matched field different.
 	/// order1 gets the original order id. order2 gets a new order id.
 	fn split_order_in_service(
 		order_id: T::BiddingOrderId,
@@ -848,7 +842,7 @@ impl<T: Config> Module<T> {
 		Ok((order1_id, order2_id))
 	}
 
-	/// change the order in service's end block time.
+	/// Change the order in service's end block time.
 	fn set_order_end_block(
 		order_id: T::BiddingOrderId,
 		end_block_num: T::BlockNumber,
@@ -859,12 +853,10 @@ impl<T: Config> Module<T> {
 		); //ensure the order exists
 
 		let BiddingOrderUnit {
-			bidder_id: _bidder_id,
 			token_id: vtoken,
 			block_num: original_end_block_num,
 			votes,
-			annual_roi: _annual_roi,
-			validator: _validator,
+			..
 		} = OrdersInService::<T>::get(order_id);
 		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
 		ensure!(
@@ -895,7 +887,6 @@ impl<T: Config> Module<T> {
 			});
 		}
 
-		// 修改订时间时ToReleaseVotesTilEndOfEra有两个操作，一个是原来的block_num era减，另一个是新的block_num era加
 		ToReleaseVotesTilEndOfEra::<T>::mutate((vtoken, original_end_era), |votes_to_release| {
 			*votes_to_release = votes_to_release.saturating_sub(votes);
 		});
@@ -910,7 +901,7 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// initialize empty storage for each vtoken
+	/// Initialize empty storage for each vtoken
 	fn vtoken_empty_storage_initialization(vtoken: T::AssetId) -> DispatchResult {
 		let empty_bidding_order_unit_vec: Vec<(Permill, T::BiddingOrderId)> = Vec::new();
 
@@ -932,7 +923,7 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// calculate currently available votes. Returned Value(Boolean, T::Balance), if the first element of the tuple shows
+	/// Calculate currently available votes. Returned Value(Boolean, T::Balance), if the first element of the tuple shows
 	/// true, the second element is the available votes. If the first element of the tuple shows false, the second element
 	/// is the votes needed to be release from bidder.
 	fn calculate_available_votes(
@@ -977,19 +968,12 @@ impl<T: Config> Module<T> {
 		let mut remained_to_release_vote = release_votes;
 
 		let balance_order_id_vec = TokenOrderROIList::<T>::get(vtoken);
-		let mut i = 0;
-		while (remained_to_release_vote > Zero::zero()) & (i < balance_order_id_vec.len()) {
-			let (_roi, order_id) = &balance_order_id_vec[i];
-			let BiddingOrderUnit {
-				bidder_id: _bidder_id,
-				token_id: _token_id,
-				block_num: _block_num,
-				votes,
-				annual_roi: _annual_roi,
-				validator: _validator,
-			} = OrdersInService::<T>::get(order_id);
-
-			let mut to_delete_order = OrdersInService::<T>::get(order_id).clone();
+		for (_, order_id) in balance_order_id_vec.iter() {
+			if remained_to_release_vote <= Zero::zero() {
+				break;
+			}
+			let BiddingOrderUnit { votes, ..} = OrdersInService::<T>::get(order_id);
+			let mut to_delete_order = OrdersInService::<T>::get(order_id);
 
 			let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
 			let mut should_deduct = votes;
@@ -1015,7 +999,6 @@ impl<T: Config> Module<T> {
 				});
 			}
 			remained_to_release_vote = remained_to_release_vote.saturating_sub(should_deduct);
-			i = i.saturating_add(1);
 		}
 
 		Ok(())
@@ -1032,8 +1015,7 @@ impl<T: Config> Module<T> {
 		);
 
 		let slash_rate = SlashMarginRates::<T>::get(vtoken);
-		// let a = Permill::one() * 10u64;
-		// Ok(votes_matched.saturating_mul(slash_rate))
+
 		Ok(slash_rate * votes_matched)
 	}
 
@@ -1047,6 +1029,7 @@ impl<T: Config> Module<T> {
 			MinMaxOrderLastingBlockNum::<T>::contains_key(vtoken),
 			Error::<T>::MinMaxOrderLastingBlockNumNotSet
 		);
+
 		ensure!(
 			ServiceStopBlockNumLag::<T>::contains_key(vtoken),
 			Error::<T>::ServiceStopBlockNumLagNotSet
@@ -1092,12 +1075,14 @@ impl<T: Config> Module<T> {
 			OrdersInService::<T>::contains_key(order_id),
 			Error::<T>::OrderNotExist
 		); //ensure the order exists
+
 		let order_detail = OrdersInService::<T>::get(&order_id);
 		OrderEndBlockNumMap::<T>::mutate(order_detail.block_num, |block_num_order_vec| {
 			if let Ok(index) = block_num_order_vec.binary_search(&order_id) {
 				block_num_order_vec.remove(index);
 			};
 		});
+
 		BidderTokenOrdersInService::<T>::mutate(
 			&order_detail.bidder_id,
 			order_detail.token_id,
@@ -1107,14 +1092,14 @@ impl<T: Config> Module<T> {
 				};
 			},
 		);
+
 		TokenOrderROIList::<T>::mutate(&order_detail.token_id, |order_roi_vec| {
-			let mut i = 0;
-			for (_ord_roi, ord_id) in order_roi_vec.iter() {
+			// ? enumerate
+			for (i, (_, ord_id)) in order_roi_vec.iter().enumerate() {
 				if *ord_id == order_id {
 					order_roi_vec.remove(i);
 					break;
 				}
-				i = i.saturating_add(1);
 			}
 		});
 
@@ -1122,7 +1107,6 @@ impl<T: Config> Module<T> {
 			*votes_in_service = votes_in_service.saturating_sub(order_detail.votes);
 		});
 
-		// ToReleaseVotesTilEndOfEra原来的block number要减
 		let block_num_per_era = BlockNumberPerEra::<T>::get(order_detail.token_id);
 		let original_era_id: T::EraId = (order_detail.block_num / block_num_per_era).into();
 		ToReleaseVotesTilEndOfEra::<T>::mutate(
@@ -1134,10 +1118,9 @@ impl<T: Config> Module<T> {
 
 		OrdersInService::<T>::remove(&order_id);
 
-		Self::deposit_event(RawEvent::DeleteOrderSuccess(
-			order_detail.token_id,
-			order_id,
-		));
+		Self::deposit_event(
+			RawEvent::DeleteOrderSuccess(order_detail.token_id, order_id)
+		);
 
 		Ok(())
 	}
@@ -1151,6 +1134,7 @@ impl<T: Config> Module<T> {
 
 		let original_slash_deposit =
 			Self::calculate_order_slash_deposit(order_detail.token_id, order_detail.votes)?;
+
 		let mut slashed_amount = Zero::zero();
 		if SlashForOrdersInService::<T>::contains_key(order_id) {
 			slashed_amount = SlashForOrdersInService::<T>::get(order_id);
@@ -1192,6 +1176,7 @@ impl<T: Config> Module<T> {
 				*old_amount = old_amount.saturating_add(slash_amount);
 			});
 		}
+
 		Ok(())
 	}
 
