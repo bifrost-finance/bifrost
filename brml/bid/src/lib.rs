@@ -1094,7 +1094,6 @@ impl<T: Config> Module<T> {
 		);
 
 		TokenOrderROIList::<T>::mutate(&order_detail.token_id, |order_roi_vec| {
-			// ? enumerate
 			for (i, (_, ord_id)) in order_roi_vec.iter().enumerate() {
 				if *ord_id == order_id {
 					order_roi_vec.remove(i);
