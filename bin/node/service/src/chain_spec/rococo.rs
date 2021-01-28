@@ -261,7 +261,8 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		ChainType::Local,
 		move || local_testnet_genesis(wasm_binary, id),
 		vec![],
-		None,
+		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
+			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		RelayExtensions {
@@ -285,7 +286,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		);
 		props.insert(
 			"tokenSymbol".to_owned(),
-			serde_json::value::to_value("RCO".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+			serde_json::value::to_value("BNC".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
 		);
 		Some(props)
 	};
@@ -296,7 +297,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		"bifrost_pc1_testnet",
 		ChainType::Custom("Bifrost PC1 Testnet".into()),
 		move || {
-			staging_testnet_config_genesis(id)
+			bifrost_config_genesis(id)
 		},
 		vec![
 			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
@@ -313,5 +314,90 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 			relay_chain: "westend-dev".into(),
 			para_id: id.into(),
 		},
+	)
+}
+
+/// Configure genesis for bifrost test
+fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
+	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
+		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
+		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
+		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
+		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
+		 // 5EZ7Ed8PNharn8PqUDVDpriCNMk54hGyXfNh3eV5z6cwBgj4
+		 hex!["6e2209923b84e44d774cf692a7f4b2f67ffcddbfd1dfbf7bd6f1fb7d769aaf9d"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+	 ),(
+		 // 5GCAXGqMdfzFbcGXfFWZKGJQb7NdAsx21mFSwQhmBdJVw4Mm
+		 hex!["b6a16a837cad7ad3cadfd6eb3661488fdb4c419805ffd66ab1d5bdc2e7449a60"].into(),
+		 // 5GCAXGqMdfzFbcGXfFWZKGJQb7NdAsx21mFSwQhmBdJVw4Mm
+		 hex!["b6a16a837cad7ad3cadfd6eb3661488fdb4c419805ffd66ab1d5bdc2e7449a60"].into(),
+		 // 5G2PmFJC4HDjUSZxkp18TbdyzCdbLoCVykaJJhKnUfsR2JCo
+		 hex!["af2d88f20650a6048f6d67d26d27636eb7d08ee8d44d2c535946d83257d12e26"].unchecked_into(),
+		 // 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
+		 hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+		 // 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
+		 hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+		 // 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
+		 hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+	 ),(
+		 // 5GGtX6U97Kb8qiCkzQhqDaspLkghK9zz42X9g8K98gubV5Zi
+		 hex!["ba3bc59c52d7eaffef1a38d38ad41cca00936fcd471d1773aed308355b91600a"].into(),
+		 // 5GGtX6U97Kb8qiCkzQhqDaspLkghK9zz42X9g8K98gubV5Zi
+		 hex!["ba3bc59c52d7eaffef1a38d38ad41cca00936fcd471d1773aed308355b91600a"].into(),
+		 // 5HXm38QXLsYNvEDXcNNLXES6r1mUUTqYaz1fmsGMyFdQ97Do
+		 hex!["f1cf7fc925e4c35ab308234b51f72052a9354c71937c481bd8d128626d144de1"].unchecked_into(),
+		 // 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
+		 hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+		 // 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
+		 hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+		 // 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
+		 hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+	 ),(
+		 // 5D2DxHgaHafNc4cu6gi98NDwHrdRowkL1sRydtXTHbL5nDr1
+		 hex!["2a57cff9e91f5ee1fedf20061cf5dec7a24ff468dd35b0c6db9a6a7639405d2f"].into(),
+		 // 5D2DxHgaHafNc4cu6gi98NDwHrdRowkL1sRydtXTHbL5nDr1
+		 hex!["2a57cff9e91f5ee1fedf20061cf5dec7a24ff468dd35b0c6db9a6a7639405d2f"].into(),
+		 // 5GDf8Ut6d9a9qvSbLvUK7LTW5PSBH6JrBgzvsgzyhjKVMJrJ
+		 hex!["b7c4f618fcc05c2f3eefeb0454ebb932f10712beca6fa4193e89ebd624133f66"].unchecked_into(),
+		 // 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
+		 hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+		 // 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
+		 hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+		 // 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
+		 hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+	 ), (
+		 // 5GyAB9Jia3nWUMxZ34n8TNgXFaJyhXG1n5ttkuE4N7oNvPzp
+		 hex!["d8f24a7af34e86ccfec746ce9546a22eee95587a448a221c880e5a3bb447d835"].into(),
+		 // 5GyAB9Jia3nWUMxZ34n8TNgXFaJyhXG1n5ttkuE4N7oNvPzp
+		 hex!["d8f24a7af34e86ccfec746ce9546a22eee95587a448a221c880e5a3bb447d835"].into(),
+		 // 5CowAQJr7Cx6WZxV3yNRL5QrhT68sVYj94QazzQuQm8BgV2n
+		 hex!["20f857f37fff5fbff14292b565bdc6aaa6a5e4e3d04d2a01b2f501dc9bda0b14"].unchecked_into(),
+		 // 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
+		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+		 // 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
+		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+		 // 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
+		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+	 )];
+
+	// generated with secret: subkey inspect "$secret"/fir
+	let root_key: AccountId = hex![
+		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+	].into();
+
+	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
+
+	testnet_genesis(
+		initial_authorities,
+		root_key,
+		Some(endowed_accounts),
+		id,
 	)
 }
