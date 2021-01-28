@@ -91,6 +91,22 @@ pub type PoolWeight = u128;
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
 
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[non_exhaustive]
+pub enum StorageVersion {
+	V0,
+	V1,
+	V2,
+	V3,
+}
+
+impl Default for StorageVersion {
+	fn default() -> Self {
+		Self::V0
+	}
+}
+
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
 pub enum TokenType {
@@ -423,4 +439,17 @@ impl<A, B, AI> RewardTrait<A, B, AI> for () {
 	type Error = core::convert::Infallible;
 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
+}
+
+pub trait MintTrait<AccountId, Balance, AssetId> {
+	type Error;
+	fn count_bnc(generate_amount: Balance);
+	fn mint_bnc(minter: AccountId, mint_amount: Balance) -> Result<(), Self::Error>;
+	fn issue_bnc() -> Result<(), Self::Error>;
+	fn v_token_score_exists(asset_id: AssetId) -> bool;
+	fn init_v_token_score(asset_id: AssetId, score: Balance);
+	fn mint_bnc_by_weight(minter: AccountId, mint_amount: Balance, asset_id: AssetId) -> Result<(), Self::Error>;
+	fn issue_bnc_by_weight() -> Result<(), Self::Error>;
+	fn improve_v_token_weight(asset_id: AssetId, pledge_amount: Balance) -> Result<(), Self::Error>;
+	fn withdraw_v_token_pledge(asset_id: AssetId, pledge_amount: Balance) -> Result<(), Self::Error>;
 }

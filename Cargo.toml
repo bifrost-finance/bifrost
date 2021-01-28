@@ -15,6 +15,7 @@ members = [
 	"brml/convert",
 	"brml/convert/rpc",
 	"brml/staking-reward",
+	"brml/minter-reward",
 	"brml/swap",
 	"brml/voucher",
 ]
