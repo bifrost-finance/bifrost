@@ -74,6 +74,7 @@ brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api"
 brml-convert = { path = "../../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
+brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 
@@ -141,6 +142,7 @@ std = [
 	"brml-assets-rpc-runtime-api/std",
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
+	'brml-minter-reward/std',
 	'brml-staking-reward/std',
 	"brml-swap/std",
 	'brml-voucher/std',

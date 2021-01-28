@@ -984,6 +984,23 @@ impl brml_staking_reward::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 }
+
+parameter_types! {
+	pub const PriceHalfBlockInterval: u32 = 10_519_200;
+	pub const MaxIssueBlockInterval: u32 = 50;
+	pub const MaxTxAmount: u32 = 1_000;
+	pub const PledgeBaseAmount: u32 = 512;
+}
+
+impl brml_minter_reward::Config for Runtime {
+	type AssetId = AssetId;
+	type Currency = Balances;
+	type PriceHalfBlockInterval = PriceHalfBlockInterval;
+	type MaxIssueBlockInterval = MaxIssueBlockInterval;
+	type MaxTxAmount = MaxTxAmount;
+	type PledgeBaseAmount = PledgeBaseAmount;
+}
+
 // bifrost runtime end
 
 construct_runtime!(
@@ -1030,6 +1047,7 @@ construct_runtime!(
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		MinterReward: brml_minter_reward::{Module, Storage, Config<T>},
 	}
 );
 

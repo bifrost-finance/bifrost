@@ -459,6 +459,7 @@ dependencies = [
  "brml-assets-rpc-runtime-api",
  "brml-convert",
  "brml-convert-rpc-runtime-api",
+ "brml-minter-reward",
  "brml-staking-reward",
  "brml-swap",
  "brml-voucher",
@@ -769,6 +770,22 @@ version = "0.6.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
+]
+
+[[package]]
+name = "brml-minter-reward"
+version = "0.6.0"
+dependencies = [
+ "fixed",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -4010,22 +4027,6 @@ checksum = "0f2d26ec3309788e423cfbf68ad1800f061638098d76a83681af979dc4eda19d"
 dependencies = [
  "adler",
  "autocfg",
-]
-
-[[package]]
-name = "minter-reward"
-version = "0.6.0"
-dependencies = [
- "fixed",
- "frame-support",
- "frame-system",
- "node-primitives",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
 ]
 
 [[package]]

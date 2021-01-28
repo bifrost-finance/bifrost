@@ -26,12 +26,16 @@ pub mod minter_reward {
 		traits::{Get, Hooks, Currency, ReservableCurrency},
 		pallet_prelude::{
 			Blake2_128Concat, ensure, StorageMap, StorageValue,
-			ValueQuery, GenesisBuild, StorageDoubleMap
+			ValueQuery, StorageDoubleMap
 		}
 	};
+	#[cfg(feature = "std")]
+	pub use frame_support::traits::GenesisBuild;
 	use frame_system::pallet_prelude::BlockNumberFor;
 	use node_primitives::{MintTrait};
-	use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize, UniqueSaturatedInto};
+	use sp_runtime::traits::{
+		AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize, UniqueSaturatedInto
+	};
 
 	type Fix = FixedU128<U0>;
 	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
