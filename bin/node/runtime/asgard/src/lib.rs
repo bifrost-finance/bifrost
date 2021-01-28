@@ -480,23 +480,28 @@ construct_runtime!(
 		NodeBlock = node_primitives::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
-		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: xcm_handler::{Module, Event<T>, Origin},
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		// Modules from brml
-		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
-		Swap: brml_swap::{Module, Call, Storage, Event<T>},
-		StakingReward: brml_staking_reward::{Module, Storage},
-		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		// Basic stuff
+		System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 1,
+
+		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 2,
+		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 3,
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 4,
+		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>} = 5,
+		Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 30,
+
+		// parachain modules
+		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
+		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
+		ParachainInfo: parachain_info::{Module, Storage, Config} = 8,
+		XcmHandler: xcm_handler::{Module, Event<T>, Origin} = 9,
+
+		// bifrost modules
+		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
+		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>} = 11,
+		Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
+		StakingReward: brml_staking_reward::{Module, Storage} = 13,
+		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
 	}
 );
 
