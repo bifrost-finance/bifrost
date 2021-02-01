@@ -39,7 +39,8 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Precision, SwapFee, PoolId, PoolWeight, PoolToken, ConvertPrice, RatePerBlock,
+	BiddingOrderId, EraId
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -368,27 +369,28 @@ impl brml_convert::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: u64 = 2;
-	pub const MinimumPassedInPoolTokenShares: u64 = 2;
-	pub const MinimumSwapFee: u64 = 1; // 0.001%
-	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
-	pub const WeightPrecision: u64 = 100_000;
+	pub const MaximumSwapInRatio: u8 = 2;
+	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
+	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
+	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
+	pub const FeePrecision: SwapFee = 100_000;
+	pub const WeightPrecision: PoolWeight = 100_000;
 	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: u64 = 1_000;
+	pub const InitialPoolSupply: PoolToken = 1_000;
 	pub const NumberOfSupportedTokens: u8 = 8;
-	pub const BonusClaimAgeDenominator: u32 = 14_400;
-	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
+	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
+	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
 }
 
 impl brml_swap::Config for Runtime {
 	type Event = Event;
-	type Fee = Fee;
+	type SwapFee = SwapFee;
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
+	type PoolToken = PoolToken;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
@@ -400,6 +402,30 @@ impl brml_swap::Config for Runtime {
 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+}
+
+parameter_types! {
+	pub const TokenOrderROIListLength: u8 = 200u8;
+	pub const MinimumVotes: u64 = 100;
+	pub const MaximumVotes: u64 = 50_000;
+	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
+	pub const MaxProposalNumberForBidder: u32 = 5;
+	pub const ROIPermillPrecision: u32 = 100;
+}
+
+impl brml_bid::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type AssetTrait = Assets;
+	type BiddingOrderId = BiddingOrderId;
+	type EraId = EraId;
+	type Balance = Balance;
+	type TokenOrderROIListLength = TokenOrderROIListLength ;
+	type MinimumVotes = MinimumVotes;
+	type MaximumVotes = MaximumVotes;
+	type BlocksPerYear = BlocksPerYear;
+	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+	type ROIPermillPrecision = ROIPermillPrecision;
 }
 
 impl brml_staking_reward::Config for Runtime {
@@ -497,6 +523,7 @@ construct_runtime!(
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		Bid: brml_bid::{Module, Call, Storage, Event<T>},
 	}
 );
 
