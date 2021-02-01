@@ -122,9 +122,9 @@ impl assets::Config for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 

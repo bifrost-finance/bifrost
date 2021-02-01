@@ -19,11 +19,11 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, ConvertPool, TokenType, Token};
+use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use bifrost_runtime::{
 	constants::currency::{BNCS as BNC, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+	VtokenMintConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
 	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
@@ -259,14 +259,14 @@ pub fn testnet_genesis(
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 			],
 		}),
-		brml_convert: Some(ConvertConfig {
-			convert_price: vec![
+		brml_vtoken_mint: Some(VtokenMintConfig {
+			mint_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
-				(2, ConvertPool::new(1, 100)), // DOT
-				(4, ConvertPool::new(1, 100)), // KSM
+				(2, VtokenPool::new(1, 100)), // DOT
+				(4, VtokenPool::new(1, 100)), // KSM
 			],
 		}),
 		brml_voucher: {

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -111,9 +111,9 @@ impl assets::Config for Test {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Balance;
-	type Convert = Balance;
+	type VtokenMint = Balance;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 
