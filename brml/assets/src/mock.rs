@@ -56,6 +56,7 @@ impl system::Config for Test {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
@@ -67,9 +68,9 @@ impl Config for Test {
 	type Balance = u128;
 	type AssetId = u32;
 	type Price = u64;
-	type Convert = u128;
+	type VtokenMint = u128;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 
