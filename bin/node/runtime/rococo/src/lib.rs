@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, VtokenMintPrice
+	AssetId, Fee, PoolId, PoolWeight, VtokenMintPrice
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -52,8 +52,7 @@ use sp_runtime::traits::{
 use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
-use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
-use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
 
@@ -367,19 +366,6 @@ impl brml_vtoken_mint::Config for Runtime {
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
-impl brml_bridge_eos::Config for Runtime {
-	type AuthorityId = BridgeEosId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchVtokenMintPool = VtokenMint;
-	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
-}
-
 parameter_types! {
 	pub const MaximumSwapInRatio: u64 = 2;
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
@@ -423,12 +409,10 @@ impl brml_staking_reward::Config for Runtime {
 // bifrost runtime end
 
 // culumus runtime start
-impl cumulus_parachain_upgrade::Config for Runtime {
+impl cumulus_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-}
-
-impl cumulus_message_broker::Config for Runtime {
+	type SelfParaId = parachain_info::Module<Runtime>;
 	type DownwardMessageHandlers = ();
 	type HrmpMessageHandlers = ();
 }
@@ -484,8 +468,8 @@ impl Config for XcmConfig {
 impl xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type UpwardMessageSender = MessageBroker;
-	type HrmpMessageSender = MessageBroker;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
 }
 // culumus runtime end
 
@@ -500,8 +484,7 @@ construct_runtime!(
 		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
 		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		ParachainUpgrade: cumulus_parachain_upgrade::{Module, Call, Storage, Inherent, Event},
-		MessageBroker: cumulus_message_broker::{Module, Storage, Call, Inherent},
+		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		XcmHandler: xcm_handler::{Module, Event<T>, Origin},
@@ -510,7 +493,6 @@ construct_runtime!(
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
@@ -620,6 +602,9 @@ impl_runtime_apis! {
 	> for Runtime {
 		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
+		}
+		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
+			TransactionPayment::query_fee_details(uxt, len)
 		}
 	}
 

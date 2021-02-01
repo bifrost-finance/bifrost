@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -19,7 +19,5 @@
 //! A list of the different weight modules for our runtime.
 
 pub mod pallet_assets;
-pub mod pallet_bridge_eos;
-pub mod pallet_bridge_iost;
 pub mod pallet_vtoken_mint;
 pub mod pallet_voucher;
