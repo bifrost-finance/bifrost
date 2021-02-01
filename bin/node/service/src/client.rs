@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -138,7 +138,7 @@ pub trait ClientHandle {
 /// See [`ExecuteWithClient`] for more information.
 #[derive(Clone)]
 pub enum Client {
-	Asgard(Arc<crate::FullClient<asgard_runtime::RuntimeApi, crate::AsgardExecutor>>),
+	Asgard(Arc<crate::FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
 	Bifrost(Arc<crate::FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
 }
 
