@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -54,10 +54,10 @@ fn load_spec(
 			.unwrap_or("bifrost")
 	} else { id };
 	Ok(match id {
-		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config()),
-		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config()?),
-		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config()?),
-		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config()),
+		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
+		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
+		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
+		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config(para_id)),
 		"bifrost" | "" => Box::new(service::chain_spec::bifrost::chainspec_config()),
 		"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost::development_config()?),
 		"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost::local_testnet_config()?),
@@ -104,11 +104,11 @@ impl SubstrateCli for Cli {
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if spec.is_asgard() {
-			&service::asgard_runtime::VERSION
+			&service::collator::asgard_runtime::VERSION
 		} else if spec.is_bifrost() {
 			&service::bifrost_runtime::VERSION
 		} else if spec.is_rococo() {
-			&service::rococo_runtime::VERSION
+			&service::collator::rococo_runtime::VERSION
 		} else {
 			&service::bifrost_runtime::VERSION
 		}
@@ -186,9 +186,9 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&*cli.run)?;
 			runner.run_node_until_exit(|config| async move {
 				match config.role {
-					Role::Light => service::build_light(config),
+					Role::Light => service::build_light(config).map_err(Into::into),
 					_ => {
-						if config.chain_spec.is_rococo() {
+						if config.chain_spec.is_asgard() || config.chain_spec.is_rococo() {
 							let key = sp_core::Pair::generate().0;
 
 							let extension = service::chain_spec::RelayExtensions::try_get(&config.chain_spec);
@@ -213,9 +213,12 @@ pub fn run() -> Result<()> {
 							let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 							let task_executor = config.task_executor.clone();
-							let polkadot_config =
-								SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
-									.map_err(|err| format!("Relay chain argument error: {}", err))?;
+							let polkadot_config = SubstrateCli::create_configuration(
+								&polkadot_cli,
+								&polkadot_cli,
+								task_executor,
+								None,
+							).map_err(|err| format!("Relay chain argument error: {}", err))?;
 							let collator = cli.run.base.validator || cli.collator;
 
 							info!("Parachain id: {:?}", id);
@@ -225,8 +228,10 @@ pub fn run() -> Result<()> {
 
 							service::collator::start_node(config, key, polkadot_config, id, collator)
 								.await
+								.map_err(Into::into)
 						} else {
 							service::build_full(config)
+								.map_err(Into::into)
 						}
 					},
 				}
@@ -329,15 +334,9 @@ pub fn run() -> Result<()> {
 			})
 		}
 		Some(Subcommand::ExportGenesisState(params)) => {
-			sc_cli::init_logger(
-				sc_cli::InitLoggerParams {
-					pattern: "".into(),
-					tracing_receiver: Default::default(),
-					tracing_targets: None,
-					disable_log_reloading: false,
-					disable_log_color: true,
-				},
-			)?;
+			let mut builder = sc_cli::GlobalLoggerBuilder::new("");
+			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
+			let _ = builder.init();
 
 			let block: Block = generate_genesis_block(&load_spec(
 				&params.chain.clone().unwrap_or_default(),
@@ -359,15 +358,10 @@ pub fn run() -> Result<()> {
 			Ok(())
 		}
 		Some(Subcommand::ExportGenesisWasm(params)) => {
-			sc_cli::init_logger(
-				sc_cli::InitLoggerParams {
-					pattern: "".into(),
-					tracing_receiver: Default::default(),
-					tracing_targets: None,
-					disable_log_reloading: false,
-					disable_log_color: true,
-				},
-			)?;
+			let mut builder = sc_cli::GlobalLoggerBuilder::new("");
+			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
+			let _ = builder.init();
+
 			let raw_wasm_blob =
 				extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
 			let output_buf = if params.raw {
@@ -445,7 +439,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.prometheus_config(default_listen_port)
 	}
 
-	fn init<C: SubstrateCli>(&self) -> Result<()> {
+	fn init<C: SubstrateCli>(&self) -> Result<sc_telemetry::TelemetryWorker> {
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 

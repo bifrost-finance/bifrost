@@ -7,7 +7,7 @@ build = "build.rs"
 
 [dependencies]
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.3.6", default-features = false, features = ["derive"] }
 serde = { version = "1.0.118", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
@@ -46,7 +46,6 @@ pallet-transaction-payment-rpc-runtime-api = { version = "2.0.0", default-featur
 brml-assets = { path = "../../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
 brml-bid = { path = "../../../../brml/bid", default-features = false }
-brml-bridge-eos = { path = "../../../../brml/bridge-eos", default-features = false }
 brml-convert = { path = "../../../../brml/convert", default-features = false }
 brml-convert-rpc-runtime-api = { path = "../../../../brml/convert/rpc/runtime-api", default-features = false }
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
@@ -54,18 +53,17 @@ brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 
 # Cumulus dependencies
-cumulus-message-broker = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-runtime = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-parachain-upgrade = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-primitives = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-xcm-handler = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-runtime = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
+cumulus-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
+cumulus-primitives = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
+xcm-handler = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
 
 # Polkadot dependencies
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "master" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "rococo-v1" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "rococo-v1" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "rococo-v1" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "rococo-v1" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "3.0.0" }
@@ -108,16 +106,14 @@ std = [
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
 	"brml-bid/std",
-	"brml-bridge-eos/std",
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
 	'brml-staking-reward/std',
 	"brml-swap/std",
 	'brml-voucher/std',
 	"parachain-info/std",
-	"cumulus-message-broker/std",
 	"cumulus-runtime/std",
-	"cumulus-parachain-upgrade/std",
+	"cumulus-parachain-system/std",
 	"cumulus-primitives/std",
 	"xcm/std",
 	"xcm-builder/std",
