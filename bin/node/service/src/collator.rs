@@ -23,17 +23,23 @@ use cumulus_service::{
 use polkadot_primitives::v0::CollatorPair;
 use sc_executor::native_executor_instance;
 pub use sc_executor::NativeExecutionDispatch;
-use sc_service::{Configuration, PartialComponents, Role, TaskManager, TFullBackend, TFullClient};
+use sc_service::{Configuration, PartialComponents, Role, TaskManager, TFullClient};
 pub use sp_api::{ApiRef, ConstructRuntimeApi, Core as CoreApi, ProvideRuntimeApi, StateBackend};
 use sp_core::Pair;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
-use rococo_runtime::RuntimeApi;
+use node_primitives::{AccountId, Nonce, Balance, Block};
+use crate::IdentifyVariant;
 
-use node_primitives::Block;
+pub use asgard_runtime;
 pub use rococo_runtime;
 
-pub use crate::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, RuntimeApiCollection};
+native_executor_instance!(
+	pub AsgardExecutor,
+	asgard_runtime::api::dispatch,
+	asgard_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
 
 native_executor_instance!(
 	pub RococoExecutor,
@@ -42,28 +48,63 @@ native_executor_instance!(
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
+/// A set of APIs that polkadot-like runtimes must implement.
+pub trait RuntimeApiCollection:
+sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+	+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+	+ sp_block_builder::BlockBuilder<Block>
+	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+	+ sp_api::Metadata<Block>
+	+ sp_offchain::OffchainWorkerApi<Block>
+	+ sp_session::SessionKeys<Block>
+where
+	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{}
+
+impl<Api> RuntimeApiCollection for Api
+	where
+		Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+		+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+		+ sp_block_builder::BlockBuilder<Block>
+		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
+		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+		+ sp_api::Metadata<Block>
+		+ sp_offchain::OffchainWorkerApi<Block>
+		+ sp_session::SessionKeys<Block>,
+		<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{}
+
+type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
+type FullBackend = sc_service::TFullBackend<Block>;
+
 /// Starts a `ServiceBuilder` for a full service.
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
-pub fn new_partial(
+pub fn new_partial<RuntimeApi, Executor>(
 	config: &Configuration,
 ) -> Result<
 	PartialComponents<
-		TFullClient<Block, RuntimeApi, RococoExecutor>,
-		TFullBackend<Block>,
+		FullClient<RuntimeApi, Executor>,
+		FullBackend,
 		(),
 		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, RococoExecutor>>,
-		(),
+		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
+		Option<telemetry::TelemetrySpan>,
 	>,
 	sc_service::Error,
 >
+	where
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
+			RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		Executor: NativeExecutionDispatch + 'static,
 {
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
-	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, RococoExecutor>(&config)?;
+	let (client, backend, keystore_container, task_manager, telemetry_span) =
+		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
 
 	let registry = config.prometheus_registry();
@@ -84,15 +125,15 @@ pub fn new_partial(
 	)?;
 
 	let params = PartialComponents {
-		backend,
 		client,
-		import_queue,
-		keystore_container,
+		backend,
 		task_manager,
+		keystore_container,
+		select_chain: (),
+		import_queue,
 		transaction_pool,
 		inherent_data_providers,
-		select_chain: (),
-		other: (),
+		other: telemetry_span,
 	};
 
 	Ok(params)
@@ -101,21 +142,25 @@ pub fn new_partial(
 /// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
 ///
 /// This is the actual implementation that is abstract over the executor and the runtime api.
-#[sc_cli::prefix_logs_with("Parachain 🌈")]
-async fn start_node_impl<RB>(
+#[sc_tracing::logging::prefix_logs_with("Parachain🌈")]
+async fn start_node_impl<RB, RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	collator_key: CollatorPair,
 	polkadot_config: Configuration,
 	id: polkadot_primitives::v0::Id,
 	validator: bool,
 	rpc_ext_builder: RB,
-) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, RococoExecutor>>)>
+) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 	where
 		RB: Fn(
-			Arc<TFullClient<Block, RuntimeApi, RococoExecutor>>,
+			Arc<FullClient<RuntimeApi, Executor>>,
 		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 		+ Send
 		+ 'static,
+		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+		RuntimeApi::RuntimeApi:
+			RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		Executor: NativeExecutionDispatch + 'static,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -132,6 +177,7 @@ async fn start_node_impl<RB>(
 		)?;
 
 	let params = new_partial(&parachain_config)?;
+	let telemetry_span = params.other;
 	params
 		.inherent_data_providers
 		.register_provider(sp_timestamp::InherentDataProvider)
@@ -171,18 +217,18 @@ async fn start_node_impl<RB>(
 		client: client.clone(),
 		transaction_pool: transaction_pool.clone(),
 		task_manager: &mut task_manager,
-		telemetry_connection_sinks: Default::default(),
 		config: parachain_config,
 		keystore: params.keystore_container.sync_keystore(),
 		backend: backend.clone(),
 		network: network.clone(),
 		network_status_sinks,
 		system_rpc_tx,
+		telemetry_span,
 	})?;
 
 	let announce_block = {
 		let network = network.clone();
-		Arc::new(move |hash, data| network.announce_block(hash, data))
+		Arc::new(move |hash, data| network.announce_block(hash, Some(data)))
 	};
 
 	if validator {
@@ -238,12 +284,32 @@ pub async fn start_node(
 	id: polkadot_primitives::v0::Id,
 	validator: bool,
 ) -> sc_service::error::Result<TaskManager> {
-	start_node_impl::<_>(
-		parachain_config,
-		collator_key,
-		polkadot_config,
-		id,
-		validator,
-		|_| Default::default(),
-	).await.map(|full| full.0)
+	if parachain_config.chain_spec.is_asgard() {
+		start_node_impl::<_, asgard_runtime::RuntimeApi, AsgardExecutor>(
+			parachain_config,
+			collator_key,
+			polkadot_config,
+			id,
+			validator,
+			|_| Default::default(),
+		).await.map(|full| full.0)
+	} else if parachain_config.chain_spec.is_rococo() {
+		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
+			parachain_config,
+			collator_key,
+			polkadot_config,
+			id,
+			validator,
+			|_| Default::default(),
+		).await.map(|full| full.0)
+	} else {
+		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
+			parachain_config,
+			collator_key,
+			polkadot_config,
+			id,
+			validator,
+			|_| Default::default(),
+		).await.map(|full| full.0)
+	}
 }
