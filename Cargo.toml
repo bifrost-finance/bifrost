@@ -11,9 +11,10 @@ members = [
 	"bin/utils/subkey",
 	"brml/assets",
 	"brml/assets/rpc",
+	"brml/bid",
 	"brml/bridge-eos",
-	"brml/convert",
-	"brml/convert/rpc",
+	"brml/vtoken-mint",
+	"brml/vtoken-mint/rpc",
 	"brml/staking-reward",
 	"brml/minter-reward",
 	"brml/swap",
@@ -85,6 +86,7 @@ zeroize = { opt-level = 3 }
 
 [profile.release]
 panic = "unwind"
+incremental = true
 
 [patch.crates-io]
 node-inspect = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
