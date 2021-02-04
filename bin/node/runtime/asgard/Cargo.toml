@@ -63,6 +63,10 @@ xcm = { git = "https://github.com/paritytech/polkadot", default-features = false
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "rococo-v1" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false , branch = "rococo-v1" }
 
+# zenlink
+zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
+zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
+
 [build-dependencies]
 substrate-wasm-builder = { version = "3.0.0" }
 
@@ -115,4 +119,6 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm-handler/std",
+	"zenlink-protocol/std",
+	"zenlink-protocol-runtime-api/std"
 ]

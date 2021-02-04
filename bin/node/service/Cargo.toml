@@ -89,6 +89,9 @@ node-rpc = { path = "../rpc" }
 # RPC related dependencies
 jsonrpc-core = "15.1.0"
 
+# zenlink rpc
+zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
+
 [dev-dependencies]
 env_logger = "0.8.1"
 
