@@ -459,6 +459,7 @@ parameter_types! {
 	}.into();
 
 	pub SiblingParachains: Vec<MultiLocation> = vec![
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
 		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
 		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
 	];
