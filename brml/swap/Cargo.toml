@@ -1,23 +1,23 @@
 [package]
 name = "brml-swap"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "1.3.6", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 fixed-point = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", default-features = false }
-frame-support = { version = "2.0.0", default-features = false }
-frame-system = { version = "2.0.0", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
 serde = { version = "1.0.118", optional = true }
-sp-runtime = { version = "2.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }
 float-cmp = "0.8.0"
-sp-core = "2.0.0"
-sp-io = "2.0.0"
+sp-core = "3.0.0"
+sp-io = "3.0.0"
 
 [features]
 default = ["std"]
