@@ -19,7 +19,7 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, VtokenPool, TokenType, Token};
-use cumulus_primitives::ParaId;
+use cumulus_primitives_core::ParaId;
 use rococo_runtime::{
 	constants::currency::{BNCS as ASG, DOLLARS},
 	AssetsConfig, BalancesConfig, VtokenMintConfig,
