@@ -38,7 +38,7 @@ use sp_runtime::traits::{Block as BlockT, BlakeTwo256};
 use futures::prelude::*;
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_executor::native_executor_instance;
-use telemetry::{TelemetryConnectionNotifier, TelemetrySpan};
+use telemetry::{TelemetryConnectionNotifier};
 
 use sp_trie::PrefixedMemoryDB;
 pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, RuntimeApiCollection};
@@ -106,7 +106,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 			sc_consensus_babe::BabeLink<Block>,
 		),
 		grandpa::SharedVoterState,
-		Option<TelemetrySpan>,
+		(),
 	)
 >, ServiceError>
 	where
@@ -115,14 +115,23 @@ pub fn new_partial<RuntimeApi, Executor>(
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		Executor: NativeExecutionDispatch + 'static,
 {
-	let (client, backend, keystore_container, task_manager, telemetry_span) =
+	// let (client, backend, keystore_container, task_manager, telemetry_span) =
+	// 	sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
+	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
+	// let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+	// 	config.transaction_pool.clone(),
+	// 	config.prometheus_registry(),
+	// 	task_manager.spawn_handle(),
+	// 	client.clone(),
+	// );
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
+		config.role.is_authority().into(),
 		config.prometheus_registry(),
 		task_manager.spawn_handle(),
 		client.clone(),
@@ -213,7 +222,8 @@ pub fn new_partial<RuntimeApi, Executor>(
 		import_queue,
 		transaction_pool,
 		inherent_data_providers,
-		other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
+		other: (rpc_extensions_builder, import_setup, rpc_setup, ()),
+		// other: (),
 	})
 }
 
@@ -244,7 +254,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 		select_chain,
 		transaction_pool,
 		inherent_data_providers,
-		other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
+		other: (rpc_extensions_builder, import_setup, rpc_setup, _),
 	} = new_partial::<RuntimeApi, Executor>(&config)?;
 
 	let shared_voter_state = rpc_setup;
@@ -295,7 +305,6 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			remote_blockchain: None,
 			network_status_sinks: network_status_sinks.clone(),
 			system_rpc_tx,
-			telemetry_span,
 		},
 	)?;
 
@@ -366,7 +375,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 		name: Some(name),
 		observer_enabled: false,
 		keystore,
-		is_authority: role.is_network_authority(),
+		is_authority: role.is_authority(),
 	};
 
 	if enable_grandpa {
@@ -436,7 +445,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
 		Executor: NativeExecutionDispatch + 'static,
 {
-	let (client, backend, keystore_container, mut task_manager, on_demand, telemetry_span) =
+	let (client, backend, keystore_container, mut task_manager, on_demand) =
 		sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
 
 	config.network.extra_sets.push(grandpa::grandpa_peers_set_config());
@@ -516,7 +525,6 @@ pub fn new_light_base<RuntimeApi, Executor>(
 			config, backend, network_status_sinks, system_rpc_tx,
 			network: network.clone(),
 			task_manager: &mut task_manager,
-			telemetry_span,
 		})?;
 
 	Ok(NewLightBase {

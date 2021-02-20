@@ -16,8 +16,8 @@
 
 use std::sync::Arc;
 
-use cumulus_network::build_block_announce_validator;
-use cumulus_service::{
+use cumulus_client_network::build_block_announce_validator;
+use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use polkadot_primitives::v0::CollatorPair;
@@ -51,7 +51,7 @@ native_executor_instance!(
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
 sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-	+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+	+ sp_api::ApiExt<Block>
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
@@ -65,7 +65,7 @@ where
 impl<Api> RuntimeApiCollection for Api
 	where
 		Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::ApiExt<Block, Error = sp_blockchain::Error>
+		+ sp_api::ApiExt<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
@@ -91,7 +91,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		(),
 		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
 		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
-		Option<telemetry::TelemetrySpan>,
+		(),
 	>,
 	sc_service::Error,
 >
@@ -103,20 +103,27 @@ pub fn new_partial<RuntimeApi, Executor>(
 {
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
-	let (client, backend, keystore_container, task_manager, telemetry_span) =
+	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
 
 	let registry = config.prometheus_registry();
 
+	// let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+	// 	config.transaction_pool.clone(),
+	// 	config.prometheus_registry(),
+	// 	task_manager.spawn_handle(),
+	// 	client.clone(),
+	// );
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
+		config.role.is_authority().into(),
 		config.prometheus_registry(),
 		task_manager.spawn_handle(),
 		client.clone(),
 	);
 
-	let import_queue = cumulus_consensus::import_queue::import_queue(
+	let import_queue = cumulus_client_consensus::import_queue::import_queue(
 		client.clone(),
 		client.clone(),
 		inherent_data_providers.clone(),
@@ -133,7 +140,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		import_queue,
 		transaction_pool,
 		inherent_data_providers,
-		other: telemetry_span,
+		other: (),
 	};
 
 	Ok(params)
@@ -169,7 +176,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 	let parachain_config = prepare_node_config(parachain_config);
 
 	let polkadot_full_node =
-		cumulus_service::build_polkadot_full_node(polkadot_config, collator_key.public()).map_err(
+		cumulus_client_service::build_polkadot_full_node(polkadot_config, collator_key.public()).map_err(
 			|e| match e {
 				polkadot_service::Error::Sub(x) => x,
 				s => format!("{}", s).into(),
@@ -177,7 +184,6 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 		)?;
 
 	let params = new_partial(&parachain_config)?;
-	let telemetry_span = params.other;
 	params
 		.inherent_data_providers
 		.register_provider(sp_timestamp::InherentDataProvider)
@@ -223,7 +229,6 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 		network: network.clone(),
 		network_status_sinks,
 		system_rpc_tx,
-		telemetry_span,
 	})?;
 
 	let announce_block = {

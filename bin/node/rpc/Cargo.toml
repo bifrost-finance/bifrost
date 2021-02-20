@@ -1,6 +1,6 @@
 [package]
 name = "node-rpc"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
@@ -10,23 +10,24 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 jsonrpc-core = "15.1.0"
 node-primitives = { path = "../primitives" }
-pallet-transaction-payment-rpc = { version = "2.0.0" }
-sc-client-api = { version = "2.0.0" }
-sc-consensus-babe = { version = "0.8.0" }
-sc-consensus-babe-rpc = { version = "0.8.0" }
-sc-consensus-epochs = { version = "0.8.0" }
-sc-chain-spec = { version = "2.0.0" }
-sc-finality-grandpa = { version = "0.8.0" }
-sc-finality-grandpa-rpc = { version = "0.8.0" }
-sc-rpc-api = { version = "0.8.0" }
-sc-rpc = { version = "2.0.0" }
-sc-sync-state-rpc = { version = "0.8.0" }
-sp-api = { version = "2.0.0" }
-sp-block-builder = { version = "2.0.0" }
-sp-blockchain = { version = "2.0.0" }
-sp-keystore = { version = "0.8.0" }
-sp-consensus = { version = "0.8.0" }
-sp-consensus-babe = { version = "0.8.0" }
-sp-runtime = { version = "2.0.0" }
-sp-transaction-pool = { version = "2.0.0" }
-substrate-frame-rpc-system = { version = "2.0.0" }
+pallet-transaction-payment-rpc = { version = "3.0.0" }
+sc-client-api = { version = "3.0.0" }
+sc-consensus-babe = { version = "0.9.0" }
+sc-consensus-babe-rpc = { version = "0.9.0" }
+sc-consensus-epochs = { version = "0.9.0" }
+sc-chain-spec = { version = "3.0.0" }
+sc-finality-grandpa = { version = "0.9.0" }
+sc-finality-grandpa-rpc = { version = "0.9.0" }
+sc-keystore = { version = "3.0.0" }
+sc-rpc-api = { version = "0.9.0" }
+sc-rpc = { version = "3.0.0" }
+sc-sync-state-rpc = { version = "0.9.0" }
+sp-api = { version = "3.0.0" }
+sp-block-builder = { version = "3.0.0" }
+sp-blockchain = { version = "3.0.0" }
+sp-keystore = { version = "0.9.0" }
+sp-consensus = { version = "0.9.0" }
+sp-consensus-babe = { version = "0.9.0" }
+sp-runtime = { version = "3.0.0" }
+sp-transaction-pool = { version = "3.0.0" }
+substrate-frame-rpc-system = { version = "3.0.0" }
