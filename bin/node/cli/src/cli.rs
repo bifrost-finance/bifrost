@@ -8,27 +8,42 @@
 
 // Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+// along with Bifrost. If not, see <https://www.gnu.org/licenses/>.
 
+use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
+use structopt::StructOpt;
 use std::path::PathBuf;
 
-use sc_cli;
-use structopt::StructOpt;
+/// An overarching CLI command definition.
+#[derive(Debug, StructOpt)]
+pub struct Cli {
+    /// Possible subcommand with parameters.
+    #[structopt(subcommand)]
+    pub subcommand: Option<Subcommand>,
+
+    #[allow(missing_docs)]
+    #[structopt(flatten)]
+    pub run: RunCmd,
+
+    /// Relaychain arguments
+    #[structopt(raw = true)]
+    pub relaychain_args: Vec<String>,
+}
 
 /// Possible subcommands of the main binary.
 #[derive(Debug, StructOpt)]
 pub enum Subcommand {
 	/// Key management cli utilities
-	Key(sc_cli::KeySubcommand),
+	Key(KeySubcommand),
 
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
 	#[structopt(
-		name = "inspect",
-		about = "Decode given block or extrinsic using current native runtime."
+	name = "inspect",
+	about = "Decode given block or extrinsic using current native runtime."
 	)]
 	Inspect(node_inspect::cli::InspectCmd),
 
@@ -37,13 +52,13 @@ pub enum Subcommand {
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
 	/// Verify a signature for a message, provided on STDIN, with a given (public or secret) key.
-	Verify(sc_cli::VerifyCmd),
+	Verify(VerifyCmd),
 
 	/// Generate a seed that provides a vanity address.
-	Vanity(sc_cli::VanityCmd),
+	Vanity(VanityCmd),
 
 	/// Sign a message, with a given (secret) key.
-	Sign(sc_cli::SignCmd),
+	Sign(SignCmd),
 
 	/// Build a chain specification.
 	BuildSpec(sc_cli::BuildSpecCmd),
@@ -111,47 +126,49 @@ pub struct ExportGenesisWasmCommand {
 	pub chain: Option<String>,
 }
 
+#[allow(missing_docs)]
 #[derive(Debug, StructOpt)]
 pub struct RunCmd {
-	#[structopt(flatten)]
-	pub base: sc_cli::RunCmd,
+    #[allow(missing_docs)]
+    #[structopt(flatten)]
+    pub base: sc_cli::RunCmd,
 
-	/// Id of the parachain this collator collates for.
-	#[structopt(long)]
-	pub parachain_id: Option<u32>,
+    /// Id of the parachain this collator collates for.
+    #[structopt(long)]
+    pub parachain_id: Option<u32>,
 }
 
 impl std::ops::Deref for RunCmd {
-	type Target = sc_cli::RunCmd;
+    type Target = sc_cli::RunCmd;
 
-	fn deref(&self) -> &Self::Target {
-		&self.base
-	}
+    fn deref(&self) -> &Self::Target {
+        &self.base
+    }
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(settings = &[
-	structopt::clap::AppSettings::GlobalVersion,
-	structopt::clap::AppSettings::ArgsNegateSubcommands,
-	structopt::clap::AppSettings::SubcommandsNegateReqs,
-])]
-pub struct Cli {
-	#[structopt(subcommand)]
-	pub subcommand: Option<Subcommand>,
+// #[derive(Debug, StructOpt)]
+// #[structopt(settings = &[
+// structopt::clap::AppSettings::GlobalVersion,
+// structopt::clap::AppSettings::ArgsNegateSubcommands,
+// structopt::clap::AppSettings::SubcommandsNegateReqs,
+// ])]
+// pub struct Cli {
+// 	#[structopt(subcommand)]
+// 	pub subcommand: Option<Subcommand>,
 
-	#[structopt(flatten)]
-	pub run: RunCmd,
+// 	#[structopt(flatten)]
+// 	pub run: RunCmd,
 
-	/// Run node as collator.
-	///
-	/// Note that this is the same as running with `--validator`.
-	#[structopt(long, conflicts_with = "validator")]
-	pub collator: bool,
+// 	/// Run node as collator.
+// 	///
+// 	/// Note that this is the same as running with `--validator`.
+// 	#[structopt(long, conflicts_with = "validator")]
+// 	pub collator: bool,
 
-	/// Relaychain arguments
-	#[structopt(raw = true)]
-	pub relaychain_args: Vec<String>,
-}
+// 	/// Relaychain arguments
+// 	#[structopt(raw = true)]
+// 	pub relaychain_args: Vec<String>,
+// }
 
 #[derive(Debug)]
 pub struct RelayChainCli {

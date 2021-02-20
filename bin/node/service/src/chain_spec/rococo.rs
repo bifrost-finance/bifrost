@@ -18,7 +18,7 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
-use cumulus_primitives::ParaId;
+use cumulus_primitives_core::ParaId;
 use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use rococo_runtime::{
 	constants::currency::{BNCS as RCO, DOLLARS},
