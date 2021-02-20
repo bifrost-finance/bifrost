@@ -36,7 +36,6 @@ frame-support = { version = "2.0.0", default-features = false }
 frame-system = { version = "2.0.0", default-features = false }
 frame-system-benchmarking = { version = "2.0.0", default-features = false, optional = true }
 frame-system-rpc-runtime-api = { version = "2.0.0", default-features = false }
-pallet-assets = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-authority-discovery = { version = "2.0.0", default-features = false }
 pallet-authorship = { version = "2.0.0", default-features = false }
 pallet-babe = { version = "2.0.0", default-features = false }
@@ -49,9 +48,7 @@ pallet-grandpa = { version = "2.0.0", default-features = false }
 pallet-im-online = { version = "2.0.0", default-features = false }
 pallet-indices = { version = "2.0.0", default-features = false }
 pallet-identity = { version = "2.0.0", default-features = false }
-pallet-lottery = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-membership = { version = "2.0.0", default-features = false }
-pallet-mmr = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate" }
 pallet-multisig = { version = "2.0.0", default-features = false }
 pallet-offences = { version = "2.0.0", default-features = false }
 pallet-offences-benchmarking = { version = "2.0.0", default-features = false, optional = true }
@@ -95,7 +92,6 @@ default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"sp-authority-discovery/std",
-	"pallet-assets/std",
 	"pallet-authority-discovery/std",
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
@@ -112,9 +108,7 @@ std = [
 	"pallet-im-online/std",
 	"pallet-indices/std",
 	"sp-inherents/std",
-	"pallet-lottery/std",
 	"pallet-membership/std",
-	"pallet-mmr/std",
 	"pallet-multisig/std",
 	"pallet-identity/std",
 	"pallet-scheduler/std",
@@ -152,7 +146,6 @@ std = [
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
 	"brml-bridge-eos/std",
-#	"brml-bridge-iost/std",
 	"brml-convert/std",
 	"brml-convert-rpc-runtime-api/std",
 	'brml-staking-reward/std',
@@ -164,7 +157,6 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"pallet-assets/runtime-benchmarks",
 	"pallet-babe/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
@@ -175,8 +167,6 @@ runtime-benchmarks = [
 	"pallet-identity/runtime-benchmarks",
 	"pallet-im-online/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
-	"pallet-lottery/runtime-benchmarks",
-	"pallet-mmr/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",

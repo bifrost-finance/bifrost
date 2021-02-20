@@ -906,50 +906,6 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 }
 
-impl pallet_mmr::Config for Runtime {
-	const INDEXING_PREFIX: &'static [u8] = b"mmr";
-	type Hashing = <Runtime as frame_system::Config>::Hashing;
-	type Hash = <Runtime as frame_system::Config>::Hash;
-	type LeafData = frame_system::Module<Self>;
-	type OnNewRoot = ();
-	type WeightInfo = ();
-}
-
-parameter_types! {
-	pub const LotteryModuleId: ModuleId = ModuleId(*b"py/lotto");
-	pub const MaxCalls: usize = 10;
-	pub const MaxGenerateRandom: u32 = 10;
-}
-
-impl pallet_lottery::Config for Runtime {
-	type ModuleId = LotteryModuleId;
-	type Call = Call;
-	type Event = Event;
-	type Currency = Balances;
-	type Randomness = RandomnessCollectiveFlip;
-	type ManagerOrigin = EnsureRoot<AccountId>;
-	type MaxCalls = MaxCalls;
-	type ValidateCall = Lottery;
-	type MaxGenerateRandom = MaxGenerateRandom;
-	type WeightInfo = pallet_lottery::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const AssetDepositBase: Balance = 100 * DOLLARS;
-	pub const AssetDepositPerZombie: Balance = 1 * DOLLARS;
-}
-
-impl pallet_assets::Config for Runtime {
-	type Event = Event;
-	type Balance = u64;
-	type AssetId = u32;
-	type Currency = Balances;
-	type ForceOrigin = EnsureRoot<AccountId>;
-	type AssetDepositBase = AssetDepositBase;
-	type AssetDepositPerZombie = AssetDepositPerZombie;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
-}
-
 // bifrost runtime start
 impl brml_assets::Config for Runtime {
 	type Event = Event;
@@ -998,19 +954,6 @@ impl brml_bridge_eos::Config for Runtime {
 	type FetchConvertPool = Convert;
 	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
 }
-
-// impl brml_bridge_iost::Config for Runtime {
-// 	type AuthorityId = BridgeIostId;
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type AssetId = AssetId;
-// 	type Precision = Precision;
-// 	type BridgeAssetFrom = ();
-// 	type Call = Call;
-// 	type AssetTrait = Assets;
-// 	type FetchConvertPool = Convert;
-// 	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
-// }
 
 parameter_types! {
 	pub const MaximumSwapInRatio: u64 = 2;
@@ -1092,14 +1035,10 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		Bounties: pallet_bounties::{Module, Call, Storage, Event<T>},
 		Tips: pallet_tips::{Module, Call, Storage, Event<T>},
-		GenericAssets: pallet_assets::{Module, Call, Storage, Event<T>},
-		Mmr: pallet_mmr::{Module, Storage},
-		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
         Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
         Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
         BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-        // BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
         Swap: brml_swap::{Module, Call, Storage, Event<T>},
         StakingReward: brml_staking_reward::{Module, Storage},
         Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
