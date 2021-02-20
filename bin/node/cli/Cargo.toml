@@ -101,7 +101,7 @@ wasm-bindgen-futures = { version = "0.4.18", optional = true }
 # browser-utils = { package = "substrate-browser-utils"}
 
 # Cumulus dependencies
-cumulus-client-consensus = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-client-consensus = { package = "cumulus-client-consensus-common", git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 cumulus-client-network = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
