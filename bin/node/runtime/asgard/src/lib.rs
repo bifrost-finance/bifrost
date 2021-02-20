@@ -8,7 +8,7 @@
 
 // Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
@@ -27,34 +27,43 @@ use frame_support::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND}, DispatchClass,
 	},
-	traits::{Randomness},
+	traits::Randomness,
 };
 use frame_system::{
+	EnsureRoot,
 	limits::{BlockWeights, BlockLength}
 };
 use codec::{Encode};
-use sp_core::{
-	crypto::KeyTypeId, OpaqueMetadata,
-};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
+	BiddingOrderId, EraId
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
-	Perbill, ApplyExtrinsicResult, impl_opaque_keys, generic, create_runtime_str,
+	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
+	impl_opaque_keys, generic, create_runtime_str, ModuleId
 };
 use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
 use sp_runtime::traits::{
-	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion,
+	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion, Convert
 };
 use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
-use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
+use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
+pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_inherents::{InherentData, CheckInherentsResult};
 use static_assertions::const_assert;
+
+#[cfg(any(feature = "std", test))]
+pub use sp_runtime::BuildStorage;
+#[cfg(any(feature = "std", test))]
+pub use pallet_balances::Call as BalancesCall;
+#[cfg(any(feature = "std", test))]
+pub use frame_system::Call as SystemCall;
 
 /// Constant values used within the runtime.
 pub mod constants;
@@ -67,11 +76,12 @@ use xcm::v0::{MultiLocation, NetworkId, Junction};
 use xcm_builder::{
 	ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, LocationInverter,
 	SovereignSignedViaLocation, SiblingParachainAsNative,
-	RelayChainAsNative, SignedAccountId32AsNative, CurrencyAdapter
+	RelayChainAsNative, SignedAccountId32AsNative
 };
-use xcm_executor::{
-	XcmExecutor, Config,
-	traits::{NativeAsset, IsConcrete},
+use xcm_executor::{XcmExecutor, Config};
+
+use zenlink_protocol::{
+	Origin as ZenlinkOrigin, ParaChainWhiteList, Transactor, PairInfo, AssetId as ZenlinkAssetId,
 };
 
 /// Weights for pallets used in the runtime.
@@ -98,7 +108,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 20,
+	spec_version: 21,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -119,6 +129,24 @@ pub fn native_version() -> NativeVersion {
 	}
 }
 
+// type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
+
+// pub struct DealWithFees;
+// impl OnUnbalanced<NegativeImbalance> for DealWithFees {
+// 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item=NegativeImbalance>) {
+// 		if let Some(fees) = fees_then_tips.next() {
+// 			// for fees, 80% to treasury, 20% to author
+// 			let mut split = fees.ration(80, 20);
+// 			if let Some(tips) = fees_then_tips.next() {
+// 				// for tips, if any, 80% to treasury, 20% to author (though this can be anything)
+// 				tips.ration_merge_into(80, 20, &mut split);
+// 			}
+// 			Treasury::on_unbalanced(split.0);
+// 			Author::on_unbalanced(split.1);
+// 		}
+// 	}
+// }
+
 /// We assume that ~10% of the block weight is consumed by `on_initalize` handlers.
 /// This is used to limit the maximal weight of a single extrinsic.
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
@@ -129,7 +157,7 @@ const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 const MAXIMUM_BLOCK_WEIGHT: Weight = 2 * WEIGHT_PER_SECOND;
 
 parameter_types! {
-	pub const BlockHashCount: BlockNumber = 250;
+	pub const BlockHashCount: BlockNumber = 2400;
 	pub const Version: RuntimeVersion = VERSION;
 	pub RuntimeBlockLength: BlockLength =
 		BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
@@ -181,10 +209,27 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
+}
+
+impl pallet_scheduler::Config for Runtime {
+	type Event = Event;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type Call = Call;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRoot<AccountId>;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -217,14 +262,19 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TransactionByteFee: Balance = 1;
+	pub const TransactionByteFee: Balance = 10 * MILLICENTS;
+	pub const TargetBlockFullness: Perquintill = Perquintill::from_percent(25);
+	pub AdjustmentVariable: Multiplier = Multiplier::saturating_from_rational(1, 100_000);
+	pub MinimumMultiplier: Multiplier = Multiplier::saturating_from_rational(1, 1_000_000_000u128);
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+	// type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
-	type FeeMultiplierUpdate = ();
+	type FeeMultiplierUpdate =
+	TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 }
 
 parameter_types! {
@@ -338,9 +388,9 @@ impl brml_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Price;
-	type Convert = ConvertPrice;
+	type VtokenMint = VtokenMintPrice;
 	type AssetRedeem = ();
-	type FetchConvertPrice = Convert;
+	type FetchVtokenMintPrice = VtokenMint;
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
@@ -352,43 +402,43 @@ impl brml_voucher::Config for Runtime {
 
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
-	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
-	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
+	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const VtokenMintPricePrecision: Balance = 1 * DOLLARS;
 }
 
-impl brml_convert::Config for Runtime {
+impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type ConvertPrice = ConvertPrice;
-	type RatePerBlock = RatePerBlock;
+	type MintPrice = VtokenMintPrice;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type ConvertDuration = ConvertDuration;
-	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
+	type VtokenMintDuration = VtokenMintDuration;
+	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: u64 = 2;
-	pub const MinimumPassedInPoolTokenShares: u64 = 2;
-	pub const MinimumSwapFee: u64 = 1; // 0.001%
-	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
-	pub const WeightPrecision: u64 = 100_000;
+	pub const MaximumSwapInRatio: u8 = 2;
+	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
+	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
+	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
+	pub const FeePrecision: SwapFee = 100_000;
+	pub const WeightPrecision: PoolWeight = 100_000;
 	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: u64 = 1_000;
+	pub const InitialPoolSupply: PoolToken = 1_000;
 	pub const NumberOfSupportedTokens: u8 = 8;
-	pub const BonusClaimAgeDenominator: u32 = 14_400;
-	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
+	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
+	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
 }
 
 impl brml_swap::Config for Runtime {
 	type Event = Event;
-	type Fee = Fee;
+	type SwapFee = SwapFee;
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
+	type PoolToken = PoolToken;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
@@ -402,6 +452,31 @@ impl brml_swap::Config for Runtime {
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
+// Bid module
+parameter_types! {
+	pub const TokenOrderROIListLength: u8 = 200u8;
+	pub const MinimumVotes: u64 = 100;
+	pub const MaximumVotes: u64 = 50_000;
+	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
+	pub const MaxProposalNumberForBidder: u32 = 5;
+	pub const ROIPermillPrecision: u32 = 100;
+}
+
+impl brml_bid::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type AssetTrait = Assets;
+	type BiddingOrderId = BiddingOrderId;
+	type EraId = EraId;
+	type Balance = Balance;
+	type TokenOrderROIListLength = TokenOrderROIListLength ;
+	type MinimumVotes = MinimumVotes;
+	type MaximumVotes = MaximumVotes;
+	type BlocksPerYear = BlocksPerYear;
+	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+	type ROIPermillPrecision = ROIPermillPrecision;
+}
+
 impl brml_staking_reward::Config for Runtime {
 	type AssetTrait = Assets;
 	type Balance = Balance;
@@ -410,12 +485,12 @@ impl brml_staking_reward::Config for Runtime {
 // bifrost runtime end
 
 // culumus runtime start
-impl cumulus_parachain_system::Config for Runtime {
+impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
-	type DownwardMessageHandlers = ();
-	type HrmpMessageHandlers = ();
+	type DownwardMessageHandlers = ZenlinkProtocol;
+	type HrmpMessageHandlers = ZenlinkProtocol;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -423,10 +498,24 @@ impl parachain_info::Config for Runtime {}
 parameter_types! {
 	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
 	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
-	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
+	pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
+	pub RelayChainOrigin: Origin = ZenlinkOrigin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain {
 		id: ParachainInfo::parachain_id().into()
 	}.into();
+
+	pub SiblingParachains: Vec<MultiLocation> = vec![
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
+	];
+}
+
+pub struct AccountId32Converter;
+impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
 }
 
 type LocationConverter = (
@@ -435,43 +524,47 @@ type LocationConverter = (
 	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
-type LocalAssetTransactor =
-CurrencyAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RococoLocation>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-	LocationConverter,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
->;
+pub type LocalAssetTransactor =
+	Transactor<Balances, ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
 
 type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
+	SiblingParachainAsNative<ZenlinkOrigin, Origin>,
 	SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
-	type XcmSender = XcmHandler;
+	type XcmSender = ZenlinkProtocol;
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = NativeAsset;
+	type IsReserve = ParaChainWhiteList<SiblingParachains>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }
 
-impl xcm_handler::Config for Runtime {
+impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
 }
+
+impl zenlink_protocol::Config for Runtime {
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
+	type NativeCurrency = Balances;
+	type AccountIdConverter = LocationConverter;
+	type AccountId32Converter = AccountId32Converter;
+	type ParaId = ParachainInfo;
+	type ModuleId = DEXModuleId;
+}
+
 // culumus runtime end
 
 construct_runtime!(
@@ -483,25 +576,31 @@ construct_runtime!(
 		// Basic stuff
 		System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 1,
+		Utility: pallet_utility::{Module, Call, Event} = 31,
+		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 32,
 
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 2,
 		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 3,
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 4,
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>} = 5,
-		Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 30,
+		// Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 30,
 
 		// parachain modules
-		ParachainSystem: cumulus_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
+		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
 		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
 		ParachainInfo: parachain_info::{Module, Storage, Config} = 8,
-		XcmHandler: xcm_handler::{Module, Event<T>, Origin} = 9,
+		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 9,
 
 		// bifrost modules
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
-		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>} = 11,
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>} = 11,
 		Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
 		StakingReward: brml_staking_reward::{Module, Storage} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
+		Bid: brml_bid::{Module, Call, Storage, Event<T>} = 15,
+
+		// Zenlink
+		ZenlinkProtocol: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} = 16,
 	}
 );
 
@@ -626,6 +725,73 @@ impl_runtime_apis! {
 		}
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn dispatch_benchmark(
+			config: frame_benchmarking::BenchmarkConfig
+		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+			// Trying to add benchmarks directly to the Session Pallet caused cyclic dependency issues.
+			// To get around that, we separated the Session benchmarks into its own crate, which is why
+			// we need these two lines below.
+			use pallet_session_benchmarking::Module as SessionBench;
+			use pallet_offences_benchmarking::Module as OffencesBench;
+			use frame_system_benchmarking::Module as SystemBench;
+
+			impl pallet_session_benchmarking::Config for Runtime {}
+			impl pallet_offences_benchmarking::Config for Runtime {}
+			impl frame_system_benchmarking::Config for Runtime {}
+
+			let whitelist: Vec<TrackedStorageKey> = vec![
+				// Block Number
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
+				// Total Issuance
+				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
+				// Execution Phase
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
+				// Event Count
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
+				// System Events
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
+				// Treasury Account
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
+			];
+
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&config, &whitelist);
+
+			add_benchmark!(params, batches, pallet_assets, Assets);
+			add_benchmark!(params, batches, pallet_babe, Babe);
+			add_benchmark!(params, batches, pallet_balances, Balances);
+			add_benchmark!(params, batches, pallet_bounties, Bounties);
+			add_benchmark!(params, batches, pallet_collective, Council);
+			add_benchmark!(params, batches, pallet_contracts, Contracts);
+			add_benchmark!(params, batches, pallet_democracy, Democracy);
+			add_benchmark!(params, batches, pallet_elections_phragmen, Elections);
+			add_benchmark!(params, batches, pallet_grandpa, Grandpa);
+			add_benchmark!(params, batches, pallet_identity, Identity);
+			add_benchmark!(params, batches, pallet_im_online, ImOnline);
+			add_benchmark!(params, batches, pallet_indices, Indices);
+			add_benchmark!(params, batches, pallet_lottery, Lottery);
+			add_benchmark!(params, batches, pallet_mmr, Mmr);
+			add_benchmark!(params, batches, pallet_multisig, Multisig);
+			add_benchmark!(params, batches, pallet_offences, OffencesBench::<Runtime>);
+			add_benchmark!(params, batches, pallet_proxy, Proxy);
+			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
+			add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
+			add_benchmark!(params, batches, pallet_staking, Staking);
+			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
+			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, pallet_tips, Tips);
+			add_benchmark!(params, batches, pallet_treasury, Treasury);
+			add_benchmark!(params, batches, pallet_utility, Utility);
+			add_benchmark!(params, batches, pallet_vesting, Vesting);
+
+			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+			Ok(batches)
+		}
+	}
+
 	// impl asset rpc methods for runtime
 	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
 		fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
@@ -637,14 +803,71 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(asset_id: AssetId) -> node_primitives::ConvertPrice {
-			Convert::get_convert(asset_id)
+	impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
+		fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
+			VtokenMint::get_vtoken_mint_price(asset_id)
+		}
+	}
+
+	// zenlink runtime outer apis
+	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+		fn get_assets() -> Vec<ZenlinkAssetId> {
+			ZenlinkProtocol::assets_list()
+		}
+
+		fn get_balance(
+			asset_id: ZenlinkAssetId,
+			owner: AccountId
+		) -> Balance {
+			ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
+		}
+
+		fn get_all_pairs() -> Vec<PairInfo<AccountId, Balance>> {
+			ZenlinkProtocol::get_all_pairs()
+		}
+
+		fn get_owner_pairs(
+			owner: AccountId
+		) -> Vec<PairInfo<AccountId, Balance>> {
+			ZenlinkProtocol::get_owner_pairs(&owner)
+		}
+
+		//buy amount token price
+		fn get_amount_in_price(
+			supply: Balance,
+			path: Vec<ZenlinkAssetId>
+		) -> Balance {
+			ZenlinkProtocol::get_in_price(supply, path)
+		}
+
+		//sell amount token price
+		fn get_amount_out_price(
+			supply: Balance,
+			path: Vec<ZenlinkAssetId>
+		) -> Balance {
+			ZenlinkProtocol::get_out_price(supply, path)
+		}
+
+		fn get_estimate_lptoken(
+			token_0: ZenlinkAssetId,
+			token_1: ZenlinkAssetId,
+			amount_0_desired: Balance,
+			amount_1_desired: Balance,
+			amount_0_min: Balance,
+			amount_1_min: Balance,
+		) -> Balance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min)
 		}
 	}
 }
 
-cumulus_runtime::register_validate_block!(Block, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);
 
 #[cfg(test)]
 mod tests {

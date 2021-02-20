@@ -63,10 +63,11 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
 	type BlockHashCount = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
-	pub const ConvertDuration: u64 = 24 * 60 * 10;
+	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
 }
 
 impl assets::Config for Test {
@@ -74,9 +75,9 @@ impl assets::Config for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 

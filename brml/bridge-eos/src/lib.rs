@@ -46,7 +46,7 @@ use frame_system::{
 };
 use node_primitives::{
 	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType,
-	FetchConvertPool,
+	FetchVtokenMintPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -189,7 +189,7 @@ decl_error! {
 		/// Invalid substrate account id
 		InvalidAccountId,
 		/// Fail to cast balance type
-		ConvertBalanceError,
+		VtokenMintBalanceError,
 		/// Fail to append block id to merkel tree
 		AppendIncreMerkleError,
 		/// Fail to verify signature
@@ -281,8 +281,8 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
-	/// Fetch convert pool from convert module
-	type FetchConvertPool: FetchConvertPool<Self::AssetId, Self::Balance>;
+	/// Fetch vtoke mint pool from vtoken mint module
+	type FetchVtokenMintPool: FetchVtokenMintPool<Self::AssetId, Self::Balance>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -881,8 +881,8 @@ impl<T: Config> Module<T> {
 		};
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
 		// but in the future, we will support both token, let user to which token he wants to get
-		// according to the convert price
-		let convert_pool = T::FetchConvertPool::fetch_convert_pool(eos_id);
+		// according to the vtoken mint price
+		let vtoken_mint_pool = T::FetchVtokenMintPool::fetch_vtoken_pool(eos_id);
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
@@ -895,12 +895,12 @@ impl<T: Config> Module<T> {
 		);
 
 		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 		if T::AssetTrait::is_v_token(token_id) {
-			// according convert pool to convert EOS to vEOS
+			// according vtoken mint pool to mint EOS vEOS
 			let vtoken_balances: T::Balance = {
-				new_balance.saturating_mul(convert_pool.vtoken_pool) / convert_pool.token_pool
+				new_balance.saturating_mul(vtoken_mint_pool.vtoken_pool) / vtoken_mint_pool.token_pool
 			};
 			T::AssetTrait::asset_issue(v_eos_id, &target, vtoken_balances);
 		} else {
@@ -933,7 +933,7 @@ impl<T: Config> Module<T> {
 				);
 
 				let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 				if all_vtoken_balances.lt(&vtoken_balances) {
 					debug::warn!("origin account balance must be greater than or equal to the transfer amount.");

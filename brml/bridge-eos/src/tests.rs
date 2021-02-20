@@ -481,7 +481,6 @@ fn rotate_author(author: u64) {
 	System::initialize(
 		&1,
 		&Default::default(),
-		&Default::default(),
 		header.digest(),
 		Default::default(),
 	);

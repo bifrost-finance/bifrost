@@ -8,7 +8,7 @@
 
 // Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
@@ -47,7 +47,8 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
+	BiddingOrderId, EraId
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -67,7 +68,7 @@ use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthority
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
+use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment, CurrencyAdapter};
 use pallet_session::{historical as pallet_session_historical};
 use sp_inherents::{InherentData, CheckInherentsResult};
@@ -322,6 +323,8 @@ impl pallet_scheduler::Config for Runtime {
 parameter_types! {
 	pub const EpochDuration: u64 = EPOCH_DURATION_IN_SLOTS;
 	pub const ExpectedBlockTime: Moment = MILLISECS_PER_BLOCK;
+	pub const ReportLongevity: u64 =
+		BondingDuration::get() as u64 * SessionsPerEra::get() as u64 * EpochDuration::get();
 }
 
 impl pallet_babe::Config for Runtime {
@@ -342,7 +345,7 @@ impl pallet_babe::Config for Runtime {
 	)>>::IdentificationTuple;
 
 	type HandleEquivocation =
-		pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences>;
+		pallet_babe::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
 	type WeightInfo = ();
 }
@@ -787,6 +790,7 @@ impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime where
 impl pallet_im_online::Config for Runtime {
 	type AuthorityId = ImOnlineId;
 	type Event = Event;
+	type ValidatorSet = Historical;
 	type SessionDuration = SessionDuration;
 	type ReportUnresponsiveness = Offences;
 	type UnsignedPriority = ImOnlineUnsignedPriority;
@@ -822,7 +826,7 @@ impl pallet_grandpa::Config for Runtime {
 	)>>::IdentificationTuple;
 
 	type HandleEquivocation =
-		pallet_grandpa::EquivocationHandler<Self::KeyOwnerIdentification, Offences>;
+		pallet_grandpa::EquivocationHandler<Self::KeyOwnerIdentification, Offences, ReportLongevity>;
 
 	type WeightInfo = ();
 }
@@ -908,15 +912,65 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = pallet_vesting::weights::SubstrateWeight<Runtime>;
 }
 
+impl pallet_mmr::Config for Runtime {
+	const INDEXING_PREFIX: &'static [u8] = b"mmr";
+	type Hashing = <Runtime as frame_system::Config>::Hashing;
+	type Hash = <Runtime as frame_system::Config>::Hash;
+	type LeafData = frame_system::Module<Self>;
+	type OnNewRoot = ();
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const LotteryModuleId: ModuleId = ModuleId(*b"py/lotto");
+	pub const MaxCalls: usize = 10;
+	pub const MaxGenerateRandom: u32 = 10;
+}
+
+impl pallet_lottery::Config for Runtime {
+	type ModuleId = LotteryModuleId;
+	type Call = Call;
+	type Event = Event;
+	type Currency = Balances;
+	type Randomness = RandomnessCollectiveFlip;
+	type ManagerOrigin = EnsureRoot<AccountId>;
+	type MaxCalls = MaxCalls;
+	type ValidateCall = Lottery;
+	type MaxGenerateRandom = MaxGenerateRandom;
+	type WeightInfo = pallet_lottery::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const AssetDepositBase: Balance = 100 * DOLLARS;
+	pub const AssetDepositPerZombie: Balance = 1 * DOLLARS;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
+	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
+}
+
+impl pallet_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = u64;
+	type AssetId = u32;
+	type Currency = Balances;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDepositBase = AssetDepositBase;
+	type AssetDepositPerZombie = AssetDepositPerZombie;
+	type StringLimit = StringLimit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+}
+
 // bifrost runtime start
 impl brml_assets::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Price;
-	type Convert = ConvertPrice;
+	type VtokenMint = VtokenMintPrice;
 	type AssetRedeem = ();
-	type FetchConvertPrice = Convert;
+	type FetchVtokenMintPrice = VtokenMint;
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
@@ -928,44 +982,43 @@ impl brml_voucher::Config for Runtime {
 
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
-	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
-	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
+	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const VtokenMintPricePrecision: Balance = 1 * DOLLARS;
 }
 
-
-impl brml_convert::Config for Runtime {
+impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type ConvertPrice = ConvertPrice;
-	type RatePerBlock = RatePerBlock;
+	type MintPrice = VtokenMintPrice;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type ConvertDuration = ConvertDuration;
-	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
+	type VtokenMintDuration = VtokenMintDuration;
+	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: u64 = 2;
-	pub const MinimumPassedInPoolTokenShares: u64 = 2;
-	pub const MinimumSwapFee: u64 = 1; // 0.001%
-	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
-	pub const WeightPrecision: u64 = 100_000;
+	pub const MaximumSwapInRatio: u8 = 2;
+	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
+	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
+	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
+	pub const FeePrecision: SwapFee = 100_000;
+	pub const WeightPrecision: PoolWeight = 100_000;
 	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: u64 = 1_000;
+	pub const InitialPoolSupply: PoolToken = 1_000;
 	pub const NumberOfSupportedTokens: u8 = 8;
-	pub const BonusClaimAgeDenominator: u32 = 14_400;
-	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
+	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
+	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
 }
 
 impl brml_swap::Config for Runtime {
 	type Event = Event;
-	type Fee = Fee;
+	type SwapFee = SwapFee;
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
+	type PoolToken = PoolToken;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
@@ -977,6 +1030,31 @@ impl brml_swap::Config for Runtime {
 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+}
+
+// Bid module
+parameter_types! {
+	pub const TokenOrderROIListLength: u8 = 200u8;
+	pub const MinimumVotes: u64 = 100;
+	pub const MaximumVotes: u64 = 50_000;
+	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
+	pub const MaxProposalNumberForBidder: u32 = 5;
+	pub const ROIPermillPrecision: u32 = 100;
+}
+
+impl brml_bid::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type AssetTrait = Assets;
+	type BiddingOrderId = BiddingOrderId;
+	type EraId = EraId;
+	type Balance = Balance;
+	type TokenOrderROIListLength = TokenOrderROIListLength ;
+	type MinimumVotes = MinimumVotes;
+	type MaximumVotes = MaximumVotes;
+	type BlocksPerYear = BlocksPerYear;
+	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+	type ROIPermillPrecision = ROIPermillPrecision;
 }
 
 impl brml_staking_reward::Config for Runtime {
@@ -994,7 +1072,7 @@ construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Utility: pallet_utility::{Module, Call, Event},
-		Babe: pallet_babe::{Module, Call, Storage, Config, Inherent, ValidateUnsigned},
+		Babe: pallet_babe::{Module, Call, Storage, Config, ValidateUnsigned},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
 		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
 		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
@@ -1024,12 +1102,16 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		Bounties: pallet_bounties::{Module, Call, Storage, Event<T>},
 		Tips: pallet_tips::{Module, Call, Storage, Event<T>},
+		GenericAssets: pallet_assets::{Module, Call, Storage, Event<T>},
+		Mmr: pallet_mmr::{Module, Storage},
+		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		Bid: brml_bid::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -1065,6 +1147,20 @@ pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
 pub type Executive = frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
+
+/// MMR helper types.
+mod mmr {
+	use super::Runtime;
+	pub use pallet_mmr::primitives::*;
+
+	pub type Leaf = <
+		<Runtime as pallet_mmr::Config>::LeafData
+		as
+		LeafDataProvider
+	>::LeafData;
+	pub type Hash = <Runtime as pallet_mmr::Config>::Hash;
+	pub type Hashing = <Runtime as pallet_mmr::Config>::Hashing;
+}
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -1173,7 +1269,7 @@ impl_runtime_apis! {
 			}
 		}
 
-		fn current_epoch_start() -> sp_consensus_babe::SlotNumber {
+		fn current_epoch_start() -> sp_consensus_babe::Slot {
 			Babe::current_epoch_start()
 		}
 
@@ -1186,7 +1282,7 @@ impl_runtime_apis! {
 		}
 
 		fn generate_key_ownership_proof(
-			_slot_number: sp_consensus_babe::SlotNumber,
+			_slot: sp_consensus_babe::Slot,
 			authority_id: sp_consensus_babe::AuthorityId,
 		) -> Option<sp_consensus_babe::OpaqueKeyOwnershipProof> {
 			use codec::Encode;
@@ -1230,6 +1326,29 @@ impl_runtime_apis! {
 		}
 		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
 			TransactionPayment::query_fee_details(uxt, len)
+		}
+	}
+
+	impl pallet_mmr::primitives::MmrApi<
+		Block,
+		mmr::Leaf,
+		mmr::Hash,
+	> for Runtime {
+		fn generate_proof(leaf_index: u64) -> Result<(mmr::Leaf, mmr::Proof<mmr::Hash>), mmr::Error> {
+			Mmr::generate_proof(leaf_index)
+		}
+
+		fn verify_proof(leaf: mmr::Leaf, proof: mmr::Proof<mmr::Hash>) -> Result<(), mmr::Error> {
+			Mmr::verify_leaf(leaf, proof)
+		}
+
+		fn verify_proof_stateless(
+			root: mmr::Hash,
+			leaf: Vec<u8>,
+			proof: mmr::Proof<mmr::Hash>
+		) -> Result<(), mmr::Error> {
+			let node = mmr::DataOrHash::Data(mmr::OpaqueLeaf(leaf));
+			pallet_mmr::verify_leaf_proof::<mmr::Hashing, _>(root, node, proof)
 		}
 	}
 
@@ -1280,6 +1399,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
+			add_benchmark!(params, batches, pallet_assets, Assets);
 			add_benchmark!(params, batches, pallet_babe, Babe);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);
@@ -1291,6 +1411,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_identity, Identity);
 			add_benchmark!(params, batches, pallet_im_online, ImOnline);
 			add_benchmark!(params, batches, pallet_indices, Indices);
+			add_benchmark!(params, batches, pallet_lottery, Lottery);
+			add_benchmark!(params, batches, pallet_mmr, Mmr);
 			add_benchmark!(params, batches, pallet_multisig, Multisig);
 			add_benchmark!(params, batches, pallet_offences, OffencesBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_proxy, Proxy);
@@ -1299,8 +1421,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_staking, Staking);
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_tips, Tips);
+			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 
@@ -1320,9 +1442,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(asset_id: AssetId) -> node_primitives::ConvertPrice {
-			Convert::get_convert(asset_id)
+	impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
+		fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
+			VtokenMint::get_vtoken_mint_price(asset_id)
 		}
 	}
 }
