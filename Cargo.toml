@@ -189,3 +189,7 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate.git", 
 
 # Apple M1
 #rocksdb = { git = "https://github.com/hdevalence/rust-rocksdb", rev = "33cd4281570b229b628d6d827fa0053cff57000a" }
+
+[patch.'https://github.com/zenlinkpro/Zenlink-DEX-Module']
+zenlink-protocol = { path = "../Zenlink-DEX-Module/zenlink-protocol" }
+zenlink-protocol-runtime-api = { path = "../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api" }
