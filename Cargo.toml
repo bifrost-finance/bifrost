@@ -103,6 +103,7 @@ pallet-bounties = { git = "https://github.com/paritytech/substrate.git", branch 
 pallet-collective = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 pallet-democracy = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+pallet-election-provider-multi-phase = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 pallet-grandpa = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 pallet-identity = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 pallet-im-online = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
@@ -146,6 +147,7 @@ sc-finality-grandpa-warp-sync = { git = "https://github.com/paritytech/substrate
 sc-informant = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-keystore = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-network = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+sc-network-gossip = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-offchain = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-rpc = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 sc-rpc-api = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
