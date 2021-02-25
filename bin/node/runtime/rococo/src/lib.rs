@@ -581,7 +581,7 @@ construct_runtime!(
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
+		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
 		Utility: pallet_utility::{Module, Call, Event},

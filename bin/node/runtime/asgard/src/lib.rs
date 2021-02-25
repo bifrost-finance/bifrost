@@ -656,7 +656,7 @@ construct_runtime!(
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
 		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
 		ParachainInfo: parachain_info::{Module, Storage, Config} = 8,
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin} = 9,
+		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
