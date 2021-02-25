@@ -291,7 +291,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let protocol_id = Some("asgard");
 
 	ChainSpec::from_genesis(
-		"Bifrost Zenlink Testnet",
+		"Asgard CC4 Testnet",
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		move || {
