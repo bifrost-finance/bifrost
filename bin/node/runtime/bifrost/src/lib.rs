@@ -1100,6 +1100,22 @@ impl brml_staking_reward::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 }
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: AssetId| -> Balance {
+		1 * CENTS
+	};
+}
+
+impl orml_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = AssetId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_assets::TransferDust<Runtime, ()>;
+}
 // bifrost runtime end
 
 construct_runtime!(
@@ -1151,6 +1167,7 @@ construct_runtime!(
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		Bid: brml_bid::{Module, Call, Storage, Event<T>},
+		OrmlAssets: orml_assets::{Module, Call, Storage, Event<T>},
 	}
 );
 

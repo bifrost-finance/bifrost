@@ -171,7 +171,7 @@ dependencies = [
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.0-dev",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-assets",
@@ -511,6 +511,8 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
  "node-primitives",
+ "orml-assets",
+ "orml-traits 0.4.1-dev",
  "pallet-assets",
  "pallet-authority-discovery",
  "pallet-authorship",
@@ -4760,14 +4762,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-assets"
+version = "0.7.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-traits 0.4.1-dev",
+ "parity-scale-codec 2.0.0",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-currencies"
 version = "0.4.0-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=sw/rococo-v1#727d6ee4e1280994d4ab584c7eb680c55419346f"
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits",
- "orml-utilities",
+ "orml-traits 0.4.0-dev",
+ "orml-utilities 0.4.0-dev",
  "parity-scale-codec 2.0.0",
  "serde",
  "sp-io",
@@ -4782,7 +4800,7 @@ source = "git+https://github.com/open-web3-stack/open-runtime-module-library?bra
 dependencies = [
  "frame-support",
  "frame-system",
- "orml-traits",
+ "orml-traits 0.4.0-dev",
  "parity-scale-codec 2.0.0",
  "serde",
  "sp-io",
@@ -4798,7 +4816,24 @@ dependencies = [
  "frame-support",
  "impl-trait-for-tuples 0.1.3",
  "num-traits",
- "orml-utilities",
+ "orml-utilities 0.4.0-dev",
+ "parity-scale-codec 2.0.0",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-traits"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git#fb405b1c2c98d5b6250f69328847bc1fb55d03e4"
+dependencies = [
+ "frame-support",
+ "funty",
+ "impl-trait-for-tuples 0.1.3",
+ "num-traits",
+ "orml-utilities 0.4.1-dev",
  "parity-scale-codec 2.0.0",
  "serde",
  "sp-io",
@@ -4820,12 +4855,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library.git#fb405b1c2c98d5b6250f69328847bc1fb55d03e4"
+dependencies = [
+ "frame-support",
+ "funty",
+ "parity-scale-codec 2.0.0",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "orml-xcm-support"
 version = "0.3.3-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=sw/rococo-v1#727d6ee4e1280994d4ab584c7eb680c55419346f"
 dependencies = [
  "frame-support",
- "orml-traits",
+ "orml-traits 0.4.0-dev",
  "parity-scale-codec 2.0.0",
  "sp-runtime",
  "sp-std",
