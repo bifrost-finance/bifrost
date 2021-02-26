@@ -18,12 +18,12 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token};
+use node_primitives::{AccountId, VtokenPool, TokenType, Token, TokenSymbol, CurrencyId};
 use cumulus_primitives_core::ParaId;
-use rococo_runtime::{
-	constants::currency::{BNCS as ASG, DOLLARS},
+use asgard_runtime::{
+	constants::currency::DOLLARS,
 	AssetsConfig, BalancesConfig, VtokenMintConfig,
-	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
+	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, TokensConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
 use crate::chain_spec::{
@@ -161,7 +161,7 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * ASG;
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -205,6 +205,19 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		orml_tokens: Some(TokensConfig {
+			endowed_accounts: endowed_accounts
+				.iter()
+				.flat_map(|x| {
+					vec![
+						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::AUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+					]
+				})
+				.collect(),
+		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
 	}
 }

@@ -20,16 +20,18 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-use sp_std::prelude::*;
+use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 use frame_support::{
 	construct_runtime, parameter_types, debug,
 	weights::{
-		Weight, IdentityFee, DispatchClass,
-		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		Weight, IdentityFee,
+		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND}, DispatchClass,
 	},
-	traits::Randomness
+	traits::{Get, Randomness}
 };
-use frame_system::{EnsureRoot,limits::{BlockWeights, BlockLength}
+use frame_system::{
+	EnsureRoot,
+	limits::{BlockWeights, BlockLength}
 };
 use codec::{Encode};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -37,18 +39,16 @@ pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
 	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
-	BiddingOrderId, EraId
+	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
-	Perbill, Perquintill, ApplyExtrinsicResult, FixedPointNumber,
-	impl_opaque_keys, generic, create_runtime_str, ModuleId
-	// Perbill, Perquintill, ApplyExtrinsicResult,
-	// impl_opaque_keys, generic, create_runtime_str, FixedPointNumber,
+	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
+	impl_opaque_keys, generic, create_runtime_str
 };
 use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
 use sp_runtime::traits::{
-	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion, Convert
+	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion, Convert, Zero
 };
 use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
@@ -76,13 +76,19 @@ use xcm::v0::{MultiLocation, NetworkId, Junction};
 use xcm_builder::{
 	ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, LocationInverter,
 	SovereignSignedViaLocation, SiblingParachainAsNative,
-	RelayChainAsNative, SignedAccountId32AsNative
+	RelayChainAsNative, SignedAccountId32AsNative, ChildParachainConvertsVia
 };
-use xcm_executor::{XcmExecutor, Config};
+use xcm_executor::{Config, XcmExecutor};
+use cumulus_primitives_core::{
+	relay_chain::Balance as RelayChainBalance,
+	ParaId
+};
 
-use zenlink_protocol::{
-	Origin as ZenlinkOrigin, ParaChainWhiteList, Transactor, PairInfo, AssetId as ZenlinkAssetId,
+use orml_xcm_support::{
+	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr
 };
+use orml_traits::parameter_type_with_key;
+use orml_currencies::BasicCurrencyAdapter;
 
 /// Weights for pallets used in the runtime.
 mod weights;
@@ -108,7 +114,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 1,
+	spec_version: 21,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -488,63 +494,12 @@ impl brml_staking_reward::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = parachain_info::Module<Runtime>;
-	type DownwardMessageHandlers = ZenlinkProtocol;
-	type HrmpMessageHandlers = ZenlinkProtocol;
+	type SelfParaId = ParachainInfo;
+	type DownwardMessageHandlers = XcmHandler;
+	type HrmpMessageHandlers = XcmHandler;
 }
 
 impl parachain_info::Config for Runtime {}
-
-parameter_types! {
-	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
-	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
-	pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
-	pub RelayChainOrigin: Origin = ZenlinkOrigin::Relay.into();
-	pub Ancestry: MultiLocation = Junction::Parachain {
-		id: ParachainInfo::parachain_id().into()
-	}.into();
-
-	pub SiblingParachains: Vec<MultiLocation> = vec![
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
-	];
-}
-
-pub struct AccountId32Converter;
-impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
-	fn convert(account_id: AccountId) -> [u8; 32] {
-		account_id.into()
-	}
-}
-
-type LocationConverter = (
-	ParentIsDefault<AccountId>,
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	AccountId32Aliases<RococoNetwork, AccountId>,
-);
-
-pub type LocalAssetTransactor =
-Transactor<Balances, ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
-
-type LocalOriginConverter = (
-	SovereignSignedViaLocation<LocationConverter, Origin>,
-	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<ZenlinkOrigin, Origin>,
-	SignedAccountId32AsNative<RococoNetwork, Origin>,
-);
-
-pub struct XcmConfig;
-impl Config for XcmConfig {
-	type Call = Call;
-	type XcmSender = ZenlinkProtocol;
-	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
-	type OriginConverter = LocalOriginConverter;
-	type IsReserve = ParaChainWhiteList<SiblingParachains>;
-	type IsTeleporter = ();
-	type LocationInverter = LocationInverter<Ancestry>;
-}
 
 impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
@@ -553,16 +508,128 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type HrmpMessageSender = ParachainSystem;
 }
 
-impl zenlink_protocol::Config for Runtime {
+parameter_types! {
+	pub const PolkadotNetworkId: NetworkId = NetworkId::Polkadot;
+}
+
+pub struct AccountId32Convert;
+impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
+}
+
+parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		Zero::zero()
+	};
+}
+
+impl orml_tokens::Config for Runtime {
 	type Event = Event;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type UpwardMessageSender = ParachainSystem;
-	type HrmpMessageSender = ParachainSystem;
-	type NativeCurrency = Balances;
-	type AccountIdConverter = LocationConverter;
-	type AccountId32Converter = AccountId32Converter;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+}
+
+parameter_types! {
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+}
+
+pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type NativeCurrency = BifrostToken;
+	type GetNativeCurrencyId = GetBifrostTokenId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub BifrostNetwork: NetworkId = NetworkId::Named("bifrost".into());
+	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
+	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
+		id: ParachainInfo::get().into(),
+	});
+	pub const RelayChainCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+}
+
+pub type LocationConverter = (
+	ParentIsDefault<AccountId>,
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	ChildParachainConvertsVia<ParaId, AccountId>,
+	AccountId32Aliases<BifrostNetwork, AccountId>,
+);
+
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
+	Currencies,
+	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
+	LocationConverter,
+	AccountId,
+	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
+	CurrencyId,
+>;
+
+pub type LocalOriginConverter = (
+	SovereignSignedViaLocation<LocationConverter, Origin>,
+	RelayChainAsNative<RelayChainOrigin, Origin>,
+	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
+	SignedAccountId32AsNative<BifrostNetwork, Origin>,
+);
+
+parameter_types! {
+	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
+		let mut t = BTreeSet::new();
+		//TODO: might need to add other assets based on orml-tokens
+		t.insert(("BNC".into(), (Junction::Parent, Junction::Parachain { id: 107 }).into()));
+		t
+	};
+}
+
+pub struct XcmConfig;
+impl Config for XcmConfig {
+	type Call = Call;
+	type XcmSender = XcmHandler;
+	type AssetTransactor = LocalAssetTransactor;
+	type OriginConverter = LocalOriginConverter;
+	//TODO: might need to add other assets based on orml-tokens
+	type IsReserve = NativePalletAssetOr<NativeOrmlTokens>;
+	type IsTeleporter = ();
+	type LocationInverter = LocationInverter<Ancestry>;
+}
+
+pub struct RelayToNative;
+impl Convert<RelayChainBalance, Balance> for RelayToNative {
+	fn convert(val: u128) -> Balance {
+		// native is 12
+		// relay is 12
+		val
+	}
+}
+
+pub struct NativeToRelay;
+impl Convert<Balance, RelayChainBalance> for NativeToRelay {
+	fn convert(val: u128) -> Balance {
+		// native is 12
+		// relay is 12
+		val
+	}
+}
+
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type ToRelayChainBalance = NativeToRelay;
+	type AccountId32Convert = AccountId32Convert;
+	//TODO: change network id if kusama
+	type RelayChainNetworkId = PolkadotNetworkId;
 	type ParaId = ParachainInfo;
-	type ModuleId = DEXModuleId;
+	type AccountIdConverter = LocationConverter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 // culumus runtime end
@@ -573,27 +640,36 @@ construct_runtime!(
 		NodeBlock = node_primitives::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Authorship: pallet_authorship::{Module, Call, Storage, Inherent},
-		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin},
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		Utility: pallet_utility::{Module, Call, Event},
-		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
-		// Modules from brml
-		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
-		Swap: brml_swap::{Module, Call, Storage, Event<T>},
-		StakingReward: brml_staking_reward::{Module, Storage},
-		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
-		Bid: brml_bid::{Module, Call, Storage, Event<T>},
-		ZenlinkProtocol: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>},
+		// Basic stuff
+		System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 1,
+		Utility: pallet_utility::{Module, Call, Event} = 31,
+		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 32,
+
+		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 2,
+		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 3,
+		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 4,
+		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>} = 5,
+		// Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 30,
+
+		// parachain modules
+		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
+		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
+		ParachainInfo: parachain_info::{Module, Storage, Config} = 8,
+		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin} = 9,
+
+		// bifrost modules
+		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>} = 11,
+		Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
+		StakingReward: brml_staking_reward::{Module, Storage} = 13,
+		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
+		Bid: brml_bid::{Module, Call, Storage, Event<T>} = 15,
+
+		// ORML
+		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
+		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>} = 17,
+		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
 	}
 );
 
@@ -799,63 +875,6 @@ impl_runtime_apis! {
 	impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
 		fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
 			VtokenMint::get_vtoken_mint_price(asset_id)
-		}
-	}
-
-	// zenlink runtime outer apis
-	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-		fn get_assets() -> Vec<ZenlinkAssetId> {
-			ZenlinkProtocol::assets_list()
-		}
-
-		fn get_balance(
-			asset_id: ZenlinkAssetId,
-			owner: AccountId
-		) -> Balance {
-			ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
-		}
-
-		fn get_all_pairs() -> Vec<PairInfo<AccountId, Balance>> {
-			ZenlinkProtocol::get_all_pairs()
-		}
-
-		fn get_owner_pairs(
-			owner: AccountId
-		) -> Vec<PairInfo<AccountId, Balance>> {
-			ZenlinkProtocol::get_owner_pairs(&owner)
-		}
-
-		//buy amount token price
-		fn get_amount_in_price(
-			supply: Balance,
-			path: Vec<ZenlinkAssetId>
-		) -> Balance {
-			ZenlinkProtocol::get_in_price(supply, path)
-		}
-
-		//sell amount token price
-		fn get_amount_out_price(
-			supply: Balance,
-			path: Vec<ZenlinkAssetId>
-		) -> Balance {
-			ZenlinkProtocol::get_out_price(supply, path)
-		}
-
-		fn get_estimate_lptoken(
-			token_0: ZenlinkAssetId,
-			token_1: ZenlinkAssetId,
-			amount_0_desired: Balance,
-			amount_1_desired: Balance,
-			amount_0_min: Balance,
-			amount_1_min: Balance,
-		) -> Balance{
-			ZenlinkProtocol::get_estimate_lptoken(
-				token_0,
-				token_1,
-				amount_0_desired,
-				amount_1_desired,
-				amount_0_min,
-				amount_1_min)
 		}
 	}
 }

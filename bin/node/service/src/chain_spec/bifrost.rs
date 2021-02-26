@@ -21,7 +21,7 @@ use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use bifrost_runtime::{
-	constants::currency::{BNCS as BNC, DOLLARS},
+	constants::currency::DOLLARS,
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
 	VtokenMintConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
@@ -171,7 +171,7 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * BNC;
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 	const STASH: u128 = ENDOWMENT / 1000;
 
 	GenesisConfig {
