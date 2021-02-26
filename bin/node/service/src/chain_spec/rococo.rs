@@ -21,7 +21,7 @@ use telemetry::TelemetryEndpoints;
 use cumulus_primitives_core::ParaId;
 use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use rococo_runtime::{
-	constants::currency::{BNCS as RCO, DOLLARS},
+	constants::currency::DOLLARS,
 	AssetsConfig, BalancesConfig, VtokenMintConfig,
 	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
@@ -161,7 +161,7 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * RCO;
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -285,7 +285,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		);
 		props.insert(
 			"tokenSymbol".to_owned(),
-			serde_json::value::to_value("RCO".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+			serde_json::value::to_value("ROC".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
 		);
 		Some(props)
 	};
