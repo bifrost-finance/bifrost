@@ -83,6 +83,8 @@ brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/ru
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+orml-assets = { path = "../../../../brml/orml-assets", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0" }
@@ -158,6 +160,8 @@ std = [
 	'brml-staking-reward/std',
 	"brml-swap/std",
 	'brml-voucher/std',
+	"orml-assets/std",
+	"orml-traits/std",
 ]
 runtime-benchmarks = [
 	"frame-benchmarking",

@@ -10,6 +10,7 @@ members = [
 	"bin/node/service",
 	"bin/utils/subkey",
 	"brml/assets",
+	"brml/orml-assets",
 	"brml/assets/rpc",
 	"brml/bid",
 	"brml/bridge-eos",
