@@ -596,7 +596,7 @@ pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 
 pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	if config.chain_spec.is_bifrost() {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
 		).map(|full| full.task_manager)
 	} else {

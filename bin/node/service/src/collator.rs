@@ -32,6 +32,7 @@ use sp_trie::PrefixedMemoryDB;
 use node_primitives::{AccountId, Nonce, Balance, Block};
 use crate::IdentifyVariant;
 use telemetry::TelemetrySpan;
+use log::info;
 
 pub use asgard_runtime;
 pub use rococo_runtime;
@@ -313,10 +314,10 @@ pub async fn start_node(
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
 	
-				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-					client,
-				)));
+				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+				// 	client,
+				// )));
 				io
 			},
 		).await.map(|full| full.0)
@@ -330,10 +331,10 @@ pub async fn start_node(
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
 	
-				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-					client,
-				)));
+				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+				// 	client,
+				// )));
 				io
 			},
 		).await.map(|full| full.0)
