@@ -46,7 +46,7 @@ use sp_runtime::{
 	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
 	impl_opaque_keys, generic, create_runtime_str
 };
-use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
+use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource};
 use sp_runtime::traits::{
 	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion, Convert, Zero
 };
@@ -312,13 +312,6 @@ impl_opaque_keys! {
 impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
-}
-
-parameter_types! {
-	pub const SessionDuration: BlockNumber = EPOCH_DURATION_IN_SLOTS as _;
-	pub const ImOnlineUnsignedPriority: TransactionPriority = TransactionPriority::max_value();
-	/// We prioritize im-online heartbeats over election solution submission.
-	pub const StakingUnsignedPriority: TransactionPriority = TransactionPriority::max_value() / 2;
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime

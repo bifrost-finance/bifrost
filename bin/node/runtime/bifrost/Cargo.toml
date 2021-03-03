@@ -36,38 +36,23 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-system-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
-pallet-assets = { version = "3.0.0", default-features = false }
 pallet-authority-discovery = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
 pallet-babe = { version = "3.0.0", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false }
-pallet-bounties = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
-pallet-elections-phragmen = { version = "3.0.0", default-features = false }
-pallet-election-provider-multi-phase = { version = "3.0.0", default-features = false }
 pallet-grandpa = { version = "3.0.0", default-features = false }
-pallet-im-online = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
-pallet-identity = { version = "3.0.0", default-features = false }
-pallet-lottery = { version = "3.0.0", default-features = false }
 pallet-membership = { version = "3.0.0", default-features = false }
-pallet-mmr = { version = "3.0.0", default-features = false }
-pallet-multisig = { version = "3.0.0", default-features = false }
 pallet-offences = { version = "3.0.0", default-features = false }
 pallet-offences-benchmarking = { version = "3.0.0", default-features = false, optional = true }
-pallet-proxy = { version = "3.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
-pallet-recovery = { version = "3.0.0", default-features = false }
 pallet-session = { version = "3.0.0", features = ["historical"], default-features = false }
 pallet-session-benchmarking = { version = "3.0.0", default-features = false, optional = true }
-pallet-staking = { version = "3.0.0", default-features = false }
-pallet-staking-reward-curve = { version = "3.0.0", default-features = false }
 pallet-scheduler = { version = "3.0.0", default-features = false }
-pallet-society = { version = "3.0.0", default-features = false }
 pallet-sudo = { version = "3.0.0", default-features = false }
 pallet-timestamp = { version = "3.0.0", default-features = false }
-pallet-tips = { version = "3.0.0", default-features = false }
 pallet-treasury = { version = "3.0.0", default-features = false }
 pallet-utility = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
@@ -97,34 +82,24 @@ default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"sp-authority-discovery/std",
-	"pallet-assets/std",
 	"pallet-authority-discovery/std",
 	"pallet-authorship/std",
 	"sp-consensus-babe/std",
 	"pallet-babe/std",
 	"pallet-balances/std",
-	"pallet-bounties/std",
 	"sp-block-builder/std",
 	"codec/std",
 	"pallet-collective/std",
 	"pallet-democracy/std",
-	"pallet-elections-phragmen/std",
-	"pallet-election-provider-multi-phase/std",
 	"frame-executive/std",
 	"pallet-grandpa/std",
-	"pallet-im-online/std",
 	"pallet-indices/std",
 	"sp-inherents/std",
-	"pallet-lottery/std",
 	"pallet-membership/std",
-	"pallet-mmr/std",
-	"pallet-multisig/std",
-	"pallet-identity/std",
 	"pallet-scheduler/std",
 	"node-primitives/std",
 	"sp-offchain/std",
 	"pallet-offences/std",
-	"pallet-proxy/std",
 	"sp-core/std",
 	"pallet-randomness-collective-flip/std",
 	"sp-std/std",
@@ -133,7 +108,6 @@ std = [
 	"sp-api/std",
 	"sp-runtime/std",
 	"sp-staking/std",
-	"pallet-staking/std",
 	"sp-keyring",
 	"sp-session/std",
 	"pallet-sudo/std",
@@ -142,15 +116,12 @@ std = [
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
 	"pallet-timestamp/std",
-	"pallet-tips/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-treasury/std",
 	"sp-transaction-pool/std",
 	"pallet-utility/std",
 	"sp-version/std",
-	"pallet-society/std",
-	"pallet-recovery/std",
 	"pallet-vesting/std",
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
@@ -168,27 +139,14 @@ runtime-benchmarks = [
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
-	"pallet-assets/runtime-benchmarks",
 	"pallet-babe/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
-	"pallet-bounties/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-democracy/runtime-benchmarks",
-	"pallet-elections-phragmen/runtime-benchmarks",
-	"pallet-election-provider-multi-phase/runtime-benchmarks",
 	"pallet-grandpa/runtime-benchmarks",
-	"pallet-identity/runtime-benchmarks",
-	"pallet-im-online/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
-	"pallet-lottery/runtime-benchmarks",
-	"pallet-mmr/runtime-benchmarks",
-	"pallet-multisig/runtime-benchmarks",
-	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
-	"pallet-society/runtime-benchmarks",
-	"pallet-staking/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
-	"pallet-tips/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
