@@ -254,8 +254,9 @@
     ]
   },
   "CurrencyId": {
-    "_enum": ["TokenSymbol"]
+    "_enum": {
+      "Token": "TokenSymbol"
+    }
   },
-  "Token": "TokenSymbol",
   "CurrencyIdOf": "CurrencyId"
 }
