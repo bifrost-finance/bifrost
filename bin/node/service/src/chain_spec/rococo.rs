@@ -206,6 +206,7 @@ pub fn testnet_genesis(
 			}
 		},
 		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
+		orml_tokens: None,
 	}
 }
 

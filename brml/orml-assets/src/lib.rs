@@ -59,7 +59,7 @@ use orml_traits::{
 use sp_runtime::{
 	traits::{
 		AccountIdConversion, AtLeast32BitUnsigned, Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member,
-		Saturating, StaticLookup, Zero, One
+		Saturating, StaticLookup, Zero,
 	},
 	DispatchError, DispatchResult, ModuleId, RuntimeDebug,
 };
@@ -69,7 +69,7 @@ use sp_std::{
 	prelude::*,
 	vec::Vec,
 };
-use node_primitives::{Token, TokenType};
+use node_primitives::CurrencyIdExt;
 
 mod default_weight;
 mod imbalances;
@@ -152,9 +152,6 @@ pub mod module {
 	use super::*;
 
 	pub trait WeightInfo {
-        fn create() -> Weight;
-        fn issue() -> Weight;
-        fn destroy() -> Weight;
 		fn transfer() -> Weight;
 		fn transfer_all() -> Weight;
 	}
@@ -178,7 +175,7 @@ pub mod module {
 			+ MaybeSerializeDeserialize;
 
 		/// The currency ID type
-		type CurrencyId: Default + Parameter + Member + Copy + MaybeSerializeDeserialize + Ord + AtLeast32BitUnsigned;
+		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -204,11 +201,6 @@ pub mod module {
 		LiquidityRestrictions,
 		/// Account still has active reserved
 		StillHasActiveReserved,
-		EmptyTokenSymbol,
-		TokenSymbolTooLong,
-		InvalidPrecision,
-		InsufficientBalance,
-		ZeroAmountOfBalance
 	}
 
 	#[pallet::event]
@@ -220,33 +212,12 @@ pub mod module {
 		/// ExistentialDeposit, resulting in an outright loss. \[account,
 		/// currency_id, amount\]
 		DustLost(T::AccountId, T::CurrencyId, T::Balance),
-		/// New Token has been created.
-		Created(T::CurrencyId, Token<T::CurrencyId, T::Balance>),
-		/// Burn tokens from user
-		Destroyed(T::CurrencyId, T::AccountId, T::Balance),
-		/// Issue tokens for user
-		Issued(T::CurrencyId, T::AccountId, T::Balance),
 	}
 
 	/// The total issuance of a token type.
 	#[pallet::storage]
 	#[pallet::getter(fn total_issuance)]
 	pub type TotalIssuance<T: Config> = StorageMap<_, Twox64Concat, T::CurrencyId, T::Balance, ValueQuery>;
-
-    /// The next asset identifier up for grabs.
-	#[pallet::storage]
-	#[pallet::getter(fn next_asset_id)]
-	pub type NextAssetId<T: Config> = StorageValue<_, T::CurrencyId, ValueQuery>;
-
-    /// List all pairs of token.
-    // (1, None) means that this currency id is standalone.
-	#[pallet::storage]
-	#[pallet::getter(fn token_pairs)]
-	pub type TokenPairs<T: Config> = StorageValue<_, Vec<(T::CurrencyId, Option<T::CurrencyId>)>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn token_details)]
-	pub type Tokens<T: Config> = StorageMap<_, Twox64Concat, T::CurrencyId, Token<T::CurrencyId, T::Balance>, ValueQuery>;
 
 	/// Any liquidity locks of a token type under an account.
 	/// NOTE: Should only be accessed when setting, changing and freeing a lock.
@@ -335,94 +306,6 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Create a brand new token.
-		///
-		/// The dispatch origin for this call must be `Root` by the
-		/// transactor.
-		#[pallet::weight(T::WeightInfo::create())]
-		pub fn create(
-			origin: OriginFor<T>,
-			symbol: Vec<u8>,
-            precision: u16,
-            token_type: TokenType,
-		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-
-			ensure!(!symbol.is_empty(), Error::<T>::EmptyTokenSymbol);
-			ensure!(symbol.len() <= 32, Error::<T>::TokenSymbolTooLong);
-			ensure!(precision <= 18, Error::<T>::InvalidPrecision); // increase to precision 18
-
-			let id = Self::next_asset_id();
-			<NextAssetId<T>>::mutate(|id| {
-				*id = *id + One::one();
-			});
-
-			// Create token
-			let token = Token::new(symbol.clone(), precision, Zero::zero(), token_type);
-
-			// Insert to storage
-			<Tokens<T>>::insert(id, &token);
-
-			Self::deposit_event(Event::Created(id, token));
-			Ok(().into())
-		}
-
-        #[pallet::weight(T::WeightInfo::destroy())]
-		pub fn destroy(
-			origin: OriginFor<T>,
-			asset_id: T::CurrencyId,
-			dest: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance,
-		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-
-			let dest = T::Lookup::lookup(dest)?;
-
-			let balance = <Self as MultiCurrency<T::AccountId>>::free_balance(asset_id, &dest);
-			ensure!(amount <= balance , Error::<T>::InsufficientBalance);
-
-			Self::set_free_balance(asset_id, &dest, balance - amount);
-
-			<Tokens<T>>::mutate(&asset_id, |token| {
-				token.total_supply -= amount;
-			});
-
-			TotalIssuance::<T>::mutate(asset_id, |total_issuance| {
-				*total_issuance -= amount;
-			});
-
-			Self::deposit_event(Event::Destroyed(asset_id, dest, amount));
-            Ok(().into())
-		}
-
-        #[pallet::weight(T::WeightInfo::issue())]
-		pub fn issue(
-			origin: OriginFor<T>,
-			asset_id: T::CurrencyId,
-            dest: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance,
-		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
-
-			let dest = T::Lookup::lookup(dest)?;
-
-			let balance = <Self as MultiCurrency<T::AccountId>>::free_balance(asset_id, &dest);
-			ensure!(amount > Zero::zero() , Error::<T>::ZeroAmountOfBalance);
-
-			Self::set_free_balance(asset_id, &dest, balance + amount);
-
-			<Tokens<T>>::mutate(&asset_id, |token| {
-				token.total_supply += amount;
-			});
-
-			TotalIssuance::<T>::mutate(asset_id, |total_issuance| {
-				*total_issuance += amount;
-			});
-
-			Self::deposit_event(Event::Issued(asset_id, dest, amount));
-            Ok(().into())
-		}
-
 		/// Transfer some balance to another account.
 		///
 		/// The dispatch origin for this call must be `Signed` by the
@@ -1173,3 +1056,39 @@ impl<T: Config> MergeAccount<T::AccountId> for Pallet<T> {
 		})
 	}
 }
+
+// impl<T: Config> AssetTrait<T::CurrencyId, T::AccountId, T::Balance> for Pallet<T> {
+// 	type Error = core::convert::Infallible;
+
+// 	// fn asset_issue(currency_id: T::CurrencyId, _: &T::AccountId, _: T::Balance) {
+// 	// 	todo!();
+// 	// }
+
+// 	// fn asset_destroy(currency_id: T::CurrencyId, _: &T::AccountId, _: T::Balance) {
+// 	// 	todo!();
+// 	// }
+
+// 	// fn asset_id_exists(_: &T::AccountId, _: &[u8], _: u16) -> Option<T::CurrencyId> {
+// 	// 	todo!();
+// 	// }
+
+// 	// fn token_exists(currency_id: T::CurrencyId) -> bool {
+// 	// 	todo!();
+// 	// }
+
+// 	// fn get_account_asset(currency_id: T::CurrencyId, _: &T::AccountId) -> AccountAsset<T::Balance> {
+// 	// 	todo!();
+// 	// }
+
+// 	// fn get_token(currency_id: T::CurrencyId) -> Token<T::CurrencyId, T::Balance> {
+// 	// 	todo!();
+// 	// }
+
+// 	fn is_token(currency_id: T::CurrencyId) -> bool {
+// 		currency_id.is_token()
+// 	}
+
+// 	fn is_vtoken(currency_id: T::CurrencyId) -> bool {
+// 		currency_id.is_vtoken()
+// 	}
+// }

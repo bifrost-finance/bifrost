@@ -17,100 +17,178 @@
 //! Test utilities
 
 #![cfg(test)]
+#![allow(non_upper_case_globals)]
 
-use frame_system as system;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}};
+use crate::{self as vtoken_mint};
+use frame_support::{parameter_types,traits::GenesisBuild};
+use node_primitives::{CurrencyId, TokenSymbol, Balance};
 use sp_core::H256;
-use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use sp_runtime::{
+	traits::{BlakeTwo256, IdentityLookup},
+	testing::Header, AccountId32
+};
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+pub type AccountId = AccountId32;
+pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+pub const aUSD: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
+pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
+pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const vKSM: CurrencyId = CurrencyId::Token(TokenSymbol::vKSM);
+pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		system<T>,
-		brml_vtoken_mint,
-		assets<T>,
+frame_support::construct_runtime!(
+	pub enum Runtime where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>, Config<T>},
+		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
+		VtokenMint: vtoken_mint::{Module, Call, Storage, Event<T>},
 	}
-}
+);
 
-mod brml_vtoken_mint {
-	pub use crate::Event;
-}
-
-impl assets::Config for Test {
-	type Event = TestEvent;
-	type Balance = u64;
-	type AssetId = u32;
-	type Price = u64;
-	type VtokenMint = u64;
-	type AssetRedeem = ();
-	type FetchVtokenMintPrice = ();
-	type WeightInfo = ();
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
-
-impl system::Config for Test {
+impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
 	type Origin = Origin;
-	type Call = ();
 	type Index = u64;
+	type Call = Call;
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
-	type AccountData = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
-	type PalletInfo = ();
 	type SS58Prefix = ();
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+impl pallet_balances::Config for Runtime {
+	type Balance = Balance;
+	type DustRemoval = ();
+	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = frame_system::Module<Runtime>;
+	type MaxLocks = ();
+	type WeightInfo = ();
+}
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		0
+	};
+}
+impl assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = assets::TransferDust<Runtime, ()>;
 }
 
 parameter_types! {
 	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
 }
-
-impl crate::Config for Test {
-	type MintPrice = u64;
-	type Event = TestEvent;
-	type AssetTrait = Assets;
-	type Balance = u64;
-	type AssetId = u32;
+impl crate::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = ();
 }
 
-pub type VtokenMint = crate::Module<Test>;
-pub type System = system::Module<Test>;
-pub type Assets = assets::Module<Test>;
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
 
-pub(crate) fn run_to_block(n: u64) {
-	while System::block_number() < n {
-		if System::block_number() > 1 {
-			System::on_finalize(System::block_number());
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![],
 		}
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		VtokenMint::on_initialize(System::block_number());
 	}
 }
 
-pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		self.balances(vec![
+			(ALICE, BNC, 100),
+			(BOB, BNC, 100),
+			(ALICE, DOT, 100),
+			(ALICE, vDOT, 400),
+			(BOB, DOT, 100),
+			(BOB, KSM, 100),
+		])
+	}
+
+	pub fn zero_for_alice_n_bob(self) -> Self {
+		self.balances(vec![
+			(ALICE, BNC, 100),
+			(BOB, BNC, 100),
+			(ALICE, DOT, 0),
+			(ALICE, vDOT, 100),
+			(BOB, DOT, 0),
+			(BOB, KSM, 100),
+		])
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<Runtime>()
+			.unwrap();
+
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == BNC)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		assets::GenesisConfig::<Runtime> {
+			endowed_accounts: self
+				.endowed_accounts
+				// .into_iter()
+				// .filter(|(_, currency_id, _)| *currency_id != BNC)
+				// .collect::<Vec<(AccountId, CurrencyId, Balance)>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		t.into()
+	}
 }

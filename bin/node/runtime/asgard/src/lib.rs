@@ -39,7 +39,7 @@ pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
 	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
-	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol
+	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol, CurrencyIdExt
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -389,16 +389,16 @@ parameter_types! {
 }
 
 // bifrost runtime start
-impl brml_assets::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Price = Price;
-	type VtokenMint = VtokenMintPrice;
-	type AssetRedeem = ();
-	type FetchVtokenMintPrice = VtokenMint;
-	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
-}
+// impl brml_assets::Config for Runtime {
+// 	type Event = Event;
+// 	type Balance = Balance;
+// 	type AssetId = AssetId;
+// 	type Price = Price;
+// 	type VtokenMint = VtokenMintPrice;
+// 	type AssetRedeem = ();
+// 	type FetchVtokenMintPrice = VtokenMint;
+// 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
+// }
 
 impl brml_voucher::Config for Runtime {
 	type Event = Event;
@@ -406,88 +406,115 @@ impl brml_voucher::Config for Runtime {
 	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
 }
 
+// parameter_types! {
+// 	pub const MaximumSwapInRatio: u8 = 2;
+// 	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
+// 	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
+// 	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
+// 	pub const FeePrecision: SwapFee = 100_000;
+// 	pub const WeightPrecision: PoolWeight = 100_000;
+// 	pub const BNCAssetId: AssetId = 0;
+// 	pub const InitialPoolSupply: PoolToken = 1_000;
+// 	pub const NumberOfSupportedTokens: u8 = 8;
+// 	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
+// 	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
+// }
+
+// impl brml_swap::Config for Runtime {
+// 	type Event = Event;
+// 	type SwapFee = SwapFee;
+// 	type AssetId = AssetId;
+// 	type PoolId = PoolId;
+// 	type Balance = Balance;
+// 	type AssetTrait = Assets;
+// 	type PoolWeight = PoolWeight;
+// 	type PoolToken = PoolToken;
+// 	type MaximumSwapInRatio = MaximumSwapInRatio;
+// 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
+// 	type MinimumSwapFee = MinimumSwapFee;
+// 	type MaximumSwapFee = MaximumSwapFee;
+// 	type FeePrecision = FeePrecision;
+// 	type WeightPrecision = WeightPrecision;
+// 	type BNCAssetId = BNCAssetId;
+// 	type InitialPoolSupply = InitialPoolSupply;
+// 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
+// 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
+// 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+// }
+
+// Bid module
+// parameter_types! {
+// 	pub const TokenOrderROIListLength: u8 = 200u8;
+// 	pub const MinimumVotes: u64 = 100;
+// 	pub const MaximumVotes: u64 = 50_000;
+// 	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
+// 	pub const MaxProposalNumberForBidder: u32 = 5;
+// 	pub const ROIPermillPrecision: u32 = 100;
+// }
+
+// impl brml_bid::Config for Runtime {
+// 	type Event = Event;
+// 	type AssetId = AssetId;
+// 	type AssetTrait = Assets;
+// 	type BiddingOrderId = BiddingOrderId;
+// 	type EraId = EraId;
+// 	type Balance = Balance;
+// 	type TokenOrderROIListLength = TokenOrderROIListLength ;
+// 	type MinimumVotes = MinimumVotes;
+// 	type MaximumVotes = MaximumVotes;
+// 	type BlocksPerYear = BlocksPerYear;
+// 	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+// 	type ROIPermillPrecision = ROIPermillPrecision;
+// }
+
+// impl brml_staking_reward::Config for Runtime {
+// 	type AssetTrait = Assets;
+// 	type Balance = Balance;
+// 	type AssetId = AssetId;
+// }
+
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
-	pub const VtokenMintPricePrecision: Balance = 1 * DOLLARS;
 }
 
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type MintPrice = VtokenMintPrice;
-	type AssetTrait = Assets;
-	type Balance = Balance;
-	type AssetId = AssetId;
+	type MultiCurrency = OrmlAssets;
+	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-	pub const MaximumSwapInRatio: u8 = 2;
-	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
-	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
-	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
-	pub const FeePrecision: SwapFee = 100_000;
-	pub const WeightPrecision: PoolWeight = 100_000;
-	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: PoolToken = 1_000;
-	pub const NumberOfSupportedTokens: u8 = 8;
-	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
-	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
+// parameter_type_with_key! {
+// 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+// 		match currency_id {
+// 			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+// 			_ => Zero::zero(),
+// 		}
+// 	};
+// }
+
+pub struct ExistentialDeposits;
+impl orml_traits::get_by_key::GetByKey<CurrencyId, Balance> for ExistentialDeposits {
+	fn get(key: &CurrencyId) -> Balance {
+		match key {
+			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+			_ => Zero::zero(),
+		}
+	}
 }
 
-impl brml_swap::Config for Runtime {
+impl orml_assets::Config for Runtime {
 	type Event = Event;
-	type SwapFee = SwapFee;
-	type AssetId = AssetId;
-	type PoolId = PoolId;
 	type Balance = Balance;
-	type AssetTrait = Assets;
-	type PoolWeight = PoolWeight;
-	type PoolToken = PoolToken;
-	type MaximumSwapInRatio = MaximumSwapInRatio;
-	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
-	type MinimumSwapFee = MinimumSwapFee;
-	type MaximumSwapFee = MaximumSwapFee;
-	type FeePrecision = FeePrecision;
-	type WeightPrecision = WeightPrecision;
-	type BNCAssetId = BNCAssetId;
-	type InitialPoolSupply = InitialPoolSupply;
-	type NumberOfSupportedTokens = NumberOfSupportedTokens;
-	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
-	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_assets::TransferDust<Runtime, ()>;
 }
 
-// Bid module
-parameter_types! {
-	pub const TokenOrderROIListLength: u8 = 200u8;
-	pub const MinimumVotes: u64 = 100;
-	pub const MaximumVotes: u64 = 50_000;
-	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
-	pub const MaxProposalNumberForBidder: u32 = 5;
-	pub const ROIPermillPrecision: u32 = 100;
-}
-
-impl brml_bid::Config for Runtime {
-	type Event = Event;
-	type AssetId = AssetId;
-	type AssetTrait = Assets;
-	type BiddingOrderId = BiddingOrderId;
-	type EraId = EraId;
-	type Balance = Balance;
-	type TokenOrderROIListLength = TokenOrderROIListLength ;
-	type MinimumVotes = MinimumVotes;
-	type MaximumVotes = MaximumVotes;
-	type BlocksPerYear = BlocksPerYear;
-	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
-	type ROIPermillPrecision = ROIPermillPrecision;
-}
-
-impl brml_staking_reward::Config for Runtime {
-	type AssetTrait = Assets;
-	type Balance = Balance;
-	type AssetId = AssetId;
-}
 // bifrost runtime end
 
 // culumus runtime start
@@ -517,12 +544,6 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> [u8; 32] {
 		account_id.into()
 	}
-}
-
-parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-		Zero::zero()
-	};
 }
 
 impl orml_tokens::Config for Runtime {
@@ -659,12 +680,13 @@ construct_runtime!(
 		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
-		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
-		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>} = 11,
-		Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
-		StakingReward: brml_staking_reward::{Module, Storage} = 13,
+		// Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>} = 11,
+		// Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
+		// StakingReward: brml_staking_reward::{Module, Storage} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
-		Bid: brml_bid::{Module, Call, Storage, Event<T>} = 15,
+		// Bid: brml_bid::{Module, Call, Storage, Event<T>} = 15,
+		OrmlAssets: orml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 19,
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
@@ -862,21 +884,21 @@ impl_runtime_apis! {
 	}
 
 	// impl asset rpc methods for runtime
-	impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
-		fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
-			Assets::asset_balances(asset_id, who)
-		}
+	// impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
+	// 	fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
+	// 		Assets::asset_balances(asset_id, who)
+	// 	}
 
-		fn asset_tokens(who: AccountId) -> Vec<AssetId> {
-			Assets::asset_tokens(who)
-		}
-	}
+	// 	fn asset_tokens(who: AccountId) -> Vec<AssetId> {
+	// 		Assets::asset_tokens(who)
+	// 	}
+	// }
 
-	impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
-		fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
-			VtokenMint::get_vtoken_mint_price(asset_id)
-		}
-	}
+	// impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
+	// 	fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
+	// 		VtokenMint::get_vtoken_mint_price(asset_id)
+	// 	}
+	// }
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);

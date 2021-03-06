@@ -9,13 +9,15 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false }
 serde = { version = "1.0.118", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
-assets = { package = "brml-assets", path = "../assets" }
-sp-core = { version = "3.0.0" }
-sp-io = { version = "3.0.0" }
+assets = { package = "orml-assets", path = "../orml-assets" }
+pallet-balances = "3.0.0"
+sp-core = "3.0.0"
+sp-io = "3.0.0"
 
 [features]
 default = ["std"]
@@ -26,4 +28,5 @@ std = [
 	"frame-system/std",
 	"serde/std",
 	"sp-runtime/std",
+	"orml-traits/std",
 ]

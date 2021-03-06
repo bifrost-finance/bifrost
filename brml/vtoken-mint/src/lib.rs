@@ -15,407 +15,235 @@
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[macro_use]
 extern crate alloc;
-use alloc::vec::Vec;
-use alloc::collections::btree_map::BTreeMap;
+
+use alloc::{collections::btree_map::BTreeMap, vec::Vec};
+use core::marker::PhantomData;
+use frame_support::{
+	Parameter, transactional, pallet_prelude::*, traits::{Get, Hooks, IsType}
+};
+use frame_system::{ensure_root, ensure_signed, pallet_prelude::{OriginFor, BlockNumberFor}};
+use node_primitives::{CurrencyIdExt, CurrencyId};
+use orml_traits::{
+	account::MergeAccount, MultiCurrency,
+	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
+};
+use sp_runtime::traits::{Member, Saturating, Zero, MaybeSerializeDeserialize};
+
+pub use pallet::*;
 
 mod mock;
 mod tests;
 
-use frame_support::traits::Get;
-use frame_support::weights::DispatchClass;
-use frame_support::{weights::Weight,Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
-use frame_system::{ensure_root, ensure_signed};
-use node_primitives::{AssetTrait, VtokenPool, FetchVtokenMintPrice, FetchVtokenMintPool, AssetReward, RewardHandler};
-use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize};
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
+type CurrencyIdOf<T> =
+	<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
-pub trait WeightInfo {
-	fn to_vtoken<T: Config>(referer: Option<&T::AccountId>) -> Weight;
-	fn to_token() -> Weight;
-}
+#[frame_support::pallet]
+pub mod pallet {
+	use super::*;
 
-impl WeightInfo for () {
-	fn to_vtoken<T: Config>(_: Option<&T::AccountId>) -> Weight { Default::default() }
-	fn to_token() -> Weight { Default::default() }
-}
+	pub trait WeightInfo {
+		fn to_vtoken<T: Config>() -> Weight;
+		fn to_token() -> Weight;
+	}
+	
+	impl WeightInfo for () {
+		fn to_vtoken<T: Config>() -> Weight { Default::default() }
+		fn to_token() -> Weight { Default::default() }
+	}
 
-pub trait Config: frame_system::Config {
-	/// vtoken mint rate
-	type MintPrice: Member + Parameter + AtLeast32Bit + Default + Copy + Into<Self::Balance> + MaybeSerializeDeserialize;
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		/// The arithmetic type of asset identifier.
+		type CurrencyId: Parameter
+			+ Member
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Ord
+			+ CurrencyIdExt;
 
-	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
+		/// A handler to manipulate assets module
+		type MultiCurrency: MergeAccount<Self::AccountId>
+			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+	
+		/// Event
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+	
+		#[pallet::constant]
+		type VtokenMintDuration: Get<Self::BlockNumber>;
+	
+		/// Set default weight
+		type WeightInfo: WeightInfo;
+	}
 
-	/// The units in which we record balances.
-	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize + From<Self::BlockNumber> + Into<Self::MintPrice>;
+	/// collect referrer, minter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
+	/// total_point = 1000 + 2000 + ...
+	/// referrer must be unique, so check it unique while a new referrer incoming.
+	/// and insert the new channel to the
+	#[pallet::storage]
+	#[pallet::getter(fn referrer_channels)]
+	pub(crate) type ReferrerChannels<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		(Vec<(T::AccountId, BalanceOf<T>)>, BalanceOf<T>),
+		ValueQuery
+	>;
 
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
+	/// referer channels for all users
+	#[pallet::storage]
+	#[pallet::getter(fn all_referer_channels)]
+	pub(crate) type AllReferrerChannels<T: Config> = StorageValue<
+		_,
+		(BTreeMap<T::AccountId, BalanceOf<T>>, BalanceOf<T>),
+		ValueQuery,
+		()
+	>;
 
-	/// event
-	type Event: From<Event> + Into<<Self as frame_system::Config>::Event>;
-
-	type VtokenMintDuration: Get<Self::BlockNumber>;
-
-	/// Set default weight
-	type WeightInfo: WeightInfo;
-
-}
-
-decl_event! {
-	pub enum Event {
+	#[pallet::event]
+	#[pallet::metadata(BalanceOf<T> = "Balance", CurrencyIdOf<T> = "CurrencyId")]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
 		UpdateRatePerBlockSuccess,
-		MintVTokenSuccess,
-		MintTokenSuccess,
+		MintedVToken(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		MintedToken(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
 		RedeemedPointsSuccess,
 		UpdateVtokenPoolSuccess,
 	}
-}
 
-decl_error! {
-	pub enum Error for Module<T: Config> {
-		/// Asset id doesn't exist
-		TokenNotExist,
-		/// Amount of input should be less than or equal to origin balance
-		InsufficientBalanceForTransaction,
-		/// Mint price doesn't be set
-		MintPriceIsNotSet,
-		/// This is an invalid mint rate
-		InvalidMintPrice,
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Account balance must be greater than or equal to the transfer amount.
+		BalanceLow,
+		/// Balance should be non-zero.
+		BalanceZero,
 		/// Token type not support
 		NotSupportTokenType,
-		/// Cannot mint token with itself
-		MintWithTheSameToken,
 		/// Empty vtoken pool, cause there's no price at all
 		EmptyVtokenPool,
 		/// The amount of token you want to mint is bigger than the vtoken pool
 		NotEnoughVtokenPool,
-		/// No need to set new vtoken pool
-		NotEmptyPool,
 	}
-}
 
-decl_storage! {
-	trait Store for Module<T: Config> as VtokenMint {
-		/// mint price between two tokens, vtoken => (token, mint_price)
-		MintPrice get(fn mint_price) config(): map hasher(blake2_128_concat) T::AssetId => T::MintPrice;
-		/// collect referrer, minter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
-		/// total_point = 1000 + 2000 + ...
-		/// referrer must be unique, so check it unique while a new referrer incoming.
-		/// and insert the new channel to the
-		ReferrerChannels get(fn referrer_channels): map hasher(blake2_128_concat) T::AccountId =>
-			(Vec<(T::AccountId, T::Balance)>, T::Balance);
-		/// referer channels for all users
-		AllReferrerChannels get(fn all_referer_channels): (BTreeMap<T::AccountId, T::Balance>, T::Balance);
-		/// Vtoken mint pool
-		Pool get(fn pool) config(): map hasher(blake2_128_concat) T::AssetId => VtokenPool<T::Balance>;
-	}
-	add_extra_genesis {
-		build(|config: &GenesisConfig<T>| {
-			for (asset_id, price) in config.mint_price.iter() {
-				MintPrice::<T>::insert(asset_id, price);
-			}
+	#[pallet::pallet]
+	pub struct Pallet<T>(PhantomData<T>);
 
-			for (asset_id, token_pool) in config.pool.iter() {
-				let price: T::MintPrice = token_pool.vtoken_pool.into() / token_pool.token_pool.into();
-				MintPrice::<T>::insert(asset_id, price);
-				Pool::<T>::insert(asset_id, token_pool);
-			}
-		});
-	}
-}
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Set price for minting vtoken.
+		///
+		/// The dispatch origin for this call must be `Root` by the
+		/// transactor.
+		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
+		#[transactional]
+		pub fn set_vtoken_pool(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			#[pallet::compact] new_token_pool: BalanceOf<T>,
+			#[pallet::compact] new_vtoken_pool: BalanceOf<T>
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin.clone())?;
+			let minter = ensure_signed(origin)?;
 
-decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
-		type Error = Error<T>;
+			let (token_id, vtoken_id) = currency_id
+				.get_token_pair()
+				.ok_or(Error::<T>::NotSupportTokenType)?;
 
-		const VtokenMintDuration: T::BlockNumber = T::VtokenMintDuration::get();
-
-		fn deposit_event() = default;
-
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
-		fn set_vtoken_pool(
-			origin,
-			asset_id: T::AssetId,
-			#[compact] new_token_pool: T::Balance,
-			#[compact] new_vtoken_pool: T::Balance
-		) {
-			ensure_root(origin)?;
-
-			let VtokenPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(asset_id);
-			ensure!(token_pool.is_zero() && vtoken_pool.is_zero(), Error::<T>::NotEmptyPool);
-			ensure!(new_vtoken_pool / new_token_pool == T::Balance::from(100u32), Error::<T>::NotEmptyPool);
-
-			<Pool<T>>::mutate(asset_id, |pool| {
-				pool.token_pool = new_token_pool;
-				pool.vtoken_pool = new_vtoken_pool;
-			});
+			T::MultiCurrency::deposit(token_id.into(), &minter, new_token_pool)?;
+			T::MultiCurrency::deposit(vtoken_id.into(), &minter, new_vtoken_pool)?;
 
 			Self::deposit_event(Event::UpdateVtokenPoolSuccess);
+
+			Ok(().into())
 		}
 
-		#[weight = (T::WeightInfo::to_vtoken::<T>(referer.as_ref()), DispatchClass::Normal)]
-		fn to_vtoken(
-			origin,
-			vtoken_asset_id: T::AssetId,
-			#[compact] token_amount: T::Balance,
-			referer: Option<T::AccountId>
-		) {
+		/// Mint vtoken by token.
+		///
+		/// The dispatch origin for this call must be `Signed` by the
+		/// transactor.
+		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
+		#[transactional]
+		pub fn to_vtoken(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			#[pallet::compact] token_amount: BalanceOf<T>
+		) -> DispatchResultWithPostInfo {
 			let minter = ensure_signed(origin)?;
 
-			ensure!(T::AssetTrait::is_v_token(vtoken_asset_id), Error::<T>::NotSupportTokenType);
+			ensure!(!token_amount.is_zero(), Error::<T>::BalanceZero);
+			ensure!(currency_id.is_vtoken(), Error::<T>::NotSupportTokenType);
 
-			// get paired tokens
-			let token_asset_id = T::AssetTrait::get_pair(vtoken_asset_id).unwrap();
+			// Get paired tokens.
+			let (token_id, _vtoken_id) = currency_id
+				.get_token_pair()
+				.ok_or(Error::<T>::NotSupportTokenType)?;
 
-			// check asset_id exist or not
-			ensure!(T::AssetTrait::token_exists(token_asset_id), Error::<T>::TokenNotExist);
+			let token_balances = T::MultiCurrency::free_balance(token_id.into(), &minter);
+			ensure!(token_balances >= token_amount, Error::<T>::BalanceLow);
 
-			let token_balances = T::AssetTrait::get_account_asset(token_asset_id, &minter).balance;
-			ensure!(token_balances >= token_amount, Error::<T>::InsufficientBalanceForTransaction);
-
-			// use current covert pool to get latest price
-			let VtokenPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_asset_id);
+			// Total amount of tokens.
+			let token_pool = T::MultiCurrency::total_issuance(token_id.into());
+			// Total amount of vtokens.
+			let vtoken_pool = T::MultiCurrency::total_issuance(currency_id);
 			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyVtokenPool);
 
-			// latest price should be vtoken_pool / token_pool
 			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
 
-			// transfer
-			T::AssetTrait::asset_destroy(token_asset_id, &minter, token_amount);
-			T::AssetTrait::asset_issue(vtoken_asset_id, &minter, vtokens_buy);
+			T::MultiCurrency::withdraw(token_id.into(), &minter, token_amount)?;
+			T::MultiCurrency::deposit(currency_id, &minter, vtokens_buy)?;
 
-			// both are the same pool, but need to be updated together
-			Self::increase_pool(token_asset_id, token_amount, vtokens_buy);
+			Self::deposit_event(Event::MintedVToken(minter, currency_id, vtokens_buy));
 
-			// save refer channel
-			Self::handle_new_refer(minter, referer, vtokens_buy);
-
-			Self::deposit_event(Event::MintVTokenSuccess);
+			Ok(().into())
 		}
 
-		#[weight = T::WeightInfo::to_token()]
-		fn to_token(
-			origin,
-			token_asset_id: T::AssetId,
-			#[compact] vtoken_amount: T::Balance,
-		) {
+		/// Mint token by vtoken.
+		///
+		/// The dispatch origin for this call must be `Signed` by the
+		/// transactor.
+		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
+		#[transactional]
+		pub fn to_token(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			#[pallet::compact] vtoken_amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let minter = ensure_signed(origin)?;
 
-			ensure!(T::AssetTrait::is_token(token_asset_id), Error::<T>::NotSupportTokenType);
+			ensure!(!vtoken_amount.is_zero(), Error::<T>::BalanceZero);
+			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
 
-			// get paired tokens
-			let vtoken_asset_id = T::AssetTrait::get_pair(token_asset_id).unwrap();
+			// Get paired tokens.
+			let (_token_id, vtoken_id) = currency_id.get_token_pair().unwrap();
 
-			// check  exist or not
-			ensure!(T::AssetTrait::token_exists(vtoken_asset_id), Error::<T>::TokenNotExist);
+			let vtoken_balances = T::MultiCurrency::free_balance(vtoken_id.into(), &minter);
+			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::BalanceLow);
 
-			let vtoken_balances = T::AssetTrait::get_account_asset(vtoken_asset_id, &minter).balance;
-			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::InsufficientBalanceForTransaction);
-
-			// use current covert pool to get latest price
-			let VtokenPool { token_pool, vtoken_pool, .. } = Pool::<T>::get(token_asset_id);
+			// Total amount of tokens.
+			let token_pool = T::MultiCurrency::total_issuance(currency_id);
+			// Total amount of vtokens.
+			let vtoken_pool = T::MultiCurrency::total_issuance(vtoken_id.into());
 			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyVtokenPool);
 
 			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
 			ensure!(vtoken_pool >= tokens_buy && vtoken_pool >= vtoken_amount, Error::<T>::NotEnoughVtokenPool);
 
-			T::AssetTrait::asset_destroy(vtoken_asset_id, &minter, vtoken_amount);
-			T::AssetTrait::asset_issue(token_asset_id, &minter, tokens_buy);
+			T::MultiCurrency::withdraw(vtoken_id.into(), &minter, vtoken_amount)?;
+			T::MultiCurrency::deposit(currency_id, &minter, tokens_buy)?;
 
-			// both are the same pool, but need to be updated together
-			Self::decrease_pool(token_asset_id, tokens_buy, vtoken_amount);
+			Self::deposit_event(Event::MintedToken(minter, currency_id, tokens_buy));
 
-			// redeem income
-			Self::redeem_income(minter, vtoken_amount);
-
-			Self::deposit_event(Event::MintTokenSuccess);
-		}
-
-		fn on_finalize(block_number: T::BlockNumber) {
-			// calculate & update mint price
-			for (token_id, _mint_pool) in <Pool<T>>::iter() {
-				<Pool<T>>::mutate(token_id, |mint_pool| {
-					// issue staking rewards
-					let current_reward = mint_pool.current_reward;
-					let reward_per_block = current_reward / T::VtokenMintDuration::get().into();
-					mint_pool.token_pool = mint_pool.token_pool.saturating_add(reward_per_block);
-
-					// update mint price after issued rewwards
-					if mint_pool.token_pool != Zero::zero() && mint_pool.vtoken_pool != Zero::zero()
-					{
-						if <MintPrice<T>>::contains_key(token_id) {
-							<MintPrice<T>>::mutate(token_id, |mint_price| {
-								*mint_price = {
-									let token_pool: T::MintPrice = mint_pool.token_pool.into();
-									let vtoken_pool: T::MintPrice = mint_pool.vtoken_pool.into();
-									vtoken_pool / token_pool
-								};
-							});
-						}
-					}
-				});
-			}
-
-			// finishes current era of rewards, start next round
-			if block_number % T::VtokenMintDuration::get() == Zero::zero() {
-				// new vtoken mint round
-				for (token_id, _mint_pool) in <Pool<T>>::iter() {
-					<Pool<T>>::mutate(token_id, |mint_pool| {
-						mint_pool.new_round();
-					});
-				}
-			}
+			Ok(().into())
 		}
 	}
-}
 
-impl<T: Config> Module<T> {
-	pub fn get_vtoken_mint_price(asset_id: T::AssetId) -> T::MintPrice {
-		<MintPrice<T>>::get(asset_id)
-	}
-
-	fn increase_pool(asset_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
-		<Pool<T>>::mutate(asset_id, |pool| {
-			pool.token_pool = pool.token_pool.saturating_add(token_amount);
-			pool.vtoken_pool = pool.vtoken_pool.saturating_add(vtoken_amount);
-		});
-	}
-
-	fn decrease_pool(asset_id: T::AssetId, token_amount: T::Balance, vtoken_amount: T::Balance) {
-		<Pool<T>>::mutate(asset_id, |pool| {
-			pool.token_pool = pool.token_pool.saturating_sub(token_amount);
-			pool.vtoken_pool = pool.vtoken_pool.saturating_sub(vtoken_amount);
-		});
-	}
-
-	fn handle_new_refer(minter: T::AccountId, referrer: Option<T::AccountId>, vtokens_buy: T::Balance) {
-		if let Some(ref refer) = referrer {
-			if !<ReferrerChannels<T>>::contains_key(&minter) {
-				// first time to referrer
-				let value = (vec![(refer, vtokens_buy)], vtokens_buy);
-				<ReferrerChannels<T>>::insert(&minter, value);
-			} else {
-				// existed, but new referrer incoming
-				<ReferrerChannels<T>>::mutate(&minter, |incomes| {
-					if incomes.0.iter().any(|income| income.0.eq(refer)) {
-						for income in &mut incomes.0 {
-							if income.0.eq(refer) {
-								income.1 += vtokens_buy;
-							}
-						}
-						incomes.1 += vtokens_buy;
-					} else {
-						incomes.1 += vtokens_buy;
-						incomes.0.push((refer.clone(), vtokens_buy));
-					}
-				});
-			}
-
-			// update all channels
-			if <AllReferrerChannels::<T>>::get().0.contains_key(refer) {
-				<AllReferrerChannels::<T>>::mutate(|(channels, total)| {
-					*total += vtokens_buy;
-					if let Some(income) = channels.get_mut(&refer) {
-						*income += vtokens_buy;
-					}
-				});
-			} else {
-				<AllReferrerChannels::<T>>::mutate(|(channels, total)| {
-					// this referer is not in all referer channels
-					let _ = channels.insert(refer.clone(), vtokens_buy);
-					*total += vtokens_buy;
-				});
-			}
-		} else {
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_finalize(_block_number: T::BlockNumber) {
 			();
-		}
-	}
-
-	fn redeem_income(minter: T::AccountId, incomes_to_redeem: T::Balance) {
-		if <ReferrerChannels<T>>::contains_key(&minter) {
-			// redeem the points by order
-			// for instance: user C has two channels that like: (A, 1000), (B, 2000),
-			// if C want to redeem 1500 points, first redeem 1000 from A, then 500 from B
-			<ReferrerChannels<T>>::mutate(&minter, |incomes| {
-				if incomes.1 < incomes_to_redeem {
-					debug::warn!("you're redeem the points that is bigger than all you have.");
-					return;
-				}
-
-				let mut rest: T::Balance = incomes_to_redeem;
-				let mut all_rest: T::Balance = incomes_to_redeem;
-				for income in &mut incomes.0 {
-					// update user's channels
-					if income.1 > rest {
-						income.1 -= rest;
-						rest = Zero::zero();
-					} else {
-						rest -= income.1;
-						income.1 = Zero::zero();
-					}
-
-					// update all channels
-					<AllReferrerChannels::<T>>::mutate(|(channels, _)| {
-						if let Some(b) = channels.get_mut(&income.0) {
-							if *b > all_rest {
-								*b -= all_rest;
-								all_rest = Zero::zero();
-							} else {
-								all_rest -= *b;
-								*b = Zero::zero();
-							}
-						}
-					});
-
-					if rest > Zero::zero() {
-						continue;
-					}
-				}
-				// update user's total points
-				incomes.1 -= incomes_to_redeem;
-				// update all channels total points
-				<AllReferrerChannels::<T>>::mutate(|(_, total)| {
-					*total -= incomes_to_redeem;
-				});
-			});
-		}
-	}
-}
-
-impl<T: Config> FetchVtokenMintPrice<T::AssetId, T::MintPrice> for Module<T> {
-	fn fetch_vtoken_price(asset_id: T::AssetId) -> T::MintPrice {
-		let price = <MintPrice<T>>::get(asset_id);
-
-		price
-	}
-}
-
-impl<T: Config> FetchVtokenMintPool<T::AssetId, T::Balance> for Module<T> {
-	fn fetch_vtoken_pool(asset_id: T::AssetId) -> VtokenPool<T::Balance> { Pool::<T>::get(asset_id) }
-}
-
-impl<T: Config> AssetReward<T::AssetId, T::Balance> for Module<T> {
-	type Output = ();
-	type Error = ();
-	fn set_asset_reward(asset_id: T::AssetId, reward: T::Balance) -> Result<(), ()> {
-		if <Pool<T>>::contains_key(&asset_id) {
-			<Pool<T>>::mutate(asset_id, |pool| {
-				pool.pending_reward = pool.pending_reward.saturating_add(reward);
-			});
-			Ok(())
-		} else {
-			Err(())
-		}
-	}
-}
-
-impl<T: Config> RewardHandler<T::AssetId, T::Balance> for Module<T> {
-	fn send_reward(asset_id: T::AssetId, reward: T::Balance) {
-		if <Pool<T>>::contains_key(asset_id) {
-			<Pool<T>>::mutate(asset_id, |pool| {
-				pool.pending_reward = pool.pending_reward.saturating_add(reward);
-			});
 		}
 	}
 }

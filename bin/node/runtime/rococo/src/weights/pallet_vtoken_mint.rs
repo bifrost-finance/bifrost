@@ -20,8 +20,8 @@ use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> brml_vtoken_mint::WeightInfo for WeightInfo<T> {
-    fn to_vtoken<U: brml_vtoken_mint::Config>(referer: Option<&U::AccountId>) -> Weight {
-        let referer_weight = referer.map_or(1000, |_| 100);
+    fn to_vtoken<U: brml_vtoken_mint::Config>() -> Weight {
+        let referer_weight = 1000;
         let db = T::DbWeight::get();
         db.reads_writes(1, 1)
             .saturating_add(referer_weight) // memo length

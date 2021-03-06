@@ -45,13 +45,13 @@ pallet-utility = { version = "3.0.0", default-features = false }
 pallet-scheduler = { version = "3.0.0", default-features = false }
 
 # bifrost pallets
-brml-assets = { path = "../../../../brml/assets", default-features = false }
-brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
-brml-bid = { path = "../../../../brml/bid", default-features = false }
+# brml-assets = { path = "../../../../brml/assets", default-features = false }
+# brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
+# brml-bid = { path = "../../../../brml/bid", default-features = false }
 brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
 brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
-brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
-brml-swap = { path = "../../../../brml/swap", default-features = false }
+# brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
+# brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 
 # Cumulus dependencies
@@ -73,9 +73,14 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 
+orml-assets = { path = "../../../../brml/orml-assets", default-features = false }
+
 # zenlink
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
+# zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
+# zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
+
+# zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
+# zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0" }
@@ -114,13 +119,13 @@ std = [
 	"sp-session/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
-	"brml-assets/std",
-	"brml-assets-rpc-runtime-api/std",
-	"brml-bid/std",
+	# "brml-assets/std",
+	# "brml-assets-rpc-runtime-api/std",
+	# "brml-bid/std",
 	"brml-vtoken-mint/std",
 	"brml-vtoken-mint-rpc-runtime-api/std",
-	'brml-staking-reward/std',
-	"brml-swap/std",
+	# 'brml-staking-reward/std',
+	# "brml-swap/std",
 	'brml-voucher/std',
 	"parachain-info/std",
 	"cumulus-pallet-parachain-system/std",
@@ -130,10 +135,11 @@ std = [
 	"xcm-executor/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
+	"orml-assets/std",
 	"orml-traits/std",
 	"orml-xtokens/std",
 	"orml-xcm-support/std",
-	"zenlink-protocol/std",
-	"zenlink-protocol-runtime-api/std",
+	# "zenlink-protocol/std",
+	# "zenlink-protocol-runtime-api/std",
 	"cumulus-pallet-xcm-handler/std",
 ]

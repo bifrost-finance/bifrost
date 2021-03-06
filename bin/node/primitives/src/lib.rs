@@ -22,14 +22,18 @@ use codec::{Encode, Decode};
 use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
-use sp_std::{
-	convert::{Into, TryFrom, TryInto},
-	prelude::*,
-};
-use sp_runtime::RuntimeDebug;
-
+use sp_std::{convert::Into, prelude::*,};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+mod currency;
+mod traits;
+
+pub use crate::currency::{CurrencyId, TokenSymbol};
+pub use crate::traits::{
+	GetDecimals, CurrencyIdExt, AssetTrait, FetchVtokenMintPrice,
+	FetchVtokenMintPool, AssetReward, RewardHandler
+};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -111,7 +115,7 @@ pub type Amount = i128;
 
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
 pub enum TokenType {
 	/// Native token, only used by BNC
 	Native,
@@ -212,103 +216,25 @@ impl<Balance: Default + Copy> VtokenPool<Balance> {
 	}
 }
 
-pub trait AssetTrait<AssetId, AccountId, Balance> {
-	type Error;
-	fn asset_create(symbol: Vec<u8>, precision: u16, token_type: TokenType) -> Result<(AssetId, Token<AssetId, Balance>), Self::Error>;
 
-	fn asset_create_pair(symbol: Vec<u8>, precision: u16) -> Result<(AssetId, AssetId), Self::Error>;
 
-	fn asset_issue(asset_id: AssetId, target: &AccountId, amount: Balance);
+// impl<Price> TokenPriceHandler<AssetId, Price> for () {
+// 	fn set_token_price(_: AssetId, _: Price) {}
+// }
 
-	fn asset_redeem(asset_id: AssetId, target: &AccountId, amount: Balance);
 
-	fn asset_destroy(asset_id: AssetId, target: &AccountId, amount: Balance);
 
-	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<AssetId>;
+// impl<A, AC, B> AssetRedeem<A, AC, B> for () {
+// 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
+// }
 
-	fn token_exists(asset_id: AssetId) -> bool;
 
-	fn get_account_asset(asset_id: AssetId, target: &AccountId) -> AccountAsset<Balance>;
 
-	fn get_token(asset_id: AssetId) -> Token<AssetId, Balance>;
 
-	fn lock_asset(who: &AccountId, asset_id: AssetId, locked: Balance);
 
-	fn unlock_asset(who: &AccountId, asset_id: AssetId, unlocked: Balance);
-
-	fn is_token(asset_id: AssetId) -> bool;
-
-	fn is_v_token(asset_id: AssetId) -> bool;
-
-	fn get_pair(asset_id: AssetId) -> Option<AssetId>;
-}
-
-impl<AssetId, AccountId, Balance> AssetTrait<AssetId, AccountId, Balance> for ()
-	where AssetId: Default, AccountId: Default, Balance: Default
-{
-	type Error = core::convert::Infallible;
-	fn asset_create(_: Vec<u8>, _: u16, _: TokenType) -> Result<(AssetId, Token<AssetId, Balance>), Self::Error> { Ok(Default::default()) }
-
-	fn asset_create_pair(_: Vec<u8>, _: u16) -> Result<(AssetId, AssetId), Self::Error> { Ok(Default::default()) }
-
-	fn asset_issue(_: AssetId, _: &AccountId, _: Balance) {}
-
-	fn asset_redeem(_: AssetId, _: &AccountId, _: Balance) {}
-
-	fn asset_destroy(_: AssetId, _: &AccountId, _: Balance) {}
-
-	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<AssetId> { Default::default() }
-
-	fn token_exists(_: AssetId) -> bool { Default::default() }
-
-	fn get_account_asset(_: AssetId, _: &AccountId) -> AccountAsset<Balance> { Default::default() }
-
-	fn get_token(_: AssetId) -> Token<AssetId, Balance> { Default::default() }
-
-	fn lock_asset( _: &AccountId, _: AssetId, _: Balance) {}
-
-	fn unlock_asset( _: &AccountId, _: AssetId, _: Balance) {}
-
-	fn is_token(_: AssetId) -> bool { Default::default() }
-
-	fn is_v_token(_: AssetId) -> bool { Default::default() }
-
-	fn get_pair(_: AssetId) -> Option<AssetId> { Default::default() }
-}
-
-pub trait TokenPriceHandler<AssetId, Price> {
-	fn set_token_price(asset_id: AssetId, price: Price);
-}
-
-impl<Price> TokenPriceHandler<AssetId, Price> for () {
-	fn set_token_price(_: AssetId, _: Price) {}
-}
-
-/// Asset redeem handler
-pub trait AssetRedeem<AssetId, AccountId, Balance> {
-	/// Asset redeem
-	fn asset_redeem(asset_id: AssetId, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
-}
-
-impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
-}
-
-/// Fetch vtoken mint rate handler
-pub trait FetchVtokenMintPrice<AssetId, VtokenMintPrice> {
-	/// fetch vtoken mint rate
-	fn fetch_vtoken_price(asset_id: AssetId) -> VtokenMintPrice;
-}
-
-/// Fetch vtoken mint rate handler
-pub trait FetchVtokenMintPool<AssetId, Balance> {
-	/// fetch vtoken mint pool for calculate vtoken mint price
-	fn fetch_vtoken_pool(asset_id: AssetId) -> VtokenPool<Balance>;
-}
-
-impl<AssetId, ER: Default> FetchVtokenMintPrice<AssetId, ER> for () {
-	fn fetch_vtoken_price(_: AssetId) -> ER { Default::default() }
-}
+// impl<AssetId, ER: Default> FetchVtokenMintPrice<AssetId, ER> for () {
+// 	fn fetch_vtoken_price(_: AssetId) -> ER { Default::default() }
+// }
 
 /// Blockchain types
 #[derive(PartialEq, Debug, Clone, Encode, Decode)]
@@ -354,51 +280,34 @@ pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 	pub asset_id: AssetId,
 }
 
-/// Bridge asset from other blockchain to Bifrost
-pub trait BridgeAssetFrom<AccountId, AssetId, Precision, Balance> {
-	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<AccountId, AssetId, Precision, Balance>);
-}
 
-impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {
-	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, AI, P, B>) {}
-}
 
-/// Bridge asset from Bifrost to other blockchain
-pub trait BridgeAssetTo<AccountId, AssetId, Precision, Balance> {
-	type Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, AssetId, Precision, Balance>, ) -> Result<(), Self::Error>;
-	fn redeem(asset_id: AssetId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn stake(asset_id: AssetId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn unstake(asset_id: AssetId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-}
+// impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {
+// 	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, AI, P, B>) {}
+// }
 
-impl<A, AI, P, B> BridgeAssetTo<A, AI, P, B> for () {
-	type Error = core::convert::Infallible;
-	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, AI, P, B>) -> Result<(), Self::Error> { Ok(()) }
-	fn redeem(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-}
 
-pub trait AssetReward<AssetId, Balance> {
-	type Output;
-	type Error;
-	fn set_asset_reward(asset_id: AssetId, reward: Balance) -> Result<Self::Output, Self::Error>;
-}
 
-impl<A, B> AssetReward<A, B> for () {
-	type Output = ();
-	type Error = core::convert::Infallible;
-	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
-}
+// impl<A, AI, P, B> BridgeAssetTo<A, AI, P, B> for () {
+// 	type Error = core::convert::Infallible;
+// 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, AI, P, B>) -> Result<(), Self::Error> { Ok(()) }
+// 	fn redeem(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+// 	fn stake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+// 	fn unstake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+// }
 
-pub trait RewardHandler<AssetId, Balance> {
-	fn send_reward(asset_id: AssetId, reward: Balance);
-}
 
-impl<A, B> RewardHandler<A, B> for () {
-	fn send_reward(_: A, _: B) {}
-}
+// impl<A, B> AssetReward<A, B> for () {
+// 	type Output = ();
+// 	type Error = core::convert::Infallible;
+// 	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
+// }
+
+
+
+// impl<A, B> RewardHandler<A, B> for () {
+// 	fn send_reward(_: A, _: B) {}
+// }
 
 
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
@@ -432,96 +341,38 @@ pub mod report {
 	}
 }
 
-pub trait RewardTrait<Balance, AccountId, AssetId> {
-	type Error;
-	fn record_reward(v_token_id: AssetId, vtoken_mint_amount: Balance, referer: AccountId) -> Result<(), Self::Error>;
-	fn dispatch_reward(v_token_id: AssetId, staking_profit: Balance) -> Result<(), Self::Error>;
-}
-
-impl<A, B, AI> RewardTrait<A, B, AI> for () {
-	type Error = core::convert::Infallible;
-	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
-	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
-}
 
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum TokenSymbol {
-	BNC = 0,
-	AUSD = 1,
-	DOT = 2,
-	KSM = 3,
-}
+// impl<A, B, AI> RewardTrait<A, B, AI> for () {
+// 	type Error = core::convert::Infallible;
+// 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
+// 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
+// }
 
-impl TryFrom<u8> for TokenSymbol {
-	type Error = ();
+#[cfg(test)]
+mod tests {
+	use super::*;
 
-	fn try_from(v: u8) -> Result<Self, Self::Error> {
-		match v {
-			0 => Ok(TokenSymbol::BNC),
-			1 => Ok(TokenSymbol::AUSD),
-			2 => Ok(TokenSymbol::DOT),
-			3 => Ok(TokenSymbol::KSM),
-			_ => Err(()),
-		}
+	#[test]
+	fn currency_id_from_string_should_work() {
+		let currency_id_str = "BNC";
+		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
+		assert!(bnc_currency_id.is_ok());
+		assert_eq!(bnc_currency_id.unwrap(), CurrencyId::Token(TokenSymbol::BNC));
 	}
-}
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub enum CurrencyId {
-	Token(TokenSymbol),
-}
-
-impl CurrencyId {
-	pub fn is_token_currency_id(&self) -> bool {
-		matches!(self, CurrencyId::Token(_))
-	}
-}
-
-impl TryFrom<Vec<u8>> for CurrencyId {
-	type Error = ();
-	fn try_from(v: Vec<u8>) -> Result<CurrencyId, ()> {
-		match v.as_slice() {
-			b"BNC" => Ok(CurrencyId::Token(TokenSymbol::BNC)),
-			b"AUSD" => Ok(CurrencyId::Token(TokenSymbol::AUSD)),
-			b"DOT" => Ok(CurrencyId::Token(TokenSymbol::DOT)),
-			b"KSM" => Ok(CurrencyId::Token(TokenSymbol::KSM)),
-			_ => Err(()),
-		}
-	}
-}
-
-/// Note the pre-deployed ERC20 contracts depend on `CurrencyId` implementation,
-/// and need to be updated if any change.
-impl TryFrom<[u8; 32]> for CurrencyId {
-	type Error = ();
-
-	fn try_from(v: [u8; 32]) -> Result<Self, Self::Error> {
-		if !v.starts_with(&[0u8; 29][..]) {
-			return Err(());
-		}
-
-		// token
-		if v[29] == 0 && v[31] == 0 {
-			return v[30].try_into().map(CurrencyId::Token);
-		}
-
-		Err(())
-	}
-}
-
-/// Note the pre-deployed ERC20 contracts depend on `CurrencyId` implementation,
-/// and need to be updated if any change.
-impl From<CurrencyId> for [u8; 32] {
-	fn from(val: CurrencyId) -> Self {
-		let mut bytes = [0u8; 32];
-		match val {
-			CurrencyId::Token(token) => {
-				bytes[30] = token as u8;
-			}
-		}
-		bytes
+	#[test]
+	fn currency_id_ext_test_should_work() {
+        let currency_id_str = "BNC";
+		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
+        assert_eq!(bnc_currency_id.unwrap().is_native(), true);
+        // assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
+        assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
+        assert_eq!(TokenSymbol::DOT as u8, 2u8);
+        assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
+        assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
+        assert_eq!(CurrencyId::Token(TokenSymbol::BNC).get_native_token(), Some(TokenSymbol::BNC));
+        assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(), Some((TokenSymbol::DOT, TokenSymbol::vDOT)));
+		// todo!();
 	}
 }

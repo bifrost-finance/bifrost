@@ -7,21 +7,21 @@
 use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
 impl crate::WeightInfo for () {
-	fn create() -> Weight {
-		(158_835_000 as Weight)
-			.saturating_add(DbWeight::get().reads(4 as Weight))
-			.saturating_add(DbWeight::get().writes(2 as Weight))
-	}
-	fn issue() -> Weight {
-		(158_835_000 as Weight)
-			.saturating_add(DbWeight::get().reads(4 as Weight))
-			.saturating_add(DbWeight::get().writes(2 as Weight))
-	}
-	fn destroy() -> Weight {
-		(158_835_000 as Weight)
-			.saturating_add(DbWeight::get().reads(4 as Weight))
-			.saturating_add(DbWeight::get().writes(2 as Weight))
-	}
+	// fn create() -> Weight {
+	// 	(158_835_000 as Weight)
+	// 		.saturating_add(DbWeight::get().reads(4 as Weight))
+	// 		.saturating_add(DbWeight::get().writes(2 as Weight))
+	// }
+	// fn issue() -> Weight {
+	// 	(158_835_000 as Weight)
+	// 		.saturating_add(DbWeight::get().reads(4 as Weight))
+	// 		.saturating_add(DbWeight::get().writes(2 as Weight))
+	// }
+	// fn destroy() -> Weight {
+	// 	(158_835_000 as Weight)
+	// 		.saturating_add(DbWeight::get().reads(4 as Weight))
+	// 		.saturating_add(DbWeight::get().writes(2 as Weight))
+	// }
 	fn transfer() -> Weight {
 		(158_835_000 as Weight)
 			.saturating_add(DbWeight::get().reads(4 as Weight))

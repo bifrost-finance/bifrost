@@ -152,11 +152,6 @@ checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
 name = "asgard-runtime"
 version = "0.7.0"
 dependencies = [
- "brml-assets",
- "brml-assets-rpc-runtime-api",
- "brml-bid",
- "brml-staking-reward",
- "brml-swap",
  "brml-voucher",
  "brml-vtoken-mint",
  "brml-vtoken-mint-rpc-runtime-api",
@@ -169,6 +164,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
  "node-primitives",
+ "orml-assets",
  "orml-currencies",
  "orml-tokens",
  "orml-traits 0.4.0-dev",
@@ -207,8 +203,6 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -495,11 +489,6 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 name = "bifrost-runtime"
 version = "0.7.0"
 dependencies = [
- "brml-assets",
- "brml-assets-rpc-runtime-api",
- "brml-bid",
- "brml-staking-reward",
- "brml-swap",
  "brml-voucher",
  "brml-vtoken-mint",
  "brml-vtoken-mint-rpc-runtime-api",
@@ -604,12 +593,6 @@ dependencies = [
  "shlex",
  "which 3.1.1",
 ]
-
-[[package]]
-name = "bitcoin_hashes"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b375d62f341cef9cd9e77793ec8f1db3fc9ce2e4d57e982c8fe697a2c16af3b6"
 
 [[package]]
 name = "bitflags"
@@ -758,118 +741,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "brml-assets"
-version = "0.7.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "parity-scale-codec 2.0.0",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "brml-assets-rpc"
-version = "0.7.0"
-dependencies = [
- "brml-assets-rpc-runtime-api",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec 2.0.0",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-assets-rpc-runtime-api"
-version = "0.7.0"
-dependencies = [
- "parity-scale-codec 2.0.0",
- "sp-api",
-]
-
-[[package]]
-name = "brml-bid"
-version = "0.7.0"
-dependencies = [
- "brml-assets",
- "frame-support",
- "frame-system",
- "node-primitives",
- "num-traits",
- "parity-scale-codec 2.0.0",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-bridge-eos"
-version = "0.7.0"
-dependencies = [
- "brml-assets",
- "brml-vtoken-mint",
- "bs58 0.4.0",
- "eos-chain",
- "eos-keys",
- "frame-support",
- "frame-system",
- "hex",
- "lazy_static",
- "lite-json",
- "node-primitives",
- "pallet-authorship",
- "parity-scale-codec 2.0.0",
- "serde",
- "serde_json",
- "sp-application-crypto",
- "sp-core",
- "sp-io",
- "sp-offchain",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "brml-staking-reward"
-version = "0.7.0"
-dependencies = [
- "brml-assets",
- "frame-support",
- "frame-system",
- "node-primitives",
- "parity-scale-codec 2.0.0",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-swap"
-version = "0.7.0"
-dependencies = [
- "brml-assets",
- "float-cmp",
- "frame-support",
- "frame-system",
- "node-primitives",
- "parity-scale-codec 2.0.0",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "substrate-fixed",
-]
-
-[[package]]
 name = "brml-voucher"
 version = "0.7.0"
 dependencies = [
@@ -885,10 +756,12 @@ dependencies = [
 name = "brml-vtoken-mint"
 version = "0.7.0"
 dependencies = [
- "brml-assets",
  "frame-support",
  "frame-system",
  "node-primitives",
+ "orml-assets",
+ "orml-traits 0.4.1-dev",
+ "pallet-balances",
  "parity-scale-codec 2.0.0",
  "serde",
  "sp-core",
@@ -1922,43 +1795,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6576a1755ddffd988788025e75bce9e74b018f7cc226198fe931d077911c6d7e"
 
 [[package]]
-name = "eos-chain"
-version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/rust-eos#8e57843f3ae5fd4b289f4c7841761ed3b6ce5c5e"
-dependencies = [
- "bitcoin_hashes",
- "chrono",
- "eos-keys",
- "eosio-core-derive",
- "hex",
- "parity-scale-codec 2.0.0",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "eos-keys"
-version = "0.1.0"
-source = "git+https://github.com/bifrost-finance/rust-eos#8e57843f3ae5fd4b289f4c7841761ed3b6ce5c5e"
-dependencies = [
- "bitcoin_hashes",
- "byteorder",
- "hex",
- "libsecp256k1 0.3.5 (git+https://github.com/bifrost-finance/libsecp256k1.git)",
- "rand 0.7.3",
-]
-
-[[package]]
-name = "eosio-core-derive"
-version = "0.2.1"
-source = "git+https://github.com/bifrost-finance/rust-eos#8e57843f3ae5fd4b289f4c7841761ed3b6ce5c5e"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "erased-serde"
 version = "0.3.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2136,15 +1972,6 @@ dependencies = [
  "libc",
  "libz-sys",
  "miniz_oxide",
-]
-
-[[package]]
-name = "float-cmp"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1267f4ac4f343772758f7b1bdcbe767c218bbab93bb432acbf5162bbf85a6c4"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -3427,9 +3254,6 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-dependencies = [
- "spin",
-]
 
 [[package]]
 name = "lazycell"
@@ -3517,7 +3341,7 @@ dependencies = [
  "futures 0.3.12",
  "futures-timer 3.0.2",
  "lazy_static",
- "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libsecp256k1",
  "log",
  "multihash",
  "multistream-select",
@@ -3887,21 +3711,6 @@ dependencies = [
 [[package]]
 name = "libsecp256k1"
 version = "0.3.5"
-source = "git+https://github.com/bifrost-finance/libsecp256k1.git#62ee7e4eeb55299676c454cb9a40b1de492cadf9"
-dependencies = [
- "arrayref",
- "crunchy",
- "digest 0.8.1",
- "hmac-drbg",
- "rand 0.7.3",
- "sha2 0.8.2",
- "subtle 2.4.0",
- "typenum",
-]
-
-[[package]]
-name = "libsecp256k1"
-version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fc1e2c808481a63dc6da2074752fdd4336a3c8fcc68b83db6f1fd5224ae7962"
 dependencies = [
@@ -3949,23 +3758,6 @@ checksum = "0d0ad4b5cc8385a881c561fac3501353d63d2a2b7a357b5064d71815c9a92724"
 dependencies = [
  "nalgebra",
  "statrs",
-]
-
-[[package]]
-name = "lite-json"
-version = "0.1.3"
-source = "git+https://github.com/xlc/lite-json#f2a9f726fc7ddb6d14b98fd6f282f5f72883e41b"
-dependencies = [
- "lite-parser",
- "num-traits",
-]
-
-[[package]]
-name = "lite-parser"
-version = "0.1.2"
-source = "git+https://github.com/xlc/lite-json#f2a9f726fc7ddb6d14b98fd6f282f5f72883e41b"
-dependencies = [
- "paste 0.1.18",
 ]
 
 [[package]]
@@ -4615,7 +4407,6 @@ dependencies = [
  "sp-transaction-pool",
  "sp-trie",
  "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "zenlink-protocol-rpc",
 ]
 
 [[package]]
@@ -7486,11 +7277,6 @@ dependencies = [
 name = "rococo-runtime"
 version = "0.7.0"
 dependencies = [
- "brml-assets",
- "brml-assets-rpc-runtime-api",
- "brml-bid",
- "brml-staking-reward",
- "brml-swap",
  "brml-voucher",
  "brml-vtoken-mint",
  "brml-vtoken-mint-rpc-runtime-api",
@@ -7503,9 +7289,10 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal 0.3.1",
  "node-primitives",
+ "orml-assets",
  "orml-currencies",
  "orml-tokens",
- "orml-traits",
+ "orml-traits 0.4.0-dev",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-assets",
@@ -7541,8 +7328,6 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -8072,7 +7857,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#ad8c5
 dependencies = [
  "derive_more",
  "lazy_static",
- "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libsecp256k1",
  "log",
  "parity-scale-codec 2.0.0",
  "parity-wasm 0.41.0",
@@ -9272,7 +9057,7 @@ dependencies = [
  "hex",
  "impl-serde",
  "lazy_static",
- "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libsecp256k1",
  "log",
  "merlin",
  "num-traits",
@@ -9377,7 +9162,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#ad8c5
 dependencies = [
  "futures 0.3.12",
  "hash-db",
- "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libsecp256k1",
  "log",
  "parity-scale-codec 2.0.0",
  "parking_lot 0.11.1",
@@ -9397,7 +9182,8 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b59f2b0e94b2048d4984aa6eb40eef2e4c05d3adf27a083dd3c9b0fce74ef7a"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -9408,8 +9194,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b59f2b0e94b2048d4984aa6eb40eef2e4c05d3adf27a083dd3c9b0fce74ef7a"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -9538,7 +9323,8 @@ dependencies = [
 [[package]]
 name = "sp-serializer"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "982d793f01eb9eea9f30ffc63b821170068b9f0d9edf715d8ba77dc4de9c300f"
 dependencies = [
  "serde",
  "serde_json",
@@ -9547,8 +9333,7 @@ dependencies = [
 [[package]]
 name = "sp-serializer"
 version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "982d793f01eb9eea9f30ffc63b821170068b9f0d9edf715d8ba77dc4de9c300f"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
 dependencies = [
  "serde",
  "serde_json",
@@ -9868,15 +9653,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "substrate-fixed"
-version = "0.5.6"
-source = "git+https://github.com/encointer/substrate-fixed#b33d186888c60f38adafcfc0ec3a21aab263aef1"
-dependencies = [
- "parity-scale-codec 2.0.0",
- "typenum",
-]
-
-[[package]]
 name = "substrate-frame-cli"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9915,7 +9691,8 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
 dependencies = [
  "async-std",
  "derive_more",
@@ -9929,8 +9706,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
 dependencies = [
  "async-std",
  "derive_more",
@@ -11382,50 +11158,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zenlink-protocol"
-version = "0.1.0"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec 2.0.0",
- "polkadot-parachain",
- "serde",
- "sp-core",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
-]
-
-[[package]]
-name = "zenlink-protocol-rpc"
-version = "0.1.0"
-dependencies = [
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec 2.0.0",
- "sp-api",
- "sp-blockchain",
- "sp-rpc",
- "sp-runtime",
- "zenlink-protocol",
- "zenlink-protocol-runtime-api",
-]
-
-[[package]]
-name = "zenlink-protocol-runtime-api"
-version = "0.1.0"
-dependencies = [
- "parity-scale-codec 2.0.0",
- "sp-api",
- "sp-std",
- "zenlink-protocol",
-]
-
-[[package]]
 name = "zeroize"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11476,3 +11208,11 @@ dependencies = [
  "itertools",
  "libc",
 ]
+
+[[patch.unused]]
+name = "zenlink-protocol"
+version = "0.1.0"
+
+[[patch.unused]]
+name = "zenlink-protocol-runtime-api"
+version = "0.1.0"
