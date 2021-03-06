@@ -22,8 +22,7 @@ use node_primitives::{AccountId, VtokenPool, TokenType, Token, TokenSymbol, Curr
 use cumulus_primitives_core::ParaId;
 use asgard_runtime::{
 	constants::currency::DOLLARS,
-	AssetsConfig, BalancesConfig, VtokenMintConfig,
-	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, TokensConfig, VoucherConfig,
+	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, TokensConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
 use crate::chain_spec::{
@@ -179,25 +178,6 @@ pub fn testnet_genesis(
 		pallet_sudo: Some(SudoConfig {
 			key: root_key.clone(),
 		}),
-		brml_assets: Some(AssetsConfig {
-			account_assets: vec![],
-			token_details: vec![
-				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
-				(1, Token::new(b"aUSD".to_vec(), 18, 0, TokenType::Stable)),
-				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
-				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
-			],
-		}),
-		brml_vtoken_mint: Some(VtokenMintConfig {
-			mint_price: vec![
-				(2, DOLLARS / 100), // DOT
-				(4, DOLLARS / 100), // KSM
-			], // initialize convert price as token = 100 * vtoken
-			pool: vec![
-				(2, VtokenPool::new(1, 100)), // DOT
-				(4, VtokenPool::new(1, 100)), // KSM
-			],
-		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
@@ -205,13 +185,14 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		brml_assets: None,
 		orml_tokens: Some(TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {
 					vec![
 						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::AUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 					]
@@ -310,7 +291,9 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		move || {
 			bifrost_config_genesis(id)
 		},
-		vec![],
+		vec![
+			"/dns/bifrost-rpc.testnet.liebi.com/tcp/30333/p2p/12D3KooWJpy1x5TeRL1gUXhHfaQVC1xKM4rqXfhEjP3KUqVgamWi".parse().expect("failed to parse multiaddress.")
+		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
 		protocol_id,

@@ -48,7 +48,7 @@ pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
 	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
-	BiddingOrderId, EraId, CurrencyId,
+	BiddingOrderId, EraId, CurrencyId, TokenSymbol
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -1025,7 +1025,7 @@ parameter_types! {
 
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = OrmlAssets;
+	type MultiCurrency = Assets;
 	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
@@ -1098,7 +1098,7 @@ impl brml_vtoken_mint::Config for Runtime {
 // 	type AssetId = AssetId;
 // }
 
-parameter_type_with_key! {
+orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
 			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
@@ -1107,14 +1107,14 @@ parameter_type_with_key! {
 	};
 }
 
-impl orml_assets::Config for Runtime {
+impl brml_assets::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = i128;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = orml_assets::TransferDust<Runtime, ()>;
+	type OnDust = brml_assets::TransferDust<Runtime, ()>;
 }
 // bifrost runtime end
 
@@ -1161,13 +1161,12 @@ construct_runtime!(
 		Mmr: pallet_mmr::{Module, Storage},
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
-		// Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
+		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>},
 		// Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		// StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		// Bid: brml_bid::{Module, Call, Storage, Event<T>},
-		OrmlAssets: orml_assets::{Module, Call, Storage, Event<T>},
 	}
 );
 

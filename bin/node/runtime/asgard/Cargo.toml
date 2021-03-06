@@ -73,7 +73,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 
-orml-assets = { path = "../../../../brml/orml-assets", default-features = false }
+brml-assets = { path = "../../../../brml/assets", default-features = false }
 
 # zenlink
 # zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
@@ -119,7 +119,7 @@ std = [
 	"sp-session/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
-	# "brml-assets/std",
+	"brml-assets/std",
 	# "brml-assets-rpc-runtime-api/std",
 	# "brml-bid/std",
 	"brml-vtoken-mint/std",
@@ -135,7 +135,6 @@ std = [
 	"xcm-executor/std",
 	"orml-currencies/std",
 	"orml-tokens/std",
-	"orml-assets/std",
 	"orml-traits/std",
 	"orml-xtokens/std",
 	"orml-xcm-support/std",

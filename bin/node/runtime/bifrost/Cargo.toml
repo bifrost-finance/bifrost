@@ -75,7 +75,7 @@ pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-featur
 pallet-vesting = { version = "3.0.0", default-features = false }
 
 # bifrost pallets
-# brml-assets = { path = "../../../../brml/assets", default-features = false }
+brml-assets = { path = "../../../../brml/assets", default-features = false }
 # brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
 # brml-bid = { path = "../../../../brml/bid", default-features = false }
 brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
@@ -83,8 +83,7 @@ brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/ru
 # brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 # brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
-orml-assets = { path = "../../../../brml/orml-assets", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "sw/rococo-v1" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0" }
@@ -152,7 +151,7 @@ std = [
 	"pallet-society/std",
 	"pallet-recovery/std",
 	"pallet-vesting/std",
-	# "brml-assets/std",
+	"brml-assets/std",
 	# "brml-assets-rpc-runtime-api/std",
 	# "brml-bid/std",
 	"brml-vtoken-mint/std",
@@ -160,7 +159,6 @@ std = [
 	# 'brml-staking-reward/std',
 	# "brml-swap/std",
 	'brml-voucher/std',
-	"orml-assets/std",
 	"orml-traits/std",
 ]
 runtime-benchmarks = [

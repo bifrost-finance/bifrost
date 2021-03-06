@@ -22,8 +22,8 @@ use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use bifrost_runtime::{
 	constants::currency::DOLLARS,
-	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	VtokenMintConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
+	CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
 	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
@@ -250,25 +250,7 @@ pub fn testnet_genesis(
 			max_members: 999,
 		}),
 		pallet_vesting: Some(Default::default()),
-		brml_assets: Some(AssetsConfig {
-			account_assets: vec![],
-			token_details: vec![
-				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
-				(1, Token::new(b"aUSD".to_vec(), 18, 0, TokenType::Stable)),
-				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
-				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
-			],
-		}),
-		brml_vtoken_mint: Some(VtokenMintConfig {
-			mint_price: vec![
-				(2, DOLLARS / 100), // DOT
-				(4, DOLLARS / 100), // KSM
-			], // initialize convert price as token = 100 * vtoken
-			pool: vec![
-				(2, VtokenPool::new(1, 100)), // DOT
-				(4, VtokenPool::new(1, 100)), // KSM
-			],
-		}),
+		brml_assets: None,
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
