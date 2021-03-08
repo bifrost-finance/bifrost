@@ -3878,7 +3878,8 @@ dependencies = [
 [[package]]
 name = "libsecp256k1"
 version = "0.3.5"
-source = "git+https://github.com/bifrost-finance/libsecp256k1.git#62ee7e4eeb55299676c454cb9a40b1de492cadf9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fc1e2c808481a63dc6da2074752fdd4336a3c8fcc68b83db6f1fd5224ae7962"
 dependencies = [
  "arrayref",
  "crunchy",
@@ -3893,8 +3894,7 @@ dependencies = [
 [[package]]
 name = "libsecp256k1"
 version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fc1e2c808481a63dc6da2074752fdd4336a3c8fcc68b83db6f1fd5224ae7962"
+source = "git+https://github.com/bifrost-finance/libsecp256k1.git#62ee7e4eeb55299676c454cb9a40b1de492cadf9"
 dependencies = [
  "arrayref",
  "crunchy",
@@ -9328,7 +9328,8 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b59f2b0e94b2048d4984aa6eb40eef2e4c05d3adf27a083dd3c9b0fce74ef7a"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -9339,8 +9340,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b59f2b0e94b2048d4984aa6eb40eef2e4c05d3adf27a083dd3c9b0fce74ef7a"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -9469,7 +9469,8 @@ dependencies = [
 [[package]]
 name = "sp-serializer"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "982d793f01eb9eea9f30ffc63b821170068b9f0d9edf715d8ba77dc4de9c300f"
 dependencies = [
  "serde",
  "serde_json",
@@ -9478,8 +9479,7 @@ dependencies = [
 [[package]]
 name = "sp-serializer"
 version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "982d793f01eb9eea9f30ffc63b821170068b9f0d9edf715d8ba77dc4de9c300f"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
 dependencies = [
  "serde",
  "serde_json",
@@ -9846,7 +9846,8 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
 dependencies = [
  "async-std",
  "derive_more",
@@ -9860,8 +9861,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
+source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#ad8c585d1c1704b534a92c49e0700080c9d8e13d"
 dependencies = [
  "async-std",
  "derive_more",
