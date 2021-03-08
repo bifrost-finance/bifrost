@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -19,18 +19,8 @@
 use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> brml_convert::WeightInfo for WeightInfo<T> {
-    fn set_convert_price() -> Weight {
-        (65949000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    fn set_price_per_block() -> Weight {
-        (46665000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    fn to_vtoken<U: brml_convert::Config>(referer: Option<&U::AccountId>) -> Weight {
+impl<T: frame_system::Config> brml_vtoken_mint::WeightInfo for WeightInfo<T> {
+    fn to_vtoken<U: brml_vtoken_mint::Config>(referer: Option<&U::AccountId>) -> Weight {
         let referer_weight = referer.map_or(1000, |_| 100);
         let db = T::DbWeight::get();
         db.reads_writes(1, 1)

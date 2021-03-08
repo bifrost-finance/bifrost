@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -19,13 +19,11 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, ConvertPool, TokenType, Token};
+use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use bifrost_runtime::{
 	constants::currency::{BNCS as BNC, DOLLARS},
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	BridgeEosConfig,
-	BridgeIostConfig,
-	ConvertConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
+	VtokenMintConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
 	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
@@ -164,11 +162,17 @@ pub fn testnet_genesis(
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
+	let mut endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
 
+	initial_authorities.iter().for_each(|x|
+		if !endowed_accounts.contains(&x.0) {
+			endowed_accounts.push(x.0.clone())
+		}
+	);
+
 	const ENDOWMENT: u128 = 1_000_000 * BNC;
-	const STASH: u128 = 100 * BNC;
+	const STASH: u128 = ENDOWMENT / 1000;
 
 	GenesisConfig {
 		frame_system: Some(SystemConfig {
@@ -177,9 +181,8 @@ pub fn testnet_genesis(
 		}),
 		pallet_balances: Some(BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
-				.map(|k| (k, ENDOWMENT))
-				.chain(initial_authorities.iter().map(|x| (x.0.clone(), STASH)))
-				.collect(),
+				.map(|x| (x, ENDOWMENT))
+				.collect()
 		}),
 		pallet_indices: Some(IndicesConfig {
 			indices: vec![],
@@ -197,7 +200,7 @@ pub fn testnet_genesis(
 		pallet_staking: Some(StakingConfig {
 			validator_count: 30,
 			minimum_validator_count: 3,
-			stakers: initial_authorities[..].iter().map(|x| { // we need last three addresses
+			stakers: initial_authorities.iter().map(|x| { // we need last three addresses
 				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
 			}).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
@@ -254,40 +257,17 @@ pub fn testnet_genesis(
 				(1, Token::new(b"aUSD".to_vec(), 18, 0, TokenType::Stable)),
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
-				(6, Token::new(b"EOS".to_vec(), 4, 0, TokenType::Token)),
-				(8, Token::new(b"IOST".to_vec(), 8, 0, TokenType::Token)),
 			],
 		}),
-		brml_convert: Some(ConvertConfig {
-			convert_price: vec![
+		brml_vtoken_mint: Some(VtokenMintConfig {
+			mint_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
-				(6, DOLLARS / 100), // EOS
-				(8, DOLLARS / 100), // IOST
 			], // initialize convert price as token = 100 * vtoken
 			pool: vec![
-				(2, ConvertPool::new(1, 100)), // DOT
-				(4, ConvertPool::new(1, 100)), // KSM
-				(6, ConvertPool::new(1, 100)), // EOS
-				(8, ConvertPool::new(1, 100)), // IOST
+				(2, VtokenPool::new(1, 100)), // DOT
+				(4, VtokenPool::new(1, 100)), // KSM
 			],
-		}),
-		brml_bridge_eos: Some(BridgeEosConfig {
-			bridge_contract_account: (b"bifrostcross".to_vec(), 2),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			cross_trade_eos_limit: 50 * DOLLARS, // 50 EOS as limit
-			eos_asset_id: 6,
-		}),
-		brml_bridge_iost: Some(BridgeIostConfig {
-			bridge_contract_account: (b"bifrost".to_vec(), 1),
-			notary_keys: initial_authorities.iter().map(|x| x.0.clone()).collect::<Vec<_>>(),
-			// alice and bob have the privilege to sign cross transaction
-			cross_chain_privilege: [(root_key.clone(), true)].iter().cloned().collect::<Vec<_>>(),
-			all_crosschain_privilege: Vec::new(),
-			iost_asset_id: 8,
 		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
@@ -311,6 +291,25 @@ fn development_config_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or("Bifrost development wasm not available")?;
 
+	let properties = {
+		let mut props = serde_json::Map::new();
+
+		props.insert(
+			"ss58Format".to_owned(),
+			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenDecimals".to_owned(),
+			serde_json::value::to_value(12u8).expect("The tokenDecimals cannot be convert to json value.")
+		);
+		props.insert(
+			"tokenSymbol".to_owned(),
+			serde_json::value::to_value("BNC".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+		);
+		Some(props)
+	};
+	let protocol_id = Some("bifrost");
+
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
@@ -318,8 +317,8 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		move || development_config_genesis(wasm_binary),
 		vec![],
 		None,
-		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		protocol_id,
+		properties,
 		Default::default(),
 	))
 }
@@ -379,7 +378,7 @@ pub fn chainspec_config() -> ChainSpec {
 		staging_testnet_config_genesis,
 		vec![
 			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
-			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWBMjifHHUZxbQaQZS9t5jMmTDtZbugAtJ8TG9RuX4umEY".parse().expect("failed to parse multiaddress."),
+			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWPbTeqZHdyTdqY14Zu2t6FVKmUkzTZc3y5GjyJ6ybbmSB".parse().expect("failed to parse multiaddress."),
 			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
 			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
 			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")

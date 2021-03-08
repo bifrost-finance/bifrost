@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -77,14 +77,15 @@ impl system::Config for Test {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: u64 = 2;
+	pub const MaximumSwapInRatio: u8 = 2;
 	pub const MinimumPassedInPoolTokenShares: u64 = 2;
 	pub const MinimumSwapFee: u64 = 1; // 0.001%
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
+	pub const FeePrecision: u64 = 100_000;
 	pub const WeightPrecision: u64 = 100_000;
 	pub const BNCAssetId: u32 = 0;
 	pub const InitialPoolSupply: u64 = 1_000;
@@ -96,12 +97,13 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type Event = TestEvent;
-	type Fee = u64;
+	type SwapFee = u64;
 	type AssetId = u32;
 	type PoolId = u32;
 	type Balance = u64;
 	type AssetTrait = Assets;
 	type PoolWeight = u64;
+	type PoolToken = u64;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
@@ -120,9 +122,9 @@ impl assets::Config for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 

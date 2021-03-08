@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -87,6 +87,7 @@ impl frame_system::Config for Test {
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
+	type SS58Prefix = ();
 }
 
 impl assets::Config for Test {
@@ -96,9 +97,9 @@ impl assets::Config for Test {
 	type Price = u64;
 	type Cost = u64;
 	type Income = u64;
-	type Convert = u64;
+	type VtokenMint = u128;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 

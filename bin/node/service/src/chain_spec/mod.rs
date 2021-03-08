@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ use babe_primitives::{AuthorityId as BabeId};
 use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
-pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, ConvertPool};
+pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, VtokenPool};
 
 type AccountPublic = <Signature as Verify>::Signer;
 

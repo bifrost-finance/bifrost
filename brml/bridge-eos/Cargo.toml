@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
-codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "1.3.6", default-features = false, features = ["derive"] }
 eos-chain = { git = "https://github.com/bifrost-finance/rust-eos", default-features = false }
 eos-keys = { git = "https://github.com/bifrost-finance/rust-eos", default-features = false }
 frame-support = { version = "2.0.0", default-features = false }
@@ -26,7 +26,7 @@ lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", defau
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }
-convert = { package = "brml-convert", path = "../convert" }
+vtoken-mint = { package = "brml-vtoken-mint", path = "../vtoken-mint" }
 substrate-offchain = { version = "2.0.0", package = "sp-offchain" }
 
 [features]

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -480,7 +480,6 @@ fn rotate_author(author: u64) {
 	header.digest_mut().pop(); // pop the seal off.
 	System::initialize(
 		&1,
-		&Default::default(),
 		&Default::default(),
 		header.digest(),
 		Default::default(),

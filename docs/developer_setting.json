@@ -4,7 +4,9 @@
   "Token": {
     "symbol": "Vec<u8>",
     "precision": "u16",
-    "totalSupply": "u128"
+    "total_supply": "Balance",
+    "token_type": "TokenType",
+    "pair": "Option<AssetId>"
   },
   "VersionId": "u32",
   "Action": {
@@ -154,14 +156,14 @@
     "account_id": "AccountId",
     "record_amount": "Balance"
   },
-  "ConvertPrice": "u128",
-  "RatePerBlock": "u64",
-  "Fee": "u64",
+  "VtokenMintPrice": "Balance",
+  "MintPrice": "Balance",
+  "SwapFee": "u64",
   "PoolId": "u32",
   "Nonce": "u32",
   "PoolDetails": {
     "owner": "AccountId",
-    "swap_fee_rate": "Fee",
+    "swap_fee_rate": "SwapFee",
     "active": "bool"
   },
   "PoolCreateTokenDetails": {
@@ -179,12 +181,14 @@
   "AccountAsset": {
     "balance": "Balance",
     "locked": "Balance",
-    "available": "Balance"
+    "available": "Balance",
+    "cost": "Balance",
+    "income": "Balance"
   },
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
-  "ConvertPool": {
+  "VtokenPool": {
     "token_pool": "Balance",
     "vtoken_pool": "Balance",
     "current_reward": "Balance",
@@ -208,7 +212,8 @@
     "weight": "u16"
   },
   "InvariantValue": "Balance",
-  "PoolWeight": "Balance",
+  "PoolWeight": "u128",
+  "PoolToken": "u128",
   "AssetConfig": {
     "redeem_duration": "BlockNumber",
     "min_reward_per_block": "Balance"
@@ -229,5 +234,7 @@
       "Token",
       "VToken"
     ]
-  }
+  },
+  "BiddingOrderId": "u64",
+  "EraId": "u32"
 }

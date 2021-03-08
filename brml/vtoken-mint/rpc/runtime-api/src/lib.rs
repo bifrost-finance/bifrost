@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -20,11 +20,11 @@ use codec::Codec;
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
-	pub trait ConvertPriceApi<AssetId, ConvertPrice> where
+	pub trait VtokenMintPriceApi<AssetId, VtokenMintPrice> where
 		AssetId: Codec,
-		ConvertPrice: Codec
+		VtokenMintPrice: Codec
 	{
-		/// get current convert rate
-		fn get_convert_rate(asset_id: AssetId) -> ConvertPrice;
+		/// get current vtoken mint rate
+		fn get_vtoken_mint_rate(asset_id: AssetId) -> VtokenMintPrice;
 	}
 }

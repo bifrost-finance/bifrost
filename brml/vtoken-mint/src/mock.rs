@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -33,12 +33,12 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_convert,
+		brml_vtoken_mint,
 		assets<T>,
 	}
 }
 
-mod brml_convert {
+mod brml_vtoken_mint {
 	pub use crate::Event;
 }
 
@@ -47,9 +47,9 @@ impl assets::Config for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 
@@ -79,24 +79,24 @@ impl system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
-	pub const ConvertDuration: u64 = 24 * 60 * 10;
+	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
 }
 
 impl crate::Config for Test {
-	type ConvertPrice = u64;
-	type RatePerBlock = u64;
+	type MintPrice = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
-	type ConvertDuration = ConvertDuration;
+	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = ();
 }
 
-pub type Convert = crate::Module<Test>;
+pub type VtokenMint = crate::Module<Test>;
 pub type System = system::Module<Test>;
 pub type Assets = assets::Module<Test>;
 
@@ -107,7 +107,7 @@ pub(crate) fn run_to_block(n: u64) {
 		}
 		System::set_block_number(System::block_number() + 1);
 		System::on_initialize(System::block_number());
-		Convert::on_initialize(System::block_number());
+		VtokenMint::on_initialize(System::block_number());
 	}
 }
 

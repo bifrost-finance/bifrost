@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -47,7 +47,8 @@ use sp_core::{
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, Precision, Fee, PoolId, PoolWeight, ConvertPrice, RatePerBlock
+	AssetId, Precision, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
+	BiddingOrderId, EraId
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -66,10 +67,8 @@ use sp_version::NativeVersion;
 use pallet_grandpa::{AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList};
 use pallet_grandpa::fg_primitives;
 use pallet_im_online::sr25519::AuthorityId as ImOnlineId;
-use brml_bridge_eos::sr25519::{AuthorityId as BridgeEosId};
-use brml_bridge_iost::sr25519::{AuthorityId as BridgeIostId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
-use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
+use pallet_transaction_payment_rpc_runtime_api::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment, CurrencyAdapter};
 use pallet_session::{historical as pallet_session_historical};
 use sp_inherents::{InherentData, CheckInherentsResult};
@@ -182,6 +181,7 @@ parameter_types! {
 		})
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
+	pub const SS58Prefix: u8 = 6;
 }
 
 const_assert!(NORMAL_DISPATCH_RATIO.deconstruct() >= AVERAGE_ON_INITIALIZE_RATIO.deconstruct());
@@ -208,6 +208,7 @@ impl frame_system::Config for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
+	type SS58Prefix = SS58Prefix;
 }
 
 impl pallet_utility::Config for Runtime {
@@ -582,7 +583,10 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 
 parameter_types! {
 	pub const CandidacyBond: Balance = 10 * DOLLARS;
-	pub const VotingBond: Balance = 1 * DOLLARS;
+	// 1 storage item created, key size is 32 bytes, value size is 16+16.
+	pub const VotingBondBase: Balance = deposit(1, 64);
+	// additional data per vote is 32 bytes (account id).
+	pub const VotingBondFactor: Balance = deposit(0, 32);
 	pub const TermDuration: BlockNumber = 7 * DAYS;
 	pub const DesiredMembers: u32 = 13;
 	pub const DesiredRunnersUp: u32 = 7;
@@ -602,9 +606,9 @@ impl pallet_elections_phragmen::Config for Runtime {
 	type InitializeMembers = Council;
 	type CurrencyToVote = U128CurrencyToVote;
 	type CandidacyBond = CandidacyBond;
-	type VotingBond = VotingBond;
+	type VotingBondBase = VotingBondBase;
+	type VotingBondFactor = VotingBondFactor;
 	type LoserCandidate = ();
-	type BadReport = ();
 	type KickedMember = ();
 	type DesiredMembers = DesiredMembers;
 	type DesiredRunnersUp = DesiredRunnersUp;
@@ -677,25 +681,38 @@ impl pallet_treasury::Config for Runtime {
 		EnsureRoot<AccountId>,
 		pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>
 	>;
-	type Tippers = Elections;
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type DataDepositPerByte = DataDepositPerByte;
 	type Event = Event;
 	type OnSlash = ();
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type SpendPeriod = SpendPeriod;
 	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = Bounties;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_bounties::Config for Runtime {
+	type Event = Event;
 	type BountyDepositBase = BountyDepositBase;
 	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
 	type BountyUpdatePeriod = BountyUpdatePeriod;
 	type BountyCuratorDeposit = BountyCuratorDeposit;
 	type BountyValueMinimum = BountyValueMinimum;
+	type DataDepositPerByte = DataDepositPerByte;
 	type MaximumReasonLength = MaximumReasonLength;
-	type BurnDestination = ();
-	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_tips::Config for Runtime {
+	type Event = Event;
+	type DataDepositPerByte = DataDepositPerByte;
+	type MaximumReasonLength = MaximumReasonLength;
+	type Tippers = Elections;
+	type TipCountdown = TipCountdown;
+	type TipFindersFee = TipFindersFee;
+	type TipReportDepositBase = TipReportDepositBase;
+	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -898,9 +915,9 @@ impl brml_assets::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Price = Price;
-	type Convert = ConvertPrice;
+	type VtokenMint = VtokenMintPrice;
 	type AssetRedeem = ();
-	type FetchConvertPrice = Convert;
+	type FetchVtokenMintPrice = VtokenMint;
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
@@ -912,70 +929,43 @@ impl brml_voucher::Config for Runtime {
 
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
-	pub const ConvertDuration: BlockNumber = 3 * 60 * MINUTES;
-	pub const ConvertPricePrecision: Balance = 1 * DOLLARS;
+	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const VtokenMintPricePrecision: Balance = 1 * DOLLARS;
 }
 
-
-impl brml_convert::Config for Runtime {
+impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type ConvertPrice = ConvertPrice;
-	type RatePerBlock = RatePerBlock;
+	type MintPrice = VtokenMintPrice;
 	type AssetTrait = Assets;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type ConvertDuration = ConvertDuration;
-	type WeightInfo = weights::pallet_convert::WeightInfo<Runtime>;
-}
-
-impl brml_bridge_eos::Config for Runtime {
-	type AuthorityId = BridgeEosId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_eos::WeightInfo<Runtime>;
-}
-
-impl brml_bridge_iost::Config for Runtime {
-	type AuthorityId = BridgeIostId;
-	type Event = Event;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Precision = Precision;
-	type BridgeAssetFrom = ();
-	type Call = Call;
-	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
-	type WeightInfo = weights::pallet_bridge_iost::WeightInfo<Runtime>;
+	type VtokenMintDuration = VtokenMintDuration;
+	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
 parameter_types! {
-	pub const MaximumSwapInRatio: u64 = 2;
-	pub const MinimumPassedInPoolTokenShares: u64 = 2;
-	pub const MinimumSwapFee: u64 = 1; // 0.001%
-	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const FeePrecision: u64 = 10_000;
-	pub const WeightPrecision: u64 = 100_000;
+	pub const MaximumSwapInRatio: u8 = 2;
+	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
+	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
+	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
+	pub const FeePrecision: SwapFee = 100_000;
+	pub const WeightPrecision: PoolWeight = 100_000;
 	pub const BNCAssetId: AssetId = 0;
-	pub const InitialPoolSupply: u64 = 1_000;
+	pub const InitialPoolSupply: PoolToken = 1_000;
 	pub const NumberOfSupportedTokens: u8 = 8;
-	pub const BonusClaimAgeDenominator: u32 = 14_400;
-	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
+	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
+	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
 }
 
 impl brml_swap::Config for Runtime {
 	type Event = Event;
-	type Fee = Fee;
+	type SwapFee = SwapFee;
 	type AssetId = AssetId;
 	type PoolId = PoolId;
 	type Balance = Balance;
 	type AssetTrait = Assets;
 	type PoolWeight = PoolWeight;
+	type PoolToken = PoolToken;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
@@ -987,6 +977,31 @@ impl brml_swap::Config for Runtime {
 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+}
+
+// Bid module
+parameter_types! {
+	pub const TokenOrderROIListLength: u8 = 200u8;
+	pub const MinimumVotes: u64 = 100;
+	pub const MaximumVotes: u64 = 50_000;
+	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
+	pub const MaxProposalNumberForBidder: u32 = 5;
+	pub const ROIPermillPrecision: u32 = 100;
+}
+
+impl brml_bid::Config for Runtime {
+	type Event = Event;
+	type AssetId = AssetId;
+	type AssetTrait = Assets;
+	type BiddingOrderId = BiddingOrderId;
+	type EraId = EraId;
+	type Balance = Balance;
+	type TokenOrderROIListLength = TokenOrderROIListLength ;
+	type MinimumVotes = MinimumVotes;
+	type MaximumVotes = MaximumVotes;
+	type BlocksPerYear = BlocksPerYear;
+	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
+	type ROIPermillPrecision = ROIPermillPrecision;
 }
 
 impl brml_staking_reward::Config for Runtime {
@@ -1032,14 +1047,15 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
+		Bounties: pallet_bounties::{Module, Call, Storage, Event<T>},
+		Tips: pallet_tips::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		Convert: brml_convert::{Module, Call, Storage, Event, Config<T>},
-		BridgeEos: brml_bridge_eos::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
-		BridgeIost: brml_bridge_iost::{Module, Call, Storage, Event<T>, ValidateUnsigned, Config<T>},
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
+		Bid: brml_bid::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -1187,6 +1203,14 @@ impl_runtime_apis! {
 			Babe::current_epoch_start()
 		}
 
+		fn current_epoch() -> sp_consensus_babe::Epoch {
+			Babe::current_epoch()
+		}
+
+		fn next_epoch() -> sp_consensus_babe::Epoch {
+			Babe::next_epoch()
+		}
+
 		fn generate_key_ownership_proof(
 			_slot_number: sp_consensus_babe::SlotNumber,
 			authority_id: sp_consensus_babe::AuthorityId,
@@ -1229,6 +1253,9 @@ impl_runtime_apis! {
 	> for Runtime {
 		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> RuntimeDispatchInfo<Balance> {
 			TransactionPayment::query_info(uxt, len)
+		}
+		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> FeeDetails<Balance> {
+			TransactionPayment::query_fee_details(uxt, len)
 		}
 	}
 
@@ -1281,6 +1308,7 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, pallet_babe, Babe);
 			add_benchmark!(params, batches, pallet_balances, Balances);
+			add_benchmark!(params, batches, pallet_bounties, Bounties);
 			add_benchmark!(params, batches, pallet_collective, Council);
 			add_benchmark!(params, batches, pallet_contracts, Contracts);
 			add_benchmark!(params, batches, pallet_democracy, Democracy);
@@ -1298,6 +1326,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_treasury, Treasury);
+			add_benchmark!(params, batches, pallet_tips, Tips);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 
@@ -1317,9 +1346,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_convert_rpc_runtime_api::ConvertPriceApi<node_primitives::Block, AssetId, node_primitives::ConvertPrice> for Runtime {
-		fn get_convert_rate(asset_id: AssetId) -> node_primitives::ConvertPrice {
-			Convert::get_convert(asset_id)
+	impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
+		fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
+			VtokenMint::get_vtoken_mint_price(asset_id)
 		}
 	}
 }

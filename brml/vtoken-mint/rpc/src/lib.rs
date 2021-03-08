@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -22,16 +22,16 @@ use std::marker::PhantomData;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
-pub use self::gen_client::Client as ConvertClient;
-pub use convert_rpc_runtime_api::{self as runtime_api, ConvertPriceApi as ConvertRateRuntimeApi};
+pub use self::gen_client::Client as VtokenMintClient;
+pub use vtoken_mint_rpc_runtime_api::{self as runtime_api, VtokenMintPriceApi as VtokenMintRateRuntimeApi};
 
 #[derive(Clone, Debug)]
-pub struct Convert<C, Block> {
+pub struct VtokenMint<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>
 }
 
-impl<C, Block> Convert<C, Block> {
+impl<C, Block> VtokenMint<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self {
 			client,
@@ -41,28 +41,28 @@ impl<C, Block> Convert<C, Block> {
 }
 
 #[rpc]
-pub trait ConvertPriceApi<BlockHash, AssetId, ConvertPrice> {
-	/// rpc method for getting current convert rate
-	#[rpc(name = "convert_getConvert")]
-	fn get_convert_rate(&self, asset_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<ConvertPrice>;
+pub trait VtokenMintPriceApi<BlockHash, AssetId, VtokenMintPrice> {
+	/// rpc method for getting current vtoken mint rate
+	#[rpc(name = "vtokenmint_getVtokenMintRate")]
+	fn get_vtoken_mint_rate(&self, asset_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<VtokenMintPrice>;
 }
 
-impl<C, Block, AssetId, ConvertPrice> ConvertPriceApi<<Block as BlockT>::Hash, AssetId, ConvertPrice>
-for Convert<C, Block>
+impl<C, Block, AssetId, VtokenMintPrice> VtokenMintPriceApi<<Block as BlockT>::Hash, AssetId, VtokenMintPrice>
+for VtokenMint<C, Block>
 	where
 		Block: BlockT,
 		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: ConvertRateRuntimeApi<Block, AssetId, ConvertPrice>,
+		C::Api: VtokenMintRateRuntimeApi<Block, AssetId, VtokenMintPrice>,
 		AssetId: Codec,
-		ConvertPrice: Codec,
+		VtokenMintPrice: Codec,
 {
-	fn get_convert_rate(&self, asset_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<ConvertPrice> {
-		let convert_rpc_api = self.client.runtime_api();
+	fn get_vtoken_mint_rate(&self, asset_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<VtokenMintPrice> {
+		let vtoken_mint_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		convert_rpc_api.get_convert_rate(&at, asset_id).map_err(|e| RpcError {
+		vtoken_mint_rpc_api.get_vtoken_mint_rate(&at, asset_id).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
-			message: "Failed to get current convert rate.".to_owned(),
+			message: "Failed to get current vtoken mint rate.".to_owned(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}
