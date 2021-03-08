@@ -177,6 +177,7 @@ impl Filter<Call> for CallFilter {
 		match *c {
 			Call::Balances(_) => false,
 			Call::Democracy(_) => false,
+			Call::Vesting(_) => false,
 			Call::Assets(_) => false,
 			Call::VtokenMint(_) => false,
 			Call::Swap(_) => false,
@@ -787,7 +788,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		PoaManager: brml_poa_manager::{Module, Call, Storage, Event<T>},
+		PoaManager: brml_poa_manager::{Module, Call, Storage, Event<T>, Config<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},

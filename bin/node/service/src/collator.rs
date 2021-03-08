@@ -32,7 +32,6 @@ use sp_trie::PrefixedMemoryDB;
 use node_primitives::{AccountId, Nonce, Balance, Block};
 use crate::IdentifyVariant;
 use telemetry::TelemetrySpan;
-use log::info;
 
 pub use asgard_runtime;
 pub use rococo_runtime;

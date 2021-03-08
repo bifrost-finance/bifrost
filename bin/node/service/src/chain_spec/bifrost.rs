@@ -22,9 +22,9 @@ use node_primitives::{AccountId, VtokenPool, TokenType, Token};
 use bifrost_runtime::{
 	constants::currency::DOLLARS,
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	VtokenMintConfig, CouncilConfig, DemocracyConfig,
+	VtokenMintConfig, CouncilConfig, DemocracyConfig, PoaManagerConfig,
 	GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SessionKeys,
-	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
+	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig, VestingConfig,
 	WASM_BINARY, wasm_binary_unwrap,
 };
 use crate::chain_spec::{
@@ -206,7 +206,12 @@ pub fn testnet_genesis(
 		}),
 		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
-		pallet_vesting: Some(Default::default()),
+		pallet_vesting: Some(VestingConfig {
+			vesting: endowed_accounts
+				.iter()
+				.map(|account_id| (account_id.clone(), 0, 10000, ENDOWMENT / 2))
+				.collect::<Vec<_>>()
+		}),
 		brml_assets: Some(AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
@@ -215,6 +220,9 @@ pub fn testnet_genesis(
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 			],
+		}),
+		brml_poa_manager: Some(PoaManagerConfig {
+			initial_validators: endowed_accounts
 		}),
 		brml_vtoken_mint: Some(VtokenMintConfig {
 			mint_price: vec![
