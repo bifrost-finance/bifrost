@@ -27,7 +27,7 @@ pub mod pallet {
 	use frame_support::traits::ValidatorRegistration;
 	use frame_system::pallet_prelude::*;
 	use pallet_session::SessionManager;
-    use sp_std::prelude::*;
+	use sp_std::prelude::*;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -134,5 +134,3 @@ pub mod pallet {
 		fn start_session(_: u32) {}
 	}
 }
-
-
