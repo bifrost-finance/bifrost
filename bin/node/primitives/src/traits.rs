@@ -137,8 +137,8 @@ pub trait MultiCurrencyExt<AccountId> {
 		+ Default;
 
 	/// Expand the total issuance by currency id
-	fn expand_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+	fn expand_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 
 	/// Burn the total issuance by currency id
-	fn reduce_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+	fn reduce_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 }

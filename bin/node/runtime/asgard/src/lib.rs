@@ -39,7 +39,7 @@ pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
 	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
 	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
-	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol, CurrencyIdExt
+	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
@@ -536,16 +536,6 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 	}
 }
 
-impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
-
 parameter_types! {
 	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
 }
@@ -554,7 +544,7 @@ pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNum
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = orml_tokens::Module<Runtime>;
+	type MultiCurrency = Assets;
 	type NativeCurrency = BifrostToken;
 	type GetNativeCurrencyId = GetBifrostTokenId;
 	type WeightInfo = ();
@@ -679,7 +669,6 @@ construct_runtime!(
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
-		Tokens: orml_tokens::{Module, Storage, Call, Event<T>, Config<T>} = 17,
 		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
 	}
 );

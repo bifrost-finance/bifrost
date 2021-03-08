@@ -192,6 +192,8 @@ pub mod module {
 		LiquidityRestrictions,
 		/// Account still has active reserved
 		StillHasActiveReserved,
+		/// Destroy balance too much
+		BurnTooMuch,
 	}
 
 	#[pallet::event]
@@ -203,6 +205,11 @@ pub mod module {
 		/// ExistentialDeposit, resulting in an outright loss. \[account,
 		/// currency_id, amount\]
 		DustLost(T::AccountId, T::CurrencyId, T::Balance),
+		/// Token issue success, \[currency_id, dest, amount\]
+		Issued(T::CurrencyId, T::AccountId, T::Balance),
+		/// Token burn success, \[currency_id, dest, amount\]
+		Burned(T::CurrencyId, T::AccountId, T::Balance)
+
 	}
 
 	/// The total issuance of a token type.
@@ -308,7 +315,13 @@ pub mod module {
 			currency_id: T::CurrencyId,
 			#[pallet::compact] amount: T::Balance
 		) -> DispatchResultWithPostInfo {
-			todo!();
+			ensure_root(origin)?;
+
+			let dest = T::Lookup::lookup(dest)?;
+			<Self as MultiCurrency<_>>::deposit(currency_id, &dest, amount)?;
+
+			Self::deposit_event(Event::Issued(currency_id, dest, amount));
+			Ok(().into())
 		}
 
 		/// Destroy some balance from an account.
@@ -322,7 +335,17 @@ pub mod module {
 			currency_id: T::CurrencyId,
 			#[pallet::compact] amount: T::Balance
 		) -> DispatchResultWithPostInfo {
-			todo!();
+			ensure_root(origin)?;
+
+			let dest = T::Lookup::lookup(dest)?;
+
+			let balance = <Self as MultiCurrency<_>>::free_balance(currency_id, &dest);
+			ensure!(balance > amount, Error::<T>::BurnTooMuch);
+
+			<Self as MultiCurrency<_>>::withdraw(currency_id, &dest, amount)?;
+
+			Self::deposit_event(Event::Burned(currency_id, dest, amount));
+			Ok(().into())
 		}
 
 		/// Transfer some balance to another account.
@@ -1081,11 +1104,23 @@ impl<T: Config> MultiCurrencyExt<T::AccountId> for Pallet<T> {
 	type CurrencyId = T::CurrencyId;
 	type Balance = T::Balance;
 
-	fn expand_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
-		todo!();
+	fn expand_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
+		TotalIssuance::<T>::try_mutate(currency_id, |total_issuance| -> DispatchResult {
+			*total_issuance = total_issuance
+				.checked_add(&amount)
+				.ok_or(Error::<T>::TotalIssuanceOverflow)?;
+
+			Ok(())
+		})
 	}
 
-	fn reduce_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
-		todo!();
+	fn reduce_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
+		TotalIssuance::<T>::try_mutate(currency_id, |total_issuance| -> DispatchResult {
+			*total_issuance = total_issuance
+				.checked_sub(&amount)
+				.ok_or(Error::<T>::TotalIssuanceOverflow)?;
+
+			Ok(())
+		})
 	}
 }

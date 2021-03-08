@@ -166,7 +166,6 @@ dependencies = [
  "hex-literal 0.3.1",
  "node-primitives",
  "orml-currencies",
- "orml-tokens",
  "orml-traits",
  "orml-xcm-support",
  "orml-xtokens",
@@ -4585,21 +4584,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-tokens"
-version = "0.4.0-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=sw/rococo-v1#727d6ee4e1280994d4ab584c7eb680c55419346f"
-dependencies = [
- "frame-support",
- "frame-system",
- "orml-traits",
- "parity-scale-codec 2.0.0",
- "serde",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
 name = "orml-traits"
 version = "0.4.0-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=sw/rococo-v1#727d6ee4e1280994d4ab584c7eb680c55419346f"
@@ -7260,7 +7244,6 @@ dependencies = [
  "hex-literal 0.3.1",
  "node-primitives",
  "orml-currencies",
- "orml-tokens",
  "orml-traits",
  "orml-xcm-support",
  "orml-xtokens",

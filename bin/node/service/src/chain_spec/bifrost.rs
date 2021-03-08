@@ -19,7 +19,7 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token};
+use node_primitives::{AccountId};
 use bifrost_runtime::{
 	constants::currency::DOLLARS,
 	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,

@@ -19,11 +19,11 @@ use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
 use cumulus_primitives_core::ParaId;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token};
+use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use rococo_runtime::{
 	constants::currency::DOLLARS,
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
+	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig
 };
 use crate::chain_spec::{
 	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -178,7 +178,19 @@ pub fn testnet_genesis(
 		pallet_sudo: Some(SudoConfig {
 			key: root_key.clone(),
 		}),
-		brml_assets: None,
+		brml_assets: Some(AssetsConfig {
+			endowed_accounts: endowed_accounts
+				.iter()
+				.flat_map(|x| {
+					vec![
+						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+					]
+				})
+				.collect(),
+		}),
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				Some(VoucherConfig { voucher: vouchers })
@@ -187,7 +199,6 @@ pub fn testnet_genesis(
 			}
 		},
 		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
-		orml_tokens: None,
 	}
 }
 

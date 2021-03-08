@@ -18,12 +18,12 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token, TokenSymbol, CurrencyId};
+use node_primitives::{AccountId, TokenSymbol, CurrencyId};
 use cumulus_primitives_core::ParaId;
 use asgard_runtime::{
 	constants::currency::DOLLARS,
-	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, TokensConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
+	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
+	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig
 };
 use crate::chain_spec::{
 	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -185,8 +185,7 @@ pub fn testnet_genesis(
 				None
 			}
 		},
-		brml_assets: None,
-		orml_tokens: Some(TokensConfig {
+		brml_assets: Some(AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {
