@@ -63,6 +63,7 @@ pallet-vesting = { version = "3.0.0", default-features = false }
 brml-assets = { path = "../../../../brml/assets", default-features = false }
 brml-assets-rpc-runtime-api = { path = "../../../../brml/assets/rpc/runtime-api", default-features = false }
 brml-bid = { path = "../../../../brml/bid", default-features = false }
+brml-poa-manager = { path = "../../../../brml/poa-manager", default-features = false }
 brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
 brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
 brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
@@ -126,6 +127,7 @@ std = [
 	"brml-assets/std",
 	"brml-assets-rpc-runtime-api/std",
 	"brml-bid/std",
+	"brml-poa-manager/std",
 	"brml-vtoken-mint/std",
 	"brml-vtoken-mint-rpc-runtime-api/std",
 	'brml-staking-reward/std',
