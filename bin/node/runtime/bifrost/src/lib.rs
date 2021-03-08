@@ -350,8 +350,7 @@ impl pallet_session::Config for Runtime {
 	type ValidatorIdOf = ();
 	type ShouldEndSession = Babe;
 	type NextSessionRotation = Babe;
-	// type SessionManager = pallet_session::historical::NoteHistoricalRoot<Self, Staking>;
-	type SessionManager = ();
+	type SessionManager = PoaManager;
 	type SessionHandler = <SessionKeys as OpaqueKeys>::KeyTypeIdProviders;
 	type Keys = SessionKeys;
 	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
@@ -647,6 +646,11 @@ impl brml_assets::Config for Runtime {
 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
 }
 
+impl brml_poa_manager::Config for Runtime {
+	type Event = Event;
+	type ValidatorRegistrationChecker = Session;
+}
+
 impl brml_voucher::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -783,6 +787,7 @@ construct_runtime!(
 		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
+		PoaManager: brml_poa_manager::{Module, Call, Storage, Event<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event, Config<T>},
 		Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		StakingReward: brml_staking_reward::{Module, Storage},
