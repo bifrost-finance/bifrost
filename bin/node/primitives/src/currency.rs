@@ -58,6 +58,27 @@ impl Default for TokenSymbol {
 	}
 }
 
+/// TokenSymbol from a number 
+impl From<u8> for TokenSymbol {
+	fn from(n: u8) -> Self {
+		match n {
+			0 => Self::BNC,
+			1 => Self::aUSD,
+			2 => Self::DOT,
+			3 => Self::vDOT,
+			4 => Self::KSM,
+			5 => Self::vKSM,
+			6 => Self::ETH,
+			7 => Self::vETH,
+			8 => Self::EOS,
+			9 => Self::vEOS,
+			10 => Self::IOST,
+			11 => Self::vIOST,
+			_ => todo!("Not support now."),
+		}
+	}
+}
+
 /// List tokens precision
 impl GetDecimals for TokenSymbol {
 	fn decimals(&self) -> u32 {
@@ -161,6 +182,27 @@ impl AsRef<TokenSymbol>  for CurrencyId {
 	fn as_ref(&self) -> &TokenSymbol {
 		match *self {
 			Self::Token(ref symbol) => symbol
+		}
+	}
+}
+
+/// CurrencyId from a number 
+impl From<u8> for CurrencyId {
+	fn from(n: u8) -> Self {
+		match n {
+			0 => CurrencyId::Token(n.into()),
+			1 => CurrencyId::Token(n.into()),
+			2 => CurrencyId::Token(n.into()),
+			3 => CurrencyId::Token(n.into()),
+			4 => CurrencyId::Token(n.into()),
+			5 => CurrencyId::Token(n.into()),
+			6 => CurrencyId::Token(n.into()),
+			7 => CurrencyId::Token(n.into()),
+			8 => CurrencyId::Token(n.into()),
+			9 => CurrencyId::Token(n.into()),
+			10 => CurrencyId::Token(n.into()),
+			11 => CurrencyId::Token(n.into()),
+			_ => todo!("Not support now."),
 		}
 	}
 }

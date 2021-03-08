@@ -20,7 +20,8 @@
 
 use codec::{Encode, Decode};
 use sp_runtime::{
-	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
+	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, 
+	OpaqueExtrinsic, MultiSignature
 };
 use sp_std::{convert::Into, prelude::*,};
 #[cfg(feature = "std")]
@@ -31,8 +32,7 @@ mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	GetDecimals, CurrencyIdExt, AssetTrait, FetchVtokenMintPrice,
-	FetchVtokenMintPool, AssetReward, RewardHandler
+	GetDecimals, CurrencyIdExt, AssetTrait, AssetReward, RewardHandler, MultiCurrencyExt
 };
 
 /// An index to a block.
@@ -112,7 +112,6 @@ pub type EraId = u32;
 
 /// Signed version of Balance
 pub type Amount = i128;
-
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
@@ -216,26 +215,6 @@ impl<Balance: Default + Copy> VtokenPool<Balance> {
 	}
 }
 
-
-
-// impl<Price> TokenPriceHandler<AssetId, Price> for () {
-// 	fn set_token_price(_: AssetId, _: Price) {}
-// }
-
-
-
-// impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-// 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
-// }
-
-
-
-
-
-// impl<AssetId, ER: Default> FetchVtokenMintPrice<AssetId, ER> for () {
-// 	fn fetch_vtoken_price(_: AssetId) -> ER { Default::default() }
-// }
-
 /// Blockchain types
 #[derive(PartialEq, Debug, Clone, Encode, Decode)]
 pub enum BlockchainType {
@@ -280,13 +259,9 @@ pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 	pub asset_id: AssetId,
 }
 
-
-
 // impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {
 // 	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, AI, P, B>) {}
 // }
-
-
 
 // impl<A, AI, P, B> BridgeAssetTo<A, AI, P, B> for () {
 // 	type Error = core::convert::Infallible;
@@ -303,13 +278,23 @@ pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 // 	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
 // }
 
-
-
 // impl<A, B> RewardHandler<A, B> for () {
 // 	fn send_reward(_: A, _: B) {}
 // }
 
+// impl<Price> TokenPriceHandler<AssetId, Price> for () {
+// 	fn set_token_price(_: AssetId, _: Price) {}
+// }
 
+// impl<A, AC, B> AssetRedeem<A, AC, B> for () {
+// 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
+// }
+
+// impl<A, B, AI> RewardTrait<A, B, AI> for () {
+// 	type Error = core::convert::Infallible;
+// 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
+// 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
+// }
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
 /// account.
@@ -340,14 +325,6 @@ pub mod report {
 		type GenericPublic = sp_core::sr25519::Public;
 	}
 }
-
-
-
-// impl<A, B, AI> RewardTrait<A, B, AI> for () {
-// 	type Error = core::convert::Infallible;
-// 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
-// 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
-// }
 
 #[cfg(test)]
 mod tests {

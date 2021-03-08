@@ -50,12 +50,12 @@ use sp_std::{
 	prelude::*,
 	vec::Vec,
 };
-use node_primitives::CurrencyIdExt;
+use node_primitives::{CurrencyIdExt, MultiCurrencyExt};
 
 mod default_weight;
 mod imbalances;
-// mod mock;
-// mod tests;
+mod mock;
+mod tests;
 
 pub struct TransferDust<T, GetAccountId>(marker::PhantomData<(T, GetAccountId)>);
 impl<T, GetAccountId> OnDust<T::AccountId, T::CurrencyId, T::Balance> for TransferDust<T, GetAccountId>
@@ -142,7 +142,12 @@ pub mod module {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The balance type
-		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy + MaybeSerializeDeserialize;
+		type Balance: Parameter
+			+ Member
+			+ AtLeast32BitUnsigned
+			+ Default
+			+ Copy
+			+ MaybeSerializeDeserialize;
 
 		/// The amount type, should be signed version of `Balance`
 		type Amount: Signed
@@ -156,7 +161,12 @@ pub mod module {
 			+ MaybeSerializeDeserialize;
 
 		/// The currency ID type
-		type CurrencyId: Parameter + Member + Copy + MaybeSerializeDeserialize + Ord;
+		type CurrencyId: Parameter
+			+ Member
+			+ Copy
+			+ MaybeSerializeDeserialize
+			+ Ord
+			+ CurrencyIdExt;
 
 		/// Weight information for extrinsics in this module.
 		type WeightInfo: WeightInfo;
@@ -287,6 +297,34 @@ pub mod module {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Issue some balance to an account.
+		///
+		/// The dispatch origin for this call must be `Root` by the
+		/// transactor.
+		#[pallet::weight(1000)]
+		pub fn issue(
+			origin: OriginFor<T>,
+			dest: <T::Lookup as StaticLookup>::Source,
+			currency_id: T::CurrencyId,
+			#[pallet::compact] amount: T::Balance
+		) -> DispatchResultWithPostInfo {
+			todo!();
+		}
+
+		/// Destroy some balance from an account.
+		///
+		/// The dispatch origin for this call must be `Root` by the
+		/// transactor.
+		#[pallet::weight(1000)]
+		pub fn burn(
+			origin: OriginFor<T>,
+			dest: <T::Lookup as StaticLookup>::Source,
+			currency_id: T::CurrencyId,
+			#[pallet::compact] amount: T::Balance
+		) -> DispatchResultWithPostInfo {
+			todo!();
+		}
+
 		/// Transfer some balance to another account.
 		///
 		/// The dispatch origin for this call must be `Signed` by the
@@ -1038,38 +1076,16 @@ impl<T: Config> MergeAccount<T::AccountId> for Pallet<T> {
 	}
 }
 
-// impl<T: Config> AssetTrait<T::CurrencyId, T::AccountId, T::Balance> for Pallet<T> {
-// 	type Error = core::convert::Infallible;
+/// MultiCurrencyExt for Pallet
+impl<T: Config> MultiCurrencyExt<T::AccountId> for Pallet<T> {
+	type CurrencyId = T::CurrencyId;
+	type Balance = T::Balance;
 
-// 	// fn asset_issue(currency_id: T::CurrencyId, _: &T::AccountId, _: T::Balance) {
-// 	// 	todo!();
-// 	// }
+	fn expand_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
+		todo!();
+	}
 
-// 	// fn asset_destroy(currency_id: T::CurrencyId, _: &T::AccountId, _: T::Balance) {
-// 	// 	todo!();
-// 	// }
-
-// 	// fn asset_id_exists(_: &T::AccountId, _: &[u8], _: u16) -> Option<T::CurrencyId> {
-// 	// 	todo!();
-// 	// }
-
-// 	// fn token_exists(currency_id: T::CurrencyId) -> bool {
-// 	// 	todo!();
-// 	// }
-
-// 	// fn get_account_asset(currency_id: T::CurrencyId, _: &T::AccountId) -> AccountAsset<T::Balance> {
-// 	// 	todo!();
-// 	// }
-
-// 	// fn get_token(currency_id: T::CurrencyId) -> Token<T::CurrencyId, T::Balance> {
-// 	// 	todo!();
-// 	// }
-
-// 	fn is_token(currency_id: T::CurrencyId) -> bool {
-// 		currency_id.is_token()
-// 	}
-
-// 	fn is_vtoken(currency_id: T::CurrencyId) -> bool {
-// 		currency_id.is_vtoken()
-// 	}
-// }
+	fn reduce_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
+		todo!();
+	}
+}

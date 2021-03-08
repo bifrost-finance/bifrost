@@ -16,8 +16,14 @@
 
 //! Low-level types used throughout the Bifrost code.
 
-use crate::{AccountAsset, Token, VtokenPool, BridgeAssetBalance};
-use sp_std::vec::Vec;
+#![allow(clippy::unnecessary_cast)]
+
+use crate::{AccountAsset, Token, BridgeAssetBalance};
+use codec::FullCodec;
+use sp_std::{vec::Vec, fmt::Debug};
+use sp_runtime::{
+	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize}, DispatchResult,
+};
 
 /// Get tokens precision
 pub trait GetDecimals {
@@ -41,13 +47,7 @@ pub trait CurrencyIdExt {
 /// A handler to manipulate assets module
 pub trait AssetTrait<CurrencyId, AccountId, Balance> where CurrencyId: CurrencyIdExt {
 	type Error;
-	// fn asset_create(symbol: Vec<u8>, precision: u16, token_type: TokenType) -> Result<(CurrencyId, Token<CurrencyId, Balance>), Self::Error>;
-
-	// fn asset_create_pair(symbol: Vec<u8>, precision: u16) -> Result<(CurrencyId, CurrencyId), Self::Error>;
-
 	fn asset_issue(asset_id: CurrencyId, target: &AccountId, amount: Balance);
-
-	// fn asset_redeem(asset_id: CurrencyId, target: &AccountId, amount: Balance);
 
 	fn asset_destroy(asset_id: CurrencyId, target: &AccountId, amount: Balance);
 
@@ -58,16 +58,6 @@ pub trait AssetTrait<CurrencyId, AccountId, Balance> where CurrencyId: CurrencyI
 	fn get_account_asset(asset_id: CurrencyId, target: &AccountId) -> AccountAsset<Balance>;
 
 	fn get_token(asset_id: CurrencyId) -> Token<CurrencyId, Balance>;
-
-	// fn lock_asset(who: &AccountId, asset_id: CurrencyId, locked: Balance);
-
-	// fn unlock_asset(who: &AccountId, asset_id: CurrencyId, unlocked: Balance);
-
-	fn is_token(asset_id: CurrencyId) -> bool;
-
-	fn is_vtoken(asset_id: CurrencyId) -> bool;
-
-	// fn get_pair(asset_id: CurrencyId) -> Option<CurrencyId>;
 }
 
 /// Default impls
@@ -75,13 +65,7 @@ impl<CurrencyId, AccountId, Balance> AssetTrait<CurrencyId, AccountId, Balance> 
 	where CurrencyId: Default + CurrencyIdExt, AccountId: Default, Balance: Default
 {
 	type Error = core::convert::Infallible;
-	// fn asset_create(_: Vec<u8>, _: u16, _: TokenType) -> Result<(CurrencyId, Token<CurrencyId, Balance>), Self::Error> { Ok(Default::default()) }
-
-	// fn asset_create_pair(_: Vec<u8>, _: u16) -> Result<(CurrencyId, CurrencyId), Self::Error> { Ok(Default::default()) }
-
 	fn asset_issue(_: CurrencyId, _: &AccountId, _: Balance) {}
-
-	// fn asset_redeem(_: CurrencyId, _: &AccountId, _: Balance) {}
 
 	fn asset_destroy(_: CurrencyId, _: &AccountId, _: Balance) {}
 
@@ -92,16 +76,6 @@ impl<CurrencyId, AccountId, Balance> AssetTrait<CurrencyId, AccountId, Balance> 
 	fn get_account_asset(_: CurrencyId, _: &AccountId) -> AccountAsset<Balance> { Default::default() }
 
 	fn get_token(_: CurrencyId) -> Token<CurrencyId, Balance> { Default::default() }
-
-	// fn lock_asset( _: &AccountId, _: CurrencyId, _: Balance) {}
-
-	// fn unlock_asset( _: &AccountId, _: CurrencyId, _: Balance) {}
-
-	fn is_token(_: CurrencyId) -> bool { Default::default() }
-
-	fn is_vtoken(_: CurrencyId) -> bool { Default::default() }
-
-	// fn get_pair(_: CurrencyId) -> Option<CurrencyId> { Default::default() }
 }
 
 pub trait TokenPriceHandler<CurrencyId, Price> {
@@ -112,12 +86,6 @@ pub trait TokenPriceHandler<CurrencyId, Price> {
 pub trait AssetRedeem<CurrencyId, AccountId, Balance> {
 	/// Asset redeem
 	fn asset_redeem(asset_id: CurrencyId, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
-}
-
-/// Fetch vtoken mint rate handler
-pub trait FetchVtokenMintPrice<CurrencyId, VtokenMintPrice> {
-	/// fetch vtoken mint rate
-	fn fetch_vtoken_price(asset_id: CurrencyId) -> VtokenMintPrice;
 }
 
 /// Bridge asset from other blockchain to Bifrost
@@ -150,8 +118,27 @@ pub trait RewardTrait<Balance, AccountId, CurrencyId> {
 	fn dispatch_reward(v_token_id: CurrencyId, staking_profit: Balance) -> Result<(), Self::Error>;
 }
 
-/// Fetch vtoken mint rate handler
-pub trait FetchVtokenMintPool<CurrencyId, Balance> {
-	/// fetch vtoken mint pool for calculate vtoken mint price
-	fn fetch_vtoken_pool(asset_id: CurrencyId) -> VtokenPool<Balance>;
+/// Extension traits for assets module
+pub trait MultiCurrencyExt<AccountId> {
+	/// The currency identifier.
+	type CurrencyId: FullCodec
+		+ Eq 
+		+ PartialEq
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ Debug;
+
+	/// The balance of an account.
+	type Balance: AtLeast32BitUnsigned
+		+ FullCodec
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ Debug
+		+ Default;
+
+	/// Expand the total issuance by currency id
+	fn expand_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+
+	/// Burn the total issuance by currency id
+	fn reduce_total_issuance(currency: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 }
