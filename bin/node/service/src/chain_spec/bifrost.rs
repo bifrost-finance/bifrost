@@ -222,7 +222,10 @@ pub fn testnet_genesis(
 			],
 		}),
 		brml_poa_manager: Some(PoaManagerConfig {
-			initial_validators: endowed_accounts
+			initial_validators: initial_authorities
+				.iter()
+				.map(|x| x.0.clone())
+				.collect::<Vec<_>>(),
 		}),
 		brml_vtoken_mint: Some(VtokenMintConfig {
 			mint_price: vec![
