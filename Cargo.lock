@@ -7280,6 +7280,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "zenlink-protocol",
 ]
 
 [[package]]
@@ -11110,6 +11111,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "zenlink-protocol"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-traits",
+ "parity-scale-codec 2.0.0",
+ "polkadot-parachain",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
 name = "zeroize"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11160,10 +11183,6 @@ dependencies = [
  "itertools",
  "libc",
 ]
-
-[[patch.unused]]
-name = "zenlink-protocol"
-version = "0.1.0"
 
 [[patch.unused]]
 name = "zenlink-protocol-runtime-api"

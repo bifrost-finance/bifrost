@@ -20,75 +20,73 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-use sp_std::{collections::btree_set::BTreeSet, prelude::*};
+use codec::Encode;
 use frame_support::{
-	construct_runtime, parameter_types, debug,
+	construct_runtime, debug, parameter_types,
+	traits::{Get, Randomness},
 	weights::{
-		Weight, IdentityFee,
-		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND}, DispatchClass,
+		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		DispatchClass, IdentityFee, Weight,
 	},
-	traits::{Get, Randomness}
 };
 use frame_system::{
+	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
-	limits::{BlockWeights, BlockLength}
 };
-use codec::{Encode};
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Balance, BlockNumber, Hash, Index, Moment,
-	AssetId, SwapFee, PoolId, PoolWeight, PoolToken,
-	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol
+	AccountIndex, Amount, AssetId, Balance, BiddingOrderId, BlockNumber, CurrencyId, EraId, Hash,
+	Index, Moment, PoolId, PoolToken, PoolWeight, SwapFee, TokenSymbol,
 };
-use sp_api::impl_runtime_apis;
-use sp_runtime::{
-	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
-	impl_opaque_keys, generic, create_runtime_str
-};
-use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
-use sp_runtime::traits::{
-	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion, Convert, Zero
-};
-use sp_version::RuntimeVersion;
-#[cfg(any(feature = "std", test))]
-use sp_version::NativeVersion;
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
-use sp_inherents::{InherentData, CheckInherentsResult};
+use sp_api::impl_runtime_apis;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_inherents::{CheckInherentsResult, InherentData};
+use sp_runtime::traits::{
+	self, BlakeTwo256, Block as BlockT, Convert, SaturatedConversion, StaticLookup, Zero,
+};
+use sp_runtime::transaction_validity::{
+	TransactionPriority, TransactionSource, TransactionValidity,
+};
+use sp_runtime::{
+	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber,
+	ModuleId, Perbill, Perquintill,
+};
+use sp_std::{collections::btree_set::BTreeSet, prelude::*};
+#[cfg(any(feature = "std", test))]
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
 #[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
+pub use frame_system::Call as SystemCall;
 #[cfg(any(feature = "std", test))]
 pub use pallet_balances::Call as BalancesCall;
 #[cfg(any(feature = "std", test))]
-pub use frame_system::Call as SystemCall;
+pub use sp_runtime::BuildStorage;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use constants::{time::*, currency::*};
+use constants::{currency::*, time::*};
 use sp_runtime::generic::Era;
 
 // XCM imports
+use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId};
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiLocation, NetworkId, Junction};
+use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
-	ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, LocationInverter,
-	SovereignSignedViaLocation, SiblingParachainAsNative,
-	RelayChainAsNative, SignedAccountId32AsNative, ChildParachainConvertsVia
+	AccountId32Aliases, ChildParachainConvertsVia, LocationInverter, ParentIsDefault,
+	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SovereignSignedViaLocation,
 };
 use xcm_executor::{Config, XcmExecutor};
-use cumulus_primitives_core::{
-	relay_chain::Balance as RelayChainBalance,
-	ParaId
-};
 
-use orml_xcm_support::{
-	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr
-};
-use orml_traits::parameter_type_with_key;
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
+use orml_xcm_support::{
+	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr,
+};
 
 /// Weights for pallets used in the runtime.
 mod weights;
@@ -100,9 +98,11 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 /// Wasm binary unwrapped. If built with `SKIP_WASM_BUILD`, the function panics.
 #[cfg(feature = "std")]
 pub fn wasm_binary_unwrap() -> &'static [u8] {
-	WASM_BINARY.expect("Development wasm binary is not available. This means the client is \
+	WASM_BINARY.expect(
+		"Development wasm binary is not available. This means the client is \
 						built with `SKIP_WASM_BUILD` flag and it is only usable for \
-						production chains. Please rebuild with the flag disabled.")
+						production chains. Please rebuild with the flag disabled.",
+	)
 }
 
 /// Runtime version.
@@ -280,7 +280,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate =
-	TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+		TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 }
 
 parameter_types! {
@@ -322,15 +322,18 @@ parameter_types! {
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-	where
-		Call: From<LocalCall>,
+where
+	Call: From<LocalCall>,
 {
 	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
 		call: Call,
 		public: <Signature as traits::Verify>::Signer,
 		account: AccountId,
 		nonce: Index,
-	) -> Option<(Call, <UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload)> {
+	) -> Option<(
+		Call,
+		<UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload,
+	)> {
 		let tip = 0;
 		// take the biggest period possible.
 		let period = BlockHashCount::get()
@@ -357,10 +360,7 @@ impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for R
 				debug::warn!("Unable to create signed payload: {:?}", e);
 			})
 			.ok()?;
-		let signature = raw_payload
-			.using_encoded(|payload| {
-				C::sign(payload, public)
-			})?;
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
 		let address = Indices::unlookup(account);
 		let (call, extra, _) = raw_payload.deconstruct();
 		Some((call, (address, signature.into(), extra)))
@@ -372,7 +372,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 	type Signature = Signature;
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime where
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
 	Call: From<C>,
 {
 	type Extrinsic = UncheckedExtrinsic;
@@ -633,6 +634,33 @@ impl orml_xtokens::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
+parameter_types! {
+	pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
+}
+
+pub struct AccountId32Converter;
+impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
+}
+
+pub type AdaptedBasicCurrency =
+	orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+impl zenlink_protocol::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type UpwardMessageSender = ParachainSystem;
+	type HrmpMessageSender = ParachainSystem;
+	type AccountIdConverter = LocationConverter;
+	type AccountId32Converter = AccountId32Converter;
+	type ParaId = ParachainInfo;
+	type ModuleId = DEXModuleId;
+}
+
 // culumus runtime end
 
 construct_runtime!(
@@ -670,6 +698,7 @@ construct_runtime!(
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
 		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
+		Zenlink: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} =19,
 	}
 );
 
@@ -704,7 +733,13 @@ pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = frame_executive::Executive<
+	Runtime,
+	Block,
+	frame_system::ChainContext<Runtime>,
+	Runtime,
+	AllModules,
+>;
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -888,9 +923,11 @@ mod tests {
 
 	#[test]
 	fn validate_transaction_submitter_bounds() {
-		fn is_submit_signed_transaction<T>() where
+		fn is_submit_signed_transaction<T>()
+		where
 			T: CreateSignedTransaction<Call>,
-		{}
+		{
+		}
 
 		is_submit_signed_transaction::<Runtime>();
 	}
