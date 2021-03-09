@@ -347,8 +347,7 @@ parameter_types! {
 impl pallet_session::Config for Runtime {
 	type Event = Event;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	// type ValidatorIdOf = pallet_staking::StashOf<Self>;
-	type ValidatorIdOf = ();
+	type ValidatorIdOf = ConvertInto;
 	type ShouldEndSession = Babe;
 	type NextSessionRotation = Babe;
 	type SessionManager = PoaManager;
