@@ -986,18 +986,20 @@ parameter_types! {
 	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
 }
 
-impl pallet_assets::Config for Runtime {
+impl brml_assets::Config for Runtime {
 	type Event = Event;
-	type Balance = u64;
-	type AssetId = u32;
-	type Currency = Balances;
-	type ForceOrigin = EnsureRoot<AccountId>;
-	type AssetDepositBase = AssetDepositBase;
-	type AssetDepositPerZombie = AssetDepositPerZombie;
-	type StringLimit = StringLimit;
-	type MetadataDepositBase = MetadataDepositBase;
-	type MetadataDepositPerByte = MetadataDepositPerByte;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type MultiCurrency = Assets;
+	type WeightInfo = ();
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
 }
 
 // bifrost runtime start
@@ -1025,7 +1027,7 @@ parameter_types! {
 
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Asset;
+	type MultiCurrency = Assets;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -1106,15 +1108,6 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
-impl brml_assets::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = i128;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = brml_assets::TransferDust<Runtime, ()>;
-}
 // bifrost runtime end
 
 construct_runtime!(
@@ -1156,16 +1149,16 @@ construct_runtime!(
 		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
 		Bounties: pallet_bounties::{Module, Call, Storage, Event<T>},
 		Tips: pallet_tips::{Module, Call, Storage, Event<T>},
-		GenericAssets: pallet_assets::{Module, Call, Storage, Event<T>},
 		Mmr: pallet_mmr::{Module, Storage},
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
-		Asset: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
+		BrmlAssets: brml_assets::{Module, Call, Storage, Event<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>},
 		// Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		// StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		// Bid: brml_bid::{Module, Call, Storage, Event<T>},
+		Assets: orml_tokens::{Module, Storage, Event<T>, Config<T>},
 	}
 );
 
@@ -1453,7 +1446,6 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			add_benchmark!(params, batches, pallet_assets, Assets);
 			add_benchmark!(params, batches, pallet_babe, Babe);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);

@@ -69,6 +69,7 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 # orml
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 
@@ -134,6 +135,7 @@ std = [
 	"xcm-executor/std",
 	"orml-currencies/std",
 	"orml-traits/std",
+	"orml-tokens/std",
 	"orml-xtokens/std",
 	"orml-xcm-support/std",
 	# "zenlink-protocol/std",

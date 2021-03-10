@@ -90,31 +90,6 @@ impl ContainsLengthBound for TenToFourteen {
 	}
 }
 
-parameter_types! {
-	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: u64 = 1;
-	pub const SpendPeriod: u64 = 2;
-	pub const Burn: Permill = Permill::from_percent(50);
-	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
-	pub const GetTokenId: CurrencyId = DOT;
-}
-
-impl pallet_treasury::Config for Runtime {
-	type ModuleId = TreasuryModuleId;
-	type Currency = CurrencyAdapter<Runtime, GetTokenId>;
-	type ApproveOrigin = frame_system::EnsureRoot<AccountId>;
-	type RejectOrigin = frame_system::EnsureRoot<AccountId>;
-	type Event = Event;
-	type OnSlash = ();
-	type ProposalBond = ProposalBond;
-	type ProposalBondMinimum = ProposalBondMinimum;
-	type SpendPeriod = SpendPeriod;
-	type Burn = Burn;
-	type BurnDestination = ();
-	type SpendFunds = ();
-	type WeightInfo = ();
-}
-
 thread_local! {
 	pub static MEMBERS: RefCell<Vec<AccountId>> = RefCell::new(vec![]);
 	pub static PRIME: RefCell<Option<AccountId>> = RefCell::new(None);
@@ -174,24 +149,6 @@ parameter_types! {
 	pub const VotingBondFactor: u64 = 0;
 }
 
-impl pallet_elections_phragmen::Config for Runtime {
-	type ModuleId = ElectionsPhragmenModuleId;
-	type Event = Event;
-	type Currency = CurrencyAdapter<Runtime, GetTokenId>;
-	type CurrencyToVote = SaturatingCurrencyToVote;
-	type ChangeMembers = TestChangeMembers;
-	type InitializeMembers = ();
-	type CandidacyBond = CandidacyBond;
-	type VotingBondBase = VotingBondBase;
-	type VotingBondFactor = VotingBondFactor;
-	type TermDuration = TermDuration;
-	type DesiredMembers = DesiredMembers;
-	type DesiredRunnersUp = DesiredRunnersUp;
-	type LoserCandidate = ();
-	type KickedMember = ();
-	type WeightInfo = ();
-}
-
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
@@ -227,22 +184,25 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Storage, Config, Event<T>},
-		Tokens: tokens::{Module, Storage, Event<T>, Config<T>},
-		Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
-		ElectionsPhragmen: pallet_elections_phragmen::{Module, Call, Storage, Event<T>},
+		Assets: orml_tokens::{Module, Storage, Event<T>, Config<T>},
+		BrmlAssets: brml_assets::{Module, Call, Event<T>},
 	}
 );
 
+impl crate::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type WeightInfo = ();
+}
+
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
-	treasury_genesis: bool,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			endowed_accounts: vec![],
-			treasury_genesis: false,
 		}
 	}
 }
@@ -258,7 +218,6 @@ impl ExtBuilder {
 	}
 
 	pub fn one_hundred_for_treasury_account(mut self) -> Self {
-		self.treasury_genesis = true;
 		self.balances(vec![(TREASURY_ACCOUNT, DOT, 100)])
 	}
 
@@ -272,18 +231,6 @@ impl ExtBuilder {
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
-
-		if self.treasury_genesis {
-			pallet_treasury::GenesisConfig::default()
-				.assimilate_storage::<Runtime, _>(&mut t)
-				.unwrap();
-
-			pallet_elections_phragmen::GenesisConfig::<Runtime> {
-				members: vec![(TREASURY_ACCOUNT, 10)],
-			}
-			.assimilate_storage(&mut t)
-			.unwrap();
-		}
 
 		let mut ext = sp_io::TestExternalities::new(t);
 		ext.execute_with(|| System::set_block_number(1));

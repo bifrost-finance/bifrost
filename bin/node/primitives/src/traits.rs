@@ -126,8 +126,7 @@ pub trait MultiCurrencyExt<AccountId> {
 		+ PartialEq
 		+ Copy
 		+ MaybeSerializeDeserialize
-		+ Debug
-		+ CurrencyIdExt;
+		+ Debug;
 
 	/// The balance of an account.
 	type Balance: AtLeast32BitUnsigned

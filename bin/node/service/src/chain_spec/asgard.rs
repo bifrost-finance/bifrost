@@ -185,7 +185,7 @@ pub fn testnet_genesis(
 				None
 			}
 		},
-		brml_assets: Some(AssetsConfig {
+		orml_tokens: Some(AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {

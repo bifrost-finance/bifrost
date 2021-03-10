@@ -249,7 +249,7 @@ pub fn testnet_genesis(
 			max_members: 999,
 		}),
 		pallet_vesting: Some(Default::default()),
-		brml_assets: None,
+		orml_tokens: None,
 		brml_vtoken_mint: Some(VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),

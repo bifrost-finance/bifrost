@@ -16,6 +16,7 @@ sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
 sp-io = { version = "3.0.0" }
 
 [features]

@@ -178,7 +178,7 @@ pub fn testnet_genesis(
 		pallet_sudo: Some(SudoConfig {
 			key: root_key.clone(),
 		}),
-		brml_assets: Some(AssetsConfig {
+		orml_tokens: Some(AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {

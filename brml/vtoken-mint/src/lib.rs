@@ -264,7 +264,10 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
-			();
+			// 
+			for (currency_id, pool) in MintPool::<T>::iter() {
+				
+			}
 		}
 	}
 
