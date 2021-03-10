@@ -28,12 +28,14 @@ fn to_vtoken_should_be_ok() {
 		.one_hundred_for_alice_n_bob()
 		.build()
 		.execute_with(|| {
+			let (dot_pool, vdot_pool) = (100, 200);
+			assert_ok!(VtokenMint::expand_mint_pool(DOT, dot_pool));
+			assert_ok!(VtokenMint::expand_mint_pool(vDOT, vdot_pool));
+
 			let alice_dot = Assets::free_balance(DOT, &ALICE);
 			let alice_vdot = Assets::free_balance(vDOT, &ALICE);
-			let total_dot = Assets::total_issuance(DOT);
-			let total_vdot = Assets::total_issuance(vDOT);
 
-			let dot_price = total_vdot / total_dot;
+			let dot_price = vdot_pool / dot_pool;
 			let to_sell_dot = 20;
 			let minted_vdot = to_sell_dot * dot_price;
 
@@ -51,8 +53,8 @@ fn to_vtoken_should_be_ok() {
 			assert_eq!(Assets::free_balance(vDOT, &ALICE), alice_vdot + minted_vdot);
 
 			// check total DOTs and vDOTs.
-			assert_eq!(Assets::total_issuance(DOT), total_dot - to_sell_dot);
-			assert_eq!(Assets::total_issuance(vDOT), total_vdot + minted_vdot);
+			assert_eq!(VtokenMint::get_mint_pool(DOT), dot_pool + to_sell_dot);
+			assert_eq!(VtokenMint::get_mint_pool(vDOT), vdot_pool + minted_vdot);
 
 			// Alice selling BNC should not work.
 			assert_noop!(
@@ -86,14 +88,16 @@ fn to_token_should_be_ok() {
 		.one_hundred_for_alice_n_bob()
 		.build()
 		.execute_with(|| {
+			let (dot_pool, vdot_pool) = (100, 200);
+			assert_ok!(VtokenMint::expand_mint_pool(DOT, dot_pool));
+			assert_ok!(VtokenMint::expand_mint_pool(vDOT, vdot_pool));
+
 			let alice_dot = Assets::free_balance(DOT, &ALICE);
 			let alice_vdot = Assets::free_balance(vDOT, &ALICE);
-			let total_dot = Assets::total_issuance(DOT);
-			let total_vdot = Assets::total_issuance(vDOT);
 
-			let dot_price = total_vdot / total_dot;
+			let vdot_price = vdot_pool / dot_pool;
 			let to_sell_vdot = 20;
-			let minted_dot = to_sell_vdot / dot_price;
+			let minted_dot = to_sell_vdot / vdot_price;
 
 			System::set_block_number(1);
 
@@ -109,8 +113,8 @@ fn to_token_should_be_ok() {
 			assert_eq!(Assets::free_balance(vDOT, &ALICE), alice_vdot - to_sell_vdot);
 
 			// check total DOTs and vDOTs.
-			assert_eq!(Assets::total_issuance(DOT), total_dot + minted_dot);
-			assert_eq!(Assets::total_issuance(vDOT), total_vdot - to_sell_vdot);
+			assert_eq!(VtokenMint::get_mint_pool(DOT), dot_pool - minted_dot);
+			assert_eq!(VtokenMint::get_mint_pool(vDOT), vdot_pool - to_sell_vdot);
 
 			// Alice selling aUSD should not work.
 			assert_noop!(

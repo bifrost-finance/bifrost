@@ -23,7 +23,7 @@ use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use rococo_runtime::{
 	constants::currency::DOLLARS,
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig
+	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig
 };
 use crate::chain_spec::{
 	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -198,6 +198,14 @@ pub fn testnet_genesis(
 				None
 			}
 		},
+		brml_vtoken_mint: Some(VtokenMintConfig {
+			pools: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vDOT), 2000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+			]
+		}),
 		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
 	}
 }

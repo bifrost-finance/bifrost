@@ -126,7 +126,8 @@ pub trait MultiCurrencyExt<AccountId> {
 		+ PartialEq
 		+ Copy
 		+ MaybeSerializeDeserialize
-		+ Debug;
+		+ Debug
+		+ CurrencyIdExt;
 
 	/// The balance of an account.
 	type Balance: AtLeast32BitUnsigned
@@ -141,4 +142,33 @@ pub trait MultiCurrencyExt<AccountId> {
 
 	/// Burn the total issuance by currency id
 	fn reduce_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+}
+
+/// Trait for others module to access vtoken-mint module
+pub trait VtokenMintExt {
+	/// The currency identifier.
+	type CurrencyId: FullCodec
+		+ Eq 
+		+ PartialEq
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ Debug
+		+ CurrencyIdExt;
+
+	/// The balance of an account.
+	type Balance: AtLeast32BitUnsigned
+		+ FullCodec
+		+ Copy
+		+ MaybeSerializeDeserialize
+		+ Debug
+		+ Default;
+
+	/// Get mint pool by currency id
+	fn get_mint_pool(currency_id: Self::CurrencyId) -> Self::Balance;
+
+	/// Expand mint pool
+	fn expand_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+
+	/// Reduce mint pool
+	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 }

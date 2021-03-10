@@ -1026,7 +1026,6 @@ parameter_types! {
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Asset;
-	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -1162,7 +1161,7 @@ construct_runtime!(
 		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
 		// Modules from brml
 		Asset: brml_assets::{Module, Call, Storage, Event<T>, Config<T>},
-		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>},
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>},
 		// Swap: brml_swap::{Module, Call, Storage, Event<T>},
 		// StakingReward: brml_staking_reward::{Module, Storage},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},

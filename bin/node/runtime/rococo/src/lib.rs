@@ -414,7 +414,6 @@ parameter_types! {
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -661,7 +660,7 @@ construct_runtime!(
 
 		// bifrost modules
 		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
-		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>} = 11,
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
 		// Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
 		// StakingReward: brml_staking_reward::{Module, Storage} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
