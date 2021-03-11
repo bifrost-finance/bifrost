@@ -53,7 +53,7 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic
     {
         System: system::{Module, Call, Storage, Event<T>},
-        Assets: assets::{Module, Call, Storage, Event<T>, Config<T>},
+        Assets: orml_tokens::{Module, Storage, Event<T>},
         Balances: balances::{Module, Call, Storage, Event<T>},
         // TransactionPayment: pallet_transaction_payment::{Module, Storage},
         ChargeTransactionFee: charge_transaction_fee::{Module, Call, Storage},
@@ -77,7 +77,7 @@ impl system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = u128;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -140,14 +140,14 @@ orml_traits::parameter_type_with_key! {
     };
 }
 
-impl assets::Config for Test {
+impl orml_tokens::Config for Test {
     type Event = Event;
     type Balance = Balance;
     type Amount = i128;
     type CurrencyId = CurrencyId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = assets::TransferDust<Test, ()>;
+    type OnDust = orml_tokens::TransferDust<Test, ()>;
 }
 
 parameter_types! {
