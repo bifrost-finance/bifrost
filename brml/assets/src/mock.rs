@@ -1,8 +1,25 @@
 
+// Copyright 2019-2021 Liebi Technologies.
+// This file is part of Bifrost.
+
+// Bifrost is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// Bifrost is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+
 #![cfg(test)]
+#![allow(non_upper_case_globals)]
 
 use crate::{self as brml_assets};
-use frame_support::{parameter_types,traits::GenesisBuild};
+use frame_support::{parameter_types};
 use node_primitives::{CurrencyId, TokenSymbol, Balance};
 use sp_core::H256;
 use sp_runtime::{
@@ -12,7 +29,6 @@ use sp_runtime::{
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
-pub const aUSD: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -124,17 +140,6 @@ impl ExtBuilder {
 			(ALICE, DOT, 100),
 			(ALICE, vDOT, 400),
 			(BOB, DOT, 100),
-			(BOB, KSM, 100),
-		])
-	}
-
-	pub fn zero_for_alice_n_bob(self) -> Self {
-		self.balances(vec![
-			(ALICE, BNC, 100),
-			(BOB, BNC, 100),
-			(ALICE, DOT, 0),
-			(ALICE, vDOT, 100),
-			(BOB, DOT, 0),
 			(BOB, KSM, 100),
 		])
 	}

@@ -477,11 +477,21 @@ parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
 }
+parameter_type_with_key! {
+	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			&CurrencyId::Token(TokenSymbol::DOT) => 000_761_035_007,
+			&CurrencyId::Token(TokenSymbol::ETH) => 000_570_776_255,
+			_ => Zero::zero(),
+		}
+	};
+}
 
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type VtokenMintDuration = VtokenMintDuration;
+	type RateOfInterestEachBlock = RateOfInterestEachBlock;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 

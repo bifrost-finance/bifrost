@@ -780,10 +780,10 @@ dependencies = [
 name = "brml-vtoken-mint"
 version = "0.7.0"
 dependencies = [
- "brml-assets",
  "frame-support",
  "frame-system",
  "node-primitives",
+ "orml-tokens",
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec 2.0.1",

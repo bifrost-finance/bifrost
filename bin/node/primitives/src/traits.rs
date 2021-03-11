@@ -118,31 +118,6 @@ pub trait RewardTrait<Balance, AccountId, CurrencyId> {
 	fn dispatch_reward(v_token_id: CurrencyId, staking_profit: Balance) -> Result<(), Self::Error>;
 }
 
-/// Extension traits for assets module
-pub trait MultiCurrencyExt<AccountId> {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq 
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug;
-
-	/// The balance of an account.
-	type Balance: AtLeast32BitUnsigned
-		+ FullCodec
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ Default;
-
-	/// Expand the total issuance by currency id
-	fn expand_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
-
-	/// Burn the total issuance by currency id
-	fn reduce_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
-}
-
 /// Trait for others module to access vtoken-mint module
 pub trait VtokenMintExt {
 	/// The currency identifier.

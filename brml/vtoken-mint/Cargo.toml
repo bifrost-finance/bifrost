@@ -14,7 +14,7 @@ serde = { version = "1.0.118", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
-assets = { package = "brml-assets", path = "../assets" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master" }
 pallet-balances = "3.0.0"
 sp-core = "3.0.0"
 sp-io = "3.0.0"
