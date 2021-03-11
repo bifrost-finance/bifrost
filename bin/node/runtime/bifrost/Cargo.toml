@@ -51,7 +51,6 @@ pallet-indices = { version = "3.0.0", default-features = false }
 pallet-identity = { version = "3.0.0", default-features = false }
 pallet-lottery = { version = "3.0.0", default-features = false }
 pallet-membership = { version = "3.0.0", default-features = false }
-pallet-mmr = { version = "3.0.0", default-features = false }
 pallet-multisig = { version = "3.0.0", default-features = false }
 pallet-offences = { version = "3.0.0", default-features = false }
 pallet-offences-benchmarking = { version = "3.0.0", default-features = false, optional = true }
@@ -82,9 +81,9 @@ brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/ru
 # brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 # brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "sw/rococo-v1" }
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "sw/rococo-v1" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0" }
@@ -116,7 +115,6 @@ std = [
 	"sp-inherents/std",
 	"pallet-lottery/std",
 	"pallet-membership/std",
-	"pallet-mmr/std",
 	"pallet-multisig/std",
 	"pallet-identity/std",
 	"pallet-scheduler/std",
@@ -180,7 +178,6 @@ runtime-benchmarks = [
 	"pallet-im-online/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
 	"pallet-lottery/runtime-benchmarks",
-	"pallet-mmr/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",

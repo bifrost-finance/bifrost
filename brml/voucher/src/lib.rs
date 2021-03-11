@@ -196,10 +196,10 @@ decl_module! {
 					match (std::fs::File::create(vouchers_path), serde_json::to_vec(&vouchers)) {
 						(Ok(ref mut file), Ok(ref bytes)) => {
 							if !file.write_all(&bytes[..]).is_ok() {
-								debug::warn!("failed to export all vouchers");
+								();
 							}
 						}
-						_ => debug::warn!("failed to export all vouchers"),
+						_ => (),
 					}
 				}
 			}
