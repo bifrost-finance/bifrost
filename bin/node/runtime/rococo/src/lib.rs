@@ -661,6 +661,21 @@ impl zenlink_protocol::Config for Runtime {
 	type ModuleId = DEXModuleId;
 }
 
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+}
+
+impl brml_charge_transaction_fee::Config for Runtime {
+	type Balance = Balance;
+	type WeightInfo = ();
+	type CurrenciesHandler = Currencies;
+	type Currency = Balances;
+	type ZenlinkDEX = Zenlink;
+	// type OnUnbalanced = DealWithFees;
+	type OnUnbalanced = ();
+	type NativeCurrencyId = NativeCurrencyId;
+}
+
 // culumus runtime end
 
 construct_runtime!(
@@ -698,7 +713,13 @@ construct_runtime!(
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
 		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
+
+		// Zenlink module
 		Zenlink: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} =19,
+
+		// Bifrost modules
+		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage} = 20,
+
 	}
 );
 
@@ -912,6 +933,18 @@ impl_runtime_apis! {
 	// 		VtokenMint::get_vtoken_mint_price(asset_id)
 	// 	}
 	// }
+
+	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, CurrencyId, AccountId, Balance> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Token(TokenSymbol::BNC), Zero::zero()),
+			}
+		}
+	}
+
+
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);

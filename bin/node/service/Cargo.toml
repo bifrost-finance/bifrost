@@ -92,6 +92,10 @@ jsonrpc-core = "15.1.0"
 # zenlink rpc
 # zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
 
+# Bifrost rpc
+brml-charge-transaction-fee-rpc = { path = "../../../brml/charge-transaction-fee/rpc" }
+
+
 [dev-dependencies]
 env_logger = "0.8.1"
 

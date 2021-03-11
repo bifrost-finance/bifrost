@@ -20,12 +20,13 @@
 #![allow(non_upper_case_globals)]
 
 use crate::{self as vtoken_mint};
-use frame_support::{parameter_types,traits::GenesisBuild};
-use node_primitives::{CurrencyId, TokenSymbol, Balance};
+use frame_support::{parameter_types, traits::GenesisBuild};
+use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
+	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	testing::Header, AccountId32
+	AccountId32,
 };
 
 pub type AccountId = AccountId32;
