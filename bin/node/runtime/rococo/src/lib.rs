@@ -944,7 +944,61 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+		// fn get_assets() -> Vec<AssetId> {
+		//     ZenlinkProtocol::assets_list()
+		// }
 
+		// fn get_balance(
+		//     asset_id: AssetId,
+		//     owner: AccountId
+		// ) -> TokenBalance {
+		//     ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
+		// }
+
+		fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
+			ZenlinkProtocol::get_all_pairs()
+		}
+
+		fn get_owner_pairs(
+			owner: AccountId
+		) -> Vec<PairInfo<AccountId, TokenBalance>> {
+			ZenlinkProtocol::get_owner_pairs(&owner)
+		}
+
+		//buy amount token price
+		fn get_amount_in_price(
+			supply: TokenBalance,
+			path: Vec<AssetId>
+		) -> TokenBalance {
+			ZenlinkProtocol::get_in_price(supply, path)
+		}
+
+		//sell amount token price
+		fn get_amount_out_price(
+			supply: TokenBalance,
+			path: Vec<AssetId>
+		) -> TokenBalance {
+			ZenlinkProtocol::get_out_price(supply, path)
+		}
+
+		fn get_estimate_lptoken(
+			token_0: AssetId,
+			token_1: AssetId,
+			amount_0_desired: TokenBalance,
+			amount_1_desired: TokenBalance,
+			amount_0_min: TokenBalance,
+			amount_1_min: TokenBalance,
+		) -> TokenBalance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min)
+		}
+	}
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);

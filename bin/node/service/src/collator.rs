@@ -316,10 +316,10 @@ pub async fn start_node(
 			validator,
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
-				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-				// 	client,
-				// )));
+				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+					client,
+				)));
 
 				io.extend_with(brml_charge_transaction_fee_rpc::FeeRpcApi::to_delegate(
 					brml_charge_transaction_fee_rpc::ChargeTransactionFeeStruct::new(client),
@@ -339,10 +339,10 @@ pub async fn start_node(
 			validator,
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
-				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-				// 	client,
-				// )));
+				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+					client,
+				)));
 
 				io.extend_with(brml_charge_transaction_fee_rpc::FeeRpcApi::to_delegate(
 					brml_charge_transaction_fee_rpc::ChargeTransactionFeeStruct::new(client),
