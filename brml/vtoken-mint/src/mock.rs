@@ -118,7 +118,6 @@ parameter_types! {
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = ();
 }

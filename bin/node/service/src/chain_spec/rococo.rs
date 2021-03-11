@@ -23,7 +23,7 @@ use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use rococo_runtime::{
 	constants::currency::DOLLARS,
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig
+	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig
 };
 use crate::chain_spec::{
 	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -163,22 +163,22 @@ pub fn testnet_genesis(
 	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
 				.map(|x| (x, ENDOWMENT))
 				.collect()
-		}),
-		pallet_indices: Some(IndicesConfig {
+		},
+		pallet_indices: IndicesConfig {
 			indices: vec![],
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
-		}),
-		brml_assets: Some(AssetsConfig {
+		},
+		orml_tokens: AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {
@@ -190,15 +190,23 @@ pub fn testnet_genesis(
 					]
 				})
 				.collect(),
-		}),
+		},
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
-				Some(VoucherConfig { voucher: vouchers })
+				VoucherConfig { voucher: vouchers }
 			} else {
-				None
+				Default::default()
 			}
 		},
-		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
+		brml_vtoken_mint: VtokenMintConfig {
+			pools: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vDOT), 2000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+			]
+		},
+		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}
 }
 

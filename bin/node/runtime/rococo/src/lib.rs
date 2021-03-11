@@ -357,7 +357,7 @@ where
 		);
 		let raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
-				debug::warn!("Unable to create signed payload: {:?}", e);
+				// debug::warn!("Unable to create signed payload: {:?}", e);
 			})
 			.ok()?;
 		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
@@ -415,7 +415,6 @@ parameter_types! {
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type CurrencyId = CurrencyId;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -498,12 +497,18 @@ parameter_type_with_key! {
 
 impl brml_assets::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Assets;
+	type WeightInfo = ();
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = brml_assets::TransferDust<Runtime, ()>;
+	type OnDust = ();
 }
 
 // bifrost runtime end
@@ -524,6 +529,8 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
+	type SendXcmOrigin = EnsureRoot<AccountId>;
+	type AccountIdConverter = LocationConverter;
 }
 
 parameter_types! {
@@ -703,8 +710,8 @@ construct_runtime!(
 		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
-		Assets: brml_assets::{Module, Call, Storage, Event<T>, Config<T>} = 10,
-		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>} = 11,
+		BrmlAssets: brml_assets::{Module, Call, Event<T>} = 10,
+		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
 		// Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
 		// StakingReward: brml_staking_reward::{Module, Storage} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
@@ -712,6 +719,7 @@ construct_runtime!(
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
+		Assets: orml_tokens::{Module, Storage, Event<T>, Config<T>} = 17,
 		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
 
 		// Zenlink module
@@ -1001,7 +1009,7 @@ impl_runtime_apis! {
 	}
 }
 
-cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
 
 #[cfg(test)]
 mod tests {

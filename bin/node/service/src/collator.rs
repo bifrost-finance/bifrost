@@ -240,7 +240,7 @@ where
 	};
 
 	if validator {
-		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+		let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 			task_manager.spawn_handle(),
 			client.clone(),
 			transaction_pool,

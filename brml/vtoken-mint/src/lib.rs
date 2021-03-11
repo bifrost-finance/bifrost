@@ -20,15 +20,17 @@ extern crate alloc;
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
-	Parameter, transactional, pallet_prelude::*, traits::{Get, Hooks, IsType}
+	transactional, pallet_prelude::*, traits::{Get, Hooks, IsType}
 };
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::{OriginFor, BlockNumberFor}};
-use node_primitives::{CurrencyIdExt, CurrencyId};
+use frame_system::{
+	ensure_root, ensure_signed, pallet_prelude::{OriginFor, BlockNumberFor}
+};
+use node_primitives::{CurrencyIdExt, CurrencyId, VtokenMintExt};
 use orml_traits::{
 	account::MergeAccount, MultiCurrency,
 	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
-use sp_runtime::traits::{Member, Saturating, Zero, MaybeSerializeDeserialize};
+use sp_runtime::{traits::{Saturating, Zero}, DispatchResult};
 
 pub use pallet::*;
 
@@ -55,14 +57,6 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// The arithmetic type of asset identifier.
-		type CurrencyId: Parameter
-			+ Member
-			+ Copy
-			+ MaybeSerializeDeserialize
-			+ Ord
-			+ CurrencyIdExt;
-
 		/// A handler to manipulate assets module
 		type MultiCurrency: MergeAccount<Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
@@ -79,7 +73,18 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
-	/// collect referrer, minter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
+	/// Total mint pool
+	#[pallet::storage]
+	#[pallet::getter(fn mint_pool)]
+	pub(crate) type MintPool<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		CurrencyIdOf<T>,
+		BalanceOf<T>,
+		ValueQuery
+	>;
+
+	/// Collect referrer, minter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 	/// total_point = 1000 + 2000 + ...
 	/// referrer must be unique, so check it unique while a new referrer incoming.
 	/// and insert the new channel to the
@@ -93,7 +98,7 @@ pub mod pallet {
 		ValueQuery
 	>;
 
-	/// referer channels for all users
+	/// Referer channels for all users
 	#[pallet::storage]
 	#[pallet::getter(fn all_referer_channels)]
 	pub(crate) type AllReferrerChannels<T: Config> = StorageValue<
@@ -146,14 +151,13 @@ pub mod pallet {
 			#[pallet::compact] new_vtoken_pool: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin.clone())?;
-			let minter = ensure_signed(origin)?;
 
 			let (token_id, vtoken_id) = currency_id
 				.get_token_pair()
 				.ok_or(Error::<T>::NotSupportTokenType)?;
 
-			T::MultiCurrency::deposit(token_id.into(), &minter, new_token_pool)?;
-			T::MultiCurrency::deposit(vtoken_id.into(), &minter, new_vtoken_pool)?;
+			Self::expand_mint_pool(token_id.into(), new_token_pool)?;
+			Self::expand_mint_pool(vtoken_id.into(), new_vtoken_pool)?;
 
 			Self::deposit_event(Event::UpdateVtokenPoolSuccess);
 
@@ -185,15 +189,22 @@ pub mod pallet {
 			ensure!(token_balances >= token_amount, Error::<T>::BalanceLow);
 
 			// Total amount of tokens.
-			let token_pool = T::MultiCurrency::total_issuance(token_id.into());
+			let token_pool = Self::get_mint_pool(token_id.into());
 			// Total amount of vtokens.
-			let vtoken_pool = T::MultiCurrency::total_issuance(currency_id);
-			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyVtokenPool);
+			let vtoken_pool = Self::get_mint_pool(currency_id);
+			ensure!(
+				!token_pool.is_zero() && !vtoken_pool.is_zero(),
+				Error::<T>::EmptyVtokenPool
+			);
 
 			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
 
 			T::MultiCurrency::withdraw(token_id.into(), &minter, token_amount)?;
 			T::MultiCurrency::deposit(currency_id, &minter, vtokens_buy)?;
+
+			// Alter mint pool
+			Self::expand_mint_pool(token_id.into(), token_amount)?;
+			Self::expand_mint_pool(currency_id, vtokens_buy)?;
 
 			Self::deposit_event(Event::MintedVToken(minter, currency_id, vtokens_buy));
 
@@ -223,16 +234,26 @@ pub mod pallet {
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::BalanceLow);
 
 			// Total amount of tokens.
-			let token_pool = T::MultiCurrency::total_issuance(currency_id);
+			let token_pool = Self::get_mint_pool(currency_id);
 			// Total amount of vtokens.
-			let vtoken_pool = T::MultiCurrency::total_issuance(vtoken_id.into());
-			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyVtokenPool);
+			let vtoken_pool = Self::get_mint_pool(vtoken_id.into());
+			ensure!(
+				!token_pool.is_zero() && !vtoken_pool.is_zero(),
+				Error::<T>::EmptyVtokenPool
+			);
 
 			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
-			ensure!(vtoken_pool >= tokens_buy && vtoken_pool >= vtoken_amount, Error::<T>::NotEnoughVtokenPool);
+			ensure!(
+				vtoken_pool >= tokens_buy && vtoken_pool >= vtoken_amount,
+				Error::<T>::NotEnoughVtokenPool
+			);
 
 			T::MultiCurrency::withdraw(vtoken_id.into(), &minter, vtoken_amount)?;
 			T::MultiCurrency::deposit(currency_id, &minter, tokens_buy)?;
+
+			// Alter mint pool
+			Self::reduce_mint_pool(currency_id, tokens_buy)?;
+			Self::reduce_mint_pool(vtoken_id.into(), vtoken_amount)?;
 
 			Self::deposit_event(Event::MintedToken(minter, currency_id, tokens_buy));
 
@@ -243,7 +264,59 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
-			();
+			// 
+			for (currency_id, pool) in MintPool::<T>::iter() {
+				
+			}
 		}
+	}
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub pools: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> GenesisConfig<T> {
+			GenesisConfig { pools: vec![] }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			for (currency_id, token_pool) in self.pools.iter() {
+				MintPool::<T>::insert(currency_id, token_pool);
+			}
+		}
+	}
+}
+
+impl<T: Config> VtokenMintExt for Pallet<T> {
+	type CurrencyId = CurrencyIdOf<T>;
+	type Balance = BalanceOf<T>;
+
+	/// Get mint pool by currency id
+	fn get_mint_pool(currency_id: Self::CurrencyId) -> Self::Balance {
+		Self::mint_pool(currency_id)
+	}
+
+	/// Expand mint pool
+	fn expand_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
+		MintPool::<T>::mutate(currency_id, |pool| {
+			*pool = pool.saturating_add(amount);
+		});
+
+		Ok(())
+	}
+
+	/// Reduce mint pool
+	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
+		MintPool::<T>::mutate(currency_id, |pool| {
+			*pool = pool.saturating_sub(amount);
+		});
+
+		Ok(())
 	}
 }
