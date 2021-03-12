@@ -313,10 +313,10 @@ pub async fn start_node(
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
 	
-				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-				// 	client,
-				// )));
+				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+					client,
+				)));
 				io
 			},
 		).await.map(|full| full.0)
@@ -330,10 +330,10 @@ pub async fn start_node(
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
 	
-				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-				// 	client,
-				// )));
+				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+					client,
+				)));
 				io
 			},
 		).await.map(|full| full.0)

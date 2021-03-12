@@ -190,10 +190,9 @@ pub fn testnet_genesis(
 				.iter()
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 					]
 				})
 				.collect(),
@@ -296,7 +295,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		move || {
-			bifrost_config_genesis(id)
+			asgard_config_genesis(id)
 		},
 		vec![
 			"/dns/bifrost-rpc.testnet.liebi.com/tcp/30333/p2p/12D3KooWJpy1x5TeRL1gUXhHfaQVC1xKM4rqXfhEjP3KUqVgamWi".parse().expect("failed to parse multiaddress.")
@@ -313,7 +312,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 }
 
 /// Configure genesis for bifrost test
-fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
+fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
 		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
 		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),

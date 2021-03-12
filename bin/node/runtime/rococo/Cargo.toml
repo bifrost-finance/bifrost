@@ -79,8 +79,8 @@ brml-assets = { path = "../../../../brml/assets", default-features = false }
 # zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
 # zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
 
-# zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
-# zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
+zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
+zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0" }
@@ -137,7 +137,7 @@ std = [
 	"orml-tokens/std",
 	"orml-xtokens/std",
 	"orml-xcm-support/std",
-	# "zenlink-protocol/std",
-	# "zenlink-protocol-runtime-api/std",
+	"zenlink-protocol/std",
+	"zenlink-protocol-runtime-api/std",
 	"cumulus-pallet-xcm-handler/std",
 ]
