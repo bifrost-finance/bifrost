@@ -209,6 +209,7 @@ impl zenlink_protocol::Config for Test {
     type AccountId32Converter = ();
     type ModuleId = DEXModuleId;
     type ParaId = ();
+    type TargetChains = ();
 }
 
 // // simulate block production
