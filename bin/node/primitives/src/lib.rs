@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic,
+	MultiSignature, OpaqueExtrinsic, RuntimeDebug, SaturatedConversion,
 };
 use sp_std::{convert::Into, prelude::*};
 
@@ -33,8 +33,8 @@ pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	AssetReward, AssetTrait, CurrencyIdExt, GetDecimals, MultiCurrencyExt, RewardHandler,
-	VtokenMintExt,
+	AssetReward, AssetTrait, CurrencyIdExt, DEXOperations, GetDecimals, MultiAsset,
+	MultiCurrencyExt, RewardHandler, VtokenMintExt,
 };
 
 /// An index to a block.
@@ -114,6 +114,12 @@ pub type EraId = u32;
 
 /// Signed version of Balance
 pub type Amount = i128;
+
+/// The balance of zenlink asset
+pub type TokenBalance = u128;
+
+/// The pair id of the zenlink dex.
+pub type PairId = u32;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
@@ -264,6 +270,72 @@ pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 	pub from: AccountId,
 	// which token type is sent to EOS
 	pub asset_id: AssetId,
+}
+
+/// Zenlink type
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
+pub struct Pair<AccountId, TokenBalance> {
+	pub token_0: ZenlinkAssetId,
+	pub token_1: ZenlinkAssetId,
+
+	pub account: AccountId,
+	pub total_liquidity: TokenBalance,
+}
+
+/// The id of Zenlink asset
+/// NativeCurrency is this parachain native currency.
+/// Other parachain's currency is represented by `ParaCurrency(u32)`, `u32` cast to the ParaId.
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum ZenlinkAssetId {
+	NativeCurrency,
+	ParaCurrency(u32),
+}
+
+impl ZenlinkAssetId {
+	pub fn is_para_currency(&self) -> bool {
+		matches!(self, ZenlinkAssetId::ParaCurrency(_))
+	}
+}
+
+impl From<u32> for ZenlinkAssetId {
+	fn from(id: u32) -> Self {
+		ZenlinkAssetId::ParaCurrency(id)
+	}
+}
+
+impl From<u128> for ZenlinkAssetId {
+	fn from(id: u128) -> Self {
+		ZenlinkAssetId::ParaCurrency(id as u32)
+	}
+}
+
+impl From<CurrencyId> for ZenlinkAssetId {
+	fn from(id: CurrencyId) -> Self {
+		if id.is_native() {
+			ZenlinkAssetId::NativeCurrency
+		} else {
+			match id {
+				CurrencyId::Token(some_id) => {
+					let u32_id = some_id as u32;
+					ZenlinkAssetId::ParaCurrency(u32_id)
+				}
+				_ => todo!("Not support now."),
+			}
+		}
+	}
+}
+
+impl Into<CurrencyId> for ZenlinkAssetId {
+	fn into(self) -> CurrencyId {
+		match self {
+			ZenlinkAssetId::NativeCurrency => CurrencyId::Token(TokenSymbol::BNC),
+			ZenlinkAssetId::ParaCurrency(some_id) => {
+				let id: u8 = some_id.saturated_into();
+				CurrencyId::Token(TokenSymbol::from(id))
+			}
+		}
+	}
 }
 
 // impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {

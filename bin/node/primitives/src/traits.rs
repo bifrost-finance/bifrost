@@ -18,7 +18,7 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AccountAsset, BridgeAssetBalance, Token};
+use crate::{AccountAsset, BridgeAssetBalance, Pair, Token, TokenBalance, ZenlinkAssetId};
 use codec::FullCodec;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
@@ -216,39 +216,53 @@ pub trait VtokenMintExt {
 	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 }
 
+/// Zenlink traits
 pub trait DEXOperations<AccountId> {
-	type TokenBalance;
-	type AssetId;
-
 	fn get_amount_out_by_path(
-		amount_in: Self::TokenBalance,
-		path: &[Self::AssetId],
-	) -> Result<Vec<Self::TokenBalance>, DispatchError>;
+		amount_in: TokenBalance,
+		path: &[ZenlinkAssetId],
+	) -> Result<Vec<TokenBalance>, DispatchError>;
 	fn get_amount_in_by_path(
-		amount_out: Self::TokenBalance,
-		path: &[Self::AssetId],
-	) -> Result<Vec<Self::TokenBalance>, DispatchError>;
+		amount_out: TokenBalance,
+		path: &[ZenlinkAssetId],
+	) -> Result<Vec<TokenBalance>, DispatchError>;
 	fn inner_swap_tokens_for_exact_tokens(
 		who: &AccountId,
-		amount_out: Self::TokenBalance,
-		amount_in_max: Self::TokenBalance,
-		path: &[Self::AssetId],
+		amount_out: TokenBalance,
+		amount_in_max: TokenBalance,
+		path: &[ZenlinkAssetId],
 		to: &AccountId,
 	) -> DispatchResult;
 
 	fn inner_swap_exact_tokens_for_tokens(
 		who: &AccountId,
-		amount_in: Self::TokenBalance,
-		amount_out_min: Self::TokenBalance,
-		path: &[Self::AssetId],
+		amount_in: TokenBalance,
+		amount_out_min: TokenBalance,
+		path: &[ZenlinkAssetId],
 		to: &AccountId,
 	) -> DispatchResult;
 
-	// For testing. Since Substrate dosn't support alias with generic type, here we comment out.
-	// fn inner_create_pair(token_0: &Self::AssetId, token_1: &Self::AssetId) -> DispatchResult;
+	fn inner_create_pair(token_0: &ZenlinkAssetId, token_1: &ZenlinkAssetId) -> DispatchResult;
 
-	// fn get_pair_from_asset_id(
-	// 	token_0: &Self::AssetId,
-	// 	token_1: &Self::AssetId,
-	// ) -> Option<Self::Pair<AccountId1, Self::TokenBalance>>;
+	fn get_pair_from_asset_id(
+		token_0: &ZenlinkAssetId,
+		token_1: &ZenlinkAssetId,
+	) -> Option<Pair<AccountId, TokenBalance>>;
+}
+
+pub trait MultiAsset<AccountId, TokenBalance> {
+	fn total_supply(asset_id: ZenlinkAssetId) -> TokenBalance;
+
+	fn balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> TokenBalance;
+
+	fn transfer(
+		asset_id: ZenlinkAssetId,
+		from: &AccountId,
+		to: &AccountId,
+		amount: TokenBalance,
+	) -> DispatchResult;
+
+	fn withdraw(asset_id: ZenlinkAssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
+
+	fn deposit(asset_id: ZenlinkAssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
 }
