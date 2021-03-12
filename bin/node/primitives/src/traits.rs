@@ -18,12 +18,13 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AccountAsset, Token, BridgeAssetBalance};
+use crate::{AccountAsset, BridgeAssetBalance, Token};
 use codec::FullCodec;
-use sp_std::{vec::Vec, fmt::Debug};
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize}, DispatchResult,
+	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
+	DispatchError, DispatchResult,
 };
+use sp_std::{fmt::Debug, vec::Vec};
 
 /// Get tokens precision
 pub trait GetDecimals {
@@ -45,7 +46,10 @@ pub trait CurrencyIdExt {
 }
 
 /// A handler to manipulate assets module
-pub trait AssetTrait<CurrencyId, AccountId, Balance> where CurrencyId: CurrencyIdExt {
+pub trait AssetTrait<CurrencyId, AccountId, Balance>
+where
+	CurrencyId: CurrencyIdExt,
+{
 	type Error;
 	fn asset_issue(asset_id: CurrencyId, target: &AccountId, amount: Balance);
 
@@ -62,20 +66,31 @@ pub trait AssetTrait<CurrencyId, AccountId, Balance> where CurrencyId: CurrencyI
 
 /// Default impls
 impl<CurrencyId, AccountId, Balance> AssetTrait<CurrencyId, AccountId, Balance> for ()
-	where CurrencyId: Default + CurrencyIdExt, AccountId: Default, Balance: Default
+where
+	CurrencyId: Default + CurrencyIdExt,
+	AccountId: Default,
+	Balance: Default,
 {
 	type Error = core::convert::Infallible;
 	fn asset_issue(_: CurrencyId, _: &AccountId, _: Balance) {}
 
 	fn asset_destroy(_: CurrencyId, _: &AccountId, _: Balance) {}
 
-	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<CurrencyId> { Default::default() }
+	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<CurrencyId> {
+		Default::default()
+	}
 
-	fn token_exists(_: CurrencyId) -> bool { Default::default() }
+	fn token_exists(_: CurrencyId) -> bool {
+		Default::default()
+	}
 
-	fn get_account_asset(_: CurrencyId, _: &AccountId) -> AccountAsset<Balance> { Default::default() }
+	fn get_account_asset(_: CurrencyId, _: &AccountId) -> AccountAsset<Balance> {
+		Default::default()
+	}
 
-	fn get_token(_: CurrencyId) -> Token<CurrencyId, Balance> { Default::default() }
+	fn get_token(_: CurrencyId) -> Token<CurrencyId, Balance> {
+		Default::default()
+	}
 }
 
 pub trait TokenPriceHandler<CurrencyId, Price> {
@@ -85,27 +100,51 @@ pub trait TokenPriceHandler<CurrencyId, Price> {
 /// Asset redeem handler
 pub trait AssetRedeem<CurrencyId, AccountId, Balance> {
 	/// Asset redeem
-	fn asset_redeem(asset_id: CurrencyId, target: AccountId, amount: Balance, to_name: Option<Vec<u8>>);
+	fn asset_redeem(
+		asset_id: CurrencyId,
+		target: AccountId,
+		amount: Balance,
+		to_name: Option<Vec<u8>>,
+	);
 }
 
 /// Bridge asset from other blockchain to Bifrost
 pub trait BridgeAssetFrom<AccountId, CurrencyId, Precision, Balance> {
-	fn bridge_asset_from(target: AccountId, bridge_asset: BridgeAssetBalance<AccountId, CurrencyId, Precision, Balance>);
+	fn bridge_asset_from(
+		target: AccountId,
+		bridge_asset: BridgeAssetBalance<AccountId, CurrencyId, Precision, Balance>,
+	);
 }
 
 /// Bridge asset from Bifrost to other blockchain
 pub trait BridgeAssetTo<AccountId, CurrencyId, Precision, Balance> {
 	type Error;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<AccountId, CurrencyId, Precision, Balance>, ) -> Result<(), Self::Error>;
-	fn redeem(asset_id: CurrencyId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn stake(asset_id: CurrencyId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
-	fn unstake(asset_id: CurrencyId, amount: Balance, validator_address: Vec<u8>) -> Result<(), Self::Error>;
+	fn bridge_asset_to(
+		target: Vec<u8>,
+		bridge_asset: BridgeAssetBalance<AccountId, CurrencyId, Precision, Balance>,
+	) -> Result<(), Self::Error>;
+	fn redeem(
+		asset_id: CurrencyId,
+		amount: Balance,
+		validator_address: Vec<u8>,
+	) -> Result<(), Self::Error>;
+	fn stake(
+		asset_id: CurrencyId,
+		amount: Balance,
+		validator_address: Vec<u8>,
+	) -> Result<(), Self::Error>;
+	fn unstake(
+		asset_id: CurrencyId,
+		amount: Balance,
+		validator_address: Vec<u8>,
+	) -> Result<(), Self::Error>;
 }
 
 pub trait AssetReward<CurrencyId, Balance> {
 	type Output;
 	type Error;
-	fn set_asset_reward(asset_id: CurrencyId, reward: Balance) -> Result<Self::Output, Self::Error>;
+	fn set_asset_reward(asset_id: CurrencyId, reward: Balance)
+		-> Result<Self::Output, Self::Error>;
 }
 
 pub trait RewardHandler<CurrencyId, Balance> {
@@ -114,19 +153,18 @@ pub trait RewardHandler<CurrencyId, Balance> {
 
 pub trait RewardTrait<Balance, AccountId, CurrencyId> {
 	type Error;
-	fn record_reward(v_token_id: CurrencyId, vtoken_mint_amount: Balance, referer: AccountId) -> Result<(), Self::Error>;
+	fn record_reward(
+		v_token_id: CurrencyId,
+		vtoken_mint_amount: Balance,
+		referer: AccountId,
+	) -> Result<(), Self::Error>;
 	fn dispatch_reward(v_token_id: CurrencyId, staking_profit: Balance) -> Result<(), Self::Error>;
 }
 
 /// Extension traits for assets module
 pub trait MultiCurrencyExt<AccountId> {
 	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq 
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug;
+	type CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug;
 
 	/// The balance of an account.
 	type Balance: AtLeast32BitUnsigned
@@ -137,17 +175,23 @@ pub trait MultiCurrencyExt<AccountId> {
 		+ Default;
 
 	/// Expand the total issuance by currency id
-	fn expand_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+	fn expand_total_issuance(
+		currency_id: Self::CurrencyId,
+		amount: Self::Balance,
+	) -> DispatchResult;
 
 	/// Burn the total issuance by currency id
-	fn reduce_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+	fn reduce_total_issuance(
+		currency_id: Self::CurrencyId,
+		amount: Self::Balance,
+	) -> DispatchResult;
 }
 
 /// Trait for others module to access vtoken-mint module
 pub trait VtokenMintExt {
 	/// The currency identifier.
 	type CurrencyId: FullCodec
-		+ Eq 
+		+ Eq
 		+ PartialEq
 		+ Copy
 		+ MaybeSerializeDeserialize
@@ -170,4 +214,41 @@ pub trait VtokenMintExt {
 
 	/// Reduce mint pool
 	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
+}
+
+pub trait DEXOperations<AccountId> {
+	type TokenBalance;
+	type AssetId;
+
+	fn get_amount_out_by_path(
+		amount_in: Self::TokenBalance,
+		path: &[Self::AssetId],
+	) -> Result<Vec<Self::TokenBalance>, DispatchError>;
+	fn get_amount_in_by_path(
+		amount_out: Self::TokenBalance,
+		path: &[Self::AssetId],
+	) -> Result<Vec<Self::TokenBalance>, DispatchError>;
+	fn inner_swap_tokens_for_exact_tokens(
+		who: &AccountId,
+		amount_out: Self::TokenBalance,
+		amount_in_max: Self::TokenBalance,
+		path: &[Self::AssetId],
+		to: &AccountId,
+	) -> DispatchResult;
+
+	fn inner_swap_exact_tokens_for_tokens(
+		who: &AccountId,
+		amount_in: Self::TokenBalance,
+		amount_out_min: Self::TokenBalance,
+		path: &[Self::AssetId],
+		to: &AccountId,
+	) -> DispatchResult;
+
+	// For testing. Since Substrate dosn't support alias with generic type, here we comment out.
+	// fn inner_create_pair(token_0: &Self::AssetId, token_1: &Self::AssetId) -> DispatchResult;
+
+	// fn get_pair_from_asset_id(
+	// 	token_0: &Self::AssetId,
+	// 	token_1: &Self::AssetId,
+	// ) -> Option<Self::Pair<AccountId1, Self::TokenBalance>>;
 }

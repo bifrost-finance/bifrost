@@ -35,8 +35,8 @@ use frame_system::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Amount, AssetId, Balance, BiddingOrderId, BlockNumber, CurrencyId, EraId, Hash,
-	Index, Moment, PoolId, PoolToken, PoolWeight, SwapFee, TokenSymbol,
+	AccountIndex, Amount, Balance, BiddingOrderId, BlockNumber, CurrencyId, EraId, Hash, Index,
+	Moment, PoolId, PoolToken, PoolWeight, SwapFee, TokenSymbol,
 };
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
@@ -58,6 +58,7 @@ use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
+use zenlink_protocol::{AssetId, PairInfo, TokenBalance};
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
@@ -643,6 +644,19 @@ impl orml_xtokens::Config for Runtime {
 
 parameter_types! {
 	pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
+
+	pub SiblingParachains: Vec<MultiLocation> = vec![
+		// Sherpax live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 59 }),
+		// Bifrost local and live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
+		// Zenlink live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 188 }),
+		// Zenlink local
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
+		// Sherpax local
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
+	];
 }
 
 pub struct AccountId32Converter;
@@ -662,10 +676,12 @@ impl zenlink_protocol::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
+
 	type AccountIdConverter = LocationConverter;
 	type AccountId32Converter = AccountId32Converter;
 	type ParaId = ParachainInfo;
 	type ModuleId = DEXModuleId;
+	type TargetChains = SiblingParachains;
 }
 
 parameter_types! {
@@ -677,7 +693,7 @@ impl brml_charge_transaction_fee::Config for Runtime {
 	type WeightInfo = ();
 	type CurrenciesHandler = Currencies;
 	type Currency = Balances;
-	type ZenlinkDEX = Zenlink;
+	type ZenlinkDEX = ZenlinkProtocol;
 	// type OnUnbalanced = DealWithFees;
 	type OnUnbalanced = ();
 	type NativeCurrencyId = NativeCurrencyId;
@@ -723,7 +739,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
 
 		// Zenlink module
-		Zenlink: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} =19,
+		ZenlinkProtocol: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} =19,
 
 		// Bifrost modules
 		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage} = 20,
@@ -963,6 +979,12 @@ impl_runtime_apis! {
 		// ) -> TokenBalance {
 		//     ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
 		// }
+
+		fn get_sovereigns_info(
+			asset_id: AssetId
+		) -> Vec<(u32, AccountId, TokenBalance)> {
+			ZenlinkProtocol::get_sovereigns_info(&asset_id)
+		}
 
 		fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
 			ZenlinkProtocol::get_all_pairs()

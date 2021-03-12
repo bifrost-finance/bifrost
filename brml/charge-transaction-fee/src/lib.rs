@@ -177,7 +177,6 @@ impl<T: Config> Pallet<T> {
         // charge the fee by the order of the above order list.
         // first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
         for currency_id in user_fee_charge_order_list {
-            println!("currency_id: {:?}", currency_id);
             let native_asset_id: AssetId = AssetId::from(T::NativeCurrencyId::get());
             // If it is mainnet currency
             if currency_id == T::NativeCurrencyId::get() {
@@ -196,12 +195,6 @@ impl<T: Config> Pallet<T> {
                 });
 
                 if native_is_enough {
-                    println!(
-                        "native_is_enough: {:?}",
-                        <<T as Config>::Currency as Currency<
-                            <T as frame_system::Config>::AccountId,
-                        >>::free_balance(who)
-                    );
                     // native balance is enough, break iteration
                     break;
                 }
@@ -209,24 +202,9 @@ impl<T: Config> Pallet<T> {
                 // If it is other assets
                 let asset_balance = T::CurrenciesHandler::total_balance(currency_id, who);
                 let asset_id: AssetId = AssetId::from(currency_id);
-
-                // // mock
-                // if asset_balance >= fee.into() {
-                //     // decrease tokens of other currency while increase BNC tokens by the same amount
-                //     T::CurrenciesHandler::asset_redeem(currency_id, who, fee.into());
-                //     T::Currency::deposit_into_existing(who, fee.into())
-                //         .unwrap_or_else(|_| PositiveImbalanceOf::<T>::zero());
-                //     break;
-                // }
-
                 let path = vec![asset_id, native_asset_id];
-
-                // let amount_out = TryInto::<TokenBalance>::try_into(fee);
                 let amount_out: TokenBalance = fee.saturated_into();
-                println!("amount_out: {:?}", amount_out);
-                // let amount_in_max = TryInto::<TokenBalance>::try_into(asset_balance);
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
-                println!("amount_in_max: {:?}", amount_in_max);
 
                 if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens(
                     who,

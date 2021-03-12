@@ -18,22 +18,23 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Encode, Decode};
-use sp_runtime::{
-	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, 
-	OpaqueExtrinsic, MultiSignature
-};
-use sp_std::{convert::Into, prelude::*,};
+use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::{
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	MultiSignature, OpaqueExtrinsic,
+};
+use sp_std::{convert::Into, prelude::*};
 
 mod currency;
-mod traits;
+pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	GetDecimals, CurrencyIdExt, AssetTrait, AssetReward, RewardHandler,
-	MultiCurrencyExt, VtokenMintExt
+	AssetReward, AssetTrait, CurrencyIdExt, GetDecimals, MultiCurrencyExt, RewardHandler,
+	VtokenMintExt,
 };
 
 /// An index to a block.
@@ -105,7 +106,7 @@ pub type PoolToken = u128;
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
 
-/// 
+///
 pub type BiddingOrderId = u64;
 
 ///
@@ -163,7 +164,12 @@ pub struct Token<AssetId, Balance> {
 }
 
 impl<AssetId, Balance: Copy> Token<AssetId, Balance> {
-	pub fn new(symbol: Vec<u8>, precision: u16, total_supply: Balance, token_type: TokenType) -> Self {
+	pub fn new(
+		symbol: Vec<u8>,
+		precision: u16,
+		total_supply: Balance,
+		token_type: TokenType,
+	) -> Self {
 		Self {
 			symbol,
 			precision,
@@ -272,7 +278,6 @@ pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 // 	fn unstake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
 // }
 
-
 // impl<A, B> AssetReward<A, B> for () {
 // 	type Output = ();
 // 	type Error = core::convert::Infallible;
@@ -336,21 +341,30 @@ mod tests {
 		let currency_id_str = "BNC";
 		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
 		assert!(bnc_currency_id.is_ok());
-		assert_eq!(bnc_currency_id.unwrap(), CurrencyId::Token(TokenSymbol::BNC));
+		assert_eq!(
+			bnc_currency_id.unwrap(),
+			CurrencyId::Token(TokenSymbol::BNC)
+		);
 	}
 
 	#[test]
 	fn currency_id_ext_test_should_work() {
-        let currency_id_str = "BNC";
+		let currency_id_str = "BNC";
 		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
-        assert_eq!(bnc_currency_id.unwrap().is_native(), true);
-        // assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
-        assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
-        assert_eq!(TokenSymbol::DOT as u8, 2u8);
-        assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
-        assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
-        assert_eq!(CurrencyId::Token(TokenSymbol::BNC).get_native_token(), Some(TokenSymbol::BNC));
-        assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(), Some((TokenSymbol::DOT, TokenSymbol::vDOT)));
+		assert_eq!(bnc_currency_id.unwrap().is_native(), true);
+		// assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
+		assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
+		assert_eq!(TokenSymbol::DOT as u8, 2u8);
+		assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
+		assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
+		assert_eq!(
+			CurrencyId::Token(TokenSymbol::BNC).get_native_token(),
+			Some(TokenSymbol::BNC)
+		);
+		assert_eq!(
+			CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(),
+			Some((TokenSymbol::DOT, TokenSymbol::vDOT))
+		);
 		// todo!();
 	}
 }
