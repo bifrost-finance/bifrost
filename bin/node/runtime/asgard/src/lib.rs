@@ -93,11 +93,6 @@ use zenlink_protocol::{
 	AssetId as ZenlinkAssetId, Origin as ZenlinkOrigin, PairInfo, ParaChainWhiteList, Transactor,
 };
 
-// zenlink imports
-use zenlink_protocol::{
-	AssetId as ZenlinkAssetId, Origin as ZenlinkOrigin, PairInfo, ParaChainWhiteList, Transactor,
-};
-
 /// Weights for pallets used in the runtime.
 mod weights;
 
