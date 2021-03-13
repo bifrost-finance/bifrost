@@ -26,6 +26,7 @@ use frame_support::{
 };
 use frame_system::{self as system, ensure_root};
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, StaticLookup, Zero};
+use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, StaticLookup, Zero};
 
 pub trait WeightInfo {
 	fn issue_voucher() -> Weight;

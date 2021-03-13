@@ -93,6 +93,11 @@ use orml_xcm_support::{
 // zenlink imports
 use zenlink_protocol::{Origin as ZenlinkOrigin, PairInfo, Transactor};
 
+// zenlink imports
+use zenlink_protocol::{
+	AssetId as ZenlinkAssetId, Origin as ZenlinkOrigin, PairInfo, ParaChainWhiteList, Transactor,
+};
+
 /// Weights for pallets used in the runtime.
 mod weights;
 

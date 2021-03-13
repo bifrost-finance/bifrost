@@ -258,5 +258,6 @@
       "Token": "TokenSymbol"
     }
   },
-  "CurrencyIdOf": "CurrencyId"
+  "CurrencyIdOf": "CurrencyId",
+  "AmountOf": "i128"
 }
