@@ -53,6 +53,8 @@ brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/ru
 # brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 # brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
+brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
@@ -76,9 +78,6 @@ orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-modu
 brml-assets = { path = "../../../../brml/assets", default-features = false }
 
 # zenlink
-# zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
-# zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
-
 zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
 zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
 
@@ -140,4 +139,6 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"cumulus-pallet-xcm-handler/std",
+	"brml-charge-transaction-fee/std",
+    "brml-charge-transaction-fee-rpc-runtime-api/std",
 ]

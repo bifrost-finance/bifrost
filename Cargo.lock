@@ -767,6 +767,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-charge-transaction-fee"
+version = "0.7.0"
+dependencies = [
+ "float-cmp",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "parity-scale-codec 2.0.1",
+ "serde",
+ "smallvec 1.6.1",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "zenlink-protocol",
+]
+
+[[package]]
+name = "brml-charge-transaction-fee-rpc"
+version = "0.7.0"
+dependencies = [
+ "brml-charge-transaction-fee-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec 2.0.1",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "brml-charge-transaction-fee-rpc-runtime-api"
+version = "0.7.0"
+dependencies = [
+ "parity-scale-codec 2.0.1",
+ "sp-api",
+]
+
+[[package]]
 name = "brml-voucher"
 version = "0.7.0"
 dependencies = [
@@ -1985,6 +2034,15 @@ dependencies = [
  "libc",
  "libz-sys",
  "miniz_oxide",
+]
+
+[[package]]
+name = "float-cmp"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1267f4ac4f343772758f7b1bdcbe767c218bbab93bb432acbf5162bbf85a6c4"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -4449,6 +4507,7 @@ version = "0.7.0"
 dependencies = [
  "asgard-runtime",
  "bifrost-runtime",
+ "brml-charge-transaction-fee-rpc",
  "bs58 0.3.1",
  "cumulus-client-collator",
  "cumulus-client-consensus-relay-chain",
@@ -7371,6 +7430,8 @@ name = "rococo-runtime"
 version = "0.7.0"
 dependencies = [
  "brml-assets",
+ "brml-charge-transaction-fee",
+ "brml-charge-transaction-fee-rpc-runtime-api",
  "brml-voucher",
  "brml-vtoken-mint",
  "brml-vtoken-mint-rpc-runtime-api",
@@ -11285,9 +11346,14 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
  "parity-scale-codec 2.0.1",
  "polkadot-parachain",
  "serde",
+ "sp-arithmetic",
  "sp-core",
  "sp-runtime",
  "sp-std",
