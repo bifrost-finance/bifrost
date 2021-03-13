@@ -27,7 +27,7 @@ use frame_system::{
 };
 use node_primitives::{CurrencyIdExt, CurrencyId, VtokenMintExt};
 use orml_traits::{
-	account::MergeAccount, MultiCurrency,
+	account::MergeAccount, MultiCurrency, GetByKey,
 	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
 use sp_runtime::{traits::{Saturating, Zero}, DispatchResult};
@@ -68,6 +68,9 @@ pub mod pallet {
 	
 		#[pallet::constant]
 		type VtokenMintDuration: Get<Self::BlockNumber>;
+
+		/// The ROI of each token by every block.
+		type RateOfInterestEachBlock: GetByKey<CurrencyIdOf<Self>, BalanceOf<Self>>;
 	
 		/// Set default weight
 		type WeightInfo: WeightInfo;
@@ -264,9 +267,13 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
-			// 
-			for (currency_id, pool) in MintPool::<T>::iter() {
-				
+			// Mock staking reward for pulling up vtoken price
+			for (currency_id, _) in MintPool::<T>::iter() {
+				// Only inject tokens into token pool
+				if currency_id.is_token() {
+					let year_rate = T::RateOfInterestEachBlock::get(&currency_id);
+					let _ = Self::expand_mint_pool(currency_id, year_rate);
+				}
 			}
 		}
 	}

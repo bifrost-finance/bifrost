@@ -22,12 +22,11 @@
 
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::{pallet_prelude::*};
-use node_primitives::{MultiCurrencyExt};
 use orml_traits::{
 	account::MergeAccount, MultiReservableCurrency,
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
 };
-use sp_runtime::{traits::{StaticLookup}, DispatchResult};
+use sp_runtime::traits::StaticLookup;
 
 mod mock;
 mod tests;
@@ -73,9 +72,9 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Token issue success, \[currency_id, dest, amount\]
-		Issued(CurrencyIdOf<T>, T::AccountId, BalanceOf<T>),
+		Issued(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
 		/// Token burn success, \[currency_id, dest, amount\]
-		Burned(CurrencyIdOf<T>, T::AccountId, BalanceOf<T>),
+		Burned(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
 
 	}
 
@@ -104,7 +103,7 @@ pub mod pallet {
 			let dest = T::Lookup::lookup(dest)?;
 			T::MultiCurrency::deposit(currency_id, &dest, amount)?;
 
-			Self::deposit_event(Event::Issued(currency_id, dest, amount));
+			Self::deposit_event(Event::Issued(dest, currency_id, amount));
 			Ok(().into())
 		}
 
@@ -129,7 +128,7 @@ pub mod pallet {
 
 			T::MultiCurrency::withdraw(currency_id, &dest, amount)?;
 
-			Self::deposit_event(Event::Burned(currency_id, dest, amount));
+			Self::deposit_event(Event::Burned(dest, currency_id, amount));
 			Ok(().into())
 		}
 	}
@@ -142,33 +141,5 @@ pub mod pallet {
 	impl WeightInfo for () {
 		fn burn() -> Weight { Default::default() }
 		fn issue() -> Weight { Default::default() }
-	}
-}
-
-/// MultiCurrencyExt for Pallet
-impl<T: Config> MultiCurrencyExt<T::AccountId> for Pallet<T> {
-	type CurrencyId = CurrencyIdOf<T>;
-	type Balance = BalanceOf<T>;
-
-	fn expand_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
-		// MintPool::<T>::try_mutate(currency_id, |total_issuance| -> DispatchResult {
-		// 	*total_issuance = total_issuance
-		// 		.checked_add(&amount)
-		// 		.ok_or(Error::<T>::TotalIssuanceOverflow)?;
-
-		// 	Ok(())
-		// })
-		todo!();
-	}
-
-	fn reduce_total_issuance(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult {
-		// MintPool::<T>::try_mutate(currency_id, |total_issuance| -> DispatchResult {
-		// 	*total_issuance = total_issuance
-		// 		.checked_sub(&amount)
-		// 		.ok_or(Error::<T>::TotalIssuanceOverflow)?;
-
-		// 	Ok(())
-		// })
-		todo!();
 	}
 }

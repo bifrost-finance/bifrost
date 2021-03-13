@@ -25,7 +25,7 @@ use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, Zero},
 	AccountId32,
 };
 
@@ -38,6 +38,7 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::Token(TokenSymbol::vKSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
+pub const CENTS: Balance = 1_000_000_000_000 / 100;
 
 frame_support::construct_runtime!(
 	pub enum Runtime where
@@ -46,7 +47,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: assets::{Module, Call, Storage, Event<T>, Config<T>},
+		Assets: orml_tokens::{Module, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		VtokenMint: vtoken_mint::{Module, Call, Storage, Event<T>},
 	}
@@ -102,23 +103,33 @@ orml_traits::parameter_type_with_key! {
 		0
 	};
 }
-impl assets::Config for Runtime {
+impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = i128;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = assets::TransferDust<Runtime, ()>;
+	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
 }
 
 parameter_types! {
 	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
 }
+orml_traits::parameter_type_with_key! {
+	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			&CurrencyId::Token(TokenSymbol::DOT) => 1 * CENTS,
+			&CurrencyId::Token(TokenSymbol::ETH) => 7 * CENTS,
+			_ => Zero::zero(),
+		}
+	};
+}
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type VtokenMintDuration = VtokenMintDuration;
+	type RateOfInterestEachBlock = RateOfInterestEachBlock;
 	type WeightInfo = ();
 }
 
@@ -179,7 +190,7 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		assets::GenesisConfig::<Runtime> {
+		orml_tokens::GenesisConfig::<Runtime> {
 			endowed_accounts: self
 				.endowed_accounts
 				// .into_iter()

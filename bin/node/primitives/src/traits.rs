@@ -249,20 +249,3 @@ pub trait DEXOperations<AccountId> {
 		token_1: &ZenlinkAssetId,
 	) -> Option<Pair<AccountId, TokenBalance>>;
 }
-
-pub trait MultiAsset<AccountId, TokenBalance> {
-	fn total_supply(asset_id: ZenlinkAssetId) -> TokenBalance;
-
-	fn balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> TokenBalance;
-
-	fn transfer(
-		asset_id: ZenlinkAssetId,
-		from: &AccountId,
-		to: &AccountId,
-		amount: TokenBalance,
-	) -> DispatchResult;
-
-	fn withdraw(asset_id: ZenlinkAssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
-
-	fn deposit(asset_id: ZenlinkAssetId, who: &AccountId, amount: TokenBalance) -> DispatchResult;
-}

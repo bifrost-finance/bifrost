@@ -35,13 +35,14 @@ use frame_system::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Amount, Balance, BiddingOrderId, BlockNumber, CurrencyId, EraId, Hash, Index,
-	Moment, PoolId, PoolToken, PoolWeight, SwapFee, TokenSymbol,
+	AccountIndex, Amount, AssetId, Balance, BiddingOrderId, BlockNumber, CurrencyId, EraId, Hash,
+	Index, Moment, Pair, PairId, PoolId, PoolToken, PoolWeight, SwapFee, TokenBalance, TokenSymbol,
+	ZenlinkAssetId,
 };
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::OpaqueMetadata;
 use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::traits::{
 	self, BlakeTwo256, Block as BlockT, Convert, SaturatedConversion, StaticLookup, Zero,
@@ -51,14 +52,14 @@ use sp_runtime::transaction_validity::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber,
-	ModuleId, Perbill, Perquintill,
+	KeyTypeId, ModuleId, Perbill, Perquintill,
 };
+
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 #[cfg(any(feature = "std", test))]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
-use zenlink_protocol::{AssetId, PairInfo, TokenBalance};
 
 #[cfg(any(feature = "std", test))]
 pub use frame_system::Call as SystemCall;
@@ -89,6 +90,9 @@ use orml_xcm_support::{
 	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr,
 };
 
+// zenlink imports
+use zenlink_protocol::{Origin as ZenlinkOrigin, PairInfo, Transactor};
+
 /// Weights for pallets used in the runtime.
 mod weights;
 
@@ -115,7 +119,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 22,
+	spec_version: 1,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -412,11 +416,21 @@ parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
 }
+parameter_type_with_key! {
+	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			&CurrencyId::Token(TokenSymbol::DOT) => 000_761_035_007,
+			&CurrencyId::Token(TokenSymbol::ETH) => 000_570_776_255,
+			_ => Zero::zero(),
+		}
+	};
+}
 
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type VtokenMintDuration = VtokenMintDuration;
+	type RateOfInterestEachBlock = RateOfInterestEachBlock;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
@@ -519,8 +533,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = ParachainInfo;
-	type DownwardMessageHandlers = XcmHandler;
-	type HrmpMessageHandlers = XcmHandler;
+	type DownwardMessageHandlers = ZenlinkProtocol;
+	type HrmpMessageHandlers = ZenlinkProtocol;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -560,12 +574,28 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_types! {
-	pub BifrostNetwork: NetworkId = NetworkId::Named("bifrost".into());
-	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
-	pub Ancestry: MultiLocation = MultiLocation::X1(Junction::Parachain {
-		id: ParachainInfo::get().into(),
-	});
 	pub const RelayChainCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+	pub BifrostNetwork: NetworkId = NetworkId::Named("bifrost".into());
+	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
+	pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
+	pub RelayChainOrigin: Origin = ZenlinkOrigin::Relay.into();
+	pub Ancestry: MultiLocation = Junction::Parachain {
+		id: ParachainInfo::parachain_id().into()
+	}.into();
+
+	pub SiblingParachains: Vec<MultiLocation> = vec![
+		// Sherpax live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 59 }),
+		// Bifrost local and live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
+		// Zenlink live
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 188 }),
+		// Zenlink local
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
+		// Sherpax local
+		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
+	];
 }
 
 pub type LocationConverter = (
@@ -575,19 +605,22 @@ pub type LocationConverter = (
 	AccountId32Aliases<BifrostNetwork, AccountId>,
 );
 
-pub type LocalAssetTransactor = MultiCurrencyAdapter<
-	Currencies,
-	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
-	LocationConverter,
-	AccountId,
-	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
-	CurrencyId,
->;
+// pub type LocalAssetTransactor = MultiCurrencyAdapter<
+// 	Currencies,
+// 	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
+// 	LocationConverter,
+// 	AccountId,
+// 	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
+// 	CurrencyId,
+// >;
+
+pub type LocalAssetTransactor =
+	Transactor<Balances, ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
 
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
+	SiblingParachainAsNative<ZenlinkOrigin, Origin>,
 	SignedAccountId32AsNative<BifrostNetwork, Origin>,
 );
 
@@ -603,7 +636,7 @@ parameter_types! {
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
-	type XcmSender = XcmHandler;
+	type XcmSender = ZenlinkProtocol;
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
 	//TODO: might need to add other assets based on orml-tokens
@@ -642,23 +675,6 @@ impl orml_xtokens::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
-parameter_types! {
-	pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
-
-	pub SiblingParachains: Vec<MultiLocation> = vec![
-		// Sherpax live
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 59 }),
-		// Bifrost local and live
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 107 }),
-		// Zenlink live
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 188 }),
-		// Zenlink local
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 200 }),
-		// Sherpax local
-		MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 300 })
-	];
-}
-
 pub struct AccountId32Converter;
 impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
 	fn convert(account_id: AccountId) -> [u8; 32] {
@@ -676,7 +692,6 @@ impl zenlink_protocol::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
-
 	type AccountIdConverter = LocationConverter;
 	type AccountId32Converter = AccountId32Converter;
 	type ParaId = ParachainInfo;
@@ -941,6 +956,7 @@ impl_runtime_apis! {
 		}
 	}
 
+
 	// impl asset rpc methods for runtime
 	// impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
 	// 	fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
@@ -969,19 +985,19 @@ impl_runtime_apis! {
 	}
 
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-		// fn get_assets() -> Vec<AssetId> {
+		// fn get_assets() -> Vec<ZenlinkAssetId> {
 		//     ZenlinkProtocol::assets_list()
 		// }
 
 		// fn get_balance(
-		//     asset_id: AssetId,
+		//     asset_id: ZenlinkAssetId,
 		//     owner: AccountId
 		// ) -> TokenBalance {
 		//     ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
 		// }
 
 		fn get_sovereigns_info(
-			asset_id: AssetId
+			asset_id: ZenlinkAssetId
 		) -> Vec<(u32, AccountId, TokenBalance)> {
 			ZenlinkProtocol::get_sovereigns_info(&asset_id)
 		}
@@ -999,7 +1015,7 @@ impl_runtime_apis! {
 		//buy amount token price
 		fn get_amount_in_price(
 			supply: TokenBalance,
-			path: Vec<AssetId>
+			path: Vec<ZenlinkAssetId>
 		) -> TokenBalance {
 			ZenlinkProtocol::get_in_price(supply, path)
 		}
@@ -1007,14 +1023,14 @@ impl_runtime_apis! {
 		//sell amount token price
 		fn get_amount_out_price(
 			supply: TokenBalance,
-			path: Vec<AssetId>
+			path: Vec<ZenlinkAssetId>
 		) -> TokenBalance {
 			ZenlinkProtocol::get_out_price(supply, path)
 		}
 
 		fn get_estimate_lptoken(
-			token_0: AssetId,
-			token_1: AssetId,
+			token_0: ZenlinkAssetId,
+			token_1: ZenlinkAssetId,
 			amount_0_desired: TokenBalance,
 			amount_1_desired: TokenBalance,
 			amount_0_min: TokenBalance,

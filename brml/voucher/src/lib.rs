@@ -21,8 +21,8 @@ extern crate alloc;
 use alloc::collections::btree_map::BTreeMap;
 use core::convert::TryInto;
 use frame_support::{
-	debug, decl_error, decl_event, decl_module, decl_storage, ensure, weights::Weight,
-	IterableStorageMap, Parameter,
+	decl_error, decl_event, decl_module, decl_storage, ensure, weights::Weight, IterableStorageMap,
+	Parameter,
 };
 use frame_system::{self as system, ensure_root};
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, StaticLookup, Zero};

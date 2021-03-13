@@ -183,10 +183,9 @@ pub fn testnet_genesis(
 				.iter()
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 					]
 				})
 				.collect(),
@@ -297,10 +296,10 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		"bifrost_pc1_testnet",
 		ChainType::Custom("Bifrost PC1 Testnet".into()),
 		move || {
-			bifrost_config_genesis(id)
+			rococo_config_genesis(id)
 		},
 		vec![
-			"/dns/bifrost-rpc.testnet.liebi.com/tcp/30333/p2p/12D3KooWJpy1x5TeRL1gUXhHfaQVC1xKM4rqXfhEjP3KUqVgamWi".parse().expect("failed to parse multiaddress.")
+			"/dns/rococo-1.testnet.liebi.com/tcp/30333/p2p/12D3KooWNM2rAjo2FqUgtQ2nnQ7nNxQntB9ssHS5TryvTVMpMKxa".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),
@@ -313,7 +312,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	)
 }
 
-fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
+fn rococo_config_genesis(id: ParaId) -> GenesisConfig {
 	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
 		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
 		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
