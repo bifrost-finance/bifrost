@@ -49,6 +49,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		NotRegistered,
+		NotValidator,
 	}
 
 	#[pallet::storage]
@@ -116,6 +117,10 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
+			ensure!(
+				<Validators<T>>::contains_key(&validator_id),
+				<Error<T>>::NotValidator
+			);
 			<Validators<T>>::remove(&validator_id);
 
 			Self::deposit_event(Event::ValidatorRemoved(validator_id));
