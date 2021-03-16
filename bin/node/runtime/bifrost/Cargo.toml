@@ -58,6 +58,7 @@ pallet-utility = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
 pallet-vesting = { version = "3.0.0", default-features = false }
+pallet-im-online = { version = "3.0.0", default-features = false }
 
 # bifrost pallets
 brml-assets = { path = "../../../../brml/assets", default-features = false }
@@ -119,6 +120,7 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-im-online/std",
 	"pallet-treasury/std",
 	"sp-transaction-pool/std",
 	"pallet-utility/std",
