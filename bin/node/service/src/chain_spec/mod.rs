@@ -22,7 +22,7 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use grandpa_primitives::{AuthorityId as GrandpaId};
 use babe_primitives::{AuthorityId as BabeId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
@@ -82,6 +82,7 @@ pub fn authority_keys_from_seed(seed: &str) -> (
 	AccountId,
 	GrandpaId,
 	BabeId,
+	ImOnlineId,
 	AuthorityDiscoveryId,
 ) {
 	(
@@ -89,6 +90,7 @@ pub fn authority_keys_from_seed(seed: &str) -> (
 		get_account_id_from_seed::<sr25519::Public>(seed),
 		get_from_seed::<GrandpaId>(seed),
 		get_from_seed::<BabeId>(seed),
+		get_from_seed::<ImOnlineId>(seed),
 		get_from_seed::<AuthorityDiscoveryId>(seed),
 	)
 }

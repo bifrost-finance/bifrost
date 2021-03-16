@@ -47,6 +47,7 @@ sp-trie = { version = "3.0.0" }
 
 # Substrate Pallets
 pallet-babe = { version = "3.0.0" }
+pallet-im-online = { version = "3.0.0" }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0" }
 
 # Substrate Other
