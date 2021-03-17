@@ -2885,7 +2885,6 @@ dependencies = [
 [[package]]
 name = "iost-chain"
 version = "0.1.0"
-source = "git+https://github.com/hsqlu/rs-iost?branch=master#e6997ec187ac888561199ee3c42ed562bbe1994a"
 dependencies = [
  "async-trait",
  "base58",
@@ -2908,7 +2907,6 @@ dependencies = [
 [[package]]
 name = "iost-derive"
 version = "0.2.1"
-source = "git+https://github.com/hsqlu/rs-iost?branch=master#e6997ec187ac888561199ee3c42ed562bbe1994a"
 dependencies = [
  "proc-macro2 1.0.24",
  "quote 1.0.7",
@@ -2918,7 +2916,6 @@ dependencies = [
 [[package]]
 name = "iost-keys"
 version = "0.1.0"
-source = "git+https://github.com/hsqlu/rs-iost?branch=master#e6997ec187ac888561199ee3c42ed562bbe1994a"
 dependencies = [
  "base58",
  "base64 0.12.3",

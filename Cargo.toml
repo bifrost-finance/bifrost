@@ -12,7 +12,7 @@ members = [
 	"brml/assets",
 	"brml/assets/rpc",
 	"brml/bridge-eos",
-#	"brml/bridge-iost",
+	"brml/bridge-iost",
 	"brml/convert",
 	"brml/convert/rpc",
 	"brml/staking-reward",
