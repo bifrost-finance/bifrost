@@ -406,7 +406,7 @@ decl_module! {
                         Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
                     }
                     Err(e) => {
-                        debug::info!("Bifrost => IOST failed due to {:?}", e);
+                        log::info!("Bifrost => IOST failed due to {:?}", e);
                         Self::deposit_event(RawEvent::WithdrawFail);
                     }
                 }
@@ -419,7 +419,7 @@ decl_module! {
                         Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
                     }
                     Err(e) => {
-                        debug::info!("IOST => Bifrost failed due to {:?}", e);
+                        log::info!("IOST => Bifrost failed due to {:?}", e);
                         Self::deposit_event(RawEvent::DepositFail);
                     }
                 }
@@ -467,13 +467,13 @@ decl_module! {
 
             match Self::bridge_asset_to(to, bridge_asset) {
                 Ok(_) => {
-                   debug::info!(target: "bridge-iost", "sent transaction to IOST node.");
+                   log::info!(target: "bridge-iost", "sent transaction to IOST node.");
                     // locked balance until trade is verified
                     T::AssetTrait::lock_asset(&origin, asset_id, amount);
                    Self::deposit_event(RawEvent::SendTransactionSuccess);
                 }
                 Err(e) => {
-                    debug::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
+                    log::warn!(target: "bridge-iost", "failed to send transaction to IOST node.");
                     Self::deposit_event(RawEvent::SendTransactionFailure);
                 }
             }
@@ -481,30 +481,30 @@ decl_module! {
 
         // Runs after every block.
         fn offchain_worker(now_block: T::BlockNumber) {
-            debug::RuntimeLogger::init();
-            debug::info!(target: "bridge-iost", "A offchain worker processing.");
+            log::RuntimeLogger::init();
+            log::info!(target: "bridge-iost", "A offchain worker processing.");
 
 
             if now_block % T::BlockNumber::from(10u32) == T::BlockNumber::from(2u32) {
                 match Self::offchain(now_block) {
-                    Ok(_) => debug::info!(target: "bridge-iost", "A offchain worker started."),
-                    Err(e) => debug::error!(target: "bridge-iost", "A offchain worker got error: {:?}", e),
+                    Ok(_) => log::info!(target: "bridge-iost", "A offchain worker started."),
+                    Err(e) => log::error!(target: "bridge-iost", "A offchain worker got error: {:?}", e),
                 }
             }
             // It's no nessesary to start offchain worker if no any task in queue
             // if !BridgeTxOuts::<T>::get().is_empty() {
             //     // Only send messages if we are a potential validator.
             //     if sp_io::offchain::is_validator() {
-            //         debug::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
+            //         log::info!(target: "bridge-iost", "Is validator at {:?}.", now_block);
             //         match Self::offchain(now_block) {
-            //             Ok(_) => debug::info!("A offchain worker started."),
-            //             Err(e) => debug::error!("A offchain worker got error: {:?}", e),
+            //             Ok(_) => log::info!("A offchain worker started."),
+            //             Err(e) => log::error!("A offchain worker got error: {:?}", e),
             //         }
             //     } else {
-            //         debug::info!(target: "bridge-iost", "Skipping send tx at {:?}. Not a validator.",now_block)
+            //         log::info!(target: "bridge-iost", "Skipping send tx at {:?}. Not a validator.",now_block)
             //     }
             // } else {
-            //     debug::info!(target: "bridge-iost", "There's no offchain worker started.");
+            //     log::info!(target: "bridge-iost", "There's no offchain worker started.");
             // }
         }
     }
@@ -570,7 +570,7 @@ impl<T: Config> Module<T> {
                     "" | "vIOST" => v_iost_id,
                     "IOST" => iost_id,
                     _ => {
-                        debug::error!("A invalid token type, default token type will be vtoken");
+                        log::error!("A invalid token type, default token type will be vtoken");
                         return Err(Error::<T>::InvalidMemo);
                     }
                 },
@@ -637,7 +637,7 @@ impl<T: Config> Module<T> {
                         .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
                     if all_vtoken_balances.lt(&vtoken_balances) {
-                        debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+                        log::warn!("origin account balance must be greater than or equal to the transfer amount.");
                         return Err(Error::<T>::InsufficientBalance);
                     }
 
@@ -711,8 +711,8 @@ impl<T: Config> Module<T> {
         let node_url = Self::get_offchain_storage(IOST_NODE_URL)?;
         let account_name = Self::get_offchain_storage(IOST_ACCOUNT_NAME)?;
         let sk_str = Self::get_offchain_storage(IOST_SECRET_KEY)?;
-        debug::info!(target: "bridge-iost", "IOST_NODE_URL ------------- {:?}.", node_url.as_str());
-        debug::info!(target: "bridge-iost", "IOST_SECRET_KEY ------------- {:?}.", sk_str.as_str());
+        log::info!(target: "bridge-iost", "IOST_NODE_URL ------------- {:?}.", node_url.as_str());
+        log::info!(target: "bridge-iost", "IOST_SECRET_KEY ------------- {:?}.", sk_str.as_str());
         let bridge_tx_outs = bridge_tx_outs.into_iter()
             .map(|bto| {
                 match bto {
@@ -721,12 +721,12 @@ impl<T: Config> Module<T> {
                         match bto.clone().generate::<T>(node_url.as_str()) {
                             Ok(generated_bto) => {
                                 has_change.set(true);
-                                debug::info!(target: "bridge-iost", "bto.generate {:?}",generated_bto);
-                                debug::info!("bto.generate");
+                                log::info!(target: "bridge-iost", "bto.generate {:?}",generated_bto);
+                                log::info!("bto.generate");
                                 generated_bto
                             }
                             Err(e) => {
-                                debug::info!("failed to get latest block due to: {:?}", e);
+                                log::info!("failed to get latest block due to: {:?}", e);
                                 bto
                             }
                         }
@@ -744,10 +744,10 @@ impl<T: Config> Module<T> {
                         match bto.sign::<T>(decoded_sk, account_name.as_str()) {
                             Ok(signed_bto) => {
                                 has_change.set(true);
-                                debug::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
+                                log::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
                                 ret = signed_bto;
                             }
-                            Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
+                            Err(e) => log::warn!("bto.sign with failure: {:?}", e),
                         }
                         ret
                     },
@@ -760,12 +760,12 @@ impl<T: Config> Module<T> {
                         match bto.clone().send::<T>(node_url.as_str()) {
                             Ok(sent_bto) => {
                                 has_change.set(true);
-                                debug::info!(target: "bridge-iost", "bto.send {:?}", sent_bto,);
-                                debug::info!("bto.send");
+                                log::info!(target: "bridge-iost", "bto.send {:?}", sent_bto,);
+                                log::info!("bto.send");
                                 sent_bto
                             }
                             Err(e) => {
-                                debug::warn!("error happened while pushing transaction: {:?}", e);
+                                log::warn!("error happened while pushing transaction: {:?}", e);
                                 bto
                             }
                         }
@@ -780,9 +780,9 @@ impl<T: Config> Module<T> {
             let call = Call::bridge_tx_report(bridge_tx_outs.clone());
             match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
                 Ok(_) => {
-                    debug::info!(target: "bridge-iost", "Call::bridge_tx_report {:?}", bridge_tx_outs)
+                    log::info!(target: "bridge-iost", "Call::bridge_tx_report {:?}", bridge_tx_outs)
                 }
-                Err(e) => debug::warn!("submit transaction with failure: {:?}", e),
+                Err(e) => log::warn!("submit transaction with failure: {:?}", e),
             }
         }
         Ok(())

@@ -25,7 +25,7 @@ mod tests;
 
 use frame_support::traits::Get;
 use frame_support::weights::DispatchClass;
-use frame_support::{weights::Weight,Parameter, decl_event, decl_error, decl_module, decl_storage, debug, ensure, StorageValue, IterableStorageMap};
+use frame_support::{weights::Weight,Parameter, decl_event, decl_error, decl_module, decl_storage, ensure, StorageValue, IterableStorageMap};
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, VtokenPool, FetchVtokenMintPrice, FetchVtokenMintPool, AssetReward, RewardHandler};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize};
@@ -339,7 +339,7 @@ impl<T: Config> Module<T> {
 			// if C want to redeem 1500 points, first redeem 1000 from A, then 500 from B
 			<ReferrerChannels<T>>::mutate(&minter, |incomes| {
 				if incomes.1 < incomes_to_redeem {
-					debug::warn!("you're redeem the points that is bigger than all you have.");
+					log::warn!("you're redeem the points that is bigger than all you have.");
 					return;
 				}
 

@@ -165,22 +165,22 @@ pub fn testnet_genesis(
 	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
 				.map(|x| (x, ENDOWMENT))
 				.collect()
-		}),
-		pallet_indices: Some(IndicesConfig {
+		},
+		pallet_indices: IndicesConfig {
 			indices: vec![],
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
-		}),
-		brml_assets: Some(AssetsConfig {
+		},
+		brml_assets: AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
 				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
@@ -188,8 +188,8 @@ pub fn testnet_genesis(
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 			],
-		}),
-		brml_vtoken_mint: Some(VtokenMintConfig {
+		},
+		brml_vtoken_mint: VtokenMintConfig {
 			mint_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
@@ -198,15 +198,15 @@ pub fn testnet_genesis(
 				(2, VtokenPool::new(1, 100)), // DOT
 				(4, VtokenPool::new(1, 100)), // KSM
 			],
-		}),
+		},
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
-				Some(VoucherConfig { voucher: vouchers })
+				VoucherConfig { voucher: vouchers }
 			} else {
-				None
+				Default::default()
 			}
 		},
-		orml_tokens: Some(TokensConfig {
+		orml_tokens: TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.flat_map(|x| {
@@ -218,8 +218,8 @@ pub fn testnet_genesis(
 					]
 				})
 				.collect(),
-		}),
-		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
+		},
+		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}
 }
 

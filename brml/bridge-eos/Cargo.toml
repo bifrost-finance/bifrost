@@ -20,9 +20,10 @@ sp-core = { version = "3.0.0", default-features = false }
 sp-io = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
-serde = { version = "1.0.118", optional = true }
+serde = { version = "1.0.124", optional = true }
 serde_json = { version = "1.0.60", default-features = false, features = ["alloc"] }
 lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", default-features = false, features = ["float"]}
+log = { version = "0.4.14", default-features = false }
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }
@@ -38,6 +39,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"hex/std",
+	"log/std",
 	"node-primitives/std",
 	"pallet-authorship/std",
 	"sp-application-crypto/std",

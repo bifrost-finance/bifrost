@@ -73,7 +73,7 @@ hex-literal = "0.2.1"
 lazy_static = "1.4.0"
 log = "0.4.8"
 parking_lot = "0.11.1"
-serde = { version = "1.0.118", features = ["derive"] }
+serde = { version = "1.0.124", features = ["derive"] }
 slog = "2.5.2"
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 serde_json = "1.0.60"
@@ -87,9 +87,6 @@ node-rpc = { path = "../rpc" }
 
 # RPC related dependencies
 jsonrpc-core = "15.1.0"
-
-# zenlink rpc
-zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
 
 [dev-dependencies]
 env_logger = "0.8.1"

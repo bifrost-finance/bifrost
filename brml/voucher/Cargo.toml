@@ -8,7 +8,8 @@ edition = "2018"
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 frame-system = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
-serde = { version = "1.0.118", optional = true }
+log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.124", optional = true }
 serde_json = { version = "1.0.60", default-features = false, features = ["alloc"] }
 sp-runtime = { version = "3.0.0", default-features = false }
 
@@ -18,6 +19,7 @@ std = [
 	"codec/std",
 	"frame-system/std",
 	"frame-support/std",
+	"log/std",
 	"serde/std",
 	"serde_json/std",
 	"sp-runtime/std",

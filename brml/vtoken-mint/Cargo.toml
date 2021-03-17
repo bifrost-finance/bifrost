@@ -9,7 +9,8 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 node-primitives = { path = "../../bin/node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
-serde = { version = "1.0.118", optional = true }
+log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.124", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
@@ -24,6 +25,7 @@ std = [
 	"node-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
+	"log/std",
 	"serde/std",
 	"sp-runtime/std",
 ]

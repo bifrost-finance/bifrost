@@ -22,12 +22,13 @@
 
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 use frame_support::{
-	construct_runtime, parameter_types, debug,
+	construct_runtime, parameter_types,
+	dispatch::DispatchResult,
+	traits::{Get, Randomness},
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND}, DispatchClass,
 	},
-	traits::{Get, Randomness}
 };
 use frame_system::{
 	EnsureRoot,
@@ -72,20 +73,18 @@ use sp_runtime::generic::Era;
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiLocation, NetworkId, Junction};
+use xcm::v0::{MultiLocation, NetworkId, Junction, Xcm};
 use xcm_builder::{
 	ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, LocationInverter,
 	SovereignSignedViaLocation, SiblingParachainAsNative,
-	RelayChainAsNative, SignedAccountId32AsNative, ChildParachainConvertsVia
+	RelayChainAsNative, SignedAccountId32AsNative,
 };
 use xcm_executor::{Config, XcmExecutor};
-use cumulus_primitives_core::{
-	relay_chain::Balance as RelayChainBalance,
-	ParaId
-};
+use cumulus_primitives_core::relay_chain::Balance as RelayChainBalance;
 
-use orml_xcm_support::{
-	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr
+pub use orml_xcm_support::{
+	CurrencyIdConverter, IsConcreteWithGeneralKey, MultiCurrencyAdapter, NativePalletAssetOr,
+	XcmHandler as XcmHandlerT,
 };
 use orml_traits::parameter_type_with_key;
 use orml_currencies::BasicCurrencyAdapter;
@@ -347,7 +346,7 @@ impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for R
 		);
 		let raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
-				debug::warn!("Unable to create signed payload: {:?}", e);
+				log::warn!("Unable to create signed payload: {:?}", e);
 			})
 			.ok()?;
 		let signature = raw_payload
@@ -499,6 +498,15 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
+	type SendXcmOrigin = EnsureRoot<AccountId>;
+	type AccountIdConverter = LocationConverter;
+}
+
+pub struct HandleXcm;
+impl orml_xcm_support::XcmHandler<AccountId> for HandleXcm {
+	fn execute_xcm(origin: AccountId, xcm: Xcm) -> DispatchResult {
+		XcmHandler::execute_xcm(origin, xcm)
+	}
 }
 
 parameter_types! {
@@ -554,13 +562,13 @@ parameter_types! {
 pub type LocationConverter = (
 	ParentIsDefault<AccountId>,
 	SiblingParachainConvertsVia<Sibling, AccountId>,
-	ChildParachainConvertsVia<ParaId, AccountId>,
 	AccountId32Aliases<BifrostNetwork, AccountId>,
 );
 
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
 	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
+	// IsConcreteWithGeneralKey<CurrencyId, Identity>,
 	LocationConverter,
 	AccountId,
 	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
@@ -617,12 +625,12 @@ impl orml_xtokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type ToRelayChainBalance = NativeToRelay;
+	// type ToRelayChainBalance = Identity;
 	type AccountId32Convert = AccountId32Convert;
 	//TODO: change network id if kusama
 	type RelayChainNetworkId = PolkadotNetworkId;
 	type ParaId = ParachainInfo;
-	type AccountIdConverter = LocationConverter;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmHandler = HandleXcm;
 }
 
 // culumus runtime end
@@ -872,7 +880,7 @@ impl_runtime_apis! {
 	}
 }
 
-cumulus_pallet_parachain_system::register_validate_block!(Block, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
 
 #[cfg(test)]
 mod tests {
