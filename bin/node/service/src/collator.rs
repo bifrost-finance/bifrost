@@ -237,7 +237,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 	};
 
 	if validator {
-		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+		let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 			task_manager.spawn_handle(),
 			client.clone(),
 			transaction_pool,
@@ -252,7 +252,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 			relay_chain_client: polkadot_full_node.client.clone(),
 			relay_chain_backend: polkadot_full_node.backend.clone(),
 		});
-		
+
 		let spawner = task_manager.spawn_handle();
 
 		let params = StartCollatorParams {

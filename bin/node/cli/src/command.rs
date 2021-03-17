@@ -188,13 +188,11 @@ pub fn run() -> Result<()> {
 						if config.chain_spec.is_asgard() || config.chain_spec.is_rococo() {
 							let key = sp_core::Pair::generate().0;
 
-							let extension = service::chain_spec::RelayExtensions::try_get(&config.chain_spec);
-							let relay_chain_id = extension.map(|e| e.relay_chain.clone());
-							let para_id = extension.map(|e| e.para_id);
+							let para_id =
+								node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
 							let polkadot_cli = RelayChainCli::new(
-								config.base_path.as_ref().map(|x| x.path().join("polkadot")),
-								relay_chain_id,
+								&config,
 								[RelayChainCli::executable_name().to_string()]
 									.iter()
 									.chain(cli.relaychain_args.iter()),
@@ -310,7 +308,25 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.database))
+
+			runner.sync_run(|config| {
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name().to_string()]
+						.iter()
+						.chain(cli.relaychain_args.iter()),
+				);
+
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.task_executor.clone(),
+					None,
+				)
+					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+				cmd.run(config, polkadot_config)
+			})
 		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;

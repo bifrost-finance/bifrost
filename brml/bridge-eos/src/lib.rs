@@ -38,7 +38,7 @@ use sp_runtime::{
 	},
 };
 use frame_support::{
-	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
+	decl_event, decl_module, decl_storage, decl_error, ensure, Parameter, traits::Get,
 	dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap, StorageValue,
 };
 use frame_system::{
@@ -626,7 +626,7 @@ decl_module! {
 						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
 					}
 					Err(e) => {
-						debug::warn!("Bifrost => EOS failed due to {:?}", e);
+						log::warn!("Bifrost => EOS failed due to {:?}", e);
 						Self::deposit_event(RawEvent::WithdrawFail);
 					}
 				}
@@ -645,7 +645,7 @@ decl_module! {
 						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
 					}
 					Err(e) => {
-						debug::info!("EOS => Bifrost failed due to {:?}", e);
+						log::info!("EOS => Bifrost failed due to {:?}", e);
 						Self::deposit_event(RawEvent::DepositFail);
 					}
 
@@ -725,14 +725,14 @@ decl_module! {
 
 			match Self::bridge_asset_to(to, bridge_asset) {
 				Ok(_) => {
-					debug::info!("sent transaction to EOS node.");
+					log::info!("sent transaction to EOS node.");
 					// locked balance until trade is verified
 					T::AssetTrait::lock_asset(&origin, asset_id, eos_amount);
 
 					Self::deposit_event(RawEvent::SentCrossChainTransaction);
 				}
 				Err(e) => {
-					debug::warn!("failed to send transaction to EOS node, due to {:?}", e);
+					log::warn!("failed to send transaction to EOS node, due to {:?}", e);
 					Self::deposit_event(RawEvent::FailToSendCrossChainTransaction);
 				}
 			}
@@ -740,7 +740,6 @@ decl_module! {
 
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
-			debug::RuntimeLogger::init();
 
 			// trigger offchain worker by each two block
 			if now_block % T::BlockNumber::from(2u32) == T::BlockNumber::from(0u32) {
@@ -752,7 +751,7 @@ decl_module! {
 					)
 				{
 					match Self::offchain(now_block) {
-						Ok(_) => debug::info!("A offchain worker started."),
+						Ok(_) => log::info!("A offchain worker started."),
 						Err(_) => (),
 					}
 				}
@@ -871,7 +870,7 @@ impl<T: Config> Module<T> {
 						"" | "vEOS" => v_eos_id,
 						"EOS" => eos_id,
 						_ => {
-							debug::error!("A invalid token type, default token type will be vtoken");
+							log::error!("A invalid token type, default token type will be vtoken");
 							return Err(Error::<T>::InvalidMemo);
 						}
 					}
@@ -936,7 +935,7 @@ impl<T: Config> Module<T> {
 				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 				if all_vtoken_balances.lt(&vtoken_balances) {
-					debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+					log::warn!("origin account balance must be greater than or equal to the transfer amount.");
 					return Err(Error::<T>::InsufficientBalance);
 				}
 
@@ -1028,7 +1027,7 @@ impl<T: Config> Module<T> {
 							changed_status_trxs.push(((generated_trx, index), TransactionStatus::Created, (trx.clone(), index),  None));
 						}
 						Err(e) => {
-							debug::error!("failed to get latest block due to: {:?}", e);
+							log::error!("failed to get latest block due to: {:?}", e);
 						}
 					}
 				}
@@ -1049,7 +1048,7 @@ impl<T: Config> Module<T> {
 								changed_status_trxs.push(((signed_trx, index), status, (trx.clone(), index), None));
 							}
 							Err(e) => {
-								debug::error!("failed to get latest block due to: {:?}", e);
+								log::error!("failed to get latest block due to: {:?}", e);
 							}
 						}
 					}
@@ -1083,8 +1082,8 @@ impl<T: Config> Module<T> {
 		if !changed_status_trxs.is_empty() {
 			let call = Call::update_bridge_trx_status(changed_status_trxs.clone());
 			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-				Ok(_) => debug::error!(target: "bridge-eos", "submit unsigned trxs {:?}", ()),
-				Err(e) => debug::error!("Failed to sent transaction due to: {:?}", e),
+				Ok(_) => log::error!(target: "bridge-eos", "submit unsigned trxs {:?}", ()),
+				Err(e) => log::error!("Failed to sent transaction due to: {:?}", e),
 			}
 		}
 
