@@ -146,30 +146,6 @@ impl std::ops::Deref for RunCmd {
     }
 }
 
-// #[derive(Debug, StructOpt)]
-// #[structopt(settings = &[
-// structopt::clap::AppSettings::GlobalVersion,
-// structopt::clap::AppSettings::ArgsNegateSubcommands,
-// structopt::clap::AppSettings::SubcommandsNegateReqs,
-// ])]
-// pub struct Cli {
-// 	#[structopt(subcommand)]
-// 	pub subcommand: Option<Subcommand>,
-
-// 	#[structopt(flatten)]
-// 	pub run: RunCmd,
-
-// 	/// Run node as collator.
-// 	///
-// 	/// Note that this is the same as running with `--validator`.
-// 	#[structopt(long, conflicts_with = "validator")]
-// 	pub collator: bool,
-
-// 	/// Relaychain arguments
-// 	#[structopt(raw = true)]
-// 	pub relaychain_args: Vec<String>,
-// }
-
 #[derive(Debug)]
 pub struct RelayChainCli {
 	/// The actual relay chain cli object.

@@ -18,19 +18,19 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token};
+use node_primitives::AccountId;
 use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use bifrost_runtime::{
 	constants::currency::DOLLARS,
-	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	VtokenMintConfig, CouncilConfig, DemocracyConfig, PoaManagerConfig,
+	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
+	CouncilConfig, DemocracyConfig, ImOnlineConfig, PoaManagerConfig,
 	GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SessionKeys,
-	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig, VestingConfig,
-	WASM_BINARY, wasm_binary_unwrap, ImOnlineConfig
+	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VestingConfig,
+	WASM_BINARY, wasm_binary_unwrap
 };
 use crate::chain_spec::{
 	Extensions, BabeId, GrandpaId, AuthorityDiscoveryId,
-	authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers, testnet_accounts
+	authority_keys_from_seed, get_account_id_from_seed, testnet_accounts
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -228,37 +228,11 @@ pub fn testnet_genesis(
 				.map(|account_id| (account_id.clone(), 0, 10000, ENDOWMENT / 2))
 				.collect::<Vec<_>>()
 		},
-		brml_assets: AssetsConfig {
-			account_assets: vec![],
-			token_details: vec![
-				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
-				(1, Token::new(b"aUSD".to_vec(), 18, 0, TokenType::Stable)),
-				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
-				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
-			],
-		},
 		brml_poa_manager: PoaManagerConfig {
 			initial_validators: initial_authorities
 				.iter()
 				.map(|x| x.0.clone())
 				.collect::<Vec<_>>(),
-		},
-		brml_vtoken_mint: VtokenMintConfig {
-			mint_price: vec![
-				(2, DOLLARS / 100), // DOT
-				(4, DOLLARS / 100), // KSM
-			], // initialize convert price as token = 100 * vtoken
-			pool: vec![
-				(2, VtokenPool::new(1, 100)), // DOT
-				(4, VtokenPool::new(1, 100)), // KSM
-			],
-		},
-		brml_voucher: {
-			if let Some(vouchers) = initialize_all_vouchers() {
-				VoucherConfig { voucher: vouchers }
-			} else {
-				Default::default()
-			}
 		},
 	}
 }

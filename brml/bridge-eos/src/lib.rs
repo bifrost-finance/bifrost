@@ -519,7 +519,7 @@ decl_module! {
 		#[weight = (T::WeightInfo::change_schedule(), DispatchClass::Normal, Pays::No)]
 		fn change_schedule(
 			origin,
-			legacy_schedule_hash: Checksum256,
+			_legacy_schedule_hash: Checksum256,
 			new_schedule: ProducerAuthoritySchedule,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
@@ -691,12 +691,12 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (T::WeightInfo::cross_to_eos(memo.len() as Weight), DispatchClass::Normal, Pays::No)]
+		#[weight = (T::WeightInfo::cross_to_eos(_memo.len() as Weight), DispatchClass::Normal, Pays::No)]
 		fn cross_to_eos(
 			origin,
 			to: Vec<u8>,
 			#[compact] amount: T::Balance,
-			memo: Vec<u8>
+			_memo: Vec<u8>
 		) {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
