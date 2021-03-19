@@ -8,31 +8,27 @@
 
 // Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+// along with Bifrost. If not, see <https://www.gnu.org/licenses/>.
 
 use std::{io::Write, net::SocketAddr};
-
 use codec::Encode;
-use cumulus_primitives::{genesis::generate_genesis_block, ParaId};
+use cumulus_primitives_core::ParaId;
+use cumulus_client_service::genesis::generate_genesis_block;
 use log::info;
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
 	NetworkParams, Result, Role, RuntimeVersion, SharedParams, SubstrateCli,
 };
-use sc_service::{
-	config::{BasePath, PrometheusConfig},
-};
+use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::{Block as BlockT};
-
 use node_primitives::Block;
 use node_service::{self as service, IdentifyVariant};
-
 use crate::{Cli, RelayChainCli, Subcommand};
 
 fn get_exec_name() -> Option<String> {
@@ -68,7 +64,8 @@ fn load_spec(
 		"rococo-staging" => Box::new(service::chain_spec::rococo::staging_testnet_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
-			Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+			// Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+			Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?)
 		}
 	})
 }
@@ -191,13 +188,11 @@ pub fn run() -> Result<()> {
 						if config.chain_spec.is_asgard() || config.chain_spec.is_rococo() {
 							let key = sp_core::Pair::generate().0;
 
-							let extension = service::chain_spec::RelayExtensions::try_get(&config.chain_spec);
-							let relay_chain_id = extension.map(|e| e.relay_chain.clone());
-							let para_id = extension.map(|e| e.para_id);
+							let para_id =
+								node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
 							let polkadot_cli = RelayChainCli::new(
-								config.base_path.as_ref().map(|x| x.path().join("polkadot")),
-								relay_chain_id,
+								&config,
 								[RelayChainCli::executable_name().to_string()]
 									.iter()
 									.chain(cli.relaychain_args.iter()),
@@ -219,7 +214,7 @@ pub fn run() -> Result<()> {
 								task_executor,
 								None,
 							).map_err(|err| format!("Relay chain argument error: {}", err))?;
-							let collator = cli.run.base.validator || cli.collator;
+							let collator = cli.run.base.validator;
 
 							info!("Parachain id: {:?}", id);
 							info!("Parachain Account: {}", parachain_account);
@@ -234,33 +229,26 @@ pub fn run() -> Result<()> {
 								.map_err(Into::into)
 						}
 					},
-				}
+				}.map_err(sc_cli::Error::Service)
 			})
 		}
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
 
-			set_default_ss58_version(chain_spec);
-
-			runner.sync_run(|config| {
-				cmd.run::<
-					service::bifrost_runtime::Block,
-					service::bifrost_runtime::RuntimeApi,
-					service::BifrostExecutor
-				>(config)
-			})
+			runner.sync_run(|config| cmd.run::<
+				service::bifrost_runtime::Block,
+				service::bifrost_runtime::RuntimeApi,
+				service::BifrostExecutor
+			>(config))
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
-				let chain_spec = &runner.config().chain_spec;
 
-				set_default_ss58_version(chain_spec);
-
-				runner.sync_run(|config| {
-					cmd.run::<service::bifrost_runtime::Block, service::BifrostExecutor>(config)
-				})
+				runner.sync_run(|config| cmd.run::<
+					service::bifrost_runtime::Block,
+					service::BifrostExecutor
+				>(config))
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`.".into())
@@ -291,10 +279,10 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 
-			runner.async_run(|mut config| {
+			Ok(runner.async_run(|mut config| {
 				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
 				Ok((cmd.run(client, config.database), task_manager))
-			})
+			})?)
 		},
 		Some(Subcommand::ExportState(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
@@ -320,7 +308,25 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.database))
+
+			runner.sync_run(|config| {
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name().to_string()]
+						.iter()
+						.chain(cli.relaychain_args.iter()),
+				);
+
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.task_executor.clone(),
+					None,
+				)
+					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+				cmd.run(config, polkadot_config)
+			})
 		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
@@ -334,7 +340,7 @@ pub fn run() -> Result<()> {
 			})
 		}
 		Some(Subcommand::ExportGenesisState(params)) => {
-			let mut builder = sc_cli::GlobalLoggerBuilder::new("");
+			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
@@ -358,7 +364,7 @@ pub fn run() -> Result<()> {
 			Ok(())
 		}
 		Some(Subcommand::ExportGenesisWasm(params)) => {
-			let mut builder = sc_cli::GlobalLoggerBuilder::new("");
+			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 

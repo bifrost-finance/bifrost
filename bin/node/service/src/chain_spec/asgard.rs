@@ -18,16 +18,17 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token};
-use cumulus_primitives::ParaId;
-use rococo_runtime::{
-	constants::currency::{BNCS as ASG, DOLLARS},
+use node_primitives::{AccountId, VtokenPool, TokenType, Token, TokenSymbol, CurrencyId};
+use cumulus_primitives_core::ParaId;
+use asgard_runtime::{
+	constants::currency::DOLLARS,
 	AssetsConfig, BalancesConfig, VtokenMintConfig,
-	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
+	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, TokensConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use crate::chain_spec::{
-	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
+	RelayExtensions, BabeId, GrandpaId, AuthorityDiscoveryId,
 	authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers, testnet_accounts
 };
 
@@ -161,25 +162,25 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * ASG;
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
 				.map(|x| (x, ENDOWMENT))
 				.collect()
-		}),
-		pallet_indices: Some(IndicesConfig {
+		},
+		pallet_indices: IndicesConfig {
 			indices: vec![],
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
-		}),
-		brml_assets: Some(AssetsConfig {
+		},
+		brml_assets: AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
 				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
@@ -187,8 +188,8 @@ pub fn testnet_genesis(
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 			],
-		}),
-		brml_vtoken_mint: Some(VtokenMintConfig {
+		},
+		brml_vtoken_mint: VtokenMintConfig {
 			mint_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
@@ -197,15 +198,28 @@ pub fn testnet_genesis(
 				(2, VtokenPool::new(1, 100)), // DOT
 				(4, VtokenPool::new(1, 100)), // KSM
 			],
-		}),
+		},
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
-				Some(VoucherConfig { voucher: vouchers })
+				VoucherConfig { voucher: vouchers }
 			} else {
-				None
+				Default::default()
 			}
 		},
-		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
+		orml_tokens: TokensConfig {
+			endowed_accounts: endowed_accounts
+				.iter()
+				.flat_map(|x| {
+					vec![
+						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::AUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+					]
+				})
+				.collect(),
+		},
+		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}
 }
 
@@ -291,19 +305,13 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let protocol_id = Some("asgard");
 
 	ChainSpec::from_genesis(
-		"Bifrost Asgard CC4",
+		"Asgard CC4 Testnet",
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		move || {
-			staging_testnet_config_genesis(id)
+			bifrost_config_genesis(id)
 		},
-		vec![
-			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
-			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWPbTeqZHdyTdqY14Zu2t6FVKmUkzTZc3y5GjyJ6ybbmSB".parse().expect("failed to parse multiaddress."),
-			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
-			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
-			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
-		],
+		vec![],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),
 		protocol_id,
@@ -314,3 +322,88 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		},
 	)
 }
+
+/// Configure genesis for bifrost test
+fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
+	let initial_authorities: Vec<(AccountId, AccountId, GrandpaId, BabeId, ImOnlineId, AuthorityDiscoveryId)> = vec![(
+		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
+		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
+		 // 5CSpDMTeczUJoZ14BuoJTAXJzF2FnWj7gwAsfredQKdvzkGL
+		 hex!["10dccc17a745f12b6026fb8e8c73544ad6d0e67f1e39106a899094bcc707e034"].into(),
+		 // 5EZ7Ed8PNharn8PqUDVDpriCNMk54hGyXfNh3eV5z6cwBgj4
+		 hex!["6e2209923b84e44d774cf692a7f4b2f67ffcddbfd1dfbf7bd6f1fb7d769aaf9d"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+	 ),(
+		 // 5GCAXGqMdfzFbcGXfFWZKGJQb7NdAsx21mFSwQhmBdJVw4Mm
+		 hex!["b6a16a837cad7ad3cadfd6eb3661488fdb4c419805ffd66ab1d5bdc2e7449a60"].into(),
+		 // 5GCAXGqMdfzFbcGXfFWZKGJQb7NdAsx21mFSwQhmBdJVw4Mm
+		 hex!["b6a16a837cad7ad3cadfd6eb3661488fdb4c419805ffd66ab1d5bdc2e7449a60"].into(),
+		 // 5G2PmFJC4HDjUSZxkp18TbdyzCdbLoCVykaJJhKnUfsR2JCo
+		 hex!["af2d88f20650a6048f6d67d26d27636eb7d08ee8d44d2c535946d83257d12e26"].unchecked_into(),
+		 // 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
+		 hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+		 // 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
+		 hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+	 ),(
+		 // 5GGtX6U97Kb8qiCkzQhqDaspLkghK9zz42X9g8K98gubV5Zi
+		 hex!["ba3bc59c52d7eaffef1a38d38ad41cca00936fcd471d1773aed308355b91600a"].into(),
+		 // 5GGtX6U97Kb8qiCkzQhqDaspLkghK9zz42X9g8K98gubV5Zi
+		 hex!["ba3bc59c52d7eaffef1a38d38ad41cca00936fcd471d1773aed308355b91600a"].into(),
+		 // 5HXm38QXLsYNvEDXcNNLXES6r1mUUTqYaz1fmsGMyFdQ97Do
+		 hex!["f1cf7fc925e4c35ab308234b51f72052a9354c71937c481bd8d128626d144de1"].unchecked_into(),
+		 // 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
+		 hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+		 // 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
+		 hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+	 ),(
+		 // 5D2DxHgaHafNc4cu6gi98NDwHrdRowkL1sRydtXTHbL5nDr1
+		 hex!["2a57cff9e91f5ee1fedf20061cf5dec7a24ff468dd35b0c6db9a6a7639405d2f"].into(),
+		 // 5D2DxHgaHafNc4cu6gi98NDwHrdRowkL1sRydtXTHbL5nDr1
+		 hex!["2a57cff9e91f5ee1fedf20061cf5dec7a24ff468dd35b0c6db9a6a7639405d2f"].into(),
+		 // 5GDf8Ut6d9a9qvSbLvUK7LTW5PSBH6JrBgzvsgzyhjKVMJrJ
+		 hex!["b7c4f618fcc05c2f3eefeb0454ebb932f10712beca6fa4193e89ebd624133f66"].unchecked_into(),
+		 // 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
+		 hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+		 // 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
+		 hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+	 ), (
+		 // 5GyAB9Jia3nWUMxZ34n8TNgXFaJyhXG1n5ttkuE4N7oNvPzp
+		 hex!["d8f24a7af34e86ccfec746ce9546a22eee95587a448a221c880e5a3bb447d835"].into(),
+		 // 5GyAB9Jia3nWUMxZ34n8TNgXFaJyhXG1n5ttkuE4N7oNvPzp
+		 hex!["d8f24a7af34e86ccfec746ce9546a22eee95587a448a221c880e5a3bb447d835"].into(),
+		 // 5CowAQJr7Cx6WZxV3yNRL5QrhT68sVYj94QazzQuQm8BgV2n
+		 hex!["20f857f37fff5fbff14292b565bdc6aaa6a5e4e3d04d2a01b2f501dc9bda0b14"].unchecked_into(),
+		 // 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
+		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+		 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+		 // 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
+		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+	 )];
+
+	// generated with secret: subkey inspect "$secret"/fir
+	let root_key: AccountId = hex![
+		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+	].into();
+
+	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
+
+	testnet_genesis(
+		initial_authorities,
+		root_key,
+		Some(endowed_accounts),
+		id,
+	)
+} 

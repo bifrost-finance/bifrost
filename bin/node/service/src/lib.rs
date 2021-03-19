@@ -74,7 +74,7 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
 	}
 	fn is_rococo(&self) -> bool {
-		self.id().starts_with("bifrost") || self.id().starts_with("roc")
+		self.id().starts_with("bifrost_pc1") || self.id().starts_with("roc")
 	}
 }
 
@@ -106,7 +106,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 			sc_consensus_babe::BabeLink<Block>,
 		),
 		grandpa::SharedVoterState,
-		Option<TelemetrySpan>,
+		(),
 	)
 >, ServiceError>
 	where
@@ -115,14 +115,23 @@ pub fn new_partial<RuntimeApi, Executor>(
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		Executor: NativeExecutionDispatch + 'static,
 {
-	let (client, backend, keystore_container, task_manager, telemetry_span) =
+	// let (client, backend, keystore_container, task_manager, telemetry_span) =
+	// 	sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
+	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
+	// let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+	// 	config.transaction_pool.clone(),
+	// 	config.prometheus_registry(),
+	// 	task_manager.spawn_handle(),
+	// 	client.clone(),
+	// );
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
+		config.role.is_authority().into(),
 		config.prometheus_registry(),
 		task_manager.spawn_handle(),
 		client.clone(),
@@ -148,7 +157,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		client.clone(),
 		select_chain.clone(),
 		inherent_data_providers.clone(),
-		&task_manager.spawn_handle(),
+		&task_manager.spawn_essential_handle(),
 		config.prometheus_registry(),
 		sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
 	)?;
@@ -213,7 +222,8 @@ pub fn new_partial<RuntimeApi, Executor>(
 		import_queue,
 		transaction_pool,
 		inherent_data_providers,
-		other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
+		other: (rpc_extensions_builder, import_setup, rpc_setup, ()),
+		// other: (),
 	})
 }
 
@@ -244,7 +254,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 		select_chain,
 		transaction_pool,
 		inherent_data_providers,
-		other: (rpc_extensions_builder, import_setup, rpc_setup, telemetry_span),
+		other: (rpc_extensions_builder, import_setup, rpc_setup, _),
 	} = new_partial::<RuntimeApi, Executor>(&config)?;
 
 	let shared_voter_state = rpc_setup;
@@ -281,6 +291,9 @@ pub fn new_full_base<RuntimeApi, Executor>(
 	let enable_grandpa = !config.disable_grandpa;
 	let prometheus_registry = config.prometheus_registry().cloned();
 
+	let telemetry_span = TelemetrySpan::new();
+	let _telemetry_span_entered = telemetry_span.enter();
+
 	let (_rpc_handlers, telemetry_connection_notifier) = sc_service::spawn_tasks(
 		sc_service::SpawnTasksParams {
 			config,
@@ -295,7 +308,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			remote_blockchain: None,
 			network_status_sinks: network_status_sinks.clone(),
 			system_rpc_tx,
-			telemetry_span,
+			telemetry_span: Some(telemetry_span.clone()),
 		},
 	)?;
 
@@ -366,7 +379,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 		name: Some(name),
 		observer_enabled: false,
 		keystore,
-		is_authority: role.is_network_authority(),
+		is_authority: role.is_authority(),
 	};
 
 	if enable_grandpa {
@@ -436,7 +449,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<LightBackend, Block>>,
 		Executor: NativeExecutionDispatch + 'static,
 {
-	let (client, backend, keystore_container, mut task_manager, on_demand, telemetry_span) =
+	let (client, backend, keystore_container, mut task_manager, on_demand) =
 		sc_service::new_light_parts::<Block, RuntimeApi, Executor>(&config)?;
 
 	config.network.extra_sets.push(grandpa::grandpa_peers_set_config());
@@ -473,7 +486,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 		client.clone(),
 		select_chain.clone(),
 		inherent_data_providers.clone(),
-		&task_manager.spawn_handle(),
+		&task_manager.spawn_essential_handle(),
 		config.prometheus_registry(),
 		sp_consensus::NeverCanAuthor,
 	)?;
@@ -505,6 +518,9 @@ pub fn new_light_base<RuntimeApi, Executor>(
 
 	let rpc_extensions = node_rpc::create_light(light_deps);
 
+	let telemetry_span = TelemetrySpan::new();
+	let _telemetry_span_entered = telemetry_span.enter();
+
 	let (rpc_handlers, telemetry_connection_notifier) =
 		sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 			on_demand: Some(on_demand),
@@ -516,7 +532,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 			config, backend, network_status_sinks, system_rpc_tx,
 			network: network.clone(),
 			task_manager: &mut task_manager,
-			telemetry_span,
+			telemetry_span: Some(telemetry_span.clone()),
 		})?;
 
 	Ok(NewLightBase {
@@ -580,7 +596,7 @@ pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 
 pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	if config.chain_spec.is_bifrost() {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
 		).map(|full| full.task_manager)
 	} else {

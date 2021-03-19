@@ -17,19 +17,19 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::Perbill;
 use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, VtokenPool, TokenType, Token};
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use bifrost_runtime::{
-	constants::currency::{BNCS as BNC, DOLLARS},
+	constants::currency::DOLLARS,
 	AssetsConfig, AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
-	VtokenMintConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
-	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
-	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
-	StakerStatus, WASM_BINARY, wasm_binary_unwrap,
+	VtokenMintConfig, CouncilConfig, DemocracyConfig, PoaManagerConfig,
+	GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SessionKeys,
+	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig, VestingConfig,
+	WASM_BINARY, wasm_binary_unwrap, ImOnlineConfig
 };
 use crate::chain_spec::{
-	Extensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
+	Extensions, BabeId, GrandpaId, AuthorityDiscoveryId,
 	authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers, testnet_accounts
 };
 
@@ -171,23 +171,22 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * BNC;
-	const STASH: u128 = ENDOWMENT / 1000;
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
 				.map(|x| (x, ENDOWMENT))
 				.collect()
-		}),
-		pallet_indices: Some(IndicesConfig {
+		},
+		pallet_indices: IndicesConfig {
 			indices: vec![],
-		}),
-		pallet_session: Some(SessionConfig {
+		},
+		pallet_session: SessionConfig {
 			keys: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.0.clone(), session_keys(
 					x.2.clone(),
@@ -196,61 +195,40 @@ pub fn testnet_genesis(
 					x.5.clone(),
 				))
 			}).collect::<Vec<_>>(),
-		}),
-		pallet_staking: Some(StakingConfig {
-			validator_count: 30,
-			minimum_validator_count: 3,
-			stakers: initial_authorities.iter().map(|x| { // we need last three addresses
-				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
-			}).collect(),
-			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
-				.chain(endowed_accounts.iter().cloned()).collect::<Vec<_>>(),
-			slash_reward_fraction: Perbill::from_percent(10),
-			.. Default::default()
-		}),
-		pallet_democracy: Some(DemocracyConfig::default()),
-		pallet_elections_phragmen: Some(ElectionsConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.map(|member| (member, STASH))
-				.collect(),
-		}),
-		pallet_collective_Instance1: Some(CouncilConfig::default()),
-		pallet_collective_Instance2: Some(TechnicalCommitteeConfig {
+		},
+		pallet_im_online: ImOnlineConfig {
+			keys: vec![],
+		},
+		pallet_democracy: DemocracyConfig::default(),
+		pallet_collective_Instance1: CouncilConfig::default(),
+		pallet_collective_Instance2: TechnicalCommitteeConfig {
 			members: endowed_accounts.iter()
 				.take((num_endowed_accounts + 1) / 2)
 				.cloned()
 				.collect(),
 			phantom: Default::default(),
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
-		}),
-		pallet_babe: Some(BabeConfig {
+		},
+		pallet_babe: BabeConfig {
 			authorities: vec![],
-		}),
-		pallet_im_online: Some(ImOnlineConfig {
+		},
+		pallet_authority_discovery: AuthorityDiscoveryConfig {
 			keys: vec![],
-		}),
-		pallet_authority_discovery: Some(AuthorityDiscoveryConfig {
-			keys: vec![],
-		}),
-		pallet_grandpa: Some(GrandpaConfig {
+		},
+		pallet_grandpa: GrandpaConfig {
 			authorities: vec![],
-		}),
-		pallet_membership_Instance1: Some(Default::default()),
-		pallet_treasury: Some(Default::default()),
-		pallet_society: Some(SocietyConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
-			pot: 0,
-			max_members: 999,
-		}),
-		pallet_vesting: Some(Default::default()),
-		brml_assets: Some(AssetsConfig {
+		},
+		pallet_membership_Instance1: Default::default(),
+		pallet_treasury: Default::default(),
+		pallet_vesting: VestingConfig {
+			vesting: endowed_accounts
+				.iter()
+				.map(|account_id| (account_id.clone(), 0, 10000, ENDOWMENT / 2))
+				.collect::<Vec<_>>()
+		},
+		brml_assets: AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
 				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
@@ -258,8 +236,14 @@ pub fn testnet_genesis(
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 			],
-		}),
-		brml_vtoken_mint: Some(VtokenMintConfig {
+		},
+		brml_poa_manager: PoaManagerConfig {
+			initial_validators: initial_authorities
+				.iter()
+				.map(|x| x.0.clone())
+				.collect::<Vec<_>>(),
+		},
+		brml_vtoken_mint: VtokenMintConfig {
 			mint_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
@@ -268,12 +252,12 @@ pub fn testnet_genesis(
 				(2, VtokenPool::new(1, 100)), // DOT
 				(4, VtokenPool::new(1, 100)), // KSM
 			],
-		}),
+		},
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
-				Some(VoucherConfig { voucher: vouchers })
+				VoucherConfig { voucher: vouchers }
 			} else {
-				None
+				Default::default()
 			}
 		},
 	}
@@ -327,7 +311,6 @@ fn local_testnet_genesis(_wasm_binary: &[u8]) -> GenesisConfig {
 	testnet_genesis(
 		vec![
 			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,

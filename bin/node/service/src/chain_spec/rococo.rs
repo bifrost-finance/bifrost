@@ -18,16 +18,17 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use telemetry::TelemetryEndpoints;
-use cumulus_primitives::ParaId;
-use node_primitives::{AccountId, VtokenPool, TokenType, Token};
+use cumulus_primitives_core::ParaId;
+use node_primitives::{AccountId, VtokenPool, TokenType, Token, TokenSymbol, CurrencyId};
 use rococo_runtime::{
-	constants::currency::{BNCS as RCO, DOLLARS},
+	constants::currency::DOLLARS,
 	AssetsConfig, BalancesConfig, VtokenMintConfig,
-	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
+	GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, TokensConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
 };
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use crate::chain_spec::{
-	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
+	RelayExtensions, BabeId, GrandpaId, AuthorityDiscoveryId,
 	authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers, testnet_accounts
 };
 
@@ -161,25 +162,25 @@ pub fn testnet_genesis(
 		}
 	);
 
-	const ENDOWMENT: u128 = 1_000_000 * RCO;
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 	GenesisConfig {
-		frame_system: Some(SystemConfig {
+		frame_system: SystemConfig {
 			code: wasm_binary_unwrap().to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(BalancesConfig {
+		},
+		pallet_balances: BalancesConfig {
 			balances: endowed_accounts.iter().cloned()
 				.map(|x| (x, ENDOWMENT))
 				.collect()
-		}),
-		pallet_indices: Some(IndicesConfig {
+		},
+		pallet_indices: IndicesConfig {
 			indices: vec![],
-		}),
-		pallet_sudo: Some(SudoConfig {
+		},
+		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
-		}),
-		brml_assets: Some(AssetsConfig {
+		},
+		brml_assets: AssetsConfig {
 			account_assets: vec![],
 			token_details: vec![
 				(0, Token::new(b"BNC".to_vec(), 12, 0, TokenType::Native)),
@@ -187,8 +188,8 @@ pub fn testnet_genesis(
 				(2, Token::new(b"DOT".to_vec(), 12, 0, TokenType::Token)),
 				(4, Token::new(b"KSM".to_vec(), 12, 0, TokenType::Token)),
 			],
-		}),
-		brml_vtoken_mint: Some(VtokenMintConfig {
+		},
+		brml_vtoken_mint: VtokenMintConfig {
 			mint_price: vec![
 				(2, DOLLARS / 100), // DOT
 				(4, DOLLARS / 100), // KSM
@@ -197,15 +198,28 @@ pub fn testnet_genesis(
 				(2, VtokenPool::new(1, 100)), // DOT
 				(4, VtokenPool::new(1, 100)), // KSM
 			],
-		}),
+		},
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
-				Some(VoucherConfig { voucher: vouchers })
+				VoucherConfig { voucher: vouchers }
 			} else {
-				None
+				Default::default()
 			}
 		},
-		parachain_info: Some(ParachainInfoConfig { parachain_id: id }),
+		orml_tokens: TokensConfig {
+			endowed_accounts: endowed_accounts
+				.iter()
+				.flat_map(|x| {
+					vec![
+						(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::AUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+					]
+				})
+				.collect(),
+		},
+		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}
 }
 
@@ -285,7 +299,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		);
 		props.insert(
 			"tokenSymbol".to_owned(),
-			serde_json::value::to_value("RCO".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
+			serde_json::value::to_value("ROC".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
 		);
 		Some(props)
 	};
@@ -298,13 +312,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		move || {
 			staging_testnet_config_genesis(id)
 		},
-		vec![
-			"/dns/n1.testnet.liebi.com/tcp/30333/p2p/12D3KooWHjmfpAdrjL7EvZ7Zkk4pFmkqKDLL5JDENc7oJdeboxJJ".parse().expect("failed to parse multiaddress."),
-			"/dns/n2.testnet.liebi.com/tcp/30333/p2p/12D3KooWPbTeqZHdyTdqY14Zu2t6FVKmUkzTZc3y5GjyJ6ybbmSB".parse().expect("failed to parse multiaddress."),
-			"/dns/n3.testnet.liebi.com/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
-			"/dns/n4.testnet.liebi.com/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
-			"/dns/n5.testnet.liebi.com/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
-		],
+		vec![],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),
 		protocol_id,
