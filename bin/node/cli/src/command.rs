@@ -64,8 +64,13 @@ fn load_spec(
 		"rococo-staging" => Box::new(service::chain_spec::rococo::staging_testnet_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
-			// Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
-			Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?)
+			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
+				Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?)
+			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
+				Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+			} else {
+				Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?)
+			}
 		}
 	})
 }

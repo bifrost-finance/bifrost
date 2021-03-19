@@ -80,15 +80,7 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(_: T::BlockNumber) {}
-
-		fn on_initialize(_: T::BlockNumber) -> Weight {
-			0
-		}
-
-		fn offchain_worker(_: T::BlockNumber) {}
-	}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
