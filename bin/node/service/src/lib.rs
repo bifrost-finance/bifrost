@@ -115,20 +115,12 @@ pub fn new_partial<RuntimeApi, Executor>(
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		Executor: NativeExecutionDispatch + 'static,
 {
-	// let (client, backend, keystore_container, task_manager, telemetry_span) =
-	// 	sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let (client, backend, keystore_container, task_manager) =
 		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
 	let client = Arc::new(client);
 
 	let select_chain = sc_consensus::LongestChain::new(backend.clone());
 
-	// let transaction_pool = sc_transaction_pool::BasicPool::new_full(
-	// 	config.transaction_pool.clone(),
-	// 	config.prometheus_registry(),
-	// 	task_manager.spawn_handle(),
-	// 	client.clone(),
-	// );
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
 		config.role.is_authority().into(),
