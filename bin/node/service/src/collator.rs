@@ -310,15 +310,7 @@ pub async fn start_node(
 			polkadot_config,
 			id,
 			validator,
-			|client| {
-				let mut io = jsonrpc_core::IoHandler::default();
-	
-				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-				// 	client,
-				// )));
-				io
-			},
+			|_| Default::default(),
 		).await.map(|full| full.0)
 	} else {
 		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
@@ -327,15 +319,7 @@ pub async fn start_node(
 			polkadot_config,
 			id,
 			validator,
-			|client| {
-				let mut io = jsonrpc_core::IoHandler::default();
-	
-				// use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-				// io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-				// 	client,
-				// )));
-				io
-			},
+			|_| Default::default(),
 		).await.map(|full| full.0)
 	}
 }
