@@ -236,5 +236,29 @@
     ]
   },
   "BiddingOrderId": "u64",
-  "EraId": "u32"
+  "EraId": "u32",
+  "CurrencyId": {
+    "_enum": {
+      "Token": "TokenSymbol"
+    }
+  },
+  "TokenSymbol": {
+    "_enum": [
+      "BNC",
+      "AUSD",
+      "DOT",
+      "KSM"
+    ]
+  },
+  "CurrencyIdOf": "CurrencyId",
+  "XCurrencyId": {
+    "chain_id": "ChainId",
+    "currency_id": "Vec<u8>"
+  },
+  "ChainId": {
+    "_enum": {
+      "RelayChain":  "",
+      "ParaChain": "ParaId"
+    }
+  }
 }

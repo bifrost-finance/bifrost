@@ -354,7 +354,7 @@ pub(crate) mod eos_rpc {
 
 		let body = response.body().collect::<Vec<u8>>();
 		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
-		// frame_support::debug::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
+		// log::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
 
 		if body_str.as_str().contains("Expired Transaction") {
 			return Err(Error::<T>::TransactionExpired);
