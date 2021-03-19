@@ -1,14 +1,23 @@
 {
+  "Address": "MultiAddress",
+  "LookupSource": "MultiAddress",
   "Token": {
     "symbol": "Vec<u8>",
     "precision": "u16",
-    "totalSupply": "u128"
+    "total_supply": "Balance",
+    "token_type": "TokenType",
+    "pair": "Option<AssetId>"
   },
   "VersionId": "u32",
   "Action": {
     "account": "AccountName",
     "name": "ActionName",
     "authorization": "Vec<PermissionLevel>",
+    "data": "Vec<u8>"
+  },
+  "IostAction": {
+    "contract": "Vec<u8>",
+    "action_name": "Vec<u8>",
     "data": "Vec<u8>"
   },
   "PermissionLevel": {
@@ -29,7 +38,8 @@
   "BlockchainType": {
     "_enum": [
       "BIFROST",
-      "EOS"
+      "EOS",
+      "IOST"
     ]
   },
   "Precision": "u32",
@@ -76,8 +86,9 @@
   "Extension": "(u16, Vec<u8>)",
   "IncrementalMerkle": {
     "_node_count": "u64",
-    "_active_nodes": "Vec<Checksum256>"
+    "_active_nodes": "Checksum256Array"
   },
+  "Checksum256Array": "Vec<Checksum256>",
   "FlatMap": {
     "map": "Vec<(ActionName, u64)>"
   },
@@ -95,50 +106,89 @@
     "multi_sig": "MultiSig",
     "action": "Action",
     "from": "AccountId",
-    "token_symbol": "TokenSymbol"
+    "asset_id": "AssetId"
   },
-  "Processing": {
+  "Sent": {
     "tx_id": "Vec<u8>",
-    "multi_sig_tx": "MultiSigTx"
+    "from": "AccountId",
+    "asset_id": "AssetId"
   },
-  "Fail": {
+  "Succeeded": {
+    "tx_id": "Vec<u8>"
+  },
+  "Failed": {
     "tx_id": "Vec<u8>",
-    "reason": "Vec<u8>",
-    "tx": "MultiSigTx"
+    "reason": "Vec<u8>"
   },
   "TxOut": {
     "_enum": {
-      "Initial": "MultiSigTx",
-      "Generated": "MultiSigTx",
-      "Signed": "MultiSigTx",
-      "Processing": "Processing",
-      "Success": "Vec<u8>",
-      "Fail": "Fail"
+      "Initialized": "MultiSigTx",
+      "Created": "MultiSigTx",
+      "SignComplete": "MultiSigTx",
+      "Sent": "Sent",
+      "Succeeded": "Succeeded",
+      "Failed": "Failed"
     }
   },
-  "ConvertPrice": "u128",
-  "RatePerBlock": "u64",
-  "Fee": "u64",
+  "IostMultiSigTx": {
+    "chain_id": "i32",
+    "raw_tx": "Vec<u8>",
+    "multi_sig": "MultiSig",
+    "action": "IostAction",
+    "from": "AccountId",
+    "asset_id": "AssetId"
+  },
+  "Processing": {
+    "tx_id": "Vec<u8>",
+    "multi_sig_tx": "IostMultiSigTx"
+  },
+  "IostTxOut": {
+    "_enum": {
+      "Initial": "IostMultiSigTx",
+      "Generated": "IostMultiSigTx",
+      "Signed": "IostMultiSigTx",
+      "Processing": "Processing",
+      "Success": "Vec<u8>",
+      "Fail": "Failed"
+    }
+  },
+  "RewardRecord": {
+    "account_id": "AccountId",
+    "record_amount": "Balance"
+  },
+  "VtokenMintPrice": "Balance",
+  "MintPrice": "Balance",
+  "SwapFee": "u64",
+  "PoolId": "u32",
+  "Nonce": "u32",
+  "PoolDetails": {
+    "owner": "AccountId",
+    "swap_fee_rate": "SwapFee",
+    "active": "bool"
+  },
+  "PoolCreateTokenDetails": {
+    "token_id": "AssetId",
+    "token_balance": "Balance",
+    "token_weight": "PoolWeight"
+  },
   "TokenPool": "Balance",
   "VTokenPool": "Balance",
   "InVariantPool": "Balance",
-  "TokenSymbol": {
-    "_enum": ["aUSD", "DOT", "vDOT", "KSM", "vKSM", "EOS", "vEOS"]
+  "TransactionStatus": {
+    "_enum": ["Initialized", "Created", "SignComplete", "Sent", "Succeeded", "Failed"]
   },
-  "Cost": "u128",
-  "Income": "u128",
   "Price": "u64",
   "AccountAsset": {
     "balance": "Balance",
     "locked": "Balance",
     "available": "Balance",
-    "cost": "Cost",
-    "income": "Income"
+    "cost": "Balance",
+    "income": "Balance"
   },
   "SpecIndex": "u32",
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
-  "ConvertPool": {
+  "VtokenPool": {
     "token_pool": "Balance",
     "vtoken_pool": "Balance",
     "current_reward": "Balance",
@@ -162,7 +212,8 @@
     "weight": "u16"
   },
   "InvariantValue": "Balance",
-  "PoolWeight": "Balance",
+  "PoolWeight": "u128",
+  "PoolToken": "u128",
   "AssetConfig": {
     "redeem_duration": "BlockNumber",
     "min_reward_per_block": "Balance"
@@ -175,5 +226,39 @@
     "reward_per_block": "Balance",
     "validator_address": "Vec<u8>"
   },
-  "BlockNumber": "u32"
+  "BlockNumber": "u32",
+  "TokenType": {
+    "_enum": [
+      "Native",
+      "Stable",
+      "Token",
+      "VToken"
+    ]
+  },
+  "BiddingOrderId": "u64",
+  "EraId": "u32",
+  "CurrencyId": {
+    "_enum": {
+      "Token": "TokenSymbol"
+    }
+  },
+  "TokenSymbol": {
+    "_enum": [
+      "BNC",
+      "AUSD",
+      "DOT",
+      "KSM"
+    ]
+  },
+  "CurrencyIdOf": "CurrencyId",
+  "XCurrencyId": {
+    "chain_id": "ChainId",
+    "currency_id": "Vec<u8>"
+  },
+  "ChainId": {
+    "_enum": {
+      "RelayChain":  "",
+      "ParaChain": "ParaId"
+    }
+  }
 }

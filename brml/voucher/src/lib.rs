@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -20,14 +20,20 @@ extern crate alloc;
 
 use alloc::collections::btree_map::BTreeMap;
 use core::convert::TryInto;
-use frame_support::traits::{Get};
-use frame_support::{decl_module, decl_event, decl_storage, decl_error, debug, ensure, Parameter, IterableStorageMap};
+use frame_support::{weights::Weight,decl_module, decl_event, decl_storage, decl_error, ensure, Parameter, IterableStorageMap};
 use sp_runtime::traits::{AtLeast32Bit, Member, MaybeSerializeDeserialize, StaticLookup, Zero};
 use frame_system::{self as system, ensure_root};
 
-pub trait Trait: system::Trait {
+pub trait WeightInfo{
+	fn issue_voucher() -> Weight;
+	fn intialize_all_voucher() -> Weight;
+	fn destroy_voucher() -> Weight;
+	fn export_all_vouchers() -> Weight;
+}
+
+pub trait Config: system::Config {
 	/// The overarching event type.
-	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
 	/// BNC Balance
 	type Balance: Member
 		+ Parameter
@@ -38,10 +44,13 @@ pub trait Trait: system::Trait {
 		+ Copy
 		+ Zero
 		+ Into<u128>;
+
+	/// Set default weight
+	type WeightInfo : WeightInfo;
 }
 
 decl_event! {
-	pub enum Event<T> where <T as system::Trait>::AccountId, <T as Trait>::Balance {
+	pub enum Event<T> where <T as system::Config>::AccountId, <T as Config>::Balance {
 		/// A event indicate user receives transaction.
 		IssuedVoucher(AccountId, Balance),
 		DestroyedVoucher(AccountId, Balance),
@@ -49,14 +58,14 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// Transferring too big balance
 		TransferringTooBigBalance,
 	}
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as Voucher {
+	trait Store for Module<T: Config> as Voucher {
 		/// How much voucher you have
 		pub BalancesVoucher get(fn voucher) config(): map hasher(blake2_128_concat) T::AccountId => T::Balance;
 		/// Total BNC in mainnet
@@ -67,7 +76,7 @@ decl_storage! {
 	add_extra_genesis {
 		build(|config: &GenesisConfig<T>| {
 			// initialize all vouchers for each register
-			let mut total = 0.into();
+			let mut total = Zero::zero();
 			for (who, balance) in &config.voucher {
 				<BalancesVoucher<T>>::insert(who, balance);
 				total += *balance;
@@ -79,12 +88,12 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::issue_voucher()]
 		pub fn issue_voucher(
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
@@ -117,7 +126,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::IssuedVoucher(dest, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::intialize_all_voucher()]
 		fn intialize_all_voucher(origin) {
 			ensure_root(origin)?;
 
@@ -128,12 +137,12 @@ decl_module! {
 
 			for (who, _) in <BalancesVoucher<T>>::iter() {
 				<BalancesVoucher<T>>::mutate(&who, |balance| {
-					*balance = 0.into();
+					*balance = Zero::zero();
 				});
 			}
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::destroy_voucher()]
 		pub fn destroy_voucher(
 			origin,
 			dest: <T::Lookup as StaticLookup>::Source,
@@ -171,7 +180,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::DestroyedVoucher(dest, amount));
 		}
 
-		#[weight = T::DbWeight::get().reads_writes(1, 1)]
+		#[weight = T::WeightInfo::export_all_vouchers()]
 		pub fn export_all_vouchers(origin) {
 			ensure_root(origin)?;
 
@@ -187,10 +196,10 @@ decl_module! {
 					match (std::fs::File::create(vouchers_path), serde_json::to_vec(&vouchers)) {
 						(Ok(ref mut file), Ok(ref bytes)) => {
 							if !file.write_all(&bytes[..]).is_ok() {
-								debug::warn!("failed to export all vouchers");
+								log::warn!("failed to export all vouchers");
 							}
 						}
-						_ => debug::warn!("failed to export all vouchers"),
+						_ => log::warn!("failed to export all vouchers"),
 					}
 				}
 			}

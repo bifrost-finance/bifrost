@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -23,15 +23,15 @@ use codec::Codec;
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
-	pub trait AssetsApi<TokenSymbol, AccountId, Balance> where
-		TokenSymbol: Codec,
+	pub trait AssetsApi<AssetId, AccountId, Balance> where
+		AssetId: Codec,
 		AccountId: Codec,
 		Balance: Codec,
 	{
 		/// get balances by account id
-		fn asset_balances(token_symbol: TokenSymbol, who: AccountId) -> u64;
+		fn asset_balances(asset_id: AssetId, who: AccountId) -> u64;
 
 		/// get all issued tokens by account id
-		fn asset_tokens(who: AccountId) -> Vec<TokenSymbol>;
+		fn asset_tokens(who: AccountId) -> Vec<AssetId>;
 	}
 }

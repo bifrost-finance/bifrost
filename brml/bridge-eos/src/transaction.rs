@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@ pub struct MultiSig<AccountId> {
 	threshold: u8,
 }
 
-impl<AccountId: PartialEq> MultiSig<AccountId> {
+impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
 	fn new(threshold: u8) -> Self {
 		MultiSig {
 			signatures: Default::default(),
@@ -57,7 +57,7 @@ impl<AccountId: PartialEq> MultiSig<AccountId> {
 
 	/// check whether a transaction is signed twice
 	fn has_signed(&self, author: AccountId) -> bool {
-		self.signatures.iter().find(|sig| sig.author == author).is_some()
+		self.signatures.iter().any(|sig| sig.author == author)
 	}
 }
 
@@ -71,7 +71,7 @@ impl<AccountId> Default for MultiSig<AccountId> {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub struct MultiSigTx<AccountId> {
+pub struct MultiSigTx<AccountId, AssetId> {
 	/// Chain id of Eos node that transaction will be sent
 	chain_id: Vec<u8>,
 	/// Transaction raw data for signing
@@ -82,44 +82,53 @@ pub struct MultiSigTx<AccountId> {
 	action: Action,
 	/// Who sends Transaction to EOS
 	pub from: AccountId,
-	/// token type
-	pub token_symbol: node_primitives::TokenSymbol,
+	/// Asset Id
+	pub asset_id: AssetId,
 }
 
 /// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
-pub enum TxOut<AccountId> {
+pub enum TxOut<AccountId, AssetId> {
+	None,
 	/// Initial Eos multi-sig transaction
-	Initial(MultiSigTx<AccountId>),
+	Initialized(MultiSigTx<AccountId, AssetId>),
 	/// Generated and signing Eos multi-sig transaction
-	Generated(MultiSigTx<AccountId>),
+	Created(MultiSigTx<AccountId, AssetId>),
 	/// Signed Eos multi-sig transaction
-	Signed(MultiSigTx<AccountId>),
-	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
-	Processing {
+	SignComplete(MultiSigTx<AccountId, AssetId>),
+	/// Eos multi-sig transaction has been sent to EOS node and fetching tx id from EOS node
+	Sent {
 		tx_id: Checksum256,
-		multi_sig_tx: MultiSigTx<AccountId>,
+		from: AccountId,
+		asset_id: AssetId,
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
-	Success(Vec<u8>),
+	Succeeded {
+		tx_id: Checksum256
+	},
 	/// Eos multi-sig transaction processed failed
-	Fail {
+	Failed {
 		tx_id: Vec<u8>,
-		reason: Vec<u8>,
-		tx: MultiSigTx<AccountId>,
+		reason: Vec<u8>
 	},
 }
 
-impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
-	/// intialize a transaction
-	pub fn init<T: crate::Trait>(
+impl<AccountId, AssetId> Default for TxOut<AccountId, AssetId> {
+	fn default() -> Self {
+		Self::None
+	}
+}
+
+impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, AssetId> {
+	/// initialize a transaction
+	pub fn init<T: crate::Config>(
 		raw_from: Vec<u8>,
 		raw_to: Vec<u8>,
 		amount: Asset,
 		threshold: u8,
 		memo: &str,
 		from: AccountId,
-		token_symbol: node_primitives::TokenSymbol
+		asset_id: AssetId
 	) -> Result<Self, Error<T>> {
 		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -134,40 +143,42 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 			multi_sig: MultiSig::new(threshold),
 			action,
 			from,
-			token_symbol,
+			asset_id,
 		};
 
-		Ok(TxOut::Initial(multi_sig_tx))
+		Ok(TxOut::Initialized(multi_sig_tx))
 	}
 
 	/// compose a transaction
-	pub fn generate<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
+	pub fn generate<T: crate::Config>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Initial(mut multi_sig_tx) => {
+			TxOut::Initialized(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
 				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
 
 				// fetch block
 				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
-
+				
 				let actions = vec![multi_sig_tx.action.clone()];
-				// Construct transaction
-				let expiration = (sp_io::offchain::timestamp().add(Duration::from_millis(600 * 1000)).unix_millis() as f64 / 1000.0) as u32;
+				// Construct transaction, and it will expire after one hour if doesn't send it EOS network
+				let expiration = (sp_io::offchain::timestamp()
+					.add(Duration::from_millis(600 * 1000))
+					.unix_millis() as f64 / 1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
 				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
-				Ok(TxOut::Generated(multi_sig_tx))
+				Ok(TxOut::Created(multi_sig_tx))
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
 		}
 	}
 
 	/// sign the transaction
-	pub fn sign<T: crate::Trait>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
+	pub fn sign<T: crate::Config>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Generated(mut multi_sig_tx) => {
+			TxOut::Created(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
 					return Err(Error::<T>::AlreadySignedByAuthor);
 				}
@@ -177,22 +188,27 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::EosChainError)?;
 				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
+				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
+					return Ok(TxOut::Created(multi_sig_tx));
+				}
+				
 				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
-					Ok(TxOut::Signed(multi_sig_tx))
+					Ok(TxOut::SignComplete(multi_sig_tx))
 				} else {
-					Ok(TxOut::Generated(multi_sig_tx))
+					Ok(TxOut::Created(multi_sig_tx))
 				}
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			TxOut::SignComplete(_) => Ok(self),
+			_ => Err(Error::<T>::InvalidSignedTxOutType)
 		}
 	}
 
 	/// send transaction to EOS node
-	pub fn send<T: crate::Trait>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
+	pub fn send<T: crate::Config>(self, eos_node_url: &str) -> Result<Self, Error<T>> {
 		match self {
-			TxOut::Signed(multi_sig_tx) => {
+			TxOut::SignComplete(multi_sig_tx) => {
 				let signed_trx = eos_rpc::serialize_push_transaction_params(&multi_sig_tx)?;
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
@@ -200,12 +216,13 @@ impl<AccountId: PartialEq + Clone> TxOut<AccountId> {
 				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
 
-				Ok(TxOut::Processing {
+				Ok(TxOut::Sent {
 					tx_id,
-					multi_sig_tx,
+					from: multi_sig_tx.from,
+					asset_id: multi_sig_tx.asset_id,
 				})
 			},
-			_ => Err(Error::<T>::InvalidTxOutType)
+			_ => Err(Error::<T>::InvalidSendTxOutType)
 		}
 	}
 }
@@ -238,7 +255,7 @@ pub(crate) mod eos_rpc {
 	type RefBlockPrefix = u32;
 
 	/// Get EOS node information
-	pub(crate) fn get_info<T: crate::Trait>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
+	pub(crate) fn get_info<T: crate::Config>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
 		let req_api = format!("{}{}", node_url, GET_INFO_API);
 		let pending = http::Request::post(&req_api, vec![b"{}"])
 			.add_header("Content-Type", "application/json")
@@ -283,7 +300,7 @@ pub(crate) mod eos_rpc {
 	}
 
 	/// Get current highest block from EOS net
-	pub(crate) fn get_block<T: crate::Trait>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
+	pub(crate) fn get_block<T: crate::Config>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
 		let req_body = {
 			JsonValue::Object(vec![
 				(
@@ -331,18 +348,26 @@ pub(crate) mod eos_rpc {
 	}
 
 	/// Push transaction to EOS net
-	pub(crate) fn push_transaction<T: crate::Trait>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
+	pub(crate) fn push_transaction<T: crate::Config>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
 		let pending = http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx]).send().map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
 		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		// log::info!(target: "bridge-eos", "push_transaction str: {:?}", body_str);
+
+		if body_str.as_str().contains("Expired Transaction") {
+			return Err(Error::<T>::TransactionExpired);
+		}
+		if body_str.as_str().contains("Duplicate transaction") {
+			return Err(Error::<T>::SendingDuplicatedTransaction);
+		}
 		let tx_id = get_transaction_id(&body_str)?;
 
 		Ok(tx_id.into_bytes())
 	}
 
-	pub(crate) fn serialize_push_transaction_params<T: crate::Trait, AccountId>(multi_sig_tx: &MultiSigTx<AccountId>) -> Result<Vec<u8>, Error<T>> {
+	pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(multi_sig_tx: &MultiSigTx<AccountId, AssetId>) -> Result<Vec<u8>, Error<T>> {
 		let serialized_signatures = {
 			let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
 			for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
@@ -377,7 +402,7 @@ pub(crate) mod eos_rpc {
 		Ok(signed_trx)
 	}
 
-	pub(crate) fn get_transaction_id<T: crate::Trait>(trx_response: &str) -> Result<String, Error<T>> {
+	pub(crate) fn get_transaction_id<T: crate::Config>(trx_response: &str) -> Result<String, Error<T>> {
 		// error happens while pushing transaction to EOS node
 		if !trx_response.contains("transaction_id") && !trx_response.contains("processed") {
 			return Err(Error::<T>::EOSRpcError);

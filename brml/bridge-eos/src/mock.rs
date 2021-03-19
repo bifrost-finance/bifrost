@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -23,7 +23,6 @@ use frame_support::{
 };
 use sp_core::H256;
 use sp_runtime::{
-	Perbill,
 	testing::{Header, TestXt},
 	traits::{BlakeTwo256, IdentityLookup},
 };
@@ -50,6 +49,7 @@ impl_outer_event! {
 		system<T>,
 		bridge_eos<T>,
 		assets<T>,
+		vtoken_mint,
 	}
 }
 
@@ -59,13 +59,13 @@ mod bridge_eos {
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 4 * 1024 * 1024;
-	pub const MaximumBlockLength: u32 = 4 * 1024 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -76,23 +76,15 @@ impl frame_system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
-	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type BaseCallFilter = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
+	type PalletInfo = ();
+	type SS58Prefix = ();
 }
-
 
 pub const TEST_ID: ConsensusEngineId = [1, 2, 3, 4];
 
@@ -112,7 +104,11 @@ impl FindAuthor<u64> for AuthorGiven {
 	}
 }
 
-impl pallet_authorship::Trait for Test {
+parameter_types! {
+	pub const UncleGenerations: u64 = 5;
+}
+
+impl pallet_authorship::Config for Test {
 	type FindAuthor = AuthorGiven;
 	type UncleGenerations = UncleGenerations;
 	type FilterUncle = ();
@@ -132,35 +128,49 @@ impl From<u64> for sr25519::AuthorityId {
 	}
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type AuthorityId = sr25519::AuthorityId;
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
 	type Precision = u32;
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
+	type FetchVtokenMintPool = VtokenMint;
+	type WeightInfo = ();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
+}
+
+impl vtoken_mint::Config for Test {
+	type MintPrice = u64;
+	type Event = TestEvent;
+	type AssetTrait = Assets;
+	type Balance = u64;
+	type AssetId = u32;
+	type VtokenMintDuration = VtokenMintDuration;
+	type WeightInfo = ();
 }
 
 pub type BridgeEos = crate::Module<Test>;
 pub type Authorship = pallet_authorship::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
+pub type VtokenMint = vtoken_mint::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
@@ -181,6 +191,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		notary_keys: vec![1u64, 2u64],
 		cross_chain_privilege: vec![(1u64, true)],
 		all_crosschain_privilege: Vec::new(),
+		cross_trade_eos_limit: 50,
+		eos_asset_id: 6,
 	}.assimilate_storage(&mut t).unwrap();
 	t.into()
 }

@@ -1,6 +1,6 @@
 [package]
 name = "brml-bridge"
-version = "0.4.0"
+version = "0.6.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 

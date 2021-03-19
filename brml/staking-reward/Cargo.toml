@@ -1,0 +1,29 @@
+[package]
+name = "brml-staking-reward"
+version = "0.7.0"
+authors = ["chw"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+node-primitives = { path = "../../bin/node/primitives", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+serde = { version = "1.0.124", optional = true }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-core = { version = "3.0.0", default-features = false }
+
+[dev-dependencies]
+assets = { package = "brml-assets", path = "../assets" }
+sp-io = { version = "3.0.0" }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "node-primitives/std",
+    "frame-support/std",
+    "frame-system/std",
+    "serde/std",
+    "sp-runtime/std",
+]

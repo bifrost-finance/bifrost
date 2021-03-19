@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -25,6 +25,8 @@ use frame_support::traits::{
 use sp_core::H256;
 use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
+
+use frame_system as system;
 
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
@@ -59,7 +61,7 @@ parameter_types! {
 	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl frame_system::Config for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -70,7 +72,6 @@ impl frame_system::Trait for Test {
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
-	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
 	type MaximumBlockWeight = MaximumBlockWeight;
 	type MaximumBlockLength = MaximumBlockLength;
@@ -85,21 +86,24 @@ impl frame_system::Trait for Test {
 	type BaseCallFilter = ();
 	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
+	type PalletInfo = ();
+	type SS58Prefix = ();
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
 	type Cost = u64;
 	type Income = u64;
-	type Convert = u64;
+	type VtokenMint = u128;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
+	type WeightInfo = ();
 }
 
-impl crate::Trait for Test {
+impl crate::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
@@ -109,6 +113,7 @@ impl crate::Trait for Test {
 	type AssetTrait = Assets;
 	type BridgeAssetTo = ();
 	type RewardHandler = ();
+	type WeightInfo = ();
 }
 
 pub type ProxyValidator = crate::Module<Test>;

@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -21,15 +21,36 @@ mod tests;
 
 use codec::{Encode, Decode};
 use core::convert::{From, Into};
-use frame_support::traits::Get;
 use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
-use frame_support::{decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
-use frame_system::{self as system, ensure_root, ensure_signed};
+use frame_support::{weights::Weight,decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
+use frame_system::{ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
 use sp_runtime::RuntimeDebug;
 use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
 use sp_std::prelude::*;
 use core::ops::Div;
+
+pub trait WeightInfo {
+	fn set_global_asset() -> Weight;
+	fn stake() -> Weight;
+	fn unstake() -> Weight;
+	fn validator_register() -> Weight;
+	fn set_need_amount() -> Weight;
+	fn set_reward_per_block() -> Weight;
+	fn deposit() -> Weight;
+	fn withdraw() -> Weight;
+}
+
+impl WeightInfo for () {
+	fn set_global_asset() -> Weight { Default::default() }
+	fn stake() -> Weight { Default::default() }
+	fn unstake() -> Weight { Default::default() }
+	fn validator_register() -> Weight { Default::default() }
+	fn set_need_amount() -> Weight { Default::default() }
+	fn set_reward_per_block() -> Weight { Default::default() }
+	fn deposit() -> Weight { Default::default() }
+	fn withdraw() -> Weight { Default::default() }
+}
 
 pub type ValidatorAddress = Vec<u8>;
 
@@ -75,9 +96,9 @@ impl<Balance: Default, BlockNumber: Default> ProxyValidatorRegister<Balance, Blo
 	}
 }
 
-pub trait Trait: frame_system::Trait {
+pub trait Config: frame_system::Config {
 	/// event
-	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
+	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + From<Self::BlockNumber>;
 	/// The arithmetic type of asset identifier.
@@ -94,13 +115,15 @@ pub trait Trait: frame_system::Trait {
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
 	/// Reward handler
 	type RewardHandler: RewardHandler<TokenSymbol, Self::Balance>;
+	/// Set default weight
+	type WeightInfo : WeightInfo;
 }
 
 decl_event! {
 	pub enum Event<T> where
-		<T as Trait>::Balance,
-		<T as frame_system::Trait>::AccountId,
-		<T as frame_system::Trait>::BlockNumber,
+		<T as Config>::Balance,
+		<T as frame_system::Config>::AccountId,
+		<T as frame_system::Config>::BlockNumber,
 	{
 		/// A new asset config has been set.
 		AssetConfigSet(TokenSymbol, AssetConfig<BlockNumber, Balance>),
@@ -122,7 +145,7 @@ decl_event! {
 }
 
 decl_error! {
-	pub enum Error for Module<T: Trait> {
+	pub enum Error for Module<T: Config> {
 		/// The asset config has not been set.
 		AssetConfigNotSet,
 		/// The proxy validator has been registered.
@@ -151,7 +174,7 @@ decl_error! {
 }
 
 decl_storage! {
-	trait Store for Module<T: Trait> as ProxyValidator {
+	trait Store for Module<T: Config> as ProxyValidator {
 		/// Asset config data.
 		AssetConfigs get(fn asset_configs): map hasher(blake2_128_concat) TokenSymbol => AssetConfig<T::BlockNumber, T::Balance>;
 		/// The total amount of asset has been locked for staking.
@@ -165,12 +188,12 @@ decl_storage! {
 }
 
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
 
-		#[weight = 0]
+		#[weight = T::WeightInfo::set_global_asset()]
 		fn set_global_asset(
 			origin,
 			token_symbol: TokenSymbol,
@@ -185,7 +208,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::AssetConfigSet(token_symbol, asset_config));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::stake()]
 		fn stake(
 			origin,
 			token_symbol: TokenSymbol,
@@ -220,7 +243,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorStaked(token_symbol, target, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::unstake()]
 		fn unstake(
 			origin,
 			token_symbol: TokenSymbol,
@@ -254,7 +277,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorUnStaked(token_symbol, target, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::validator_register()]
 		fn validator_register(
 			origin,
 			token_symbol: TokenSymbol,
@@ -286,7 +309,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorRegistered(token_symbol, origin, validator));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		//#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::set_need_amount()]
 		fn set_need_amount(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -302,7 +326,8 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorNeedAmountSet(token_symbol, origin, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		//#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::set_reward_per_block()]
 		fn set_reward_per_block(origin, token_symbol: TokenSymbol, reward_per_block: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -324,7 +349,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorRewardPerBlockSet(token_symbol, origin, reward_per_block));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::deposit()]
 		fn deposit(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -343,7 +368,7 @@ decl_module! {
 			Self::deposit_event(RawEvent::ProxyValidatorDeposited(token_symbol, origin, amount));
 		}
 
-		#[weight = T::DbWeight::get().writes(1)]
+		#[weight = T::WeightInfo::withdraw()]
 		fn withdraw(origin, token_symbol: TokenSymbol, amount: T::Balance) {
 			let origin = ensure_signed(origin)?;
 
@@ -365,13 +390,13 @@ decl_module! {
 		fn on_finalize(now_block: T::BlockNumber) {
 			match Self::validator_deduct(now_block) {
 				Ok(_) => (),
-				Err(e) => debug::error!("An error happened while deduct: {:?}", e),
+				Err(e) => log::error!("An error happened while deduct: {:?}", e),
 			}
 		}
 	}
 }
 
-impl<T: Trait> Module<T> {
+impl<T: Config> Module<T> {
 	fn asset_lock(
 		account_id: T::AccountId,
 		token_symbol: TokenSymbol,
@@ -419,7 +444,7 @@ impl<T: Trait> Module<T> {
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
-			let mut reward = Zero::zero();
+			let  reward;
 			let min_reward = val.staking.saturating_mul(
 				min_reward_per_block.saturating_mul(redeem_duration.into())
 			).div(1_000_000.into()).div(1_000_000.into());

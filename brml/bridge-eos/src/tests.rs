@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -37,7 +37,7 @@ use sp_core::offchain::{
 use sp_runtime::traits::Header as HeaderT;
 use sp_runtime::{generic::DigestItem, testing::Header};
 use node_primitives::{BridgeAssetSymbol, BlockchainType};
-use frame_support::{assert_ok, dispatch};
+use frame_support::assert_ok;
 
 #[test]
 fn get_latest_schedule_version_should_work() {
@@ -374,7 +374,7 @@ fn bridge_eos_offchain_should_work() {
 			amount: 1 * 10u64.pow(8),
 			memo: vec![],
 			from: 1,
-			token_symbol: TokenSymbol::EOS,
+			asset_id: 6,
 		};
 		assert_ok!(BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset));
 		assert_ok!(BridgeEos::offchain(1));
@@ -388,18 +388,7 @@ fn bridge_eos_offchain_should_work() {
 		use codec::Decode;
 		let transaction = pool_state.write().transactions.pop().unwrap();
 		assert_eq!(pool_state.read().transactions.len(), 1);
-		let ex: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
-		let tx_outs = match ex.call {
-			crate::mock::Call::BridgeEos(crate::Call::bridge_tx_report(tx_outs)) => tx_outs,
-			e => panic!("Unexpected call: {:?}", e),
-		};
-
-		assert_eq!(tx_outs.iter().filter(|out| {
-			match out {
-				TxOut::Processing{ .. } => true,
-				_ => false,
-			}
-		}).count(), 1);
+		let _: Extrinsic = Decode::decode(&mut &*transaction).unwrap();
 	});
 }
 
@@ -462,22 +451,6 @@ fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Err
 	Ok(json_str)
 }
 
-#[allow(dead_code)]
-fn bridge_tx_report() -> dispatch::DispatchResult {
-	#[allow(deprecated)]
-	use frame_support::unsigned::ValidateUnsigned;
-
-	let tx_outs = vec![TxOut::Success(vec![])];
-
-	#[allow(deprecated)]
-	BridgeEos::pre_dispatch(&crate::Call::bridge_tx_report(tx_outs.clone())).map_err(|e| <&'static str>::from(e))?;
-
-	BridgeEos::bridge_tx_report(
-		Origin::none(),
-		tx_outs,
-	)
-}
-
 fn seal_header(mut header: Header, author: u64) -> Header {
 	{
 		let digest = header.digest_mut();
@@ -507,7 +480,6 @@ fn rotate_author(author: u64) {
 	header.digest_mut().pop(); // pop the seal off.
 	System::initialize(
 		&1,
-		&Default::default(),
 		&Default::default(),
 		header.digest(),
 		Default::default(),

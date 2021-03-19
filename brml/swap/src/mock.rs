@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -16,14 +16,19 @@
 
 #![cfg(test)]
 
+use super::*;
+use crate as swap;
 use frame_support::{
-	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}
+	impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types,
+	traits::{OnFinalize, OnInitialize},
 };
 use sp_core::H256;
-use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
-use super::*;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+};
 
-const DOLLARS: u64 = 1_000_000_000_000u64;
+use frame_system as system;
 
 impl_outer_dispatch! {
 	pub enum Call for Test where origin: Origin {
@@ -31,7 +36,7 @@ impl_outer_dispatch! {
 	}
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Test;
 
 impl_outer_origin! {
@@ -41,91 +46,89 @@ impl_outer_origin! {
 impl_outer_event! {
 	pub enum TestEvent for Test {
 		system<T>,
-		brml_swap<T>,
+		swap<T>,
 		assets<T>,
 	}
 }
 
-mod brml_swap {
-	pub use crate::Event;
-}
-
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 4 * 1024 * 1024;
-	pub const MaximumBlockLength: u32 = 4 * 1024 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-	pub const UncleGenerations: u32 = 5;
 }
 
-impl frame_system::Trait for Test {
+impl system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
-	type BlockNumber = u64;
 	type Call = Call;
+	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = TestEvent;
-	type ModuleToIndex = ();
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type PalletInfo = ();
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type BaseCallFilter = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 parameter_types! {
-	pub const InitPoolSupply: u64 = 1000;
-	pub const MaximumSwapInRatio: u64 = 2;
-	pub const MinimumBalance: u64 = 10;
+	pub const MaximumSwapInRatio: u8 = 2;
+	pub const MinimumPassedInPoolTokenShares: u64 = 2;
+	pub const MinimumSwapFee: u64 = 1; // 0.001%
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
-	pub const MinimumSwapFee: u64 = 1; // 0.0001%
-	pub const FeePrecision: u64 = DOLLARS / 10_000_000;
+	pub const FeePrecision: u64 = 100_000;
+	pub const WeightPrecision: u64 = 100_000;
+	pub const BNCAssetId: u32 = 0;
+	pub const InitialPoolSupply: u64 = 1_000;
+
+	pub const NumberOfSupportedTokens: u8 = 8;
+	pub const BonusClaimAgeDenominator: u64 = 14_400;
+	pub const MaximumPassedInPoolTokenShares: u64 = 1_000_000;
 }
 
-impl crate::Trait for Test {
-	type Fee = u64;
+impl crate::Config for Test {
 	type Event = TestEvent;
-	type AssetTrait = Assets;
-	type Balance = u64;
+	type SwapFee = u64;
 	type AssetId = u32;
-	type Cost = u64;
-	type Income = u64;
-	type InvariantValue = u64;
+	type PoolId = u32;
+	type Balance = u64;
+	type AssetTrait = Assets;
 	type PoolWeight = u64;
-	type InitPoolSupply = InitPoolSupply;
+	type PoolToken = u64;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
-	type MinimumBalance = MinimumBalance;
-	type MaximumSwapFee = MaximumSwapFee;
+	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
+	type MaximumSwapFee = MaximumSwapFee;
 	type FeePrecision = FeePrecision;
+	type WeightPrecision = WeightPrecision;
+	type BNCAssetId = BNCAssetId;
+	type InitialPoolSupply = InitialPoolSupply;
+	type NumberOfSupportedTokens = NumberOfSupportedTokens;
+	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
+	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
 }
 
-impl assets::Trait for Test {
+impl assets::Config for Test {
 	type Event = TestEvent;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = ();
+	type FetchVtokenMintPrice = ();
+	type WeightInfo = ();
 }
 
-pub type Swap = crate::Module<Test>;
+pub type Swap = swap::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
 
@@ -142,5 +145,8 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap()
+		.into()
 }

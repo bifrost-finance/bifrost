@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -41,13 +41,13 @@ impl<C, Block> Assets<C, Block> {
 }
 
 #[rpc]
-pub trait AssetsApi<BlockHash, TokenSymbol, AccountId, Balance> {
+pub trait AssetsApi<BlockHash, AssetId, AccountId, Balance> {
 	/// rpc method get balances by account id
 	/// useage: curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "assets_getBalances", "params": [0, "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]}' http://localhost:9933/
 	#[rpc(name = "assets_getBalances")]
 	fn asset_balances(
 		&self,
-		token_symbol: TokenSymbol,
+		asset_id: AssetId,
 		who: AccountId,
 		at: Option<BlockHash>
 	) -> JsonRpcResult<u64>;
@@ -59,31 +59,31 @@ pub trait AssetsApi<BlockHash, TokenSymbol, AccountId, Balance> {
 		&self,
 		who: AccountId,
 		at: Option<BlockHash>
-	) -> JsonRpcResult<Vec<TokenSymbol>>;
+	) -> JsonRpcResult<Vec<AssetId>>;
 }
 
-impl<C, Block, TokenSymbol, AccountId, Balance> AssetsApi<<Block as BlockT>::Hash, TokenSymbol, AccountId, Balance>
+impl<C, Block, AssetId, AccountId, Balance> AssetsApi<<Block as BlockT>::Hash, AssetId, AccountId, Balance>
 	for Assets<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: AssetsRuntimeApi<Block, TokenSymbol, AccountId, Balance>,
+	C::Api: AssetsRuntimeApi<Block, AssetId, AccountId, Balance>,
 	AccountId: Codec,
-	TokenSymbol: Codec,
+	AssetId: Codec,
 	Balance: Codec,
 {
-	fn asset_balances(&self, token_symbol: TokenSymbol, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<u64> {
+	fn asset_balances(&self, asset_id: AssetId, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<u64> {
 		let asset_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		asset_rpc_api.asset_balances(&at, token_symbol, who).map_err(|e| RpcError {
+		asset_rpc_api.asset_balances(&at, asset_id, who).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
 			message: "Failed to get balance for you requested asset id.".to_owned(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}
 
-	fn asset_tokens(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<Vec<TokenSymbol>> {
+	fn asset_tokens(&self, who: AccountId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<Vec<AssetId>> {
 		let asset_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
