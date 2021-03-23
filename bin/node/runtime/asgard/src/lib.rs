@@ -22,12 +22,14 @@
 
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 use frame_support::{
-	construct_runtime, parameter_types, debug,
+	construct_runtime, parameter_types,
 	weights::{
 		Weight, IdentityFee, DispatchClass,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
-	traits::{Get, Randomness}
+	traits::{
+		Randomness, ExistenceRequirement, ExistenceRequirement::KeepAlive, WithdrawReasons, Currency
+	}
 };
 use frame_system::{
 	EnsureRoot,
@@ -37,14 +39,12 @@ use codec::{Encode};
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Balance, BlockNumber, Hash, Index, Moment,
-	AssetId, SwapFee, PoolId, PoolWeight, PoolToken,
-	BiddingOrderId, EraId, Amount, CurrencyId, TokenSymbol
+	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Amount, CurrencyId, TokenSymbol
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
-	impl_opaque_keys, generic, create_runtime_str, ModuleId
+	impl_opaque_keys, generic, create_runtime_str, ModuleId, DispatchResult
 };
 use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
 use sp_runtime::traits::{
@@ -93,6 +93,7 @@ use orml_currencies::BasicCurrencyAdapter;
 // zenlink imports
 use zenlink_protocol::{
 	Origin as ZenlinkOrigin, ParaChainWhiteList, Transactor, PairInfo, AssetId as ZenlinkAssetId,
+	OperationalAsset, ZenlinkMultiAsset
 };
 
 /// Weights for pallets used in the runtime.
@@ -607,7 +608,7 @@ pub type LocationConverter = (
 // >;
 
 pub type LocalAssetTransactor =
-    Transactor<Balances, ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
+    Transactor<ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
 
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
@@ -674,17 +675,67 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
     }
 }
 
+/// A proxy struct implement `OperationalAsset`. It control `Balance` module
+struct BalancesProxy;
+
+impl OperationalAsset<u32, AccountId, Balance> for BalancesProxy {
+    fn balance(&self, _id: u32, who: AccountId) -> u128 {
+        Balances::free_balance(&who).saturated_into::<Balance>()
+    }
+
+    fn total_supply(&self, _id: u32) -> u128 {
+        Balances::total_issuance().saturated_into::<Balance>()
+    }
+
+    fn inner_transfer(
+        &self,
+        _id: u32,
+        origin: AccountId,
+        target: AccountId,
+        amount: u128,
+    ) -> DispatchResult {
+        <Balances as Currency<AccountId>>::transfer(&origin, &target, amount, KeepAlive)
+    }
+
+    fn inner_deposit(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
+        let _ = <Balances as Currency<AccountId>>::deposit_creating(&origin, amount);
+
+        Ok(())
+    }
+
+    fn inner_withdraw(&self, _id: u32, origin: AccountId, amount: u128) -> DispatchResult {
+        <Balances as Currency<AccountId>>::withdraw(
+            &origin,
+            amount,
+            WithdrawReasons::TRANSFER,
+            ExistenceRequirement::AllowDeath,
+        )?;
+
+        Ok(())
+    }
+}
+
+
+parameter_types! {
+    /// Zenlink protocol use the proxy in the registry to control assets module.
+    /// The first in the tuple represent the module index.
+    pub AssetModuleRegistry : Vec<(u8, Box<dyn OperationalAsset<u32, AccountId, Balance>>)> = vec![
+        (2u8, Box::new(BalancesProxy))
+    ];
+}
+
 impl zenlink_protocol::Config for Runtime {
     type Event = Event;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type UpwardMessageSender = ParachainSystem;
     type HrmpMessageSender = ParachainSystem;
-    type NativeCurrency = Balances;
+    // type NativeCurrency = Balances;
     type AccountIdConverter = LocationConverter;
     type AccountId32Converter = AccountId32Converter;
     type ParaId = ParachainInfo;
     type ModuleId = DEXModuleId;
     type TargetChains = SiblingParachains;
+	type AssetModuleRegistry = AssetModuleRegistry;
 }
 
 // culumus runtime end
@@ -929,7 +980,7 @@ impl_runtime_apis! {
             asset_id: ZenlinkAssetId,
             owner: AccountId
         ) -> Balance {
-            ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
+            ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
         }
 
         fn get_sovereigns_info(
@@ -953,7 +1004,7 @@ impl_runtime_apis! {
             supply: Balance,
             path: Vec<ZenlinkAssetId>
         ) -> Balance {
-            ZenlinkProtocol::get_in_price(supply, path)
+            ZenlinkProtocol::desired_in_amount(supply, path)
         }
 
         //sell amount token price
@@ -961,7 +1012,7 @@ impl_runtime_apis! {
             supply: Balance,
             path: Vec<ZenlinkAssetId>
         ) -> Balance {
-            ZenlinkProtocol::get_out_price(supply, path)
+            ZenlinkProtocol::supply_out_amount(supply, path)
         }
 
         fn get_estimate_lptoken(

@@ -23,7 +23,7 @@
 
 use sp_std::prelude::*;
 use frame_support::{
-	construct_runtime, parameter_types, debug, RuntimeDebug,
+	construct_runtime, parameter_types, RuntimeDebug,
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND}, DispatchClass,
@@ -46,9 +46,7 @@ use sp_core::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price,
-	AssetId, SwapFee, PoolId, PoolWeight, PoolToken, VtokenMintPrice,
-	BiddingOrderId, EraId, CurrencyId, TokenSymbol
+	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Price, EraId, CurrencyId, TokenSymbol
 };
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
