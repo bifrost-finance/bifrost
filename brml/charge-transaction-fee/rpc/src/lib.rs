@@ -17,12 +17,15 @@
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
+use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::Bytes;
+use sp_rpc::number::NumberOrHex;
 use sp_runtime::{
     generic::BlockId,
     traits::{Block as BlockT, Zero},
+    SaturatedConversion,
 };
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -46,7 +49,7 @@ impl<C, Block> ChargeTransactionFeeStruct<C, Block> {
 }
 
 #[rpc]
-pub trait FeeRpcApi<BlockHash, CurrencyId, AccountId, Balance> {
+pub trait FeeRpcApi<BlockHash, AccountId> {
     /// rpc method get balances by account id
     /// useage: curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "assets_getBalances", "params": [0, "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]}' http://localhost:9933/
     #[rpc(name = "fee_get_token_and_amount")]
@@ -55,7 +58,7 @@ pub trait FeeRpcApi<BlockHash, CurrencyId, AccountId, Balance> {
         who: AccountId,
         encoded_xt: Bytes,
         at: Option<BlockHash>,
-    ) -> JsonRpcResult<(CurrencyId, Balance)>;
+    ) -> JsonRpcResult<(CurrencyId, NumberOrHex)>;
 }
 
 /// Error type of this RPC api.
@@ -75,16 +78,13 @@ impl From<Error> for i64 {
     }
 }
 
-impl<C, Block, CurrencyId, AccountId, Balance>
-    FeeRpcApi<<Block as BlockT>::Hash, CurrencyId, AccountId, Balance>
+impl<C, Block, AccountId> FeeRpcApi<<Block as BlockT>::Hash, AccountId>
     for ChargeTransactionFeeStruct<C, Block>
 where
     Block: BlockT,
     C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-    C::Api: FeeRuntimeApi<Block, CurrencyId, AccountId, Balance>
-        + TransactionPaymentRuntimeApi<Block, Balance>,
+    C::Api: FeeRuntimeApi<Block, AccountId> + TransactionPaymentRuntimeApi<Block, Balance>,
     AccountId: Codec,
-    CurrencyId: Codec,
     Balance: Codec + std::fmt::Display + std::ops::Add<Output = Balance> + sp_runtime::traits::Zero,
 {
     fn get_fee_token_and_amount(
@@ -92,7 +92,12 @@ where
         who: AccountId,
         encoded_xt: Bytes,
         at: Option<<Block as BlockT>::Hash>,
-    ) -> JsonRpcResult<(CurrencyId, Balance)> {
+    ) -> JsonRpcResult<(CurrencyId, NumberOrHex)> {
+        // Ok((
+        //     CurrencyId::Token(TokenSymbol::BNC),
+        //     sp_rpc::number::NumberOrHex::Number(1200),
+        // ))
+
         let api = self.client.runtime_api();
         let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
         let encoded_len = encoded_xt.len() as u32;
@@ -122,11 +127,15 @@ where
             }
         };
 
-        api.get_fee_token_and_amount(&at, who, total_inclusion_fee)
-            .map_err(|e| RpcError {
+        let rs = api.get_fee_token_and_amount(&at, who, total_inclusion_fee);
+
+        match rs {
+            Ok((id, val)) => Ok((id, NumberOrHex::Number(val.saturated_into()))),
+            Err(e) => Err(RpcError {
                 code: ErrorCode::ServerError(Error::RuntimeError.into()),
                 message: "Unable to query fee token and amount.".into(),
                 data: Some(format!("{:?}", e).into()),
-            })
+            }),
+        }
     }
 }

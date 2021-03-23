@@ -974,7 +974,7 @@ impl_runtime_apis! {
 	// 	}
 	// }
 
-	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, CurrencyId, AccountId, Balance> for Runtime {
+	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
 		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
 		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
 			match rs {

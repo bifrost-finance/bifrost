@@ -16,3 +16,4 @@ sp-core = "3.0.0"
 sp-rpc = "3.0.0"
 pallet-transaction-payment-rpc-runtime-api = "3.0.0"
 brml-charge-transaction-fee-rpc-runtime-api = { version = "0.7.0", path = "./runtime-api" }
+node-primitives = { path = "../../../bin/node/primitives", default-features = false }

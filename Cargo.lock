@@ -798,6 +798,7 @@ dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
+ "node-primitives",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec 2.0.1",
  "sp-api",
@@ -811,6 +812,7 @@ dependencies = [
 name = "brml-charge-transaction-fee-rpc-runtime-api"
 version = "0.7.0"
 dependencies = [
+ "node-primitives",
  "parity-scale-codec 2.0.1",
  "sp-api",
 ]
