@@ -51,8 +51,8 @@ impl<C, Block> ChargeTransactionFeeStruct<C, Block> {
 #[rpc]
 pub trait FeeRpcApi<BlockHash, AccountId> {
     /// rpc method get balances by account id
-    /// useage: curl -H "Content-Type: application/json" -d '{"id":1, "jsonrpc":"2.0", "method": "assets_getBalances", "params": [0, "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"]}' http://localhost:9933/
-    #[rpc(name = "fee_get_token_and_amount")]
+    /// useage: curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0","id":1,"method":"chargeTransactionFee_getFeeTokenAndAmount","params": ["0x0e0626477621754200486f323e3858cd5f28fcbe52c69b2581aecb622e384764", "0xa0040400008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48cef70500"]}’
+    #[rpc(name = "chargeTransactionFee_getFeeTokenAndAmount")]
     fn get_fee_token_and_amount(
         &self,
         who: AccountId,
