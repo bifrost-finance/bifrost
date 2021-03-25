@@ -210,12 +210,6 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 			},
 		)?;
 
-	let params = new_partial(&parachain_config)?;
-	params
-		.inherent_data_providers
-		.register_provider(sp_timestamp::InherentDataProvider)
-		.unwrap();
-
 	let client = params.client.clone();
 	let backend = params.backend.clone();
 	let block_announce_validator = build_block_announce_validator(
