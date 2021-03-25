@@ -11,6 +11,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 serde = { version = "1.0.118", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
+log = { version = "0.4.14", default-features = false }
 
 # primitives
 node-primitives = { path = "../../primitives", default-features = false }
@@ -49,7 +50,6 @@ pallet-grandpa = { version = "3.0.0", default-features = false }
 pallet-im-online = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
 pallet-identity = { version = "3.0.0", default-features = false }
-pallet-lottery = { version = "3.0.0", default-features = false }
 pallet-membership = { version = "3.0.0", default-features = false }
 pallet-multisig = { version = "3.0.0", default-features = false }
 pallet-offences = { version = "3.0.0", default-features = false }
@@ -104,6 +104,7 @@ std = [
 	"pallet-bounties/std",
 	"sp-block-builder/std",
 	"codec/std",
+	"log/std",
 	"pallet-collective/std",
 	"pallet-democracy/std",
 	"pallet-elections-phragmen/std",
@@ -113,7 +114,6 @@ std = [
 	"pallet-im-online/std",
 	"pallet-indices/std",
 	"sp-inherents/std",
-	"pallet-lottery/std",
 	"pallet-membership/std",
 	"pallet-multisig/std",
 	"pallet-identity/std",
@@ -177,7 +177,6 @@ runtime-benchmarks = [
 	"pallet-identity/runtime-benchmarks",
 	"pallet-im-online/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
-	"pallet-lottery/runtime-benchmarks",
 	"pallet-multisig/runtime-benchmarks",
 	"pallet-proxy/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",

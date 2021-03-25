@@ -265,7 +265,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
@@ -356,7 +356,7 @@ impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for R
 		);
 		let raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
-				// debug::warn!("Unable to create signed payload: {:?}", e);
+				log::warn!("Unable to create signed payload: {:?}", e);
 			})
 			.ok()?;
 		let signature = raw_payload
@@ -742,38 +742,38 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic
 	{
 		// Basic stuff
-		System: frame_system::{Module, Call, Config, Storage, Event<T>} = 0,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage} = 1,
-		Utility: pallet_utility::{Module, Call, Event} = 31,
-		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>} = 32,
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 1,
+		Utility: pallet_utility::{Pallet, Call, Event} = 31,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 32,
 
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent} = 2,
-		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 3,
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 4,
-		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>} = 5,
-		// Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 30,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
+		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 4,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 5,
+		// Authorship: pallet_authorship::{Pallet, Call, Storage, Inherent} = 30,
 
 		// parachain modules
-		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
-		TransactionPayment: pallet_transaction_payment::{Module, Storage} = 7,
-		ParachainInfo: parachain_info::{Module, Storage, Config} = 8,
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin} = 9,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
+		XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
-		BrmlAssets: brml_assets::{Module, Call, Event<T>} = 10,
-		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
-		// Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
-		// StakingReward: brml_staking_reward::{Module, Storage} = 13,
-		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
-		// Bid: brml_bid::{Module, Call, Storage, Event<T>} = 15,
+		BrmlAssets: brml_assets::{Pallet, Call, Event<T>} = 10,
+		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
+		// Swap: brml_swap::{Pallet, Call, Storage, Event<T>} = 12,
+		// StakingReward: brml_staking_reward::{Pallet, Storage} = 13,
+		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
+		// Bid: brml_bid::{Pallet, Call, Storage, Event<T>} = 15,
 
 		// ORML
-		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
-		Assets: orml_tokens::{Module, Storage, Event<T>, Config<T>} = 17,
-		Currencies: orml_currencies::{Module, Call, Event<T>} = 18,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
+		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 17,
+		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink
-		ZenlinkProtocol: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} = 19,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Origin, Call, Storage, Event<T>} = 19,
 	}
 );
 
@@ -808,7 +808,7 @@ pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllModules>;
+pub type Executive = frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllPallets>;
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -849,7 +849,7 @@ impl_runtime_apis! {
 		}
 
 		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
+			RandomnessCollectiveFlip::random_seed().0
 		}
 	}
 
@@ -907,9 +907,9 @@ impl_runtime_apis! {
 			// Trying to add benchmarks directly to the Session Pallet caused cyclic dependency issues.
 			// To get around that, we separated the Session benchmarks into its own crate, which is why
 			// we need these two lines below.
-			use pallet_session_benchmarking::Module as SessionBench;
-			use pallet_offences_benchmarking::Module as OffencesBench;
-			use frame_system_benchmarking::Module as SystemBench;
+			use pallet_session_benchmarking::Pallet as SessionBench;
+			use pallet_offences_benchmarking::Pallet as OffencesBench;
+			use frame_system_benchmarking::Pallet as SystemBench;
 
 			impl pallet_session_benchmarking::Config for Runtime {}
 			impl pallet_offences_benchmarking::Config for Runtime {}

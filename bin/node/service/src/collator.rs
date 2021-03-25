@@ -31,7 +31,7 @@ use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
 use node_primitives::{AccountId, Nonce, Balance, Block};
 use crate::IdentifyVariant;
-use telemetry::TelemetrySpan;
+use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 
 pub use asgard_runtime;
 pub use rococo_runtime;
@@ -93,28 +93,51 @@ pub fn new_partial<RuntimeApi, Executor>(
 		(),
 		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
 		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
-		(),
+		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
 	sc_service::Error,
 >
 	where
 		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 		RuntimeApi::RuntimeApi:
-			RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 		Executor: NativeExecutionDispatch + 'static,
 {
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
+	let telemetry = config.telemetry_endpoints.clone()
+		.filter(|x| !x.is_empty())
+		.map(|endpoints| -> Result<_, sc_telemetry::Error> {
+			let worker = TelemetryWorker::new(16)?;
+			let telemetry = worker.handle().new_telemetry(endpoints);
+			Ok((worker, telemetry))
+		})
+		.transpose()?;
+
 	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(&config)?;
+		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
+			&config,
+			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+		)?;
 	let client = Arc::new(client);
+
+	let telemetry_worker_handle = telemetry
+		.as_ref()
+		.map(|(worker, _)| worker.handle());
+
+	let telemetry = telemetry
+		.map(|(worker, telemetry)| {
+			task_manager.spawn_handle().spawn("telemetry", worker.run());
+			telemetry
+		});
 
 	let registry = config.prometheus_registry();
 
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
 		config.role.is_authority().into(),
-		config.prometheus_registry(),
+		// config.prometheus_registry(),
+		None,
 		task_manager.spawn_handle(),
 		client.clone(),
 	);
@@ -124,19 +147,20 @@ pub fn new_partial<RuntimeApi, Executor>(
 		client.clone(),
 		inherent_data_providers.clone(),
 		&task_manager.spawn_essential_handle(),
-		registry.clone(),
+		// registry.clone(),
+		None,
 	)?;
 
 	let params = PartialComponents {
-		client,
 		backend,
-		task_manager,
-		keystore_container,
-		select_chain: (),
+		client,
 		import_queue,
+		keystore_container,
+		task_manager,
 		transaction_pool,
 		inherent_data_providers,
-		other: (),
+		select_chain: (),
+		other: (telemetry, telemetry_worker_handle),
 	};
 
 	Ok(params)
@@ -171,8 +195,15 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 
 	let parachain_config = prepare_node_config(parachain_config);
 
+	let params = new_partial::<RuntimeApi, Executor>(&parachain_config)?;
+	params
+		.inherent_data_providers
+		.register_provider(sp_timestamp::InherentDataProvider)
+		.unwrap();
+	let (mut telemetry, telemetry_worker_handle) = params.other;
+
 	let polkadot_full_node =
-		cumulus_client_service::build_polkadot_full_node(polkadot_config, collator_key.public()).map_err(
+		cumulus_client_service::build_polkadot_full_node(polkadot_config, collator_key.public(), telemetry_worker_handle).map_err(
 			|e| match e {
 				polkadot_service::Error::Sub(x) => x,
 				s => format!("{}", s).into(),
@@ -212,9 +243,6 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 	let rpc_client = client.clone();
 	let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
 
-	let telemetry_span = TelemetrySpan::new();
-	let _telemetry_span_entered = telemetry_span.enter();
-
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		on_demand: None,
 		remote_blockchain: None,
@@ -228,12 +256,12 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 		network: network.clone(),
 		network_status_sinks,
 		system_rpc_tx,
-		telemetry_span: Some(telemetry_span.clone()),
+		telemetry: telemetry.as_mut(),
 	})?;
 
 	let announce_block = {
 		let network = network.clone();
-		Arc::new(move |hash, data| network.announce_block(hash, Some(data)))
+		Arc::new(move |hash, data| network.announce_block(hash, data))
 	};
 
 	if validator {
@@ -241,7 +269,9 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 			task_manager.spawn_handle(),
 			client.clone(),
 			transaction_pool,
-			prometheus_registry.as_ref(),
+			// prometheus_registry.as_ref(),
+			None,
+			telemetry.as_ref().map(|x| x.handle()),
 		);
 
 		let parachain_consensus = build_relay_chain_consensus(BuildRelayChainConsensusParams {

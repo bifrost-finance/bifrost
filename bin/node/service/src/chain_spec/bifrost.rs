@@ -18,7 +18,7 @@ use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Perbill;
-use telemetry::TelemetryEndpoints;
+use sc_telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use bifrost_runtime::{
 	constants::currency::DOLLARS, AuthorityDiscoveryConfig, BabeConfig, 
@@ -228,6 +228,7 @@ pub fn testnet_genesis(
 		},
 		pallet_babe: BabeConfig {
 			authorities: vec![],
+			epoch_config: None,
 		},
 		pallet_im_online: ImOnlineConfig {
 			keys: vec![],

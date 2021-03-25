@@ -17,7 +17,7 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use telemetry::TelemetryEndpoints;
+use sc_telemetry::TelemetryEndpoints;
 use cumulus_primitives_core::ParaId;
 use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use rococo_runtime::{
