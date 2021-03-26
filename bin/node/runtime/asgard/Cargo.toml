@@ -11,6 +11,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 serde = { version = "1.0.118", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
+log = "0.4.8"
 
 # primitives
 node-primitives = { default-features = false, path = "../../primitives" }
@@ -50,6 +51,7 @@ pallet-scheduler = { version = "3.0.0", default-features = false }
 # brml-bid = { path = "../../../../brml/bid", default-features = false }
 brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
 brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
+brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
 # brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 # brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
@@ -124,6 +126,7 @@ std = [
 	# "brml-bid/std",
 	"brml-vtoken-mint/std",
 	"brml-vtoken-mint-rpc-runtime-api/std",
+	"brml-minter-reward/std",
 	# 'brml-staking-reward/std',
 	# "brml-swap/std",
 	'brml-voucher/std',

@@ -20,17 +20,17 @@ extern crate alloc;
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use core::marker::PhantomData;
 use frame_support::{
-	transactional, pallet_prelude::*, traits::{Get, Hooks, IsType}
+	transactional, pallet_prelude::*, traits::{Get, Hooks, IsType, Randomness}
 };
 use frame_system::{
 	ensure_root, ensure_signed, pallet_prelude::{OriginFor, BlockNumberFor}
 };
-use node_primitives::{CurrencyIdExt, CurrencyId, VtokenMintExt};
+use node_primitives::{CurrencyIdExt, CurrencyId, DEXOperations, VtokenMintExt, MinterRewardExt};
 use orml_traits::{
 	account::MergeAccount, MultiCurrency, GetByKey,
 	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
-use sp_runtime::{traits::{Saturating, Zero}, DispatchResult};
+use sp_runtime::{Permill, traits::{Saturating, Zero}, DispatchResult, ModuleId};
 
 pub use pallet::*;
 
@@ -57,7 +57,7 @@ pub mod pallet {
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
-		/// A handler to manipulate assets module
+		/// A handler to manipulate assets module.
 		type MultiCurrency: MergeAccount<Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
@@ -66,14 +66,30 @@ pub mod pallet {
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 	
-		#[pallet::constant]
-		type VtokenMintDuration: Get<Self::BlockNumber>;
+		/// List lock period while staking.
+		type StakingLockPeriod: GetByKey<CurrencyIdOf<Self>, Self::BlockNumber>;
 
 		/// The ROI of each token by every block.
 		type RateOfInterestEachBlock: GetByKey<CurrencyIdOf<Self>, BalanceOf<Self>>;
+
+		/// Identifier for the staking lock.
+		#[pallet::constant]
+		type ModuleId: Get<ModuleId>;
+
+		/// Get swap price from zenlink module
+		type DEXOperations: DEXOperations<Self::AccountId>;
+
+		/// Record mint reward
+		type MinterReward: MinterRewardExt<Self::AccountId, BalanceOf<Self>, CurrencyIdOf<Self>, Self::BlockNumber>;
 	
-		/// Set default weight
+		/// Set default weight.
 		type WeightInfo: WeightInfo;
+
+		/// Random source for determinated yield
+		type RandomnessSource: Randomness<sp_core::H256>;
+
+		/// Yeild rate for each token
+		type YieldRate: GetByKey<CurrencyIdOf<Self>, Permill>;
 	}
 
 	/// Total mint pool
@@ -101,7 +117,7 @@ pub mod pallet {
 		ValueQuery
 	>;
 
-	/// Referer channels for all users
+	/// Referer channels for all users.
 	#[pallet::storage]
 	#[pallet::getter(fn all_referer_channels)]
 	pub(crate) type AllReferrerChannels<T: Config> = StorageValue<
@@ -109,6 +125,17 @@ pub mod pallet {
 		(BTreeMap<T::AccountId, BalanceOf<T>>, BalanceOf<T>),
 		ValueQuery,
 		()
+	>;
+
+	/// When the use start to stake.
+	#[pallet::storage]
+	#[pallet::getter(fn when_staked)]
+	pub(crate) type WhenStaked<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		T::BlockNumber,
+		ValueQuery
 	>;
 
 	#[pallet::event]
@@ -128,12 +155,14 @@ pub mod pallet {
 		BalanceLow,
 		/// Balance should be non-zero.
 		BalanceZero,
-		/// Token type not support
+		/// Token type not support.
 		NotSupportTokenType,
-		/// Empty vtoken pool, cause there's no price at all
+		/// Empty vtoken pool, cause there's no price at all.
 		EmptyVtokenPool,
-		/// The amount of token you want to mint is bigger than the vtoken pool
+		/// The amount of token you want to mint is bigger than the vtoken pool.
 		NotEnoughVtokenPool,
+		/// User's token still under staking while he want to redeem.
+		UnderStaking,
 	}
 
 	#[pallet::pallet]
@@ -209,6 +238,18 @@ pub mod pallet {
 			Self::expand_mint_pool(token_id.into(), token_amount)?;
 			Self::expand_mint_pool(currency_id, vtokens_buy)?;
 
+			let current_block = <frame_system::Module<T>>::block_number();
+			if WhenStaked::<T>::contains_key(&minter) {
+				WhenStaked::<T>::mutate(&minter, |when| {
+					*when = current_block;
+				});
+			} else {
+				WhenStaked::<T>::insert(&minter, current_block);
+			}
+
+			// reward mint reward
+			T::MinterReward::reward_minted_vtoken(&minter, currency_id, vtokens_buy, current_block);
+
 			Self::deposit_event(Event::MintedVToken(minter, currency_id, vtokens_buy));
 
 			Ok(().into())
@@ -229,6 +270,14 @@ pub mod pallet {
 
 			ensure!(!vtoken_amount.is_zero(), Error::<T>::BalanceZero);
 			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
+
+			// check the user can redeem their tokens
+			let current_block = <frame_system::Module<T>>::block_number();
+			let when_started_staking = WhenStaked::<T>::get(&minter);
+			ensure!(
+				current_block - when_started_staking >  T::StakingLockPeriod::get(&currency_id),
+				Error::<T>::UnderStaking
+			);
 
 			// Get paired tokens.
 			let (_token_id, vtoken_id) = currency_id.get_token_pair().unwrap();
@@ -268,13 +317,40 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
 			// Mock staking reward for pulling up vtoken price
+			let random_sum = Self::mock_yield_change();
+			let fluctuation = Permill::from_percent(3); // +- 3%
 			for (currency_id, _) in MintPool::<T>::iter() {
 				// Only inject tokens into token pool
+				let year_rate = T::YieldRate::get(&currency_id);
+				if year_rate.is_zero() {
+					continue;
+				}
+
+				let bonus = T::RateOfInterestEachBlock::get(&currency_id);
 				if currency_id.is_token() {
-					let year_rate = T::RateOfInterestEachBlock::get(&currency_id);
-					let _ = Self::expand_mint_pool(currency_id, year_rate);
+					if year_rate.deconstruct() % random_sum > random_sum / 2u32 {
+						// up to 17.8% or 11.2%
+						let rate = year_rate.saturating_add(fluctuation) * bonus;
+						let _ = Self::expand_mint_pool(currency_id, rate);
+					} else {
+						// down to 11.8% or 5.2%
+						let rate = year_rate.saturating_sub(fluctuation) * bonus;
+						let _ = Self::expand_mint_pool(currency_id, rate);
+					}
 				}
 			}
+		}
+	}
+
+	/// Mock yield change
+	impl<T: Config> Pallet<T> {
+		fn mock_yield_change() -> u32 {
+			// Use block number as seed
+			let current_block = <frame_system::Module<T>>::block_number();
+    		let random_result = T::RandomnessSource::random(&current_block.encode());
+			let random_sum = random_result.0.iter().fold(0u32, |acc, x| acc + *x as u32);
+
+			random_sum
 		}
 	}
 

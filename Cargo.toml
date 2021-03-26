@@ -15,6 +15,7 @@ members = [
 	# "brml/bridge-eos",
 	"brml/vtoken-mint",
 	"brml/vtoken-mint/rpc",
+	"brml/minter-reward",
 	# "brml/staking-reward",
 	# "brml/swap",
 	"brml/voucher",

@@ -216,16 +216,30 @@ pub trait VtokenMintExt {
 	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 }
 
+/// Handle mint reward
+pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
+	type Error;
+
+	fn reward_minted_vtoken(
+		minter: &AccountId,
+		currency_id: CurrencyId,
+		minted_vtoken: Balance,
+		block_num: BlockNumber
+	) -> Result<(), Self::Error>;
+}
+
 /// Zenlink traits
 pub trait DEXOperations<AccountId> {
 	fn get_amount_out_by_path(
 		amount_in: TokenBalance,
 		path: &[ZenlinkAssetId],
 	) -> Result<Vec<TokenBalance>, DispatchError>;
+	
 	fn get_amount_in_by_path(
 		amount_out: TokenBalance,
 		path: &[ZenlinkAssetId],
 	) -> Result<Vec<TokenBalance>, DispatchError>;
+
 	fn inner_swap_tokens_for_exact_tokens(
 		who: &AccountId,
 		amount_out: TokenBalance,
@@ -248,4 +262,51 @@ pub trait DEXOperations<AccountId> {
 		token_0: &ZenlinkAssetId,
 		token_1: &ZenlinkAssetId,
 	) -> Option<Pair<AccountId, TokenBalance>>;
+}
+
+impl<AccountId> DEXOperations<AccountId> for () {
+	fn get_amount_out_by_path(
+		amount_in: TokenBalance,
+		path: &[ZenlinkAssetId],
+	) -> Result<Vec<TokenBalance>, DispatchError> {
+		Ok(sp_std::vec![])
+	}
+	
+	fn get_amount_in_by_path(
+		amount_out: TokenBalance,
+		path: &[ZenlinkAssetId],
+	) -> Result<Vec<TokenBalance>, DispatchError> {
+		Ok(sp_std::vec![])
+	}
+
+	fn inner_swap_tokens_for_exact_tokens(
+		who: &AccountId,
+		amount_out: TokenBalance,
+		amount_in_max: TokenBalance,
+		path: &[ZenlinkAssetId],
+		to: &AccountId,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn inner_swap_exact_tokens_for_tokens(
+		who: &AccountId,
+		amount_in: TokenBalance,
+		amount_out_min: TokenBalance,
+		path: &[ZenlinkAssetId],
+		to: &AccountId,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn inner_create_pair(token_0: &ZenlinkAssetId, token_1: &ZenlinkAssetId) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_pair_from_asset_id(
+		token_0: &ZenlinkAssetId,
+		token_1: &ZenlinkAssetId,
+	) -> Option<Pair<AccountId, TokenBalance>> {
+		None
+	}
 }

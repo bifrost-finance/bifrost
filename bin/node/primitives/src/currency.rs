@@ -107,6 +107,12 @@ pub enum CurrencyId {
 	Token(TokenSymbol),
 }
 
+impl Default for CurrencyId {
+	fn default() -> Self {
+		Self::Token(TokenSymbol::BNC)
+	}
+}
+
 impl From<TokenSymbol> for CurrencyId {
 	fn from(symbol: TokenSymbol) -> Self {
 		CurrencyId::Token(symbol)

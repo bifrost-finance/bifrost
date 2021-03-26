@@ -22,8 +22,8 @@
 
 use codec::Encode;
 use frame_support::{
-	construct_runtime, debug, parameter_types,
-	traits::{Get, Randomness},
+	construct_runtime, parameter_types,
+	traits::{Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -35,9 +35,8 @@ use frame_system::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Amount, AssetId, Balance, BiddingOrderId, BlockNumber, CurrencyId, EraId, Hash,
-	Index, Moment, Pair, PairId, PoolId, PoolToken, PoolWeight, SwapFee, TokenBalance, TokenSymbol,
-	ZenlinkAssetId,
+	AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash,
+	Index, Moment, TokenBalance, TokenSymbol, ZenlinkAssetId,
 };
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
@@ -52,7 +51,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber,
-	KeyTypeId, ModuleId, Perbill, Perquintill,
+	KeyTypeId, ModuleId, Perbill, Perquintill, Permill
 };
 
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
@@ -139,24 +138,6 @@ pub fn native_version() -> NativeVersion {
 		can_author_with: Default::default(),
 	}
 }
-
-// type NegativeImbalance = <Balances as Currency<AccountId>>::NegativeImbalance;
-
-// pub struct DealWithFees;
-// impl OnUnbalanced<NegativeImbalance> for DealWithFees {
-// 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item=NegativeImbalance>) {
-// 		if let Some(fees) = fees_then_tips.next() {
-// 			// for fees, 80% to treasury, 20% to author
-// 			let mut split = fees.ration(80, 20);
-// 			if let Some(tips) = fees_then_tips.next() {
-// 				// for tips, if any, 80% to treasury, 20% to author (though this can be anything)
-// 				tips.ration_merge_into(80, 20, &mut split);
-// 			}
-// 			Treasury::on_unbalanced(split.0);
-// 			Author::on_unbalanced(split.1);
-// 		}
-// 	}
-// }
 
 /// We assume that ~10% of the block weight is consumed by `on_initalize` handlers.
 /// This is used to limit the maximal weight of a single extrinsic.
@@ -395,17 +376,6 @@ parameter_types! {
 }
 
 // bifrost runtime start
-// impl brml_assets::Config for Runtime {
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type AssetId = AssetId;
-// 	type Price = Price;
-// 	type VtokenMint = VtokenMintPrice;
-// 	type AssetRedeem = ();
-// 	type FetchVtokenMintPrice = VtokenMint;
-// 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
-// }
-
 impl brml_voucher::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -415,13 +385,32 @@ impl brml_voucher::Config for Runtime {
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const StakingModuleId: ModuleId = ModuleId(*b"staking ");
 }
-parameter_type_with_key! {
+orml_traits::parameter_type_with_key! {
 	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 000_761_035_007,
-			&CurrencyId::Token(TokenSymbol::ETH) => 000_570_776_255,
+			&CurrencyId::Token(TokenSymbol::ETH) => 019_025_875_190, // 100000.0 * 0.148/(365*24*600)
+			&CurrencyId::Token(TokenSymbol::KSM) => 009_512_937_595, // 50000.0 * 0.082/(365*24*600)
 			_ => Zero::zero(),
+		}
+	};
+}
+orml_traits::parameter_type_with_key! {
+	pub StakingLockPeriod: |currency_id: CurrencyId| -> BlockNumber {
+		match currency_id {
+			&CurrencyId::Token(TokenSymbol::DOT) => 28 * DAYS,
+			&CurrencyId::Token(TokenSymbol::KSM) => 14 * DAYS,
+			_ => Zero::zero(),
+		}
+	};
+}
+parameter_type_with_key! {
+	pub YieldRate: |currency_id: CurrencyId| -> Permill {
+		match currency_id {
+			&CurrencyId::Token(TokenSymbol::ETH) => Permill::from_perthousand(82), // 8.2%
+			&CurrencyId::Token(TokenSymbol::KSM) => Permill::from_perthousand(148), // 14.8%
+			_ => Permill::from_perthousand(0u32), // no revenue
 		}
 	};
 }
@@ -429,77 +418,33 @@ parameter_type_with_key! {
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type VtokenMintDuration = VtokenMintDuration;
+	type ModuleId = StakingModuleId;
+	type MinterReward = MinterReward;
+	type StakingLockPeriod = StakingLockPeriod;
+	type DEXOperations = ZenlinkProtocol;
 	type RateOfInterestEachBlock = RateOfInterestEachBlock;
+	type YieldRate = YieldRate;
+	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
-// parameter_types! {
-// 	pub const MaximumSwapInRatio: u8 = 2;
-// 	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
-// 	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
-// 	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
-// 	pub const FeePrecision: SwapFee = 100_000;
-// 	pub const WeightPrecision: PoolWeight = 100_000;
-// 	pub const BNCAssetId: AssetId = 0;
-// 	pub const InitialPoolSupply: PoolToken = 1_000;
-// 	pub const NumberOfSupportedTokens: u8 = 8;
-// 	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
-// 	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
-// }
+parameter_types! {
+	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
+	pub const RewardPeriod: BlockNumber = 50;
+	pub const MaximumExtendedPeriod: BlockNumber = 500;
+	pub const ShareWeightModuleId: ModuleId = ModuleId(*b"weight  ");
+}
 
-// impl brml_swap::Config for Runtime {
-// 	type Event = Event;
-// 	type SwapFee = SwapFee;
-// 	type AssetId = AssetId;
-// 	type PoolId = PoolId;
-// 	type Balance = Balance;
-// 	type AssetTrait = Assets;
-// 	type PoolWeight = PoolWeight;
-// 	type PoolToken = PoolToken;
-// 	type MaximumSwapInRatio = MaximumSwapInRatio;
-// 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
-// 	type MinimumSwapFee = MinimumSwapFee;
-// 	type MaximumSwapFee = MaximumSwapFee;
-// 	type FeePrecision = FeePrecision;
-// 	type WeightPrecision = WeightPrecision;
-// 	type BNCAssetId = BNCAssetId;
-// 	type InitialPoolSupply = InitialPoolSupply;
-// 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
-// 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
-// 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
-// }
-
-// Bid module
-// parameter_types! {
-// 	pub const TokenOrderROIListLength: u8 = 200u8;
-// 	pub const MinimumVotes: u64 = 100;
-// 	pub const MaximumVotes: u64 = 50_000;
-// 	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
-// 	pub const MaxProposalNumberForBidder: u32 = 5;
-// 	pub const ROIPermillPrecision: u32 = 100;
-// }
-
-// impl brml_bid::Config for Runtime {
-// 	type Event = Event;
-// 	type AssetId = AssetId;
-// 	type AssetTrait = Assets;
-// 	type BiddingOrderId = BiddingOrderId;
-// 	type EraId = EraId;
-// 	type Balance = Balance;
-// 	type TokenOrderROIListLength = TokenOrderROIListLength ;
-// 	type MinimumVotes = MinimumVotes;
-// 	type MaximumVotes = MaximumVotes;
-// 	type BlocksPerYear = BlocksPerYear;
-// 	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
-// 	type ROIPermillPrecision = ROIPermillPrecision;
-// }
-
-// impl brml_staking_reward::Config for Runtime {
-// 	type AssetTrait = Assets;
-// 	type Balance = Balance;
-// 	type AssetId = AssetId;
-// }
+impl brml_minter_reward::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type TwoYear = TwoYear;
+	type ModuleId = ShareWeightModuleId;
+	type RewardPeriod = RewardPeriod;
+	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	type DEXOperations = ZenlinkProtocol;
+	type ShareWeight = Balance;
+}
 
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
@@ -605,15 +550,6 @@ pub type LocationConverter = (
 	AccountId32Aliases<BifrostNetwork, AccountId>,
 );
 
-// pub type LocalAssetTransactor = MultiCurrencyAdapter<
-// 	Currencies,
-// 	IsConcreteWithGeneralKey<CurrencyId, RelayToNative>,
-// 	LocationConverter,
-// 	AccountId,
-// 	CurrencyIdConverter<CurrencyId, RelayChainCurrencyId>,
-// 	CurrencyId,
-// >;
-
 pub type LocalAssetTransactor =
 	Transactor<Balances, ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
 
@@ -709,7 +645,6 @@ impl brml_charge_transaction_fee::Config for Runtime {
 	type CurrenciesHandler = Currencies;
 	type Currency = Balances;
 	type ZenlinkDEX = ZenlinkProtocol;
-	// type OnUnbalanced = DealWithFees;
 	type OnUnbalanced = ();
 	type NativeCurrencyId = NativeCurrencyId;
 }
@@ -732,7 +667,6 @@ construct_runtime!(
 		Indices: pallet_indices::{Module, Call, Storage, Config<T>, Event<T>} = 3,
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>} = 4,
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>} = 5,
-		// Authorship: pallet_authorship::{Module, Call, Storage, Inherent} = 30,
 
 		// parachain modules
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event} = 6,
@@ -743,10 +677,8 @@ construct_runtime!(
 		// bifrost modules
 		BrmlAssets: brml_assets::{Module, Call, Event<T>} = 10,
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
-		// Swap: brml_swap::{Module, Call, Storage, Event<T>} = 12,
-		// StakingReward: brml_staking_reward::{Module, Storage} = 13,
+		MinterReward: brml_minter_reward::{Module, Storage, Event<T>} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
-		// Bid: brml_bid::{Module, Call, Storage, Event<T>} = 15,
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
@@ -956,24 +888,6 @@ impl_runtime_apis! {
 		}
 	}
 
-
-	// impl asset rpc methods for runtime
-	// impl brml_assets_rpc_runtime_api::AssetsApi<node_primitives::Block, AssetId, AccountId, Balance> for Runtime {
-	// 	fn asset_balances(asset_id: AssetId, who: AccountId) -> u64 {
-	// 		Assets::asset_balances(asset_id, who)
-	// 	}
-
-	// 	fn asset_tokens(who: AccountId) -> Vec<AssetId> {
-	// 		Assets::asset_tokens(who)
-	// 	}
-	// }
-
-	// impl brml_vtoken_mint_rpc_runtime_api::VtokenMintPriceApi<node_primitives::Block, AssetId, node_primitives::VtokenMintPrice> for Runtime {
-	// 	fn get_vtoken_mint_rate(asset_id: AssetId) -> node_primitives::VtokenMintPrice {
-	// 		VtokenMint::get_vtoken_mint_price(asset_id)
-	// 	}
-	// }
-
 	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, CurrencyId, AccountId, Balance> for Runtime {
 		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
 		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
@@ -985,17 +899,6 @@ impl_runtime_apis! {
 	}
 
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-		// fn get_assets() -> Vec<ZenlinkAssetId> {
-		//     ZenlinkProtocol::assets_list()
-		// }
-
-		// fn get_balance(
-		//     asset_id: ZenlinkAssetId,
-		//     owner: AccountId
-		// ) -> TokenBalance {
-		//     ZenlinkProtocol::asset_balance_of(&asset_id, &owner)
-		// }
-
 		fn get_sovereigns_info(
 			asset_id: ZenlinkAssetId
 		) -> Vec<(u32, AccountId, TokenBalance)> {

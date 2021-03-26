@@ -34,7 +34,7 @@ pub mod traits;
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
 	AssetReward, AssetTrait, CurrencyIdExt, DEXOperations, GetDecimals, RewardHandler,
-	VtokenMintExt,
+	VtokenMintExt, MinterRewardExt
 };
 
 /// An index to a block.
@@ -338,41 +338,22 @@ impl Into<CurrencyId> for ZenlinkAssetId {
 	}
 }
 
-// impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {
-// 	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, AI, P, B>) {}
-// }
+#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[non_exhaustive]
+pub enum StorageVersion {
+	V0,
+	V1,
+	V2,
+	V3,
+}
 
-// impl<A, AI, P, B> BridgeAssetTo<A, AI, P, B> for () {
-// 	type Error = core::convert::Infallible;
-// 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, AI, P, B>) -> Result<(), Self::Error> { Ok(()) }
-// 	fn redeem(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-// 	fn stake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-// 	fn unstake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-// }
+impl Default for StorageVersion {
+	fn default() -> Self {
+		Self::V0
+	}
+}
 
-// impl<A, B> AssetReward<A, B> for () {
-// 	type Output = ();
-// 	type Error = core::convert::Infallible;
-// 	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
-// }
-
-// impl<A, B> RewardHandler<A, B> for () {
-// 	fn send_reward(_: A, _: B) {}
-// }
-
-// impl<Price> TokenPriceHandler<AssetId, Price> for () {
-// 	fn set_token_price(_: AssetId, _: Price) {}
-// }
-
-// impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-// 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
-// }
-
-// impl<A, B, AI> RewardTrait<A, B, AI> for () {
-// 	type Error = core::convert::Infallible;
-// 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
-// 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
-// }
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
 /// account.
@@ -437,6 +418,5 @@ mod tests {
 			CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(),
 			Some((TokenSymbol::DOT, TokenSymbol::vDOT))
 		);
-		// todo!();
 	}
 }
