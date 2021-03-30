@@ -17,11 +17,12 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_runtime::Permill;
 use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, TokenSymbol, CurrencyId};
 use cumulus_primitives_core::ParaId;
 use asgard_runtime::{
-	constants::currency::DOLLARS,
+	constants::{currency::DOLLARS, time::DAYS},
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig
 };
@@ -31,7 +32,7 @@ use crate::chain_spec::{
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "asg";
+const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
 /// The `ChainSpec` parametrised for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
@@ -203,7 +204,19 @@ pub fn testnet_genesis(
 				(CurrencyId::Token(TokenSymbol::vDOT), 2000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-			]
+			],
+			staking_lock_period: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
+				(CurrencyId::Token(TokenSymbol::KSM), 14 * DAYS)
+			],
+			rate_of_interest_each_block: vec![
+				(CurrencyId::Token(TokenSymbol::ETH), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 009_512_937_595) // 50000.0 * 0.082/(365*24*600)
+			],
+			yield_rate: vec![
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(148)) // 14.8%
+			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}

@@ -1004,43 +1004,13 @@ parameter_types! {
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
 	pub const StakingModuleId: ModuleId = ModuleId(*b"staking ");
 }
-orml_traits::parameter_type_with_key! {
-	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::ETH) => 019_025_875_190, // 100000.0 * 0.148/(365*24*600)
-			&CurrencyId::Token(TokenSymbol::KSM) => 009_512_937_595, // 50000.0 * 0.082/(365*24*600)
-			_ => Zero::zero(),
-		}
-	};
-}
-orml_traits::parameter_type_with_key! {
-	pub StakingLockPeriod: |currency_id: CurrencyId| -> BlockNumber {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 28 * DAYS,
-			&CurrencyId::Token(TokenSymbol::KSM) => 14 * DAYS,
-			_ => Zero::zero(),
-		}
-	};
-}
-orml_traits::parameter_type_with_key! {
-	pub YieldRate: |currency_id: CurrencyId| -> Permill {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::ETH) => Permill::from_perthousand(82), // 8.2%
-			&CurrencyId::Token(TokenSymbol::KSM) => Permill::from_perthousand(148), // 14.8%
-			_ => Permill::from_perthousand(0u32), // no revenue
-		}
-	};
-}
 
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type ModuleId = StakingModuleId;
 	type MinterReward = MinterReward;
-	type StakingLockPeriod = StakingLockPeriod;
 	type DEXOperations = ();
-	type RateOfInterestEachBlock = RateOfInterestEachBlock;
-	type YieldRate = YieldRate;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }

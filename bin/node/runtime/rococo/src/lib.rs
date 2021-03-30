@@ -387,43 +387,12 @@ parameter_types! {
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
 	pub const StakingModuleId: ModuleId = ModuleId(*b"staking ");
 }
-orml_traits::parameter_type_with_key! {
-	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::ETH) => 019_025_875_190, // 100000.0 * 0.148/(365*24*600)
-			&CurrencyId::Token(TokenSymbol::KSM) => 009_512_937_595, // 50000.0 * 0.082/(365*24*600)
-			_ => Zero::zero(),
-		}
-	};
-}
-orml_traits::parameter_type_with_key! {
-	pub StakingLockPeriod: |currency_id: CurrencyId| -> BlockNumber {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 28 * DAYS,
-			&CurrencyId::Token(TokenSymbol::KSM) => 14 * DAYS,
-			_ => Zero::zero(),
-		}
-	};
-}
-parameter_type_with_key! {
-	pub YieldRate: |currency_id: CurrencyId| -> Permill {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::ETH) => Permill::from_perthousand(82), // 8.2%
-			&CurrencyId::Token(TokenSymbol::KSM) => Permill::from_perthousand(148), // 14.8%
-			_ => Permill::from_perthousand(0u32), // no revenue
-		}
-	};
-}
-
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type ModuleId = StakingModuleId;
 	type MinterReward = MinterReward;
-	type StakingLockPeriod = StakingLockPeriod;
 	type DEXOperations = ZenlinkProtocol;
-	type RateOfInterestEachBlock = RateOfInterestEachBlock;
-	type YieldRate = YieldRate;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -679,6 +648,7 @@ construct_runtime!(
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: brml_minter_reward::{Module, Storage, Event<T>} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
+		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage} = 20,
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
@@ -687,10 +657,6 @@ construct_runtime!(
 
 		// Zenlink module
 		ZenlinkProtocol: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>} =19,
-
-		// Bifrost modules
-		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage} = 20,
-
 	}
 );
 
@@ -856,29 +822,17 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			add_benchmark!(params, batches, pallet_assets, Assets);
-			add_benchmark!(params, batches, pallet_babe, Babe);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);
 			add_benchmark!(params, batches, pallet_collective, Council);
 			add_benchmark!(params, batches, pallet_contracts, Contracts);
-			add_benchmark!(params, batches, pallet_democracy, Democracy);
-			add_benchmark!(params, batches, pallet_elections_phragmen, Elections);
-			add_benchmark!(params, batches, pallet_grandpa, Grandpa);
 			add_benchmark!(params, batches, pallet_identity, Identity);
-			add_benchmark!(params, batches, pallet_im_online, ImOnline);
 			add_benchmark!(params, batches, pallet_indices, Indices);
-			add_benchmark!(params, batches, pallet_lottery, Lottery);
-			add_benchmark!(params, batches, pallet_mmr, Mmr);
 			add_benchmark!(params, batches, pallet_multisig, Multisig);
 			add_benchmark!(params, batches, pallet_offences, OffencesBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_proxy, Proxy);
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-			add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_staking, Staking);
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_tips, Tips);
 			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);

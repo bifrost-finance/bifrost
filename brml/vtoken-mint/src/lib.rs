@@ -27,7 +27,7 @@ use frame_system::{
 };
 use node_primitives::{CurrencyIdExt, CurrencyId, DEXOperations, VtokenMintExt, MinterRewardExt};
 use orml_traits::{
-	account::MergeAccount, MultiCurrency, GetByKey,
+	account::MergeAccount, MultiCurrency,
 	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
 use sp_runtime::{Permill, traits::{Saturating, Zero}, DispatchResult, ModuleId};
@@ -65,12 +65,6 @@ pub mod pallet {
 	
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-	
-		/// List lock period while staking.
-		type StakingLockPeriod: GetByKey<CurrencyIdOf<Self>, Self::BlockNumber>;
-
-		/// The ROI of each token by every block.
-		type RateOfInterestEachBlock: GetByKey<CurrencyIdOf<Self>, BalanceOf<Self>>;
 
 		/// Identifier for the staking lock.
 		#[pallet::constant]
@@ -87,9 +81,6 @@ pub mod pallet {
 
 		/// Random source for determinated yield
 		type RandomnessSource: Randomness<sp_core::H256>;
-
-		/// Yeild rate for each token
-		type YieldRate: GetByKey<CurrencyIdOf<Self>, Permill>;
 	}
 
 	/// Total mint pool
@@ -137,6 +128,39 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
 		Vec<(T::BlockNumber, BalanceOf<T>)>,
+		ValueQuery
+	>;
+
+	/// List lock period while staking.
+	#[pallet::storage]
+	#[pallet::getter(fn staking_lock_period)]
+	pub(crate) type StakingLockPeriod<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		CurrencyIdOf<T>,
+		T::BlockNumber,
+		ValueQuery
+	>;
+
+	/// The ROI of each token by every block.
+	#[pallet::storage]
+	#[pallet::getter(fn rate_of_interest_each_block)]
+	pub(crate) type RateOfInterestEachBlock<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		CurrencyIdOf<T>,
+		BalanceOf<T>,
+		ValueQuery
+	>;
+
+	/// Yeild rate for each token
+	#[pallet::storage]
+	#[pallet::getter(fn yield_rate)]
+	pub(crate) type YieldRate<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		CurrencyIdOf<T>,
+		Permill,
 		ValueQuery
 	>;
 
@@ -290,12 +314,12 @@ pub mod pallet {
 			let fluctuation = Permill::from_percent(3); // +- 3%
 			for (currency_id, _) in MintPool::<T>::iter() {
 				// Only inject tokens into token pool
-				let year_rate = T::YieldRate::get(&currency_id);
+				let year_rate = YieldRate::<T>::get(&currency_id);
 				if year_rate.is_zero() {
 					continue;
 				}
 
-				let bonus = T::RateOfInterestEachBlock::get(&currency_id);
+				let bonus = RateOfInterestEachBlock::<T>::get(&currency_id);
 				if currency_id.is_token() {
 					if year_rate.deconstruct() % random_sum > random_sum / 2u32 {
 						// up to 17.8% or 11.2%
@@ -336,7 +360,7 @@ pub mod pallet {
 
 		fn check_redeem_period(n: T::BlockNumber) -> DispatchResult {
 			for (who, currency_id, records) in RedeemRecord::<T>::iter() {
-				let redeem_period = T::StakingLockPeriod::get(&currency_id);
+				let redeem_period = StakingLockPeriod::<T>::get(&currency_id);
 				for (when, amount) in records.iter() {
 					if n - *when >= redeem_period {
 						// Get paired tokens.
@@ -388,12 +412,20 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub pools: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		pub staking_lock_period: Vec<(CurrencyIdOf<T>, T::BlockNumber)>,
+		pub rate_of_interest_each_block: Vec<(CurrencyIdOf<T>, BalanceOf<T>)>,
+		pub yield_rate: Vec<(CurrencyIdOf<T>, Permill)>,
 	}
 
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> GenesisConfig<T> {
-			GenesisConfig { pools: vec![] }
+			Self {
+				pools: vec![],
+				staking_lock_period: vec![],
+				rate_of_interest_each_block: vec![],
+				yield_rate: vec![],
+			}
 		}
 	}
 
@@ -402,6 +434,18 @@ pub mod pallet {
 		fn build(&self) {
 			for (currency_id, token_pool) in self.pools.iter() {
 				MintPool::<T>::insert(currency_id, token_pool);
+			}
+
+			for (currency_id, period) in self.staking_lock_period.iter() {
+				StakingLockPeriod::<T>::insert(currency_id, period);
+			}
+
+			for (currency_id, reward_by_block) in self.rate_of_interest_each_block.iter() {
+				RateOfInterestEachBlock::<T>::insert(currency_id, reward_by_block);
+			}
+
+			for (currency_id, rate) in self.yield_rate.iter() {
+				YieldRate::<T>::insert(currency_id, rate);
 			}
 		}
 	}

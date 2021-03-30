@@ -61,16 +61,7 @@ pub mod pallet {
     use super::*;
 
     #[pallet::config]
-    // pub trait Config: frame_system::Config + zenlink_protocol::Config {
     pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
-        // /// The arithmetic type of asset identifier.
-        // type CurrencyId: Parameter
-        //     + Member
-        //     + Copy
-        //     + MaybeSerializeDeserialize
-        //     + Ord
-        //     + CurrencyIdExt
-        //     + From<u8>;
         /// The units in which we record balances.
         type Balance: Member
             + Parameter
@@ -138,8 +129,8 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Set user fee charge assets order.
         #[pallet::weight(<T as Config>::WeightInfo::set_user_fee_charge_order())]
-        /// Set user fee charge assets order
         pub fn set_user_fee_charge_order(
             origin: OriginFor<T>,
             asset_order_list_vec: Option<Vec<CurrencyId>>,

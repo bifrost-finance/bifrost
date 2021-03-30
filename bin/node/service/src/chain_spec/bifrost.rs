@@ -17,11 +17,11 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::Perbill;
+use sp_runtime::{Perbill, Permill};
 use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use bifrost_runtime::{
-	constants::currency::DOLLARS, AuthorityDiscoveryConfig, BabeConfig, 
+	constants::{currency::DOLLARS, time::DAYS}, AuthorityDiscoveryConfig, BabeConfig, 
 	BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
@@ -33,7 +33,7 @@ use crate::chain_spec::{
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "bnc";
+const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
 /// The `ChainSpec` parametrised for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -256,7 +256,19 @@ pub fn testnet_genesis(
 				(CurrencyId::Token(TokenSymbol::vDOT), 2000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-			]
+			],
+			staking_lock_period: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
+				(CurrencyId::Token(TokenSymbol::KSM), 14 * DAYS)
+			],
+			rate_of_interest_each_block: vec![
+				(CurrencyId::Token(TokenSymbol::ETH), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 009_512_937_595) // 50000.0 * 0.082/(365*24*600)
+			],
+			yield_rate: vec![
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(148)) // 14.8%
+			],
 		},
 		brml_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
