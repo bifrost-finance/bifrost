@@ -127,14 +127,16 @@ pub mod pallet {
 		()
 	>;
 
-	/// When the use start to stake.
+	/// Record when and how much balance user want to redeem.
 	#[pallet::storage]
-	#[pallet::getter(fn when_staked)]
-	pub(crate) type WhenStaked<T: Config> = StorageMap<
+	#[pallet::getter(fn redeem_record)]
+	pub(crate) type RedeemRecord<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		T::AccountId,
-		T::BlockNumber,
+		Blake2_128Concat,
+		CurrencyIdOf<T>,
+		Vec<(T::BlockNumber, BalanceOf<T>)>,
 		ValueQuery
 	>;
 
@@ -143,8 +145,8 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		UpdateRatePerBlockSuccess,
-		MintedVToken(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
-		MintedToken(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		Minted(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		RedeemStarted(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
 		RedeemedPointsSuccess,
 		UpdateVtokenPoolSuccess,
 	}
@@ -196,13 +198,13 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Mint vtoken by token.
+		/// Mint vtoken.
 		///
 		/// The dispatch origin for this call must be `Signed` by the
 		/// transactor.
 		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
 		#[transactional]
-		pub fn to_vtoken(
+		pub fn mint(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
 			#[pallet::compact] token_amount: BalanceOf<T>
@@ -239,75 +241,42 @@ pub mod pallet {
 			Self::expand_mint_pool(currency_id, vtokens_buy)?;
 
 			let current_block = <frame_system::Module<T>>::block_number();
-			if WhenStaked::<T>::contains_key(&minter) {
-				WhenStaked::<T>::mutate(&minter, |when| {
-					*when = current_block;
-				});
-			} else {
-				WhenStaked::<T>::insert(&minter, current_block);
-			}
 
 			// reward mint reward
-			T::MinterReward::reward_minted_vtoken(&minter, currency_id, vtokens_buy, current_block);
+			let _ = T::MinterReward::reward_minted_vtoken(&minter, currency_id, vtokens_buy, current_block);
 
-			Self::deposit_event(Event::MintedVToken(minter, currency_id, vtokens_buy));
+			Self::deposit_event(Event::Minted(minter, currency_id, vtokens_buy));
 
 			Ok(().into())
 		}
 
-		/// Mint token by vtoken.
+		/// Redeem token.
 		///
 		/// The dispatch origin for this call must be `Signed` by the
 		/// transactor.
 		#[pallet::weight(T::DbWeight::get().reads_writes(1, 1))]
 		#[transactional]
-		pub fn to_token(
+		pub fn redeem(
 			origin: OriginFor<T>,
 			currency_id: CurrencyIdOf<T>,
 			#[pallet::compact] vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let minter = ensure_signed(origin)?;
+			let redeemer = ensure_signed(origin)?;
 
 			ensure!(!vtoken_amount.is_zero(), Error::<T>::BalanceZero);
 			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
-
-			// check the user can redeem their tokens
-			let current_block = <frame_system::Module<T>>::block_number();
-			let when_started_staking = WhenStaked::<T>::get(&minter);
-			ensure!(
-				current_block - when_started_staking >  T::StakingLockPeriod::get(&currency_id),
-				Error::<T>::UnderStaking
-			);
-
+			
 			// Get paired tokens.
-			let (_token_id, vtoken_id) = currency_id.get_token_pair().unwrap();
-
-			let vtoken_balances = T::MultiCurrency::free_balance(vtoken_id.into(), &minter);
+			let (_token_id, vtoken_id) = currency_id
+				.get_token_pair()
+				.ok_or(Error::<T>::NotSupportTokenType)?;
+			
+			let vtoken_balances = T::MultiCurrency::free_balance(vtoken_id.into(), &redeemer);
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::BalanceLow);
 
-			// Total amount of tokens.
-			let token_pool = Self::get_mint_pool(currency_id);
-			// Total amount of vtokens.
-			let vtoken_pool = Self::get_mint_pool(vtoken_id.into());
-			ensure!(
-				!token_pool.is_zero() && !vtoken_pool.is_zero(),
-				Error::<T>::EmptyVtokenPool
-			);
+			Self::update_redeem_record(currency_id, &redeemer, vtoken_amount);
 
-			let tokens_buy = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
-			ensure!(
-				vtoken_pool >= tokens_buy && vtoken_pool >= vtoken_amount,
-				Error::<T>::NotEnoughVtokenPool
-			);
-
-			T::MultiCurrency::withdraw(vtoken_id.into(), &minter, vtoken_amount)?;
-			T::MultiCurrency::deposit(currency_id, &minter, tokens_buy)?;
-
-			// Alter mint pool
-			Self::reduce_mint_pool(currency_id, tokens_buy)?;
-			Self::reduce_mint_pool(vtoken_id.into(), vtoken_amount)?;
-
-			Self::deposit_event(Event::MintedToken(minter, currency_id, tokens_buy));
+			Self::deposit_event(Event::Minted(redeemer, currency_id, vtoken_amount));
 
 			Ok(().into())
 		}
@@ -339,11 +308,73 @@ pub mod pallet {
 					}
 				}
 			}
+
+			// Check redeem
+			let _ = Self::check_redeem_period(_block_number);
 		}
 	}
 
 	/// Mock yield change
 	impl<T: Config> Pallet<T> {
+		fn update_redeem_record(
+			currency_id: CurrencyIdOf<T>,
+			who: &T::AccountId,
+			amount: BalanceOf<T>,
+		) {
+			let current_block = <frame_system::Module<T>>::block_number();
+
+			if RedeemRecord::<T>::contains_key(who, currency_id) {
+				RedeemRecord::<T>::mutate(who, currency_id, |record| {
+					record.push((current_block, amount));
+				})
+			} else {
+				let mut new_recrod = Vec::with_capacity(1);
+				new_recrod.push((current_block, amount));
+				RedeemRecord::<T>::insert(who, currency_id, new_recrod);
+			}
+		}
+
+		fn check_redeem_period(n: T::BlockNumber) -> DispatchResult {
+			for (who, currency_id, records) in RedeemRecord::<T>::iter() {
+				let redeem_period = T::StakingLockPeriod::get(&currency_id);
+				for (when, amount) in records.iter() {
+					if n - *when >= redeem_period {
+						// Get paired tokens.
+						let (_token_id, vtoken_id) = currency_id
+							.get_token_pair()
+							.ok_or(Error::<T>::NotSupportTokenType)?;
+
+						// Reach the end of staking period, begin to redeem.
+						// Total amount of tokens.
+						let token_pool = Self::get_mint_pool(currency_id);
+						// Total amount of vtokens.
+						let vtoken_pool = Self::get_mint_pool(vtoken_id.into());
+						ensure!(
+							!token_pool.is_zero() && !vtoken_pool.is_zero(),
+							Error::<T>::EmptyVtokenPool
+						);
+
+						let tokens_redeem = amount.saturating_mul(token_pool) / vtoken_pool;
+						ensure!(
+							vtoken_pool >= tokens_redeem && vtoken_pool >= *amount,
+							Error::<T>::NotEnoughVtokenPool
+						);
+
+						T::MultiCurrency::withdraw(vtoken_id.into(), &who, *amount)?;
+						T::MultiCurrency::deposit(currency_id, &who, tokens_redeem)?;
+
+						// Alter mint pool
+						Self::reduce_mint_pool(currency_id, tokens_redeem)?;
+						Self::reduce_mint_pool(vtoken_id.into(), *amount)?;
+
+						T::MultiCurrency::deposit(currency_id, &who, *amount)?;
+					}
+				}
+			}
+
+			Ok(())
+		}
+
 		fn mock_yield_change() -> u32 {
 			// Use block number as seed
 			let current_block = <frame_system::Module<T>>::block_number();

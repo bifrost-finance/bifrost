@@ -343,7 +343,7 @@ where
 		);
 		let raw_payload = SignedPayload::new(call, extra)
 			.map_err(|e| {
-				// debug::warn!("Unable to create signed payload: {:?}", e);
+				log::warn!("Unable to create signed payload: {:?}", e);
 			})
 			.ok()?;
 		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
@@ -888,7 +888,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, CurrencyId, AccountId, Balance> for Runtime {
+	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
 		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
 		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
 			match rs {

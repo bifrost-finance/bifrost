@@ -292,14 +292,14 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost PC1",
+		"Asgard CC4 Dev",
 		"bifrost_pc1_testnet",
-		ChainType::Custom("Bifrost PC1 Testnet".into()),
+		ChainType::Custom("Asgard CC4 Dev Testnet".into()),
 		move || {
 			rococo_config_genesis(id)
 		},
 		vec![
-			"/dns/rococo-1.testnet.liebi.com/tcp/30333/p2p/12D3KooWNM2rAjo2FqUgtQ2nnQ7nNxQntB9ssHS5TryvTVMpMKxa".parse().expect("failed to parse multiaddress.")
+			// "/dns/rococo-1.testnet.liebi.com/tcp/30333/p2p/12D3KooWNM2rAjo2FqUgtQ2nnQ7nNxQntB9ssHS5TryvTVMpMKxa".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),

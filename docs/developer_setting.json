@@ -259,5 +259,7 @@
     }
   },
   "CurrencyIdOf": "CurrencyId",
-  "AmountOf": "i128"
+  "AmountOf": "i128",
+  "BlockNumberFor": "BlockNumber",
+  "ShareWeight": "Balance"
 }

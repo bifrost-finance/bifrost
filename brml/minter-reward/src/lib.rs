@@ -16,10 +16,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::marker::PhantomData;
-use core::convert::{TryFrom};
 use fixed::{types::extra::U0, FixedU128};
 use frame_support::{
-	Parameter, traits::{Get, Hooks, CurrencyToVote}, transactional,
+	Parameter, traits::{Get, Hooks}, transactional,
 	pallet_prelude::{
 		Blake2_128Concat, ensure, StorageMap, StorageValue,
 		ValueQuery, StorageDoubleMap, IsType, DispatchResult
@@ -71,10 +70,6 @@ pub mod pallet {
 		/// Reward period, normally it's 50 blocks after.
 		#[pallet::constant]
 		type RewardPeriod: Get<BlockNumberFor<Self>>;
-
-		/// Convert a balance into a number used for election calculation.
-		/// This must fit into a `u64` but is allowed to be sensibly lossy.
-		type CurrencyToVote: CurrencyToVote<BalanceOf<Self>>;
 
 		/// Allow maximum blocks can be extended.
 		#[pallet::constant]
@@ -149,6 +144,17 @@ pub mod pallet {
 		_,
 		// (when, amount, currency _id, extended)
 		(BlockNumberFor<T>, BalanceOf<T>, CurrencyIdOf<T>, IsExtended),
+		ValueQuery
+	>;
+
+	/// Record a user how much bnc s/he reveives.
+	#[pallet::storage]
+	#[pallet::getter(fn user_bnc_reward)]
+	pub(crate) type UserNBNCReward<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BalanceOf<T>,
 		ValueQuery
 	>;
 
@@ -306,7 +312,7 @@ pub mod pallet {
 
 		pub fn issue_bnc_reward(bnc_reward: BalanceOf<T>) {
 			let total_weight: BalanceOf<T>  = {
-				let mut total: T::ShareWeight = Zero::zero();
+				let total: T::ShareWeight = Zero::zero();
 				for (_, _weight) in Weights::<T>::iter() {
 					total.saturating_add(_weight);
 				}
@@ -318,6 +324,15 @@ pub mod pallet {
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id);
 				let reward = (bnc_reward * weight.into() / total_weight.into()) * (vtoken_amount / total_vtoken_mint);
 				let _ = T::MultiCurrency::deposit(currency_id, &minter, reward);
+
+				// Record all BNC rewards the user receives.
+				if UserNBNCReward::<T>::contains_key(&minter) {
+					UserNBNCReward::<T>::mutate(&minter, |balance| {
+						*balance = balance.saturating_add(reward);
+					})
+				} else {
+					UserNBNCReward::<T>::insert(&minter, reward);
+				}
 			}
 		}
 	}

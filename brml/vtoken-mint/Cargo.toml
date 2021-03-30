@@ -13,6 +13,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 serde = { version = "1.0.118", optional = true }
 sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master" }
@@ -30,5 +31,6 @@ std = [
 	"serde/std",
 	"sp-core/std",
 	"sp-runtime/std",
+	"sp-std/std",
 	"orml-traits/std",
 ]
