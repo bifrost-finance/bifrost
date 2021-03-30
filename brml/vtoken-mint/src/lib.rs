@@ -170,7 +170,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		UpdateRatePerBlockSuccess,
 		Minted(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
-		RedeemStarted(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		RedeemStarted(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>, T::BlockNumber),
 		RedeemedPointsSuccess,
 		UpdateVtokenPoolSuccess,
 	}
@@ -300,7 +300,8 @@ pub mod pallet {
 
 			Self::update_redeem_record(currency_id, &redeemer, vtoken_amount);
 
-			Self::deposit_event(Event::Minted(redeemer, currency_id, vtoken_amount));
+			let current_block = <frame_system::Module<T>>::block_number();
+			Self::deposit_event(Event::RedeemStarted(redeemer, currency_id, vtoken_amount, current_block));
 
 			Ok(().into())
 		}

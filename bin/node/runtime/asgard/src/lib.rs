@@ -50,8 +50,8 @@ use sp_runtime::transaction_validity::{
 	TransactionPriority, TransactionSource, TransactionValidity,
 };
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber,
-	ModuleId, Perbill, Perquintill, Permill
+	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult,
+	ModuleId, Perbill, Perquintill, FixedPointNumber
 };
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 #[cfg(any(feature = "std", test))]
