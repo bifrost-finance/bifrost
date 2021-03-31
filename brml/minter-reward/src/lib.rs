@@ -150,7 +150,7 @@ pub mod pallet {
 	/// Record a user how much bnc s/he reveives.
 	#[pallet::storage]
 	#[pallet::getter(fn user_bnc_reward)]
-	pub(crate) type UserNBNCReward<T: Config> = StorageMap<
+	pub(crate) type UserBNCReward<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
 		T::AccountId,
@@ -326,12 +326,12 @@ pub mod pallet {
 				let _ = T::MultiCurrency::deposit(currency_id, &minter, reward);
 
 				// Record all BNC rewards the user receives.
-				if UserNBNCReward::<T>::contains_key(&minter) {
-					UserNBNCReward::<T>::mutate(&minter, |balance| {
+				if UserBNCReward::<T>::contains_key(&minter) {
+					UserBNCReward::<T>::mutate(&minter, |balance| {
 						*balance = balance.saturating_add(reward);
 					})
 				} else {
-					UserNBNCReward::<T>::insert(&minter, reward);
+					UserBNCReward::<T>::insert(&minter, reward);
 				}
 			}
 		}
