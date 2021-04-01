@@ -136,8 +136,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
 		config.role.is_authority().into(),
-		// config.prometheus_registry(),
-		None,
+		config.prometheus_registry(),
 		task_manager.spawn_handle(),
 		client.clone(),
 	);
@@ -147,8 +146,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		client.clone(),
 		inherent_data_providers.clone(),
 		&task_manager.spawn_essential_handle(),
-		// registry.clone(),
-		None,
+		registry.clone(),
 	)?;
 
 	let params = PartialComponents {
@@ -203,7 +201,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
 	let polkadot_full_node =
-		cumulus_client_service::build_polkadot_full_node(polkadot_config, collator_key.public(), telemetry_worker_handle).map_err(
+		cumulus_client_service::build_polkadot_full_node(polkadot_config, collator_key.clone(), telemetry_worker_handle).map_err(
 			|e| match e {
 				polkadot_service::Error::Sub(x) => x,
 				s => format!("{}", s).into(),
@@ -263,8 +261,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 			task_manager.spawn_handle(),
 			client.clone(),
 			transaction_pool,
-			// prometheus_registry.as_ref(),
-			None,
+			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|x| x.handle()),
 		);
 

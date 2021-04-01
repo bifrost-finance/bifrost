@@ -142,8 +142,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
 		config.role.is_authority().into(),
-		// config.prometheus_registry(),
-		None,
+		config.prometheus_registry(),
 		task_manager.spawn_handle(),
 		client.clone(),
 	);
@@ -172,8 +171,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		select_chain.clone(),
 		inherent_data_providers.clone(),
 		&task_manager.spawn_essential_handle(),
-		// config.prometheus_registry(),
-		None,
+		config.prometheus_registry(),
 		sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
 		telemetry.as_ref().map(|x| x.handle()),
 	)?;
@@ -331,8 +329,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			task_manager.spawn_handle(),
 			client.clone(),
 			transaction_pool.clone(),
-			// prometheus_registry.as_ref(),
-			None,
+			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|x| x.handle()),
 		);
 
@@ -374,8 +371,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			network.clone(),
 			Box::pin(dht_event_stream),
 			authority_discovery_role,
-			// prometheus_registry.clone(),
-			None,
+			prometheus_registry.clone(),
 		);
 
 		task_manager.spawn_handle().spawn("authority-discovery-worker", authority_discovery_worker.run());
@@ -413,8 +409,7 @@ pub fn new_full_base<RuntimeApi, Executor>(
 			network: network.clone(),
 			telemetry: telemetry.as_ref().map(|x| x.handle()),
 			voting_rule: grandpa::VotingRulesBuilder::default().build(),
-			prometheus_registry: None,
-			// None,
+			prometheus_registry: prometheus_registry,
 			shared_voter_state,
 		};
 
@@ -494,8 +489,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 
 	let transaction_pool = Arc::new(sc_transaction_pool::BasicPool::new_light(
 		config.transaction_pool.clone(),
-		// config.prometheus_registry(),
-		None,
+		config.prometheus_registry(),
 		task_manager.spawn_handle(),
 		client.clone(),
 		on_demand.clone(),
@@ -525,8 +519,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 		select_chain.clone(),
 		inherent_data_providers.clone(),
 		&task_manager.spawn_essential_handle(),
-		// config.prometheus_registry(),
-		None,
+		config.prometheus_registry(),
 		sp_consensus::NeverCanAuthor,
 		telemetry.as_ref().map(|x| x.handle()),
 	)?;
