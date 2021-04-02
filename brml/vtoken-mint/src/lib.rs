@@ -25,7 +25,9 @@ use frame_support::{
 use frame_system::{
 	ensure_root, ensure_signed, pallet_prelude::{OriginFor, BlockNumberFor}
 };
-use node_primitives::{CurrencyIdExt, CurrencyId, DEXOperations, VtokenMintExt, MinterRewardExt};
+use node_primitives::{
+	CurrencyIdExt, CurrencyId, TokenSymbol, DEXOperations, VtokenMintExt, MinterRewardExt
+};
 use orml_traits::{
 	account::MergeAccount, MultiCurrency,
 	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
@@ -139,6 +141,19 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
 		T::BlockNumber,
+		ValueQuery
+	>;
+
+	/// List user staking revenue.
+	#[pallet::storage]
+	#[pallet::getter(fn user_staking_revenue)]
+	pub(crate) type UserStakingRevenue<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		Blake2_128Concat,
+		TokenSymbol,
+		BalanceOf<T>,
 		ValueQuery
 	>;
 
@@ -300,6 +315,11 @@ pub mod pallet {
 
 			Self::update_redeem_record(currency_id, &redeemer, vtoken_amount);
 
+			// Just record which vtoken is minted
+			if !UserStakingRevenue::<T>::contains_key(&redeemer, vtoken_id) {
+				UserStakingRevenue::<T>::insert(&redeemer, vtoken_id, BalanceOf::<T>::from(0u32));
+			}
+
 			let current_block = <frame_system::Module<T>>::block_number();
 			Self::deposit_event(Event::RedeemStarted(redeemer, currency_id, vtoken_amount, current_block));
 
@@ -326,10 +346,14 @@ pub mod pallet {
 						// up to 17.8% or 11.2%
 						let rate = year_rate.saturating_add(fluctuation) * bonus;
 						let _ = Self::expand_mint_pool(currency_id, rate);
+						// update revenue for each user having vtoken
+						Self::record_user_staking_revenue(currency_id, rate);
 					} else {
 						// down to 11.8% or 5.2%
 						let rate = year_rate.saturating_sub(fluctuation) * bonus;
 						let _ = Self::expand_mint_pool(currency_id, rate);
+						// update revenue for each user having vtoken
+						Self::record_user_staking_revenue(currency_id, rate);
 					}
 				}
 			}
@@ -341,6 +365,23 @@ pub mod pallet {
 
 	/// Mock yield change
 	impl<T: Config> Pallet<T> {
+		fn record_user_staking_revenue(
+			currency_id: CurrencyIdOf<T>,
+			revenue: BalanceOf<T>
+		) {
+			// vtoken total issued
+			let toal_issued = T::MultiCurrency::total_issuance(currency_id);
+
+			// find out all holders having this vtoken.
+			for (who, token_symbol, _) in UserStakingRevenue::<T>::iter().filter(|(_, id, _)| *id == *currency_id) {
+				let free_balance = T::MultiCurrency::free_balance(currency_id, &who);
+				let gain = free_balance.saturating_mul(revenue) / toal_issued;
+				UserStakingRevenue::<T>::mutate(&who, token_symbol, |balance| {
+					*balance = balance.saturating_add(gain);
+				})
+			}
+		}
+
 		fn update_redeem_record(
 			currency_id: CurrencyIdOf<T>,
 			who: &T::AccountId,
