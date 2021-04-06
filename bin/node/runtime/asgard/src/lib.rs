@@ -201,6 +201,7 @@ impl frame_system::Config for Runtime {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Runtime>;
 	type SS58Prefix = SS58Prefix;
+	type OnSetCode = ();
 }
 
 impl pallet_utility::Config for Runtime {
@@ -439,7 +440,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OnValidationData = ();
 	type SelfParaId = ParachainInfo;
 	type DownwardMessageHandlers = ZenlinkProtocol;
-	type HrmpMessageHandlers = ZenlinkProtocol;
+	type XcmpMessageHandlers = ZenlinkProtocol;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -448,9 +449,9 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
-	type HrmpMessageSender = ParachainSystem;
 	type SendXcmOrigin = EnsureRoot<AccountId>;
 	type AccountIdConverter = LocationConverter;
+	type XcmpMessageSender = ParachainSystem;
 }
 
 parameter_types! {
@@ -624,14 +625,13 @@ impl zenlink_protocol::Config for Runtime {
     type Event = Event;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type UpwardMessageSender = ParachainSystem;
-    type HrmpMessageSender = ParachainSystem;
-    // type NativeCurrency = Balances;
     type AccountIdConverter = LocationConverter;
     type AccountId32Converter = AccountId32Converter;
     type ParaId = ParachainInfo;
     type ModuleId = DEXModuleId;
     type TargetChains = SiblingParachains;
 	type AssetModuleRegistry = AssetModuleRegistry;
+	type XcmpMessageSender = ParachainSystem;
 }
 
 // culumus runtime end
