@@ -420,7 +420,7 @@ impl brml_minter_reward::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
 			_ => Zero::zero(),
 		}
 	};
@@ -476,7 +476,7 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 }
 
 parameter_types! {
-	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;

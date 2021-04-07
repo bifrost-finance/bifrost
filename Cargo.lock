@@ -854,12 +854,14 @@ dependencies = [
 name = "brml-vtoken-mint"
 version = "0.7.0"
 dependencies = [
+ "brml-minter-reward",
  "frame-support",
  "frame-system",
  "node-primitives",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-randomness-collective-flip",
  "parity-scale-codec 2.0.1",
  "serde",
  "sp-core",

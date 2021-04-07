@@ -23,7 +23,7 @@ use frame_support::{assert_ok, assert_noop};
 use node_primitives::Balance;
 
 #[test]
-fn to_vtoken_should_be_ok() {
+fn mint_vtoken_should_be_ok() {
 	ExtBuilder::default()
 		.one_hundred_for_alice_n_bob()
 		.build()
@@ -42,10 +42,10 @@ fn to_vtoken_should_be_ok() {
 			System::set_block_number(1);
 
 			// Alice sell 20 DOTs to mint vDOT.
-			assert_ok!(VtokenMint::to_vtoken(Origin::signed(ALICE), vDOT, to_sell_dot));
+			assert_ok!(VtokenMint::mint(Origin::signed(ALICE), vDOT, to_sell_dot));
 
 			// Check event
-			let mint_vtoken_event = mock::Event::vtoken_mint(crate::Event::MintedVToken(ALICE, vDOT, minted_vdot));
+			let mint_vtoken_event = mock::Event::vtoken_mint(crate::Event::Minted(ALICE, vDOT, minted_vdot));
 			assert!(System::events().iter().any(|record| record.event == mint_vtoken_event));
 
 			// check Alice DOTs and vDOTs.
@@ -58,32 +58,32 @@ fn to_vtoken_should_be_ok() {
 
 			// Alice selling BNC should not work.
 			assert_noop!(
-				VtokenMint::to_vtoken(Origin::signed(ALICE), BNC, to_sell_dot),
+				VtokenMint::mint(Origin::signed(ALICE), BNC, to_sell_dot),
 				Error::<Runtime>::NotSupportTokenType
 			);
 
 			// Alice selling DOT should not work due to it only support minting vDOT(vtoken).
 			assert_noop!(
-				VtokenMint::to_vtoken(Origin::signed(ALICE), DOT, to_sell_dot),
+				VtokenMint::mint(Origin::signed(ALICE), DOT, to_sell_dot),
 				Error::<Runtime>::NotSupportTokenType
 			);
 
 			// Alice selling 0 DOTs should not work.
 			assert_noop!(
-				VtokenMint::to_vtoken(Origin::signed(ALICE), vDOT, 0),
+				VtokenMint::mint(Origin::signed(ALICE), vDOT, 0),
 				Error::<Runtime>::BalanceZero
 			);
 
 			// Alice selling amount of DOTs exceeds all she has.
 			assert_noop!(
-				VtokenMint::to_vtoken(Origin::signed(ALICE), vDOT, Balance::max_value()),
+				VtokenMint::mint(Origin::signed(ALICE), vDOT, Balance::max_value()),
 				Error::<Runtime>::BalanceLow
 			);
 		});
 }
 
 #[test]
-fn to_token_should_be_ok() {
+fn redeem_token_should_be_ok() {
 	ExtBuilder::default()
 		.one_hundred_for_alice_n_bob()
 		.build()
@@ -102,11 +102,16 @@ fn to_token_should_be_ok() {
 			System::set_block_number(1);
 
 			// Alice sell 20 vDOTs to mint DOT.
-			assert_ok!(VtokenMint::to_token(Origin::signed(ALICE), DOT, to_sell_vdot));
+			assert_ok!(VtokenMint::redeem(Origin::signed(ALICE), DOT, to_sell_vdot));
 
 			// Check event
-			let mint_token_event = mock::Event::vtoken_mint(crate::Event::MintedToken(ALICE, DOT, minted_dot));
-			assert!(System::events().iter().any(|record| record.event == mint_token_event));
+			let redeem_token_event = mock::Event::vtoken_mint(crate::Event::RedeemStarted(ALICE, DOT, minted_dot, 1));
+			assert!(System::events().iter().any(|record| {
+					dbg!(&record);
+					dbg!(&redeem_token_event);
+					record.event == redeem_token_event
+				})
+			);
 
 			// check Alice DOTs and vDOTs.
 			assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot + minted_dot);
@@ -118,25 +123,25 @@ fn to_token_should_be_ok() {
 
 			// Alice selling aUSD should not work.
 			assert_noop!(
-				VtokenMint::to_token(Origin::signed(ALICE), aUSD, to_sell_vdot),
+				VtokenMint::redeem(Origin::signed(ALICE), aUSD, to_sell_vdot),
 				Error::<Runtime>::NotSupportTokenType
 			);
 
 			// Alice selling vDOT should not work due to it only support minting DOT(token).
 			assert_noop!(
-				VtokenMint::to_token(Origin::signed(ALICE), vDOT, to_sell_vdot),
+				VtokenMint::redeem(Origin::signed(ALICE), vDOT, to_sell_vdot),
 				Error::<Runtime>::NotSupportTokenType
 			);
 
 			// Alice selling 0 vDOTs should not work.
 			assert_noop!(
-				VtokenMint::to_token(Origin::signed(ALICE), DOT, 0),
+				VtokenMint::redeem(Origin::signed(ALICE), DOT, 0),
 				Error::<Runtime>::BalanceZero
 			);
 
 			// Alice selling amount of DOTs exceeds all she has.
 			assert_noop!(
-				VtokenMint::to_token(Origin::signed(ALICE), DOT, Balance::max_value()),
+				VtokenMint::redeem(Origin::signed(ALICE), DOT, Balance::max_value()),
 				Error::<Runtime>::BalanceLow
 			);
 		});
@@ -155,13 +160,13 @@ fn zero_token_pool_should_not_work() {
 
 			// Alice sell 20 vDOTs to mint DOT.
 			assert_noop!(
-				VtokenMint::to_token(Origin::signed(ALICE), DOT, to_sell_vdot),
+				VtokenMint::redeem(Origin::signed(ALICE), DOT, to_sell_vdot),
 				Error::<Runtime>::EmptyVtokenPool
 			);
 
 			// Alice sell 20 KSMs to mint vKSM.
 			assert_noop!(
-				VtokenMint::to_vtoken(Origin::signed(BOB), vKSM, to_sell_ksm),
+				VtokenMint::redeem(Origin::signed(BOB), vKSM, to_sell_ksm),
 				Error::<Runtime>::EmptyVtokenPool
 			);
 		});
