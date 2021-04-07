@@ -39,10 +39,10 @@ pub use pallet::*;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::{vec, vec::Vec};
 
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, DEXOperations, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use zenlink_protocol::{AssetId, DEXOperations, TokenBalance};
+use zenlink_protocol::{AssetId, TokenBalance};
 
 mod default_weight;
 mod mock;
@@ -62,6 +62,8 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
+        /// Event
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The units in which we record balances.
         type Balance: Member
             + Parameter
@@ -105,7 +107,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        FlexibleFeeExchanged(CurrencyId, T::Balance), // token and amount
+        FlexibleFeeExchanged(CurrencyId, u128), // token and amount
     }
 
     #[pallet::type_value]
@@ -117,7 +119,8 @@ pub mod pallet {
             CurrencyId::Token(TokenSymbol::vDOT),
             CurrencyId::Token(TokenSymbol::ETH),
             CurrencyId::Token(TokenSymbol::vETH),
-        ].to_vec()
+        ]
+        .to_vec()
     }
 
     #[pallet::storage]
@@ -185,8 +188,7 @@ impl<T: Config> Pallet<T> {
                 let native_is_enough = <<T as Config>::Currency as Currency<
                     <T as frame_system::Config>::AccountId,
                 >>::free_balance(who)
-                .checked_sub(&fee)
-                .checked_sub(&existential_deposit)
+                .checked_sub(&(fee + existential_deposit.into()))
                 .map_or(false, |new_free_balance| {
                     <<T as Config>::Currency as Currency<
                                                 <T as frame_system::Config>::AccountId,
@@ -209,7 +211,9 @@ impl<T: Config> Pallet<T> {
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
 
                 // query for amount in
-                let amounts = Self::get_amount_in_by_path(amount_out, &path)?;
+                let amounts = T::ZenlinkDEX::get_amount_in_by_path(amount_out, &path)
+                    .map_err(|_e| vec![0])
+                    .unwrap();
 
                 if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens(
                     who,
@@ -220,7 +224,7 @@ impl<T: Config> Pallet<T> {
                 )
                 .is_ok()
                 {
-                    Self::deposit_event(FlexibleFeeExchanged(currency_id, amounts[0]));
+                    Self::deposit_event(Event::FlexibleFeeExchanged(currency_id, amounts[0]));
                     // successfully swap, break iteration
                     break;
                 }

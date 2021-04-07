@@ -23,7 +23,7 @@
 use codec::Encode;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{Randomness},
+	traits::Randomness,
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -35,8 +35,8 @@ use frame_system::{
 };
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash,
-	Index, Moment, TokenBalance, TokenSymbol, ZenlinkAssetId,
+	AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Index, Moment, TokenBalance,
+	TokenSymbol, ZenlinkAssetId,
 };
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
@@ -51,7 +51,7 @@ use sp_runtime::transaction_validity::{
 };
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, FixedPointNumber,
-	KeyTypeId, ModuleId, Perbill, Perquintill, Permill
+	KeyTypeId, ModuleId, Perbill, Permill, Perquintill,
 };
 
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
@@ -648,7 +648,7 @@ construct_runtime!(
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: brml_minter_reward::{Module, Storage, Event<T>} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
-		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage} = 20,
+		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
