@@ -418,7 +418,7 @@ impl brml_minter_reward::Config for Runtime {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
 			_ => Zero::zero(),
 		}
 	};
@@ -474,7 +474,7 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 }
 
 parameter_types! {
-	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -605,7 +605,7 @@ impl zenlink_protocol::Config for Runtime {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 impl brml_charge_transaction_fee::Config for Runtime {
@@ -847,7 +847,7 @@ impl_runtime_apis! {
 		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
 			match rs {
 				Ok(val) => val,
-				_ => (CurrencyId::Token(TokenSymbol::BNC), Zero::zero()),
+				_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
 			}
 		}
 	}

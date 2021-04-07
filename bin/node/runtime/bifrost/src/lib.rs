@@ -1036,7 +1036,7 @@ impl brml_minter_reward::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
 			_ => 0,
 		}
 	};

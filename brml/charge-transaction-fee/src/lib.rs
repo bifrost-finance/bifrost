@@ -39,7 +39,7 @@ pub use pallet::*;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::{vec, vec::Vec};
 
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use zenlink_protocol::{AssetId, DEXOperations, TokenBalance};
@@ -104,13 +104,14 @@ pub mod pallet {
 
     #[pallet::type_value]
     pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
-        let mut fee_charge_order_vec = Vec::new();
-        // Should frequently update the number of Currency Ids. Right now there's only 12.
-        for i in 0..12 {
-            fee_charge_order_vec.push(CurrencyId::from(i as u8));
-        }
-
-        fee_charge_order_vec
+        [
+            CurrencyId::Token(TokenSymbol::ASG),
+            CurrencyId::Token(TokenSymbol::aUSD),
+            CurrencyId::Token(TokenSymbol::DOT),
+            CurrencyId::Token(TokenSymbol::vDOT),
+            CurrencyId::Token(TokenSymbol::ETH),
+            CurrencyId::Token(TokenSymbol::vETH),
+        ].to_vec()
     }
 
     #[pallet::storage]

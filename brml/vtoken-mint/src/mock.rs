@@ -24,13 +24,12 @@ use frame_support::{parameter_types, traits::GenesisBuild};
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,
+	testing::Header, AccountId32, ModuleId,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
-	AccountId32,
 };
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 pub const aUSD: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
@@ -50,6 +49,8 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Module, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		VtokenMint: vtoken_mint::{Module, Call, Storage, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+		MinterReward: brml_minter_reward::{Module, Storage, Event<T>},
 	}
 );
 
@@ -114,7 +115,28 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
+	pub const TwoYear: u32 = 1 * 365 * 2;
+	pub const RewardPeriod: u32 = 50;
+	pub const MaximumExtendedPeriod: u32 = 500;
+	pub const ShareWeightModuleId: ModuleId = ModuleId(*b"weight  ");
+}
+
+impl brml_minter_reward::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type TwoYear = TwoYear;
+	type ModuleId = ShareWeightModuleId;
+	type RewardPeriod = RewardPeriod;
+	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	// type DEXOperations = ZenlinkProtocol;
+	type DEXOperations = ();
+	type ShareWeight = Balance;
+}
+
+parameter_types! {
+	// 3 hours(1800 blocks) as an era
+	pub const VtokenMintDuration: u32 = 3 * 60 * 1;
+	pub const StakingModuleId: ModuleId = ModuleId(*b"staking ");
 }
 orml_traits::parameter_type_with_key! {
 	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
@@ -128,8 +150,10 @@ orml_traits::parameter_type_with_key! {
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type VtokenMintDuration = VtokenMintDuration;
-	type RateOfInterestEachBlock = RateOfInterestEachBlock;
+	type ModuleId = StakingModuleId;
+	type MinterReward = MinterReward;
+	type DEXOperations = ();
+	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = ();
 }
 

@@ -239,7 +239,7 @@
   "EraId": "u32",
   "TokenSymbol": {
     "_enum": [
-      "BNC",
+      "ASG",
       "aUSD",
       "DOT",
       "vDOT",

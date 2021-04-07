@@ -261,7 +261,12 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> GenesisConfig<T> {
-			Default::default()
+			Self {
+				wegiths: Default::default(),
+				reward_by_one_block: Default::default(),
+				round_index: Default::default(),
+				storage_version: Default::default(),
+			}
 		}
 	}
 
