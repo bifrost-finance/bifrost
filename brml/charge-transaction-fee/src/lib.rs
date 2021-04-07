@@ -102,6 +102,12 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        FlexibleFeeExchanged(CurrencyId, T::Balance), // token and amount
+    }
+
     #[pallet::type_value]
     pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
         let mut fee_charge_order_vec = Vec::new();
@@ -164,6 +170,9 @@ impl<T: Config> Pallet<T> {
     fn ensure_can_charge_fee(who: &T::AccountId, fee: PalletBalanceOf<T>, reason: WithdrawReasons) {
         // get the user defined fee charge order list.
         let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
+        let existential_deposit = <<T as Config>::Currency as Currency<
+            <T as frame_system::Config>::AccountId,
+        >>::minimum_balance();
 
         // charge the fee by the order of the above order list.
         // first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
@@ -176,6 +185,7 @@ impl<T: Config> Pallet<T> {
                     <T as frame_system::Config>::AccountId,
                 >>::free_balance(who)
                 .checked_sub(&fee)
+                .checked_sub(&existential_deposit)
                 .map_or(false, |new_free_balance| {
                     <<T as Config>::Currency as Currency<
                                                 <T as frame_system::Config>::AccountId,
@@ -197,6 +207,9 @@ impl<T: Config> Pallet<T> {
                 let amount_out: TokenBalance = fee.saturated_into();
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
 
+                // query for amount in
+                let amounts = Self::get_amount_in_by_path(amount_out, &path)?;
+
                 if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens(
                     who,
                     amount_out,
@@ -206,6 +219,7 @@ impl<T: Config> Pallet<T> {
                 )
                 .is_ok()
                 {
+                    Self::deposit_event(FlexibleFeeExchanged(currency_id, amounts[0]));
                     // successfully swap, break iteration
                     break;
                 }
