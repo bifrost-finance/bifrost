@@ -211,9 +211,8 @@ impl<T: Config> Pallet<T> {
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
 
                 // query for amount in
-                let amounts = T::ZenlinkDEX::get_amount_in_by_path(amount_out, &path)
-                    .map_err(|_e| vec![0])
-                    .unwrap();
+                let amounts =
+                    T::ZenlinkDEX::get_amount_in_by_path(amount_out, &path).map_or(vec![0], |v| v);
 
                 if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens(
                     who,

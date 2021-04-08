@@ -262,7 +262,8 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Runtime {
 	// type OnChargeTransaction = CurrencyAdapter<Balances, DealWithFees>;
-	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	// type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = ChargeTransactionFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate =
@@ -609,6 +610,7 @@ parameter_types! {
 }
 
 impl brml_charge_transaction_fee::Config for Runtime {
+	type Event = Event;
 	type Balance = Balance;
 	type WeightInfo = ();
 	type CurrenciesHandler = Currencies;

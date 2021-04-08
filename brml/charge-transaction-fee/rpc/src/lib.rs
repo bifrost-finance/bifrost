@@ -17,7 +17,7 @@
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
-use node_primitives::{Balance, CurrencyId, TokenSymbol};
+use node_primitives::{Balance, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::Bytes;
