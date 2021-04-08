@@ -33,8 +33,8 @@ pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	AssetReward, AssetTrait, CurrencyIdExt, DEXOperations, GetDecimals, RewardHandler,
-	VtokenMintExt, MinterRewardExt
+	AssetReward, AssetTrait, CurrencyIdExt, DEXOperations, GetDecimals, MinterRewardExt,
+	RewardHandler, VtokenMintExt,
 };
 
 /// An index to a block.
@@ -287,6 +287,7 @@ pub struct Pair<AccountId, TokenBalance> {
 /// Other parachain's currency is represented by `ParaCurrency(u32)`, `u32` cast to the ParaId.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
 pub enum ZenlinkAssetId {
 	NativeCurrency,
 	ParaCurrency(u32),

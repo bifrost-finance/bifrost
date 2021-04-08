@@ -39,10 +39,10 @@ pub use pallet::*;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::{vec, vec::Vec};
 
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, DEXOperations, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use zenlink_protocol::{AssetId, DEXOperations, TokenBalance};
+use zenlink_protocol::{AssetId, TokenBalance};
 
 mod default_weight;
 mod mock;
@@ -62,6 +62,8 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
+        /// Event
+        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         /// The units in which we record balances.
         type Balance: Member
             + Parameter
@@ -102,6 +104,12 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
+    #[pallet::event]
+    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    pub enum Event<T: Config> {
+        FlexibleFeeExchanged(CurrencyId, u128), // token and amount
+    }
+
     #[pallet::type_value]
     pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
         [
@@ -111,7 +119,8 @@ pub mod pallet {
             CurrencyId::Token(TokenSymbol::vDOT),
             CurrencyId::Token(TokenSymbol::ETH),
             CurrencyId::Token(TokenSymbol::vETH),
-        ].to_vec()
+        ]
+        .to_vec()
     }
 
     #[pallet::storage]
@@ -165,6 +174,9 @@ impl<T: Config> Pallet<T> {
     fn ensure_can_charge_fee(who: &T::AccountId, fee: PalletBalanceOf<T>, reason: WithdrawReasons) {
         // get the user defined fee charge order list.
         let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
+        let existential_deposit = <<T as Config>::Currency as Currency<
+            <T as frame_system::Config>::AccountId,
+        >>::minimum_balance();
 
         // charge the fee by the order of the above order list.
         // first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
@@ -176,7 +188,7 @@ impl<T: Config> Pallet<T> {
                 let native_is_enough = <<T as Config>::Currency as Currency<
                     <T as frame_system::Config>::AccountId,
                 >>::free_balance(who)
-                .checked_sub(&fee)
+                .checked_sub(&(fee + existential_deposit.into()))
                 .map_or(false, |new_free_balance| {
                     <<T as Config>::Currency as Currency<
                                                 <T as frame_system::Config>::AccountId,
@@ -198,6 +210,10 @@ impl<T: Config> Pallet<T> {
                 let amount_out: TokenBalance = fee.saturated_into();
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
 
+                // query for amount in
+                let amounts =
+                    T::ZenlinkDEX::get_amount_in_by_path(amount_out, &path).map_or(vec![0], |v| v);
+
                 if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens(
                     who,
                     amount_out,
@@ -207,6 +223,7 @@ impl<T: Config> Pallet<T> {
                 )
                 .is_ok()
                 {
+                    Self::deposit_event(Event::FlexibleFeeExchanged(currency_id, amounts[0]));
                     // successfully swap, break iteration
                     break;
                 }
