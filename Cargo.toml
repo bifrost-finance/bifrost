@@ -10,14 +10,9 @@ members = [
 	"bin/node/service",
 	"bin/utils/subkey",
 	"brml/assets",
-	# "brml/assets/rpc",
-	# "brml/bid",
-	# "brml/bridge-eos",
 	"brml/vtoken-mint",
 	"brml/vtoken-mint/rpc",
 	"brml/minter-reward",
-	# "brml/staking-reward",
-	# "brml/swap",
 	"brml/voucher",
 ]
 

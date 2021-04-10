@@ -95,26 +95,24 @@ fn redeem_token_should_be_ok() {
 			let alice_dot = Assets::free_balance(DOT, &ALICE);
 			let alice_vdot = Assets::free_balance(vDOT, &ALICE);
 
-			let vdot_price = vdot_pool / dot_pool;
 			let to_sell_vdot = 20;
-			let minted_dot = to_sell_vdot / vdot_price;
+			let minted_dot = to_sell_vdot * dot_pool / vdot_pool;
 
 			System::set_block_number(1);
+			System::on_initialize(1);
 
 			// Alice sell 20 vDOTs to mint DOT.
 			assert_ok!(VtokenMint::redeem(Origin::signed(ALICE), DOT, to_sell_vdot));
 
 			// Check event
-			let redeem_token_event = mock::Event::vtoken_mint(crate::Event::RedeemStarted(ALICE, DOT, minted_dot, 1));
+			let redeem_token_event = mock::Event::vtoken_mint(crate::Event::RedeemStarted(ALICE, DOT, to_sell_vdot, 1));
 			assert!(System::events().iter().any(|record| {
-					dbg!(&record);
-					dbg!(&redeem_token_event);
 					record.event == redeem_token_event
 				})
 			);
 
 			// check Alice DOTs and vDOTs.
-			assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot + minted_dot);
+			// assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot + minted_dot);
 			assert_eq!(Assets::free_balance(vDOT, &ALICE), alice_vdot - to_sell_vdot);
 
 			// check total DOTs and vDOTs.
@@ -144,6 +142,11 @@ fn redeem_token_should_be_ok() {
 				VtokenMint::redeem(Origin::signed(ALICE), DOT, Balance::max_value()),
 				Error::<Runtime>::BalanceLow
 			);
+
+			System::set_block_number(40);
+			System::on_initialize(40);
+			System::on_finalize(40);
+			assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot + minted_dot);
 		});
 }
 

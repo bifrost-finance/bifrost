@@ -55,6 +55,8 @@ brml-minter-reward = { path = "../../../../brml/minter-reward", default-features
 # brml-staking-reward = { path = "../../../../brml/staking-reward", default-features = false }
 # brml-swap = { path = "../../../../brml/swap", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
+brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
@@ -130,6 +132,8 @@ std = [
 	# 'brml-staking-reward/std',
 	# "brml-swap/std",
 	'brml-voucher/std',
+	"brml-charge-transaction-fee/std",
+    "brml-charge-transaction-fee-rpc-runtime-api/std",
 	"parachain-info/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-primitives-core/std",

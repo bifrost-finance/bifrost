@@ -1017,8 +1017,8 @@ impl brml_vtoken_mint::Config for Runtime {
 
 parameter_types! {
 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
-	pub const RewardPeriod: BlockNumber = 50;
-	pub const MaximumExtendedPeriod: BlockNumber = 500;
+	pub const RewardPeriod: BlockNumber = 5;
+	pub const MaximumExtendedPeriod: BlockNumber = 10;
 	pub const ShareWeightModuleId: ModuleId = ModuleId(*b"weight  ");
 }
 
@@ -1088,7 +1088,7 @@ construct_runtime!(
 		BrmlAssets: brml_assets::{Module, Call, Storage, Event<T>},
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>},
 		// Swap: brml_swap::{Module, Call, Storage, Event<T>},
-		MinterReward: brml_minter_reward::{Module, Storage, Event<T>},
+		MinterReward: brml_minter_reward::{Module, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>},
 		// Bid: brml_bid::{Module, Call, Storage, Event<T>},
 		Assets: orml_tokens::{Module, Storage, Event<T>, Config<T>},

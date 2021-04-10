@@ -282,7 +282,8 @@ pub mod pallet {
 			let current_block = <frame_system::Module<T>>::block_number();
 
 			// reward mint reward
-			let _ = T::MinterReward::reward_minted_vtoken(&minter, currency_id, vtokens_buy, current_block);
+			let r = T::MinterReward::reward_minted_vtoken(&minter, currency_id, vtokens_buy, current_block).is_ok();
+			log::debug!(target: "mint", "mint {:?}", r);
 
 			Self::deposit_event(Event::Minted(minter, currency_id, vtokens_buy));
 
@@ -320,6 +321,28 @@ pub mod pallet {
 				UserStakingRevenue::<T>::insert(&redeemer, vtoken_id, BalanceOf::<T>::from(0u32));
 			}
 
+			// Reach the end of staking period, begin to redeem.
+			// Total amount of tokens.
+			let token_pool = Self::get_mint_pool(currency_id);
+			// Total amount of vtokens.
+			let vtoken_pool = Self::get_mint_pool(vtoken_id.into());
+			ensure!(
+				!token_pool.is_zero() && !vtoken_pool.is_zero(),
+				Error::<T>::EmptyVtokenPool
+			);
+
+			let tokens_redeem = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
+			ensure!(
+				token_pool >= tokens_redeem && vtoken_pool >= vtoken_amount,
+				Error::<T>::NotEnoughVtokenPool
+			);
+
+			T::MultiCurrency::withdraw(vtoken_id.into(), &redeemer, vtoken_amount)?;
+
+			// Alter mint pool
+			Self::reduce_mint_pool(currency_id, tokens_redeem)?;
+			Self::reduce_mint_pool(vtoken_id.into(), vtoken_amount)?;
+
 			let current_block = <frame_system::Module<T>>::block_number();
 			Self::deposit_event(Event::RedeemStarted(redeemer, currency_id, vtoken_amount, current_block));
 
@@ -330,6 +353,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_block_number: T::BlockNumber) {
+			// dbg!(_block_number);
 			// Mock staking reward for pulling up vtoken price
 			let random_sum = Self::mock_yield_change();
 			let fluctuation = Permill::from_percent(3); // +- 3%
@@ -403,39 +427,21 @@ pub mod pallet {
 		fn check_redeem_period(n: T::BlockNumber) -> DispatchResult {
 			for (who, currency_id, records) in RedeemRecord::<T>::iter() {
 				let redeem_period = StakingLockPeriod::<T>::get(&currency_id);
-				for (when, amount) in records.iter() {
-					if n - *when >= redeem_period {
-						// Get paired tokens.
-						let (_token_id, vtoken_id) = currency_id
-							.get_token_pair()
-							.ok_or(Error::<T>::NotSupportTokenType)?;
-
-						// Reach the end of staking period, begin to redeem.
-						// Total amount of tokens.
-						let token_pool = Self::get_mint_pool(currency_id);
-						// Total amount of vtokens.
-						let vtoken_pool = Self::get_mint_pool(vtoken_id.into());
-						ensure!(
-							!token_pool.is_zero() && !vtoken_pool.is_zero(),
-							Error::<T>::EmptyVtokenPool
-						);
-
-						let tokens_redeem = amount.saturating_mul(token_pool) / vtoken_pool;
-						ensure!(
-							vtoken_pool >= tokens_redeem && vtoken_pool >= *amount,
-							Error::<T>::NotEnoughVtokenPool
-						);
-
-						T::MultiCurrency::withdraw(vtoken_id.into(), &who, *amount)?;
-						T::MultiCurrency::deposit(currency_id, &who, tokens_redeem)?;
-
-						// Alter mint pool
-						Self::reduce_mint_pool(currency_id, tokens_redeem)?;
-						Self::reduce_mint_pool(vtoken_id.into(), *amount)?;
-
-						T::MultiCurrency::deposit(currency_id, &who, *amount)?;
+				let mut exist_redeem_record = Vec::new();
+				for (index, (when, amount)) in records.iter().cloned().enumerate() {
+					log::debug!(target: "redeem", "period {:?}", redeem_period);
+					log::debug!(target: "redeem", "stripe {:?}", n - when);
+					log::debug!(target: "redeem", "called by {:?}", amount);
+					if n - when >= redeem_period {
+						T::MultiCurrency::deposit(currency_id, &who, amount)?;
+					} else {
+						exist_redeem_record.push((when, amount));
+						log::debug!(target: "redeem", "doesn't reach staking period {:?}", exist_redeem_record);
 					}
 				}
+				RedeemRecord::<T>::mutate(who, currency_id, |record| {
+					*record = exist_redeem_record;
+				});
 			}
 
 			Ok(())

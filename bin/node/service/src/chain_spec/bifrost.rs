@@ -25,7 +25,7 @@ use bifrost_runtime::{
 	BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
 	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
 	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
-	StakerStatus, WASM_BINARY, wasm_binary_unwrap, VtokenMintConfig
+	StakerStatus, WASM_BINARY, wasm_binary_unwrap, VtokenMintConfig, AssetsConfig, MinterRewardConfig,
 };
 use crate::chain_spec::{
 	Extensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -249,6 +249,16 @@ pub fn testnet_genesis(
 			max_members: 999,
 		},
 		pallet_vesting: Default::default(),
+		brml_minter_reward: MinterRewardConfig {
+			wegiths: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::ETH), 1 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::KSM), 1 * DOLLARS),
+			],
+			reward_by_one_block: 3 * DOLLARS,
+			round_index: 1,
+			storage_version: Default::default(),
+		},
 		orml_tokens: Default::default(),
 		brml_vtoken_mint: VtokenMintConfig {
 			pools: vec![
@@ -256,18 +266,23 @@ pub fn testnet_genesis(
 				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
 			],
 			staking_lock_period: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
-				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS)
+				(CurrencyId::Token(TokenSymbol::DOT), 20 * 1),
+				(CurrencyId::Token(TokenSymbol::ETH), 3 * 1),
+				(CurrencyId::Token(TokenSymbol::KSM), 4 * 1)
 			],
 			rate_of_interest_each_block: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595) // 50000.0 * 0.082/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
 			],
 			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)) // 8.2%
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
 			],
 		},
 		brml_voucher: {

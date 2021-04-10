@@ -442,6 +442,21 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 }
 
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+impl brml_charge_transaction_fee::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type WeightInfo = ();
+	type CurrenciesHandler = Currencies;
+	type Currency = Balances;
+	type ZenlinkDEX = ZenlinkProtocol;
+	type OnUnbalanced = ();
+	type NativeCurrencyId = NativeCurrencyId;
+}
+
 // bifrost runtime end
 
 // culumus runtime start
@@ -629,6 +644,7 @@ construct_runtime!(
 		VtokenMint: brml_vtoken_mint::{Module, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: brml_minter_reward::{Module, Storage, Event<T>} = 13,
 		Voucher: brml_voucher::{Module, Call, Storage, Event<T>, Config<T>} = 14,
+		ChargeTransactionFee: brml_charge_transaction_fee::{Module, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		XTokens: orml_xtokens::{Module, Storage, Call, Event<T>} = 16,
@@ -831,6 +847,16 @@ impl_runtime_apis! {
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
+		}
+	}
+
+	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
+			}
 		}
 	}
 

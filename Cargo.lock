@@ -153,6 +153,8 @@ name = "asgard-runtime"
 version = "0.7.0"
 dependencies = [
  "brml-assets",
+ "brml-charge-transaction-fee",
+ "brml-charge-transaction-fee-rpc-runtime-api",
  "brml-minter-reward",
  "brml-voucher",
  "brml-vtoken-mint",
@@ -828,7 +830,9 @@ dependencies = [
  "fixed",
  "frame-support",
  "frame-system",
+ "log",
  "node-primitives",
+ "orml-tokens",
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec 2.0.1",
@@ -857,6 +861,7 @@ dependencies = [
  "brml-minter-reward",
  "frame-support",
  "frame-system",
+ "log",
  "node-primitives",
  "orml-tokens",
  "orml-traits",
