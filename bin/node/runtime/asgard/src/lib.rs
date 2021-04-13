@@ -119,7 +119,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	// and set impl_version to 0. If only runtime
 	// implementation changes and behavior does not, then leave spec_version as
 	// is and increment impl_version.
-	spec_version: 1,
+	spec_version: 2,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -818,30 +818,17 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			add_benchmark!(params, batches, pallet_assets, Assets);
-			add_benchmark!(params, batches, pallet_babe, Babe);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);
-			add_benchmark!(params, batches, pallet_collective, Council);
-			add_benchmark!(params, batches, pallet_contracts, Contracts);
-			add_benchmark!(params, batches, pallet_democracy, Democracy);
-			add_benchmark!(params, batches, pallet_elections_phragmen, Elections);
-			add_benchmark!(params, batches, pallet_grandpa, Grandpa);
 			add_benchmark!(params, batches, pallet_identity, Identity);
-			add_benchmark!(params, batches, pallet_im_online, ImOnline);
 			add_benchmark!(params, batches, pallet_indices, Indices);
-			add_benchmark!(params, batches, pallet_lottery, Lottery);
 			add_benchmark!(params, batches, pallet_mmr, Mmr);
 			add_benchmark!(params, batches, pallet_multisig, Multisig);
 			add_benchmark!(params, batches, pallet_offences, OffencesBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_proxy, Proxy);
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-			add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_staking, Staking);
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_tips, Tips);
-			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 
