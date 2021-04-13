@@ -17,6 +17,7 @@ log = { version = "0.4.14", default-features = false }
 node-primitives = { path = "../../primitives", default-features = false }
 sp-authority-discovery = { version = "3.0.0", default-features = false }
 sp-consensus-babe = { version = "0.9.0", default-features = false }
+sp-npos-elections = { version = "3.0.0", default-features = false }
 sp-block-builder = { default-features = false, version = "3.0.0"}
 sp-inherents = { version = "3.0.0", default-features = false }
 sp-offchain = { version = "3.0.0", default-features = false }
