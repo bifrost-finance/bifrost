@@ -189,9 +189,10 @@ pub fn testnet_genesis(
 		orml_tokens: AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
+				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
