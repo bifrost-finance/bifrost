@@ -184,6 +184,7 @@ sp-version = { git = "https://github.com/paritytech/substrate.git", branch = "ro
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
+substrate-frame-cli = { git = "https://github.com/paritytech/substrate.git", branch = "rococo-v1" }
 
 # Apple M1
 #rocksdb = { git = "https://github.com/hdevalence/rust-rocksdb", rev = "33cd4281570b229b628d6d827fa0053cff57000a" }

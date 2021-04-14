@@ -22,7 +22,7 @@
 
 use sp_std::{collections::btree_set::BTreeSet, prelude::*};
 use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime, parameter_types, PalletId,
 	weights::{
 		Weight, IdentityFee, DispatchClass,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -42,7 +42,7 @@ use node_primitives::{
 use sp_api::impl_runtime_apis;
 use sp_runtime::{
 	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
-	impl_opaque_keys, generic, create_runtime_str, ModuleId, DispatchResult
+	impl_opaque_keys, generic, create_runtime_str, DispatchResult
 };
 use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
 use sp_runtime::traits::{
@@ -599,7 +599,7 @@ impl orml_xtokens::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ZenlinkModuleId: ModuleId = ModuleId(*b"zenlink1");
+    pub const ZenlinkPalletId: PalletId = PalletId(*b"zenlink1");
     pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
         // Phala local and live, 1 PHA
         (make_x2_location(30),    1_000_000_000_000),
@@ -631,7 +631,7 @@ impl zenlink_protocol::Config for Runtime {
     type AccountIdConverter = LocationConverter;
     type AccountId32Converter = AccountId32Converter;
     type ParaId = ParachainInfo;
-    type ModuleId = ZenlinkModuleId;
+    type PalletId = ZenlinkPalletId;
     type TargetChains = ZenlinkRegistedParaChains;
     type NativeCurrency = NativeCurrencyAdaptor<Runtime, Balances>;
     type OtherAssets = ();
