@@ -16,21 +16,23 @@
 
 use std::sync::Arc;
 
+use crate::IdentifyVariant;
+use cumulus_client_consensus_relay_chain::{
+	build_relay_chain_consensus, BuildRelayChainConsensusParams,
+};
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
-use cumulus_client_consensus_relay_chain::{build_relay_chain_consensus, BuildRelayChainConsensusParams};
+use node_primitives::{AccountId, Balance, Block, Nonce};
 use polkadot_primitives::v0::CollatorPair;
 use sc_executor::native_executor_instance;
 pub use sc_executor::NativeExecutionDispatch;
-use sc_service::{Configuration, PartialComponents, Role, TaskManager, TFullClient};
+use sc_service::{Configuration, PartialComponents, Role, TFullClient, TaskManager};
+use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 pub use sp_api::{ApiRef, ConstructRuntimeApi, Core as CoreApi, ProvideRuntimeApi, StateBackend};
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
-use node_primitives::{AccountId, Nonce, Balance, Block};
-use crate::IdentifyVariant;
-use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 
 pub use asgard_runtime;
 pub use rococo_runtime;
@@ -51,7 +53,7 @@ native_executor_instance!(
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
-sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::ApiExt<Block>
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
@@ -61,11 +63,12 @@ sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_session::SessionKeys<Block>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{}
+{
+}
 
 impl<Api> RuntimeApiCollection for Api
-	where
-		Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+where
+	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::ApiExt<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
@@ -73,8 +76,9 @@ impl<Api> RuntimeApiCollection for Api
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>,
-		<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{}
+	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{
+}
 
 type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
@@ -96,15 +100,18 @@ pub fn new_partial<RuntimeApi, Executor>(
 	>,
 	sc_service::Error,
 >
-	where
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
+where
+	RuntimeApi:
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
+	Executor: NativeExecutionDispatch + 'static,
 {
 	let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
-	let telemetry = config.telemetry_endpoints.clone()
+	let telemetry = config
+		.telemetry_endpoints
+		.clone()
 		.filter(|x| !x.is_empty())
 		.map(|endpoints| -> Result<_, sc_telemetry::Error> {
 			let worker = TelemetryWorker::new(16)?;
@@ -120,15 +127,12 @@ pub fn new_partial<RuntimeApi, Executor>(
 		)?;
 	let client = Arc::new(client);
 
-	let telemetry_worker_handle = telemetry
-		.as_ref()
-		.map(|(worker, _)| worker.handle());
+	let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());
 
-	let telemetry = telemetry
-		.map(|(worker, telemetry)| {
-			task_manager.spawn_handle().spawn("telemetry", worker.run());
-			telemetry
-		});
+	let telemetry = telemetry.map(|(worker, telemetry)| {
+		task_manager.spawn_handle().spawn("telemetry", worker.run());
+		telemetry
+	});
 
 	let registry = config.prometheus_registry();
 
@@ -175,16 +179,15 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 	validator: bool,
 	rpc_ext_builder: RB,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
-	where
-		RB: Fn(
-			Arc<FullClient<RuntimeApi, Executor>>,
-		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
+where
+	RB: Fn(Arc<FullClient<RuntimeApi, Executor>>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 		+ Send
 		+ 'static,
-		RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-		RuntimeApi::RuntimeApi:
-			RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-		Executor: NativeExecutionDispatch + 'static,
+	RuntimeApi:
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi:
+		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
+	Executor: NativeExecutionDispatch + 'static,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -199,13 +202,15 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 		.unwrap();
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
-	let polkadot_full_node =
-		cumulus_client_service::build_polkadot_full_node(polkadot_config, collator_key.clone(), telemetry_worker_handle).map_err(
-			|e| match e {
-				polkadot_service::Error::Sub(x) => x,
-				s => format!("{}", s).into(),
-			},
-		)?;
+	let polkadot_full_node = cumulus_client_service::build_polkadot_full_node(
+		polkadot_config,
+		collator_key.clone(),
+		telemetry_worker_handle,
+	)
+	.map_err(|e| match e {
+		polkadot_service::Error::Sub(x) => x,
+		s => format!("{}", s).into(),
+	})?;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -272,7 +277,6 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 			relay_chain_client: polkadot_full_node.client.clone(),
 			relay_chain_backend: polkadot_full_node.backend.clone(),
 		});
-		
 		let spawner = task_manager.spawn_handle();
 
 		let params = StartCollatorParams {
@@ -321,8 +325,17 @@ pub async fn start_node(
 			polkadot_config,
 			id,
 			validator,
-			|_| Default::default(),
-		).await.map(|full| full.0)
+			|client| {
+				let mut io = jsonrpc_core::IoHandler::default();
+				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
+					client,
+				)));
+				io
+			},
+		)
+		.await
+		.map(|full| full.0)
 	} else if parachain_config.chain_spec.is_rococo() {
 		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
 			parachain_config,
@@ -332,14 +345,15 @@ pub async fn start_node(
 			validator,
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
-	
 				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
 					client,
 				)));
 				io
 			},
-		).await.map(|full| full.0)
+		)
+		.await
+		.map(|full| full.0)
 	} else {
 		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
 			parachain_config,
@@ -349,13 +363,14 @@ pub async fn start_node(
 			validator,
 			|client| {
 				let mut io = jsonrpc_core::IoHandler::default();
-	
 				use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 				io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
 					client,
 				)));
 				io
 			},
-		).await.map(|full| full.0)
+		)
+		.await
+		.map(|full| full.0)
 	}
 }

@@ -20,55 +20,62 @@
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit = "256"]
 
-use sp_std::{collections::btree_set::BTreeSet, prelude::*};
+use codec::{Decode, Encode};
 use frame_support::{
-	construct_runtime, parameter_types, PalletId,
+	construct_runtime, parameter_types,
+	traits::{Get, Randomness},
 	weights::{
-		Weight, IdentityFee, DispatchClass,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
+		DispatchClass, IdentityFee, Weight,
 	},
-	traits::{Randomness, Get}
+	PalletId,
 };
 use frame_system::{
+	limits::{BlockLength, BlockWeights},
 	EnsureRoot,
-	limits::{BlockWeights, BlockLength}
 };
-use codec::{Encode, Decode};
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 pub use node_primitives::{AccountId, Signature};
 use node_primitives::{
-	AccountIndex, Balance, BlockNumber, Hash, Index, Moment, Amount, CurrencyId, TokenSymbol
+	AccountIndex, Amount, Balance, BlockNumber, CurrencyId, Hash, Index, Moment, TokenSymbol,
 };
-use sp_api::impl_runtime_apis;
-use sp_runtime::{
-	Perbill, ApplyExtrinsicResult, Perquintill, FixedPointNumber,
-	impl_opaque_keys, generic, create_runtime_str, DispatchResult
-};
-use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
-use sp_runtime::traits::{
-	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion, Convert, Zero
-};
-use sp_version::RuntimeVersion;
-#[cfg(any(feature = "std", test))]
-use sp_version::NativeVersion;
 use pallet_transaction_payment::{FeeDetails, RuntimeDispatchInfo};
 pub use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
-use sp_inherents::{InherentData, CheckInherentsResult};
+use sp_api::impl_runtime_apis;
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_inherents::{CheckInherentsResult, InherentData};
+use sp_runtime::traits::{
+	self, BlakeTwo256, Block as BlockT, Convert, SaturatedConversion, StaticLookup, Zero,
+};
+use sp_runtime::transaction_validity::{
+	TransactionPriority, TransactionSource, TransactionValidity,
+};
+use sp_runtime::{
+	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, DispatchResult,
+	FixedPointNumber, Perbill, Perquintill,
+};
+use sp_std::{collections::btree_set::BTreeSet, prelude::*};
+#[cfg(any(feature = "std", test))]
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 use static_assertions::const_assert;
 
 #[cfg(any(feature = "std", test))]
-pub use sp_runtime::BuildStorage;
+pub use frame_system::Call as SystemCall;
 #[cfg(any(feature = "std", test))]
 pub use pallet_balances::Call as BalancesCall;
 #[cfg(any(feature = "std", test))]
-pub use frame_system::Call as SystemCall;
+pub use sp_runtime::BuildStorage;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use constants::{time::*, currency::*};
+use constants::{currency::*, time::*};
 use sp_runtime::generic::Era;
 
 // XCM imports
+use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId};
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
+use orml_xcm_support::XcmHandler as XcmHandlerT;
 use polkadot_parachain::primitives::Sibling;
 pub use xcm::v0::{
 	Junction::{self, GeneralKey, Parachain, Parent},
@@ -77,18 +84,15 @@ pub use xcm::v0::{
 	NetworkId, Xcm,
 };
 use xcm_builder::{
-	ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, LocationInverter,
-	SovereignSignedViaLocation, SiblingParachainAsNative,
-	RelayChainAsNative, SignedAccountId32AsNative
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+	SovereignSignedViaLocation,
 };
-use xcm_executor::{XcmExecutor};
-use cumulus_primitives_core::{relay_chain::Balance as RelayChainBalance, ParaId};
-use orml_xcm_support::{XcmHandler as XcmHandlerT};
-use orml_traits::parameter_type_with_key;
-use orml_currencies::BasicCurrencyAdapter;
+use xcm_executor::XcmExecutor;
 
 use zenlink_protocol::{
-    AssetId, MultiAssetHandler, PairInfo, ParaChainWhiteList, TokenBalance, TransactorAdaptor, make_x2_location, NativeCurrencyAdaptor
+	make_x2_location, AssetId, MultiAssetHandler, NativeCurrencyAdaptor, PairInfo,
+	ParaChainWhiteList, TokenBalance, TransactorAdaptor,
 };
 
 /// Weights for pallets used in the runtime.
@@ -101,9 +105,11 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 /// Wasm binary unwrapped. If built with `SKIP_WASM_BUILD`, the function panics.
 #[cfg(feature = "std")]
 pub fn wasm_binary_unwrap() -> &'static [u8] {
-	WASM_BINARY.expect("Development wasm binary is not available. This means the client is \
+	WASM_BINARY.expect(
+		"Development wasm binary is not available. This means the client is \
 						built with `SKIP_WASM_BUILD` flag and it is only usable for \
-						production chains. Please rebuild with the flag disabled.")
+						production chains. Please rebuild with the flag disabled.",
+	)
 }
 
 /// Runtime version.
@@ -264,7 +270,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 	type FeeMultiplierUpdate =
-	TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+		TargetedFeeAdjustment<Self, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
 }
 
 parameter_types! {
@@ -306,15 +312,18 @@ parameter_types! {
 }
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
-	where
-		Call: From<LocalCall>,
+where
+	Call: From<LocalCall>,
 {
 	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
 		call: Call,
 		public: <Signature as traits::Verify>::Signer,
 		account: AccountId,
 		nonce: Index,
-	) -> Option<(Call, <UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload)> {
+	) -> Option<(
+		Call,
+		<UncheckedExtrinsic as traits::Extrinsic>::SignaturePayload,
+	)> {
 		let tip = 0;
 		// take the biggest period possible.
 		let period = BlockHashCount::get()
@@ -341,10 +350,7 @@ impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for R
 				log::warn!("Unable to create signed payload: {:?}", e);
 			})
 			.ok()?;
-		let signature = raw_payload
-			.using_encoded(|payload| {
-				C::sign(payload, public)
-			})?;
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
 		let address = Indices::unlookup(account);
 		let (call, extra, _) = raw_payload.deconstruct();
 		Some((call, (address, signature.into(), extra)))
@@ -356,7 +362,8 @@ impl frame_system::offchain::SigningTypes for Runtime {
 	type Signature = Signature;
 }
 
-impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime where
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
 	Call: From<C>,
 {
 	type Extrinsic = UncheckedExtrinsic;
@@ -475,22 +482,22 @@ impl orml_currencies::Config for Runtime {
 }
 
 parameter_types! {
-    pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
-    pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
-    pub Ancestry: MultiLocation = Junction::Parachain {
-        id: ParachainInfo::parachain_id().into()
-    }.into();
+	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
+	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
+	pub Ancestry: MultiLocation = Junction::Parachain {
+		id: ParachainInfo::parachain_id().into()
+	}.into();
 }
 
 type LocationConverter = (
-    ParentIsDefault<AccountId>,
-    SiblingParachainConvertsVia<Sibling, AccountId>,
-    AccountId32Aliases<RococoNetwork, AccountId>,
+	ParentIsDefault<AccountId>,
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
 pub type ZenlinkXcmTransactor =
-    TransactorAdaptor<ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
+	TransactorAdaptor<ZenlinkProtocol, LocationConverter, AccountId, ParachainInfo>;
 
 type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
@@ -503,21 +510,21 @@ parameter_types! {
 	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
 		let mut t = BTreeSet::new();
 		//TODO: might need to add other assets based on orml-tokens
-		t.insert(("BNC".into(), (Junction::Parent, Junction::Parachain { id: 107 }).into()));
+		t.insert(("BNC".into(), (Junction::Parent, Junction::Parachain { id: 1024 }).into()));
 		t
 	};
 }
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
-    type Call = Call;
-    type XcmSender = XcmHandler;
-    // How to withdraw and deposit an asset.
-    type AssetTransactor = ZenlinkXcmTransactor;
-    type OriginConverter = LocalOriginConverter;
-    type IsReserve = ParaChainWhiteList<ZenlinkRegistedParaChains>;
-    type IsTeleporter = ();
-    type LocationInverter = LocationInverter<Ancestry>;
+	type Call = Call;
+	type XcmSender = XcmHandler;
+	// How to withdraw and deposit an asset.
+	type AssetTransactor = ZenlinkXcmTransactor;
+	type OriginConverter = LocalOriginConverter;
+	type IsReserve = ParaChainWhiteList<ZenlinkRegistedParaChains>;
+	type IsTeleporter = ();
+	type LocationInverter = LocationInverter<Ancestry>;
 }
 
 pub struct RelayToNative;
@@ -558,7 +565,9 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		match location {
 			X1(Parent) => Some(CurrencyId::Token(TokenSymbol::DOT)),
-			X3(Parent, Parachain { id }, GeneralKey(key)) if ParaId::from(id) == ParachainInfo::get() => {
+			X3(Parent, Parachain { id }, GeneralKey(key))
+				if ParaId::from(id) == ParachainInfo::get() =>
+			{
 				// decode the general key
 				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 					// check if `currency_id` is cross-chain asset
@@ -599,44 +608,43 @@ impl orml_xtokens::Config for Runtime {
 }
 
 parameter_types! {
-    pub const ZenlinkPalletId: PalletId = PalletId(*b"zenlink1");
-    pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
-        // Phala local and live, 1 PHA
-        (make_x2_location(30),    1_000_000_000_000),
-        // Sherpax live
-        (make_x2_location(59),  500),
-        // Bifrost local and live, 0.01 BNC
-        (make_x2_location(107),   10_000_000_000),
-        // Zenlink live
-        (make_x2_location(188), 500),
-        // Zenlink local
-        (make_x2_location(200), 500),
-        // Sherpax local
-        (make_x2_location(300), 500),
-        // Plasm local and live, 0.001 PLM
-        (make_x2_location(5000), 1_000_000_000_000)
-    ];
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"zenlink1");
+	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
+		// Phala local and live, 1 PHA
+		(make_x2_location(30),    1_000_000_000_000),
+		// Sherpax live
+		(make_x2_location(59),  500),
+		// Bifrost local and live, 0.01 BNC
+		(make_x2_location(1024),   10_000_000_000),
+		// Zenlink live
+		(make_x2_location(188), 500),
+		// Zenlink local
+		(make_x2_location(200), 500),
+		// Sherpax local
+		(make_x2_location(300), 500),
+		// Plasm local and live, 0.001 PLM
+		(make_x2_location(5000), 1_000_000_000_000)
+	];
 }
 
 pub struct AccountId32Converter;
 impl Convert<AccountId, [u8; 32]> for AccountId32Converter {
-    fn convert(account_id: AccountId) -> [u8; 32] {
-        account_id.into()
-    }
+	fn convert(account_id: AccountId) -> [u8; 32] {
+		account_id.into()
+	}
 }
 
 impl zenlink_protocol::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type AccountIdConverter = LocationConverter;
-    type AccountId32Converter = AccountId32Converter;
-    type ParaId = ParachainInfo;
-    type PalletId = ZenlinkPalletId;
-    type TargetChains = ZenlinkRegistedParaChains;
-    type NativeCurrency = NativeCurrencyAdaptor<Runtime, Balances>;
-    type OtherAssets = ();
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type AccountIdConverter = LocationConverter;
+	type AccountId32Converter = AccountId32Converter;
+	type ParaId = ParachainInfo;
+	type PalletId = ZenlinkPalletId;
+	type TargetChains = ZenlinkRegistedParaChains;
+	type NativeCurrency = NativeCurrencyAdaptor<Runtime, Balances>;
+	type OtherAssets = ();
 }
-
 
 // culumus runtime end
 
@@ -713,7 +721,13 @@ pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 /// Extrinsic type that has already been checked.
 pub type CheckedExtrinsic = generic::CheckedExtrinsic<AccountId, Call, SignedExtra>;
 /// Executive: handles dispatch to the various modules.
-pub type Executive = frame_executive::Executive<Runtime, Block, frame_system::ChainContext<Runtime>, Runtime, AllPallets>;
+pub type Executive = frame_executive::Executive<
+	Runtime,
+	Block,
+	frame_system::ChainContext<Runtime>,
+	Runtime,
+	AllPallets,
+>;
 
 impl_runtime_apis! {
 	impl sp_api::Core<Block> for Runtime {
@@ -872,64 +886,64 @@ impl_runtime_apis! {
 
 	// zenlink runtime outer apis
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-        fn get_assets() -> Vec<AssetId> {
-            ZenlinkProtocol::assets_list()
-        }
+		fn get_assets() -> Vec<AssetId> {
+			ZenlinkProtocol::assets_list()
+		}
 
-        fn get_balance(
-            asset_id: AssetId,
-            owner: AccountId
-        ) -> TokenBalance {
-            ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
-        }
+		fn get_balance(
+			asset_id: AssetId,
+			owner: AccountId
+		) -> TokenBalance {
+			ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
+		}
 
-        fn get_sovereigns_info(
-            asset_id: AssetId
-        ) -> Vec<(u32, AccountId, TokenBalance)> {
-            ZenlinkProtocol::get_sovereigns_info(&asset_id)
-        }
+		fn get_sovereigns_info(
+			asset_id: AssetId
+		) -> Vec<(u32, AccountId, TokenBalance)> {
+			ZenlinkProtocol::get_sovereigns_info(&asset_id)
+		}
 
-        fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
-            ZenlinkProtocol::get_all_pairs()
-        }
+		fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
+			ZenlinkProtocol::get_all_pairs()
+		}
 
-        fn get_owner_pairs(
-            owner: AccountId
-        ) -> Vec<PairInfo<AccountId, TokenBalance>> {
-            ZenlinkProtocol::get_owner_pairs(&owner)
-        }
+		fn get_owner_pairs(
+			owner: AccountId
+		) -> Vec<PairInfo<AccountId, TokenBalance>> {
+			ZenlinkProtocol::get_owner_pairs(&owner)
+		}
 
-        fn get_amount_in_price(
-            supply: TokenBalance,
-            path: Vec<AssetId>
-        ) -> TokenBalance {
-            ZenlinkProtocol::desired_in_amount(supply, path)
-        }
+		fn get_amount_in_price(
+			supply: TokenBalance,
+			path: Vec<AssetId>
+		) -> TokenBalance {
+			ZenlinkProtocol::desired_in_amount(supply, path)
+		}
 
-        fn get_amount_out_price(
-            supply: TokenBalance,
-            path: Vec<AssetId>
-        ) -> TokenBalance {
-            ZenlinkProtocol::supply_out_amount(supply, path)
-        }
+		fn get_amount_out_price(
+			supply: TokenBalance,
+			path: Vec<AssetId>
+		) -> TokenBalance {
+			ZenlinkProtocol::supply_out_amount(supply, path)
+		}
 
-        fn get_estimate_lptoken(
-            token_0: AssetId,
-            token_1: AssetId,
-            amount_0_desired: TokenBalance,
-            amount_1_desired: TokenBalance,
-            amount_0_min: TokenBalance,
-            amount_1_min: TokenBalance,
-        ) -> TokenBalance{
-            ZenlinkProtocol::get_estimate_lptoken(
-                token_0,
-                token_1,
-                amount_0_desired,
-                amount_1_desired,
-                amount_0_min,
-                amount_1_min)
-        }
-    }
+		fn get_estimate_lptoken(
+			token_0: AssetId,
+			token_1: AssetId,
+			amount_0_desired: TokenBalance,
+			amount_1_desired: TokenBalance,
+			amount_0_min: TokenBalance,
+			amount_1_min: TokenBalance,
+		) -> TokenBalance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min)
+		}
+	}
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
@@ -941,9 +955,11 @@ mod tests {
 
 	#[test]
 	fn validate_transaction_submitter_bounds() {
-		fn is_submit_signed_transaction<T>() where
+		fn is_submit_signed_transaction<T>()
+		where
 			T: CreateSignedTransaction<Call>,
-		{}
+		{
+		}
 
 		is_submit_signed_transaction::<Runtime>();
 	}

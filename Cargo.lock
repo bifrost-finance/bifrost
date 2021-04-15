@@ -4583,6 +4583,8 @@ dependencies = [
  "tempfile",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "zenlink-protocol-rpc",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -11694,6 +11696,9 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-traits",
  "parity-scale-codec",
  "serde",
  "sp-core",
