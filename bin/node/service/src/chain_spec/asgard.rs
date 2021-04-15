@@ -17,11 +17,12 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sc_telemetry::TelemetryEndpoints;
+use sp_runtime::Permill;
+use telemetry::TelemetryEndpoints;
 use node_primitives::{AccountId, TokenSymbol, CurrencyId};
 use cumulus_primitives_core::ParaId;
 use asgard_runtime::{
-	constants::currency::DOLLARS,
+	constants::{currency::DOLLARS, time::DAYS},
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig
 };
@@ -31,7 +32,7 @@ use crate::chain_spec::{
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "asg";
+const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
 /// The `ChainSpec` parametrised for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
@@ -188,11 +189,13 @@ pub fn testnet_genesis(
 		orml_tokens: AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
+				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 					]
 				})
 				.collect(),
@@ -200,10 +203,27 @@ pub fn testnet_genesis(
 		brml_vtoken_mint: VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vDOT), 2000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-			]
+				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
+			],
+			staking_lock_period: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
+				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
+				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
+			],
+			rate_of_interest_each_block: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
+			],
+			yield_rate: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
+			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}
@@ -291,14 +311,18 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let protocol_id = Some("asgard");
 
 	ChainSpec::from_genesis(
-		"Asgard CC4 Testnet",
+		"Bifrost Asgard CC4",
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
 		move || {
 			asgard_config_genesis(id)
 		},
 		vec![
-			"/dns/bifrost-rpc.testnet.liebi.com/tcp/30333/p2p/12D3KooWJpy1x5TeRL1gUXhHfaQVC1xKM4rqXfhEjP3KUqVgamWi".parse().expect("failed to parse multiaddress.")
+			"/ip4/150.109.71.108/tcp/30333/p2p/12D3KooWC8djq1tWHepURWiiQ1FAcPE7L1AfJvSpDb8TQAi1izKv".parse().expect("failed to parse multiaddress."),
+			"/ip4/119.28.73.187/tcp/30333/p2p/12D3KooWGK87fM2pNQyLn23R1GkBvQCYqnSdKdMsrJGNRqT22wU8".parse().expect("failed to parse multiaddress."),
+			"/ip4/150.109.194.40/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
+			"/ip4/124.156.223.229/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
+			"/ip4/124.156.217.80/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Asgard Testnet telemetry url is valid; qed")),

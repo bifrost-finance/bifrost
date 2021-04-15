@@ -38,7 +38,7 @@ use sp_runtime::traits::{Block as BlockT, BlakeTwo256};
 use futures::prelude::*;
 use sc_client_api::{ExecutorProvider, RemoteBackend};
 use sc_executor::native_executor_instance;
-use sc_telemetry::{Telemetry, TelemetryWorker};
+use telemetry::{Telemetry, TelemetryWorker};
 
 use sp_trie::PrefixedMemoryDB;
 pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, RuntimeApiCollection};
@@ -117,7 +117,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 {
 	let telemetry = config.telemetry_endpoints.clone()
 		.filter(|x| !x.is_empty())
-		.map(|endpoints| -> Result<_, sc_telemetry::Error> {
+		.map(|endpoints| -> Result<_, telemetry::Error> {
 			let worker = TelemetryWorker::new(16)?;
 			let telemetry = worker.handle().new_telemetry(endpoints);
 			Ok((worker, telemetry))
@@ -464,7 +464,7 @@ pub fn new_light_base<RuntimeApi, Executor>(
 {
 	let telemetry = config.telemetry_endpoints.clone()
 		.filter(|x| !x.is_empty())
-		.map(|endpoints| -> Result<_, sc_telemetry::Error> {
+		.map(|endpoints| -> Result<_, telemetry::Error> {
 			let transport = None;
 			let worker = TelemetryWorker::with_transport(16, transport)?;
 			let telemetry = worker.handle().new_telemetry(endpoints);

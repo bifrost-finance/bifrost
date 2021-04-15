@@ -32,7 +32,7 @@ mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	GetDecimals, CurrencyIdExt, AssetTrait, AssetReward, RewardHandler, VtokenMintExt
+	GetDecimals, CurrencyIdExt, AssetTrait, AssetReward, RewardHandler, VtokenMintExt, MinterRewardExt
 };
 
 /// An index to a block.
@@ -323,6 +323,22 @@ pub mod report {
 		type RuntimeAppPublic = ReporterId;
 		type GenericSignature = sp_core::sr25519::Signature;
 		type GenericPublic = sp_core::sr25519::Public;
+	}
+}
+
+#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[non_exhaustive]
+pub enum StorageVersion {
+	V0,
+	V1,
+	V2,
+	V3,
+}
+
+impl Default for StorageVersion {
+	fn default() -> Self {
+		Self::V0
 	}
 }
 

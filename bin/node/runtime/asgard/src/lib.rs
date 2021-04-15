@@ -91,8 +91,8 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 use zenlink_protocol::{
-	make_x2_location, AssetId, MultiAssetHandler, NativeCurrencyAdaptor, PairInfo,
-	ParaChainWhiteList, TokenBalance, TransactorAdaptor,
+	make_x2_location, AssetId, MultiAssetHandler, NativeCurrencyAdaptor, OtherAssetAdaptor,
+	PairInfo, ParaChainWhiteList, TokenBalance, TransactorAdaptor,
 };
 
 /// Weights for pallets used in the runtime.
@@ -390,29 +390,22 @@ impl brml_voucher::Config for Runtime {
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
 }
-parameter_type_with_key! {
-	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 000_761_035_007,
-			&CurrencyId::Token(TokenSymbol::ETH) => 000_570_776_255,
-			_ => Zero::zero(),
-		}
-	};
-}
-
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type VtokenMintDuration = VtokenMintDuration;
-	type RateOfInterestEachBlock = RateOfInterestEachBlock;
+	type PalletId = StakingPalletId;
+	type MinterReward = MinterReward;
+	type DEXOperations = ZenlinkProtocol;
+	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
 
 parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
 			_ => Zero::zero(),
 		}
 	};
@@ -432,6 +425,38 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
+}
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+impl brml_charge_transaction_fee::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type WeightInfo = ();
+	type CurrenciesHandler = Currencies;
+	type Currency = Balances;
+	type ZenlinkDEX = ZenlinkProtocol;
+	type OnUnbalanced = ();
+	type NativeCurrencyId = NativeCurrencyId;
+}
+
+parameter_types! {
+	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
+	pub const RewardPeriod: BlockNumber = 50;
+	pub const MaximumExtendedPeriod: BlockNumber = 500;
+	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+}
+
+impl brml_minter_reward::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type TwoYear = TwoYear;
+	type PalletId = ShareWeightPalletId;
+	type RewardPeriod = RewardPeriod;
+	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	type DEXOperations = ZenlinkProtocol;
+	type ShareWeight = Balance;
 }
 
 // bifrost runtime end
@@ -468,7 +493,7 @@ impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 }
 
 parameter_types! {
-	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
@@ -510,7 +535,7 @@ parameter_types! {
 	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
 		let mut t = BTreeSet::new();
 		//TODO: might need to add other assets based on orml-tokens
-		t.insert(("BNC".into(), (Junction::Parent, Junction::Parachain { id: 1024 }).into()));
+		t.insert(("ASG".into(), (Junction::Parent, Junction::Parachain { id: 1024 }).into()));
 		t
 	};
 }
@@ -572,7 +597,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for CurrencyIdConvert {
 				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 					// check if `currency_id` is cross-chain asset
 					match currency_id {
-						CurrencyId::Token(TokenSymbol::BNC) => Some(currency_id),
+						CurrencyId::Token(TokenSymbol::ASG) => Some(currency_id),
 						_ => None,
 					}
 				} else {
@@ -614,7 +639,7 @@ parameter_types! {
 		(make_x2_location(30),    1_000_000_000_000),
 		// Sherpax live
 		(make_x2_location(59),  500),
-		// Bifrost local and live, 0.01 BNC
+		// Bifrost local and live, 0.01 ASG
 		(make_x2_location(1024),   10_000_000_000),
 		// Zenlink live
 		(make_x2_location(188), 500),
@@ -643,7 +668,7 @@ impl zenlink_protocol::Config for Runtime {
 	type PalletId = ZenlinkPalletId;
 	type TargetChains = ZenlinkRegistedParaChains;
 	type NativeCurrency = NativeCurrencyAdaptor<Runtime, Balances>;
-	type OtherAssets = ();
+	type OtherAssets = OtherAssetAdaptor<Runtime, Currencies>;
 }
 
 // culumus runtime end
@@ -675,10 +700,9 @@ construct_runtime!(
 		// bifrost modules
 		BrmlAssets: brml_assets::{Pallet, Call, Event<T>} = 10,
 		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
-		// Swap: brml_swap::{Pallet, Call, Storage, Event<T>} = 12,
-		// StakingReward: brml_staking_reward::{Pallet, Storage} = 13,
+		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>} = 13,
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		// Bid: brml_bid::{Pallet, Call, Storage, Event<T>} = 15,
+		ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
@@ -852,26 +876,15 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			add_benchmark!(params, batches, pallet_assets, Assets);
-			add_benchmark!(params, batches, pallet_babe, Babe);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);
-			add_benchmark!(params, batches, pallet_collective, Council);
-			add_benchmark!(params, batches, pallet_contracts, Contracts);
-			add_benchmark!(params, batches, pallet_democracy, Democracy);
-			add_benchmark!(params, batches, pallet_elections_phragmen, Elections);
-			add_benchmark!(params, batches, pallet_grandpa, Grandpa);
 			add_benchmark!(params, batches, pallet_identity, Identity);
 			add_benchmark!(params, batches, pallet_im_online, ImOnline);
 			add_benchmark!(params, batches, pallet_indices, Indices);
-			add_benchmark!(params, batches, pallet_lottery, Lottery);
-			add_benchmark!(params, batches, pallet_mmr, Mmr);
 			add_benchmark!(params, batches, pallet_multisig, Multisig);
 			add_benchmark!(params, batches, pallet_offences, OffencesBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_proxy, Proxy);
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-			add_benchmark!(params, batches, pallet_session, SessionBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_staking, Staking);
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 			add_benchmark!(params, batches, pallet_tips, Tips);
@@ -947,20 +960,3 @@ impl_runtime_apis! {
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use frame_system::offchain::CreateSignedTransaction;
-
-	#[test]
-	fn validate_transaction_submitter_bounds() {
-		fn is_submit_signed_transaction<T>()
-		where
-			T: CreateSignedTransaction<Call>,
-		{
-		}
-
-		is_submit_signed_transaction::<Runtime>();
-	}
-}

@@ -57,7 +57,7 @@ use sp_runtime::curve::PiecewiseLinear;
 use sp_runtime::transaction_validity::{TransactionValidity, TransactionSource, TransactionPriority};
 use sp_runtime::traits::{
 	self, BlakeTwo256, Block as BlockT, StaticLookup, SaturatedConversion,
-	ConvertInto, OpaqueKeys, NumberFor, Zero
+	ConvertInto, OpaqueKeys, NumberFor
 };
 use sp_version::RuntimeVersion;
 #[cfg(any(feature = "std", test))]
@@ -1008,99 +1008,43 @@ impl brml_voucher::Config for Runtime {
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
 }
-orml_traits::parameter_type_with_key! {
-	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 000_761_035_007,
-			&CurrencyId::Token(TokenSymbol::ETH) => 000_570_776_255,
-			_ => Zero::zero(),
-		}
-	};
-}
-
 impl brml_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type VtokenMintDuration = VtokenMintDuration;
-	type RateOfInterestEachBlock = RateOfInterestEachBlock;
+	type PalletId = StakingPalletId;
+	type MinterReward = MinterReward;
+	type DEXOperations = ();
+	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
-
-// parameter_types! {
-// 	pub const MaximumSwapInRatio: u8 = 2;
-// 	pub const MinimumPassedInPoolTokenShares: PoolToken = 2;
-// 	pub const MinimumSwapFee: SwapFee = 1; // 0.001%
-// 	pub const MaximumSwapFee: SwapFee = 10_000; // 10%
-// 	pub const FeePrecision: SwapFee = 100_000;
-// 	pub const WeightPrecision: PoolWeight = 100_000;
-// 	pub const BNCAssetId: AssetId = 0;
-// 	pub const InitialPoolSupply: PoolToken = 1_000;
-// 	pub const NumberOfSupportedTokens: u8 = 8;
-// 	pub const BonusClaimAgeDenominator: BlockNumber = 14_400;
-// 	pub const MaximumPassedInPoolTokenShares: PoolToken = 1_000_000;
-// }
-
-// impl brml_swap::Config for Runtime {
-// 	type Event = Event;
-// 	type SwapFee = SwapFee;
-// 	type AssetId = AssetId;
-// 	type PoolId = PoolId;
-// 	type Balance = Balance;
-// 	type AssetTrait = Assets;
-// 	type PoolWeight = PoolWeight;
-// 	type PoolToken = PoolToken;
-// 	type MaximumSwapInRatio = MaximumSwapInRatio;
-// 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
-// 	type MinimumSwapFee = MinimumSwapFee;
-// 	type MaximumSwapFee = MaximumSwapFee;
-// 	type FeePrecision = FeePrecision;
-// 	type WeightPrecision = WeightPrecision;
-// 	type BNCAssetId = BNCAssetId;
-// 	type InitialPoolSupply = InitialPoolSupply;
-// 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
-// 	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
-// 	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
-// }
-
-// Bid module
-// parameter_types! {
-// 	pub const TokenOrderROIListLength: u8 = 200u8;
-// 	pub const MinimumVotes: u64 = 100;
-// 	pub const MaximumVotes: u64 = 50_000;
-// 	pub const BlocksPerYear: BlockNumber = 60 * 60 * 24 * 365 / 6;
-// 	pub const MaxProposalNumberForBidder: u32 = 5;
-// 	pub const ROIPermillPrecision: u32 = 100;
-// }
-
-// impl brml_bid::Config for Runtime {
-// 	type Event = Event;
-// 	type AssetId = AssetId;
-// 	type AssetTrait = Assets;
-// 	type BiddingOrderId = BiddingOrderId;
-// 	type EraId = EraId;
-// 	type Balance = Balance;
-// 	type TokenOrderROIListLength = TokenOrderROIListLength ;
-// 	type MinimumVotes = MinimumVotes;
-// 	type MaximumVotes = MaximumVotes;
-// 	type BlocksPerYear = BlocksPerYear;
-// 	type MaxProposalNumberForBidder = MaxProposalNumberForBidder;
-// 	type ROIPermillPrecision = ROIPermillPrecision;
-// }
-
-// impl brml_staking_reward::Config for Runtime {
-// 	type AssetTrait = Assets;
-// 	type Balance = Balance;
-// 	type AssetId = AssetId;
-// }
 
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::BNC) => 1 * CENTS,
+			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
 			_ => 0,
 		}
 	};
+}
+
+parameter_types! {
+	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
+	pub const RewardPeriod: BlockNumber = 50;
+	pub const MaximumExtendedPeriod: BlockNumber = 500;
+	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+}
+
+impl brml_minter_reward::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type TwoYear = TwoYear;
+	type PalletId = ShareWeightPalletId;
+	type RewardPeriod = RewardPeriod;
+	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	type DEXOperations = ();
+	type ShareWeight = Balance;
 }
 
 // bifrost runtime end
@@ -1147,8 +1091,7 @@ construct_runtime!(
 		// Modules from brml
 		BrmlAssets: brml_assets::{Pallet, Call, Storage, Event<T>},
 		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>},
-		// Swap: brml_swap::{Pallet, Call, Storage, Event<T>},
-		// StakingReward: brml_staking_reward::{Pallet, Storage},
+		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>},
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>},
 		// Bid: brml_bid::{Pallet, Call, Storage, Event<T>},
 		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},

@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 #[repr(u8)]
 pub enum TokenSymbol {
 	// Native token
-	BNC = 0_u8,
+	ASG = 0_u8,
 	// Acala
 	aUSD = 1u8,
 	// Polkadot
@@ -54,7 +54,7 @@ pub enum TokenSymbol {
 
 impl Default for TokenSymbol {
 	fn default() -> Self {
-		Self::BNC
+		Self::ASG
 	}
 }
 
@@ -62,7 +62,7 @@ impl Default for TokenSymbol {
 impl From<u8> for TokenSymbol {
 	fn from(n: u8) -> Self {
 		match n {
-			0 => Self::BNC,
+			0 => Self::ASG,
 			1 => Self::aUSD,
 			2 => Self::DOT,
 			3 => Self::vDOT,
@@ -83,7 +83,7 @@ impl From<u8> for TokenSymbol {
 impl GetDecimals for TokenSymbol {
 	fn decimals(&self) -> u32 {
 		match *self {
-            Self::BNC => 12u32,
+            Self::ASG => 12u32,
             Self::aUSD => 12u32,
             Self::DOT => 10u32,
             Self::vDOT => 10u32,
@@ -105,6 +105,12 @@ impl GetDecimals for TokenSymbol {
 #[non_exhaustive]
 pub enum CurrencyId {
 	Token(TokenSymbol),
+}
+
+impl Default for CurrencyId {
+	fn default() -> Self {
+		Self::Token(TokenSymbol::ASG)
+	}
 }
 
 impl From<TokenSymbol> for CurrencyId {
@@ -132,7 +138,7 @@ impl CurrencyIdExt for CurrencyId {
 	}
 
 	fn is_native(&self) -> bool {
-		matches!(self.as_ref(), TokenSymbol::BNC)
+		matches!(self.as_ref(), TokenSymbol::ASG)
 	}
 
 	fn is_stable_token(&self) -> bool {
@@ -141,7 +147,7 @@ impl CurrencyIdExt for CurrencyId {
 
 	fn get_native_token(&self) -> Option<Self::TokenSymbol> {
 		match self.as_ref() {
-			TokenSymbol::BNC => Some(TokenSymbol::BNC),
+			TokenSymbol::ASG => Some(TokenSymbol::ASG),
 			_ => None,
 		}
 	}
@@ -212,7 +218,7 @@ impl TryFrom<Vec<u8>> for CurrencyId {
 
 	fn try_from(v: Vec<u8>) -> Result<Self, Self::Error> {
 		match v.as_slice() {
-			b"BNC" => Ok(CurrencyId::Token(TokenSymbol::BNC)),
+			b"ASG" => Ok(CurrencyId::Token(TokenSymbol::ASG)),
 			b"aUSD" => Ok(CurrencyId::Token(TokenSymbol::aUSD)),
 			b"DOT" => Ok(CurrencyId::Token(TokenSymbol::DOT)),
 			b"vDOT" => Ok(CurrencyId::Token(TokenSymbol::vDOT)),

@@ -146,3 +146,15 @@ pub trait VtokenMintExt {
 	/// Reduce mint pool
 	fn reduce_mint_pool(currency_id: Self::CurrencyId, amount: Self::Balance) -> DispatchResult;
 }
+
+/// Handle mint reward
+pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
+	type Error;
+
+	fn reward_minted_vtoken(
+		minter: &AccountId,
+		currency_id: CurrencyId,
+		minted_vtoken: Balance,
+		block_num: BlockNumber
+	) -> Result<(), Self::Error>;
+}

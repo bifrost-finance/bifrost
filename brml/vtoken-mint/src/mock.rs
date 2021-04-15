@@ -20,16 +20,16 @@
 #![allow(non_upper_case_globals)]
 
 use crate::{self as vtoken_mint};
-use frame_support::{parameter_types,traits::GenesisBuild};
-use node_primitives::{CurrencyId, TokenSymbol, Balance};
+use frame_support::{parameter_types, traits::GenesisBuild};
+use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
+	testing::Header, AccountId32, ModuleId, Permill,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
-	testing::Header, AccountId32
 };
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 pub const aUSD: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
@@ -49,6 +49,8 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Module, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		VtokenMint: vtoken_mint::{Module, Call, Storage, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
+		MinterReward: brml_minter_reward::{Module, Storage, Event<T>},
 	}
 );
 
@@ -113,7 +115,28 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
+	pub const TwoYear: u32 = 1 * 365 * 2;
+	pub const RewardPeriod: u32 = 50;
+	pub const MaximumExtendedPeriod: u32 = 500;
+	pub const ShareWeightModuleId: ModuleId = ModuleId(*b"weight  ");
+}
+
+impl brml_minter_reward::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type TwoYear = TwoYear;
+	type ModuleId = ShareWeightModuleId;
+	type RewardPeriod = RewardPeriod;
+	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	// type DEXOperations = ZenlinkProtocol;
+	type DEXOperations = ();
+	type ShareWeight = Balance;
+}
+
+parameter_types! {
+	// 3 hours(1800 blocks) as an era
+	pub const VtokenMintDuration: u32 = 3 * 60 * 1;
+	pub const StakingModuleId: ModuleId = ModuleId(*b"staking ");
 }
 orml_traits::parameter_type_with_key! {
 	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
@@ -127,8 +150,10 @@ orml_traits::parameter_type_with_key! {
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type VtokenMintDuration = VtokenMintDuration;
-	type RateOfInterestEachBlock = RateOfInterestEachBlock;
+	type ModuleId = StakingModuleId;
+	type MinterReward = MinterReward;
+	type DEXOperations = ();
+	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = ();
 }
 
@@ -190,11 +215,25 @@ impl ExtBuilder {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self
-				.endowed_accounts
-				// .into_iter()
-				// .filter(|(_, currency_id, _)| *currency_id != BNC)
-				// .collect::<Vec<(AccountId, CurrencyId, Balance)>>(),
+			endowed_accounts: self.endowed_accounts
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		crate::GenesisConfig::<Runtime> {
+			pools: vec![],
+			staking_lock_period: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 28 * 1),
+				(CurrencyId::Token(TokenSymbol::ETH), 14 * 1)
+			],
+			rate_of_interest_each_block: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595) // 50000.0 * 0.082/(365*24*600)
+			],
+			yield_rate: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)) // 8.2%
+			]
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

@@ -17,11 +17,12 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sc_telemetry::TelemetryEndpoints;
+use sp_runtime::Permill;
+use telemetry::TelemetryEndpoints;
 use cumulus_primitives_core::ParaId;
 use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use rococo_runtime::{
-	constants::currency::DOLLARS,
+	constants::{currency::DOLLARS, time::DAYS},
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig
 };
@@ -31,7 +32,7 @@ use crate::chain_spec::{
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "roc";
+const DEFAULT_PROTOCOL_ID: &str = "rococo";
 
 /// The `ChainSpec` parametrized for the rococo runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
@@ -181,11 +182,13 @@ pub fn testnet_genesis(
 		orml_tokens: AssetsConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
+				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 					]
 				})
 				.collect(),
@@ -200,10 +203,27 @@ pub fn testnet_genesis(
 		brml_vtoken_mint: VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vDOT), 2000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-			]
+				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
+			],
+			staking_lock_period: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
+				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
+				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
+			],
+			rate_of_interest_each_block: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
+			],
+			yield_rate: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
+			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 	}
@@ -292,14 +312,14 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let protocol_id = Some("bifrost");
 
 	ChainSpec::from_genesis(
-		"Bifrost PC1",
+		"Asgard CC4 Dev",
 		"bifrost_pc1_testnet",
-		ChainType::Custom("Bifrost PC1 Testnet".into()),
+		ChainType::Custom("Asgard CC4 Dev Testnet".into()),
 		move || {
 			rococo_config_genesis(id)
 		},
 		vec![
-			"/dns/rococo-1.testnet.liebi.com/tcp/30333/p2p/12D3KooWNM2rAjo2FqUgtQ2nnQ7nNxQntB9ssHS5TryvTVMpMKxa".parse().expect("failed to parse multiaddress.")
+			// "/dns/rococo-1.testnet.liebi.com/tcp/30333/p2p/12D3KooWNM2rAjo2FqUgtQ2nnQ7nNxQntB9ssHS5TryvTVMpMKxa".parse().expect("failed to parse multiaddress.")
 		],
 		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
 			.expect("Bifrost PC1 Testnet telemetry url is valid; qed")),
