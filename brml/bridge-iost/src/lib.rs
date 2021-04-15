@@ -18,10 +18,7 @@
 #[macro_use]
 extern crate alloc;
 
-use crate::transaction::IostTxOut;
-use alloc::string::{String, ToString};
 use codec::{Decode, Encode};
-use core::{convert::TryFrom, fmt::Debug, iter::FromIterator};
 use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
     dispatch::DispatchResult,
@@ -34,12 +31,9 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::{ActionTransfer, IostAction};
+use iost_chain::spv::{from_block_head, Block, Head, VERIFIER_NUM, VOTE_INTERVAL};
+use iost_chain::{verify::BlockHead, ActionTransfer, IostAction};
 use lite_json::{parse_json, JsonValue};
-use node_primitives::{
-    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
-    BridgeAssetTo, FetchConvertPool,
-};
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
@@ -51,13 +45,25 @@ use sp_runtime::{
 };
 use sp_std::prelude::*;
 
+use alloc::collections::btree_map::BTreeMap;
+use alloc::string::{String, ToString};
+use core::{convert::TryFrom, fmt::Debug, iter::FromIterator};
+use node_primitives::{
+    AssetTrait, BlockchainType, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetSymbol,
+    BridgeAssetTo, FetchConvertPool,
+};
+
+use crate::transaction::IostTxOut;
+
 mod transaction;
 
 pub trait WeightInfo {
     fn bridge_enable() -> Weight;
     fn set_contract_accounts() -> Weight;
+    fn init_schedule() -> Weight;
     fn grant_crosschain_privilege() -> Weight;
     fn remove_crosschain_privilege() -> Weight;
+    fn change_schedule() -> Weight;
     fn prove_action() -> Weight;
     fn bridge_tx_report() -> Weight;
     fn cross_to_iost(weight: Weight) -> Weight;
@@ -70,10 +76,16 @@ impl WeightInfo for () {
     fn set_contract_accounts() -> Weight {
         Default::default()
     }
+    fn init_schedule() -> Weight {
+        Default::default()
+    }
     fn grant_crosschain_privilege() -> Weight {
         Default::default()
     }
     fn remove_crosschain_privilege() -> Weight {
+        Default::default()
+    }
+    fn change_schedule() -> Weight {
         Default::default()
     }
     fn prove_action() -> Weight {
@@ -95,9 +107,12 @@ enum TransactionType {
 
 pub type VersionId = u32;
 
+pub type IostBlockNumber = i64;
+
 pub mod sr25519 {
     pub mod app_sr25519 {
         use sp_application_crypto::{app_crypto, key_types::ACCOUNT, sr25519};
+
         app_crypto!(sr25519, ACCOUNT);
 
         impl From<sp_runtime::AccountId32> for Public {
@@ -252,8 +267,8 @@ decl_event! {
     pub enum Event<T>
         where <T as system::Config>::AccountId,
     {
-        InitSchedule(VersionId),
-        ChangeSchedule(VersionId, VersionId), // ChangeSchedule(older, newer)
+        InitSchedule(IostBlockNumber),
+        ChangeSchedule(IostBlockNumber, IostBlockNumber), // ChangeSchedule(older, newer)
         ProveAction,
         RelayBlock,
         Deposit(Vec<u8>, AccountId), // IOST account => Bifrost AccountId
@@ -281,8 +296,11 @@ decl_storage! {
         /// Cross transaction back enable or not
         CrossChainBackEnable get(fn is_cross_back_enable): bool = true;
 
+        /// IOST producer list and hash which in specific version id
+        ProducerSchedules: map hasher(blake2_128_concat) IostBlockNumber => (Vec<Vec<u8>>);
+
         /// Current pending schedule version
-        PendingScheduleVersion: VersionId;
+        PendingScheduleVersion: IostBlockNumber;
 
         /// Transaction sent to Eos blockchain
         BridgeTxOuts get(fn bridge_tx_outs): Vec<IostTxOut<T::AccountId, T::AssetId>>;
@@ -346,6 +364,20 @@ decl_module! {
             BridgeContractAccount::put((account, threthold));
         }
 
+        #[weight = T::WeightInfo::init_schedule()]
+        fn init_schedule(origin, bn: IostBlockNumber, producers: Vec<Vec<u8>>) {
+            ensure_root(origin)?;
+
+            ensure!(!ProducerSchedules::contains_key(bn), Error::<T>::InitMultiTimeProducerSchedules);
+            ensure!(!PendingScheduleVersion::exists(), Error::<T>::InitMultiTimeProducerSchedules);
+
+
+            ProducerSchedules::insert(bn, producers);
+            PendingScheduleVersion::put(bn);
+
+            Self::deposit_event(RawEvent::InitSchedule(bn));
+        }
+
         #[weight = T::WeightInfo::grant_crosschain_privilege()]
         fn grant_crosschain_privilege(origin, target: T::AccountId) {
             ensure_root(origin)?;
@@ -378,15 +410,31 @@ decl_module! {
             Self::deposit_event(RawEvent::RemovedCrossChainPrivilege(target));
         }
 
+        #[weight = (T::WeightInfo::change_schedule(), DispatchClass::Normal, Pays::No)]
+        fn change_schedule(
+            origin,
+            bh: BlockHead,
+            witness_headers: Vec<BlockHead>,
+            pending_list: Vec<Vec<u8>>
+        ) -> DispatchResult {
+            let origin = ensure_signed(origin)?;
+
+            Self::update_epoch(&bh, witness_headers, pending_list)?;
+            Ok(())
+        }
+
         #[weight = (T::WeightInfo::prove_action(), DispatchClass::Normal, Pays::No)]
         fn prove_action(
             origin,
             action: IostAction,
             trx_id: Vec<u8>,
+            block_header: BlockHead,
+            block_headers: Vec<BlockHead>,
         ) -> DispatchResult {
             let origin = ensure_signed(origin)?;
             ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
 
+            Self::check_block(&block_header, block_headers)?;
             // ensure this transaction is unique, and ensure no duplicated transaction
             // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
@@ -661,8 +709,6 @@ impl<T: Config> Module<T> {
         Err(Error::<T>::InvalidAccountId)
     }
 
-    /// check receiver account format
-    /// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
     fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
         let decoded_ss58 = bs58::decode(receiver)
             .into_vec()
@@ -680,6 +726,97 @@ impl<T: Config> Module<T> {
 
     fn into_account(data: [u8; 32]) -> Result<T::AccountId, Error<T>> {
         T::AccountId::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidAccountId)
+    }
+
+    fn update_epoch(
+        bh: &BlockHead,
+        witness_headers: Vec<BlockHead>,
+        pending_list: Vec<Vec<u8>>,
+    ) -> Result<(), Error<T>> {
+        let current_schedule_version = PendingScheduleVersion::get();
+
+        let vote_block_number = bh.number;
+        if vote_block_number % VOTE_INTERVAL != 0 {
+            return Err(Error::<T>::InvalidAccountId);
+        }
+
+        if pending_list.len() != VERIFIER_NUM {
+            return Err(Error::<T>::InvalidAccountId);
+        }
+
+        match Self::check_block(bh, witness_headers) {
+            Ok(_) => {
+                ProducerSchedules::insert(vote_block_number, pending_list);
+                PendingScheduleVersion::put(vote_block_number);
+                Self::deposit_event(RawEvent::ChangeSchedule(
+                    current_schedule_version,
+                    vote_block_number as IostBlockNumber,
+                ));
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn check_block(bh: &BlockHead, witness_headers: Vec<BlockHead>) -> Result<(), Error<T>> {
+        if !bh.verify_self() {
+            return Err(Error::<T>::InvalidAccountId);
+        }
+
+        for w_bh in witness_headers.iter() {
+            if !w_bh.verify_self() {
+                return Err(Error::<T>::InvalidAccountId);
+            }
+        }
+
+        let block_number = bh.number;
+        let mut current_epoch_start_block: i64 = 0;
+
+        if block_number % VOTE_INTERVAL == 0 {
+            current_epoch_start_block = block_number - VOTE_INTERVAL
+        } else {
+            current_epoch_start_block = block_number / VOTE_INTERVAL * VOTE_INTERVAL
+        }
+
+        let producers = ProducerSchedules::get(current_epoch_start_block as IostBlockNumber);
+
+        let mut valid_witness_count = 0;
+        let mut valid_witness: BTreeMap<String, bool> = BTreeMap::new();
+
+        let mut parent_hash = bh.parse_head().hash();
+        let mut parent_block_number = bh.number;
+
+        for bh in witness_headers.iter() {
+            // let block_parent_hash = &b.head.parent_hash;
+            let b: Head = bh.parse_head();
+            if parent_hash.as_slice() != b.parent_hash.as_slice() {
+                return Err(Error::<T>::InvalidAccountId);
+            }
+            if parent_block_number + 1 != b.number {
+                return Err(Error::<T>::InvalidAccountId);
+            }
+
+            match valid_witness.get(&b.witness) {
+                None => {
+                    for produce_arr in producers.iter() {
+                        let produce = core::str::from_utf8(&produce_arr)
+                            .map_err(|_| Error::<T>::ParseUtf8Error)?;
+                        if produce.eq(&b.witness) {
+                            valid_witness.insert(produce.to_string(), true);
+                            valid_witness_count = valid_witness_count + 1;
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            }
+            parent_block_number = b.number;
+            parent_hash = b.hash();
+        }
+        if valid_witness_count < 12 {
+            return Err(Error::<T>::InvalidAccountId);
+        }
+        Ok(())
     }
 
     /// generate transaction for transfer amount to
@@ -741,7 +878,7 @@ impl<T: Config> Module<T> {
                                 bto
                             }
                         }
-                    },
+                    }
                     _ => bto,
                 }
             })
@@ -761,7 +898,7 @@ impl<T: Config> Module<T> {
                             Err(e) => debug::warn!("bto.sign with failure: {:?}", e),
                         }
                         ret
-                    },
+                    }
                     _ => bto,
                 }
             })
@@ -780,7 +917,7 @@ impl<T: Config> Module<T> {
                                 bto
                             }
                         }
-                    },
+                    }
                     _ => bto,
                 }
             }).collect::<Vec<_>>();
@@ -798,6 +935,7 @@ impl<T: Config> Module<T> {
         }
         Ok(())
     }
+
     // fn convert_to_iost_asset<A, P, B>(
     //     bridge_asset: &BridgeAssetBalance<A, P, B>
     // ) -> Result<Asset, Error<T>>
@@ -814,6 +952,7 @@ impl<T: Config> Module<T> {
     //
     //     Ok(Asset::new(amount, symbol))
     // }
+
     fn get_offchain_storage(key: &[u8]) -> Result<String, Error<T>> {
         let value = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key)
             .ok_or(Error::<T>::NoLocalStorage)?;
