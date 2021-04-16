@@ -169,7 +169,9 @@ pub fn testnet_genesis(
 			changes_trie_config: Default::default(),
 		},
 		pallet_balances: BalancesConfig {
-			balances: endowed_accounts.iter().cloned()
+			balances: endowed_accounts.iter()
+				.chain(super::faucet_accounts().iter())
+				.cloned()
 				.map(|x| (x, ENDOWMENT))
 				.collect()
 		},
