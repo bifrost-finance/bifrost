@@ -1,0 +1,17 @@
+[package]
+name = "brml-charge-transaction-fee-rpc-runtime-api"
+version = "0.7.0"
+authors = ["Herry Ho <herry.heyi@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+sp-api = { version = "3.0.0", default-features = false }
+node-primitives = { path = "../../../../bin/node/primitives", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"sp-api/std"
+]
