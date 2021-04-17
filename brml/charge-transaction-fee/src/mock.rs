@@ -26,17 +26,16 @@ use frame_system as system;
 use smallvec::smallvec;
 use sp_std::cell::RefCell;
 // use node_primitives::Balance;
+use frame_support::PalletId;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    ModuleId, Perbill,
+    Perbill,
 };
 
 use node_primitives::{CurrencyId, TokenSymbol};
-use zenlink_protocol::{
-    HrmpMessageSender, OutboundHrmpMessage, UpwardMessage, UpwardMessageSender,
-};
+use zenlink_protocol::{make_x2_location, MultiLocation, NativeCurrencyAdaptor, OtherAssetAdaptor};
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -52,13 +51,13 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic
     {
-        System: system::{Module, Call, Storage, Event<T>},
-        Assets: orml_tokens::{Module, Storage, Event<T>},
-        Balances: balances::{Module, Call, Storage, Event<T>},
+        System: system::{Pallet, Call, Storage, Event<T>},
+        Assets: orml_tokens::{Pallet, Storage, Event<T>},
+        Balances: balances::{Pallet, Call, Storage, Event<T>},
         // TransactionPayment: pallet_transaction_payment::{Module, Storage},
-        ChargeTransactionFee: charge_transaction_fee::{Module, Call, Storage},
-        Zenlink: zenlink_protocol::{Module, Origin, Call, Storage, Event<T>},
-        Currencies: orml_currencies::{Module, Call, Storage, Event<T>},
+        ChargeTransactionFee: charge_transaction_fee::{Pallet, Call, Storage,Event<T>},
+        Zenlink: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
+        Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -89,6 +88,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = ();
+    type OnSetCode = ();
 }
 
 thread_local! {
@@ -151,10 +151,11 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-    pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+    pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 impl crate::Config for Test {
+    type Event = Event;
     type Balance = u64;
     type WeightInfo = ();
     type CurrenciesHandler = Currencies;
@@ -165,7 +166,7 @@ impl crate::Config for Test {
 }
 
 parameter_types! {
-    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =
@@ -180,48 +181,36 @@ impl orml_currencies::Config for Test {
 }
 
 parameter_types! {
-    pub const DEXModuleId: ModuleId = ModuleId(*b"zenlink1");
-}
-
-pub struct TestSender;
-
-impl UpwardMessageSender for TestSender {
-    fn send_upward_message(_msg: UpwardMessage) -> Result<(), ()> {
-        unimplemented!()
-    }
-}
-
-impl HrmpMessageSender for TestSender {
-    /// Send the given HRMP message.
-    fn send_hrmp_message(_msg: OutboundHrmpMessage) -> Result<(), ()> {
-        unimplemented!()
-    }
+    pub const ZenlinkPalletId: PalletId = PalletId(*b"zenlink1");
+    pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
+        // Phala local and live, 1 PHA
+        (make_x2_location(30),    1_000_000_000_000),
+        // Sherpax live
+        (make_x2_location(59),  500),
+        // Bifrost local and live, 0.01 BNC
+        (make_x2_location(1024),   10_000_000_000),
+        // Zenlink live
+        (make_x2_location(188), 500),
+        // Zenlink local
+        (make_x2_location(200), 500),
+        // Sherpax local
+        (make_x2_location(300), 500),
+        // Plasm local and live, 0.001 PLM
+        (make_x2_location(5000), 1_000_000_000_000)
+    ];
 }
 
 impl zenlink_protocol::Config for Test {
     type Event = Event;
-    type MultiCurrency = Assets;
-    type NativeCurrency = AdaptedBasicCurrency;
     type XcmExecutor = ();
-    type UpwardMessageSender = TestSender;
-    type HrmpMessageSender = TestSender;
     type AccountIdConverter = ();
     type AccountId32Converter = ();
-    type ModuleId = DEXModuleId;
     type ParaId = ();
+    type PalletId = ZenlinkPalletId;
     type TargetChains = ();
+    type NativeCurrency = NativeCurrencyAdaptor<Test, Balances>;
+    type OtherAssets = OtherAssetAdaptor<Test, Currencies>;
 }
-
-// // simulate block production
-// pub(crate) fn run_to_block(n: u64) {
-//     while System::block_number() < n {
-//         ChargeTransactionFee::on_finalize(System::block_number());
-//         System::on_finalize(System::block_number());
-//         System::set_block_number(System::block_number() + 1);
-//         System::on_initialize(System::block_number());
-//         ChargeTransactionFee::on_initialize(System::block_number());
-//     }
-// }
 
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {

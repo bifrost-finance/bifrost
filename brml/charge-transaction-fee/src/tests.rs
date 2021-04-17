@@ -36,7 +36,8 @@ use zenlink_protocol::{AssetId, DEXOperations};
 pub const ALICE: u128 = 1;
 pub const BOB: u128 = 2;
 pub const CHARLIE: u128 = 3;
-pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+pub const DICK: u128 = 4;
+pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const CURRENCY_ID_3: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
@@ -65,37 +66,59 @@ fn basic_setup() {
     assert_ok!(Currencies::deposit(CURRENCY_ID_3, &CHARLIE, 40));
     assert_ok!(Currencies::deposit(CURRENCY_ID_4, &CHARLIE, 50));
 
+    // Dick
+    assert_ok!(Currencies::deposit(CURRENCY_ID_0, &DICK, 100000));
+    assert_ok!(Currencies::deposit(CURRENCY_ID_1, &DICK, 100000));
+    assert_ok!(Currencies::deposit(CURRENCY_ID_2, &DICK, 100000));
+    assert_ok!(Currencies::deposit(CURRENCY_ID_3, &DICK, 100000));
+    assert_ok!(Currencies::deposit(CURRENCY_ID_4, &DICK, 100000));
+
     // create DEX pair
     let asset_0_currency_id: AssetId = AssetId::from(CURRENCY_ID_0);
     let asset_1_currency_id: AssetId = AssetId::from(CURRENCY_ID_1);
     let asset_2_currency_id: AssetId = AssetId::from(CURRENCY_ID_2);
 
-    assert_ok!(Zenlink::inner_create_pair(
+    assert_ok!(Zenlink::inner_create_pair_zenlink(
         &asset_0_currency_id,
         &asset_1_currency_id
     )); // asset 0 and 1
     let pool_0_1_account =
-        Zenlink::get_pair_from_asset_id(&asset_0_currency_id, &asset_1_currency_id)
+        Zenlink::get_pair_from_asset_id_zenlink(&asset_0_currency_id, &asset_1_currency_id)
             .unwrap()
             .account;
 
     // need to deposit some money into the pools
     // pool 0 1
-    assert_ok!(Currencies::deposit(CURRENCY_ID_0, &pool_0_1_account, 1000));
-    assert_ok!(Currencies::deposit(CURRENCY_ID_1, &pool_0_1_account, 1000));
+    assert_ok!(Zenlink::inner_add_liquidity_zenlink(
+        &DICK,
+        &asset_0_currency_id,
+        &asset_1_currency_id,
+        1000,
+        1000,
+        1,
+        1
+    ));
 
-    assert_ok!(Zenlink::inner_create_pair(
+    assert_ok!(Zenlink::inner_create_pair_zenlink(
         &asset_0_currency_id,
         &asset_2_currency_id
     )); // asset 0 and 2
+
     let pool_0_2_account =
-        Zenlink::get_pair_from_asset_id(&asset_0_currency_id, &asset_2_currency_id)
+        Zenlink::get_pair_from_asset_id_zenlink(&asset_0_currency_id, &asset_2_currency_id)
             .unwrap()
             .account;
 
     // pool 0 2
-    assert_ok!(Currencies::deposit(CURRENCY_ID_0, &pool_0_2_account, 1000));
-    assert_ok!(Currencies::deposit(CURRENCY_ID_2, &pool_0_2_account, 1000));
+    assert_ok!(Zenlink::inner_add_liquidity_zenlink(
+        &DICK,
+        &asset_0_currency_id,
+        &asset_2_currency_id,
+        1000,
+        1000,
+        1,
+        1
+    ));
 }
 
 #[test]
@@ -145,9 +168,13 @@ fn inner_get_user_fee_charge_order_list_should_work() {
         ];
 
         let mut default_order_list: Vec<CurrencyId> = Vec::new();
-        for i in 0..12 {
-            default_order_list.push(CurrencyId::from(i as u8));
-        }
+        default_order_list.push(CurrencyId::from(0 as u8));
+        default_order_list.push(CurrencyId::from(1 as u8));
+        default_order_list.push(CurrencyId::from(2 as u8));
+        default_order_list.push(CurrencyId::from(3 as u8));
+        default_order_list.push(CurrencyId::from(6 as u8));
+        default_order_list.push(CurrencyId::from(7 as u8));
+
         assert_eq!(
             ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
             default_order_list
@@ -192,9 +219,18 @@ fn ensure_can_charge_fee_should_work() {
 
         let native_asset_id: AssetId = AssetId::from(CURRENCY_ID_0);
         let asset_id: AssetId = AssetId::from(CURRENCY_ID_1);
+
         let path = vec![asset_id, native_asset_id];
-        let pool_0_1_price = <Test as crate::Config>::ZenlinkDEX::get_amount_in_by_path(100, &path);
-        let pool_0_1_account = <Test as crate::Config>::ZenlinkDEX::get_pair_from_asset_id(
+
+        let pool_0_1_account = Zenlink::get_pair_from_asset_id_zenlink(&asset_id, &native_asset_id)
+            .unwrap()
+            .account;
+
+        println!("pool_0_1_account: {:?}", pool_0_1_account);
+
+        let pool_0_1_price =
+            <Test as crate::Config>::ZenlinkDEX::get_amount_in_by_path_zenlink(100, &path);
+        let pool_0_1_account = <Test as crate::Config>::ZenlinkDEX::get_pair_from_asset_id_zenlink(
             &native_asset_id,
             &asset_id,
         )
@@ -229,8 +265,8 @@ fn ensure_can_charge_fee_should_work() {
             100,
             WithdrawReasons::TRANSACTION_PAYMENT,
         );
-        assert_eq!(<Test as crate::Config>::Currency::free_balance(&BOB), 100);
-        assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &BOB), 200);
+        assert_eq!(<Test as crate::Config>::Currency::free_balance(&BOB), 200); // exitential deposit check should be more than 0 balance kept for charging 100 fee
+        assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &BOB), 60);
     });
 }
 
