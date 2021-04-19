@@ -42,7 +42,7 @@ use sp_std::{vec, vec::Vec};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use zenlink_protocol::{AssetId, TokenBalance, DEXOperations};
+use zenlink_protocol::{AssetId, DEXOperations, TokenBalance};
 
 mod default_weight;
 mod mock;
@@ -204,15 +204,15 @@ impl<T: Config> Pallet<T> {
                 }
             } else {
                 // If it is other assets
-                let asset_balance = T::CurrenciesHandler::total_balance(currency_id, who);
+                let asset_balance = T::CurrenciesHandler::free_balance(currency_id, who);
                 let asset_id: AssetId = AssetId::from(currency_id);
                 let path = vec![asset_id, native_asset_id];
                 let amount_out: TokenBalance = fee.saturated_into();
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
 
                 // query for amount in
-                let amounts =
-                    T::ZenlinkDEX::get_amount_in_by_path_zenlink(amount_out, &path).map_or(vec![0], |v| v);
+                let amounts = T::ZenlinkDEX::get_amount_in_by_path_zenlink(amount_out, &path)
+                    .map_or(vec![0], |v| v);
 
                 if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens_zenlink(
                     who,
