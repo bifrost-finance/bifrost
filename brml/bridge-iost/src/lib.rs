@@ -55,6 +55,7 @@ use node_primitives::{
 
 use crate::transaction::IostTxOut;
 
+mod test;
 mod transaction;
 
 pub trait WeightInfo {
@@ -282,6 +283,10 @@ decl_event! {
         GrantedCrossChainPrivilege(AccountId),
         RemovedCrossChainPrivilege(AccountId),
         UnsignedTrx,
+
+        DebuggingEvent,
+
+        DebuggingFailedEvent(u8),
     }
 }
 
@@ -366,11 +371,11 @@ decl_module! {
 
         #[weight = T::WeightInfo::init_schedule()]
         fn init_schedule(origin, bn: IostBlockNumber, producers: Vec<Vec<u8>>) {
-            ensure_root(origin)?;
+            // TODO: To fix the auth function!!
+            // ensure_root(origin)?;
 
             ensure!(!ProducerSchedules::contains_key(bn), Error::<T>::InitMultiTimeProducerSchedules);
             ensure!(!PendingScheduleVersion::exists(), Error::<T>::InitMultiTimeProducerSchedules);
-
 
             ProducerSchedules::insert(bn, producers);
             PendingScheduleVersion::put(bn);
@@ -431,10 +436,13 @@ decl_module! {
             block_header: BlockHead,
             block_headers: Vec<BlockHead>,
         ) -> DispatchResult {
-            let origin = ensure_signed(origin)?;
-            ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
+            // let origin = ensure_signed(origin)?;
+            // ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
+            match Self::check_block(&block_header, block_headers) {
+                Ok(_) => Self::deposit_event(RawEvent::DebuggingEvent),
+                Err(_) => Self::deposit_event(RawEvent::DebuggingFailedEvent(0)),
+            };
 
-            Self::check_block(&block_header, block_headers)?;
             // ensure this transaction is unique, and ensure no duplicated transaction
             // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
@@ -458,7 +466,7 @@ decl_module! {
                 }
             }
 
-            // deposit operation, EOS => Bifrost
+            // deposit operation, IOST => Bifrost
             if cross_account == action_transfer.to.to_string().into_bytes() {
                 match Self::transaction_from_iost_to_bifrost(&action_transfer) {
                     Ok(target) => {
@@ -759,12 +767,16 @@ impl<T: Config> Module<T> {
     }
 
     fn check_block(bh: &BlockHead, witness_headers: Vec<BlockHead>) -> Result<(), Error<T>> {
+        debug::info!(target: "bridge-iost", "Block check ------------- {:?}.", bh.number);
+
         if !bh.verify_self() {
+            // return Ok(1);
             return Err(Error::<T>::InvalidAccountId);
         }
 
         for w_bh in witness_headers.iter() {
             if !w_bh.verify_self() {
+                // return Ok(2);
                 return Err(Error::<T>::InvalidAccountId);
             }
         }
@@ -790,9 +802,11 @@ impl<T: Config> Module<T> {
             // let block_parent_hash = &b.head.parent_hash;
             let b: Head = bh.parse_head();
             if parent_hash.as_slice() != b.parent_hash.as_slice() {
+                // return Ok(3);
                 return Err(Error::<T>::InvalidAccountId);
             }
             if parent_block_number + 1 != b.number {
+                // return Ok(4);
                 return Err(Error::<T>::InvalidAccountId);
             }
 
@@ -814,6 +828,7 @@ impl<T: Config> Module<T> {
             parent_hash = b.hash();
         }
         if valid_witness_count < 12 {
+            // return Ok(5);
             return Err(Error::<T>::InvalidAccountId);
         }
         Ok(())
