@@ -503,6 +503,7 @@ name = "bifrost-runtime"
 version = "0.7.0"
 dependencies = [
  "brml-poa-manager",
+ "brml-vesting",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -534,7 +535,6 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-treasury",
  "pallet-utility",
- "pallet-vesting",
  "parity-scale-codec 2.0.0",
  "serde",
  "sp-api",
@@ -5585,7 +5585,6 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#645299e8b23ec5fa52935b1a6edbf36886e80141"
 dependencies = [
  "enumflags2",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec 2.0.0",
