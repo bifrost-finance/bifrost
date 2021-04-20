@@ -92,7 +92,6 @@ impl<
 			Zero::zero(),
 			|st| n.saturating_sub(st.max(self.starting_block))
 		);
-		// let vested_block_count = n.saturating_sub(self.starting_block);
 		let vested_block_count = BlockNumberToBalance::convert(vested_block_count);
 		// Return amount that is still locked in vesting
 		let maybe_balance = vested_block_count.checked_mul(&self.per_block);
@@ -129,8 +128,8 @@ pub mod pallet {
 
 	/// Start at
 	#[pallet::storage]
-	#[pallet::getter(fn start_at)]
-	pub(super) type StartAt<T: Config> = StorageValue<_, T::BlockNumber>;
+	#[pallet::getter(fn vesting_start_at)]
+	pub(super) type VestingStartAt<T: Config> = StorageValue<_, T::BlockNumber>;
 
 	/// Information regarding the vesting of a given account.
 	#[pallet::storage]
@@ -188,7 +187,7 @@ pub mod pallet {
 			}
 		}
 	}
-`·
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	#[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
@@ -335,6 +334,18 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(0)]
+		pub fn init_vesting_start_at(
+			origin: OriginFor<T>,
+			vesting_start_at: T::BlockNumber,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			VestingStartAt::<T>::put(vesting_start_at);
+
+			Ok(())
+		}
 	}
 }
 
@@ -344,7 +355,7 @@ impl<T: Config> Pallet<T> {
 	fn update_lock(who: T::AccountId) -> DispatchResult {
 		let vesting = Self::vesting(&who).ok_or(Error::<T>::NotVesting)?;
 		let now = <frame_system::Pallet<T>>::block_number();
-		let locked_now = vesting.locked_at::<T::BlockNumberToBalance>(now, Self::start_at());
+		let locked_now = vesting.locked_at::<T::BlockNumberToBalance>(now, Self::vesting_start_at());
 
 		if locked_now.is_zero() {
 			T::Currency::remove_lock(VESTING_ID, &who);
@@ -369,7 +380,7 @@ impl<T: Config> VestingSchedule<T::AccountId> for Pallet<T> where
 	fn vesting_balance(who: &T::AccountId) -> Option<BalanceOf<T>> {
 		if let Some(v) = Self::vesting(who) {
 			let now = <frame_system::Pallet<T>>::block_number();
-			let locked_now = v.locked_at::<T::BlockNumberToBalance>(now, Self::start_at());
+			let locked_now = v.locked_at::<T::BlockNumberToBalance>(now, Self::vesting_start_at());
 			Some(T::Currency::free_balance(who).min(locked_now))
 		} else {
 			None
