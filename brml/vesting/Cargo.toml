@@ -1,0 +1,35 @@
+[package]
+name = "brml-vesting"
+version = "0.7.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+enumflags2 = { version = "0.6.2" }
+sp-std = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+frame-benchmarking = { version = "3.1.0", default-features = false, optional = true }
+
+[dev-dependencies]
+sp-io = { version = "3.0.0" }
+sp-core = { version = "3.0.0" }
+pallet-balances = { version = "3.0.0" }
+sp-storage = { version = "3.0.0" }
+hex-literal = "0.3.1"
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"codec/std",
+	"sp-std/std",
+	"sp-runtime/std",
+	"frame-support/std",
+	"frame-system/std",
+]
+runtime-benchmarks = ["frame-benchmarking"]
+try-runtime = ["frame-support/try-runtime"]
