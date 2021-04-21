@@ -204,10 +204,21 @@ impl<T: Config> Pallet<T> {
                 }
             } else {
                 // If it is other assets
+                let native_balance =
+                    T::CurrenciesHandler::free_balance(T::NativeCurrencyId::get(), who);
+
+                // If native token balance is below existential deposit requirement,
+                // go exchange fee + existential deposit. Else to exchange fee amount.
+                let amount_out: TokenBalance;
+                if native_balance > T::Balance::from(existential_deposit) {
+                    amount_out = fee.saturated_into();
+                } else {
+                    amount_out = (fee + existential_deposit).saturated_into();
+                }
+
                 let asset_balance = T::CurrenciesHandler::free_balance(currency_id, who);
                 let asset_id: AssetId = AssetId::from(currency_id);
                 let path = vec![asset_id, native_asset_id];
-                let amount_out: TokenBalance = fee.saturated_into();
                 let amount_in_max: TokenBalance = asset_balance.saturated_into();
 
                 // query for amount in
@@ -310,12 +321,13 @@ where
         } else {
             WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
         };
+
         // Make sure there are enough BNC to be deducted if the user has assets in other form of tokens rather than BNC.
         Self::ensure_can_charge_fee(who, fee, withdraw_reason);
 
         match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
             Ok(imbalance) => Ok(Some(imbalance)),
-            Err(_) => Err(InvalidTransaction::Payment.into()),
+            Err(msg) => Err(InvalidTransaction::Payment.into()),
         }
     }
 
