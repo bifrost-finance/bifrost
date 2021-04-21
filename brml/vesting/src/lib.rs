@@ -87,11 +87,11 @@ impl<
 		BlockNumberToBalance: Convert<BlockNumber, Balance>
 	>(&self, n: BlockNumber, start_at: Option<BlockNumber>) -> Balance {
 		// Number of blocks that count toward vesting
-		// Saturating to 0 when n < starting_block
-		let vested_block_count = start_at.map_or(
-			Zero::zero(),
-			|st| n.saturating_sub(st.max(self.starting_block))
-		);
+		// Saturating to 0 when n < starting_block or n < start_at
+		let vested_block_count = match start_at {
+			Some(st) if st < n => n.saturating_sub(st.max(self.starting_block)),
+			_ => Zero::zero(),
+		};
 		let vested_block_count = BlockNumberToBalance::convert(vested_block_count);
 		// Return amount that is still locked in vesting
 		let maybe_balance = vested_block_count.checked_mul(&self.per_block);
