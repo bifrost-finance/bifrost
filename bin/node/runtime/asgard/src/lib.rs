@@ -443,13 +443,14 @@ impl brml_charge_transaction_fee::Config for Runtime {
 parameter_types! {
 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
 	pub const RewardPeriod: BlockNumber = 50;
-	pub const MaximumExtendedPeriod: BlockNumber = 500;
+	pub const MaximumExtendedPeriod: BlockNumber = 100;
 	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
 }
 
 impl brml_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
+	type NativeCurrency = BifrostToken;
 	type TwoYear = TwoYear;
 	type PalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
@@ -699,7 +700,7 @@ construct_runtime!(
 		// bifrost modules
 		BrmlAssets: brml_assets::{Pallet, Call, Event<T>} = 10,
 		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
-		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>} = 13,
+		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
 		ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 

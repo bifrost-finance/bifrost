@@ -167,6 +167,8 @@ pub fn faucet_accounts() -> Vec<AccountId> {
 		hex!["7ea84934a575487fb02c44e01f4488c2f242cdbf48052630780dcd8ac567950c"].into(),
 		hex!["ee05492a82cb982392aad78f7e6f6fff56eaee4988fd9961ebb84e177dd6526d"].into(), // bifrost-faucet
 		hex!["7435653321694ee115e8cea8c8e117c0b6703b6fb91298b6df5adeef7679a46f"].into(), // danny testing account
-		hex!["263c78393f33b23cd23f3211726b2316e950910749d20c1552ea6972091a645e"].into() // jianbo testing account
+		hex!["263c78393f33b23cd23f3211726b2316e950910749d20c1552ea6972091a645e"].into(), // jianbo testing account
+		hex!["803feefeab8e5c81c3d268038b6c494d3018714fc8c5d08cf027111fd8114b06"].into(), // tieqiao testing account
+		hex!["8898ffd2cb04fb751655ede7bc0081b6b6ebe13cd0bdee5bbb9273e6dcc9b91c"].into(), // tyrone testing account
 	]
 }

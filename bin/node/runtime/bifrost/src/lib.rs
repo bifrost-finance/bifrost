@@ -1030,6 +1030,19 @@ orml_traits::parameter_type_with_key! {
 }
 
 parameter_types! {
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, node_primitives::Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = BifrostToken;
+	type GetNativeCurrencyId = GetBifrostTokenId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
 	pub const RewardPeriod: BlockNumber = 50;
 	pub const MaximumExtendedPeriod: BlockNumber = 500;
@@ -1039,6 +1052,7 @@ parameter_types! {
 impl brml_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
+	type NativeCurrency = BifrostToken;
 	type TwoYear = TwoYear;
 	type PalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
@@ -1095,6 +1109,7 @@ construct_runtime!(
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>},
 		// Bid: brml_bid::{Pallet, Call, Storage, Event<T>},
 		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
+		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 	}
 );
 

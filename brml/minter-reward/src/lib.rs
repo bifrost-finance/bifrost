@@ -27,7 +27,7 @@ use frame_support::{
 #[cfg(feature = "std")]
 pub use frame_support::traits::GenesisBuild;
 use frame_system::pallet_prelude::{BlockNumberFor, OriginFor, ensure_signed};
-use node_primitives::{CurrencyId, MinterRewardExt};
+use node_primitives::{CurrencyId, MinterRewardExt, TokenSymbol};
 use sp_runtime::{
 	traits::{
 		AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize,
@@ -35,8 +35,10 @@ use sp_runtime::{
 	}
 };
 use orml_traits::{
-	account::MergeAccount, MultiCurrency,
-	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
+	account::MergeAccount,
+	arithmetic::{Signed, SimpleArithmetic},
+	BalanceStatus, BasicCurrency, BasicCurrencyExtended, BasicLockableCurrency, BasicReservableCurrency,
+	LockIdentifier, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
 use zenlink_protocol::{DEXOperations, AssetId};
 pub use pallet::*;
@@ -54,6 +56,8 @@ pub mod pallet {
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 	pub type CurrencyIdOf<T> =
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+	pub(crate) type AmountOf<T> =
+		<<T as Config>::MultiCurrency as MultiCurrencyExtended<<T as frame_system::Config>::AccountId>>::Amount;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -62,6 +66,10 @@ pub mod pallet {
 		+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
 		+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
 		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+
+		type NativeCurrency: BasicCurrencyExtended<Self::AccountId, Balance = BalanceOf<Self>, Amount = AmountOf<Self>>
+			+ BasicLockableCurrency<Self::AccountId, Balance = BalanceOf<Self>>
+			+ BasicReservableCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
 
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -227,11 +235,12 @@ pub mod pallet {
 					*reward /= BalanceOf::<T>::from(2u32);
 				});
 			}
+
 			// if extended, 
 			// check BNC should be issued or not
 			// check reaching the period or not
 			let started_block_num = CurrentRoundStartAt::<T>::get();
-			if n - started_block_num >= T::RewardPeriod::get() {
+			if n - started_block_num >= T::RewardPeriod::get() && started_block_num > Zero::zero() {
 				// mint period is not extended.
 				let (last_max_minted_block, current_max_minted, last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
 				// not extended
@@ -245,8 +254,8 @@ pub mod pallet {
 					// after issued reward, need to clean this round data
 					let _ = MaximumVtokenMinted::<T>::kill();
 					CurrentRoundStartAt::<T>::put(BlockNumberFor::<T>::from(0u32));
-					let _ = Minter::<T>::drain();
-					let _ = TotalVtokenMinted::<T>::drain();
+					let _ = Minter::<T>::remove_all();
+					let _ = TotalVtokenMinted::<T>::remove_all();
 				} else {
 					// mint period is extended
 					// two senario need to consider
@@ -257,8 +266,8 @@ pub mod pallet {
 						// after issued reward, need to clean this round data
 						let _ = MaximumVtokenMinted::<T>::kill();
 						CurrentRoundStartAt::<T>::put(BlockNumberFor::<T>::from(0u32));
-						let _ = Minter::<T>::drain();
-						let _ = TotalVtokenMinted::<T>::drain();
+						let _ = Minter::<T>::remove_all();
+						let _ = TotalVtokenMinted::<T>::remove_all();
 					}
 
 					let max_extended_period = T::MaximumExtendedPeriod::get();
@@ -270,12 +279,10 @@ pub mod pallet {
 						// after issued reward, need to clean this round data
 						let _ = MaximumVtokenMinted::<T>::kill();
 						CurrentRoundStartAt::<T>::put(BlockNumberFor::<T>::from(0u32));
-						let _ = Minter::<T>::drain();
-						let _ = TotalVtokenMinted::<T>::drain();
+						let _ = Minter::<T>::remove_all();
+						let _ = TotalVtokenMinted::<T>::remove_all();
 					}
 				}
-
-				
 			}
 		}
 	}
@@ -315,23 +322,15 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub fn compare_max_vtoken_minted(
-			currency_id: CurrencyIdOf<T>,
-			minted_vtoken: BalanceOf<T>,
+			currency_id: CurrencyId,
+			ausd_amount: BalanceOf<T>,
 			block_num: BlockNumberFor<T>,
-		) -> Result<(), Error::<T>>{
+		) -> Result<(), Error::<T>> {
 			let current_block = <frame_system::Pallet<T>>::block_number();
-			let base_value = T::DEXOperations::get_amount_out_by_path_zenlink(
-					minted_vtoken.saturated_into(),
-					&[AssetId::from(currency_id), AssetId::from(0u32)]
-				)
-				.map_err(|_| Error::<T>::FailToGetSwapPrice)?
-				.last()
-				.copied()
-				.ok_or(Error::<T>::FailToGetSwapPrice)?;
-			// let base_value = minted_vtoken;
+			// let ausd_amount = get_ausd_amount_by_zenlink(minted_vtoken)?;
+
 			let (last_block, current_max_minted, last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
-			let base_value = BalanceOf::<T>::unique_saturated_from(base_value);
-			if base_value > current_max_minted {
+			if ausd_amount > current_max_minted {
 				MaximumVtokenMinted::<T>::mutate(|max_minted| {
 					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get()) >= T::RewardPeriod::get() {
 						if !is_extended {
@@ -340,7 +339,7 @@ pub mod pallet {
 					}
 					max_minted.0 = block_num;
 					
-					max_minted.1 = base_value;
+					max_minted.1 = ausd_amount;
 					max_minted.2 = currency_id;
 				});
 			}
@@ -359,11 +358,12 @@ pub mod pallet {
 			
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = Weights::<T>::get(&currency_id);
-				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id);
+				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // aUSD
 				let reward = bnc_reward
 					.saturating_mul(weight.into()
-					.saturating_mul(vtoken_amount)) / total_weight.saturating_mul(total_vtoken_mint);
-				let _ = T::MultiCurrency::deposit(currency_id, &minter, reward);
+					.saturating_mul(vtoken_amount)) / (total_weight * total_vtoken_mint);
+				// let _ = T::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::ASG), &minter, reward);
+				let _ = T::NativeCurrency::deposit(&minter, reward);
 
 				// Record all BNC rewards the user receives.
 				if UserBNCReward::<T>::contains_key(&minter) {
@@ -375,6 +375,33 @@ pub mod pallet {
 				}
 			}
 		}
+
+		pub fn get_ausd_amount_by_zenlink(
+			vtoken_amount: BalanceOf<T>,
+			currency_id: CurrencyId
+		) -> Result<BalanceOf::<T>, Error::<T>> {
+			let ausd_amount = T::DEXOperations::get_amount_out_by_path_zenlink(
+				vtoken_amount.saturated_into(),
+				&[
+				AssetId {
+					chain_id: 1024u32,
+					module_index: 2,
+					asset_index: *currency_id as u32,
+				},
+				AssetId {
+					chain_id: 1024u32,
+					module_index: 2,
+					asset_index: 1u32,
+				}
+			]
+			)
+			.map_err(|_| Error::<T>::FailToGetSwapPrice)?
+			.last()
+			.copied()
+			.ok_or(Error::<T>::FailToGetSwapPrice)?;
+
+			Ok(BalanceOf::<T>::unique_saturated_from(ausd_amount))
+		}
 	}
 }
 
@@ -383,24 +410,20 @@ impl<T: Config> MinterRewardExt<T::AccountId, BalanceOf<T>, CurrencyIdOf<T>, Blo
 
 	fn reward_minted_vtoken(
 		minter: &T::AccountId,
-		currency_id: CurrencyIdOf<T>,
+		currency_id: CurrencyId,
 		minted_vtoken: BalanceOf<T>,
 		block_num: BlockNumberFor<T>
 	) -> Result<(), Self::Error> {
-		let base_value = T::DEXOperations::get_amount_out_by_path_zenlink(
-				minted_vtoken.saturated_into(),
-				&[AssetId::from(currency_id), AssetId::from(0u32)]
-			)
-			.map_err(|_| Error::<T>::FailToGetSwapPrice)?
-			.last()
-			.copied()
-			.ok_or(Error::<T>::FailToGetSwapPrice)?;
+		let ausd_amount = Self::get_ausd_amount_by_zenlink(minted_vtoken, currency_id)?;
 
-		let base_value = BalanceOf::<T>::unique_saturated_from(base_value);
-		TotalVtokenMinted::<T>::mutate(currency_id, |total| {
-			total.saturating_add(base_value.saturated_into());
-			// *total = total.saturating_add(minted_vtoken);
-		});
+		// Update minter mint how much vtoken
+		if TotalVtokenMinted::<T>::contains_key(currency_id) {
+			TotalVtokenMinted::<T>::mutate(currency_id, |total| {
+				total.saturating_add(ausd_amount.saturated_into());
+			});
+		} else {
+			TotalVtokenMinted::<T>::insert(currency_id, ausd_amount);
+		}
 
 		// check it is a new round
 		if CurrentRoundStartAt::<T>::get() == Zero::zero() {
@@ -410,12 +433,12 @@ impl<T: Config> MinterRewardExt<T::AccountId, BalanceOf<T>, CurrencyIdOf<T>, Blo
 		// Update minter mint how much vtoken
 		if Minter::<T>::contains_key(minter, &currency_id) {
 			Minter::<T>::mutate(minter, &currency_id, |minted| {
-				minted.saturating_add(minted_vtoken);
+				minted.saturating_add(ausd_amount);
 			});
 		} else {
-			Minter::<T>::insert(minter, &currency_id, minted_vtoken);
+			Minter::<T>::insert(minter, &currency_id, ausd_amount);
 		}
 
-		Self::compare_max_vtoken_minted(currency_id, minted_vtoken, block_num)
+		Self::compare_max_vtoken_minted(currency_id, ausd_amount, block_num)
 	}
 }

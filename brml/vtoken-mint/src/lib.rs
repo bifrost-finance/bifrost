@@ -283,8 +283,7 @@ pub mod pallet {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			// reward mint reward
-			let r = T::MinterReward::reward_minted_vtoken(&minter, currency_id, vtokens_buy, current_block).is_ok();
-			log::debug!(target: "mint", "mint {:?}", r);
+			let r = T::MinterReward::reward_minted_vtoken(&minter, _vtoken_id.into(), vtokens_buy, current_block);
 
 			Self::deposit_event(Event::Minted(minter, currency_id, vtokens_buy));
 
@@ -365,17 +364,22 @@ pub mod pallet {
 					continue;
 				}
 
-				let bonus = RateOfInterestEachBlock::<T>::get(&currency_id);
 				if currency_id.is_token() {
+					let bonus = MintPool::<T>::get(&currency_id);
+					if bonus == Zero::zero() {
+						continue;
+					}
+
+					let one_year_blocks = BalanceOf::<T>::from(365*24*600u32);
 					if year_rate.deconstruct() % random_sum > random_sum / 2u32 {
 						// up to 17.8% or 11.2%
-						let rate = year_rate.saturating_add(fluctuation) * bonus;
+						let rate = year_rate.saturating_add(fluctuation) * bonus / one_year_blocks;
 						let _ = Self::expand_mint_pool(currency_id, rate);
 						// update revenue for each user having vtoken
 						Self::record_user_staking_revenue(currency_id, rate);
 					} else {
 						// down to 11.8% or 5.2%
-						let rate = year_rate.saturating_sub(fluctuation) * bonus;
+						let rate = year_rate.saturating_sub(fluctuation) * bonus / one_year_blocks;
 						let _ = Self::expand_mint_pool(currency_id, rate);
 						// update revenue for each user having vtoken
 						Self::record_user_staking_revenue(currency_id, rate);
@@ -430,14 +434,10 @@ pub mod pallet {
 				let redeem_period = StakingLockPeriod::<T>::get(&currency_id);
 				let mut exist_redeem_record = Vec::new();
 				for (index, (when, amount)) in records.iter().cloned().enumerate() {
-					log::debug!(target: "redeem", "period {:?}", redeem_period);
-					log::debug!(target: "redeem", "stripe {:?}", n - when);
-					log::debug!(target: "redeem", "called by {:?}", amount);
 					if n - when >= redeem_period {
 						T::MultiCurrency::deposit(currency_id, &who, amount)?;
 					} else {
 						exist_redeem_record.push((when, amount));
-						log::debug!(target: "redeem", "doesn't reach staking period {:?}", exist_redeem_record);
 					}
 				}
 				RedeemRecord::<T>::mutate(who, currency_id, |record| {

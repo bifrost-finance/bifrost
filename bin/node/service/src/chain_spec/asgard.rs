@@ -24,7 +24,7 @@ use cumulus_primitives_core::ParaId;
 use asgard_runtime::{
 	constants::{currency::DOLLARS, time::DAYS},
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig
+	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig, MinterRewardConfig,
 };
 use crate::chain_spec::{
 	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
@@ -201,6 +201,16 @@ pub fn testnet_genesis(
 					]
 				})
 				.collect(),
+		},
+		brml_minter_reward: MinterRewardConfig {
+			wegiths: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
+			],
+			reward_by_one_block: 5 * DOLLARS / 100,
+			round_index: 1,
+			storage_version: Default::default(),
 		},
 		brml_vtoken_mint: VtokenMintConfig {
 			pools: vec![
