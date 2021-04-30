@@ -988,16 +988,6 @@ impl orml_tokens::Config for Runtime {
 }
 
 // bifrost runtime start
-// impl brml_assets::Config for Runtime {
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type AssetId = AssetId;
-// 	type Price = Price;
-// 	type VtokenMint = VtokenMintPrice;
-// 	type AssetRedeem = ();
-// 	type FetchVtokenMintPrice = VtokenMint;
-// 	type WeightInfo = weights::pallet_assets::WeightInfo<Runtime>;
-// }
 
 impl brml_voucher::Config for Runtime {
 	type Event = Event;

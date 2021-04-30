@@ -12,6 +12,7 @@ members = [
 	"brml/assets",
 	"brml/vtoken-mint",
 	"brml/vtoken-mint/rpc",
+	"brml/minter-reward",
 	"brml/voucher",
 ]
 

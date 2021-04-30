@@ -73,9 +73,6 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 
 # zenlink
-# zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
-# zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
-
 zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
 zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
 
@@ -119,6 +116,8 @@ std = [
 	"brml-assets/std",
 	"brml-vtoken-mint/std",
 	"brml-vtoken-mint-rpc-runtime-api/std",
+	"brml-minter-reward/std",
+	"brml-minter-reward/std",
 	'brml-voucher/std',
 	"brml-charge-transaction-fee/std",
     "brml-charge-transaction-fee-rpc-runtime-api/std",
@@ -136,4 +135,6 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"cumulus-pallet-xcm-handler/std",
+	"brml-charge-transaction-fee/std",
+    "brml-charge-transaction-fee-rpc-runtime-api/std",
 ]

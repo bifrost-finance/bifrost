@@ -321,7 +321,6 @@ where
         } else {
             WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
         };
-
         // Make sure there are enough BNC to be deducted if the user has assets in other form of tokens rather than BNC.
         Self::ensure_can_charge_fee(who, fee, withdraw_reason);
 

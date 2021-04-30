@@ -235,7 +235,6 @@ pub mod pallet {
 					*reward /= BalanceOf::<T>::from(2u32);
 				});
 			}
-
 			// if extended, 
 			// check BNC should be issued or not
 			// check reaching the period or not

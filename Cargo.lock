@@ -885,6 +885,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-charge-transaction-fee-rpc"
+version = "0.7.0"
+dependencies = [
+ "brml-charge-transaction-fee-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "node-primitives",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
 name = "brml-charge-transaction-fee-rpc-runtime-api"
 version = "0.7.0"
 dependencies = [
@@ -4763,6 +4781,7 @@ version = "0.7.0"
 dependencies = [
  "asgard-runtime",
  "bifrost-runtime",
+ "brml-charge-transaction-fee-rpc",
  "bs58 0.3.1",
  "cumulus-client-collator",
  "cumulus-client-consensus-relay-chain",

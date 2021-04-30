@@ -18,17 +18,18 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Encode, Decode};
-use sp_runtime::{
-	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, 
-	OpaqueExtrinsic, MultiSignature
-};
-use sp_std::{convert::Into, prelude::*,};
+use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use sp_runtime::{
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	MultiSignature, OpaqueExtrinsic, RuntimeDebug, SaturatedConversion,
+};
+use sp_std::{convert::Into, prelude::*};
 
 mod currency;
-mod traits;
+pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
@@ -104,7 +105,7 @@ pub type PoolToken = u128;
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
 
-/// 
+///
 pub type BiddingOrderId = u64;
 
 ///
@@ -112,6 +113,12 @@ pub type EraId = u32;
 
 /// Signed version of Balance
 pub type Amount = i128;
+
+/// The balance of zenlink asset
+pub type TokenBalance = u128;
+
+/// The pair id of the zenlink dex.
+pub type PairId = u32;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
@@ -162,7 +169,12 @@ pub struct Token<AssetId, Balance> {
 }
 
 impl<AssetId, Balance: Copy> Token<AssetId, Balance> {
-	pub fn new(symbol: Vec<u8>, precision: u16, total_supply: Balance, token_type: TokenType) -> Self {
+	pub fn new(
+		symbol: Vec<u8>,
+		precision: u16,
+		total_supply: Balance,
+		token_type: TokenType,
+	) -> Self {
 		Self {
 			symbol,
 			precision,
@@ -259,42 +271,89 @@ pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
 	pub asset_id: AssetId,
 }
 
-// impl<A, AI, P, B> BridgeAssetFrom<A, AI, P, B> for () {
-// 	fn bridge_asset_from(_: A, _: BridgeAssetBalance<A, AI, P, B>) {}
-// }
+/// Zenlink type
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
+pub struct Pair<AccountId, TokenBalance> {
+	pub token_0: ZenlinkAssetId,
+	pub token_1: ZenlinkAssetId,
 
-// impl<A, AI, P, B> BridgeAssetTo<A, AI, P, B> for () {
-// 	type Error = core::convert::Infallible;
-// 	fn bridge_asset_to(_: Vec<u8>, _: BridgeAssetBalance<A, AI, P, B>) -> Result<(), Self::Error> { Ok(()) }
-// 	fn redeem(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-// 	fn stake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-// 	fn unstake(_: AI, _: B, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-// }
+	pub account: AccountId,
+	pub total_liquidity: TokenBalance,
+}
 
+/// The id of Zenlink asset
+/// NativeCurrency is this parachain native currency.
+/// Other parachain's currency is represented by `ParaCurrency(u32)`, `u32` cast to the ParaId.
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
+pub enum ZenlinkAssetId {
+	NativeCurrency,
+	ParaCurrency(u32),
+}
 
-// impl<A, B> AssetReward<A, B> for () {
-// 	type Output = ();
-// 	type Error = core::convert::Infallible;
-// 	fn set_asset_reward(_: A, _: B) -> Result<Self::Output, Self::Error> { Ok(()) }
-// }
+impl ZenlinkAssetId {
+	pub fn is_para_currency(&self) -> bool {
+		matches!(self, ZenlinkAssetId::ParaCurrency(_))
+	}
+}
 
-// impl<A, B> RewardHandler<A, B> for () {
-// 	fn send_reward(_: A, _: B) {}
-// }
+impl From<u32> for ZenlinkAssetId {
+	fn from(id: u32) -> Self {
+		ZenlinkAssetId::ParaCurrency(id)
+	}
+}
 
-// impl<Price> TokenPriceHandler<AssetId, Price> for () {
-// 	fn set_token_price(_: AssetId, _: Price) {}
-// }
+impl From<u128> for ZenlinkAssetId {
+	fn from(id: u128) -> Self {
+		ZenlinkAssetId::ParaCurrency(id as u32)
+	}
+}
 
-// impl<A, AC, B> AssetRedeem<A, AC, B> for () {
-// 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
-// }
+impl From<CurrencyId> for ZenlinkAssetId {
+	fn from(id: CurrencyId) -> Self {
+		if id.is_native() {
+			ZenlinkAssetId::NativeCurrency
+		} else {
+			match id {
+				CurrencyId::Token(some_id) => {
+					let u32_id = some_id as u32;
+					ZenlinkAssetId::ParaCurrency(u32_id)
+				}
+				_ => todo!("Not support now."),
+			}
+		}
+	}
+}
 
-// impl<A, B, AI> RewardTrait<A, B, AI> for () {
-// 	type Error = core::convert::Infallible;
-// 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
-// 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
-// }
+impl Into<CurrencyId> for ZenlinkAssetId {
+	fn into(self) -> CurrencyId {
+		match self {
+			ZenlinkAssetId::NativeCurrency => CurrencyId::Token(TokenSymbol::ASG),
+			ZenlinkAssetId::ParaCurrency(some_id) => {
+				let id: u8 = some_id.saturated_into();
+				CurrencyId::Token(TokenSymbol::from(id))
+			}
+		}
+	}
+}
+
+#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
+#[non_exhaustive]
+pub enum StorageVersion {
+	V0,
+	V1,
+	V2,
+	V3,
+}
+
+impl Default for StorageVersion {
+	fn default() -> Self {
+		Self::V0
+	}
+}
+
 /// App-specific crypto used for reporting equivocation/misbehavior in BABE and
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
 /// account.
@@ -326,22 +385,6 @@ pub mod report {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[non_exhaustive]
-pub enum StorageVersion {
-	V0,
-	V1,
-	V2,
-	V3,
-}
-
-impl Default for StorageVersion {
-	fn default() -> Self {
-		Self::V0
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -351,21 +394,29 @@ mod tests {
 		let currency_id_str = "BNC";
 		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
 		assert!(bnc_currency_id.is_ok());
-		assert_eq!(bnc_currency_id.unwrap(), CurrencyId::Token(TokenSymbol::BNC));
+		assert_eq!(
+			bnc_currency_id.unwrap(),
+			CurrencyId::Token(TokenSymbol::BNC)
+		);
 	}
 
 	#[test]
 	fn currency_id_ext_test_should_work() {
-        let currency_id_str = "BNC";
+		let currency_id_str = "BNC";
 		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
-        assert_eq!(bnc_currency_id.unwrap().is_native(), true);
-        // assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
-        assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
-        assert_eq!(TokenSymbol::DOT as u8, 2u8);
-        assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
-        assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
-        assert_eq!(CurrencyId::Token(TokenSymbol::BNC).get_native_token(), Some(TokenSymbol::BNC));
-        assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(), Some((TokenSymbol::DOT, TokenSymbol::vDOT)));
-		// todo!();
+		assert_eq!(bnc_currency_id.unwrap().is_native(), true);
+		// assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
+		assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
+		assert_eq!(TokenSymbol::DOT as u8, 2u8);
+		assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
+		assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
+		assert_eq!(
+			CurrencyId::Token(TokenSymbol::BNC).get_native_token(),
+			Some(TokenSymbol::BNC)
+		);
+		assert_eq!(
+			CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(),
+			Some((TokenSymbol::DOT, TokenSymbol::vDOT))
+		);
 	}
 }
