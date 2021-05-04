@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
+base64 = { version = "0.12.3", default-features = false, features= ["alloc"] }
 codec = { package = "parity-scale-codec", version = "1.3.4", default-features = false, features = ["derive"] }
 #iost-chain = { path = "/Users/qiannan/workspace/blockchain/rs-iost/chain", default-features = false }
 #iost-keys = { path = "/Users/qiannan/workspace/blockchain/rs-iost/keys", default-features = false }
@@ -33,6 +34,7 @@ substrate-offchain = { version = "2.0.0", package = "sp-offchain" }
 [features]
 default = ["std"]
 std = [
+	"base64/std",
 	"codec/std",
     "iost-chain/std",
     "iost-keys/std",

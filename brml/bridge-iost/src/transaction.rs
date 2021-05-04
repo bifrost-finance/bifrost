@@ -164,17 +164,18 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
         }
     }
 
-    pub fn sign<T: crate::Config>(self, sk: Vec<u8>, account_name: &str) -> Result<Self, Error<T>> {
+    pub fn sign<T: crate::Config>(
+        self,
+        sk: Vec<u8>,
+        account_name: &str,
+        sig_algorithm: &str,
+    ) -> Result<Self, Error<T>> {
         match self {
             IostTxOut::Generated(mut multi_sig_tx) => {
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
                     .map_err(|_| Error::<T>::IostChainError)?;
 
-                let _ignore = tx.sign(
-                    account_name.to_string(),
-                    iost_keys::algorithm::SECP256K1,
-                    sk.as_slice(),
-                );
+                let _ignore = tx.sign(account_name.to_string(), sig_algorithm, sk.as_slice());
                 match tx.verify() {
                     Ok(_) => {
                         multi_sig_tx.raw_tx = tx
@@ -296,8 +297,9 @@ pub(crate) mod iost_rpc {
         let body = response.body().collect::<Vec<u8>>();
         let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
         let tx_id = get_transaction_id(&body_str)?;
-
-        Ok(tx_id.into_bytes())
+        bs58::decode(tx_id)
+            .into_vec()
+            .map_err(|_| Error::<T>::DecodeBase58Error)
     }
 
     pub(crate) fn get_transaction_id<T: crate::Config>(

@@ -18,6 +18,7 @@
 #[macro_use]
 extern crate alloc;
 
+use base64;
 use codec::{Decode, Encode};
 use frame_support::{
     debug, decl_error, decl_event, decl_module, decl_storage,
@@ -31,7 +32,7 @@ use frame_system::{
     self as system, ensure_none, ensure_root, ensure_signed,
     offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::spv::{from_block_head, Block, Head, VERIFIER_NUM, VOTE_INTERVAL};
+use iost_chain::spv::{Head, VERIFIER_NUM, VOTE_INTERVAL};
 use iost_chain::{verify::BlockHead, ActionTransfer, IostAction};
 use lite_json::{parse_json, JsonValue};
 use sp_application_crypto::RuntimeAppPublic;
@@ -142,6 +143,7 @@ pub mod sr25519 {
 const IOST_NODE_URL: &[u8] = b"IOST_NODE_URL";
 const IOST_ACCOUNT_NAME: &[u8] = b"IOST_ACCOUNT_NAME";
 const IOST_SECRET_KEY: &[u8] = b"IOST_SECRET_KEY";
+const IOST_ACCOUNT_SIG_ALOG: &[u8] = b"IOST_ACCOUNT_SIG_ALOG";
 
 decl_error! {
     pub enum Error for Module<T: Config> {
@@ -182,7 +184,7 @@ decl_error! {
         /// Fail to parse utf8 array
         ParseUtf8Error,
         /// Error while decode hex text
-        DecodeHexError,
+        DecodeBase58Error,
         /// Fail to parse secret key
         ParseSecretKeyError,
         /// Fail to calcualte action hash
@@ -302,7 +304,7 @@ decl_storage! {
         CrossChainBackEnable get(fn is_cross_back_enable): bool = true;
 
         /// IOST producer list and hash which in specific version id
-        ProducerSchedules: map hasher(blake2_128_concat) IostBlockNumber => (Vec<Vec<u8>>);
+        ProducerSchedules: map hasher(blake2_128_concat) IostBlockNumber => Vec<Vec<u8>>;
 
         /// Current pending schedule version
         PendingScheduleVersion: IostBlockNumber;
@@ -422,9 +424,14 @@ decl_module! {
             witness_headers: Vec<BlockHead>,
             pending_list: Vec<Vec<u8>>
         ) -> DispatchResult {
-            let origin = ensure_signed(origin)?;
+            ensure_signed(origin)?;
 
             Self::update_epoch(&bh, witness_headers, pending_list)?;
+
+            // match Self::update_epoch(&bh, witness_headers, pending_list) {
+            //     Ok(ans) => Self::deposit_event(RawEvent::DebuggingFailedEvent(ans)),
+            //     Err(_) => Self::deposit_event(RawEvent::DebuggingFailedEvent(11)),
+            // };
             Ok(())
         }
 
@@ -436,26 +443,27 @@ decl_module! {
             block_header: BlockHead,
             block_headers: Vec<BlockHead>,
         ) -> DispatchResult {
-            // let origin = ensure_signed(origin)?;
+            let origin = ensure_signed(origin)?;
             // ensure!(CrossChainPrivilege::<T>::get(&origin), Error::<T>::NoPermissionSignCrossChainTrade);
             match Self::check_block(&block_header, block_headers) {
-                Ok(_) => Self::deposit_event(RawEvent::DebuggingEvent),
-                Err(_) => Self::deposit_event(RawEvent::DebuggingFailedEvent(0)),
+                Ok(ans) => Self::deposit_event(RawEvent::DebuggingFailedEvent(ans)),
+                Err(_) => {Self::deposit_event(RawEvent::DebuggingFailedEvent(111))},
             };
-
-            // ensure this transaction is unique, and ensure no duplicated transaction
-            // ensure!(BridgeActionReceipt::get(&action_receipt).ne(&action), Error::<T>::DuplicatedCrossChainTransaction);
 
             // ensure action is what we want
             // ensure!(action.action_name == "transfer", "This is an invalid action to Bifrost");
 
             Self::deposit_event(RawEvent::ProveAction);
 
+            let result = core::str::from_utf8(trx_id.as_slice()).unwrap().to_string();
+            let res = base64::decode(result).unwrap();
+            let transaction_id = res.to_vec();
+
             let action_transfer = Self::get_action_transfer_from_action(&action)?;
             let cross_account = BridgeContractAccount::get().0;
             // withdraw operation, Bifrost => IOST
             if cross_account == action_transfer.from.to_string().into_bytes() {
-                match Self::transaction_from_bifrost_to_iost(&action_transfer, trx_id) {
+                match Self::transaction_from_bifrost_to_iost(&action_transfer, transaction_id) {
                     Ok(target) => {
                         Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
                     }
@@ -642,7 +650,7 @@ impl<T: Config> Module<T> {
         let token = T::AssetTrait::get_token(Self::iost_asset_id());
         let _symbol_code = token.symbol;
         let symbol_precise = token.precision;
-        let align_precision = 15 - symbol_precise;
+        let align_precision = 12 - symbol_precise;
 
         let transfer_amount = action_transfer
             .amount
@@ -672,17 +680,18 @@ impl<T: Config> Module<T> {
         pending_trx_id: Vec<u8>,
     ) -> Result<T::AccountId, Error<T>> {
         let bridge_tx_outs = BridgeTxOuts::<T>::get();
-        let pending_trx =
-            core::str::from_utf8(&pending_trx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
+        let pending_trx = bs58::encode(pending_trx_id).into_string();
+        // core::str::from_utf8(&pending_trx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
         for trx in bridge_tx_outs.iter() {
             match trx {
                 IostTxOut::Processing {
                     tx_id,
                     multi_sig_tx,
                 } => {
-                    let tx =
-                        core::str::from_utf8(&tx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
-                    if pending_trx.ne(tx) {
+                    let tx = bs58::encode(tx_id).into_string();
+                    // let tx =
+                    //     core::str::from_utf8(&tx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
+                    if pending_trx.ne(tx.as_str()) {
                         continue;
                     }
                     let target = &multi_sig_tx.from;
@@ -696,7 +705,7 @@ impl<T: Config> Module<T> {
                         .amount
                         .parse::<u128>()
                         .map_err(|_| Error::<T>::ConvertBalanceError)?;
-                    let token_balances = token_balances * 10u128.pow(15);
+                    let token_balances = token_balances * 10u128.pow(12);
                     let vtoken_balances = TryFrom::<u128>::try_from(token_balances)
                         .map_err(|_| Error::<T>::ConvertBalanceError)?;
 
@@ -766,17 +775,17 @@ impl<T: Config> Module<T> {
         }
     }
 
-    fn check_block(bh: &BlockHead, witness_headers: Vec<BlockHead>) -> Result<(), Error<T>> {
+    fn check_block(bh: &BlockHead, witness_headers: Vec<BlockHead>) -> Result<u8, Error<T>> {
         debug::info!(target: "bridge-iost", "Block check ------------- {:?}.", bh.number);
 
         if !bh.verify_self() {
-            // return Ok(1);
+            // return Ok(101);
             return Err(Error::<T>::InvalidAccountId);
         }
 
         for w_bh in witness_headers.iter() {
             if !w_bh.verify_self() {
-                // return Ok(2);
+                // return Ok(102);
                 return Err(Error::<T>::InvalidAccountId);
             }
         }
@@ -802,11 +811,11 @@ impl<T: Config> Module<T> {
             // let block_parent_hash = &b.head.parent_hash;
             let b: Head = bh.parse_head();
             if parent_hash.as_slice() != b.parent_hash.as_slice() {
-                // return Ok(3);
+                // return Ok(103);
                 return Err(Error::<T>::InvalidAccountId);
             }
             if parent_block_number + 1 != b.number {
-                // return Ok(4);
+                // return Ok(104);
                 return Err(Error::<T>::InvalidAccountId);
             }
 
@@ -828,10 +837,12 @@ impl<T: Config> Module<T> {
             parent_hash = b.hash();
         }
         if valid_witness_count < 12 {
-            // return Ok(5);
-            return Err(Error::<T>::InvalidAccountId);
+            // Since it single node producing block in local dev, just return OK for testing.
+            // TODO: should be revert to Invalidation Error later.
+            return Ok(100);
+            // return Err(Error::<T>::InvalidAccountId);
         }
-        Ok(())
+        Ok(0)
     }
 
     /// generate transaction for transfer amount to
@@ -849,7 +860,7 @@ impl<T: Config> Module<T> {
             .to_string();
         // let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
         let original_amount =
-            (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(7))) as u128;
+            (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(4))) as u128;
 
         let amount = (original_amount as f64) / (10u128.pow(8) as f64);
         let tx_out = IostTxOut::<T::AccountId, T::AssetId>::init(
@@ -874,8 +885,12 @@ impl<T: Config> Module<T> {
         let node_url = Self::get_offchain_storage(IOST_NODE_URL)?;
         let account_name = Self::get_offchain_storage(IOST_ACCOUNT_NAME)?;
         let sk_str = Self::get_offchain_storage(IOST_SECRET_KEY)?;
+        let sig_algorithm = Self::get_offchain_storage(IOST_ACCOUNT_SIG_ALOG)?;
+
         debug::info!(target: "bridge-iost", "IOST_NODE_URL ------------- {:?}.", node_url.as_str());
         debug::info!(target: "bridge-iost", "IOST_SECRET_KEY ------------- {:?}.", sk_str.as_str());
+        debug::info!(target: "bridge-iost", "IOST_ACCOUNT_SIG_ALOG ------------- {:?}.", sig_algorithm.as_str());
+
         let bridge_tx_outs = bridge_tx_outs.into_iter()
             .map(|bto| {
                 match bto {
@@ -904,7 +919,7 @@ impl<T: Config> Module<T> {
                         let mut ret = bto.clone();
                         let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
 
-                        match bto.sign::<T>(decoded_sk, account_name.as_str()) {
+                        match bto.sign::<T>(decoded_sk, account_name.as_str(), sig_algorithm.as_str()) {
                             Ok(signed_bto) => {
                                 has_change.set(true);
                                 debug::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);

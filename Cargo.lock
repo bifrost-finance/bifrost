@@ -738,6 +738,7 @@ dependencies = [
 name = "brml-bridge-iost"
 version = "0.6.0"
 dependencies = [
+ "base64 0.12.3",
  "brml-assets",
  "bs58 0.3.1",
  "frame-support",
