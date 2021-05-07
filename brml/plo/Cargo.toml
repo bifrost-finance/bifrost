@@ -1,0 +1,22 @@
+[package]
+name = "brml-plo"
+version = "0.7.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+serde = { version = "1.0.124", optional = true }
+sp-std = { version = "3.0.0", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-support/std",
+	"frame-system/std",
+	"serde",
+	"sp-std/std",
+]
