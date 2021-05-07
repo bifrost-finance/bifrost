@@ -172,7 +172,6 @@ impl Filter<Call> for CallFilter {
 	fn filter(c: &Call) -> bool {
 		match *c {
 			Call::Balances(_) => false,
-			Call::Democracy(_) => false,
 			Call::Vesting(_) => false,
 			_ => true,
 		}
