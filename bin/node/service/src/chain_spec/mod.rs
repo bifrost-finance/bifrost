@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -22,13 +22,12 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use grandpa_primitives::{AuthorityId as GrandpaId};
 use babe_primitives::{AuthorityId as BabeId};
-use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
-pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, ConvertPool};
+pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, VtokenPool};
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -57,7 +56,7 @@ pub struct RelayExtensions {
 
 impl RelayExtensions {
 	/// Try to get the extension from the given `ChainSpec`.
-	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
 		sc_chain_spec::get_extension(chain_spec.extensions())
 	}
 }

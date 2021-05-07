@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -38,7 +38,7 @@ use sp_runtime::{
 	},
 };
 use frame_support::{
-	decl_event, decl_module, decl_storage, decl_error, debug, ensure, Parameter, traits::Get,
+	decl_event, decl_module, decl_storage, decl_error, ensure, Parameter, traits::Get,
 	dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap, StorageValue,
 };
 use frame_system::{
@@ -46,7 +46,7 @@ use frame_system::{
 };
 use node_primitives::{
 	AssetTrait, BridgeAssetBalance, BridgeAssetFrom, BridgeAssetTo, BridgeAssetSymbol, BlockchainType,
-	FetchConvertPool,
+	FetchVtokenMintPool,
 };
 use sp_application_crypto::RuntimeAppPublic;
 
@@ -189,7 +189,7 @@ decl_error! {
 		/// Invalid substrate account id
 		InvalidAccountId,
 		/// Fail to cast balance type
-		ConvertBalanceError,
+		VtokenMintBalanceError,
 		/// Fail to append block id to merkel tree
 		AppendIncreMerkleError,
 		/// Fail to verify signature
@@ -281,8 +281,8 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 
 	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
 
-	/// Fetch convert pool from convert module
-	type FetchConvertPool: FetchConvertPool<Self::AssetId, Self::Balance>;
+	/// Fetch vtoke mint pool from vtoken mint module
+	type FetchVtokenMintPool: FetchVtokenMintPool<Self::AssetId, Self::Balance>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -519,7 +519,7 @@ decl_module! {
 		#[weight = (T::WeightInfo::change_schedule(), DispatchClass::Normal, Pays::No)]
 		fn change_schedule(
 			origin,
-			legacy_schedule_hash: Checksum256,
+			_legacy_schedule_hash: Checksum256,
 			new_schedule: ProducerAuthoritySchedule,
 			merkle: IncrementalMerkle,
 			block_headers: Vec<SignedBlockHeader>,
@@ -626,7 +626,7 @@ decl_module! {
 						Self::deposit_event(RawEvent::Withdraw(target, action_transfer.to.to_string().into_bytes()));
 					}
 					Err(e) => {
-						debug::warn!("Bifrost => EOS failed due to {:?}", e);
+						log::warn!("Bifrost => EOS failed due to {:?}", e);
 						Self::deposit_event(RawEvent::WithdrawFail);
 					}
 				}
@@ -645,7 +645,7 @@ decl_module! {
 						Self::deposit_event(RawEvent::Deposit(action_transfer.from.to_string().into_bytes(), target));
 					}
 					Err(e) => {
-						debug::info!("EOS => Bifrost failed due to {:?}", e);
+						log::info!("EOS => Bifrost failed due to {:?}", e);
 						Self::deposit_event(RawEvent::DepositFail);
 					}
 
@@ -691,12 +691,12 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = (T::WeightInfo::cross_to_eos(memo.len() as Weight), DispatchClass::Normal, Pays::No)]
+		#[weight = (T::WeightInfo::cross_to_eos(_memo.len() as Weight), DispatchClass::Normal, Pays::No)]
 		fn cross_to_eos(
 			origin,
 			to: Vec<u8>,
 			#[compact] amount: T::Balance,
-			memo: Vec<u8>
+			_memo: Vec<u8>
 		) {
 			let origin = system::ensure_signed(origin)?;
 			let eos_amount = amount;
@@ -725,14 +725,14 @@ decl_module! {
 
 			match Self::bridge_asset_to(to, bridge_asset) {
 				Ok(_) => {
-					debug::info!("sent transaction to EOS node.");
+					log::info!("sent transaction to EOS node.");
 					// locked balance until trade is verified
 					T::AssetTrait::lock_asset(&origin, asset_id, eos_amount);
 
 					Self::deposit_event(RawEvent::SentCrossChainTransaction);
 				}
 				Err(e) => {
-					debug::warn!("failed to send transaction to EOS node, due to {:?}", e);
+					log::warn!("failed to send transaction to EOS node, due to {:?}", e);
 					Self::deposit_event(RawEvent::FailToSendCrossChainTransaction);
 				}
 			}
@@ -740,7 +740,6 @@ decl_module! {
 
 		// Runs after every block.
 		fn offchain_worker(now_block: T::BlockNumber) {
-			debug::RuntimeLogger::init();
 
 			// trigger offchain worker by each two block
 			if now_block % T::BlockNumber::from(2u32) == T::BlockNumber::from(0u32) {
@@ -752,7 +751,7 @@ decl_module! {
 					)
 				{
 					match Self::offchain(now_block) {
-						Ok(_) => debug::info!("A offchain worker started."),
+						Ok(_) => log::info!("A offchain worker started."),
 						Err(_) => (),
 					}
 				}
@@ -871,7 +870,7 @@ impl<T: Config> Module<T> {
 						"" | "vEOS" => v_eos_id,
 						"EOS" => eos_id,
 						_ => {
-							debug::error!("A invalid token type, default token type will be vtoken");
+							log::error!("A invalid token type, default token type will be vtoken");
 							return Err(Error::<T>::InvalidMemo);
 						}
 					}
@@ -881,8 +880,8 @@ impl<T: Config> Module<T> {
 		};
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
 		// but in the future, we will support both token, let user to which token he wants to get
-		// according to the convert price
-		let convert_pool = T::FetchConvertPool::fetch_convert_pool(eos_id);
+		// according to the vtoken mint price
+		let vtoken_mint_pool = T::FetchVtokenMintPool::fetch_vtoken_pool(eos_id);
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
@@ -895,12 +894,12 @@ impl<T: Config> Module<T> {
 		);
 
 		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 		if T::AssetTrait::is_v_token(token_id) {
-			// according convert pool to convert EOS to vEOS
+			// according vtoken mint pool to mint EOS vEOS
 			let vtoken_balances: T::Balance = {
-				new_balance.saturating_mul(convert_pool.vtoken_pool) / convert_pool.token_pool
+				new_balance.saturating_mul(vtoken_mint_pool.vtoken_pool) / vtoken_mint_pool.token_pool
 			};
 			T::AssetTrait::asset_issue(v_eos_id, &target, vtoken_balances);
 		} else {
@@ -933,10 +932,10 @@ impl<T: Config> Module<T> {
 				);
 
 				let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::ConvertBalanceError)?;
+				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 				if all_vtoken_balances.lt(&vtoken_balances) {
-					debug::warn!("origin account balance must be greater than or equal to the transfer amount.");
+					log::warn!("origin account balance must be greater than or equal to the transfer amount.");
 					return Err(Error::<T>::InsufficientBalance);
 				}
 
@@ -1028,7 +1027,7 @@ impl<T: Config> Module<T> {
 							changed_status_trxs.push(((generated_trx, index), TransactionStatus::Created, (trx.clone(), index),  None));
 						}
 						Err(e) => {
-							debug::error!("failed to get latest block due to: {:?}", e);
+							log::error!("failed to get latest block due to: {:?}", e);
 						}
 					}
 				}
@@ -1049,7 +1048,7 @@ impl<T: Config> Module<T> {
 								changed_status_trxs.push(((signed_trx, index), status, (trx.clone(), index), None));
 							}
 							Err(e) => {
-								debug::error!("failed to get latest block due to: {:?}", e);
+								log::error!("failed to get latest block due to: {:?}", e);
 							}
 						}
 					}
@@ -1083,8 +1082,8 @@ impl<T: Config> Module<T> {
 		if !changed_status_trxs.is_empty() {
 			let call = Call::update_bridge_trx_status(changed_status_trxs.clone());
 			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
-				Ok(_) => debug::error!(target: "bridge-eos", "submit unsigned trxs {:?}", ()),
-				Err(e) => debug::error!("Failed to sent transaction due to: {:?}", e),
+				Ok(_) => log::error!(target: "bridge-eos", "submit unsigned trxs {:?}", ()),
+				Err(e) => log::error!("Failed to sent transaction due to: {:?}", e),
 			}
 		}
 

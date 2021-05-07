@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -49,7 +49,7 @@ impl_outer_event! {
 		system<T>,
 		bridge_eos<T>,
 		assets<T>,
-		convert,
+		vtoken_mint,
 	}
 }
 
@@ -83,8 +83,8 @@ impl frame_system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type PalletInfo = ();
+	type SS58Prefix = ();
 }
-
 
 pub const TEST_ID: ConsensusEngineId = [1, 2, 3, 4];
 
@@ -137,7 +137,7 @@ impl crate::Config for Test {
 	type BridgeAssetFrom = ();
 	type Call = Call;
 	type AssetTrait = Assets;
-	type FetchConvertPool = Convert;
+	type FetchVtokenMintPool = VtokenMint;
 	type WeightInfo = ();
 }
 
@@ -146,24 +146,23 @@ impl assets::Config for Test {
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Convert = u64;
+	type VtokenMint = u64;
 	type AssetRedeem = ();
-	type FetchConvertPrice = Convert;
+	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
 
 parameter_types! {
-	pub const ConvertDuration: u64 = 24 * 60 * 10;
+	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
 }
 
-impl convert::Config for Test {
-	type ConvertPrice = u64;
-	type RatePerBlock = u64;
+impl vtoken_mint::Config for Test {
+	type MintPrice = u64;
 	type Event = TestEvent;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
-	type ConvertDuration = ConvertDuration;
+	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = ();
 }
 
@@ -171,7 +170,7 @@ pub type BridgeEos = crate::Module<Test>;
 pub type Authorship = pallet_authorship::Module<Test>;
 pub type System = frame_system::Module<Test>;
 pub type Assets = assets::Module<Test>;
-pub type Convert = convert::Module<Test>;
+pub type VtokenMint = vtoken_mint::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {

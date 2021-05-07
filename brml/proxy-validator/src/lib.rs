@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -390,7 +390,7 @@ decl_module! {
 		fn on_finalize(now_block: T::BlockNumber) {
 			match Self::validator_deduct(now_block) {
 				Ok(_) => (),
-				Err(e) => debug::error!("An error happened while deduct: {:?}", e),
+				Err(e) => log::error!("An error happened while deduct: {:?}", e),
 			}
 		}
 	}

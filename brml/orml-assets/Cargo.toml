@@ -1,0 +1,35 @@
+[package]
+name = "orml-assets"
+version = "0.7.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+frame-support = { version = "3.0.0", default-features = false }
+frame-system = { version = "3.0.0", default-features = false }
+node-primitives = { path = "../../bin/node/primitives", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master" }
+serde = { version = "1.0.124", optional = true }
+sp-core = { version = "3.0.0", default-features = false }
+sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
+log = { version = "0.4.14", default-features = false }
+
+[dev-dependencies]
+sp-io = { version = "3.0.0" }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"log/std",
+	"node-primitives/std",
+	"frame-support/std",
+	"frame-system/std",
+	"orml-traits/std",
+	"serde",
+	"sp-core/std",
+	"sp-runtime/std",
+	"sp-std/std",
+]

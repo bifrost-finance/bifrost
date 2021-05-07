@@ -1,18 +1,18 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-
+//
 // Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-
+//
 // You should have received a copy of the GNU General Public License
-// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+// along with Bifrost. If not, see <https://www.gnu.org/licenses/>.
 
 //! A CLI extension for substrate node, adding sub-command to pretty print debug info
 //! about blocks and extrinsics.
@@ -100,8 +100,8 @@ impl std::error::Error for Error {
 
 /// A helper trait to access block headers and bodies.
 pub trait ChainAccess<TBlock: Block>:
-	HeaderBackend<TBlock> +
-	BlockBackend<TBlock>
+HeaderBackend<TBlock> +
+BlockBackend<TBlock>
 {}
 
 impl<T, TBlock> ChainAccess<TBlock> for T where

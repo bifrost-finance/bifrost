@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -16,11 +16,9 @@
 
 use structopt::StructOpt;
 use sc_cli::{
-	Error, VanityCmd, SignCmd, VerifyCmd, InsertCmd,
-	GenerateNodeKeyCmd, GenerateCmd, InspectKeyCmd, InspectNodeKeyCmd
+	Error, VanityCmd, SignCmd, VerifyCmd, GenerateNodeKeyCmd, GenerateCmd, InspectKeyCmd,
+	InspectNodeKeyCmd
 };
-use substrate_frame_cli::ModuleIdCmd;
-use sp_core::crypto::Ss58Codec;
 
 mod offchain_rpc;
 
@@ -44,12 +42,6 @@ pub enum Subkey {
 	/// Print the peer ID corresponding to the node key in the given file
 	InspectNodeKey(InspectNodeKeyCmd),
 
-	/// Insert a key to the keystore of a node.
-	Insert(InsertCmd),
-
-	/// Inspect a module ID address
-	ModuleId(ModuleIdCmd),
-
 	/// Sign a message, with a given (secret) key.
 	Sign(SignCmd),
 
@@ -69,26 +61,18 @@ pub enum Subkey {
 }
 
 /// Run the subkey command, given the apropriate runtime.
-pub fn run<R>() -> Result<(), Error>
-	where
-		R: frame_system::Config,
-		R::AccountId: Ss58Codec
-{
+pub fn run() -> Result<(), Error> {
 	match Subkey::from_args() {
-		Subkey::GenerateNodeKey(cmd) => cmd.run()?,
-		Subkey::Generate(cmd) => cmd.run()?,
-		Subkey::Inspect(cmd) => cmd.run()?,
-		Subkey::InspectNodeKey(cmd) => cmd.run()?,
-		Subkey::Insert(cmd) => cmd.run()?,
-		Subkey::ModuleId(cmd) => cmd.run::<R>()?,
-		Subkey::Vanity(cmd) => cmd.run()?,
-		Subkey::Verify(cmd) => cmd.run()?,
-		Subkey::Sign(cmd) => cmd.run()?,
-		Subkey::GetLocalStorage(cmd) => cmd.run()?,
-		Subkey::SetLocalStorage(cmd) => cmd.run()?,
-	};
-
-	Ok(())
+		Subkey::GenerateNodeKey(cmd) => cmd.run(),
+		Subkey::Generate(cmd) => cmd.run(),
+		Subkey::Inspect(cmd) => cmd.run(),
+		Subkey::InspectNodeKey(cmd) => cmd.run(),
+		Subkey::Vanity(cmd) => cmd.run(),
+		Subkey::Verify(cmd) => cmd.run(),
+		Subkey::Sign(cmd) => cmd.run(),
+		Subkey::GetLocalStorage(cmd) => cmd.run(),
+		Subkey::SetLocalStorage(cmd) => cmd.run(),
+	}
 }
 
 pub mod offchain_storage {

@@ -790,14 +790,11 @@ impl<T: Config> Module<T> {
             }
         }
 
-        let block_number = bh.number;
-        let mut current_epoch_start_block: i64 = 0;
-
-        if block_number % VOTE_INTERVAL == 0 {
-            current_epoch_start_block = block_number - VOTE_INTERVAL
+        let current_epoch_start_block = if bh.number % VOTE_INTERVAL == 0 {
+            block_number - VOTE_INTERVAL
         } else {
-            current_epoch_start_block = block_number / VOTE_INTERVAL * VOTE_INTERVAL
-        }
+            block_number / VOTE_INTERVAL * VOTE_INTERVAL
+        };
 
         let producers = ProducerSchedules::get(current_epoch_start_block as IostBlockNumber);
 

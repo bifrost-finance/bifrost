@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -22,7 +22,14 @@ use codec::{Encode, Decode};
 use sp_runtime::{
 	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
 };
-use sp_std::prelude::*;
+use sp_std::{
+	convert::{Into, TryFrom, TryInto},
+	prelude::*,
+};
+use sp_runtime::RuntimeDebug;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -40,9 +47,8 @@ pub type AccountIndex = u32;
 /// An index to an asset
 pub type AssetId = u32;
 
-/// Convert type
-pub type ConvertPrice = u128;
-pub type RatePerBlock = u64;
+/// Vtoken Mint type
+pub type VtokenMintPrice = u128;
 
 /// Balance of an account.
 pub type Balance = u128;
@@ -80,7 +86,7 @@ pub type Block = generic::Block<Header, OpaqueExtrinsic>;
 pub type BlockId = generic::BlockId<Block>;
 
 /// Balancer pool swap fee.
-pub type Fee = u128;
+pub type SwapFee = u128;
 
 /// Balancer pool ID.
 pub type PoolId = u32;
@@ -88,8 +94,21 @@ pub type PoolId = u32;
 /// Balancer pool weight.
 pub type PoolWeight = u128;
 
+/// Balancer pool token.
+pub type PoolToken = u128;
+
 /// Index of a transaction in the chain. 32-bit should be plenty.
 pub type Nonce = u32;
+
+/// 
+pub type BiddingOrderId = u64;
+
+///
+pub type EraId = u32;
+
+/// Signed version of Balance
+pub type Amount = i128;
+
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
@@ -167,18 +186,18 @@ pub struct AccountAsset<Balance> {
 
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub struct ConvertPool<Balance> {
-	/// A pool that hold the total amount of token converted to vtoken
+pub struct VtokenPool<Balance> {
+	/// A pool that hold the total amount of token minted to vtoken
 	pub token_pool: Balance,
-	/// A pool that hold the total amount of vtoken converted from token
+	/// A pool that hold the total amount of vtoken minted from token
 	pub vtoken_pool: Balance,
-	/// Total reward for current convert duration
+	/// Total reward for current mint duration
 	pub current_reward: Balance,
-	/// Total reward for next convert duration
+	/// Total reward for next mint duration
 	pub pending_reward: Balance,
 }
 
-impl<Balance: Default + Copy> ConvertPool<Balance> {
+impl<Balance: Default + Copy> VtokenPool<Balance> {
 	pub fn new(token_amount: Balance, vtoken_amount: Balance) -> Self {
 		Self {
 			token_pool: token_amount,
@@ -275,20 +294,20 @@ impl<A, AC, B> AssetRedeem<A, AC, B> for () {
 	fn asset_redeem(_: A, _: AC, _: B, _: Option<Vec<u8>>) {}
 }
 
-/// Fetch convert rate handler
-pub trait FetchConvertPrice<AssetId, ConvertPrice> {
-	/// fetch convert rate
-	fn fetch_convert_price(asset_id: AssetId) -> ConvertPrice;
+/// Fetch vtoken mint rate handler
+pub trait FetchVtokenMintPrice<AssetId, VtokenMintPrice> {
+	/// fetch vtoken mint rate
+	fn fetch_vtoken_price(asset_id: AssetId) -> VtokenMintPrice;
 }
 
-/// Fetch convert rate handler
-pub trait FetchConvertPool<AssetId, Balance> {
-	/// fetch convert pool for calculate convert price
-	fn fetch_convert_pool(asset_id: AssetId) -> ConvertPool<Balance>;
+/// Fetch vtoken mint rate handler
+pub trait FetchVtokenMintPool<AssetId, Balance> {
+	/// fetch vtoken mint pool for calculate vtoken mint price
+	fn fetch_vtoken_pool(asset_id: AssetId) -> VtokenPool<Balance>;
 }
 
-impl<AssetId, ER: Default> FetchConvertPrice<AssetId, ER> for () {
-	fn fetch_convert_price(_: AssetId) -> ER { Default::default() }
+impl<AssetId, ER: Default> FetchVtokenMintPrice<AssetId, ER> for () {
+	fn fetch_vtoken_price(_: AssetId) -> ER { Default::default() }
 }
 
 /// Blockchain types
@@ -415,7 +434,7 @@ pub mod report {
 
 pub trait RewardTrait<Balance, AccountId, AssetId> {
 	type Error;
-	fn record_reward(v_token_id: AssetId, convert_amount: Balance, referer: AccountId) -> Result<(), Self::Error>;
+	fn record_reward(v_token_id: AssetId, vtoken_mint_amount: Balance, referer: AccountId) -> Result<(), Self::Error>;
 	fn dispatch_reward(v_token_id: AssetId, staking_profit: Balance) -> Result<(), Self::Error>;
 }
 
@@ -423,4 +442,86 @@ impl<A, B, AI> RewardTrait<A, B, AI> for () {
 	type Error = core::convert::Infallible;
 	fn record_reward(_: AI, _: A, _: B) -> Result<(), Self::Error> { Ok(()) }
 	fn dispatch_reward(_: AI, _: A) -> Result<(), Self::Error> { Ok(()) }
+}
+
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum TokenSymbol {
+	BNC = 0,
+	AUSD = 1,
+	DOT = 2,
+	KSM = 3,
+}
+
+impl TryFrom<u8> for TokenSymbol {
+	type Error = ();
+
+	fn try_from(v: u8) -> Result<Self, Self::Error> {
+		match v {
+			0 => Ok(TokenSymbol::BNC),
+			1 => Ok(TokenSymbol::AUSD),
+			2 => Ok(TokenSymbol::DOT),
+			3 => Ok(TokenSymbol::KSM),
+			_ => Err(()),
+		}
+	}
+}
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub enum CurrencyId {
+	Token(TokenSymbol),
+}
+
+impl CurrencyId {
+	pub fn is_token_currency_id(&self) -> bool {
+		matches!(self, CurrencyId::Token(_))
+	}
+}
+
+impl TryFrom<Vec<u8>> for CurrencyId {
+	type Error = ();
+	fn try_from(v: Vec<u8>) -> Result<CurrencyId, ()> {
+		match v.as_slice() {
+			b"BNC" => Ok(CurrencyId::Token(TokenSymbol::BNC)),
+			b"AUSD" => Ok(CurrencyId::Token(TokenSymbol::AUSD)),
+			b"DOT" => Ok(CurrencyId::Token(TokenSymbol::DOT)),
+			b"KSM" => Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			_ => Err(()),
+		}
+	}
+}
+
+/// Note the pre-deployed ERC20 contracts depend on `CurrencyId` implementation,
+/// and need to be updated if any change.
+impl TryFrom<[u8; 32]> for CurrencyId {
+	type Error = ();
+
+	fn try_from(v: [u8; 32]) -> Result<Self, Self::Error> {
+		if !v.starts_with(&[0u8; 29][..]) {
+			return Err(());
+		}
+
+		// token
+		if v[29] == 0 && v[31] == 0 {
+			return v[30].try_into().map(CurrencyId::Token);
+		}
+
+		Err(())
+	}
+}
+
+/// Note the pre-deployed ERC20 contracts depend on `CurrencyId` implementation,
+/// and need to be updated if any change.
+impl From<CurrencyId> for [u8; 32] {
+	fn from(val: CurrencyId) -> Self {
+		let mut bytes = [0u8; 32];
+		match val {
+			CurrencyId::Token(token) => {
+				bytes[30] = token as u8;
+			}
+		}
+		bytes
+	}
 }

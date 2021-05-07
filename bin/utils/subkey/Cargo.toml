@@ -1,6 +1,6 @@
 [package]
 name = "subkey"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 
@@ -12,17 +12,14 @@ name = "subkey"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-frame-system = "2.0.0"
+frame-system = "3.0.0"
 futures = "0.1.29"
 hex = "0.4.2"
-jsonrpc-core-client = { version = "15", features = ["http"] }
-node-runtime = { package = "bifrost-runtime", path = "../../node/runtime/bifrost" }
-node-primitives = { path = "../../node/primitives" }
-sc-cli = "0.8.0"
-sc-rpc = "2.0.0"
-sp-core = "2.0.0"
+jsonrpc-core-client = { version = "15.1", features = ["http"] }
+sc-cli = "0.9.0"
+sc-rpc = "3.0.0"
+sp-core = "3.0.0"
 structopt = "0.3.14"
-substrate-frame-cli = "2.0.0"
 tokio = "0.1.22"
 
 [features]

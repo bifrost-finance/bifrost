@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -16,8 +16,6 @@
 
 //! Subkey utility, based on node_runtime.
 
-use node_runtime::Runtime;
-
 fn main() -> Result<(), sc_cli::Error> {
-	subkey::run::<Runtime>()
+	subkey::run()
 }

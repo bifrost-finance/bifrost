@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Liebi Technologies.
+// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
 // Bifrost is free software: you can redistribute it and/or modify
@@ -8,11 +8,11 @@
 
 // Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+// along with Bifrost. If not, see <https://www.gnu.org/licenses/>.
 
 //! Command ran by the CLI
 
@@ -26,11 +26,11 @@ use std::str::FromStr;
 impl InspectCmd {
 	/// Run the inspect command, passing the inspector.
 	pub fn run<B, RA, EX>(&self, config: Configuration) -> Result<()>
-	where
-		B: Block,
-		B::Hash: FromStr,
-		RA: Send + Sync + 'static,
-		EX: NativeExecutionDispatch + 'static,
+		where
+			B: Block,
+			B::Hash: FromStr,
+			RA: Send + Sync + 'static,
+			EX: NativeExecutionDispatch + 'static,
 	{
 		let client = new_full_client::<B, RA, EX>(&config)?;
 		let inspect = Inspector::<B>::new(client);
