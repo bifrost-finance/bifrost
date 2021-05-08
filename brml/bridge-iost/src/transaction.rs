@@ -14,14 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::Error;
 use alloc::string::{String, ToString};
-use codec::{Decode, Encode};
 use core::iter::FromIterator;
-use frame_support::debug;
+
+use codec::{Decode, Encode};
 use iost_chain::{IostAction, Read, SerializeData, Tx};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
+
+use crate::Error;
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Default)]
 pub struct TxSig<AccountId> {
@@ -208,10 +209,12 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
 }
 
 pub(crate) mod iost_rpc {
-    use super::*;
-    use crate::Error;
     use lite_json::{parse_json, JsonValue};
     use sp_runtime::offchain::http;
+
+    use crate::Error;
+
+    use super::*;
 
     const HASH: [char; 4] = ['h', 'a', 's', 'h']; // tx hash
     const CHAIN_ID: [char; 8] = ['c', 'h', 'a', 'i', 'n', '_', 'i', 'd']; // key chain_id
