@@ -58,11 +58,11 @@ pallet-treasury = { version = "3.0.0", default-features = false }
 pallet-utility = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
-pallet-vesting = { version = "3.0.0", default-features = false }
 pallet-im-online = { version = "3.0.0", default-features = false }
 
 # bifrost pallets
 brml-poa-manager = { path = "../../../../brml/poa-manager", default-features = false }
+pallet-vesting = { package = "brml-vesting", path = "../../../../brml/vesting", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "4.0.0" }
