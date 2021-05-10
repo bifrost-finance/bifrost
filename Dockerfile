@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Bifrost.  If not, see <http:#www.gnu.org/licenses/>.
 
-FROM ubuntu:18.04 as builder
+FROM ubuntu:latest as builder
 LABEL description="The first stage for building a release bifrost binary."
 
 ARG PROFILE=release
@@ -38,7 +38,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 # ===== SECOND STAGE ======
 
-FROM ubuntu:18.04
+FROM ubuntu:latest
 LABEL description="The second stage for configuring the image."
 ARG PROFILE=release
 WORKDIR /bifrost
