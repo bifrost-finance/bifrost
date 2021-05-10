@@ -250,7 +250,7 @@ fn register_vtoken_for_bidding_should_work() {
 		assert_eq!(
 			Bid::register_vtoken_for_bidding(origin_root.clone(), token_id),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("NotValidVtoken")
 			})
@@ -260,7 +260,7 @@ fn register_vtoken_for_bidding_should_work() {
 		assert_eq!(
 			Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 14,
 				message: Some("VtokenAlreadyRegistered")
 			})
@@ -325,7 +325,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 				maximum_lasting_block_num
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -340,7 +340,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 				minimum_lasting_block_num
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 9,
 				message: Some("MinimumOrMaximumNotRight")
 			})
@@ -403,7 +403,7 @@ fn set_block_number_per_era_should_work() {
 		assert_eq!(
 			Bid::set_block_number_per_era(origin_root.clone(), token_id, block_num_per_era),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -466,7 +466,7 @@ fn set_service_stop_block_num_lag_should_work() {
 				service_stop_lag_block_num
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -524,7 +524,7 @@ fn set_slash_margin_rates_should_work() {
 		assert_eq!(
 			Bid::set_slash_margin_rates(origin_root.clone(), token_id, slash_margin),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -533,7 +533,7 @@ fn set_slash_margin_rates_should_work() {
 		assert_eq!(
 			Bid::set_slash_margin_rates(origin_root.clone(), vtoken_id, 200),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 8,
 				message: Some("RateExceedUpperBound")
 			})
@@ -591,7 +591,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -608,7 +608,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("VotesExceedLowerBound")
 			})
@@ -625,7 +625,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 6,
 				message: Some("VotesExceedUpperBound")
 			})
@@ -642,7 +642,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 4,
 				message: Some("AmountNotAboveZero")
 			})
@@ -659,7 +659,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 19,
 				message: Some("ROIExceedOneHundredPercent")
 			})
@@ -720,7 +720,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("NotEnoughBalance")
 			})
@@ -769,7 +769,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 18,
 				message: Some("ProposalsExceedLimit")
 			})
@@ -827,7 +827,7 @@ fn cancel_a_bidding_proposal_should_work() {
 		assert_eq!(
 			Bid::cancel_a_bidding_proposal(origin_bob.clone(), 8),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 16,
 				message: Some("ProposalNotExist")
 			})
@@ -837,7 +837,7 @@ fn cancel_a_bidding_proposal_should_work() {
 		assert_eq!(
 			Bid::cancel_a_bidding_proposal(origin_alice.clone(), 0),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 17,
 				message: Some("NotProposalOwner",),
 			},)
