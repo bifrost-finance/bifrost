@@ -78,7 +78,6 @@ node-primitives = { path = "../primitives" }
 # CLI-specific dependencies
 sc-cli = { version = "0.9.0", optional = true }
 frame-benchmarking-cli = { version = "3.0.0", optional = true }
-#node-inspect = { path = "../inspect", optional = true }
 node-inspect = { version = "0.8.0", optional = true }
 
 # new added after removed local node-rpc, node-primitives
@@ -97,7 +96,6 @@ frame-benchmarking = "3.0.0"
 # WASM-specific dependencies
 wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.18", optional = true }
-# browser-utils = { package = "substrate-browser-utils"}
 
 # Cumulus dependencies
 cumulus-cli = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
@@ -146,7 +144,7 @@ package = "sc-cli"
 optional = true
 
 [features]
-default = [ "cli" ]
+default = [ "cli", "with-bifrost-runtime" ]
 cli = [
 	"node-inspect",
 	"sc-cli",
@@ -159,4 +157,16 @@ cli = [
 ]
 runtime-benchmarks = [
 	"frame-benchmarking-cli",
+]
+with-asgard-runtime = [
+	"node-service/with-asgard-runtime",
+]
+with-bifrost-runtime = [
+	"node-service/with-bifrost-runtime",
+]
+with-rococo-runtime = [
+	"node-service/with-rococo-runtime",
+]
+with-all-runtime = [
+	"node-service/with-all-runtime",
 ]

@@ -79,9 +79,9 @@ bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 serde_json = "1.0.60"
 
 # Runtimes
-asgard-runtime = { path = "../runtime/asgard" }
-bifrost-runtime = { path = "../runtime/bifrost" }
-rococo-runtime = { path = "../runtime/rococo" }
+asgard-runtime = { path = "../runtime/asgard", optional = true }
+bifrost-runtime = { path = "../runtime/bifrost", optional = true }
+rococo-runtime = { path = "../runtime/rococo", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
@@ -92,7 +92,22 @@ jsonrpc-core = "15.1.0"
 env_logger = "0.8.1"
 
 [features]
-default = []
+default = ["std", "with-bifrost-runtime"]
+std = []
+with-asgard-runtime = [
+	"asgard-runtime",
+]
+with-bifrost-runtime = [
+	"bifrost-runtime",
+]
+with-rococo-runtime = [
+	"rococo-runtime",
+]
+with-all-runtime = [
+	"with-asgard-runtime",
+	"with-bifrost-runtime",
+	"with-rococo-runtime",
+]
 runtime-benchmarks = [
 #	"asgard-runtime/runtime-benchmarks",
 	"bifrost-runtime/runtime-benchmarks",
