@@ -691,7 +691,7 @@ mod tests {
 			.execute_with(|| {
 				let user1_free_balance = Balances::free_balance(&1);
 				assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-									 // Account 1 has only 5 units vested at block 1 (plus 50 unvested)
+				// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 				assert_eq!(Vesting::vesting_balance(&1), Some(45));
 				assert_noop!(
 					Balances::transfer(Some(1).into(), 2, 56),
@@ -708,7 +708,7 @@ mod tests {
 			.execute_with(|| {
 				let user1_free_balance = Balances::free_balance(&1);
 				assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-									 // Account 1 has only 5 units vested at block 1 (plus 50 unvested)
+				// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 				assert_eq!(Vesting::vesting_balance(&1), Some(45));
 				assert_ok!(Vesting::vest(Some(1).into()));
 
@@ -729,7 +729,7 @@ mod tests {
 			.execute_with(|| {
 				let user1_free_balance = Balances::free_balance(&1);
 				assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-									 // Account 1 has only 5 units vested at block 1 (plus 50 unvested)
+				// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 				assert_eq!(Vesting::vesting_balance(&1), Some(45));
 				assert_ok!(Vesting::vest_other(Some(2).into(), 1));
 				assert_ok!(Balances::transfer(Some(1).into(), 2, 55));
@@ -772,7 +772,7 @@ mod tests {
 				let user12_free_balance = Balances::free_balance(&12);
 
 				assert_eq!(user12_free_balance, 2560); // Account 12 has free balance
-									   // Account 12 has liquid funds
+				// Account 12 has liquid funds
 				assert_eq!(
 					Vesting::vesting_balance(&12),
 					Some(user12_free_balance - 256 * 5)
