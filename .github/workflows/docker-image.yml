@@ -6,12 +6,9 @@ on:
       - published
   workflow_dispatch:
     inputs:
-      logLevel:
-        description: 'Log level'
-        required: false
-        default: 'warning'
-      tags:
-        description: 'image tags'
+      tag:
+        description: 'docker image tag'
+        required: true
 
 jobs:
   build:
@@ -20,8 +17,12 @@ jobs:
 
     steps:
       - run: |
-          echo "Log level: ${{ github.event.inputs.logLevel }}"
-          echo "Tags: ${{ github.event.inputs.tags }}"
+          echo "Tag: ${{ github.event.inputs.tag }}"
+          echo "TAG=${{ github.event.inputs.tag }}" >> "$GITHUB_ENV"
+      - name: Set Tag env
+        if: ${{ github.event.release.tag_name }}
+        run: |
+          echo "TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v2
         with:
           submodules: recursive
@@ -44,9 +45,9 @@ jobs:
           push: true
           tags: |
             bifrostnetwork/bifrost:latest
-            bifrostnetwork/bifrost:${{ github.event.release.tag_name }}
+            bifrostnetwork/bifrost:${{ env.TAG }}
           build-args: |
-            BIFROST_VERSION=${{ github.event.release.tag_name }}
+            BIFROST_VERSION=${{ env.TAG }}
             VCS_REF=${{ github.ref }}
             BUILD_DATE=${{ github.event.release.published_at }}
           cache-from: type=local,src=/tmp/.buildx-cache
