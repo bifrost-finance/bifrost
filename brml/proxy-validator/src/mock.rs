@@ -17,7 +17,7 @@
 #![cfg(test)]
 
 use frame_support::{
-	impl_outer_origin, impl_outer_dispatch, impl_outer_event, parameter_types
+	construct_runtime, parameter_types
 };
 use frame_support::traits::{
 	OnInitialize, OnFinalize
@@ -26,77 +26,56 @@ use sp_core::H256;
 use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
 use super::*;
 
-use frame_system as system;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-impl_outer_dispatch! {
-	pub enum Call for Test where origin: Origin {
-		brml_proxy_validator::ProxyValidator,
+construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
+		Bid: pallet_bid::{Module, Call, Storage, Event<T>},
 	}
-}
-
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
-
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		system<T>,
-		assets<T>,
-		brml_proxy_validator<T>,
-	}
-}
-
-mod brml_proxy_validator {
-	pub use crate::Event;
-}
+);
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
-	pub const MaximumBlockWeight: u32 = 4 * 1024 * 1024;
-	pub const MaximumBlockLength: u32 = 4 * 1024 * 1024;
-	pub const AvailableBlockRatio: Perbill = Perbill::from_percent(75);
-	pub const UncleGenerations: u32 = 5;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
-
 impl frame_system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
-	type Call = Call;
 	type Hash = H256;
+	type Call = Call;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
-	type MaximumBlockWeight = MaximumBlockWeight;
-	type MaximumBlockLength = MaximumBlockLength;
-	type AvailableBlockRatio = AvailableBlockRatio;
 	type Version = ();
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
-	type DbWeight = ();
-	type BlockExecutionWeight = ();
-	type ExtrinsicBaseWeight = ();
-	type BaseCallFilter = ();
-	type MaximumExtrinsicWeight = MaximumBlockWeight;
 	type SystemWeightInfo = ();
-	type PalletInfo = ();
 	type SS58Prefix = ();
 }
 
 impl assets::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
-	type Cost = u64;
-	type Income = u64;
 	type VtokenMint = u128;
 	type AssetRedeem = ();
 	type FetchVtokenMintPrice = ();
@@ -104,7 +83,7 @@ impl assets::Config for Test {
 }
 
 impl crate::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = u64;
 	type AssetId = u32;
 	type Cost = u64;
@@ -115,11 +94,6 @@ impl crate::Config for Test {
 	type RewardHandler = ();
 	type WeightInfo = ();
 }
-
-pub type ProxyValidator = crate::Module<Test>;
-pub type System = frame_system::Module<Test>;
-pub type Assets = assets::Module<Test>;
-pub type ProxyValidatorError = Error<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
@@ -134,5 +108,5 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
