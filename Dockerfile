@@ -58,11 +58,6 @@ COPY --from=builder /src/target/$PROFILE/bifrost /usr/local/bin
 RUN ldd /usr/local/bin/bifrost && \
 	/usr/local/bin/bifrost --version
 
-# Shrinking
-RUN rm -rf /usr/lib/python* && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man && \
-	rm -rf /src
-
 USER bifrost
 EXPOSE 30333 9933 9944
 VOLUME ["/bifrost"]
