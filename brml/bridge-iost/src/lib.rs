@@ -56,7 +56,6 @@ use node_primitives::{
 
 use crate::transaction::IostTxOut;
 
-mod test;
 mod transaction;
 
 pub trait WeightInfo {

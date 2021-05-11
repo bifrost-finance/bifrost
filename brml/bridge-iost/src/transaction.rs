@@ -75,7 +75,6 @@ pub struct IostMultiSigTx<AccountId, AssetId> {
 /// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub enum IostTxOut<AccountId, AssetId> {
-    // None,
     /// Initial Eos multi-sig transaction
     Initial(IostMultiSigTx<AccountId, AssetId>),
     /// Generated and signing Eos multi-sig transaction
@@ -96,12 +95,6 @@ pub enum IostTxOut<AccountId, AssetId> {
         // tx: IostMultiSigTx<AccountId, AssetId>,
     },
 }
-
-// impl<AccountId, AssetId> Default for IostTxOut<AccountId, AssetId> {
-//     fn default() -> Self {
-//         Self::None
-//     }
-// }
 
 impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<AccountId, AssetId> {
     pub fn init<T: crate::Config>(

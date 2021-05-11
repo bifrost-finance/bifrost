@@ -8,10 +8,8 @@ edition = "2018"
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 base64 = { version = "0.12.3", default-features = false, features= ["alloc"] }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-#iost-chain = { path = "/Users/qiannan/workspace/blockchain/rs-iost/chain", default-features = false }
-#iost-keys = { path = "/Users/qiannan/workspace/blockchain/rs-iost/keys", default-features = false }
-iost-chain = { git = "https://github.com/hsqlu/rs-iost", branch = "master", default-features = false }
-iost-keys = { git = "https://github.com/hsqlu/rs-iost", branch = "master", default-features = false }
+iost-chain = { git = "https://github.com/bifrost-finance/rust-iost", branch = "master", default-features = false }
+iost-keys = { git = "https://github.com/bifrost-finance/rust-iost", branch = "master", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 hex = { version = "0.4.2", default-features = false }
@@ -38,8 +36,8 @@ default = ["std"]
 std = [
 	"base64/std",
 	"codec/std",
-    "iost-chain/std",
-    "iost-keys/std",
+	"iost-chain/std",
+	"iost-keys/std",
 	"frame-support/std",
 	"frame-system/std",
 	"hex/std",
