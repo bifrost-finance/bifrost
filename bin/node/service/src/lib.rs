@@ -569,42 +569,31 @@ pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
 		{
 			let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
 				= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
-			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
-		}
-	} else {
-		#[cfg(feature = "with-bifrost-runtime")]
-		{
-			let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-				= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
-			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
+			return Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager));
 		}
 	}
+
+	return Err(ServiceError::SelectChainRequired);
 }
 
 pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 	if config.chain_spec.is_bifrost() {
 		#[cfg(feature = "with-bifrost-runtime")]
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+		return new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
-		).map(|full| full.task_manager)
-	} else {
-		#[cfg(feature = "with-bifrost-runtime")]
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
+		).map(|full| full.task_manager);
 	}
+
+	return Err(ServiceError::SelectChainRequired);
 }
 
 pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	if config.chain_spec.is_bifrost() {
 		#[cfg(feature = "with-bifrost-runtime")]
-		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+		return new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
-		).map(|full| full.task_manager)
-	} else {
-		#[cfg(feature = "with-bifrost-runtime")]
-		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
+		).map(|full| full.task_manager);
 	}
+
+	return Err(ServiceError::SelectChainRequired);
 }

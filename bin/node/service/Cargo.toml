@@ -92,7 +92,7 @@ jsonrpc-core = "15.1.0"
 env_logger = "0.8.1"
 
 [features]
-default = ["std", "with-bifrost-runtime"]
+default = [ "std" ]
 std = []
 with-asgard-runtime = [
 	"asgard-runtime",
@@ -104,9 +104,9 @@ with-rococo-runtime = [
 	"rococo-runtime",
 ]
 with-all-runtime = [
-	"with-asgard-runtime",
-	"with-bifrost-runtime",
-	"with-rococo-runtime",
+	"asgard-runtime",
+	"bifrost-runtime",
+	"rococo-runtime",
 ]
 runtime-benchmarks = [
 #	"asgard-runtime/runtime-benchmarks",
