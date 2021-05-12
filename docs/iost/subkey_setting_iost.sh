@@ -12,3 +12,8 @@
 # IOST accounts for Multisignature
 ../../target/debug/subkey localstorage-set --key IOST_SECRET_KEY --value 3mjUtYRvNnoQbxSb6zM86NCM8KqUeMgV7YLJFvtiHrjZ http://127.0.0.1:1234 # testa
 ../../target/debug/subkey localstorage-set --key IOST_SECRET_KEY --value 3mjUtYRvNnoQbxSb6zM86NCM8KqUeMgV7YLJFvtiHrjZ http://127.0.0.1:4321 # testb
+
+
+# IOST cross account signature algorithm
+../../target/debug/subkey localstorage-set --key IOST_ACCOUNT_SIG_ALOG --value SECP256K1 http://127.0.0.1:1234 # testa
+../../target/debug/subkey localstorage-set --key IOST_ACCOUNT_SIG_ALOG --value SECP256K1 http://127.0.0.1:4321 # testb
