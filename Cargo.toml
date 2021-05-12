@@ -14,6 +14,7 @@ members = [
 	"brml/assets/rpc",
 	"brml/bid",
 	"brml/bridge-eos",
+	"brml/bridge-iost",
 	"brml/poa-manager",
 	"brml/vtoken-mint",
 	"brml/vtoken-mint/rpc",
