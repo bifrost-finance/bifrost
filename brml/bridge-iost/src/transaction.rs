@@ -14,14 +14,15 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::Error;
 use alloc::string::{String, ToString};
+use core::iter::FromIterator;
+
 use codec::{Decode, Encode};
-use core::{iter::FromIterator, str::FromStr};
-use frame_support::debug;
 use iost_chain::{IostAction, Read, SerializeData, Tx};
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
+
+use crate::Error;
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Default)]
 pub struct TxSig<AccountId> {
@@ -43,17 +44,6 @@ impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
             signatures: Default::default(),
             threshold,
         }
-    }
-
-    fn reach_threshold(&self) -> bool {
-        self.signatures.len() >= self.threshold as usize
-    }
-
-    fn has_signed(&self, author: AccountId) -> bool {
-        self.signatures
-            .iter()
-            .find(|sig| sig.author == author)
-            .is_some()
     }
 }
 
@@ -85,7 +75,6 @@ pub struct IostMultiSigTx<AccountId, AssetId> {
 /// Status of a transaction
 #[derive(Encode, Decode, Clone, PartialEq, Debug)]
 pub enum IostTxOut<AccountId, AssetId> {
-    None,
     /// Initial Eos multi-sig transaction
     Initial(IostMultiSigTx<AccountId, AssetId>),
     /// Generated and signing Eos multi-sig transaction
@@ -105,12 +94,6 @@ pub enum IostTxOut<AccountId, AssetId> {
         reason: Vec<u8>,
         // tx: IostMultiSigTx<AccountId, AssetId>,
     },
-}
-
-impl<AccountId, AssetId> Default for IostTxOut<AccountId, AssetId> {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<AccountId, AssetId> {
@@ -175,17 +158,18 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
         }
     }
 
-    pub fn sign<T: crate::Config>(self, sk: Vec<u8>, account_name: &str) -> Result<Self, Error<T>> {
+    pub fn sign<T: crate::Config>(
+        self,
+        sk: Vec<u8>,
+        account_name: &str,
+        sig_algorithm: &str,
+    ) -> Result<Self, Error<T>> {
         match self {
             IostTxOut::Generated(mut multi_sig_tx) => {
                 let mut tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0)
                     .map_err(|_| Error::<T>::IostChainError)?;
 
-                tx.sign(
-                    account_name.to_string(),
-                    iost_keys::algorithm::SECP256K1,
-                    sk.as_slice(),
-                );
+                let _ignore = tx.sign(account_name.to_string(), sig_algorithm, sk.as_slice());
                 match tx.verify() {
                     Ok(_) => {
                         multi_sig_tx.raw_tx = tx
@@ -218,10 +202,12 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
 }
 
 pub(crate) mod iost_rpc {
-    use super::*;
-    use crate::Error;
-    use lite_json::{parse_json, JsonValue, Serialize};
+    use lite_json::{parse_json, JsonValue};
     use sp_runtime::offchain::http;
+
+    use crate::Error;
+
+    use super::*;
 
     const HASH: [char; 4] = ['h', 'a', 's', 'h']; // tx hash
     const CHAIN_ID: [char; 8] = ['c', 'h', 'a', 'i', 'n', '_', 'i', 'd']; // key chain_id
@@ -286,8 +272,7 @@ pub(crate) mod iost_rpc {
     pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(
         multi_sig_tx: &IostMultiSigTx<AccountId, AssetId>,
     ) -> Result<Vec<u8>, Error<T>> {
-        let mut tx =
-            Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
+        let tx = Tx::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::IostChainError)?;
         Ok(tx.no_std_serialize_vec())
     }
 
@@ -308,8 +293,9 @@ pub(crate) mod iost_rpc {
         let body = response.body().collect::<Vec<u8>>();
         let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
         let tx_id = get_transaction_id(&body_str)?;
-
-        Ok(tx_id.into_bytes())
+        bs58::decode(tx_id)
+            .into_vec()
+            .map_err(|_| Error::<T>::DecodeBase58Error)
     }
 
     pub(crate) fn get_transaction_id<T: crate::Config>(

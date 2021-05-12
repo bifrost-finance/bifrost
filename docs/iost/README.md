@@ -80,7 +80,7 @@ $ iwallet --account lispczz4 call 'gas.iost' 'pledge' '["lispczz4","lispczz4","1
 Go to [polkadot.js.org](https://polkadot.js.org/apps/#/settings/developer), Copy content data from the file ```developer_setting.json``` to **Deveoper** tab like this, and save it.
 ![developer_setting](developer_setting.png)
 
-### EOS to Bifrost
+### IOST to Bifrost
 
 Before you send a transaction to Bifrost, check **jim**'s and **bifrost**'s balance.
 

@@ -819,6 +819,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "brml-bridge-iost"
+version = "0.7.0"
+dependencies = [
+ "base64 0.12.3",
+ "brml-assets",
+ "brml-vtoken-mint",
+ "bs58 0.4.0",
+ "frame-support",
+ "frame-system",
+ "hex",
+ "iost-chain",
+ "iost-keys",
+ "lazy_static",
+ "lite-json",
+ "log",
+ "node-primitives",
+ "pallet-authorship",
+ "parity-scale-codec 2.0.0",
+ "serde",
+ "serde_json",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-io",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "brml-poa-manager"
 version = "0.7.0"
 dependencies = [
@@ -3146,6 +3175,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "iost-chain"
+version = "0.1.0"
+source = "git+https://github.com/bifrost-finance/rust-iost?branch=master#ff46cb965663ab7dbb3fb6631109a223ee670ee9"
+dependencies = [
+ "async-trait",
+ "base64 0.12.3",
+ "bs58 0.3.1",
+ "byteorder",
+ "chrono",
+ "digest 0.8.1",
+ "hex",
+ "iost-derive",
+ "iost-keys",
+ "itoa",
+ "lite-json",
+ "parity-scale-codec 2.0.0",
+ "serde",
+ "serde_json",
+ "sha3 0.8.2",
+]
+
+[[package]]
+name = "iost-derive"
+version = "0.2.1"
+source = "git+https://github.com/bifrost-finance/rust-iost?branch=master#ff46cb965663ab7dbb3fb6631109a223ee670ee9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "iost-keys"
+version = "0.1.0"
+source = "git+https://github.com/bifrost-finance/rust-iost?branch=master#ff46cb965663ab7dbb3fb6631109a223ee670ee9"
+dependencies = [
+ "base64 0.12.3",
+ "bitcoin_hashes",
+ "bs58 0.3.1",
+ "byteorder",
+ "ed25519-dalek",
+ "hex",
+ "libsecp256k1 0.3.5 (git+https://github.com/bifrost-finance/libsecp256k1.git)",
+ "rand 0.7.3",
+]
+
+[[package]]
 name = "iovec"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3852,7 +3928,7 @@ dependencies = [
  "pin-project 1.0.5",
  "rand 0.7.3",
  "salsa20",
- "sha3",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -4380,7 +4456,7 @@ dependencies = [
  "generic-array 0.14.4",
  "multihash-derive",
  "sha2 0.9.3",
- "sha3",
+ "sha3 0.9.1",
  "unsigned-varint 0.5.1",
 ]
 
@@ -8964,6 +9040,19 @@ dependencies = [
  "cpuid-bool 0.1.2",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "sha3"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd26bc0e7a2e3a7c959bc494caf58b72ee0c71d67704e9520f736ca7e4853ecf"
+dependencies = [
+ "block-buffer 0.7.3",
+ "byte-tools",
+ "digest 0.8.1",
+ "keccak",
+ "opaque-debug 0.2.3",
 ]
 
 [[package]]
