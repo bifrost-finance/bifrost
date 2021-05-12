@@ -170,5 +170,7 @@ with-rococo-runtime = [
 	"node-service/with-rococo-runtime",
 ]
 with-all-runtime = [
-	"node-service/with-all-runtime",
+	"with-asgard-runtime",
+	"with-bifrost-runtime",
+	"with-rococo-runtime",
 ]
