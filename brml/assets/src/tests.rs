@@ -20,6 +20,7 @@
 
 use super::*;
 use crate::mock::*;
+use crate::mock::Event;
 use frame_support::{assert_ok, assert_noop};
 use system::{EventRecord, Phase};
 
@@ -58,16 +59,19 @@ fn create_asset_should_work() {
 		assert_eq!(System::events(), vec![
 			EventRecord {
 				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id1, token1)),
+				event: Event::assets(RawEvent::Created(id1, token1)),
 				topics: vec![],
 			},
 			EventRecord {
 				phase: Phase::Initialization,
-				event: TestEvent::assets(RawEvent::Created(id2, token2)),
+				event: Event::assets(RawEvent::Created(id2, token2)),
 				topics: vec![],
 			}
 		]);
+
 	});
+
+		
 }
 
 #[test]
@@ -102,10 +106,10 @@ fn issuing_asset_units_to_issuer_should_work() {
 		assert_eq!(Assets::account_assets((ausd_id, bob)).balance, 50000);
 
 		assert_eq!(System::events(), vec![
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(dot_id, 1, 10000)), topics: vec![] },
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(vdot_id, 1, 20000)), topics: vec![] },
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(ausd_id, 2, 20000)), topics: vec![] },
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(ausd_id, 2, 30000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Issued(dot_id, 1, 10000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Issued(vdot_id, 1, 20000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Issued(ausd_id, 2, 20000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Issued(ausd_id, 2, 30000)), topics: vec![] },
 		]);
 	});
 }
@@ -116,7 +120,7 @@ fn issuing_before_creating_should_now_work() {
 		let asset_id = 10;
 		assert_noop!(
 			Assets::issue(Origin::root(), asset_id, 1, 10000),
-			AssetsError::TokenNotExist
+			Error::<Test>::TokenNotExist
 		);
 	});
 }
@@ -141,8 +145,8 @@ fn transferring_amount_above_available_balance_should_work() {
 		assert_eq!(Assets::account_assets((ausd_id, bob)).balance, 1000);
 
 		assert_eq!(System::events(), vec![
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(ausd_id, 1, 10000)), topics: vec![] },
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Transferred(ausd_id, 1, 2, 1000)), topics: vec![] }
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Issued(ausd_id, 1, 10000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Transferred(ausd_id, 1, 2, 1000)), topics: vec![] }
 		]);
 	});
 }
@@ -155,7 +159,7 @@ fn transferring_amount_less_than_available_balance_should_not_work() {
 		let (alice, bob) = (1, 2);
 		assert_noop!(
 			Assets::transfer(Origin::signed(alice), ausd_id, bob, 1000),
-			AssetsError::InsufficientBalanceForTransaction
+			Error::<Test>::InsufficientBalanceForTransaction
 		);
 	});
 }
@@ -168,7 +172,7 @@ fn transferring_less_than_one_unit_should_not_work() {
 		let (alice, bob) = (1, 2);
 		assert_noop!(
 			Assets::transfer(Origin::signed(alice), ausd_id, bob, 0),
-			AssetsError::ZeroAmountOfBalance
+			Error::<Test>::ZeroAmountOfBalance
 		);
 	});
 }
@@ -192,9 +196,9 @@ fn destroying_asset_balance_with_positive_balance_should_work() {
 		assert_eq!(Assets::account_assets((ausd_id, alice)).balance, 9000);
 
 		assert_eq!(System::events(), vec![
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Created(0, Token { symbol: b"aUSD".to_vec(), precision: 18, total_supply: 0, token_type: TokenType::Stable, pair: None })), topics: vec![] },
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Issued(ausd_id, 1, 10000)), topics: vec![] },
-			EventRecord { phase: Phase::Initialization, event: TestEvent::assets(RawEvent::Destroyed(ausd_id, 1, 1000)), topics: vec![] }
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Created(0, Token { symbol: b"aUSD".to_vec(), precision: 18, total_supply: 0, token_type: TokenType::Stable, pair: None })), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Issued(ausd_id, 1, 10000)), topics: vec![] },
+			EventRecord { phase: Phase::Initialization, event: Event::assets(RawEvent::Destroyed(ausd_id, 1, 1000)), topics: vec![] }
 		]);
 	});
 }
@@ -208,7 +212,7 @@ fn destroying_asset_balance_with_zero_balance_should_not_work() {
 		assert_ok!(Assets::issue(Origin::root(), id, alice, 100));
 		assert_noop!(
 			Assets::destroy(Origin::signed(alice), id, 100 + 1),
-			AssetsError::InsufficientBalanceForTransaction
+			Error::<Test>::InsufficientBalanceForTransaction
 		);
 	});
 }

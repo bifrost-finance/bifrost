@@ -267,7 +267,7 @@ fn create_pool_should_work() {
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("FeeRateExceedMaximumLimit")
 			})
@@ -284,7 +284,7 @@ fn create_pool_should_work() {
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 14,
 				message: Some("FeeRateExceedMinimumLimit")
 			})
@@ -310,7 +310,7 @@ fn create_pool_should_work() {
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 6,
 				message: Some("TooManyTokensToPool")
 			})
@@ -327,7 +327,7 @@ fn create_pool_should_work() {
 		// let token_for_pool_vec: Vec<PoolCreateTokenDetails<Test>> =
 		// vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone(), vec_node_4.clone()] ;
 		// assert_eq!(Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
-		// Err(DispatchError::Module { index: 0, error: 6, message: Some("TokenNotExist") }));
+		// Err(DispatchError::Module { index: 2, error: 6, message: Some("TokenNotExist") }));
 
 		// validate token amount used to create a pool must be bigger than zero.
 		let vec_node_4 = PoolCreateTokenDetails {
@@ -347,7 +347,7 @@ fn create_pool_should_work() {
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 13,
 				message: Some("AmountBelowZero")
 			})
@@ -371,7 +371,7 @@ fn create_pool_should_work() {
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -434,7 +434,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -446,7 +446,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -458,7 +458,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("LessThanMinimumPassedInPoolTokenShares")
 			})
@@ -469,7 +469,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -480,7 +480,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 17,
 				message: Some("MoreThanMaximumPassedInPoolTokenShares")
 			})
@@ -537,7 +537,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				token_amount_in
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -555,7 +555,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				token_amount_in
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -573,7 +573,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				token_amount_in
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -590,7 +590,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				token_amount_in
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 13,
 				message: Some("AmountBelowZero")
 			})
@@ -606,7 +606,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				token_amount_in
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -622,7 +622,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				token_amount_in
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("LessThanMinimumPassedInPoolTokenShares")
 			})
@@ -692,7 +692,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				new_pool_token
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -710,7 +710,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				new_pool_token
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -727,7 +727,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				new_pool_token
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -744,7 +744,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				new_pool_token
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("LessThanMinimumPassedInPoolTokenShares")
 			})
@@ -760,7 +760,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				new_pool_token
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 17,
 				message: Some("MoreThanMaximumPassedInPoolTokenShares")
 			})
@@ -776,7 +776,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				new_pool_token
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -845,7 +845,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -863,7 +863,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -880,7 +880,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -897,7 +897,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("LessThanMinimumPassedInPoolTokenShares")
 			})
@@ -914,7 +914,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 7,
 				message: Some("UserNotInThePool")
 			})
@@ -930,7 +930,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 17,
 				message: Some("MoreThanMaximumPassedInPoolTokenShares")
 			})
@@ -946,7 +946,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				pool_token_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -1001,7 +1001,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -1019,7 +1019,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -1036,7 +1036,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -1053,7 +1053,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 13,
 				message: Some("AmountBelowZero")
 			})
@@ -1071,7 +1071,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 7,
 				message: Some("UserNotInThePool")
 			})
@@ -1088,7 +1088,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -1104,7 +1104,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -1120,7 +1120,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				token_amount
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("LessThanMinimumPassedInPoolTokenShares")
 			})
@@ -1185,7 +1185,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_amount_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -1201,7 +1201,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_amount_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -1218,7 +1218,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_amount_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 7,
 				message: Some("UserNotInThePool")
 			})
@@ -1235,7 +1235,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_amount_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 5,
 				message: Some("LessThanMinimumPassedInPoolTokenShares")
 			})
@@ -1250,7 +1250,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_amount_out
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -1324,7 +1324,7 @@ fn swap_exact_in_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 8,
 				message: Some("ForbidSameTokenSwap")
 			})
@@ -1342,7 +1342,7 @@ fn swap_exact_in_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -1357,7 +1357,7 @@ fn swap_exact_in_should_work() {
 				asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -1375,7 +1375,7 @@ fn swap_exact_in_should_work() {
 				token_out_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -1394,7 +1394,7 @@ fn swap_exact_in_should_work() {
 				token_out_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -1413,7 +1413,7 @@ fn swap_exact_in_should_work() {
 				token_out_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -1432,7 +1432,7 @@ fn swap_exact_in_should_work() {
 				token_out_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 10,
 				message: Some("ExceedMaximumSwapInRatio")
 			})
@@ -1451,7 +1451,7 @@ fn swap_exact_in_should_work() {
 				token_out_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 11,
 				message: Some("LessThanExpectedAmount")
 			})
@@ -1526,7 +1526,7 @@ fn swap_exact_out_should_work() {
 				token_out_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 8,
 				message: Some("ForbidSameTokenSwap")
 			})
@@ -1544,7 +1544,7 @@ fn swap_exact_out_should_work() {
 				asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -1559,7 +1559,7 @@ fn swap_exact_out_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 2,
 				message: Some("TokenNotExist")
 			})
@@ -1577,7 +1577,7 @@ fn swap_exact_out_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -1596,7 +1596,7 @@ fn swap_exact_out_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -1615,7 +1615,7 @@ fn swap_exact_out_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 10,
 				message: Some("ExceedMaximumSwapInRatio")
 			})
@@ -1634,7 +1634,7 @@ fn swap_exact_out_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 12,
 				message: Some("BiggerThanExpectedAmount")
 			})
@@ -1654,7 +1654,7 @@ fn swap_exact_out_should_work() {
 				token_in_asset_id
 			),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 3,
 				message: Some("NotEnoughBalance")
 			})
@@ -1708,7 +1708,7 @@ fn claim_bonus_should_work() {
 		assert_eq!(
 			Swap::claim_bonus(claimer.clone(), pool_id),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 0,
 				message: Some("PoolNotExist")
 			})
@@ -1720,7 +1720,7 @@ fn claim_bonus_should_work() {
 		assert_eq!(
 			Swap::claim_bonus(claimer.clone(), pool_id),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 1,
 				message: Some("PoolNotActive")
 			})
@@ -1731,7 +1731,7 @@ fn claim_bonus_should_work() {
 		assert_eq!(
 			Swap::claim_bonus(Origin::signed(charlie), pool_id),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 7,
 				message: Some("UserNotInThePool")
 			})
@@ -1760,7 +1760,7 @@ fn set_swap_fee_should_work() {
 		assert_eq!(
 			Swap::set_swap_fee(Origin::signed(bob), pool_id, new_swap_fee),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 16,
 				message: Some("NotPoolOwner")
 			})
@@ -1772,7 +1772,7 @@ fn set_swap_fee_should_work() {
 		assert_eq!(
 			Swap::set_swap_fee(setter.clone(), pool_id, new_swap_fee),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 15,
 				message: Some("FeeRateExceedMaximumLimit")
 			})
@@ -1784,7 +1784,7 @@ fn set_swap_fee_should_work() {
 		assert_eq!(
 			Swap::set_swap_fee(setter.clone(), pool_id, new_swap_fee),
 			Err(DispatchError::Module {
-				index: 0,
+				index: 2,
 				error: 14,
 				message: Some("FeeRateExceedMinimumLimit")
 			})

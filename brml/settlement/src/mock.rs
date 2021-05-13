@@ -18,17 +18,26 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_origin, parameter_types};
+use crate as pallet_settlement;
+use frame_support::{construct_runtime, parameter_types};
 use sp_core::H256;
 use sp_runtime::{Perbill, traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use super::*;
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
+		Settlement: pallet_settlement::{Module, Call, Storage, Event<T>},
+	}
+);
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -76,10 +85,6 @@ impl Config for Test {
 	type AssetIssue = Assets;
 }
 
-pub type Settlement = Module<Test>;
-pub type Assets = brml_assets::Module<Test>;
-pub type System = system::Module<Test>;
-
 pub fn new_test_ext() -> runtime_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

@@ -18,23 +18,33 @@
 
 #![cfg(test)]
 
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}};
-use sp_core::H256;
-use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use crate as assets;
 use super::*;
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
+use frame_support::{parameter_types, traits::{OnInitialize, OnFinalize}};
+use sp_core::H256;
+use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
+
+frame_support::construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>, Config<T>},
+	}
+);
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
-
-impl system::Config for Test {
+impl frame_system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -42,16 +52,16 @@ impl system::Config for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
-	type Call = ();
 	type Hash = H256;
+	type Call = Call;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
@@ -59,12 +69,8 @@ impl system::Config for Test {
 	type SS58Prefix = ();
 }
 
-parameter_types! {
-	pub const SettlementPeriod: u64 = 24 * 60 * 10;
-}
-
 impl Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = u128;
 	type AssetId = u32;
 	type Price = u64;
@@ -73,21 +79,6 @@ impl Config for Test {
 	type FetchVtokenMintPrice = ();
 	type WeightInfo = ();
 }
-
-mod assets {
-	pub use crate::Event;
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		system<T>,
-		assets<T>,
-	}
-}
-
-pub type Assets = Module<Test>;
-pub type AssetsError = Error<Test>;
-pub type System = system::Module<Test>;
 
 // simulate block production
 #[allow(dead_code)]
