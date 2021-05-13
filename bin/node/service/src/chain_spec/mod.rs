@@ -14,8 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
+#[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
+#[cfg(feature = "with-bifrost-runtime")]
 pub mod bifrost;
+#[cfg(feature = "with-rococo-runtime")]
 pub mod rococo;
 
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
@@ -112,6 +115,7 @@ fn testnet_accounts() -> Vec<AccountId> {
 	]
 }
 
+#[allow(dead_code)]
 fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>> {
 	use std::collections::HashSet;
 
@@ -144,6 +148,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	Some(final_vouchers)
 }
 
+#[allow(dead_code)]
 fn parse_address(address: impl AsRef<str>) -> AccountId {
 	let decoded_ss58 = bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
 	let mut data = [0u8; 32];
