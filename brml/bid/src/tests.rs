@@ -859,7 +859,6 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
 		run_to_block(3); // 4000 vtoken votes are supplied
 
-		// Bob 要有200 票vksm的订单，池子里还剩 3800票
 		// There was an vksm order of 200 votes from Bob in the storage initialization. So the pool should has only 3800
 		// votes left and Bob should have a 200 vksm order.Decode
 		let bob = 2;
@@ -877,54 +876,28 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		// 总服务票数改了，对
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
-
-		// // 维护列表有点问题
-		// assert_eq!(
-		//	 TokenOrderROIList::<Test>::get(vksm_id).len(),
-		//	 1
-		// );
-
-		// 挂单已经不存在了，是对的
 		assert_eq!(BiddingQueues::<Test>::contains_key(0), false);
-
-		// 竞拍订单队列也已经没有了作何挂单，是对的
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 0);
-
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).is_empty(), true);
-
 		assert_eq!(ProposalsInQueue::<Test>::contains_key(0), false);
-
 		assert_eq!(
 			BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0),
 			false
 		);
-
 		assert_eq!(TotalProposalsInQueue::<Test>::get(vksm_id), 0);
-
 		assert_eq!(OrdersInService::<Test>::get(0).votes, 200);
-
-		// Alice再下一个 4500票 vksm订章，只有 3800票成交，剩下 700票依然挂在上面
-
-		// 30天后， Bob的票到期自动删除。释放出订单。Alice的剩余订单是否会自动成交200
-
-		// 看是否成功匹配订单，各storage数字是否正确
-
-		// 如果用户抽走vtoken，池子里不够的话，是否会自动拆单，其中一单撤走，另一单是否还留在那里。释放出来后，这些空票是否被保留着，还是又被匹配掉了？
-
-		// 订单到期会不会被自动删除，并释放出票出来，是否还会重新匹配
 
 		run_to_block(5);
 
-		// 订单0是到期区块是5，订单1到期区块是21
-		assert_eq!(OrdersInService::<Test>::contains_key(1), false); // order1已经被马上release了
-		assert_eq!(OrdersInService::<Test>::get(2).votes, 5); // order2是保留的不变
+		// order 0 will be released by the end of block 5, while order 1 will be released by the end of block 21
+		assert_eq!(OrdersInService::<Test>::contains_key(1), false);
+		assert_eq!(OrdersInService::<Test>::get(2).votes, 5);
 
-		assert_eq!(OrdersInService::<Test>::contains_key(0), false); // 原订单已经结束,已经不在订单列表里了
-		assert_eq!(OrdersInService::<Test>::get(2).block_num, 21); // 创建时间1+21-1= 21，不受影响订单保留原来的结束时间
+		assert_eq!(OrdersInService::<Test>::contains_key(0), false);
+		assert_eq!(OrdersInService::<Test>::get(2).block_num, 21);
 
-		// Bidder Bob有两个订单
+		// Bidder Bob has two orders
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
 			1
@@ -932,13 +905,13 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&1),
 			false
-		); // 订单1已经被结束掉了
+		); // order 1 is finished.
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2),
 			true
 		);
 
-		// TokenOrderROIList里边应该只有订单2
+		// TokenOrderROIList has only order 2 in it.
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 1);
 		assert_eq!(
 			TokenOrderROIList::<Test>::get(vksm_id)
@@ -951,17 +924,14 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		// 订单剩下5 votes，已强行释放出195个votes
+		// order has only 5 votes left, while 195 votes are forcibly released.
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 5);
 
-		// 本era(era 0)会有195张票强制性到期
+		// there will be 195 votes forcibly released by the end of era 0.
 		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 5); // era 3有5票到期要放
-
-		// 在第五个区块不够用户抽走，拆单了，拆成了 195和5两个订单，加上最早的订单号，一共是3个订单，对
+		// There will be 5 votes release by the end of era 3.
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 5);
 		assert_eq!(OrderNextId::<Test>::get(), 3);
-
-		// 本区块ForciblyUnbondOrdersInCurrentEra应该有一个数量为195的订单1记录了强制结束，强制结束区块为5,但在等待复活列表里的区块记录为原来的区块数字21
 		assert_eq!(
 			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
 			1
@@ -979,24 +949,23 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			21
 		);
 
-		run_to_block(6); // 区块6供应 206个订单，数量足够，bob的订单1应该恢复成结束时间为 21
+		run_to_block(6);
 
-		assert_eq!(OrdersInService::<Test>::contains_key(1), false); // 原来的订单1已经在区块5结束的时候强行结束了
-
-		assert_eq!(OrdersInService::<Test>::contains_key(3), true); // 但因为区块6又有多余的votes出现，已经强行删除的订单重新复活，得到一个新的订单号3
-		assert_eq!(OrdersInService::<Test>::get(3).votes, 195); // 新订单的票数为195
-		assert_eq!(OrdersInService::<Test>::get(3).block_num, 21); // 新订单的到期时间为第21区块
+		assert_eq!(OrdersInService::<Test>::contains_key(1), false);
+		assert_eq!(OrdersInService::<Test>::contains_key(3), true);
+		assert_eq!(OrdersInService::<Test>::get(3).votes, 195);=
+		assert_eq!(OrdersInService::<Test>::get(3).block_num, 21);
 
 		assert_eq!(
 			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
 			0
-		); // 已经复活了，所以没有这条记录了
+		);
 
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).len(), 2);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&2), true);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&3), true);
 
-		// Bidder Bob有两个订单2和3
+		// Bidder Bob orders of 2 and 3.
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
 			2
@@ -1010,7 +979,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		// TokenOrderROIList里边应该有两条订单，订单2和复活订单3
+		// TokenOrderROIList should have to orders，order 2 and revival order 3
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 2);
 		assert_eq!(
 			TokenOrderROIList::<Test>::get(vksm_id)
@@ -1023,22 +992,23 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200); // 在服务的票权有200个
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0); // 本era没有票要释放
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200); // era 3有200票到期要放
-		assert_eq!(OrderNextId::<Test>::get(), 4); // 复活订单用了订单号3
+		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200);
+		assert_eq!(OrderNextId::<Test>::get(), 4);
 		assert_eq!(
 			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
 			0
-		); // 已经没有强行关闭订单了
+		);
 
-		run_to_block(10); // 只有10票available
+		run_to_block(10);
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 10);
 
 		assert_eq!(OrderNextId::<Test>::get(), 6);
-		assert_eq!(OrdersInService::<Test>::contains_key(5), true); // 但因为区块6又有多余的votes出现，已经强行删除的订单重新复活，得到一个新的订单号3
-		assert_eq!(OrdersInService::<Test>::get(5).votes, 5); // 新订单的票数为190
-		assert_eq!(OrdersInService::<Test>::get(5).block_num, 21); // 新订单的到期时间为第21区块
+		// block 6 has extra votes which enables the forced closed order to revive and gets a new order number of 5.
+		assert_eq!(OrdersInService::<Test>::contains_key(5), true);
+		assert_eq!(OrdersInService::<Test>::get(5).votes, 5);
+		assert_eq!(OrdersInService::<Test>::get(5).block_num, 21);
 
 		assert_eq!(OrdersInService::<Test>::contains_key(2), true);
 		assert_eq!(OrdersInService::<Test>::get(2).votes, 5);
@@ -1073,7 +1043,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		// Bidder Bob有两个订单2和5
+		// Bidder Bob orders of 2 and 5
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
 			2
@@ -1091,10 +1061,12 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&2), true);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&5), true);
 
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0); // 本era没有票要释放
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 10); // era 3有10票到期要放
+		// no votes will be released by the end of current era
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0); 
+		// 10 votes will be released by the end of era 3
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 10);
 
-		run_to_block(11); // 有211票available
+		run_to_block(11); // 211 votes are available
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
 		assert_eq!(
 			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
@@ -1105,8 +1077,10 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrdersInService::<Test>::contains_key(2), true);
 		assert_eq!(OrdersInService::<Test>::contains_key(5), true);
 		assert_eq!(OrdersInService::<Test>::contains_key(6), true);
-		assert_eq!(OrdersInService::<Test>::get(6).votes, 190); // 新订单的票数为190
-		assert_eq!(OrdersInService::<Test>::get(6).block_num, 21); // 新订单的到期时间为第21区块
+		// order 6 has 190 votes
+		assert_eq!(OrdersInService::<Test>::get(6).votes, 190);
+		 // order 6 will release all the votes by the end of block 21
+		assert_eq!(OrdersInService::<Test>::get(6).block_num, 21);
 
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 3);
 		assert_eq!(
@@ -1125,7 +1099,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		// Bidder Bob有两个订单2\5\6
+		// Bidder Bob has orders of 2\5\6
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
 			3
@@ -1148,11 +1122,12 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&5), true);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&6), true);
 
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0); // 本era没有票要释放
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200); // era 3有10票到期要放
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200);
 
-		// Alice再下一单100，因为本期一共211票，bob用了200，alice只有11票，检验一下是否会拆票
-		// create a proposal for alice
+		// Alice make one more order of 100 votes. Since there will be only 211 votes
+		// available in this era. Bob has taken up 200 votes with only 11 votes
+		// left for Alice
 		let alice = 1;
 		let origin_alice = Origin::signed(alice);
 		let votes_needed_alice = 100;
@@ -1166,7 +1141,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			validator_alice,
 		));
 
-		// Alice下的订单被拆单了，还剩89votes需求挂在上面
+		// Alice's order is split, with only 89 votes left for sale.
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 1);
 		assert_eq!(
 			BiddingQueues::<Test>::get(vksm_id).contains(&(Permill::from_parts(80 * 10_000), 1)),
@@ -1186,8 +1161,10 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrdersInService::<Test>::contains_key(5), true);
 		assert_eq!(OrdersInService::<Test>::contains_key(6), true);
 		assert_eq!(OrdersInService::<Test>::contains_key(7), true);
-		assert_eq!(OrdersInService::<Test>::get(7).votes, 11); // 新订单的票数为190
-		assert_eq!(OrdersInService::<Test>::get(7).block_num, 31); // 新订单的到期时间为第31区块
+		// the new order has 190 votes.
+		assert_eq!(OrdersInService::<Test>::get(7).votes, 11);
+		// the new order will be released by the end of block 31.
+		assert_eq!(OrdersInService::<Test>::get(7).block_num, 31);
 
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 4);
 		assert_eq!(
@@ -1211,10 +1188,9 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			true
 		);
 
-		// 测alice的新order在TokenOrderROIList里的排序
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id)[3].1, 7);
 
-		// Bidder Bob有3个订单，alice有1个订单
+		// Bidder Bob has 3 orders，alice has only 1 order.
 		assert_eq!(
 			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
 			3
@@ -1232,9 +1208,9 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(31).len(), 1);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(31).contains(&7), true);
 
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0); // 本era没有票要释放
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200); // era 3有200票到期要放
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 4)), 11); // era 4有11票到期要放
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200);
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 4)), 11);
 
 		// Bob再下一单150, roi 70%, proposal_id = 2
 		// create a proposal for Bob
@@ -1250,7 +1226,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			validator_bob,
 		));
 
-		// Alice再下一单200, roi 90%, proposal_id = 3
+		// Alice makes one more order of 200 votes, roi 90%, proposal_id = 3
 		// create a proposal for Alice
 		let origin_alice = Origin::signed(alice);
 		let votes_needed_alice = 200;
@@ -1264,27 +1240,31 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 			validator_alice,
 		));
 
-		// 先看proposal挂单队列
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 3);
-		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[2].1, 3); // 排序是升序排列的，排序最后的订单应该是alice roi为 90%的proposal
-		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[1].1, 1); // 倒数第二是 alice roi 为 80%的proposal
-		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[0].1, 2); // 倒数第三是 bob roi 为 70%的proposal
-
-		run_to_block(12); // 区块12释放 412个votes，看看是否优先成交最高roi的订单
-		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 2); // 剩下2个挂单。Bob roi 70%的 150票 order 2，和 alice roi 80%的 88票 order 1
+		// the queue is ordered by ascending. So the last order should be alice's proposal of roi 90%
+		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[2].1, 3); 
+		// second from the last should be alice's proposal of roi 80%.
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[1].1, 1);
+		// second from the last should be bob's proposal of roi 70%.
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[0].1, 2);
 
+		run_to_block(12);
+		 // 2 orders left。Bob's order 2 of 150 votes with roi 70% 150 and  alice's order 1 of 88 votes with roi 80%.
+		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 2);
+		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[1].1, 1);
+		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[0].1, 2);
+		// order 8 is from alice's votes order, which has an roi of 90%
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 412);
-		assert_eq!(OrdersInService::<Test>::get(8).votes, 200); // 第8个订单是alice roi为90%的200票订单
+
+		assert_eq!(OrdersInService::<Test>::get(8).votes, 200); // 
 		assert_eq!(
 			OrdersInService::<Test>::get(8).annual_roi,
 			Permill::from_parts(90 * 10_000)
 		);
-		assert_eq!(OrdersInService::<Test>::get(9).votes, 1); // 第9个订单是alice roi为80%的1票订单
+		assert_eq!(OrdersInService::<Test>::get(9).votes, 1);
 		assert_eq!(
 			OrdersInService::<Test>::get(9).annual_roi,
 			Permill::from_parts(80 * 10_000)
-		); // 第9个订单是alice roi为80%的1票订单
+		); // order 9 is from alice's 1 vote order, which has an roi of 80%.
 	});
 }

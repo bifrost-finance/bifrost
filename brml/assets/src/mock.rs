@@ -69,10 +69,6 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 }
 
-// parameter_types! {
-// 	pub const SettlementPeriod: u64 = 24 * 60 * 10;
-// }
-
 impl Config for Test {
 	type Event = Event;
 	type Balance = u128;
