@@ -270,7 +270,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or("Bifrost PC1 development wasm not available")?;
 
 	Ok(ChainSpec::from_genesis(
-		"Rococo PC1 Local Testnet",
+		"Bifrost PC1 Local Testnet",
 		"rococo_pc1_local_testnet",
 		ChainType::Local,
 		move || local_testnet_genesis(wasm_binary, id),
