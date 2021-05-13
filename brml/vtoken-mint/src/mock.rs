@@ -18,32 +18,58 @@
 
 #![cfg(test)]
 
-use frame_system as system;
-use frame_support::{impl_outer_origin, impl_outer_event, parameter_types, traits::{OnInitialize, OnFinalize}};
+use crate as pallet_vtoken_mint;
+use frame_support::{construct_runtime, parameter_types, traits::{OnInitialize, OnFinalize}};
 use sp_core::H256;
 use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 
-#[derive(Clone, Eq, PartialEq)]
-pub struct Test;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		system<T>,
-		brml_vtoken_mint,
-		assets<T>,
+construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
+		VtokenMint: pallet_vtoken_mint::{Module, Call, Config<T>, Storage, Event},
 	}
-}
+);
 
-mod brml_vtoken_mint {
-	pub use crate::Event;
+parameter_types! {
+	pub const BlockHashCount: u64 = 250;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
+}
+impl frame_system::Config for Test {
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type Origin = Origin;
+	type Index = u64;
+	type BlockNumber = u64;
+	type Hash = H256;
+	type Call = Call;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type Event = Event;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = ();
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = ();
 }
 
 impl assets::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type Balance = u64;
 	type AssetId = u32;
 	type Price = u64;
@@ -53,34 +79,6 @@ impl assets::Config for Test {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const BlockHashCount: u64 = 250;
-}
-
-impl system::Config for Test {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Call = ();
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = TestEvent;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type AccountData = ();
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type PalletInfo = ();
-	type SS58Prefix = ();
-}
 
 parameter_types! {
 	pub const VtokenMintDuration: u64 = 24 * 60 * 10;
@@ -88,17 +86,13 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type MintPrice = u64;
-	type Event = TestEvent;
+	type Event = Event;
 	type AssetTrait = Assets;
 	type Balance = u64;
 	type AssetId = u32;
 	type VtokenMintDuration = VtokenMintDuration;
 	type WeightInfo = ();
 }
-
-pub type VtokenMint = crate::Module<Test>;
-pub type System = system::Module<Test>;
-pub type Assets = assets::Module<Test>;
 
 pub(crate) fn run_to_block(n: u64) {
 	while System::block_number() < n {
@@ -112,5 +106,5 @@ pub(crate) fn run_to_block(n: u64) {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

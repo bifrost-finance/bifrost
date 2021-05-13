@@ -17,11 +17,8 @@
 #![cfg(test)]
 
 // use super::*;
-use crate as bid;
-use frame_support::{
-	impl_outer_dispatch, impl_outer_event, impl_outer_origin, parameter_types,
-	traits::{OnFinalize, OnInitialize},
-};
+use crate as pallet_bid;
+use frame_support::{parameter_types, construct_runtime, traits::{OnFinalize, OnInitialize}};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -29,35 +26,27 @@ use sp_runtime::{
 };
 use node_primitives::{Balance, AssetId, BlockNumber};
 
-use frame_system as system;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+type Block = frame_system::mocking::MockBlock<Test>;
 
-impl_outer_dispatch! {
-	pub enum Call for Test where origin: Origin {
-		brml_bid::Bid,
+construct_runtime!(
+	pub enum Test where
+		Block = Block,
+		NodeBlock = Block,
+		UncheckedExtrinsic = UncheckedExtrinsic,
+	{
+		System: frame_system::{Module, Call, Config, Storage, Event<T>},
+		Assets: assets::{Module, Call, Storage, Event<T>},
+		Bid: pallet_bid::{Module, Call, Storage, Event<T>},
 	}
-}
-
-#[derive(Clone, Eq, PartialEq, Debug, Default)]
-pub struct Test;
-
-impl_outer_origin! {
-	pub enum Origin for Test {}
-}
-
-impl_outer_event! {
-	pub enum TestEvent for Test {
-		system<T>, // the alias of the package/crate
-		bid<T>,
-		assets<T>,
-	}
-}
+);
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
-
-impl system::Config for Test {
-	//配置各个type的类型，再加上上面定义好的常量。类型+常量
+impl frame_system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
@@ -65,21 +54,32 @@ impl system::Config for Test {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
-	type Call = Call;
 	type Hash = H256;
+	type Call = Call;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = TestEvent;
+	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
-	type PalletInfo = ();
+	type PalletInfo = PalletInfo;
 	type AccountData = ();
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+}
+
+impl assets::Config for Test {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Price = Balance;
+	type VtokenMint = Balance;
+	type AssetRedeem = ();
+	type FetchVtokenMintPrice = ();
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -92,7 +92,7 @@ parameter_types! {
 }
 
 impl crate::Config for Test {
-	type Event = TestEvent;
+	type Event = Event;
 	type AssetId = AssetId;
 	type AssetTrait = Assets;
 	type BiddingOrderId = u64;
@@ -106,20 +106,6 @@ impl crate::Config for Test {
 	type ROIPermillPrecision = ROIPermillPrecision;
 }
 
-impl assets::Config for Test {
-	type Event = TestEvent;
-	type Balance = Balance;
-	type AssetId = AssetId;
-	type Price = Balance;
-	type VtokenMint = Balance;
-	type AssetRedeem = ();
-	type FetchVtokenMintPrice = ();
-	type WeightInfo = ();
-}
-
-pub type Bid = bid::Module<Test>;  // package/crate name
-pub type System = frame_system::Module<Test>;
-pub type Assets = assets::Module<Test>;
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
@@ -134,7 +120,7 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default()
+	frame_system::GenesisConfig::default()
 		.build_storage::<Test>()
 		.unwrap()
 		.into()
