@@ -40,7 +40,7 @@ fn get_exec_name() -> Option<String> {
 
 fn load_spec(
 	id: &str,
-	para_id: ParaId,
+	#[allow(unused_variables)] para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
@@ -50,26 +50,47 @@ fn load_spec(
 			.unwrap_or("bifrost")
 	} else { id };
 	Ok(match id {
+		#[cfg(feature = "with-asgard-runtime")]
 		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
+		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
+		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
+		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config(para_id)),
+		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost" | "" => Box::new(service::chain_spec::bifrost::chainspec_config()),
+		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost::development_config()?),
+		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost::local_testnet_config()?),
+		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost::staging_testnet_config()),
+		#[cfg(feature = "with-rococo-runtime")]
 		"rococo" => Box::new(service::chain_spec::rococo::chainspec_config(para_id)),
+		#[cfg(feature = "with-rococo-runtime")]
 		"rococo-dev" => Box::new(service::chain_spec::rococo::development_config(para_id)?),
+		#[cfg(feature = "with-rococo-runtime")]
 		"rococo-local" => Box::new(service::chain_spec::rococo::local_testnet_config(para_id)?),
+		#[cfg(feature = "with-rococo-runtime")]
 		"rococo-staging" => Box::new(service::chain_spec::rococo::staging_testnet_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
-				Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?)
+				#[cfg(feature = "with-asgard-runtime")]
+				{ Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?) }
+				#[cfg(not(feature = "with-asgard-runtime"))]
+				return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
-				Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+				#[cfg(feature = "with-bifrost-runtime")]
+				{ Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?) }
+				#[cfg(not(feature = "with-bifrost-runtime"))]
+				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 			} else {
-				Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?)
+				#[cfg(feature = "with-rococo-runtime")]
+				{ Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?) }
+				#[cfg(not(feature = "with-rococo-runtime"))]
+				return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
 			}
 		}
 	})
@@ -106,13 +127,21 @@ impl SubstrateCli for Cli {
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if spec.is_asgard() {
-			&service::collator::asgard_runtime::VERSION
+			#[cfg(feature = "with-asgard-runtime")] { &service::collator::asgard_runtime::VERSION }
+			#[cfg(not(feature = "with-asgard-runtime"))]
+			panic!("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.");
 		} else if spec.is_bifrost() {
-			&service::bifrost_runtime::VERSION
+			#[cfg(feature = "with-bifrost-runtime")] { &service::bifrost_runtime::VERSION }
+			#[cfg(not(feature = "with-bifrost-runtime"))]
+			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
 		} else if spec.is_rococo() {
-			&service::collator::rococo_runtime::VERSION
+			#[cfg(feature = "with-rococo-runtime")] { &service::collator::rococo_runtime::VERSION }
+			#[cfg(not(feature = "with-rococo-runtime"))]
+			panic!("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.");
 		} else {
-			&service::bifrost_runtime::VERSION
+			#[cfg(feature = "with-bifrost-runtime")] { &service::bifrost_runtime::VERSION }
+			#[cfg(not(feature = "with-bifrost-runtime"))]
+			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
 		}
 	}
 }

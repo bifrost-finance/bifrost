@@ -1,18 +1,18 @@
-// Copyright 2019 Parity Technologies (UK) Ltd.
-// This file is part of Cumulus.
+// Copyright 2019-2021 Liebi Technologies.
+// This file is part of Bifrost.
 
-// Cumulus is free software: you can redistribute it and/or modify
+// Bifrost is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Cumulus is distributed in the hope that it will be useful,
+// Bifrost is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
+// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
 use std::sync::Arc;
 
@@ -22,7 +22,6 @@ use cumulus_client_service::{
 };
 use cumulus_client_consensus_relay_chain::{build_relay_chain_consensus, BuildRelayChainConsensusParams};
 use polkadot_primitives::v0::CollatorPair;
-use sc_executor::native_executor_instance;
 pub use sc_executor::NativeExecutionDispatch;
 use sc_service::{Configuration, PartialComponents, Role, TaskManager, TFullClient};
 pub use sp_api::{ApiRef, ConstructRuntimeApi, Core as CoreApi, ProvideRuntimeApi, StateBackend};
@@ -33,17 +32,22 @@ use node_primitives::{AccountId, Nonce, Balance, Block};
 use crate::IdentifyVariant;
 use telemetry::TelemetrySpan;
 
+#[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
+
+#[cfg(feature = "with-rococo-runtime")]
 pub use rococo_runtime;
 
-native_executor_instance!(
+#[cfg(feature = "with-asgard-runtime")]
+sc_executor::native_executor_instance!(
 	pub AsgardExecutor,
 	asgard_runtime::api::dispatch,
 	asgard_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
-native_executor_instance!(
+#[cfg(feature = "with-rococo-runtime")]
+sc_executor::native_executor_instance!(
 	pub RococoExecutor,
 	rococo_runtime::api::dispatch,
 	rococo_runtime::native_version,
@@ -286,6 +290,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor>(
 	Ok((task_manager, client))
 }
 
+#[allow(unused_variables)]
 /// Start a normal parachain node.
 pub async fn start_node(
 	parachain_config: Configuration,
@@ -295,31 +300,40 @@ pub async fn start_node(
 	validator: bool,
 ) -> sc_service::error::Result<TaskManager> {
 	if parachain_config.chain_spec.is_asgard() {
-		start_node_impl::<_, asgard_runtime::RuntimeApi, AsgardExecutor>(
+		#[cfg(feature = "with-asgard-runtime")]
+		return start_node_impl::<_, asgard_runtime::RuntimeApi, AsgardExecutor>(
 			parachain_config,
 			collator_key,
 			polkadot_config,
 			id,
 			validator,
 			|_| Default::default(),
-		).await.map(|full| full.0)
+		).await.map(|full| full.0);
+		#[cfg(not(feature = "with-asgard-runtime"))]
+		return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 	} else if parachain_config.chain_spec.is_rococo() {
-		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
+		#[cfg(feature = "with-rococo-runtime")]
+		return start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
 			parachain_config,
 			collator_key,
 			polkadot_config,
 			id,
 			validator,
 			|_| Default::default(),
-		).await.map(|full| full.0)
+		).await.map(|full| full.0);
+		#[cfg(not(feature = "with-rococo-runtime"))]
+		return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
 	} else {
-		start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
+		#[cfg(feature = "with-rococo-runtime")]
+		return start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
 			parachain_config,
 			collator_key,
 			polkadot_config,
 			id,
 			validator,
 			|_| Default::default(),
-		).await.map(|full| full.0)
+		).await.map(|full| full.0);
+		#[cfg(not(feature = "with-rococo-runtime"))]
+		return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
 	}
 }

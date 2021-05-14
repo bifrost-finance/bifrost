@@ -1,4 +1,4 @@
-# Copyright 2019 Liebi Technologies.
+# Copyright 2019-2021 Liebi Technologies.
 # This file is part of Bifrost.
 
 # Bifrost is free software: you can redistribute it and/or modify
@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Bifrost.  If not, see <http:#www.gnu.org/licenses/>.
 
-FROM ubuntu:18.04 as builder
+FROM ubuntu:latest as builder
 LABEL description="The first stage for building a release bifrost binary."
 
 ARG PROFILE=release
@@ -38,7 +38,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 # ===== SECOND STAGE ======
 
-FROM ubuntu:18.04
+FROM ubuntu:latest
 LABEL description="The second stage for configuring the image."
 ARG PROFILE=release
 WORKDIR /bifrost
@@ -57,11 +57,6 @@ COPY --from=builder /src/target/$PROFILE/bifrost /usr/local/bin
 # checks
 RUN ldd /usr/local/bin/bifrost && \
 	/usr/local/bin/bifrost --version
-
-# Shrinking
-RUN rm -rf /usr/lib/python* && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man && \
-	rm -rf /src
 
 USER bifrost
 EXPOSE 30333 9933 9944
