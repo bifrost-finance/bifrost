@@ -953,7 +953,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
 		assert_eq!(OrdersInService::<Test>::contains_key(1), false);
 		assert_eq!(OrdersInService::<Test>::contains_key(3), true);
-		assert_eq!(OrdersInService::<Test>::get(3).votes, 195);=
+		assert_eq!(OrdersInService::<Test>::get(3).votes, 195);
 		assert_eq!(OrdersInService::<Test>::get(3).block_num, 21);
 
 		assert_eq!(
