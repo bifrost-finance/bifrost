@@ -72,7 +72,7 @@ pallet-staking = { version = "3.0.0" }
 pallet-grandpa = { version = "3.0.0" }
 
 # node-specific dependencies
-node-service = { path = "../service", default-features = false }
+node-service = { path = "../service" }
 node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
@@ -144,7 +144,7 @@ package = "sc-cli"
 optional = true
 
 [features]
-default = [ "cli" ]
+default = [ "cli", "with-bifrost-runtime" ]
 cli = [
 	"node-inspect",
 	"sc-cli",

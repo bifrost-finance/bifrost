@@ -92,7 +92,7 @@ jsonrpc-core = "15.1.0"
 env_logger = "0.8.1"
 
 [features]
-default = [ "std" ]
+default = [ "std", "with-bifrost-runtime" ]
 std = []
 with-asgard-runtime = [
 	"asgard-runtime",
