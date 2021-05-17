@@ -34,12 +34,11 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           toolchain: nightly
           target: wasm32-unknown-unknown
           default: true
       - name: Check
-        run: cargo check --all
+        run: cargo update -p environmental && cargo check --all
       - name: Run tests
         run: cargo test --all
       - uses: 8398a7/action-slack@v3
