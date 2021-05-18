@@ -16,22 +16,21 @@
 
 use std::sync::Arc;
 
-use crate::IdentifyVariant;
-use cumulus_client_consensus_relay_chain::{
-	build_relay_chain_consensus, BuildRelayChainConsensusParams,
-};
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
-use node_primitives::{AccountId, Balance, Block, Nonce};
+use cumulus_client_consensus_relay_chain::{build_relay_chain_consensus, BuildRelayChainConsensusParams};
 use polkadot_primitives::v0::CollatorPair;
 pub use sc_executor::NativeExecutionDispatch;
-use sc_service::{Configuration, PartialComponents, Role, TFullClient, TaskManager};
-use telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
+use sc_service::{Configuration, PartialComponents, Role, TaskManager, TFullClient};
 pub use sp_api::{ApiRef, ConstructRuntimeApi, Core as CoreApi, ProvideRuntimeApi, StateBackend};
+use sp_core::Pair;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
+use node_primitives::{AccountId, Nonce, Balance, Block};
+use crate::IdentifyVariant;
+use telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
@@ -57,7 +56,7 @@ sc_executor::native_executor_instance!(
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
-	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::ApiExt<Block>
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
@@ -67,12 +66,11 @@ pub trait RuntimeApiCollection:
 	+ sp_session::SessionKeys<Block>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{
-}
+{}
 
 impl<Api> RuntimeApiCollection for Api
-where
-	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
+	where
+		Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::ApiExt<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
@@ -80,9 +78,8 @@ where
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>,
-	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{
-}
+		<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+{}
 
 type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
 type FullBackend = sc_service::TFullBackend<Block>;
@@ -339,9 +336,9 @@ pub async fn start_node(
 				)));
 				io
 			},
-		)
-		.await
-		.map(|full| full.0)
+		).await.map(|full| full.0);
+		#[cfg(not(feature = "with-asgard-runtime"))]
+		return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 	} else if parachain_config.chain_spec.is_rococo() {
 		#[cfg(feature = "with-rococo-runtime")]
 		return start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
@@ -365,9 +362,9 @@ pub async fn start_node(
 
 				io
 			},
-		)
-		.await
-		.map(|full| full.0)
+		).await.map(|full| full.0);
+		#[cfg(not(feature = "with-rococo-runtime"))]
+		return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
 	} else {
 		#[cfg(feature = "with-rococo-runtime")]
 		return start_node_impl::<_, rococo_runtime::RuntimeApi, RococoExecutor>(
@@ -391,8 +388,8 @@ pub async fn start_node(
 
 				io
 			},
-		)
-		.await
-		.map(|full| full.0)
+		).await.map(|full| full.0);
+		#[cfg(not(feature = "with-rococo-runtime"))]
+		return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
 	}
 }

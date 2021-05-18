@@ -442,8 +442,7 @@ parameter_types! {
 
 impl brml_minter_reward::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
-	type NativeCurrency = BifrostToken;
+	type MultiCurrency = Currencies;
 	type TwoYear = TwoYear;
 	type PalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;

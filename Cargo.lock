@@ -1697,16 +1697,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cumulus-cli"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
-dependencies = [
- "sc-cli",
- "sc-service",
- "structopt",
-]
-
-[[package]]
 name = "cumulus-client-collator"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#3db8a38cfad53c4fe742ca68d7b425b88c61813d"
@@ -4902,8 +4892,8 @@ version = "0.7.0"
 dependencies = [
  "assert_cmd",
  "async-std",
- "cumulus-cli",
  "cumulus-client-collator",
+ "cumulus-client-consensus-common",
  "cumulus-client-network",
  "cumulus-client-service",
  "cumulus-primitives-core",

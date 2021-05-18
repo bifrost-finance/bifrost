@@ -341,25 +341,7 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-
-			runner.sync_run(|config| {
-				let polkadot_cli = RelayChainCli::new(
-					&config,
-					[RelayChainCli::executable_name().to_string()]
-						.iter()
-						.chain(cli.relaychain_args.iter()),
-				);
-
-				let polkadot_config = SubstrateCli::create_configuration(
-					&polkadot_cli,
-					&polkadot_cli,
-					config.task_executor.clone(),
-					None,
-				)
-					.map_err(|err| format!("Relay chain argument error: {}", err))?;
-
-				cmd.run(config, polkadot_config)
-			})
+			runner.sync_run(|config| cmd.run(config.database))
 		},
 		Some(Subcommand::Revert(cmd)) => {
 			let runner = cli.create_runner(cmd)?;

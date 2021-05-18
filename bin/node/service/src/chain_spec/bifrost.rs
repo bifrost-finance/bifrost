@@ -17,15 +17,16 @@
 use hex_literal::hex;
 use sc_chain_spec::ChainType;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::{Perbill, Permill};
 use telemetry::TelemetryEndpoints;
-use node_primitives::{AccountId, CurrencyId, TokenSymbol};
+use node_primitives::AccountId;
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use bifrost_runtime::{
-	constants::{currency::DOLLARS}, AuthorityDiscoveryConfig, BabeConfig, 
-	BalancesConfig, CouncilConfig, DemocracyConfig, ElectionsConfig,
-	GenesisConfig, GrandpaConfig, ImOnlineConfig, IndicesConfig, SessionConfig, SessionKeys,
-	SocietyConfig, StakingConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VoucherConfig,
-	StakerStatus, WASM_BINARY, wasm_binary_unwrap, VtokenMintConfig, MinterRewardConfig,
+	constants::currency::DOLLARS,
+	AuthorityDiscoveryConfig, BabeConfig, BalancesConfig,
+	CouncilConfig, DemocracyConfig, ImOnlineConfig, PoaManagerConfig,
+	GenesisConfig, GrandpaConfig, IndicesConfig, SessionConfig, SessionKeys,
+	SudoConfig, SystemConfig, TechnicalCommitteeConfig, VestingConfig,
+	WASM_BINARY, wasm_binary_unwrap
 };
 use crate::chain_spec::{
 	Extensions, BabeId, GrandpaId, AuthorityDiscoveryId,
@@ -33,7 +34,7 @@ use crate::chain_spec::{
 };
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
-const DEFAULT_PROTOCOL_ID: &str = "bifrost";
+const DEFAULT_PROTOCOL_ID: &str = "bnc";
 
 /// The `ChainSpec` parametrised for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
@@ -195,25 +196,10 @@ pub fn testnet_genesis(
 				))
 			}).collect::<Vec<_>>(),
 		},
-		pallet_staking: StakingConfig {
-			validator_count: 30,
-			minimum_validator_count: 3,
-			stakers: initial_authorities.iter().map(|x| { // we need last three addresses
-				(x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)
-			}).collect(),
-			invulnerables: initial_authorities.iter().map(|x| x.0.clone())
-				.chain(endowed_accounts.iter().cloned()).collect::<Vec<_>>(),
-			slash_reward_fraction: Perbill::from_percent(10),
-			.. Default::default()
+		pallet_im_online: ImOnlineConfig {
+			keys: vec![],
 		},
 		pallet_democracy: DemocracyConfig::default(),
-		pallet_elections_phragmen: ElectionsConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.map(|member| (member, STASH))
-				.collect(),
-		},
 		pallet_collective_Instance1: CouncilConfig::default(),
 		pallet_collective_Instance2: TechnicalCommitteeConfig {
 			members: endowed_accounts.iter()
@@ -229,9 +215,6 @@ pub fn testnet_genesis(
 			authorities: vec![],
 			epoch_config: Default::default(),
 		},
-		pallet_im_online: ImOnlineConfig {
-			keys: vec![],
-		},
 		pallet_authority_discovery: AuthorityDiscoveryConfig {
 			keys: vec![],
 		},
@@ -240,57 +223,17 @@ pub fn testnet_genesis(
 		},
 		pallet_membership_Instance1: Default::default(),
 		pallet_treasury: Default::default(),
-		pallet_society: SocietyConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
-			pot: 0,
-			max_members: 999,
+		pallet_vesting: VestingConfig {
+			vesting: endowed_accounts
+				.iter()
+				.map(|account_id| (account_id.clone(), 0, 10000, ENDOWMENT / 2))
+				.collect::<Vec<_>>()
 		},
-		pallet_vesting: Default::default(),
-		brml_minter_reward: MinterRewardConfig {
-			wegiths: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 1 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::ETH), 1 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1 * DOLLARS),
-			],
-			reward_by_one_block: 3 * DOLLARS,
-			round_index: 1,
-			storage_version: Default::default(),
-		},
-		orml_tokens: Default::default(),
-		brml_vtoken_mint: VtokenMintConfig {
-			pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
-			],
-			staking_lock_period: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 20 * 1),
-				(CurrencyId::Token(TokenSymbol::ETH), 3 * 1),
-				(CurrencyId::Token(TokenSymbol::KSM), 4 * 1)
-			],
-			rate_of_interest_each_block: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
-			],
-			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
-				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
-			],
-		},
-		brml_voucher: {
-			if let Some(vouchers) = initialize_all_vouchers() {
-				VoucherConfig { voucher: vouchers }
-			} else {
-				Default::default()
-			}
+		brml_poa_manager: PoaManagerConfig {
+			initial_validators: initial_authorities
+				.iter()
+				.map(|x| x.0.clone())
+				.collect::<Vec<_>>(),
 		},
 	}
 }
