@@ -38,9 +38,9 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
       - name: Check
-        run: cargo update -p environmental && cargo check --features with-bifrost-runtime,with-asgard-runtime
+        run: cargo update -p environmental && cargo check --features with-bifrost-runtime
       - name: Run tests
-        run: cargo test --features with-bifrost-runtime,with-asgard-runtime
+        run: cargo test --features with-bifrost-runtime
       - uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
         with:
