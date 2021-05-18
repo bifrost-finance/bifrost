@@ -283,7 +283,7 @@ pub mod pallet {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			// reward mint reward
-			let r = T::MinterReward::reward_minted_vtoken(&minter, _vtoken_id.into(), vtokens_buy, current_block);
+			let _r = T::MinterReward::reward_minted_vtoken(&minter, _vtoken_id.into(), vtokens_buy, current_block);
 
 			Self::deposit_event(Event::Minted(minter, currency_id, vtokens_buy));
 
@@ -337,7 +337,9 @@ pub mod pallet {
 				Error::<T>::NotEnoughVtokenPool
 			);
 
+			// Alter redeemer's balance
 			T::MultiCurrency::withdraw(vtoken_id.into(), &redeemer, vtoken_amount)?;
+			T::MultiCurrency::deposit(currency_id.into(), &redeemer, tokens_redeem)?;
 
 			// Alter mint pool
 			Self::reduce_mint_pool(currency_id, tokens_redeem)?;
@@ -433,7 +435,7 @@ pub mod pallet {
 			for (who, currency_id, records) in RedeemRecord::<T>::iter() {
 				let redeem_period = StakingLockPeriod::<T>::get(&currency_id);
 				let mut exist_redeem_record = Vec::new();
-				for (index, (when, amount)) in records.iter().cloned().enumerate() {
+				for (_index, (when, amount)) in records.iter().cloned().enumerate() {
 					if n - when >= redeem_period {
 						T::MultiCurrency::deposit(currency_id, &who, amount)?;
 					} else {

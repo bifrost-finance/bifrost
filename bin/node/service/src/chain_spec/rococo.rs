@@ -26,8 +26,9 @@ use rococo_runtime::{
 	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
 	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig, MinterRewardConfig,
 };
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use crate::chain_spec::{
-	RelayExtensions, BabeId, GrandpaId, ImOnlineId, AuthorityDiscoveryId,
+	RelayExtensions, BabeId, GrandpaId, AuthorityDiscoveryId,
 	authority_keys_from_seed, get_account_id_from_seed, initialize_all_vouchers, testnet_accounts
 };
 
@@ -289,7 +290,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 
 	Ok(ChainSpec::from_genesis(
 		"Bifrost PC1 Local Testnet",
-		"bifrost_pc1_local_testnet",
+		"rococo_pc1_local_testnet",
 		ChainType::Local,
 		move || local_testnet_genesis(wasm_binary, id),
 		vec![],

@@ -18,7 +18,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "2.0.0" }
-serde = { version = "1.0.118", features = ["derive"] }
+serde = { version = "1.0.124", features = ["derive"] }
 serde_json = "1.0.60"
 futures = { version = "0.3.9", features = ["compat"] }
 hex-literal = "0.3.1"
@@ -67,7 +67,6 @@ frame-system = { version = "3.0.0" }
 pallet-balances = { version = "3.0.0" }
 pallet-transaction-payment = { version = "3.0.0" }
 frame-support = { version = "3.0.0", default-features = false }
-pallet-im-online = { version = "3.0.0", default-features = false }
 pallet-authority-discovery = { version = "3.0.0" }
 pallet-staking = { version = "3.0.0" }
 pallet-grandpa = { version = "3.0.0" }
@@ -78,13 +77,12 @@ zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol
 
 
 # node-specific dependencies
-node-service = { path = "../service" }
+node-service = { path = "../service", default-features = false }
 node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
 sc-cli = { version = "0.9.0", optional = true }
 frame-benchmarking-cli = { version = "3.0.0", optional = true }
-#node-inspect = { path = "../inspect", optional = true }
 node-inspect = { version = "0.8.0", optional = true }
 
 # new added after removed local node-rpc, node-primitives
@@ -103,14 +101,13 @@ frame-benchmarking = "3.0.0"
 # WASM-specific dependencies
 wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.18", optional = true }
-# browser-utils = { package = "substrate-browser-utils"}
 
 # Cumulus dependencies
-cumulus-client-consensus = { package = "cumulus-client-consensus-common", git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-cli = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 cumulus-client-network = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
 
 # Polkadot dependencies
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
@@ -165,4 +162,20 @@ cli = [
 ]
 runtime-benchmarks = [
 	"frame-benchmarking-cli",
+]
+with-asgard-runtime = [
+	"node-service/with-bifrost-runtime",
+	"node-service/with-asgard-runtime",
+]
+with-bifrost-runtime = [
+	"node-service/with-bifrost-runtime",
+]
+with-rococo-runtime = [
+	"node-service/with-bifrost-runtime",
+	"node-service/with-rococo-runtime",
+]
+with-all-runtime = [
+	"with-asgard-runtime",
+	"with-bifrost-runtime",
+	"with-rococo-runtime",
 ]

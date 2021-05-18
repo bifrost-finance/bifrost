@@ -20,11 +20,11 @@
 #![allow(non_upper_case_globals)]
 
 use crate::{self as vtoken_mint};
-use frame_support::{parameter_types, traits::GenesisBuild};
-use node_primitives::{Balance, CurrencyId, TokenSymbol};
+use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header, AccountId32, ModuleId, Permill,
+	testing::Header, AccountId32, Permill,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
 };
 
@@ -39,26 +39,33 @@ pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CENTS: Balance = 1_000_000_000_000 / 100;
 
+pub type BlockNumber = u64;
+pub type Amount = i128;
+pub type Balance = u128;
+
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
+
 frame_support::construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: orml_tokens::{Module, Call, Storage, Event<T>, Config<T>},
-		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		VtokenMint: vtoken_mint::{Module, Call, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		MinterReward: brml_minter_reward::{Module, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
+		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		VtokenMint: vtoken_mint::{Pallet, Call, Storage, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
+		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>},
 	}
 );
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-type Block = frame_system::mocking::MockBlock<Runtime>;
-
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
@@ -83,6 +90,22 @@ impl frame_system::Config for Runtime {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
+}
+
+parameter_types! {
+    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+pub type AdaptedBasicCurrency =
+    orml_currencies::BasicCurrencyAdapter<Runtime, PalletBalances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+    type Event = Event;
+    type MultiCurrency = Assets;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -118,14 +141,14 @@ parameter_types! {
 	pub const TwoYear: u32 = 1 * 365 * 2;
 	pub const RewardPeriod: u32 = 50;
 	pub const MaximumExtendedPeriod: u32 = 500;
-	pub const ShareWeightModuleId: ModuleId = ModuleId(*b"weight  ");
+	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
 }
 
 impl brml_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type TwoYear = TwoYear;
-	type ModuleId = ShareWeightModuleId;
+	type PalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	// type DEXOperations = ZenlinkProtocol;
@@ -136,7 +159,7 @@ impl brml_minter_reward::Config for Runtime {
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: u32 = 3 * 60 * 1;
-	pub const StakingModuleId: ModuleId = ModuleId(*b"staking ");
+	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
 }
 orml_traits::parameter_type_with_key! {
 	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
@@ -150,7 +173,7 @@ orml_traits::parameter_type_with_key! {
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
-	type ModuleId = StakingModuleId;
+	type PalletId = StakingPalletId;
 	type MinterReward = MinterReward;
 	type DEXOperations = ();
 	type RandomnessSource = RandomnessCollectiveFlip;

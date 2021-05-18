@@ -28,7 +28,7 @@ use sp_runtime::{
 };
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::BNC);
+pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -42,10 +42,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: orml_tokens::{Module, Storage, Event<T>},
-		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		BrmlAssets: brml_assets::{Module, Call, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Assets: orml_tokens::{Pallet, Storage, Event<T>},
+		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		BrmlAssets: brml_assets::{Pallet, Call, Event<T>},
 	}
 );
 
@@ -54,6 +54,8 @@ type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
+	pub BlockWeights: frame_system::limits::BlockWeights =
+		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
@@ -78,6 +80,7 @@ impl frame_system::Config for Runtime {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 parameter_types! {

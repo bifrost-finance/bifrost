@@ -33,7 +33,7 @@ pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	GetDecimals, CurrencyIdExt, AssetTrait, AssetReward, RewardHandler, VtokenMintExt, MinterRewardExt
+	GetDecimals, CurrencyIdExt, AssetReward, RewardHandler, VtokenMintExt, MinterRewardExt, RewardTrait, BridgeAssetFrom, BridgeAssetTo
 };
 
 /// An index to a block.

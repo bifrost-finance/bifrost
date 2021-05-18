@@ -138,7 +138,7 @@
     "from": "AccountId",
     "asset_id": "AssetId"
   },
-  "Processing": {
+  "IostProcessing": {
     "tx_id": "Vec<u8>",
     "multi_sig_tx": "IostMultiSigTx"
   },
@@ -147,7 +147,7 @@
       "Initial": "IostMultiSigTx",
       "Generated": "IostMultiSigTx",
       "Signed": "IostMultiSigTx",
-      "Processing": "Processing",
+      "Processing": "IostProcessing",
       "Success": "Vec<u8>",
       "Fail": "Failed"
     }

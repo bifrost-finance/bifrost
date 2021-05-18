@@ -21,11 +21,11 @@
 #![allow(non_upper_case_globals)]
 
 use crate::{self as brml_minter_reward};
-use frame_support::{parameter_types, traits::GenesisBuild};
-use node_primitives::{Balance, CurrencyId, TokenSymbol};
+use frame_support::{parameter_types, PalletId, traits::GenesisBuild};
+use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header, AccountId32, ModuleId, Permill,
+	testing::Header, AccountId32, Permill,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
 };
 
@@ -40,48 +40,72 @@ pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CENTS: Balance = 1_000_000_000_000 / 100;
 
+pub type BlockNumber = u64;
+pub type Amount = i128;
+
+pub type Balance = u64;
+pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
+pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, Call, ()>;
+
 frame_support::construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: orml_tokens::{Module, Call, Storage, Event<T>, Config<T>},
-		PalletBalances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		MinterReward: brml_minter_reward::{Module, Call, Storage, Event<T>, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
+		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		MinterReward: brml_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
 );
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-type Block = frame_system::mocking::MockBlock<Runtime>;
+// type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+// type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 impl frame_system::Config for Runtime {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type Call = Call;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
+    type BaseCallFilter = ();
+    type BlockWeights = ();
+    type BlockLength = ();
+    type DbWeight = ();
+    type Origin = Origin;
+    type Index = u64;
+    type Call = Call;
+    type BlockNumber = u64;
+    type Hash = H256;
+    type Hashing = BlakeTwo256;
+    type AccountId = sp_runtime::AccountId32;
+    type Lookup = IdentityLookup<Self::AccountId>;
+    type Header = Header;
+    type Event = Event;
+    type BlockHashCount = BlockHashCount;
+    type Version = ();
+    type PalletInfo = PalletInfo;
+    type AccountData = pallet_balances::AccountData<u64>;
+    type OnNewAccount = ();
+    type OnKilledAccount = ();
+    type SystemWeightInfo = ();
+    type SS58Prefix = ();
+    type OnSetCode = ();
+}
+
+parameter_types! {
+    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+pub type AdaptedBasicCurrency =
+    orml_currencies::BasicCurrencyAdapter<Runtime, PalletBalances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+    type Event = Event;
+    type MultiCurrency = Assets;
+    type NativeCurrency = AdaptedBasicCurrency;
+    type GetNativeCurrencyId = GetNativeCurrencyId;
+    type WeightInfo = ();
 }
 
 parameter_types! {
@@ -117,14 +141,14 @@ parameter_types! {
 	pub const TwoYear: u32 = 40;
 	pub const RewardPeriod: u32 = 10;
 	pub const MaximumExtendedPeriod: u32 = 20;
-	pub const ShareWeightModuleId: ModuleId = ModuleId(*b"weight  ");
+	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
 }
 
 impl crate::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Currencies;
 	type TwoYear = TwoYear;
-	type ModuleId = ShareWeightModuleId;
+	type PalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type DEXOperations = ();

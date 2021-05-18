@@ -18,11 +18,11 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AccountAsset, BridgeAssetBalance, Pair, Token, TokenBalance, ZenlinkAssetId};
+use crate::{AccountAsset, BridgeAssetBalance, Token};
 use codec::FullCodec;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
-	DispatchError, DispatchResult,
+	DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
 

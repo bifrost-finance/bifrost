@@ -18,10 +18,10 @@
 use core::marker::PhantomData;
 use fixed::{types::extra::U0, FixedU128};
 use frame_support::{
-	Parameter, traits::{Get, Hooks}, transactional, PalletId,
+	Parameter, traits::{Get, Hooks}, PalletId,
 	pallet_prelude::{
-		Blake2_128Concat, ensure, StorageMap, StorageValue,
-		ValueQuery, StorageDoubleMap, IsType, DispatchResult, DispatchResultWithPostInfo
+		Blake2_128Concat, StorageMap, StorageValue,
+		ValueQuery, StorageDoubleMap, IsType, DispatchResultWithPostInfo
 	}
 };
 #[cfg(feature = "std")]
@@ -36,9 +36,7 @@ use sp_runtime::{
 };
 use orml_traits::{
 	account::MergeAccount,
-	arithmetic::{Signed, SimpleArithmetic},
-	BalanceStatus, BasicCurrency, BasicCurrencyExtended, BasicLockableCurrency, BasicReservableCurrency,
-	LockIdentifier, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
+	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
 use zenlink_protocol::{DEXOperations, AssetId};
 pub use pallet::*;
@@ -56,8 +54,6 @@ pub mod pallet {
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
 	pub type CurrencyIdOf<T> =
 		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
-	pub(crate) type AmountOf<T> =
-		<<T as Config>::MultiCurrency as MultiCurrencyExtended<<T as frame_system::Config>::AccountId>>::Amount;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -67,9 +63,9 @@ pub mod pallet {
 		+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
 		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
 
-		type NativeCurrency: BasicCurrencyExtended<Self::AccountId, Balance = BalanceOf<Self>, Amount = AmountOf<Self>>
-			+ BasicLockableCurrency<Self::AccountId, Balance = BalanceOf<Self>>
-			+ BasicReservableCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
+		// type NativeCurrency: BasicCurrencyExtended<Self::AccountId, Balance = BalanceOf<Self>, Amount = AmountOf<Self>>
+		// 	+ BasicLockableCurrency<Self::AccountId, Balance = BalanceOf<Self>>
+		// 	+ BasicReservableCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
 
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -206,9 +202,9 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let minter = ensure_signed(origin)?;
 
-			let current_block = <frame_system::Module<T>>::block_number();
+			let current_block = <frame_system::Pallet<T>>::block_number();
 
-			Self::reward_minted_vtoken(&minter, currency_id, vtoken_amount, current_block);
+			Self::reward_minted_vtoken(&minter, currency_id, vtoken_amount, current_block)?;
 
 			Ok(().into())
 		}
@@ -241,7 +237,7 @@ pub mod pallet {
 			let started_block_num = CurrentRoundStartAt::<T>::get();
 			if n - started_block_num >= T::RewardPeriod::get() && started_block_num > Zero::zero() {
 				// mint period is not extended.
-				let (last_max_minted_block, current_max_minted, last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
+				let (last_max_minted_block, _current_max_minted, _last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
 				// not extended
 				if !is_extended {
 					// issue BNC reward to minters
@@ -325,10 +321,10 @@ pub mod pallet {
 			ausd_amount: BalanceOf<T>,
 			block_num: BlockNumberFor<T>,
 		) -> Result<(), Error::<T>> {
-			let current_block = <frame_system::Pallet<T>>::block_number();
+			let _current_block = <frame_system::Pallet<T>>::block_number();
 			// let ausd_amount = get_ausd_amount_by_zenlink(minted_vtoken)?;
 
-			let (last_block, current_max_minted, last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
+			let (_last_block, current_max_minted, _last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
 			if ausd_amount > current_max_minted {
 				MaximumVtokenMinted::<T>::mutate(|max_minted| {
 					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get()) >= T::RewardPeriod::get() {
@@ -361,8 +357,8 @@ pub mod pallet {
 				let reward = bnc_reward
 					.saturating_mul(weight.into()
 					.saturating_mul(vtoken_amount)) / (total_weight * total_vtoken_mint);
-				// let _ = T::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::ASG), &minter, reward);
-				let _ = T::NativeCurrency::deposit(&minter, reward);
+				let _ = T::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::ASG), &minter, reward);
+				// let _ = T::NativeCurrency::deposit(&minter, reward);
 
 				// Record all BNC rewards the user receives.
 				if UserBNCReward::<T>::contains_key(&minter) {

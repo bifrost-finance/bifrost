@@ -170,7 +170,7 @@ fn zero_token_pool_should_not_work() {
 			// Alice sell 20 KSMs to mint vKSM.
 			assert_noop!(
 				VtokenMint::redeem(Origin::signed(BOB), vKSM, to_sell_ksm),
-				Error::<Runtime>::EmptyVtokenPool
+				Error::<Runtime>::NotSupportTokenType
 			);
 		});
 }

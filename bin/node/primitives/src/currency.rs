@@ -79,6 +79,26 @@ impl From<u8> for TokenSymbol {
 	}
 }
 
+impl From<CurrencyId> for TokenSymbol {
+	fn from(currency_id: CurrencyId) -> Self {
+		match currency_id {
+			CurrencyId::Token(TokenSymbol::ASG) => Self::ASG,
+			CurrencyId::Token(TokenSymbol::aUSD) => Self::aUSD,
+			CurrencyId::Token(TokenSymbol::DOT) => Self::DOT,
+			CurrencyId::Token(TokenSymbol::vDOT) => Self::vDOT,
+			CurrencyId::Token(TokenSymbol::KSM) => Self::KSM,
+			CurrencyId::Token(TokenSymbol::vKSM) => Self::vKSM,
+			CurrencyId::Token(TokenSymbol::ETH) => Self::ETH,
+			CurrencyId::Token(TokenSymbol::vETH) => Self::vETH,
+			CurrencyId::Token(TokenSymbol::EOS) => Self::EOS,
+			CurrencyId::Token(TokenSymbol::EOS) => Self::vEOS,
+			CurrencyId::Token(TokenSymbol::IOST) => Self::IOST,
+			CurrencyId::Token(TokenSymbol::vIOST) => Self::vIOST,
+			_ => todo!("Not support now."),
+		}
+	}
+}
+
 /// List tokens precision
 impl GetDecimals for TokenSymbol {
 	fn decimals(&self) -> u32 {
@@ -98,6 +118,29 @@ impl GetDecimals for TokenSymbol {
 		}
 	}
 }
+
+impl From<TokenSymbol> for Vec<u8> {
+
+	fn from(token_symbol: TokenSymbol) -> Self {
+		match token_symbol {
+			TokenSymbol::ASG => b"ASG".to_vec(),
+			TokenSymbol::aUSD => b"aUSD".to_vec(),
+			TokenSymbol::DOT => b"DOT".to_vec(),
+			TokenSymbol::vDOT => b"vDOT".to_vec(),
+			TokenSymbol::KSM => b"KSM".to_vec(),
+			TokenSymbol::vKSM => b"vKSM".to_vec(),
+			TokenSymbol::ETH => b"ETH".to_vec(),
+			TokenSymbol::vETH => b"vETH".to_vec(),
+			TokenSymbol::EOS => b"EOS".to_vec(),
+			TokenSymbol::vEOS => b"vEOS".to_vec(),
+			TokenSymbol::IOST => b"IOST".to_vec(),
+			TokenSymbol::vIOST => b"vIOST".to_vec(),
+			_ => todo!("Not support now."),
+		}
+	}
+}
+
+
 
 /// Currency ID, it might be extended with more variants in the future.
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
@@ -234,3 +277,4 @@ impl TryFrom<Vec<u8>> for CurrencyId {
 		}
 	}
 }
+

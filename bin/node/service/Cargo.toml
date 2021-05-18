@@ -48,7 +48,6 @@ sp-trie = { version = "3.0.0" }
 # Substrate Pallets
 pallet-babe = { version = "3.0.0" }
 pallet-im-online = { version = "3.0.0" }
-pallet-staking = { version = "3.0.0" }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0" }
 
 # Substrate Other
@@ -74,15 +73,15 @@ hex-literal = "0.2.1"
 lazy_static = "1.4.0"
 log = "0.4.8"
 parking_lot = "0.11.1"
-serde = { version = "1.0.118", features = ["derive"] }
+serde = { version = "1.0.124", features = ["derive"] }
 slog = "2.5.2"
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 serde_json = "1.0.60"
 
 # Runtimes
-asgard-runtime = { path = "../runtime/asgard" }
-bifrost-runtime = { path = "../runtime/bifrost" }
-rococo-runtime = { path = "../runtime/rococo" }
+asgard-runtime = { path = "../runtime/asgard", optional = true }
+bifrost-runtime = { path = "../runtime/bifrost", optional = true }
+rococo-runtime = { path = "../runtime/rococo", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
@@ -100,7 +99,22 @@ brml-charge-transaction-fee-rpc = { path = "../../../brml/charge-transaction-fee
 env_logger = "0.8.1"
 
 [features]
-default = []
+default = [ "std" ]
+std = []
+with-asgard-runtime = [
+	"asgard-runtime",
+]
+with-bifrost-runtime = [
+	"bifrost-runtime",
+]
+with-rococo-runtime = [
+	"rococo-runtime",
+]
+with-all-runtime = [
+	"asgard-runtime",
+	"bifrost-runtime",
+	"rococo-runtime",
+]
 runtime-benchmarks = [
 #	"asgard-runtime/runtime-benchmarks",
 	"bifrost-runtime/runtime-benchmarks",

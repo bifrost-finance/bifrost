@@ -45,8 +45,10 @@ pub use self::client::{AbstractClient, Client, ClientHandle, ExecuteWithClient, 
 pub use sp_api::{ApiRef, Core as CoreApi, ConstructRuntimeApi, ProvideRuntimeApi, StateBackend};
 pub use sc_executor::NativeExecutionDispatch;
 
+#[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
 
+#[cfg(feature = "with-bifrost-runtime")]
 native_executor_instance!(
 	pub BifrostExecutor,
 	bifrost_runtime::api::dispatch,
@@ -601,36 +603,35 @@ pub fn new_chain_ops(mut config: &mut Configuration) -> Result<
 {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
 	if config.chain_spec.is_bifrost() {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
-		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
-	} else {
-		let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
-			= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
-		Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
+		#[cfg(feature = "with-bifrost-runtime")]
+		{
+			let sc_service::PartialComponents { client, backend, import_queue, task_manager, .. }
+				= new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config)?;
+			return Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager));
+		}
 	}
+
+	return Err(ServiceError::SelectChainRequired);
 }
 
 pub fn build_light(config: Configuration) -> Result<TaskManager, ServiceError> {
 	if config.chain_spec.is_bifrost() {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+		#[cfg(feature = "with-bifrost-runtime")]
+		return new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
-		).map(|full| full.task_manager)
-	} else {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
+		).map(|full| full.task_manager);
 	}
+
+	return Err(ServiceError::SelectChainRequired);
 }
 
 pub fn build_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	if config.chain_spec.is_bifrost() {
-		new_light_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+		#[cfg(feature = "with-bifrost-runtime")]
+		return new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 			config
-		).map(|full| full.task_manager)
-	} else {
-		new_full_base::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-			config
-		).map(|full| full.task_manager)
+		).map(|full| full.task_manager);
 	}
+
+	return Err(ServiceError::SelectChainRequired);
 }

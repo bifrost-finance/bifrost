@@ -19,12 +19,17 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage};
-use node_primitives::{RewardTrait, AssetTrait};
+use node_primitives::{RewardTrait};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
+use orml_traits::MultiCurrency;
+use node_primitives::{CurrencyId, TokenSymbol};
 
 mod mock;
 mod tests;
+
+pub type CurrencyIdOf<T> =
+<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
 pub trait Config: frame_system::Config {
 	/// The units in which we record balances.
@@ -35,10 +40,12 @@ pub trait Config: frame_system::Config {
 		+ Copy
 		+ MaybeSerializeDeserialize
 		+ From<Self::BlockNumber>;
-	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 	/// Assets
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
+	type CurrenciesHandler: MultiCurrency<
+		Self::AccountId,
+		CurrencyId = CurrencyId,
+		Balance = Self::Balance,
+	>;
 }
 
 #[derive(Encode, Decode, Default, Clone)]
@@ -53,8 +60,8 @@ pub const LEN: usize = 256;
 
 decl_storage! {
 	trait Store for Module<T: Config> as Reward {
-		Point get(fn query_point): map hasher(blake2_128_concat) (T::AssetId, T::AccountId) => T::Balance;
-		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) T::AssetId
+		Point get(fn query_point): map hasher(blake2_128_concat) (CurrencyIdOf<T>, T::AccountId) => T::Balance;
+		Reward get(fn vtoken_reward): map hasher(blake2_128_concat) CurrencyIdOf<T>
 			=> Vec<RewardRecord<T::AccountId, T::Balance>> = Vec::with_capacity(CAPACITY);
 	}
 }
@@ -70,11 +77,11 @@ decl_module! {
 	pub struct Module<T: Config> for enum Call where origin: T::Origin {}
 }
 
-impl<T: Config> RewardTrait<T::Balance, T::AccountId, T::AssetId> for Module<T> {
+impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Module<T> {
 	type Error = Error<T>;
 	
 	fn record_reward(
-		v_token_id: T::AssetId,
+		v_token_id: CurrencyIdOf<T>,
 		convert_amount: T::Balance,
 		referer: T::AccountId
 	) -> Result<(), Self::Error> {
@@ -110,7 +117,7 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, T::AssetId> for Module<T> 
 	}
 	
 	fn dispatch_reward(
-		v_token_id: T::AssetId,
+		v_token_id: CurrencyIdOf<T>,
 		staking_profit: T::Balance
 	) -> Result<(), Self::Error> {
 		// Obtain vec
@@ -132,7 +139,9 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, T::AssetId> for Module<T> 
 			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
 			// Check dispatch reward
 			if reward.ne(&T::Balance::from(0u32)) {
-				T::AssetTrait::asset_issue(v_token_id, &referer.account_id, reward);
+				<<T as Config>::CurrenciesHandler as MultiCurrency<
+				<T as frame_system::Config>::AccountId,
+			>>::deposit(v_token_id, &referer.account_id, reward);
 			}
 		}
 		// Clear vec and point

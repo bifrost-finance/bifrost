@@ -12,6 +12,7 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 log = { version = "0.4.14", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master" }
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
 serde = { version = "1.0.106", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 zenlink-protocol = { path = "../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
@@ -26,11 +27,13 @@ sp-core = { version = "3.0.0" }
 default = ["std"]
 std = [
 	"codec/std",
+	"log/std",
 	"node-primitives/std",
 	"fixed/std",
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
+	"orml-currencies/std",
 	"serde/std",
 	"sp-runtime/std",
 	"zenlink-protocol/std",

@@ -13,6 +13,13 @@ members = [
 	"brml/vtoken-mint",
 	"brml/vtoken-mint/rpc",
 	"brml/minter-reward",
+	"brml/bid",
+	"brml/bridge-eos",
+	"brml/bridge-iost",
+	"brml/poa-manager",
+	"brml/vesting",
+	"brml/staking-reward",
+	"brml/swap",
 	"brml/voucher",
 ]
 
@@ -189,7 +196,3 @@ substrate-frame-cli = { git = "https://github.com/paritytech/substrate.git", bra
 
 # Apple M1
 #rocksdb = { git = "https://github.com/hdevalence/rust-rocksdb", rev = "33cd4281570b229b628d6d827fa0053cff57000a" }
-
-[patch.'https://github.com/zenlinkpro/Zenlink-DEX-Module']
-zenlink-protocol = { path = "../Zenlink-DEX-Module/zenlink-protocol" }
-zenlink-protocol-runtime-api = { path = "../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api" }

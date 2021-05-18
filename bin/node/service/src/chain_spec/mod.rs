@@ -14,8 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
+#[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
+#[cfg(feature = "with-bifrost-runtime")]
 pub mod bifrost;
+#[cfg(feature = "with-rococo-runtime")]
 pub mod rococo;
 
 use hex_literal::hex;
@@ -23,10 +26,9 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-
+use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use grandpa_primitives::{AuthorityId as GrandpaId};
 use babe_primitives::{AuthorityId as BabeId};
-use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
 use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, VtokenPool};
@@ -58,7 +60,7 @@ pub struct RelayExtensions {
 
 impl RelayExtensions {
 	/// Try to get the extension from the given `ChainSpec`.
-	pub fn try_get(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Option<&Self> {
+	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
 		sc_chain_spec::get_extension(chain_spec.extensions())
 	}
 }
@@ -114,6 +116,7 @@ fn testnet_accounts() -> Vec<AccountId> {
 	]
 }
 
+#[allow(dead_code)]
 fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>> {
 	use std::collections::HashSet;
 
@@ -146,6 +149,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	Some(final_vouchers)
 }
 
+#[allow(dead_code)]
 fn parse_address(address: impl AsRef<str>) -> AccountId {
 	let decoded_ss58 = bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
 	let mut data = [0u8; 32];
