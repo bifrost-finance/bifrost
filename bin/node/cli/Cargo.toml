@@ -75,7 +75,6 @@ pallet-grandpa = { version = "3.0.0" }
 zenlink-protocol-runtime-api = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api" }
 zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
 
-
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
 node-primitives = { path = "../primitives" }

@@ -525,7 +525,7 @@ parameter_types! {
 	pub NativeOrmlTokens: BTreeSet<(Vec<u8>, MultiLocation)> = {
 		let mut t = BTreeSet::new();
 		//TODO: might need to add other assets based on orml-tokens
-		t.insert(("ASG".into(), (Junction::Parent, Junction::Parachain { id: 1024 }).into()));
+		t.insert(("ASG".into(), (Junction::Parent, Junction::Parachain { id: 2001 }).into()));
 		t
 	};
 }
@@ -630,7 +630,7 @@ parameter_types! {
 		// Sherpax live
 		(make_x2_location(59),  500),
 		// Bifrost local and live, 0.01 ASG
-		(make_x2_location(1024),   10_000_000_000),
+		(make_x2_location(2001),   10_000_000_000),
 		// Zenlink live
 		(make_x2_location(188), 500),
 		// Zenlink local

@@ -120,7 +120,7 @@ std = [
 	"brml-minter-reward/std",
 	'brml-voucher/std',
 	"brml-charge-transaction-fee/std",
-    "brml-charge-transaction-fee-rpc-runtime-api/std",
+	"brml-charge-transaction-fee-rpc-runtime-api/std",
 	"parachain-info/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-primitives-core/std",
@@ -134,5 +134,5 @@ std = [
 	"orml-xcm-support/std",
 	"cumulus-pallet-xcm-handler/std",
 	"brml-charge-transaction-fee/std",
-    "brml-charge-transaction-fee-rpc-runtime-api/std",
+	"brml-charge-transaction-fee-rpc-runtime-api/std",
 ]
