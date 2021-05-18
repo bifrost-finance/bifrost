@@ -103,18 +103,18 @@ impl From<CurrencyId> for TokenSymbol {
 impl GetDecimals for TokenSymbol {
 	fn decimals(&self) -> u32 {
 		match *self {
-            Self::ASG => 12u32,
-            Self::aUSD => 12u32,
-            Self::DOT => 10u32,
-            Self::vDOT => 10u32,
-            Self::KSM => 12u32,
-            Self::vKSM => 12u32,
-            Self::ETH => 18u32,
-            Self::vETH => 18u32,
-            Self::EOS => 12u32,
-            Self::vEOS => 12u32,
-            Self::IOST => 12u32,
-            Self::vIOST => 12u32,
+			Self::ASG => 12u32,
+			Self::aUSD => 12u32,
+			Self::DOT => 10u32,
+			Self::vDOT => 10u32,
+			Self::KSM => 12u32,
+			Self::vKSM => 12u32,
+			Self::ETH => 18u32,
+			Self::vETH => 18u32,
+			Self::EOS => 12u32,
+			Self::vEOS => 12u32,
+			Self::IOST => 12u32,
+			Self::vIOST => 12u32,
 		}
 	}
 }
@@ -164,7 +164,7 @@ impl From<TokenSymbol> for CurrencyId {
 
 impl CurrencyIdExt for CurrencyId {
 	/// This pair means (EOS, vEOS), token is ahead of vtoken.
-    type PairTokens = (TokenSymbol, TokenSymbol);
+	type PairTokens = (TokenSymbol, TokenSymbol);
 	type TokenSymbol = TokenSymbol;
 	fn is_vtoken(&self) -> bool {
 		matches!(

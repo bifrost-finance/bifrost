@@ -39,23 +39,23 @@ fn minter_reward_should_work() {
 		.one_hundred_for_alice_n_bob()
 		.build()
 		.execute_with(|| {
-            run_to_block(2);
+			run_to_block(2);
 
 			let to_sell_vdot = 20;
 			let to_sell_ksm = 20;
 
-            assert_ok!(MinterReward::mint(Origin::signed(ALICE), DOT, to_sell_vdot));
-            // assert_eq!(MinterReward::current_round_start_at(), 2);
-            run_to_block(10);
-            
-            // assert_eq!(MinterReward::current_round(), 3);
-            // assert_eq!(MinterReward::reward_by_one_block(), 75);
-            dbg!(MinterReward::maximum_vtoken_minted());
-            
-            run_to_block(12);
-            assert_ok!(MinterReward::mint(Origin::signed(BOB), DOT, to_sell_vdot + 40));
-            // assert_ok!(MinterReward::mint(Origin::signed(ALICE), DOT, to_sell_vdot + 20));
-            run_to_block(23);
-            // run_to_block(17);
-        });
+			assert_ok!(MinterReward::mint(Origin::signed(ALICE), DOT, to_sell_vdot));
+			// assert_eq!(MinterReward::current_round_start_at(), 2);
+			run_to_block(10);
+			
+			// assert_eq!(MinterReward::current_round(), 3);
+			// assert_eq!(MinterReward::reward_by_one_block(), 75);
+			dbg!(MinterReward::maximum_vtoken_minted());
+			
+			run_to_block(12);
+			assert_ok!(MinterReward::mint(Origin::signed(BOB), DOT, to_sell_vdot + 40));
+			// assert_ok!(MinterReward::mint(Origin::signed(ALICE), DOT, to_sell_vdot + 20));
+			run_to_block(23);
+			// run_to_block(17);
+		});
 }

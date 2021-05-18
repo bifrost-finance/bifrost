@@ -24,14 +24,14 @@ pallet-balances = { version = "3.0.0" }
 [features]
 default = ["std"]
 std = [
-    "codec/std",
-    "node-primitives/std",
-    "frame-support/std",
-    "frame-system/std",
-    "serde/std",
-    "sp-runtime/std",
-    "sp-core/std",
-    "orml-traits/std",
+	"codec/std",
+	"node-primitives/std",
+	"frame-support/std",
+	"frame-system/std",
+	"serde/std",
+	"sp-runtime/std",
+	"sp-core/std",
+	"orml-traits/std",
 	"orml-currencies/std",
 	"orml-tokens/std"
 ]

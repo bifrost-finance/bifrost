@@ -21,17 +21,17 @@ use std::path::PathBuf;
 /// An overarching CLI command definition.
 #[derive(Debug, StructOpt)]
 pub struct Cli {
-    /// Possible subcommand with parameters.
-    #[structopt(subcommand)]
-    pub subcommand: Option<Subcommand>,
+	/// Possible subcommand with parameters.
+	#[structopt(subcommand)]
+	pub subcommand: Option<Subcommand>,
 
-    #[allow(missing_docs)]
-    #[structopt(flatten)]
-    pub run: RunCmd,
+	#[allow(missing_docs)]
+	#[structopt(flatten)]
+	pub run: RunCmd,
 
-    /// Relaychain arguments
-    #[structopt(raw = true)]
-    pub relaychain_args: Vec<String>,
+	/// Relaychain arguments
+	#[structopt(raw = true)]
+	pub relaychain_args: Vec<String>,
 }
 
 /// Possible subcommands of the main binary.
@@ -129,21 +129,21 @@ pub struct ExportGenesisWasmCommand {
 #[allow(missing_docs)]
 #[derive(Debug, StructOpt)]
 pub struct RunCmd {
-    #[allow(missing_docs)]
-    #[structopt(flatten)]
-    pub base: sc_cli::RunCmd,
+	#[allow(missing_docs)]
+	#[structopt(flatten)]
+	pub base: sc_cli::RunCmd,
 
-    /// Id of the parachain this collator collates for.
-    #[structopt(long)]
-    pub parachain_id: Option<u32>,
+	/// Id of the parachain this collator collates for.
+	#[structopt(long)]
+	pub parachain_id: Option<u32>,
 }
 
 impl std::ops::Deref for RunCmd {
-    type Target = sc_cli::RunCmd;
+	type Target = sc_cli::RunCmd;
 
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
+	fn deref(&self) -> &Self::Target {
+		&self.base
+	}
 }
 
 #[derive(Debug)]

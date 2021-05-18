@@ -94,18 +94,18 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Runtime, PalletBalances, Amount, BlockNumber>;
+	orml_currencies::BasicCurrencyAdapter<Runtime, PalletBalances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Runtime {
-    type Event = Event;
-    type MultiCurrency = Assets;
-    type NativeCurrency = AdaptedBasicCurrency;
-    type GetNativeCurrencyId = GetNativeCurrencyId;
-    type WeightInfo = ();
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
 }
 
 parameter_types! {

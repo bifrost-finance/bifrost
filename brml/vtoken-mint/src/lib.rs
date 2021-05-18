@@ -453,7 +453,7 @@ pub mod pallet {
 		fn mock_yield_change() -> u32 {
 			// Use block number as seed
 			let current_block = <frame_system::Pallet<T>>::block_number();
-    		let random_result = T::RandomnessSource::random(&current_block.encode());
+			let random_result = T::RandomnessSource::random(&current_block.encode());
 			let random_sum = random_result.0.0.iter().fold(0u32, |acc, x| acc + *x as u32);
 
 			random_sum

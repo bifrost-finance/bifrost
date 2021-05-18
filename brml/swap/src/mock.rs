@@ -55,74 +55,74 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Test {
-    type BaseCallFilter = ();
-    type BlockWeights = ();
-    type BlockLength = ();
-    type DbWeight = ();
-    type Origin = Origin;
-    type Index = u64;
-    type Call = Call;
-    type BlockNumber = u64;
-    type Hash = H256;
-    type Hashing = BlakeTwo256;
-    type AccountId = u64;
-    type Lookup = IdentityLookup<Self::AccountId>;
-    type Header = Header;
-    type Event = Event;
-    type BlockHashCount = BlockHashCount;
-    type Version = ();
-    type PalletInfo = PalletInfo;
-    type AccountData = pallet_balances::AccountData<u64>;
-    type OnNewAccount = ();
-    type OnKilledAccount = ();
-    type SystemWeightInfo = ();
-    type SS58Prefix = ();
-    type OnSetCode = ();
+	type BaseCallFilter = ();
+	type BlockWeights = ();
+	type BlockLength = ();
+	type DbWeight = ();
+	type Origin = Origin;
+	type Index = u64;
+	type Call = Call;
+	type BlockNumber = u64;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type AccountId = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
+	type Header = Header;
+	type Event = Event;
+	type BlockHashCount = BlockHashCount;
+	type Version = ();
+	type PalletInfo = PalletInfo;
+	type AccountData = pallet_balances::AccountData<u64>;
+	type OnNewAccount = ();
+	type OnKilledAccount = ();
+	type SystemWeightInfo = ();
+	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 parameter_types! {
-    pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =
-    orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
 impl orml_currencies::Config for Test {
-    type Event = Event;
-    type MultiCurrency = Assets;
-    type NativeCurrency = AdaptedBasicCurrency;
-    type GetNativeCurrencyId = GetNativeCurrencyId;
-    type WeightInfo = ();
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
 }
 
 parameter_types! {
-    pub const ExistentialDeposit: u64 = 1;
+	pub const ExistentialDeposit: u64 = 1;
 }
 
 impl pallet_balances::Config for Test {
-    type Balance = u64;
-    type Event = Event;
-    type DustRemoval = ();
-    type ExistentialDeposit = ExistentialDeposit;
-    type AccountStore = System;
-    type MaxLocks = ();
-    type WeightInfo = ();
+	type Balance = u64;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type MaxLocks = ();
+	type WeightInfo = ();
 }
 
 orml_traits::parameter_type_with_key! {
-    pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-        0
-    };
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		0
+	};
 }
 
 impl orml_tokens::Config for Test {
-    type Event = Event;
-    type Balance = Balance;
-    type Amount = i128;
-    type CurrencyId = CurrencyId;
-    type WeightInfo = ();
-    type ExistentialDeposits = ExistentialDeposits;
-    type OnDust = orml_tokens::TransferDust<Test, ()>;
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Test, ()>;
 }
 
 parameter_types! {
