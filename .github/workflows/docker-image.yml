@@ -43,6 +43,7 @@ jobs:
       - uses: docker/build-push-action@v2
         with:
           push: true
+          file: scripts/docker/release.Dockerfile
           tags: |
             bifrostnetwork/bifrost:latest
             bifrostnetwork/bifrost:${{ env.TAG }}
