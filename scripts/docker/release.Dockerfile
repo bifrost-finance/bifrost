@@ -1,4 +1,4 @@
-
+FROM ubuntu:latest as builder
 LABEL description="The first stage for building a release bifrost binary."
 
 ARG PROFILE=release
