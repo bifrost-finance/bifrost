@@ -23,7 +23,7 @@ use node_primitives::{RewardTrait};
 use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
 use codec::{Encode, Decode};
 use orml_traits::MultiCurrency;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::CurrencyId;
 
 mod mock;
 mod tests;
@@ -70,6 +70,8 @@ decl_error! {
 	pub enum Error for Module<T: Config> {
 		/// No included referer
 		RefererNotExist,
+		/// Deposit Error
+		DepositError,
 	}
 }
 
@@ -141,7 +143,7 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Modul
 			if reward.ne(&T::Balance::from(0u32)) {
 				<<T as Config>::CurrenciesHandler as MultiCurrency<
 				<T as frame_system::Config>::AccountId,
-			>>::deposit(v_token_id, &referer.account_id, reward);
+			>>::deposit(v_token_id, &referer.account_id, reward).map_err(|_| Error::<T>::DepositError)?;
 			}
 		}
 		// Clear vec and point

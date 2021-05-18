@@ -309,7 +309,7 @@ decl_module! {
 				// destroy token from user's asset_redeem(assetId, &target, amount)
 				<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::withdraw(*tk, &provider, *blc);
+				>>::withdraw(*tk, &provider, *blc)?;
 			}
 
 			Self::deposit_event(RawEvent::AddLiquiditySuccess);
@@ -365,7 +365,7 @@ decl_module! {
 			// destroy token from user's asset_redeem(asset_id, &target, amount)
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::withdraw(asset_id, &provider, token_amount_in);
+				>>::withdraw(asset_id, &provider, token_amount_in)?;
 
 			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
@@ -421,7 +421,7 @@ decl_module! {
 			// destroy token from user's asset_redeem(asset_id, &target, amount)
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::withdraw(asset_id, &provider, token_amount_in);
+				>>::withdraw(asset_id, &provider, token_amount_in)?;
 
 			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
@@ -467,7 +467,7 @@ decl_module! {
 			// update user asset
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::deposit(asset_id, &remover, token_amount);
+				>>::deposit(asset_id, &remover, token_amount)?;
 
 			// update TokenBalancesInPool map.
 			TokenBalancesInPool::<T>::mutate(pool_id, asset_id, |token_balance| {
@@ -523,7 +523,7 @@ decl_module! {
 			// update user asset
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::deposit(asset_id, &remover, token_amount);
+				>>::deposit(asset_id, &remover, token_amount)?;
 
 			// update TokenBalancesInPool map.
 			TokenBalancesInPool::<T>::mutate(pool_id, asset_id, |token_balance| {
@@ -569,7 +569,7 @@ decl_module! {
 				// issue money to user's account
 				<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::deposit(token_id, &remover, can_withdraw_amount);
+				>>::deposit(token_id, &remover, can_withdraw_amount)?;
 
 				// deduct the corresponding token balance in the pool
 				TokenBalancesInPool::<T>::mutate(pool_id, token_id, |token_balance| {
@@ -636,11 +636,11 @@ decl_module! {
 			// deducted token-in amount from the user account
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::withdraw(token_in_asset_id, &swapper, token_amount_in);
+				>>::withdraw(token_in_asset_id, &swapper, token_amount_in)?;
 			// add up token-out amount to the user account
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::deposit(token_out_asset_id, &swapper, token_amount_out);
+				>>::deposit(token_out_asset_id, &swapper, token_amount_out)?;
 
 			// update the token-in amount in the pool
 			TokenBalancesInPool::<T>::mutate(pool_id, token_in_asset_id, |token_balance| {
@@ -711,11 +711,11 @@ decl_module! {
 			// deducted token-in amount from the user account
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::withdraw(token_in_asset_id, &swapper, token_amount_in);
+				>>::withdraw(token_in_asset_id, &swapper, token_amount_in)?;
 			// add up token-out amount to the user account
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::deposit(token_out_asset_id, &swapper, token_amount_out);
+				>>::deposit(token_out_asset_id, &swapper, token_amount_out)?;
 
 			// update the token-in amount in the pool
 			TokenBalancesInPool::<T>::mutate(pool_id, token_in_asset_id, |token_balance| {
@@ -747,14 +747,15 @@ decl_module! {
 
 			Self::update_unclaimed_bonus_related_states(&claimer, pool_id)?;
 
-			UserUnclaimedBonusInPool::<T>::mutate(&claimer, pool_id, |(unclaimed_bonus_balance, _block_num)| {
+			UserUnclaimedBonusInPool::<T>::mutate(&claimer, pool_id, |(unclaimed_bonus_balance, _block_num)| -> DispatchResult{
 				// issue corresponding BNC bonus to the user's account
 				<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::deposit(T::BNCAssetId::get(), &claimer, *unclaimed_bonus_balance);
+				>>::deposit(T::BNCAssetId::get(), &claimer, *unclaimed_bonus_balance)?;
 				// mutate the user's unclaimed BNC bonus to zero
 				*unclaimed_bonus_balance = Zero::zero();
-			});
+				Ok(())
+			})?;
 
 			Ok(())
 		}
@@ -812,7 +813,7 @@ decl_module! {
 				// destroy user's token
 				<<T as Config>::CurrenciesHandler as MultiCurrency<
 					<T as frame_system::Config>::AccountId,
-				>>::withdraw(token_info.token_id, &creator, token_info.token_balance);
+				>>::withdraw(token_info.token_id, &creator, token_info.token_balance)?;
 
 				// insert TokenWeightsInPool
 				let token_normalized_weight = token_info.token_weight.saturating_mul(T::WeightPrecision::get()) / total_weight;
@@ -830,7 +831,7 @@ decl_module! {
 			UserPoolTokensInPool::<T>::insert(&creator, new_pool_id, T::InitialPoolSupply::get());
 
 			// get current block number
-			let current_block_num = <frame_system::Module<T>>::block_number();
+			let current_block_num = <frame_system::Pallet<T>>::block_number();
 			// update UserUnclaimedBonusInPool
 			UserUnclaimedBonusInPool::<T>::insert(&creator, new_pool_id, (T::Balance::from(0u32), current_block_num));
 
@@ -963,7 +964,7 @@ impl<T: Config> Module<T> {
 		};
 
 		//get current block number update unclaimed bonus in pool.
-		let current_block_num = <frame_system::Module<T>>::block_number();
+		let current_block_num = <frame_system::Pallet<T>>::block_number();
 		if UserUnclaimedBonusInPool::<T>::contains_key(&account_id, pool_id) {
 			UserUnclaimedBonusInPool::<T>::mutate(
 				&account_id,
@@ -1004,7 +1005,7 @@ impl<T: Config> Module<T> {
 	) -> Result<FixedI128<extra::U64>, Error<T>> {
 		let user_pool_token = UserPoolTokensInPool::<T>::get(&account_id, pool_id);
 		let all_pool_token = PoolTokensInPool::<T>::get(pool_id);
-		let current_block_num = <frame_system::Module<T>>::block_number(); //get current block number
+		let current_block_num = <frame_system::Pallet<T>>::block_number(); //get current block number
 
 		// get last unclaimed bonus information for the user
 		let (_last_unclaimed_amount, last_calculate_block_num) =

@@ -326,7 +326,7 @@ where
 
         match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
             Ok(imbalance) => Ok(Some(imbalance)),
-            Err(msg) => Err(InvalidTransaction::Payment.into()),
+            Err(_msg) => Err(InvalidTransaction::Payment.into()),
         }
     }
 

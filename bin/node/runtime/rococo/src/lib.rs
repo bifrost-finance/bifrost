@@ -47,9 +47,7 @@ use sp_inherents::{CheckInherentsResult, InherentData};
 use sp_runtime::traits::{
 	self, BlakeTwo256, Block as BlockT, Convert, SaturatedConversion, StaticLookup, Zero,
 };
-use sp_runtime::transaction_validity::{
-	TransactionPriority, TransactionSource, TransactionValidity,
-};
+use sp_runtime::transaction_validity::{TransactionSource, TransactionValidity};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, ApplyExtrinsicResult, DispatchResult,
 	FixedPointNumber, Perbill, Perquintill,
