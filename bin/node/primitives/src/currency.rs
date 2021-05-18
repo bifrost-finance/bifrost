@@ -91,7 +91,7 @@ impl From<CurrencyId> for TokenSymbol {
 			CurrencyId::Token(TokenSymbol::ETH) => Self::ETH,
 			CurrencyId::Token(TokenSymbol::vETH) => Self::vETH,
 			CurrencyId::Token(TokenSymbol::EOS) => Self::EOS,
-			CurrencyId::Token(TokenSymbol::EOS) => Self::vEOS,
+			CurrencyId::Token(TokenSymbol::vEOS) => Self::vEOS,
 			CurrencyId::Token(TokenSymbol::IOST) => Self::IOST,
 			CurrencyId::Token(TokenSymbol::vIOST) => Self::vIOST,
 			_ => todo!("Not support now."),
