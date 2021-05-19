@@ -45,7 +45,8 @@ pub mod module {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotEnoughCurrency,
+		NotEnoughCurrencySold,
+		NotEnoughCurrencyExpected,
 		NotFindOrderInfo,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
@@ -117,7 +118,7 @@ pub mod module {
 			let free_balance_currency_sold = T::Assets::free_balance(currency_sold, &owner);
 			ensure!(
 				free_balance_currency_sold >= amount_sold,
-				Error::<T>::NotEnoughCurrency
+				Error::<T>::NotEnoughCurrencySold
 			);
 
 			// TODO: Lock assets
@@ -208,6 +209,14 @@ pub mod module {
 			ensure!(
 				order_info.owner != from,
 				Error::<T>::ForbidClinchOrderWithinOwnership
+			);
+
+			// Check currency
+			let free_balance_currency_expected =
+				T::Assets::free_balance(order_info.currency_expected, &from);
+			ensure!(
+				free_balance_currency_expected > order_info.amount_expected,
+				Error::<T>::NotEnoughCurrencyExpected
 			);
 
 			// TODO: Exchange assets
