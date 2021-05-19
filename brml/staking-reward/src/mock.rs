@@ -24,7 +24,7 @@ use sp_core::H256;
 use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
 use node_primitives::{CurrencyId, TokenSymbol};
 pub type BlockNumber = u64;
-pub type Amount = i128;
+pub type Amount = i64;
 pub type Balance = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -60,7 +60,7 @@ impl frame_system::Config for Test {
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u128;
+	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -94,7 +94,7 @@ parameter_types! {
 	pub const ExistentialDeposit: u64 = 1;
 }
 
-impl balances::Config for Test {
+impl pallet_balances::Config for Test {
 	type Balance = u64;
 	type Event = Event;
 	type DustRemoval = ();
@@ -113,7 +113,7 @@ orml_traits::parameter_type_with_key! {
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = Balance;
-	type Amount = i128;
+	type Amount = i64;
 	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;

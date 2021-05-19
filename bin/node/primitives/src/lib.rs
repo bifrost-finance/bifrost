@@ -27,6 +27,7 @@ use sp_runtime::{
 	MultiSignature, OpaqueExtrinsic, RuntimeDebug, SaturatedConversion,
 };
 use sp_std::{convert::Into, prelude::*};
+use sp_application_crypto::TryFrom;
 
 mod currency;
 pub mod traits;
@@ -391,28 +392,28 @@ mod tests {
 
 	#[test]
 	fn currency_id_from_string_should_work() {
-		let currency_id_str = "BNC";
+		let currency_id_str = "ASG";
 		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
 		assert!(bnc_currency_id.is_ok());
 		assert_eq!(
 			bnc_currency_id.unwrap(),
-			CurrencyId::Token(TokenSymbol::BNC)
+			CurrencyId::Token(TokenSymbol::ASG)
 		);
 	}
 
 	#[test]
 	fn currency_id_ext_test_should_work() {
-		let currency_id_str = "BNC";
-		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
-		assert_eq!(bnc_currency_id.unwrap().is_native(), true);
+		let currency_id_str = "ASG";
+		let bnc_currency_id = CurrencyId::Token(TokenSymbol::ASG);
+		assert_eq!(bnc_currency_id.is_native(), true);
 		// assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
 		assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
 		assert_eq!(TokenSymbol::DOT as u8, 2u8);
 		assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
 		assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
 		assert_eq!(
-			CurrencyId::Token(TokenSymbol::BNC).get_native_token(),
-			Some(TokenSymbol::BNC)
+			CurrencyId::Token(TokenSymbol::ASG).get_native_token(),
+			Some(TokenSymbol::ASG)
 		);
 		assert_eq!(
 			CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(),
