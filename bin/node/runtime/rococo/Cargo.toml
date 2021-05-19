@@ -27,6 +27,7 @@ sp-keyring = { version = "3.0.0", optional = true }
 sp-session = { version = "3.0.0", default-features = false }
 sp-transaction-pool = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
+sp-consensus-aura = { version = "0.9.0",  default-features = false }
 
 # frame dependencies
 frame-executive = { version = "3.0.0", default-features = false }
@@ -43,41 +44,27 @@ pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
 pallet-utility = { version = "3.0.0", default-features = false }
 pallet-scheduler = { version = "3.0.0", default-features = false }
-
-# bifrost pallets
-brml-assets = { path = "../../../../brml/assets", default-features = false }
-brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
-brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
-brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
-brml-voucher = { path = "../../../../brml/voucher", default-features = false }
-brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
-brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
+pallet-aura = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
-parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
-cumulus-pallet-xcm-handler = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "rococo-v1" }
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
 
 # Polkadot dependencies
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
-
-# orml
-orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-
-# zenlink
-zenlink-protocol = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
-zenlink-protocol-runtime-api = { path = "../../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
 
 [build-dependencies]
-substrate-wasm-builder = { version = "4.0.0" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0" }
@@ -112,27 +99,17 @@ std = [
 	"sp-runtime/std",
 	"sp-session/std",
 	"sp-transaction-pool/std",
-	"sp-version/std",
-	"brml-assets/std",
-	"brml-vtoken-mint/std",
-	"brml-vtoken-mint-rpc-runtime-api/std",
-	"brml-minter-reward/std",
-	"brml-minter-reward/std",
-	'brml-voucher/std',
-	"brml-charge-transaction-fee/std",
-	"brml-charge-transaction-fee-rpc-runtime-api/std",
 	"parachain-info/std",
+	"cumulus-pallet-aura-ext/std",
+	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
+	"cumulus-pallet-xcmp-queue/std",
+	"cumulus-pallet-xcm/std",
 	"cumulus-primitives-core/std",
+	"cumulus-primitives-utility/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
-	"orml-currencies/std",
-	"orml-traits/std",
-	"orml-tokens/std",
-	"orml-xtokens/std",
-	"orml-xcm-support/std",
-	"cumulus-pallet-xcm-handler/std",
-	"brml-charge-transaction-fee/std",
-	"brml-charge-transaction-fee-rpc-runtime-api/std",
+	"pallet-aura/std",
+	"sp-consensus-aura/std",
 ]

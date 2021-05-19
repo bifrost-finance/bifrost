@@ -29,11 +29,11 @@ use node_primitives::{
 	CurrencyIdExt, CurrencyId, TokenSymbol, VtokenMintExt, MinterRewardExt
 };
 use orml_traits::{
-	account::MergeAccount, MultiCurrency,
-	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
+	currency::TransferAll,
+	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
 use sp_runtime::{Permill, traits::{Saturating, Zero}, DispatchResult};
-use zenlink_protocol::{DEXOperations};
+// use zenlink_protocol::{DEXOperations};
 
 pub use pallet::*;
 
@@ -61,7 +61,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// A handler to manipulate assets module.
-		type MultiCurrency: MergeAccount<Self::AccountId>
+		type MultiCurrency: TransferAll<Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
@@ -73,8 +73,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		/// Get swap price from zenlink module
-		type DEXOperations: DEXOperations<Self::AccountId>;
+		// /// Get swap price from zenlink module
+		// type DEXOperations: DEXOperations<Self::AccountId>;
 
 		/// Record mint reward
 		type MinterReward: MinterRewardExt<Self::AccountId, BalanceOf<Self>, CurrencyIdOf<Self>, Self::BlockNumber>;

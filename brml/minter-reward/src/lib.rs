@@ -35,10 +35,13 @@ use sp_runtime::{
 	}
 };
 use orml_traits::{
-	account::MergeAccount,
+	currency::TransferAll,
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
-use zenlink_protocol::{DEXOperations, AssetId};
+use zenlink_protocol::{
+	// DEXOperations,
+	AssetId
+};
 pub use pallet::*;
 
 mod mock;
@@ -58,7 +61,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// A handler to manipulate assets module.
-		type MultiCurrency: MergeAccount<Self::AccountId>
+		type MultiCurrency: TransferAll<Self::AccountId>
 		+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
 		+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
 		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
@@ -82,8 +85,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumExtendedPeriod: Get<BlockNumberFor<Self>>;
 
-		/// Get price from swap module to compare maximumm vtoken minted
-		type DEXOperations: DEXOperations<Self::AccountId>;
+		// /// Get price from swap module to compare maximumm vtoken minted
+		// type DEXOperations: DEXOperations<Self::AccountId>;
 
 		/// Identifier for adjusting weight
 		#[pallet::constant]
@@ -375,27 +378,28 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 			currency_id: CurrencyId
 		) -> Result<BalanceOf::<T>, Error::<T>> {
-			let ausd_amount = T::DEXOperations::get_amount_out_by_path_zenlink(
-				vtoken_amount.saturated_into(),
-				&[
-				AssetId {
-					chain_id: 1024u32,
-					module_index: 2,
-					asset_index: *currency_id as u32,
-				},
-				AssetId {
-					chain_id: 1024u32,
-					module_index: 2,
-					asset_index: 1u32,
-				}
-			]
-			)
-			.map_err(|_| Error::<T>::FailToGetSwapPrice)?
-			.last()
-			.copied()
-			.ok_or(Error::<T>::FailToGetSwapPrice)?;
-
-			Ok(BalanceOf::<T>::unique_saturated_from(ausd_amount))
+			// let ausd_amount = T::DEXOperations::get_amount_out_by_path_zenlink(
+			// 	vtoken_amount.saturated_into(),
+			// 	&[
+			// 	AssetId {
+			// 		chain_id: 1024u32,
+			// 		module_index: 2,
+			// 		asset_index: *currency_id as u32,
+			// 	},
+			// 	AssetId {
+			// 		chain_id: 1024u32,
+			// 		module_index: 2,
+			// 		asset_index: 1u32,
+			// 	}
+			// ]
+			// )
+			// .map_err(|_| Error::<T>::FailToGetSwapPrice)?
+			// .last()
+			// .copied()
+			// .ok_or(Error::<T>::FailToGetSwapPrice)?;
+			//
+			// Ok(BalanceOf::<T>::unique_saturated_from(ausd_amount))
+			Ok(BalanceOf::<T>::unique_saturated_from(0_u32))
 		}
 	}
 }

@@ -16,8 +16,6 @@
 
 #[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
-#[cfg(feature = "with-bifrost-runtime")]
-pub mod bifrost;
 #[cfg(feature = "with-rococo-runtime")]
 pub mod rococo;
 
@@ -26,10 +24,6 @@ use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
-use pallet_im_online::sr25519::{AuthorityId as ImOnlineId};
-use grandpa_primitives::{AuthorityId as GrandpaId};
-use babe_primitives::{AuthorityId as BabeId};
-use sp_authority_discovery::AuthorityId as AuthorityDiscoveryId;
 
 pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, VtokenPool};
 
@@ -78,25 +72,6 @@ pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 		AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
-/// Helper function to generate stash, controller and session key from seed
-pub fn authority_keys_from_seed(seed: &str) -> (
-	AccountId,
-	AccountId,
-	GrandpaId,
-	BabeId,
-	ImOnlineId,
-	AuthorityDiscoveryId,
-) {
-	(
-		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", seed)),
-		get_account_id_from_seed::<sr25519::Public>(seed),
-		get_from_seed::<GrandpaId>(seed),
-		get_from_seed::<BabeId>(seed),
-		get_from_seed::<ImOnlineId>(seed),
-		get_from_seed::<AuthorityDiscoveryId>(seed),
-	)
 }
 
 fn testnet_accounts() -> Vec<AccountId> {

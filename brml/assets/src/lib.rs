@@ -23,8 +23,8 @@
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::{pallet_prelude::*};
 use orml_traits::{
-	account::MergeAccount, MultiReservableCurrency,
-	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	currency::TransferAll,
+	MultiReservableCurrency, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
 };
 use sp_runtime::traits::StaticLookup;
 
@@ -48,7 +48,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type MultiCurrency: MergeAccount<Self::AccountId>
+		type MultiCurrency: TransferAll<Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId>
 			+ MultiLockableCurrency<Self::AccountId>
 			+ MultiReservableCurrency<Self::AccountId>;

@@ -28,7 +28,7 @@ use frame_support::{
 		Weight, IdentityFee, DispatchClass,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 	},
-	traits::{Currency, Filter, Imbalance, KeyOwnerProofSystem, OnUnbalanced, Randomness},
+	traits::{Currency, Filter, Imbalance, KeyOwnerProofSystem, OnUnbalanced},
 };
 use frame_system::{
 	EnsureRoot, EnsureOneOf,
@@ -461,6 +461,8 @@ impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type PrimeOrigin = EnsureRootOrHalfCouncil;
 	type MembershipInitialized = TechnicalCommittee;
 	type MembershipChanged = TechnicalCommittee;
+	type MaxMembers = TechnicalMaxMembers;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -479,6 +481,7 @@ parameter_types! {
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
 	pub const BountyValueMinimum: Balance = 5 * DOLLARS;
+	pub const MaxApprovals: u32 = 100;
 }
 
 impl pallet_treasury::Config for Runtime {
@@ -503,6 +506,7 @@ impl pallet_treasury::Config for Runtime {
 	type BurnDestination = ();
 	type SpendFunds = ();
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type MaxApprovals = MaxApprovals;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -594,7 +598,6 @@ impl pallet_offences::Config for Runtime {
 	type Event = Event;
 	type IdentificationTuple = pallet_session::historical::IdentificationTuple<Self>;
 	type OnOffenceHandler = ();
-	type WeightSoftLimit = OffencesWeightSoftLimit;
 }
 
 impl pallet_authority_discovery::Config for Runtime {}
@@ -738,10 +741,6 @@ impl_runtime_apis! {
 
 		fn check_inherents(block: Block, data: InherentData) -> CheckInherentsResult {
 			data.check_extrinsics(&block)
-		}
-
-		fn random_seed() -> <Block as BlockT>::Hash {
-			pallet_babe::RandomnessFromOneEpochAgo::<Runtime>::random_seed().0
 		}
 	}
 

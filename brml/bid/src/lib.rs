@@ -33,7 +33,7 @@ use num_traits::sign::Unsigned;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero, One};
 use sp_runtime::{DispatchError, Permill};
 use orml_traits::{
-	account::MergeAccount, MultiCurrency,
+	currency::TransferAll, MultiCurrency,
 	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
 use node_primitives::{ CurrencyIdExt, CurrencyId};
@@ -46,7 +46,7 @@ const PERMILL_INPUT_MAXIMUM_NUM: u32 = 10_000;
 pub trait Config: frame_system::Config {
 	/// Handler for both NativeCurrency and MultiCurrency
 	// type CurrenciesHandler: Currency<Self::AccountId> + MultiReservableCurrency<Self::AccountId> + MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>;
-	type CurrenciesHandler: MergeAccount<Self::AccountId>
+	type CurrenciesHandler: TransferAll<Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
 			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
 			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>;

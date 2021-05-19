@@ -40,7 +40,7 @@ fn get_exec_name() -> Option<String> {
 
 fn load_spec(
 	id: &str,
-	#[allow(unused_variables)] para_id: ParaId,
+	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
@@ -58,14 +58,6 @@ fn load_spec(
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config(para_id)),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost" | "" => Box::new(service::chain_spec::bifrost::chainspec_config()),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-dev" | "dev" => Box::new(service::chain_spec::bifrost::development_config()?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-local" | "local" => Box::new(service::chain_spec::bifrost::local_testnet_config()?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-staging" | "staging" => Box::new(service::chain_spec::bifrost::staging_testnet_config()),
 		#[cfg(feature = "with-rococo-runtime")]
 		"rococo" => Box::new(service::chain_spec::rococo::chainspec_config(para_id)),
 		#[cfg(feature = "with-rococo-runtime")]
@@ -81,11 +73,6 @@ fn load_spec(
 				{ Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?) }
 				#[cfg(not(feature = "with-asgard-runtime"))]
 				return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
-			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
-				#[cfg(feature = "with-bifrost-runtime")]
-				{ Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?) }
-				#[cfg(not(feature = "with-bifrost-runtime"))]
-				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 			} else {
 				#[cfg(feature = "with-rococo-runtime")]
 				{ Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?) }
@@ -98,7 +85,7 @@ fn load_spec(
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"bifrost-node".into()
+		"Bifrost Collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -106,7 +93,13 @@ impl SubstrateCli for Cli {
 	}
 
 	fn description() -> String {
-		env!("CARGO_PKG_DESCRIPTION").into()
+		format!(
+			"Bifrost collator\n\nThe command-line arguments provided first will be \
+		passed to the parachain node, while the arguments provided after -- will be passed \
+		to the relaychain node.\n\n\
+		{} [parachain-args] -- [relaychain-args]",
+			Self::executable_name()
+		)
 	}
 
 	fn author() -> String {
@@ -130,18 +123,10 @@ impl SubstrateCli for Cli {
 			#[cfg(feature = "with-asgard-runtime")] { &service::collator::asgard_runtime::VERSION }
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.");
-		} else if spec.is_bifrost() {
-			#[cfg(feature = "with-bifrost-runtime")] { &service::bifrost_runtime::VERSION }
-			#[cfg(not(feature = "with-bifrost-runtime"))]
-			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
-		} else if spec.is_rococo() {
+		} else {
 			#[cfg(feature = "with-rococo-runtime")] { &service::collator::rococo_runtime::VERSION }
 			#[cfg(not(feature = "with-rococo-runtime"))]
 			panic!("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.");
-		} else {
-			#[cfg(feature = "with-bifrost-runtime")] { &service::bifrost_runtime::VERSION }
-			#[cfg(not(feature = "with-bifrost-runtime"))]
-			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
 		}
 	}
 }
@@ -190,8 +175,6 @@ fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
 
 	let ss58_version = if spec.is_asgard() {
 		Ss58AddressFormat::BifrostAccount
-	} else if spec.is_bifrost() {
-		Ss58AddressFormat::BifrostAccount
 	} else {
 		Ss58AddressFormat::BifrostAccount
 	};
@@ -208,70 +191,94 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
+use service::collator::new_partial;
+#[cfg(feature = "with-asgard-runtime")]
+use service::collator::{asgard_runtime, AsgardExecutor};
+#[cfg(feature = "with-rococo-runtime")]
+use service::collator::{rococo_runtime, RococoExecutor};
+
+macro_rules! construct_async_run {
+	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+		let runner = $cli.create_runner($cmd)?;
+			#[cfg(feature = "with-asgard-runtime")]
+			return runner.async_run(|$config| {
+				let $components = new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor, _>(
+					&$config,
+					crate::service::collator::asgard_parachain_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			});
+			#[cfg(feature = "with-rococo-runtime")]
+			return runner.async_run(|$config| {
+				let $components = new_partial::<rococo_runtime::RuntimeApi, RococoExecutor, _>(
+					&$config,
+					crate::service::collator::rococo_parachain_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			});
+	}}
+}
+
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
 
 	match &cli.subcommand {
 		None => {
-			let runner = cli.create_runner(&*cli.run)?;
+			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
-				match config.role {
-					Role::Light => service::build_light(config).map_err(Into::into),
-					_ => {
-						if config.chain_spec.is_asgard() || config.chain_spec.is_rococo() {
-							let key = sp_core::Pair::generate().0;
+				let key = sp_core::Pair::generate().0;
 
-							let para_id =
-								node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+				let para_id =
+					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
-							let polkadot_cli = RelayChainCli::new(
-								&config,
-								[RelayChainCli::executable_name().to_string()]
-									.iter()
-									.chain(cli.relaychain_args.iter()),
-							);
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name().to_string()]
+						.iter()
+						.chain(cli.relaychain_args.iter()),
+				);
 
-							let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(2001));
+				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(2001));
 
-							let parachain_account =
-								AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
+				let parachain_account =
+					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
 
-							let block: Block =
-								generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
-							let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+				let block: Block =
+					generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
+				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
-							let task_executor = config.task_executor.clone();
-							let polkadot_config = SubstrateCli::create_configuration(
-								&polkadot_cli,
-								&polkadot_cli,
-								task_executor,
-							).map_err(|err| format!("Relay chain argument error: {}", err))?;
-							let collator = cli.run.base.validator;
+				let task_executor = config.task_executor.clone();
+				let polkadot_config =
+					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
+						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
-							info!("Parachain id: {:?}", id);
-							info!("Parachain Account: {}", parachain_account);
-							info!("Parachain genesis state: {}", genesis_state);
-							info!("Is collating: {}", if collator { "yes" } else { "no" });
+				info!("Parachain id: {:?}", id);
+				info!("Parachain Account: {}", parachain_account);
+				info!("Parachain genesis state: {}", genesis_state);
+				info!(
+					"Is collating: {}",
+					if config.role.is_authority() {
+						"yes"
+					} else {
+						"no"
+					}
+				);
 
-							service::collator::start_node(config, key, polkadot_config, id, collator)
-								.await
-								.map_err(Into::into)
-						} else {
-							service::build_full(config)
-								.map_err(Into::into)
-						}
-					},
-				}.map_err(sc_cli::Error::Service)
+				service::collator::start_node(config, key, polkadot_config, id)
+					.await
+					.map_err(Into::into)
 			})
 		}
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
 			runner.sync_run(|config| cmd.run::<
-				service::bifrost_runtime::Block,
-				service::bifrost_runtime::RuntimeApi,
-				service::BifrostExecutor
+				service::rococo_runtime::Block,
+				service::rococo_runtime::RuntimeApi,
+				service::RococoExecutor
 			>(config))
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
@@ -279,8 +286,8 @@ pub fn run() -> Result<()> {
 				let runner = cli.create_runner(cmd)?;
 
 				runner.sync_run(|config| cmd.run::<
-					service::bifrost_runtime::Block,
-					service::BifrostExecutor
+					service::rococo_runtime::Block,
+					service::RococoExecutor
 				>(config))
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
@@ -295,73 +302,50 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		},
-		Some(Subcommand::CheckBlock(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-
-			set_default_ss58_version(chain_spec);
-
-			runner.async_run(|mut config| {
-				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
-			})
-		},
-		Some(Subcommand::ExportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-
-			set_default_ss58_version(chain_spec);
-
-			Ok(runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, config.database), task_manager))
-			})?)
-		},
-		Some(Subcommand::ExportState(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-
-			set_default_ss58_version(chain_spec);
-
-			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, config.chain_spec), task_manager))
-			})
-		},
-		Some(Subcommand::ImportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
-
-			set_default_ss58_version(chain_spec);
-
-			runner.async_run(|mut config| {
-				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
-			})
-		},
+		Some(Subcommand::CheckBlock(cmd)) => construct_async_run! (|components, cli, cmd, config| {
+			Ok(cmd.run(components.client, components.import_queue))
+		}),
+		Some(Subcommand::ExportBlocks(cmd)) => construct_async_run! (|components, cli, cmd, config| {
+			Ok(cmd.run(components.client, config.database))
+		}),
+		Some(Subcommand::ExportState(cmd)) => construct_async_run! (|components, cli, cmd, config| {
+			Ok(cmd.run(components.client, config.chain_spec))
+		}),
+		Some(Subcommand::ImportBlocks(cmd)) => construct_async_run! (|components, cli, cmd, config| {
+			Ok(cmd.run(components.client, components.import_queue))
+		}),
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.database))
-		},
-		Some(Subcommand::Revert(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			let chain_spec = &runner.config().chain_spec;
 
-			set_default_ss58_version(chain_spec);
+			runner.sync_run(|config| {
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name().to_string()]
+						.iter()
+						.chain(cli.relaychain_args.iter()),
+				);
 
-			runner.async_run(|mut config| {
-				let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, backend), task_manager))
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.task_executor.clone(),
+				)
+					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+				cmd.run(config, polkadot_config)
 			})
 		}
+		Some(Subcommand::Revert(cmd)) => construct_async_run! (|components, cli, cmd, config| {
+			Ok(cmd.run(components.client, components.backend))
+		}),
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let block: Block = generate_genesis_block(&load_spec(
+			let block: crate::service::Block = generate_genesis_block(&load_spec(
 				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.into(),
+				params.parachain_id.unwrap_or(2001).into(),
 			)?)?;
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
