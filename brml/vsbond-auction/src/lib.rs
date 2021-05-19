@@ -4,6 +4,9 @@ use orml_traits::{
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
 
+mod mock;
+mod tests;
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct OrderInfo<T: Config> {
 	owner: AccountIdOf<T>,

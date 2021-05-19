@@ -10920,8 +10920,13 @@ version = "0.7.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "node-primitives",
+ "orml-assets",
  "orml-traits",
  "parity-scale-codec 2.0.0",
+ "serde",
+ "sp-core",
+ "sp-runtime",
 ]
 
 [[package]]
