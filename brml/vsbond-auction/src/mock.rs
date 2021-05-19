@@ -6,7 +6,7 @@ use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{OnFinalize, OnInitialize},
 };
-use node_primitives::{Balance, AssetId, Amount};
+use node_primitives::{Amount, AssetId, Balance};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -66,8 +66,8 @@ orml_traits::parameter_type_with_key! {
 impl orml_assets::Config for Test {
 	type Event = Event;
 	type Balance = Balance;
-    type Amount = Amount;
-    type CurrencyId = AssetId;
+	type Amount = Amount;
+	type CurrencyId = AssetId;
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
@@ -77,4 +77,12 @@ impl vsbond_auction::Config for Test {
 	type Event = Event;
 
 	type Assets = orml_assets::Pallet<Self>;
+}
+
+// mockup runtime
+pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
+	frame_system::GenesisConfig::default()
+		.build_storage::<Test>()
+		.unwrap()
+		.into()
 }
