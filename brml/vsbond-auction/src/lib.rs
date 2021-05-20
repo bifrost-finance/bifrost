@@ -1,7 +1,8 @@
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use orml_traits::{
-	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
+	LockIdentifier, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	MultiReservableCurrency,
 };
 
 mod mock;
@@ -121,8 +122,6 @@ pub mod module {
 				Error::<T>::NotEnoughCurrencySold
 			);
 
-			// TODO: Lock assets
-
 			// Create order
 			let order_id = Self::next_order_id();
 			let order_info = OrderInfo::<T> {
@@ -137,6 +136,10 @@ pub mod module {
 
 			TotalOrders::<T>::insert(order_id, order_info);
 			SellerOrders::<T>::mutate(owner.clone(), currency_sold, |orders| orders.push(order_id));
+
+			// Lock the balance of currency_sold
+			let lock_iden = order_id.to_be_bytes();
+			T::Assets::set_lock(lock_iden, currency_sold, &owner, amount_sold);
 
 			Self::deposit_event(Event::OrderCreated(
 				order_id,
@@ -173,7 +176,9 @@ pub mod module {
 				Error::<T>::ForbidRevokeOrderWithoutOwnership
 			);
 
-			// TODO: Unlock assets
+			// Unlock the balance of currency_sold
+			let lock_iden = order_info.order_id.to_be_bytes();
+			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &from);
 
 			// Revoke order
 			TotalOrders::<T>::mutate(order_id, |oi| match oi {
@@ -205,21 +210,37 @@ pub mod module {
 			);
 
 			// Check origin
-			let from = ensure_signed(origin)?;
+			let buyer = ensure_signed(origin)?;
 			ensure!(
-				order_info.owner != from,
+				order_info.owner != buyer,
 				Error::<T>::ForbidClinchOrderWithinOwnership
 			);
 
 			// Check currency
 			let free_balance_currency_expected =
-				T::Assets::free_balance(order_info.currency_expected, &from);
+				T::Assets::free_balance(order_info.currency_expected, &buyer);
 			ensure!(
-				free_balance_currency_expected > order_info.amount_expected,
+				free_balance_currency_expected >= order_info.amount_expected,
 				Error::<T>::NotEnoughCurrencyExpected
 			);
 
-			// TODO: Exchange assets
+			// Unlock the balance of currency_sold
+			let lock_iden = order_info.order_id.to_be_bytes();
+			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &order_info.owner);
+
+			// Exchange assets
+			T::Assets::transfer(
+				order_info.currency_sold,
+				&order_info.owner,
+				&buyer,
+				order_info.amount_sold,
+			);
+			T::Assets::transfer(
+				order_info.currency_expected,
+				&buyer,
+				&order_info.owner,
+				order_info.amount_expected,
+			);
 
 			// Clinch order
 			TotalOrders::<T>::mutate(order_id, |oi| match oi {
@@ -229,7 +250,7 @@ pub mod module {
 				_ => {}
 			});
 
-			Self::deposit_event(Event::<T>::OrderClinchd(order_id, order_info.owner, from));
+			Self::deposit_event(Event::<T>::OrderClinchd(order_id, order_info.owner, buyer));
 
 			Ok(().into())
 		}
@@ -243,6 +264,8 @@ impl<T: Config> Pallet<T> {
 		next_order_id
 	}
 }
+
+// TODO: Maybe impl Auction trait for vsbond-auction
 
 #[allow(type_alias_bounds)]
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;

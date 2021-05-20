@@ -47,7 +47,6 @@ fn create_order_by_origin_illegal_should_fail() {
 fn create_order_without_enough_currency_should_fail() {
 	// TODO: Need Init Genesis State
 	todo!()
-
 }
 
 #[test]
