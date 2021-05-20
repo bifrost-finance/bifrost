@@ -277,13 +277,6 @@ parameter_types! {
 	pub const UncleGenerations: BlockNumber = 5;
 }
 
-impl pallet_authorship::Config for Runtime {
-	type FindAuthor = ();
-	type UncleGenerations = UncleGenerations;
-	type FilterUncle = ();
-	type EventHandler = ();
-}
-
 impl_opaque_keys! {
 	pub struct SessionKeys {}
 }
@@ -530,19 +523,19 @@ construct_runtime!(
 	{
 		// Basic stuff
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 1,
-		Utility: pallet_utility::{Pallet, Call, Event} = 31,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 32,
-
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 2,
-		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 3,
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 4,
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 5,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 6,
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 5,
 
 		// parachain modules
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 20,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
+
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
+		Utility: pallet_utility::{Pallet, Call, Event} = 41,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 42,
 
 		Aura: pallet_aura::{Pallet, Config<T>},
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
