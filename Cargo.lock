@@ -612,6 +612,61 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-runtime"
+version = "0.7.0"
+dependencies = [
+ "cumulus-pallet-aura-ext",
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-utility",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-rpc-runtime-api",
+ "hex-literal 0.3.1",
+ "log",
+ "node-primitives",
+ "pallet-aura",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-indices",
+ "pallet-randomness-collective-flip",
+ "pallet-scheduler",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-utility",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "serde",
+ "sp-api",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-keyring 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder 4.0.0",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+]
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5135,6 +5190,7 @@ name = "node-service"
 version = "0.7.0"
 dependencies = [
  "asgard-runtime",
+ "bifrost-runtime",
  "brml-charge-transaction-fee-rpc",
  "bs58 0.3.1",
  "cumulus-client-collator",
@@ -5160,7 +5216,6 @@ dependencies = [
  "parking_lot 0.11.1",
  "polkadot-primitives",
  "polkadot-service",
- "rococo-runtime 0.7.0",
  "sc-authority-discovery",
  "sc-basic-authorship",
  "sc-block-builder",
@@ -7330,7 +7385,7 @@ dependencies = [
  "polkadot-runtime",
  "polkadot-runtime-parachains",
  "polkadot-statement-distribution",
- "rococo-runtime 0.9.1",
+ "rococo-runtime",
  "sc-authority-discovery",
  "sc-basic-authorship",
  "sc-block-builder",
@@ -8045,61 +8100,6 @@ checksum = "c749134fda8bfc90d0de643d59bfc841dcb3ac8a1062e12b6754bd60235c48b3"
 dependencies = [
  "libc",
  "librocksdb-sys",
-]
-
-[[package]]
-name = "rococo-runtime"
-version = "0.7.0"
-dependencies = [
- "cumulus-pallet-aura-ext",
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
- "cumulus-primitives-utility",
- "frame-executive",
- "frame-support",
- "frame-system",
- "frame-system-rpc-runtime-api",
- "hex-literal 0.3.1",
- "log",
- "node-primitives",
- "pallet-aura",
- "pallet-authorship",
- "pallet-balances",
- "pallet-indices",
- "pallet-randomness-collective-flip",
- "pallet-scheduler",
- "pallet-sudo",
- "pallet-timestamp",
- "pallet-transaction-payment",
- "pallet-transaction-payment-rpc-runtime-api",
- "pallet-utility",
- "pallet-xcm",
- "parachain-info",
- "parity-scale-codec",
- "polkadot-parachain",
- "serde",
- "sp-api",
- "sp-block-builder",
- "sp-consensus-aura",
- "sp-consensus-babe",
- "sp-core",
- "sp-inherents",
- "sp-io",
- "sp-keyring 3.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sp-offchain",
- "sp-runtime",
- "sp-session",
- "sp-std",
- "sp-transaction-pool",
- "sp-version",
- "static_assertions",
- "substrate-wasm-builder 4.0.0",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
@@ -11351,7 +11351,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.3.23",
+ "rand 0.7.3",
  "static_assertions",
 ]
 

@@ -80,7 +80,7 @@ serde_json = "1.0.60"
 
 # Runtimes
 asgard-runtime = { path = "../runtime/asgard", optional = true }
-rococo-runtime = { path = "../runtime/rococo", optional = true }
+bifrost-runtime = { path = "../runtime/bifrost", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
@@ -102,11 +102,11 @@ std = []
 with-asgard-runtime = [
 	"asgard-runtime",
 ]
-with-rococo-runtime = [
-	"rococo-runtime",
+with-bifrost-runtime = [
+	"bifrost-runtime",
 ]
 with-all-runtime = [
 	"asgard-runtime",
-	"rococo-runtime",
+	"bifrost-runtime",
 ]
 

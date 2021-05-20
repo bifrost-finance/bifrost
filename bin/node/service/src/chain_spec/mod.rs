@@ -16,8 +16,8 @@
 
 #[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
-#[cfg(feature = "with-rococo-runtime")]
-pub mod rococo;
+#[cfg(feature = "with-bifrost-runtime")]
+pub mod bifrost;
 
 use hex_literal::hex;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};

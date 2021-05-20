@@ -160,10 +160,10 @@ runtime-benchmarks = [
 with-asgard-runtime = [
 	"node-service/with-asgard-runtime",
 ]
-with-rococo-runtime = [
-	"node-service/with-rococo-runtime",
+with-bifrost-runtime = [
+	"node-service/with-bifrost-runtime",
 ]
 with-all-runtime = [
 	"with-asgard-runtime",
-	"with-rococo-runtime",
+	"with-bifrost-runtime",
 ]

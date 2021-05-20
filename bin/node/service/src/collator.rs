@@ -48,8 +48,8 @@ type Hash = sp_core::H256;
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
 
-#[cfg(feature = "with-rococo-runtime")]
-pub use rococo_runtime;
+#[cfg(feature = "with-bifrost-runtime")]
+pub use bifrost_runtime;
 
 #[cfg(feature = "with-asgard-runtime")]
 native_executor_instance!(
@@ -58,11 +58,11 @@ native_executor_instance!(
 	asgard_runtime::native_version,
 );
 
-#[cfg(feature = "with-rococo-runtime")]
+#[cfg(feature = "with-bifrost-runtime")]
 native_executor_instance!(
-	pub RococoExecutor,
-	rococo_runtime::api::dispatch,
-	rococo_runtime::native_version,
+	pub BifrostExecutor,
+	bifrost_runtime::api::dispatch,
+	bifrost_runtime::native_version,
 );
 
 /// Starts a `ServiceBuilder` for a full service.
@@ -384,17 +384,17 @@ pub fn asgard_parachain_build_import_queue(
 		.map_err(Into::into)
 }
 
-/// Build the import queue for the rococo runtime.
-#[cfg(feature = "with-rococo-runtime")]
-pub fn rococo_parachain_build_import_queue(
-	client: Arc<TFullClient<Block, rococo_runtime::RuntimeApi, RococoExecutor>>,
+/// Build the import queue for the bifrost runtime.
+#[cfg(feature = "with-bifrost-runtime")]
+pub fn bifrost_parachain_build_import_queue(
+	client: Arc<TFullClient<Block, bifrost_runtime::RuntimeApi, BifrostExecutor>>,
 	config: &Configuration,
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
 	sp_consensus::DefaultImportQueue<
 		Block,
-		TFullClient<Block, rococo_runtime::RuntimeApi, RococoExecutor>,
+		TFullClient<Block, bifrost_runtime::RuntimeApi, BifrostExecutor>,
 	>,
 	sc_service::Error,
 > {
@@ -532,14 +532,14 @@ pub async fn start_node(
 		#[cfg(not(feature = "with-asgard-runtime"))]
 		return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 	} else {
-		#[cfg(feature = "with-rococo-runtime")]
-		return start_node_impl::<rococo_runtime::RuntimeApi, RococoExecutor, _, _, _>(
+		#[cfg(feature = "with-bifrost-runtime")]
+		return start_node_impl::<bifrost_runtime::RuntimeApi, BifrostExecutor, _, _, _>(
 			parachain_config,
 			collator_key,
 			polkadot_config,
 			id,
 			|_| Default::default(),
-			rococo_parachain_build_import_queue,
+			bifrost_parachain_build_import_queue,
 			|client,
 			 prometheus_registry,
 			 telemetry,
@@ -615,7 +615,7 @@ pub async fn start_node(
 				}))
 			},
 		).await.map(|full| full.0);
-		#[cfg(not(feature = "with-rococo-runtime"))]
-		return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
+		#[cfg(not(feature = "with-bifrost-runtime"))]
+		return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 	}
 }

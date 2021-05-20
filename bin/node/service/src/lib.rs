@@ -27,8 +27,8 @@ pub trait IdentifyVariant {
     /// Returns if this is a configuration for the `Asgard` network.
     fn is_asgard(&self) -> bool;
 
-    /// Returns if this is a configuration for the `Rococo` network.
-    fn is_rococo(&self) -> bool;
+    /// Returns if this is a configuration for the `Bifrost` network.
+    fn is_bifrost(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
@@ -36,7 +36,7 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
         self.id().starts_with("asgard") || self.id().starts_with("asg")
     }
 
-    fn is_rococo(&self) -> bool {
-        self.id().starts_with("bifrost_pc1") || self.id().starts_with("roc")
+    fn is_bifrost(&self) -> bool {
+        self.id().starts_with("bifrost") || self.id().starts_with("bnc")
     }
 }

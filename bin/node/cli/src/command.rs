@@ -58,14 +58,14 @@ fn load_spec(
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config(para_id)),
-		#[cfg(feature = "with-rococo-runtime")]
-		"rococo" => Box::new(service::chain_spec::rococo::chainspec_config(para_id)),
-		#[cfg(feature = "with-rococo-runtime")]
-		"rococo-dev" => Box::new(service::chain_spec::rococo::development_config(para_id)?),
-		#[cfg(feature = "with-rococo-runtime")]
-		"rococo-local" => Box::new(service::chain_spec::rococo::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-rococo-runtime")]
-		"rococo-staging" => Box::new(service::chain_spec::rococo::staging_testnet_config(para_id)),
+		#[cfg(feature = "with-bifrost-runtime")]
+		"bifrost" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
+		#[cfg(feature = "with-bifrost-runtime")]
+		"bifrost-dev" => Box::new(service::chain_spec::bifrost::development_config(para_id)?),
+		#[cfg(feature = "with-bifrost-runtime")]
+		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
+		#[cfg(feature = "with-bifrost-runtime")]
+		"bifrost-staging" => Box::new(service::chain_spec::bifrost::staging_testnet_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
@@ -74,10 +74,10 @@ fn load_spec(
 				#[cfg(not(feature = "with-asgard-runtime"))]
 				return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 			} else {
-				#[cfg(feature = "with-rococo-runtime")]
-				{ Box::new(service::chain_spec::rococo::ChainSpec::from_json_file(path)?) }
-				#[cfg(not(feature = "with-rococo-runtime"))]
-				return Err("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.".into());
+				#[cfg(feature = "with-bifrost-runtime")]
+				{ Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?) }
+				#[cfg(not(feature = "with-bifrost-runtime"))]
+				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 			}
 		}
 	})
@@ -124,9 +124,9 @@ impl SubstrateCli for Cli {
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.");
 		} else {
-			#[cfg(feature = "with-rococo-runtime")] { &service::collator::rococo_runtime::VERSION }
-			#[cfg(not(feature = "with-rococo-runtime"))]
-			panic!("Rococo runtime is not available. Please compile the node with `--features with-rococo-runtime` to enable it.");
+			#[cfg(feature = "with-bifrost-runtime")] { &service::collator::bifrost_runtime::VERSION }
+			#[cfg(not(feature = "with-bifrost-runtime"))]
+			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
 		}
 	}
 }
@@ -144,7 +144,7 @@ impl SubstrateCli for RelayChainCli {
 		"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
-		rococo-collator [parachain-args] -- [relaychain-args]"
+		bifrost-collator [parachain-args] -- [relaychain-args]"
 			.into()
 	}
 
@@ -194,8 +194,8 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 use service::collator::new_partial;
 #[cfg(feature = "with-asgard-runtime")]
 use service::collator::{asgard_runtime, AsgardExecutor};
-#[cfg(feature = "with-rococo-runtime")]
-use service::collator::{rococo_runtime, RococoExecutor};
+#[cfg(feature = "with-bifrost-runtime")]
+use service::collator::{bifrost_runtime, BifrostExecutor};
 
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
@@ -209,11 +209,11 @@ macro_rules! construct_async_run {
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
 			});
-			#[cfg(feature = "with-rococo-runtime")]
+			#[cfg(feature = "with-bifrost-runtime")]
 			return runner.async_run(|$config| {
-				let $components = new_partial::<rococo_runtime::RuntimeApi, RococoExecutor, _>(
+				let $components = new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor, _>(
 					&$config,
-					crate::service::collator::rococo_parachain_build_import_queue,
+					crate::service::collator::bifrost_parachain_build_import_queue,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
@@ -276,9 +276,9 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(cmd)?;
 
 			runner.sync_run(|config| cmd.run::<
-				service::rococo_runtime::Block,
-				service::rococo_runtime::RuntimeApi,
-				service::RococoExecutor
+				service::bifrost_runtime::Block,
+				service::bifrost_runtime::RuntimeApi,
+				service::BifrostExecutor
 			>(config))
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
@@ -286,8 +286,8 @@ pub fn run() -> Result<()> {
 				let runner = cli.create_runner(cmd)?;
 
 				runner.sync_run(|config| cmd.run::<
-					service::rococo_runtime::Block,
-					service::RococoExecutor
+					service::bifrost_runtime::Block,
+					service::BifrostExecutor
 				>(config))
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \

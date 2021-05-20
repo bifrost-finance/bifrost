@@ -5,7 +5,7 @@ members = [
 	"bin/node/primitives",
 	"bin/node/rpc",
 	"bin/node/runtime/asgard",
-	"bin/node/runtime/rococo",
+	"bin/node/runtime/bifrost",
 	"bin/node/service",
 	"bin/utils/subkey",
 	"brml/assets",
@@ -195,6 +195,3 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
 substrate-frame-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
-
-# Apple M1
-#rocksdb = { git = "https://github.com/hdevalence/rust-rocksdb", rev = "33cd4281570b229b628d6d827fa0053cff57000a" }
