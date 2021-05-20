@@ -1,8 +1,7 @@
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use orml_traits::{
-	LockIdentifier, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-	MultiReservableCurrency,
+	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
 
 mod mock;
@@ -139,7 +138,7 @@ pub mod module {
 
 			// Lock the balance of currency_sold
 			let lock_iden = order_id.to_be_bytes();
-			T::Assets::set_lock(lock_iden, currency_sold, &owner, amount_sold);
+			T::Assets::set_lock(lock_iden, currency_sold, &owner, amount_sold)?;
 
 			Self::deposit_event(Event::OrderCreated(
 				order_id,
@@ -178,7 +177,7 @@ pub mod module {
 
 			// Unlock the balance of currency_sold
 			let lock_iden = order_info.order_id.to_be_bytes();
-			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &from);
+			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &from)?;
 
 			// Revoke order
 			TotalOrders::<T>::mutate(order_id, |oi| match oi {
@@ -226,7 +225,7 @@ pub mod module {
 
 			// Unlock the balance of currency_sold
 			let lock_iden = order_info.order_id.to_be_bytes();
-			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &order_info.owner);
+			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &order_info.owner)?;
 
 			// Exchange assets
 			T::Assets::transfer(
@@ -234,13 +233,13 @@ pub mod module {
 				&order_info.owner,
 				&buyer,
 				order_info.amount_sold,
-			);
+			)?;
 			T::Assets::transfer(
 				order_info.currency_expected,
 				&buyer,
 				&order_info.owner,
 				order_info.amount_expected,
-			);
+			)?;
 
 			// Clinch order
 			TotalOrders::<T>::mutate(order_id, |oi| match oi {
