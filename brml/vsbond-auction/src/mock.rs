@@ -2,10 +2,7 @@
 
 use crate as vsbond_auction;
 
-use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{OnFinalize, OnInitialize},
-};
+use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
 use node_primitives::{Amount, AssetId, Balance};
 use sp_core::H256;
 use sp_runtime::{
@@ -81,8 +78,20 @@ impl vsbond_auction::Config for Test {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
+	let mut fs_gc = frame_system::GenesisConfig::default()
 		.build_storage::<Test>()
-		.unwrap()
-		.into()
+		.unwrap();
+
+	orml_assets::GenesisConfig::<Test> {
+		endowed_accounts: vec![
+			// alice, currency `1`, amount `100`
+			(1, 1, 100),
+			// bob, currency `2`, amount `100`
+			(2, 2, 100),
+		],
+	}
+	.assimilate_storage(&mut fs_gc)
+	.unwrap();
+
+	fs_gc.into()
 }

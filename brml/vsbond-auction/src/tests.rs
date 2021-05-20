@@ -4,8 +4,6 @@ use crate::mock::*;
 use crate::*;
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 
-fn storages_initialization() {}
-
 fn create_order_for_test(
 	owner: AccountIdOf<Test>,
 	currency_sold: CurrencyIdOf<Test>,
@@ -33,20 +31,39 @@ fn create_order_for_test(
 
 #[test]
 fn create_order_should_work() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		assert_ok!(VSBondAuction::create_order(
+			Origin::signed(1),
+			1,
+			100,
+			2,
+			100
+		),);
+	});
 }
 
 #[test]
 fn create_order_by_origin_illegal_should_fail() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			VSBondAuction::create_order(Origin::root(), 1, 100, 2, 100,),
+			DispatchError::BadOrigin,
+		);
+		assert_noop!(
+			VSBondAuction::create_order(Origin::none(), 1, 100, 2, 100,),
+			DispatchError::BadOrigin,
+		);
+	});
 }
 
 #[test]
 fn create_order_without_enough_currency_should_fail() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			VSBondAuction::create_order(Origin::signed(1), 1, 1_000, 2, 100,),
+			Error::<Test>::NotEnoughCurrencySold,
+		);
+	});
 }
 
 #[test]
@@ -107,24 +124,70 @@ fn revoke_order_not_in_trade_should_fail() {
 
 #[test]
 fn clinch_order_should_work() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		let order_id = create_order_for_test(1, 1, 100, 2, 100, OrderState::InTrade);
+
+		assert_ok!(VSBondAuction::clinch_order(Origin::signed(2), order_id));
+	});
 }
 
 #[test]
 fn clinch_order_not_exist_should_fail() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		let order_id = create_order_for_test(1, 1, 100, 2, 100, OrderState::InTrade);
+
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::signed(2), order_id + 1),
+			Error::<Test>::NotFindOrderInfo
+		);
+	});
 }
 
 #[test]
 fn clinck_order_by_origin_illegal_should_fail() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		let order_id = create_order_for_test(1, 1, 100, 2, 100, OrderState::InTrade);
+
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::root(), order_id),
+			DispatchError::BadOrigin
+		);
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::signed(1), order_id),
+			Error::<Test>::ForbidClinchOrderWithinOwnership
+		);
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::none(), order_id),
+			DispatchError::BadOrigin
+		);
+	});
 }
 
 #[test]
 fn clinch_order_not_in_trade_should_fail() {
-	// TODO: Need Init Genesis State
-	todo!()
+	new_test_ext().execute_with(|| {
+		let order_id_revoked = create_order_for_test(1, 1, 100, 2, 100, OrderState::Revoked);
+		let order_id_clinchd = create_order_for_test(1, 1, 100, 2, 100, OrderState::Clinchd);
+
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::signed(2), order_id_revoked),
+			Error::<Test>::ForbidClinchOrderNotInTrade
+		);
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::signed(2), order_id_clinchd),
+			Error::<Test>::ForbidClinchOrderNotInTrade
+		);
+	});
+}
+
+#[test]
+fn clinch_order_without_enough_currency_expected_should_fail() {
+	new_test_ext().execute_with(|| {
+		let order_id = create_order_for_test(1, 1, 100, 2, 1_000, OrderState::InTrade);
+
+		assert_noop!(
+			VSBondAuction::clinch_order(Origin::signed(2), order_id),
+			Error::<Test>::NotEnoughCurrencyExpected
+		);
+	});
 }
