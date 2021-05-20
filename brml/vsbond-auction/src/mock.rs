@@ -2,6 +2,7 @@
 
 use crate as vsbond_auction;
 
+use crate::{AccountIdOf, BalanceOf, CurrencyIdOf};
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
 use node_primitives::{Amount, AssetId, Balance};
 use sp_core::H256;
@@ -84,10 +85,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	orml_assets::GenesisConfig::<Test> {
 		endowed_accounts: vec![
-			// alice, currency `1`, amount `100`
-			(1, 1, 100),
-			// bob, currency `2`, amount `100`
-			(2, 2, 100),
+			(ACCOUNT_ALICE, CURRENCY_OWNED_BY_ALICE, BALANCE_OWNED),
+			(ACCOUNT_BRUCE, CURRENCY_OWNED_BY_BRUCE, BALANCE_OWNED),
 		],
 	}
 	.assimilate_storage(&mut fs_gc)
@@ -95,3 +94,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	fs_gc.into()
 }
+
+pub(crate) const ACCOUNT_ALICE: AccountIdOf<Test> = 1;
+pub(crate) const ACCOUNT_BRUCE: AccountIdOf<Test> = 2;
+pub(crate) const CURRENCY_OWNED_BY_ALICE: CurrencyIdOf<Test> = 1;
+pub(crate) const CURRENCY_OWNED_BY_BRUCE: CurrencyIdOf<Test> = 2;
+pub(crate) const BALANCE_OWNED: BalanceOf<Test> = 1_000;
+pub(crate) const BALANCE_EXCEEDED: BalanceOf<Test> = BALANCE_OWNED + 1;
