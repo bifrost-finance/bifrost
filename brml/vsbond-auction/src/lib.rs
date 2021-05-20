@@ -48,6 +48,7 @@ pub mod module {
 		NotEnoughCurrencySold,
 		NotEnoughCurrencyExpected,
 		NotFindOrderInfo,
+		ForbidCreateOrderWithSameCurrency,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
@@ -119,6 +120,11 @@ pub mod module {
 			ensure!(
 				free_balance_currency_sold >= amount_sold,
 				Error::<T>::NotEnoughCurrencySold
+			);
+
+			ensure!(
+				currency_sold != currency_expected,
+				Error::<T>::ForbidCreateOrderWithSameCurrency
 			);
 
 			// Create order

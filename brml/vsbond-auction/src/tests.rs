@@ -95,6 +95,22 @@ fn create_order_without_enough_currency_should_fail() {
 }
 
 #[test]
+fn create_order_with_same_currency_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(
+			VSBondAuction::create_order(
+				Origin::signed(ACCOUNT_ALICE),
+				CURRENCY_OWNED_BY_ALICE,
+				BALANCE_OWNED,
+				CURRENCY_OWNED_BY_ALICE,
+				BALANCE_OWNED,
+			),
+			Error::<Test>::ForbidCreateOrderWithSameCurrency
+		);
+	});
+}
+
+#[test]
 fn revoke_order_should_work() {
 	new_test_ext().execute_with(|| {
 		let order_id = create_order_for_test(
