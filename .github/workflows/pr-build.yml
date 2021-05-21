@@ -38,7 +38,7 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
       - name: Check
-        run: cargo update -p environmental && cargo check --features with-bifrost-runtime
+        run: cargo check --features with-bifrost-runtime
       - name: Run tests
         run: cargo test --features with-bifrost-runtime
       - uses: 8398a7/action-slack@v3
