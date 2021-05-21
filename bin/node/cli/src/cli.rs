@@ -18,22 +18,6 @@ use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
 use structopt::StructOpt;
 use std::path::PathBuf;
 
-/// An overarching CLI command definition.
-#[derive(Debug, StructOpt)]
-pub struct Cli {
-    /// Possible subcommand with parameters.
-    #[structopt(subcommand)]
-    pub subcommand: Option<Subcommand>,
-
-    #[allow(missing_docs)]
-    #[structopt(flatten)]
-    pub run: RunCmd,
-
-    /// Relaychain arguments
-    #[structopt(raw = true)]
-    pub relaychain_args: Vec<String>,
-}
-
 /// Possible subcommands of the main binary.
 #[derive(Debug, StructOpt)]
 pub enum Subcommand {
@@ -42,10 +26,10 @@ pub enum Subcommand {
 
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
 	#[structopt(
-	name = "inspect",
-	about = "Decode given block or extrinsic using current native runtime."
+		name = "inspect",
+		about = "Decode given block or extrinsic using current native runtime."
 	)]
-	Inspect(node_inspect::cli::InspectCmd),
+	Inspect(node_inspect::cli::InspectKeyCmd),
 
 	/// The custom benchmark subcommmand benchmarking runtime pallets.
 	#[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
@@ -76,7 +60,7 @@ pub enum Subcommand {
 	ImportBlocks(sc_cli::ImportBlocksCmd),
 
 	/// Remove the whole chain.
-	PurgeChain(cumulus_cli::PurgeChainCmd),
+	PurgeChain(cumulus_client_cli::PurgeChainCmd),
 
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
@@ -98,8 +82,10 @@ pub struct ExportGenesisStateCommand {
 	pub output: Option<PathBuf>,
 
 	/// Id of the parachain this state is for.
-	#[structopt(long, default_value = "100")]
-	pub parachain_id: u32,
+	///
+	/// default 2001
+	#[structopt(long)]
+	pub parachain_id: Option<u32>,
 
 	/// Write output in binary. Default is to write in hex.
 	#[structopt(short, long)]
@@ -126,24 +112,22 @@ pub struct ExportGenesisWasmCommand {
 	pub chain: Option<String>,
 }
 
-#[allow(missing_docs)]
 #[derive(Debug, StructOpt)]
-pub struct RunCmd {
-    #[allow(missing_docs)]
-    #[structopt(flatten)]
-    pub base: sc_cli::RunCmd,
+#[structopt(settings = &[
+	structopt::clap::AppSettings::GlobalVersion,
+	structopt::clap::AppSettings::ArgsNegateSubcommands,
+	structopt::clap::AppSettings::SubcommandsNegateReqs,
+])]
+pub struct Cli {
+	#[structopt(subcommand)]
+	pub subcommand: Option<Subcommand>,
 
-    /// Id of the parachain this collator collates for.
-    #[structopt(long)]
-    pub parachain_id: Option<u32>,
-}
+	#[structopt(flatten)]
+	pub run: cumulus_client_cli::RunCmd,
 
-impl std::ops::Deref for RunCmd {
-    type Target = sc_cli::RunCmd;
-
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
+	/// Relaychain arguments
+	#[structopt(raw = true)]
+	pub relaychain_args: Vec<String>,
 }
 
 #[derive(Debug)]

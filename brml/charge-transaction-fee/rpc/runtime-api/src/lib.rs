@@ -14,10 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+#![cfg_attr(not(feature = "std"), no_std)]
 
-//! A list of the different weight modules for our runtime.
+use codec::Codec;
+use node_primitives::{Balance, CurrencyId};
+use sp_api::decl_runtime_apis;
 
-pub mod pallet_assets;
-pub mod pallet_vtoken_mint;
-pub mod pallet_voucher;
+decl_runtime_apis! {
+	pub trait ChargeTransactionFeeRuntimeApi<AccountId> where
+		AccountId: Codec,
+	{
+		/// get flexible fee token and amount to be deducted
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance);
+	}
+}

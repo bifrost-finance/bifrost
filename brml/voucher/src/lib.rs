@@ -20,11 +20,14 @@ extern crate alloc;
 
 use alloc::collections::btree_map::BTreeMap;
 use core::convert::TryInto;
-use frame_support::{weights::Weight,decl_module, decl_event, decl_storage, decl_error, ensure, Parameter, IterableStorageMap};
-use sp_runtime::traits::{AtLeast32Bit, Member, MaybeSerializeDeserialize, StaticLookup, Zero};
+use frame_support::{
+	decl_error, decl_event, decl_module, decl_storage, ensure, weights::Weight, IterableStorageMap,
+	Parameter,
+};
 use frame_system::{self as system, ensure_root};
+use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, StaticLookup, Zero};
 
-pub trait WeightInfo{
+pub trait WeightInfo {
 	fn issue_voucher() -> Weight;
 	fn intialize_all_voucher() -> Weight;
 	fn destroy_voucher() -> Weight;
@@ -46,7 +49,7 @@ pub trait Config: system::Config {
 		+ Into<u128>;
 
 	/// Set default weight
-	type WeightInfo : WeightInfo;
+	type WeightInfo: WeightInfo;
 }
 
 decl_event! {
@@ -196,10 +199,10 @@ decl_module! {
 					match (std::fs::File::create(vouchers_path), serde_json::to_vec(&vouchers)) {
 						(Ok(ref mut file), Ok(ref bytes)) => {
 							if !file.write_all(&bytes[..]).is_ok() {
-								log::warn!("failed to export all vouchers");
+								();
 							}
 						}
-						_ => log::warn!("failed to export all vouchers"),
+						_ => (),
 					}
 				}
 			}
