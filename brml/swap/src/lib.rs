@@ -38,11 +38,15 @@ use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
 };
 use frame_system::ensure_signed;
-use node_primitives::AssetTrait;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
+use orml_traits::MultiCurrency;
+use node_primitives::{CurrencyId, CurrencyIdExt};
 
 mod mock;
 mod tests;
+
+pub type CurrencyIdOf<T> =
+<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
 pub trait Config: frame_system::Config {
 	/// event
@@ -58,17 +62,18 @@ pub trait Config: frame_system::Config {
 		+ Into<Self::Balance>
 		+ From<Self::Balance>;
 
-	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
 	/// Pool Id
 	type PoolId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	/// The units in which we record balances.
 	type Balance: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
-	/// AssetTrait to handle assets
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
+	/// Currencies handler to handle assets
+	type CurrenciesHandler: MultiCurrency<
+		Self::AccountId,
+		CurrencyId = CurrencyId,
+		Balance = Self::Balance,
+	>;
 
 	/// Weight
 	type PoolWeight: Member
@@ -112,7 +117,7 @@ pub trait Config: frame_system::Config {
 	type WeightPrecision: Get<Self::PoolWeight>;
 
 	/// The up-limit of tokens supported.
-	type BNCAssetId: Get<Self::AssetId>;
+	type BNCAssetId: Get<CurrencyIdOf<Self>>;
 
 	/// the asset id of BNC
 	type InitialPoolSupply: Get<Self::PoolToken>;
@@ -177,9 +182,9 @@ pub struct PoolDetails<AccountId, SwapFee> {
 
 /// struct for pool creating token info.
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug, Copy)]
-pub struct PoolCreateTokenDetails<AssetId, Balance, PoolWeight> {
+pub struct PoolCreateTokenDetails<CurrencyId, Balance, PoolWeight> {
 	/// token asset id
-	token_id: AssetId,
+	token_id: CurrencyId,
 	/// token balance that the pool creator wants to deposit into the pool for the first time.
 	token_balance: Balance,
 	/// token weight that the pool creator wants to give to the token
@@ -195,13 +200,13 @@ decl_storage! {
 		/// Sum of all the token weights for a pool must be 1 * WeightPrecision. Should be ensured when set up the pool.
 		TokenWeightsInPool get(fn token_weights_in_pool): double_map
 			hasher(blake2_128_concat) T::PoolId,
-			hasher(blake2_128_concat) T::AssetId
+			hasher(blake2_128_concat) CurrencyIdOf<T>
 			=> T::PoolWeight;
 
 		/// Token balance info for pools
 		TokenBalancesInPool get(fn token_balances_in_pool): double_map
 			hasher(blake2_128_concat) T::PoolId,
-			hasher(blake2_128_concat) T::AssetId
+			hasher(blake2_128_concat) CurrencyIdOf<T>
 			=> T::Balance;
 
 		/// total pool tokens in pool.
@@ -241,7 +246,7 @@ decl_module! {
 		const FeePrecision: T::SwapFee = T::FeePrecision::get();
 		const WeightPrecision: T::PoolWeight = T::WeightPrecision::get();
 		const NumberOfSupportedTokens: u8 = T::NumberOfSupportedTokens::get();
-		const BNCAssetId: T::AssetId = T::BNCAssetId::get();
+		const BNCAssetId: CurrencyIdOf<T> = T::BNCAssetId::get();
 		const BonusClaimAgeDenominator: T::BlockNumber = T::BonusClaimAgeDenominator::get();
 		const InitialPoolSupply: T::PoolToken = T::InitialPoolSupply::get();
 		const MaximumPassedInPoolTokenShares: T::PoolToken = T::MaximumPassedInPoolTokenShares::get();
@@ -278,7 +283,9 @@ decl_module! {
 				// Asset id
 				let token_id = tk.0;
 				// get the user's balance for a specific token
-				let user_token_pool_balance = T::AssetTrait::get_account_asset(token_id, &provider).available;
+				let user_token_pool_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::free_balance(token_id, &provider);
 				// the balance of a specific token in a pool
 				let token_pool_balance = TokenBalancesInPool::<T>::get(pool_id, token_id);
 				// the amount of the token that the user should deposit
@@ -300,7 +307,9 @@ decl_module! {
 				});
 
 				// destroy token from user's asset_redeem(assetId, &target, amount)
-				T::AssetTrait::asset_redeem(*tk, &provider, *blc);
+				<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::withdraw(*tk, &provider, *blc)?;
 			}
 
 			Self::deposit_event(RawEvent::AddLiquiditySuccess);
@@ -313,17 +322,19 @@ decl_module! {
 		fn add_single_liquidity_given_amount_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: T::AssetId,
+			asset_id: CurrencyIdOf<T>,
 			#[compact] token_amount_in: T::Balance,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
-			ensure!(T::AssetTrait::token_exists(asset_id), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(token_amount_in > Zero::zero(), Error::<T>::AmountBelowZero);
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(asset_id, &provider).available;
+			let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::free_balance(asset_id, &provider);
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			// calculate how many pool token will be issued to user
@@ -352,7 +363,9 @@ decl_module! {
 			});
 
 			// destroy token from user's asset_redeem(asset_id, &target, amount)
-			T::AssetTrait::asset_redeem(asset_id, &provider, token_amount_in);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::withdraw(asset_id, &provider, token_amount_in)?;
 
 			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
@@ -365,12 +378,12 @@ decl_module! {
 		fn add_single_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: T::AssetId,
+			asset_id: CurrencyIdOf<T>,
 			#[compact] new_pool_token: T::PoolToken,
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
-			ensure!(T::AssetTrait::token_exists(asset_id), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(new_pool_token >= T::MinimumPassedInPoolTokenShares::get(), Error::<T>::LessThanMinimumPassedInPoolTokenShares);
@@ -393,7 +406,9 @@ decl_module! {
 			};
 
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(asset_id, &provider).available;
+			let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+				<T as frame_system::Config>::AccountId,
+			>>::free_balance(asset_id, &provider);
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			Self::revise_storages_except_token_balances_when_adding_liquidity(pool_id, new_pool_token, &provider)?;
@@ -404,7 +419,9 @@ decl_module! {
 			});
 
 			// destroy token from user's asset_redeem(asset_id, &target, amount)
-			T::AssetTrait::asset_redeem(asset_id, &provider, token_amount_in);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::withdraw(asset_id, &provider, token_amount_in)?;
 
 			Self::deposit_event(RawEvent::AddSingleLiquiditySuccess);
 			Ok(())
@@ -416,12 +433,12 @@ decl_module! {
 		fn remove_single_asset_liquidity_given_shares_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: T::AssetId,
+			asset_id: CurrencyIdOf<T>,
 			#[compact] pool_token_out: T::PoolToken  // The pool token that the user want to remove liquidity with from the pool.
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
 
-			ensure!(T::AssetTrait::token_exists(asset_id), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(pool_token_out >= T::MinimumPassedInPoolTokenShares::get(), Error::<T>::LessThanMinimumPassedInPoolTokenShares);
@@ -448,7 +465,9 @@ decl_module! {
 			};
 
 			// update user asset
-			T::AssetTrait::asset_issue(asset_id, &remover, token_amount);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(asset_id, &remover, token_amount)?;
 
 			// update TokenBalancesInPool map.
 			TokenBalancesInPool::<T>::mutate(pool_id, asset_id, |token_balance| {
@@ -467,14 +486,14 @@ decl_module! {
 		fn remove_single_asset_liquidity_given_amount_in(
 			origin,
 			pool_id: T::PoolId,
-			asset_id: T::AssetId,
+			asset_id: CurrencyIdOf<T>,
 			#[compact] token_amount: T::Balance  // The number of out-token that the user want to remove liquidity with from the pool.
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
 			// out-token's balance in the pool, which is the number of the specific token.
 			let out_token_balance_in_pool = TokenBalancesInPool::<T>::get(pool_id, asset_id);
 
-			ensure!(T::AssetTrait::token_exists(asset_id), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(token_amount > Zero::zero(), Error::<T>::AmountBelowZero);
@@ -502,7 +521,9 @@ decl_module! {
 			ensure!(pool_token_out >= T::MinimumPassedInPoolTokenShares::get(), Error::<T>::LessThanMinimumPassedInPoolTokenShares);
 
 			// update user asset
-			T::AssetTrait::asset_issue(asset_id, &remover, token_amount);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(asset_id, &remover, token_amount)?;
 
 			// update TokenBalancesInPool map.
 			TokenBalancesInPool::<T>::mutate(pool_id, asset_id, |token_balance| {
@@ -546,7 +567,9 @@ decl_module! {
 				// the amount of the token that the user should deposit
 				let can_withdraw_amount = token_pool_balance.saturating_mul(pool_amount_out.into()) / all_pool_tokens.into();
 				// issue money to user's account
-				T::AssetTrait::asset_issue(token_id, &remover, can_withdraw_amount);
+				<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(token_id, &remover, can_withdraw_amount)?;
 
 				// deduct the corresponding token balance in the pool
 				TokenBalancesInPool::<T>::mutate(pool_id, token_id, |token_balance| {
@@ -564,20 +587,22 @@ decl_module! {
 		fn swap_exact_in(
 			origin,
 			pool_id: T::PoolId,
-			token_in_asset_id: T::AssetId,
+			token_in_asset_id: CurrencyIdOf<T>,
 			#[compact]token_amount_in: T::Balance, // the input token amount that the user is willing to pay.
 			min_token_amount_out: Option<T::Balance>,  // The least output token amount that the user can accept
-			token_out_asset_id: T::AssetId,
+			token_out_asset_id: CurrencyIdOf<T>,
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
 
 			ensure!(token_in_asset_id != token_out_asset_id, Error::<T>::ForbidSameTokenSwap);
-			ensure!(T::AssetTrait::token_exists(token_in_asset_id), Error::<T>::TokenNotExist);
-			ensure!(T::AssetTrait::token_exists(token_out_asset_id), Error::<T>::TokenNotExist);
+			ensure!(token_in_asset_id.is_vtoken() || token_in_asset_id.is_token() || token_in_asset_id.is_native() || token_in_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(token_out_asset_id.is_vtoken() || token_out_asset_id.is_token() || token_out_asset_id.is_native() || token_out_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(token_in_asset_id, &swapper).available;
+			let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+				<T as frame_system::Config>::AccountId,
+			>>::free_balance(token_in_asset_id, &swapper);
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			// get the total token-in token amount for the specific pool
@@ -609,9 +634,13 @@ decl_module! {
 			}
 
 			// deducted token-in amount from the user account
-			T::AssetTrait::asset_redeem(token_in_asset_id, &swapper, token_amount_in);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::withdraw(token_in_asset_id, &swapper, token_amount_in)?;
 			// add up token-out amount to the user account
-			T::AssetTrait::asset_issue(token_out_asset_id, &swapper, token_amount_out);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(token_out_asset_id, &swapper, token_amount_out)?;
 
 			// update the token-in amount in the pool
 			TokenBalancesInPool::<T>::mutate(pool_id, token_in_asset_id, |token_balance| {
@@ -633,15 +662,15 @@ decl_module! {
 		fn swap_exact_out(
 			origin,
 			pool_id: T::PoolId,
-			token_out_asset_id: T::AssetId,
+			token_out_asset_id: CurrencyIdOf<T>,
 			#[compact]token_amount_out: T::Balance, // the out token amount that the user wants to get.
 			max_token_amount_in: Option<T::Balance>,  // most input token amount user can accept to get token amount out.
-			token_in_asset_id: T::AssetId,
+			token_in_asset_id: CurrencyIdOf<T>,
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
 			ensure!(token_in_asset_id != token_out_asset_id, Error::<T>::ForbidSameTokenSwap);
-			ensure!(T::AssetTrait::token_exists(token_in_asset_id), Error::<T>::TokenNotExist);
-			ensure!(T::AssetTrait::token_exists(token_out_asset_id), Error::<T>::TokenNotExist);
+			ensure!(token_in_asset_id.is_vtoken() || token_in_asset_id.is_token() || token_in_asset_id.is_native() || token_in_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(token_out_asset_id.is_vtoken() || token_out_asset_id.is_token() || token_out_asset_id.is_native() || token_out_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 
@@ -674,13 +703,19 @@ decl_module! {
 			}
 
 			// get the user's balance for a specific token
-			let user_token_balance = T::AssetTrait::get_account_asset(token_in_asset_id, &swapper).available;
+			let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+				<T as frame_system::Config>::AccountId,
+			>>::free_balance(token_in_asset_id, &swapper);
 			ensure!(user_token_balance >= token_amount_in, Error::<T>::NotEnoughBalance);
 
 			// deducted token-in amount from the user account
-			T::AssetTrait::asset_redeem(token_in_asset_id, &swapper, token_amount_in);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::withdraw(token_in_asset_id, &swapper, token_amount_in)?;
 			// add up token-out amount to the user account
-			T::AssetTrait::asset_issue(token_out_asset_id, &swapper, token_amount_out);
+			<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(token_out_asset_id, &swapper, token_amount_out)?;
 
 			// update the token-in amount in the pool
 			TokenBalancesInPool::<T>::mutate(pool_id, token_in_asset_id, |token_balance| {
@@ -712,12 +747,15 @@ decl_module! {
 
 			Self::update_unclaimed_bonus_related_states(&claimer, pool_id)?;
 
-			UserUnclaimedBonusInPool::<T>::mutate(&claimer, pool_id, |(unclaimed_bonus_balance, _block_num)| {
+			UserUnclaimedBonusInPool::<T>::mutate(&claimer, pool_id, |(unclaimed_bonus_balance, _block_num)| -> DispatchResult{
 				// issue corresponding BNC bonus to the user's account
-				T::AssetTrait::asset_issue(T::BNCAssetId::get(), &claimer, *unclaimed_bonus_balance);
+				<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(T::BNCAssetId::get(), &claimer, *unclaimed_bonus_balance)?;
 				// mutate the user's unclaimed BNC bonus to zero
 				*unclaimed_bonus_balance = Zero::zero();
-			});
+				Ok(())
+			})?;
 
 			Ok(())
 		}
@@ -728,7 +766,7 @@ decl_module! {
 		pub fn create_pool(
 			origin,
 			swap_fee_rate: T::SwapFee,  // this number is an integer to avoid precision loss, should be divided by fee precision constant when used.
-			token_for_pool_vec: Vec<PoolCreateTokenDetails<T::AssetId, T::Balance, T::PoolWeight>>,
+			token_for_pool_vec: Vec<PoolCreateTokenDetails<CurrencyIdOf<T>, T::Balance, T::PoolWeight>>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
 			// swap fee rate should be greater or equals to MinimumSwapFee.
@@ -745,11 +783,13 @@ decl_module! {
 			let map_iter_1 = token_for_pool_vec.iter();
 			// ensure all the elements of the tokenForPoolMap are ok.
 			for token_info in map_iter_1 {
-				ensure!(T::AssetTrait::token_exists(token_info.token_id), Error::<T>::TokenNotExist);
+				ensure!((token_info.token_id).is_vtoken() || (token_info.token_id).is_token() || (token_info.token_id).is_native() || (token_info.token_id).is_stable_token(), Error::<T>::TokenNotExist);
 				ensure!(token_info.token_balance > Zero::zero(), Error::<T>::AmountBelowZero);
 
 				// get the user's balance for a specific token
-				let user_token_balance = T::AssetTrait::get_account_asset(token_info.token_id, &creator).available;
+				let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::free_balance(token_info.token_id, &creator);
 				ensure!(user_token_balance >= token_info.token_balance, Error::<T>::NotEnoughBalance);
 				// Add up the total weight
 				total_weight = total_weight.saturating_add(token_info.token_weight);
@@ -771,7 +811,9 @@ decl_module! {
 			// initialize the pool
 			for token_info in map_iter_2 {
 				// destroy user's token
-				T::AssetTrait::asset_redeem(token_info.token_id, &creator, token_info.token_balance);
+				<<T as Config>::CurrenciesHandler as MultiCurrency<
+					<T as frame_system::Config>::AccountId,
+				>>::withdraw(token_info.token_id, &creator, token_info.token_balance)?;
 
 				// insert TokenWeightsInPool
 				let token_normalized_weight = token_info.token_weight.saturating_mul(T::WeightPrecision::get()) / total_weight;
@@ -789,7 +831,7 @@ decl_module! {
 			UserPoolTokensInPool::<T>::insert(&creator, new_pool_id, T::InitialPoolSupply::get());
 
 			// get current block number
-			let current_block_num = <frame_system::Module<T>>::block_number();
+			let current_block_num = <frame_system::Pallet<T>>::block_number();
 			// update UserUnclaimedBonusInPool
 			UserUnclaimedBonusInPool::<T>::insert(&creator, new_pool_id, (T::Balance::from(0u32), current_block_num));
 
@@ -922,7 +964,7 @@ impl<T: Config> Module<T> {
 		};
 
 		//get current block number update unclaimed bonus in pool.
-		let current_block_num = <frame_system::Module<T>>::block_number();
+		let current_block_num = <frame_system::Pallet<T>>::block_number();
 		if UserUnclaimedBonusInPool::<T>::contains_key(&account_id, pool_id) {
 			UserUnclaimedBonusInPool::<T>::mutate(
 				&account_id,
@@ -963,7 +1005,7 @@ impl<T: Config> Module<T> {
 	) -> Result<FixedI128<extra::U64>, Error<T>> {
 		let user_pool_token = UserPoolTokensInPool::<T>::get(&account_id, pool_id);
 		let all_pool_token = PoolTokensInPool::<T>::get(pool_id);
-		let current_block_num = <frame_system::Module<T>>::block_number(); //get current block number
+		let current_block_num = <frame_system::Pallet<T>>::block_number(); //get current block number
 
 		// get last unclaimed bonus information for the user
 		let (_last_unclaimed_amount, last_calculate_block_num) =

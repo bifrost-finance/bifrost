@@ -1,3 +1,4 @@
+
 // Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
@@ -14,84 +15,155 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Test utilities
-
 #![cfg(test)]
+#![allow(non_upper_case_globals)]
 
-use crate as assets;
-use super::*;
-
-use frame_support::{parameter_types, traits::{OnInitialize, OnFinalize}};
+use crate::{self as brml_assets};
+use frame_support::{parameter_types};
+use node_primitives::{CurrencyId, TokenSymbol, Balance};
 use sp_core::H256;
-use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use sp_runtime::{
+	traits::{BlakeTwo256, IdentityLookup},
+	testing::Header, AccountId32
+};
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
+pub type AccountId = AccountId32;
+pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
+pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const vKSM: CurrencyId = CurrencyId::Token(TokenSymbol::vKSM);
+pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 
 frame_support::construct_runtime!(
-	pub enum Test where
+	pub enum Runtime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: assets::{Module, Call, Storage, Event<T>, Config<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Assets: orml_tokens::{Pallet, Storage, Event<T>},
+		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		BrmlAssets: brml_assets::{Pallet, Call, Event<T>},
 	}
 );
+
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
+type Block = frame_system::mocking::MockBlock<Runtime>;
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
-impl frame_system::Config for Test {
+impl frame_system::Config for Runtime {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
+	type Call = Call;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Call = Call;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
-impl Config for Test {
+parameter_types! {
+	pub const ExistentialDeposit: Balance = 1;
+}
+
+impl pallet_balances::Config for Runtime {
+	type Balance = Balance;
+	type DustRemoval = ();
 	type Event = Event;
-	type Balance = u128;
-	type AssetId = u32;
-	type Price = u64;
-	type VtokenMint = u128;
-	type AssetRedeem = ();
-	type FetchVtokenMintPrice = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = frame_system::Module<Runtime>;
+	type MaxLocks = ();
 	type WeightInfo = ();
 }
 
-// simulate block production
-#[allow(dead_code)]
-pub(crate) fn run_to_block(n: u64) {
-	while System::block_number() < n {
-		Assets::on_finalize(System::block_number());
-		System::on_finalize(System::block_number());
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		Assets::on_initialize(System::block_number());
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		0
+	};
+}
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+}
+
+impl crate::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type WeightInfo = ();
+}
+
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
+
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self {
+			endowed_accounts: vec![],
+		}
 	}
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		self.balances(vec![
+			(ALICE, BNC, 100),
+			(BOB, BNC, 100),
+			(ALICE, DOT, 100),
+			(ALICE, vDOT, 400),
+			(BOB, DOT, 100),
+			(BOB, KSM, 100),
+		])
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default()
+			.build_storage::<Runtime>()
+			.unwrap();
+
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == BNC)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		t.into()
+	}
 }

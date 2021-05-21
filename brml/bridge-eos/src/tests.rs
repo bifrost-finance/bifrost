@@ -31,7 +31,7 @@ use std::{
 };
 use sp_core::H256;
 use sp_core::offchain::{
-	OffchainExt, TransactionPoolExt,
+	OffchainDbExt, TransactionPoolExt,
 	testing::{TestOffchainExt, TestTransactionPoolExt},
 };
 use sp_runtime::traits::Header as HeaderT;
@@ -356,7 +356,7 @@ fn bridge_eos_offchain_should_work() {
 	let mut ext = new_test_ext();
 	let (offchain, _state) = TestOffchainExt::new();
 	let (pool, pool_state) = TestTransactionPoolExt::new();
-	ext.register_extension(OffchainExt::new(offchain));
+	ext.register_extension(OffchainDbExt::new(offchain));
 	ext.register_extension(TransactionPoolExt::new(pool));
 
 	ext.execute_with(|| {
@@ -374,7 +374,7 @@ fn bridge_eos_offchain_should_work() {
 			amount: 1 * 10u64.pow(8),
 			memo: vec![],
 			from: 1,
-			asset_id: 6,
+			asset_id: CurrencyId::Token(TokenSymbol::EOS),
 		};
 		assert_ok!(BridgeEos::bridge_asset_to(raw_to.clone(), bridge_asset));
 		assert_ok!(BridgeEos::offchain(1));
