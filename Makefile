@@ -12,10 +12,6 @@ build-asgard:
 build-bifrost:
 	cargo build -p node-cli --locked --no-default-features --features "cli with-bifrost-runtime"
 
-.PHONY: build-rococo
-build-rococo:
-	cargo build -p node-cli --locked --no-default-features --features "cli with-rococo-runtime"
-
 .PHONY: build-all
 build-all:
 	cargo build -p node-cli --locked --no-default-features --features "cli with-all-runtime"
@@ -30,10 +26,6 @@ build-asgard-release:
 build-bifrost-release:
 	cargo build -p node-cli --locked --no-default-features --features "cli with-bifrost-runtime" --release
 
-.PHONY: build-rococo-release
-build-rococo-release:
-	cargo build -p node-cli --locked --no-default-features --features "cli with-rococo-runtime" --release
-
 .PHONY: build-all-release
 build-all-release:
 	cargo build -p node-cli --locked --no-default-features --features "cli with-all-runtime" --release
@@ -45,10 +37,6 @@ check-asgard:
 .PHONY: check-bifrost
 check-bifrost:
 	cargo check -p node-cli --locked --no-default-features --features "cli with-bifrost-runtime"
-
-.PHONY: check-rococo
-check-rococo:
-	cargo check -p node-cli --locked --no-default-features --features "cli with-rococo-runtime"
 
 .PHONY: check-all
 check-all:
