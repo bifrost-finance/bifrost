@@ -20,7 +20,7 @@ use std::sync::Arc;
 use sp_api::{ProvideRuntimeApi, CallApiAt, NumberFor};
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
-	Justification, generic::{BlockId, SignedBlock}, traits::{Block as BlockT, BlakeTwo256},
+	Justifications, generic::{BlockId, SignedBlock}, traits::{Block as BlockT, BlakeTwo256},
 };
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
 use sp_storage::{StorageData, StorageKey, ChildInfo, PrefixedStorageKey};
@@ -187,13 +187,13 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		}
 	}
 
-	fn justification(
+	fn justifications(
 		&self,
 		id: &BlockId<Block>
-	) -> sp_blockchain::Result<Option<Justification>> {
+	) -> sp_blockchain::Result<Option<Justifications>> {
 		match self {
-			Self::Asgard(client) => client.justification(id),
-			Self::Bifrost(client) => client.justification(id),
+			Self::Asgard(client) => client.justifications(id),
+			Self::Bifrost(client) => client.justifications(id),
 		}
 	}
 
@@ -207,13 +207,13 @@ impl sc_client_api::BlockBackend<Block> for Client {
 		}
 	}
 
-	fn extrinsic(
+	fn indexed_transaction(
 		&self,
 		id: &<Block as BlockT>::Hash
-	) -> sp_blockchain::Result<Option<<Block as BlockT>::Extrinsic>> {
+	) -> sp_blockchain::Result<Option<Vec<u8>>> {
 		match self {
-			Self::Asgard(client) => client.extrinsic(id),
-			Self::Bifrost(client) => client.extrinsic(id),
+			Self::Asgard(client) => client.indexed_transaction(id),
+			Self::Bifrost(client) => client.indexed_transaction(id),
 		}
 	}
 }

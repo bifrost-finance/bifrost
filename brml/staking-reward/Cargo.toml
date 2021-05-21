@@ -1,6 +1,6 @@
 [package]
 name = "brml-staking-reward"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["chw"]
 edition = "2018"
 
@@ -12,18 +12,26 @@ frame-system = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.124", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false}
 
 [dev-dependencies]
 assets = { package = "brml-assets", path = "../assets" }
 sp-io = { version = "3.0.0" }
+pallet-balances = { version = "3.0.0" }
 
 [features]
 default = ["std"]
 std = [
-    "codec/std",
-    "node-primitives/std",
-    "frame-support/std",
-    "frame-system/std",
-    "serde/std",
-    "sp-runtime/std",
+	"codec/std",
+	"node-primitives/std",
+	"frame-support/std",
+	"frame-system/std",
+	"serde/std",
+	"sp-runtime/std",
+	"sp-core/std",
+	"orml-traits/std",
+	"orml-currencies/std",
+	"orml-tokens/std"
 ]

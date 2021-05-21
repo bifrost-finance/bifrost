@@ -21,35 +21,10 @@
 use crate::mock::*;
 use crate::*;
 use frame_support::{assert_ok, dispatch::DispatchError};
-use node_primitives::TokenType;
+use orml_traits::MultiCurrency;
+use node_primitives::{ CurrencyIdExt, CurrencyId, TokenSymbol};
 
 fn storages_initialization() {
-	let symbol0 = b"BNC".to_vec();
-	let precision0 = 12;
-	let token_type0 = TokenType::Native;
-	<Test as Config>::AssetTrait::asset_create(symbol0, precision0, token_type0).unwrap_or_default();
-
-	let symbol1 = b"aUSD".to_vec();
-	let precision1 = 12;
-	let token_type1 = TokenType::Stable;
-	<Test as Config>::AssetTrait::asset_create(symbol1, precision1, token_type1).unwrap_or_default();
-
-	let symbol2 = b"DOT".to_vec();
-	let precision2 = 12;
-	<Test as Config>::AssetTrait::asset_create_pair(symbol2, precision2).unwrap_or_default();
-
-	let symbol3 = b"KSM".to_vec();
-	let precision3 = 12;
-	<Test as Config>::AssetTrait::asset_create_pair(symbol3, precision3).unwrap_or_default();
-
-	let symbol4 = b"EOS".to_vec();
-	let precision4 = 12;
-	<Test as Config>::AssetTrait::asset_create_pair(symbol4, precision4).unwrap_or_default();
-
-	let symbol5 = b"IOST".to_vec();
-	let precision5 = 12;
-	<Test as Config>::AssetTrait::asset_create_pair(symbol5, precision5).unwrap_or_default();
-
 	let alice = 1;
 	let bob = 2;
 	let charlie = 3;
@@ -61,38 +36,38 @@ fn storages_initialization() {
 	// let ian = 9;
 	// let jerry = 10;
 
-	let dot_id = 2;
-	let ksm_id = 4;
-	let eos_id = 6;
-	let iost_id = 8;
+	let dot_id: CurrencyId = 2u8.into();
+	let ksm_id = 4u8.into();
+	let eos_id = 6u8.into();
+	let iost_id = 8u8.into();
 
 	let amount = 100_000_000;
 	// create some assets for bidder Alice
-	<Test as Config>::AssetTrait::asset_issue(dot_id, &alice, amount);
-	<Test as Config>::AssetTrait::asset_issue(ksm_id, &alice, amount);
-	<Test as Config>::AssetTrait::asset_issue(eos_id, &alice, amount);
-	<Test as Config>::AssetTrait::asset_issue(iost_id, &alice, amount);
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &alice, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(ksm_id, &alice, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &alice, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &alice, amount));
 
 	let amount = 10_000;
 	// create some assets for bidder Bob
-	<Test as Config>::AssetTrait::asset_issue(dot_id, &bob, amount);
-	<Test as Config>::AssetTrait::asset_issue(ksm_id, &bob, amount);
-	<Test as Config>::AssetTrait::asset_issue(eos_id, &bob, amount);
-	<Test as Config>::AssetTrait::asset_issue(iost_id, &bob, amount);
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &bob, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(ksm_id, &bob, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &bob, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &bob, amount));
 
 	let amount = 100;
 	// create some assets for bidder Charlie
-	<Test as Config>::AssetTrait::asset_issue(dot_id, &charlie, amount);
-	<Test as Config>::AssetTrait::asset_issue(ksm_id, &charlie, amount);
-	<Test as Config>::AssetTrait::asset_issue(eos_id, &charlie, amount);
-	<Test as Config>::AssetTrait::asset_issue(iost_id, &charlie, amount);
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &charlie, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(ksm_id, &charlie, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &charlie, amount));
+	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &charlie, amount));
 
 	// register vtokens
 	let origin_root = Origin::root();
-	let vdot_id = 3;
-	let vksm_id = 5;
-	let veos_id = 7;
-	let viost_id = 9;
+	let vdot_id = 3u8.into();
+	let vksm_id = 5u8.into();
+	let veos_id = 7u8.into();
+	let viost_id = 9u8.into();
 	Bid::register_vtoken_for_bidding(origin_root.clone(), vdot_id).unwrap_or_default();
 	Bid::register_vtoken_for_bidding(origin_root.clone(), vksm_id).unwrap_or_default();
 	Bid::register_vtoken_for_bidding(origin_root.clone(), veos_id).unwrap_or_default();
@@ -227,14 +202,12 @@ fn register_vtoken_for_bidding_should_work() {
 		let origin_signed = Origin::signed(alice);
 		let origin_root = Origin::root();
 
-		let symbol = b"DOT".to_vec();
-		let precision = 12;
 		// create assets
-		let (token_id, vtoken_id) =
-			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
 
-		assert_eq!(<Test as Config>::AssetTrait::is_token(token_id), true);
-		assert_eq!(<Test as Config>::AssetTrait::is_v_token(vtoken_id), true);
+		assert_eq!(token_id.is_token(), true);
+		assert_eq!(vtoken_id.is_vtoken(), true);
 
 		// a user cannot register a vtoken for bidding
 		assert_eq!(
@@ -250,7 +223,7 @@ fn register_vtoken_for_bidding_should_work() {
 		assert_eq!(
 			Bid::register_vtoken_for_bidding(origin_root.clone(), token_id),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 1,
 				message: Some("NotValidVtoken")
 			})
@@ -260,7 +233,7 @@ fn register_vtoken_for_bidding_should_work() {
 		assert_eq!(
 			Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 14,
 				message: Some("VtokenAlreadyRegistered")
 			})
@@ -293,14 +266,12 @@ fn set_min_max_order_lasting_block_num_should_work() {
 		let origin_signed = Origin::signed(alice);
 		let origin_root = Origin::root();
 
-		let symbol = b"DOT".to_vec();
-		let precision = 12;
-
 		let minimum_lasting_block_num = 43_200;
 		let maximum_lasting_block_num = 432_000;
+
 		// create assets
-		let (token_id, vtoken_id) =
-			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -325,7 +296,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 				maximum_lasting_block_num
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -340,7 +311,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 				minimum_lasting_block_num
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 9,
 				message: Some("MinimumOrMaximumNotRight")
 			})
@@ -382,12 +353,9 @@ fn set_block_number_per_era_should_work() {
 		let origin_signed = Origin::signed(alice);
 		let origin_root = Origin::root();
 
-		let symbol = b"DOT".to_vec();
-		let precision = 12;
-
 		// create assets
-		let (token_id, vtoken_id) =
-			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -403,7 +371,7 @@ fn set_block_number_per_era_should_work() {
 		assert_eq!(
 			Bid::set_block_number_per_era(origin_root.clone(), token_id, block_num_per_era),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -437,12 +405,9 @@ fn set_service_stop_block_num_lag_should_work() {
 		let origin_signed = Origin::signed(alice);
 		let origin_root = Origin::root();
 
-		let symbol = b"DOT".to_vec();
-		let precision = 12;
-
 		// create assets
-		let (token_id, vtoken_id) =
-			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -466,7 +431,7 @@ fn set_service_stop_block_num_lag_should_work() {
 				service_stop_lag_block_num
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -503,12 +468,9 @@ fn set_slash_margin_rates_should_work() {
 		let origin_signed = Origin::signed(alice);
 		let origin_root = Origin::root();
 
-		let symbol = b"DOT".to_vec();
-		let precision = 12;
-
 		// create assets
-		let (token_id, vtoken_id) =
-			<Test as Config>::AssetTrait::asset_create_pair(symbol, precision).unwrap_or_default();
+		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -524,7 +486,7 @@ fn set_slash_margin_rates_should_work() {
 		assert_eq!(
 			Bid::set_slash_margin_rates(origin_root.clone(), token_id, slash_margin),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -533,7 +495,7 @@ fn set_slash_margin_rates_should_work() {
 		assert_eq!(
 			Bid::set_slash_margin_rates(origin_root.clone(), vtoken_id, 200),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 8,
 				message: Some("RateExceedUpperBound")
 			})
@@ -575,8 +537,8 @@ fn create_bidding_proposal_should_work() {
 		// Alice creates a proposal
 		let alice = 1;
 		let origin_alice = Origin::signed(alice);
-		let dot_id = 2;
-		let vdot_id = 3;
+		let dot_id = 2u8.into();
+		let vdot_id = 3u8.into();
 		let votes_needed_alice = 10_000;
 		let annual_roi_alice = 1_500; // 15% annual roi
 		let validator = alice;
@@ -591,7 +553,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 15,
 				message: Some("VtokenNotRegistered")
 			})
@@ -608,7 +570,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 5,
 				message: Some("VotesExceedLowerBound")
 			})
@@ -625,7 +587,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 6,
 				message: Some("VotesExceedUpperBound")
 			})
@@ -642,7 +604,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 4,
 				message: Some("AmountNotAboveZero")
 			})
@@ -659,7 +621,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 19,
 				message: Some("ROIExceedOneHundredPercent")
 			})
@@ -720,7 +682,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 2,
 				message: Some("NotEnoughBalance")
 			})
@@ -769,7 +731,7 @@ fn create_bidding_proposal_should_work() {
 				validator
 			),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 18,
 				message: Some("ProposalsExceedLimit")
 			})
@@ -814,7 +776,7 @@ fn cancel_a_bidding_proposal_should_work() {
 
 		let alice = 1;
 		let bob = 2;
-		let vksm_id = 5;
+		let vksm_id: CurrencyId = 5u8.into();
 		let origin_bob = Origin::signed(bob);
 		let origin_alice = Origin::signed(alice);
 		// make sure bob's proposal exists
@@ -827,7 +789,7 @@ fn cancel_a_bidding_proposal_should_work() {
 		assert_eq!(
 			Bid::cancel_a_bidding_proposal(origin_bob.clone(), 8),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 16,
 				message: Some("ProposalNotExist")
 			})
@@ -837,7 +799,7 @@ fn cancel_a_bidding_proposal_should_work() {
 		assert_eq!(
 			Bid::cancel_a_bidding_proposal(origin_alice.clone(), 0),
 			Err(DispatchError::Module {
-				index: 2,
+				index: 4,
 				error: 17,
 				message: Some("NotProposalOwner",),
 			},)
@@ -862,7 +824,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		// There was an vksm order of 200 votes from Bob in the storage initialization. So the pool should has only 3800
 		// votes left and Bob should have a 200 vksm order.Decode
 		let bob = 2;
-		let vksm_id = 5;
+		let vksm_id = 5u8.into();
 		// BiddingQueues::<Test>::get(vksm_id)
 		// assert_eq!(ProposalsInQueue::<Test>::get(0).votes, 3800);
 
@@ -877,7 +839,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		);
 
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
-		assert_eq!(BiddingQueues::<Test>::contains_key(0), false);
+		assert_eq!(BiddingQueues::<Test>::contains_key(CurrencyId::Token(0u8.into())), false);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 0);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).is_empty(), true);
 		assert_eq!(ProposalsInQueue::<Test>::contains_key(0), false);
@@ -953,7 +915,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
 		assert_eq!(OrdersInService::<Test>::contains_key(1), false);
 		assert_eq!(OrdersInService::<Test>::contains_key(3), true);
-		assert_eq!(OrdersInService::<Test>::get(3).votes, 195);=
+		assert_eq!(OrdersInService::<Test>::get(3).votes, 195);
 		assert_eq!(OrdersInService::<Test>::get(3).block_num, 21);
 
 		assert_eq!(

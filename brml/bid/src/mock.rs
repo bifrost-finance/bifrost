@@ -24,7 +24,11 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use node_primitives::{Balance, AssetId, BlockNumber};
+use node_primitives::{CurrencyId, TokenSymbol};
+
+pub type BlockNumber = u64;
+pub type Amount = i128;
+pub type Balance = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -35,9 +39,11 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: assets::{Module, Call, Storage, Event<T>},
-		Bid: pallet_bid::{Module, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Assets: orml_tokens::{Pallet, Storage, Event<T>},
+	Balances: balances::{Pallet, Call, Storage, Event<T>},
+		Bid: pallet_bid::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -53,33 +59,68 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
+	type Call = Call;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Call = Call;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
+	type AccountId = u128;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
-impl assets::Config for Test {
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+pub type AdaptedBasicCurrency =
+	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Test {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: u64 = 1;
+}
+
+impl balances::Config for Test {
+	type Balance = u64;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type MaxLocks = ();
+	type WeightInfo = ();
+}
+
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
+		0
+	};
+}
+impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = Balance;
-	type AssetId = AssetId;
-	type Price = Balance;
-	type VtokenMint = Balance;
-	type AssetRedeem = ();
-	type FetchVtokenMintPrice = ();
+	type Amount = i128;
+	type CurrencyId = CurrencyId;
 	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Test, ()>;
 }
 
 parameter_types! {
@@ -93,11 +134,10 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type Event = Event;
-	type AssetId = AssetId;
-	type AssetTrait = Assets;
+	type CurrenciesHandler = Currencies;
+	type Balance = u64;
 	type BiddingOrderId = u64;
 	type EraId = u64;
-	type Balance = Balance;
 	type TokenOrderROIListLength = TokenOrderROIListLength ;
 	type MinimumVotes = MinimumVotes;
 	type MaximumVotes = MaximumVotes;
