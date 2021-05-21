@@ -1,6 +1,6 @@
 [package]
 name = "brml-charge-transaction-fee"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2018"
 

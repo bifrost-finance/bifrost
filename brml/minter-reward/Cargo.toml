@@ -1,6 +1,6 @@
 [package]
 name = "brml-minter-reward"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Dengjianping <djptux@gmail.com>"]
 edition = "2018"
 

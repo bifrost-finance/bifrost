@@ -1,6 +1,6 @@
 [package]
 name = "brml-vtoken-mint"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 
