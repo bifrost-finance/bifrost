@@ -193,7 +193,7 @@ checksum = "5a2f58b0bb10c380af2b26e57212856b8c9a59e0925b4c20f4a174a49734eaf7"
 
 [[package]]
 name = "asgard-runtime"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "bifrost-runtime"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -830,7 +830,7 @@ dependencies = [
 
 [[package]]
 name = "brml-assets"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -848,7 +848,7 @@ dependencies = [
 
 [[package]]
 name = "brml-bid"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -867,7 +867,7 @@ dependencies = [
 
 [[package]]
 name = "brml-charge-transaction-fee-rpc"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "brml-charge-transaction-fee-rpc-runtime-api",
  "jsonrpc-core",
@@ -885,7 +885,7 @@ dependencies = [
 
 [[package]]
 name = "brml-charge-transaction-fee-rpc-runtime-api"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "node-primitives",
  "parity-scale-codec",
@@ -894,7 +894,7 @@ dependencies = [
 
 [[package]]
 name = "brml-minter-reward"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "fixed",
  "frame-support",
@@ -915,7 +915,7 @@ dependencies = [
 
 [[package]]
 name = "brml-staking-reward"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "brml-assets",
  "frame-support",
@@ -934,7 +934,7 @@ dependencies = [
 
 [[package]]
 name = "brml-swap"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "float-cmp",
  "frame-support",
@@ -954,7 +954,7 @@ dependencies = [
 
 [[package]]
 name = "brml-vesting"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "enumflags2",
  "frame-benchmarking",
@@ -973,7 +973,7 @@ dependencies = [
 
 [[package]]
 name = "brml-voucher"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -986,7 +986,7 @@ dependencies = [
 
 [[package]]
 name = "brml-vtoken-mint"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "brml-minter-reward",
  "frame-support",
@@ -1009,7 +1009,7 @@ dependencies = [
 
 [[package]]
 name = "brml-vtoken-mint-rpc"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "brml-vtoken-mint-rpc-runtime-api",
  "jsonrpc-core",
@@ -1023,7 +1023,7 @@ dependencies = [
 
 [[package]]
 name = "brml-vtoken-mint-rpc-runtime-api"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -4815,7 +4815,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "assert_cmd",
  "async-std",
@@ -4830,7 +4830,7 @@ dependencies = [
  "hex-literal 0.3.1",
  "log",
  "nix",
- "node-inspect 0.8.0",
+ "node-inspect 0.8.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.1)",
  "node-primitives",
  "node-service",
  "pallet-authority-discovery",
@@ -4906,7 +4906,7 @@ dependencies = [
 
 [[package]]
 name = "node-inspect"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "derive_more",
  "log",
@@ -4939,7 +4939,7 @@ dependencies = [
 
 [[package]]
 name = "node-primitives"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "frame-system",
  "parity-scale-codec",
@@ -4954,7 +4954,7 @@ dependencies = [
 
 [[package]]
 name = "node-rpc"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "jsonrpc-core",
  "node-primitives",
@@ -4983,7 +4983,7 @@ dependencies = [
 
 [[package]]
 name = "node-service"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "asgard-runtime",
  "bifrost-runtime",
@@ -10302,7 +10302,7 @@ dependencies = [
 
 [[package]]
 name = "subkey"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "frame-system",
  "futures 0.1.31",
