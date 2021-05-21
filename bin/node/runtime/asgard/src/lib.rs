@@ -984,6 +984,22 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
+		fn slot_duration() -> sp_consensus_aura::SlotDuration {
+			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+		}
+
+		fn authorities() -> Vec<AuraId> {
+			Aura::authorities()
+		}
+	}
+
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
+		}
+	}
+
 	// impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
 	// 	fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
 	// 	let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);

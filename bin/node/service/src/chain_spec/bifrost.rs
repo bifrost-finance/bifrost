@@ -14,23 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use hex_literal::hex;
-use sc_chain_spec::ChainType;
-use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, sr25519};
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use bifrost_runtime::{
 	AccountId, AuraId,
 	constants::{currency::DOLLARS},
 	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap,
+	ParachainInfoConfig, WASM_BINARY,
 };
+use sc_service::ChainType;
+use sc_telemetry::TelemetryEndpoints;
+use sp_core::{crypto::UncheckedInto, sr25519};
+
 use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
-/// The `ChainSpec` parametrized for the bifrost runtime.
+/// Specialized `ChainSpec` for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
 pub fn config() -> Result<ChainSpec, String> {
@@ -105,7 +106,9 @@ pub fn testnet_genesis(
 
 	GenesisConfig {
 		frame_system: SystemConfig {
-			code: wasm_binary_unwrap().to_vec(),
+			code: WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
 		pallet_balances: BalancesConfig {
@@ -260,4 +263,4 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		Some(endowed_accounts),
 		id,
 	)
-} 
+}
