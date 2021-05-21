@@ -20,6 +20,12 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Check out zenlink
+        uses: actions/checkout@v2
+        with:
+          repository: bifrost-finance/Zenlink-DEX-Module
+          token: ${{ secrets.ZENLINK_TOKEN }}
+          path: '../Zenlink-DEX-Module'
       - name: Cache cargo registry and index
         uses: actions/cache@v2
         with:
