@@ -91,7 +91,7 @@ fn load_genesis_config_from_json_or_default(
 	// const STARTING_BLOCK: u128 = ENDOWMENT / 2;
 
 	#[cfg(feature = "std")]
-		let json_str: String = {
+	let json_str: String = {
 		if let Ok(str) = read_json_from_file(PATH) {
 			str
 		} else {
@@ -100,7 +100,7 @@ fn load_genesis_config_from_json_or_default(
 		}
 	};
 	#[cfg(not(feature = "std"))]
-		let json_str: &str = include_str!("../../res/genesis_config/bifrost_mainnet.json");
+	let json_str: &str = include_str!("../../res/genesis_config/bifrost_mainnet.json");
 
 	endowed_accounts.extend_from_slice(&super::faucet_accounts());
 
@@ -188,67 +188,67 @@ fn load_genesis_config_from_json_or_default(
 		// Reset ec_map.
 		ec_map.iter_mut().for_each(|(_, is_set)| *is_set = false);
 
-		// // Modify `VestingConfig` if has `"palletVesting": VestingConfig` pair in json.
-		// if let Some(vv) = genesis_config.get("palletVesting") {
-		// 	if let Ok(mut vc) = serde_json::from_value::<VestingConfig>(vv.clone()) {
-		// 		vesting_config = Default::default();
-		//
-		// 		for (account_id, locked, per_block, starting_block) in vc.vesting.drain(..) {
-		// 			if ec_map.contains_key(&account_id) {
-		// 				// NORMAL: account_id in endowed_accounts and in json.
-		// 				if ec_map[&account_id] != true {
-		// 					*ec_map.get_mut(&account_id).unwrap() = true;
-		// 					vesting_config.vesting.push((
-		// 						account_id,
-		// 						locked,
-		// 						per_block,
-		// 						starting_block,
-		// 					));
-		// 				}
-		// 				// WARNING: duplicate account_id.
-		// 				else {
-		// 					log::info!(
-		// 						"Duplicate account_id({}) in `palletVesting` in json.",
-		// 						account_id
-		// 					);
-		// 				}
-		// 			}
-		// 			// WARNING: account_id not in endowed_accounts.
-		// 			else {
-		// 				log::info!(
-		// 					"Extra account_id({}) in `palletVesting` in json.",
-		// 					account_id
-		// 				);
-		// 			}
-		// 		}
-		//
-		// 		for account_id in ec_map
-		// 			.iter()
-		// 			.filter(|(_, is_set)| !**is_set)
-		// 			.map(|(account_id, _)| account_id)
-		// 			.cloned()
-		// 		{
-		// 			// WARNING: missing account_id.
-		// 			log::info!(
-		// 				"Missing account_id({}) in `palletVesting` in json.",
-		// 				&account_id
-		// 			);
-		// 			vesting_config
-		// 				.vesting
-		// 				.push((account_id, LOCKED, PER_BLOCK, STARTING_BLOCK));
-		// 		}
-		// 	} else {
-		// 		log::info!(
-		// 			"CANNOT convert json in {} to `VestingConfig`, use default vesting config.",
-		// 			NAME
-		// 		);
-		// 	}
-		// } else {
-		// 	log::info!(
-		// 		"Not find `palletVesting` in {}, use default vesting config.",
-		// 		NAME
-		// 	);
-		// }
+	// // Modify `VestingConfig` if has `"palletVesting": VestingConfig` pair in json.
+	// if let Some(vv) = genesis_config.get("palletVesting") {
+	// 	if let Ok(mut vc) = serde_json::from_value::<VestingConfig>(vv.clone()) {
+	// 		vesting_config = Default::default();
+	//
+	// 		for (account_id, locked, per_block, starting_block) in vc.vesting.drain(..) {
+	// 			if ec_map.contains_key(&account_id) {
+	// 				// NORMAL: account_id in endowed_accounts and in json.
+	// 				if ec_map[&account_id] != true {
+	// 					*ec_map.get_mut(&account_id).unwrap() = true;
+	// 					vesting_config.vesting.push((
+	// 						account_id,
+	// 						locked,
+	// 						per_block,
+	// 						starting_block,
+	// 					));
+	// 				}
+	// 				// WARNING: duplicate account_id.
+	// 				else {
+	// 					log::info!(
+	// 						"Duplicate account_id({}) in `palletVesting` in json.",
+	// 						account_id
+	// 					);
+	// 				}
+	// 			}
+	// 			// WARNING: account_id not in endowed_accounts.
+	// 			else {
+	// 				log::info!(
+	// 					"Extra account_id({}) in `palletVesting` in json.",
+	// 					account_id
+	// 				);
+	// 			}
+	// 		}
+	//
+	// 		for account_id in ec_map
+	// 			.iter()
+	// 			.filter(|(_, is_set)| !**is_set)
+	// 			.map(|(account_id, _)| account_id)
+	// 			.cloned()
+	// 		{
+	// 			// WARNING: missing account_id.
+	// 			log::info!(
+	// 				"Missing account_id({}) in `palletVesting` in json.",
+	// 				&account_id
+	// 			);
+	// 			vesting_config
+	// 				.vesting
+	// 				.push((account_id, LOCKED, PER_BLOCK, STARTING_BLOCK));
+	// 		}
+	// 	} else {
+	// 		log::info!(
+	// 			"CANNOT convert json in {} to `VestingConfig`, use default vesting config.",
+	// 			NAME
+	// 		);
+	// 	}
+	// } else {
+	// 	log::info!(
+	// 		"Not find `palletVesting` in {}, use default vesting config.",
+	// 		NAME
+	// 	);
+	// }
 	} else {
 		log::info!("CANNOT parse {}, use default genesis config.", NAME);
 	}
