@@ -6,54 +6,8 @@
         1000000000000000001
       ],
       [
-        "5Fbsd6WXDGiLTxunqeK5BATNiocfCqu9bS1yArVjCgeBLkVy",
+        "5CFSrXYonEkG33N16oW1y1b8C7z3yt1Wqo2R5Cfq4HQm75G1",
         1000000000000000002
-      ],
-      [
-        "5ERawXCzCWkjVq3xz1W5KGNtVx2VdefvZ62Bw1FEuZW4Vny2",
-        1000000000000000003
-      ],
-      [
-        "5DyVtKWPidondEu8iHZgi6Ffv9yrJJ1NDNLom3X9cTDi98qp",
-        1000000000000000004
-      ],
-      [
-        "5HYZnKWe5FVZQ33ZRJK1rG3WaLMztxWrrNDb1JRwaHHVWyP9",
-        1000000000000000005
-      ]
-    ]
-  },
-  "palletVesting": {
-    "vesting": [
-      [
-        "5Ff3iXP75ruzroPWRP2FYBHWnmGGBSb63857BgnzCoXNxfPo",
-        0,
-        10000,
-        500000000000000001
-      ],
-      [
-        "5Fbsd6WXDGiLTxunqeK5BATNiocfCqu9bS1yArVjCgeBLkVy",
-        0,
-        10000,
-        500000000000000002
-      ],
-      [
-        "5ERawXCzCWkjVq3xz1W5KGNtVx2VdefvZ62Bw1FEuZW4Vny2",
-        0,
-        10000,
-        500000000000000003
-      ],
-      [
-        "5DyVtKWPidondEu8iHZgi6Ffv9yrJJ1NDNLom3X9cTDi98qp",
-        0,
-        10000,
-        500000000000000004
-      ],
-      [
-        "5HYZnKWe5FVZQ33ZRJK1rG3WaLMztxWrrNDb1JRwaHHVWyP9",
-        0,
-        10000,
-        500000000000000005
       ]
     ]
   }
