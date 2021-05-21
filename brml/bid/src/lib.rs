@@ -29,18 +29,37 @@ use frame_support::{
 	weights::Weight, Parameter, StorageValue,
 };
 use frame_system::{ensure_root, ensure_signed};
-use node_primitives::AssetTrait;
 use num_traits::sign::Unsigned;
 use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero, One};
 use sp_runtime::{DispatchError, Permill};
+use orml_traits::{
+	currency::TransferAll, MultiCurrency,
+	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
+};
+use node_primitives::{ CurrencyIdExt, CurrencyId};
+
+type CurrencyIdOf<T> =
+	<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
 
 const PERMILL_INPUT_MAXIMUM_NUM: u32 = 10_000;
 
 pub trait Config: frame_system::Config {
-	/// The arithmetic type of asset identifier.
-	type AssetId: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
-
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance>;
+	/// Handler for both NativeCurrency and MultiCurrency
+	// type CurrenciesHandler: Currency<Self::AccountId> + MultiReservableCurrency<Self::AccountId> + MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+	type CurrenciesHandler: TransferAll<Self::AccountId>
+			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
+			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
+			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>;
+	
+	/// The units in which we record balances.
+	type Balance: Member
+			+ Parameter
+			+ AtLeast32Bit
+			+ Default
+			+ Copy
+			+ Unsigned
+			+ MaybeSerializeDeserialize
+			+ From<Self::BlockNumber>;
 
 	/// Bidding order id.
 	type BiddingOrderId: Member
@@ -61,16 +80,6 @@ pub trait Config: frame_system::Config {
 		+ Into<Self::BlockNumber>;
 
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-
-	/// The units in which we record balances.
-	type Balance: Member
-		+ Parameter
-		+ AtLeast32Bit
-		+ Default
-		+ Copy
-		+ Unsigned
-		+ MaybeSerializeDeserialize
-		+ From<Self::BlockNumber>;
 
 	/// The number of records that the order roi list should keep
 	type TokenOrderROIListLength: Get<u8>;
@@ -93,7 +102,7 @@ pub trait Config: frame_system::Config {
 
 decl_event! {
 	pub enum Event<T> where
-		AssetId = <T as Config>::AssetId,
+		AssetId = CurrencyIdOf<T>,
 		BlockNumber = <T as frame_system::Config>::BlockNumber,
 		BiddingOrderId = <T as Config>::BiddingOrderId,
 		{
@@ -136,11 +145,11 @@ decl_error! {
 
 /// struct for matched order in service
 #[derive(Default, Clone, Eq, PartialEq, Debug, Encode, Decode)]
-pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance> {
+pub struct BiddingOrderUnit<AccountId, CurrencyId, BlockNumber, Balance> {
 	/// bidder id
 	bidder_id: AccountId,
 	/// token id
-	token_id: AssetId,
+	token_id: CurrencyId,
 	/// if it's a bidding proposal unit, then block_num means bidding block number.
 	/// If it's an order in service unit, then block_num means order end block number.
 	block_num: BlockNumber,
@@ -155,7 +164,7 @@ pub struct BiddingOrderUnit<AccountId, AssetId, BlockNumber, Balance> {
 
 type BiddingOrderUnitOf<T> = BiddingOrderUnit<
 	<T as frame_system::Config>::AccountId,
-	<T as Config>::AssetId,
+	CurrencyIdOf<T>,
 	<T as frame_system::Config>::BlockNumber,
 	<T as Config>::Balance,
 >;
@@ -163,7 +172,7 @@ type BiddingOrderUnitOf<T> = BiddingOrderUnit<
 decl_storage! {
 	trait Store for Module<T: Config> as Bid {
 		/// queue for unmatched bidding proposals
-		BiddingQueues get(fn bidding_queues): map hasher(blake2_128_concat) T::AssetId
+		BiddingQueues get(fn bidding_queues): map hasher(blake2_128_concat) CurrencyIdOf<T>
 						=> Vec<(Permill, T::BiddingOrderId)>;
 		/// proposal Id
 		ProposalNextId get(fn proposal_next_id): T::BiddingOrderId;
@@ -173,10 +182,10 @@ decl_storage! {
 		/// Bidder proposals in queue which haven't been matched.
 		BidderProposalInQueue get(fn bidder_proposal_in_queue): double_map
 			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) T::AssetId
+			hasher(blake2_128_concat) CurrencyIdOf<T>
 			=> Vec<T::BiddingOrderId>;
 		/// the bidding balance of each registered vtoken.
-		TotalProposalsInQueue get(fn total_proposals_in_queue): map hasher(blake2_128_concat) T::AssetId => T::Balance;
+		TotalProposalsInQueue get(fn total_proposals_in_queue): map hasher(blake2_128_concat) CurrencyIdOf<T> => T::Balance;
 		/// map for recording orders in service. key is id, value is BiddingOrderUnit struct.
 		OrdersInService get(fn orders_in_service): map hasher(blake2_128_concat) T::BiddingOrderId
 													=> BiddingOrderUnitOf<T>;
@@ -186,35 +195,35 @@ decl_storage! {
 		/// Record bidder token orders in service in the form of id in a map.
 		BidderTokenOrdersInService get(fn bidder_token_orders_in_service): double_map
 			hasher(blake2_128_concat) T::AccountId,
-			hasher(blake2_128_concat) T::AssetId
+			hasher(blake2_128_concat) CurrencyIdOf<T>
 			=> Vec<T::BiddingOrderId>;
 		/// maintain a list of order id for each token in the order of ROI increasing. Every Vec constrain 
 		/// to a constant length. token => (annual roi, order id), order by annual roi ascending.
-		TokenOrderROIList get(fn token_order_roi_list): map hasher(blake2_128_concat) T::AssetId
+		TokenOrderROIList get(fn token_order_roi_list): map hasher(blake2_128_concat) CurrencyIdOf<T>
 															 => Vec<(Permill, T::BiddingOrderId)>;
 		/// total votes which are already in service
-		TotalVotesInService get(fn total_votes_in_service): map hasher(blake2_128_concat) T::AssetId => T::Balance;
+		TotalVotesInService get(fn total_votes_in_service): map hasher(blake2_128_concat) CurrencyIdOf<T> => T::Balance;
 		/// Record the releasing votes from now to the end of current era.
 		ToReleaseVotesTilEndOfEra get(fn to_release_votes_til_end_of_era): map hasher(blake2_128_concat)
-																				(T::AssetId, T::EraId) => T::Balance;
+																				(CurrencyIdOf<T>, T::EraId) => T::Balance;
 		/// Order next id
 		OrderNextId get(fn order_next_id): T::BiddingOrderId;
 		/// the min and max number of blocks that an matched order can last. 【token => (min, max)】
-		MinMaxOrderLastingBlockNum get(fn max_order_lasting_block_num): map hasher(blake2_128_concat) T::AssetId
+		MinMaxOrderLastingBlockNum get(fn max_order_lasting_block_num): map hasher(blake2_128_concat) CurrencyIdOf<T>
 		=> (T::BlockNumber, T::BlockNumber);
 		/// slash margin rates for each type of token
-		SlashMarginRates get(fn slash_margin_rates): map hasher(blake2_128_concat) T::AssetId => Permill;
+		SlashMarginRates get(fn slash_margin_rates): map hasher(blake2_128_concat) CurrencyIdOf<T> => Permill;
 		/// Block number per era for each vtoken
-		BlockNumberPerEra get(fn block_number_per_era): map hasher(blake2_128_concat) T::AssetId => T::BlockNumber;
+		BlockNumberPerEra get(fn block_number_per_era): map hasher(blake2_128_concat) CurrencyIdOf<T> => T::BlockNumber;
 		/// the block number lag before we can vote for another validator when we stop a staking
-		ServiceStopBlockNumLag get(fn service_stop_block_num_lag): map hasher(blake2_128_concat) T::AssetId => T::BlockNumber;
+		ServiceStopBlockNumLag get(fn service_stop_block_num_lag): map hasher(blake2_128_concat) CurrencyIdOf<T> => T::BlockNumber;
 		/// vtokens that have been registered for bidding marketplace
-		VtokensRegisteredForBidding get(fn vtoken_registered_for_bidding): Vec<T::AssetId>;
+		VtokensRegisteredForBidding get(fn vtoken_registered_for_bidding): Vec<CurrencyIdOf<T>>;
 		/// Orders have been unbonded because of user withdrawing within current era. If vtoken supply increase later
 		/// within current era, the deleted orders recorded in this storage can restore. 
 		/// vtoken => (deleted_order_id, original_end_block_number)
 		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) 
-											T::AssetId => Vec<(T::BiddingOrderId, BiddingOrderUnitOf<T>)>;
+		CurrencyIdOf<T> => Vec<(T::BiddingOrderId, BiddingOrderUnitOf<T>)>;
 
 		/// Slash amounts for orders in service. This storage should be updated by the Staking pallet whenever there is
 		/// slash occurred for a certain order. When the order ends, remaining slash deposit should be return to the
@@ -306,9 +315,9 @@ decl_module! {
 
 		/// Register a vtoken for bidding marketplace
 		#[weight = 1_000]
-		fn register_vtoken_for_bidding(origin, vtoken: T::AssetId) -> DispatchResult {
+		fn register_vtoken_for_bidding(origin, vtoken: CurrencyIdOf<T>) -> DispatchResult {
 			ensure_root(origin)?;
-			ensure!(T::AssetTrait::is_v_token(vtoken), Error::<T>::NotValidVtoken); // ensure the passed in vtoken valid
+			ensure!(vtoken.is_vtoken(), Error::<T>::NotValidVtoken); // ensure the passed in vtoken valid
 			ensure!(!VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenAlreadyRegistered);
 
 			VtokensRegisteredForBidding::<T>::mutate(|vtoken_vec| {
@@ -372,7 +381,7 @@ decl_module! {
 				ensure_root(origin)?
 			}
 			ensure!(OrdersInService::<T>::contains_key(order_id), Error::<T>::OrderNotExist);  //ensure the order exists
-			let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+			let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
 			ensure!(end_block_num >= current_block_number, Error::<T>::BlockNumberNotValid);  // ensure end_block_num valid
 
 			Self::deposit_event(RawEvent::SetOrderEndTimeSuccess(order_id, end_block_num));
@@ -384,7 +393,7 @@ decl_module! {
 
 		/// Create a bidding proposal and update it to the corresponding storage
 		#[weight = 1_000]
-		fn create_bidding_proposal(origin, vtoken: T::AssetId, #[compact] votes_needed: T::Balance, roi: u32, validator: T::AccountId
+		fn create_bidding_proposal(origin, vtoken: CurrencyIdOf<T>, #[compact] votes_needed: T::Balance, roi: u32, validator: T::AccountId
 		) -> DispatchResult {
 			let bidder = ensure_signed(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
@@ -406,12 +415,14 @@ decl_module! {
 			let should_deposit = slash_deposit.saturating_add(onetime_payment);
 
 			// get the corresponding token id by vtoken id.
-			let token_id = T::AssetTrait::get_pair(vtoken).unwrap_or_default();
-			let user_token_balance = T::AssetTrait::get_account_asset(token_id, &bidder).available;
+			let token_id = CurrencyId::Token(vtoken.get_token_pair().unwrap_or_default().0);
+			let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+				<T as frame_system::Config>::AccountId,
+			>>::free_balance(token_id, &bidder);
 
 			ensure!(user_token_balance >= should_deposit, Error::<T>::NotEnoughBalance);  // ensure user has enough balance
 
-			let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+			let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
 			let new_proposal = BiddingOrderUnit {
 				bidder_id: bidder.clone(),
 				token_id: vtoken,
@@ -461,7 +472,7 @@ decl_module! {
 		/// Below functions can be only called by root.
 		/// set the default minimum and maximum order lasting time in the form of block number.
 		#[weight = 1_000]
-		fn set_min_max_order_lasting_block_num(origin, vtoken: T::AssetId, minimum: T::BlockNumber, maximum: T::BlockNumber
+		fn set_min_max_order_lasting_block_num(origin, vtoken: CurrencyIdOf<T>, minimum: T::BlockNumber, maximum: T::BlockNumber
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
@@ -482,7 +493,7 @@ decl_module! {
 
 		/// Set the default block number per era for each vtoken according to its original token chain
 		#[weight = 1_000]
-		fn set_block_number_per_era(origin, vtoken: T::AssetId, block_num_per_era: T::BlockNumber) -> DispatchResult {
+		fn set_block_number_per_era(origin, vtoken: CurrencyIdOf<T>, block_num_per_era: T::BlockNumber) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
 
@@ -501,7 +512,7 @@ decl_module! {
 
 		/// set the lag block number before we can change voting for another validator when we stop a taking
 		#[weight = 1_000]
-		fn set_service_stop_block_num_lag(origin, vtoken: T::AssetId, service_stop_lag_block_num: T::BlockNumber
+		fn set_service_stop_block_num_lag(origin, vtoken: CurrencyIdOf<T>, service_stop_lag_block_num: T::BlockNumber
 		) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
@@ -521,7 +532,7 @@ decl_module! {
 
 		/// Set slash margin rate for each vtoken.
 		#[weight = 1_000]
-		fn set_slash_margin_rates(origin, vtoken: T::AssetId, slash_margin: u32) -> DispatchResult {
+		fn set_slash_margin_rates(origin, vtoken: CurrencyIdOf<T>, slash_margin: u32) -> DispatchResult {
 			ensure_root(origin)?;
 			ensure!(VtokensRegisteredForBidding::<T>::get().contains(&vtoken), Error::<T>::VtokenNotRegistered);
 			ensure!(slash_margin <= 100, Error::<T>::RateExceedUpperBound); // not allowed to be higher than 100% roi
@@ -548,7 +559,7 @@ impl<T: Config> Module<T> {
 	/// If the available votes are less than needed, an order in service will be created with the available votes.
 	/// Meanwhile a new bidding proposal will be issued with the remained unmet votes.
 	fn check_and_match_unsatisfied_bidding_proposal(
-		vtoken: T::AssetId,
+		vtoken: CurrencyIdOf<T>,
 		current_block_num: T::BlockNumber,
 	) -> DispatchResult {
 		let (available_flag, available_votes) =
@@ -680,19 +691,19 @@ impl<T: Config> Module<T> {
 			Self::calculate_order_onetime_payment(*vtoken, votes_matched, *annual_roi)?;
 		let should_deposit = slash_deposit.saturating_add(onetime_payment);
 		// get the corresponding token id by vtoken id.
-		let token_id = T::AssetTrait::get_pair(*vtoken).unwrap_or_default();
-		let user_token_balance = T::AssetTrait::get_account_asset(token_id, &bidder).available;
+		let token_id = CurrencyId::Token(vtoken.get_token_pair().unwrap_or_default().0);
+		let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
+			<T as frame_system::Config>::AccountId,
+		>>::free_balance(token_id, &bidder);
 
 		ensure!(
 			user_token_balance >= should_deposit,
 			Error::<T>::NotEnoughBalance
 		); // ensure user has enough balance
 
-		// lock the slash deposit
-		T::AssetTrait::lock_asset(&bidder, token_id, slash_deposit);
-
-		// deduct the onetime payment asset_redeem(assetId, &target, amount)
-		T::AssetTrait::asset_redeem(token_id, &bidder, onetime_payment);
+		// reserve the slash deposit
+		T::CurrenciesHandler::reserve(token_id, &bidder, slash_deposit)?;
+		T::CurrenciesHandler::withdraw(token_id, &bidder, onetime_payment)?;
 
 		Ok(())
 	}
@@ -717,7 +728,7 @@ impl<T: Config> Module<T> {
 		votes_matched: T::Balance,
 	) -> Result<T::BiddingOrderId, DispatchError> {
 		// current block number
-		let current_block_num = <frame_system::Module<T>>::block_number();
+		let current_block_num = frame_system::Pallet::<T>::block_number();
 		ensure!(
 			order_end_block_num >= current_block_num,
 			Error::<T>::BlockNumberNotValid
@@ -858,7 +869,7 @@ impl<T: Config> Module<T> {
 			votes,
 			..
 		} = OrdersInService::<T>::get(order_id);
-		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+		let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
 		ensure!(
 			end_block_num >= current_block_number,
 			Error::<T>::BlockNumberNotValid
@@ -902,7 +913,7 @@ impl<T: Config> Module<T> {
 	}
 
 	/// Initialize empty storage for each vtoken
-	fn vtoken_empty_storage_initialization(vtoken: T::AssetId) -> DispatchResult {
+	fn vtoken_empty_storage_initialization(vtoken: CurrencyIdOf<T>) -> DispatchResult {
 		let empty_bidding_order_unit_vec: Vec<(Permill, T::BiddingOrderId)> = Vec::new();
 
 		// initialize proposal related storage
@@ -927,7 +938,7 @@ impl<T: Config> Module<T> {
 	/// true, the second element is the available votes. If the first element of the tuple shows false, the second element
 	/// is the votes needed to be release from bidder.
 	fn calculate_available_votes(
-		vtoken: T::AssetId,
+		vtoken: CurrencyIdOf<T>,
 		current_block_num: T::BlockNumber,
 	) -> Result<(bool, T::Balance), Error<T>> {
 		ensure!(
@@ -964,7 +975,7 @@ impl<T: Config> Module<T> {
 
 	/// If total votes are less than votes in service(available votes is a negative number), we need to release some
 	///  votes from the bidder who provides the lowest roi rate.
-	fn release_votes_from_bidder(vtoken: T::AssetId, release_votes: T::Balance) -> DispatchResult {
+	fn release_votes_from_bidder(vtoken: CurrencyIdOf<T>, release_votes: T::Balance) -> DispatchResult {
 		let mut remained_to_release_vote = release_votes;
 
 		let balance_order_id_vec = TokenOrderROIList::<T>::get(vtoken);
@@ -975,7 +986,7 @@ impl<T: Config> Module<T> {
 			let BiddingOrderUnit { votes, ..} = OrdersInService::<T>::get(order_id);
 			let mut to_delete_order = OrdersInService::<T>::get(order_id);
 
-			let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+			let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
 			let mut should_deduct = votes;
 
 			if remained_to_release_vote < votes {
@@ -1006,7 +1017,7 @@ impl<T: Config> Module<T> {
 
 	/// calculate how much slash deposit bidder should be locked.
 	fn calculate_order_slash_deposit(
-		vtoken: T::AssetId,
+		vtoken: CurrencyIdOf<T>,
 		votes_matched: T::Balance,
 	) -> Result<T::Balance, Error<T>> {
 		ensure!(
@@ -1021,7 +1032,7 @@ impl<T: Config> Module<T> {
 
 	/// calculate the minimum one time payment the bidder should pay for his votes needed.
 	fn calculate_order_onetime_payment(
-		vtoken: T::AssetId,
+		vtoken: CurrencyIdOf<T>,
 		votes_matched: T::Balance,
 		roi_rate: Permill,
 	) -> Result<T::Balance, Error<T>> {
@@ -1141,8 +1152,9 @@ impl<T: Config> Module<T> {
 			SlashForOrdersInService::<T>::remove(order_id);
 		}
 
-		let token_id = T::AssetTrait::get_pair(order_detail.token_id).unwrap_or_default();
-		T::AssetTrait::unlock_asset(&order_detail.bidder_id, token_id, original_slash_deposit);
+		let token_id = CurrencyId::Token((order_detail.token_id).get_token_pair().unwrap_or_default().0);
+		<<T as Config>::CurrenciesHandler as MultiReservableCurrency<<T as frame_system::Config>::AccountId,
+			>>::unreserve(token_id, &order_detail.bidder_id, original_slash_deposit);
 
 		// unlock the remaining slash deposit.
 		if slashed_amount > original_slash_deposit {
@@ -1150,11 +1162,11 @@ impl<T: Config> Module<T> {
 		}
 
 		if slashed_amount > Zero::zero() {
-			T::AssetTrait::asset_redeem(
+			T::CurrenciesHandler::withdraw(
 				order_detail.token_id,
 				&order_detail.bidder_id,
 				slashed_amount,
-			);
+			)?;
 		}
 
 		Ok(())
@@ -1180,8 +1192,8 @@ impl<T: Config> Module<T> {
 	}
 
 	/// get the current total votes from convert pool
-	fn get_total_votes(_vtoken: T::AssetId) -> T::Balance {
-		let current_block_number = <frame_system::Module<T>>::block_number(); // get current block number
+	fn get_total_votes(_vtoken: CurrencyIdOf<T>) -> T::Balance {
+		let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
 		let mock_total_votes =
 			current_block_number * T::BlockNumber::from(201 as u32) % T::BlockNumber::from(1_000 as u32);
 		mock_total_votes.into()

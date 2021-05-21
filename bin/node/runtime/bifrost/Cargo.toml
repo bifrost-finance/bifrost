@@ -1,6 +1,6 @@
 [package]
 name = "bifrost-runtime"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2018"
 build = "build.rs"
@@ -14,8 +14,7 @@ static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
 
 # primitives
-node-primitives = { path = "../../primitives", default-features = false }
-sp-authority-discovery = { version = "3.0.0", default-features = false }
+node-primitives = { default-features = false, path = "../../primitives" }
 sp-consensus-babe = { version = "0.9.0", default-features = false }
 sp-block-builder = { default-features = false, version = "3.0.0"}
 sp-inherents = { version = "3.0.0", default-features = false }
@@ -24,48 +23,47 @@ sp-core = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 sp-api = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
-sp-staking = { version = "3.0.0", default-features = false }
 sp-keyring = { version = "3.0.0", optional = true }
 sp-session = { version = "3.0.0", default-features = false }
 sp-transaction-pool = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
+sp-consensus-aura = { version = "0.9.0",  default-features = false }
 
 # frame dependencies
 frame-executive = { version = "3.0.0", default-features = false }
-frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
-frame-system-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
-pallet-authority-discovery = { version = "3.0.0", default-features = false }
-pallet-authorship = { version = "3.0.0", default-features = false }
-pallet-babe = { version = "3.0.0", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false }
-pallet-collective = { version = "3.0.0", default-features = false }
-pallet-democracy = { version = "3.0.0", default-features = false }
-pallet-grandpa = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
-pallet-membership = { version = "3.0.0", default-features = false }
-pallet-offences = { version = "3.0.0", default-features = false }
-pallet-offences-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
-pallet-session = { version = "3.0.0", features = ["historical"], default-features = false }
-pallet-session-benchmarking = { version = "3.0.0", default-features = false, optional = true }
-pallet-scheduler = { version = "3.0.0", default-features = false }
 pallet-sudo = { version = "3.0.0", default-features = false }
 pallet-timestamp = { version = "3.0.0", default-features = false }
-pallet-treasury = { version = "3.0.0", default-features = false }
-pallet-utility = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
-pallet-im-online = { version = "3.0.0", default-features = false }
+pallet-utility = { version = "3.0.0", default-features = false }
+pallet-scheduler = { version = "3.0.0", default-features = false }
+pallet-aura = { version = "3.0.0", default-features = false }
 
-# bifrost pallets
-brml-poa-manager = { path = "../../../../brml/poa-manager", default-features = false }
-pallet-vesting = { package = "brml-vesting", path = "../../../../brml/vesting", default-features = false }
+# Cumulus dependencies
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.1" }
+
+# Polkadot dependencies
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
 
 [build-dependencies]
-substrate-wasm-builder = { version = "4.0.0" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0" }
@@ -74,70 +72,42 @@ sp-io = { version = "3.0.0" }
 default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
-	"sp-authority-discovery/std",
-	"pallet-authority-discovery/std",
-	"pallet-authorship/std",
-	"sp-consensus-babe/std",
-	"pallet-babe/std",
-	"pallet-balances/std",
-	"sp-block-builder/std",
 	"codec/std",
 	"log/std",
-	"pallet-collective/std",
-	"pallet-democracy/std",
 	"frame-executive/std",
-	"pallet-grandpa/std",
-	"pallet-indices/std",
-	"sp-inherents/std",
-	"pallet-membership/std",
-	"pallet-scheduler/std",
-	"node-primitives/std",
-	"sp-offchain/std",
-	"pallet-offences/std",
-	"sp-core/std",
-	"pallet-randomness-collective-flip/std",
-	"sp-std/std",
-	"serde",
-	"pallet-session/std",
-	"sp-api/std",
-	"sp-runtime/std",
-	"sp-staking/std",
-	"sp-keyring",
-	"sp-session/std",
-	"pallet-sudo/std",
 	"frame-support/std",
-	"frame-benchmarking/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"node-primitives/std",
+	"pallet-balances/std",
+	"pallet-indices/std",
+	"pallet-randomness-collective-flip/std",
+	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-	"pallet-im-online/std",
-	"pallet-treasury/std",
+	"serde",
+	"sp-consensus-babe/std",
+	"sp-block-builder/std",
+	"sp-inherents/std",
+	"sp-offchain/std",
+	"sp-core/std",
+	"sp-std/std",
+	"sp-api/std",
+	"sp-runtime/std",
+	"sp-session/std",
 	"sp-transaction-pool/std",
-	"pallet-utility/std",
-	"sp-version/std",
-	"pallet-vesting/std",
-	"brml-poa-manager/std",
-]
-runtime-benchmarks = [
-	"frame-benchmarking",
-	"frame-support/runtime-benchmarks",
-	"frame-system/runtime-benchmarks",
-	"sp-runtime/runtime-benchmarks",
-	"pallet-babe/runtime-benchmarks",
-	"pallet-balances/runtime-benchmarks",
-	"pallet-collective/runtime-benchmarks",
-	"pallet-democracy/runtime-benchmarks",
-	"pallet-grandpa/runtime-benchmarks",
-	"pallet-indices/runtime-benchmarks",
-	"pallet-scheduler/runtime-benchmarks",
-	"pallet-timestamp/runtime-benchmarks",
-	"pallet-treasury/runtime-benchmarks",
-	"pallet-utility/runtime-benchmarks",
-	"pallet-vesting/runtime-benchmarks",
-	"pallet-offences-benchmarking",
-	"pallet-session-benchmarking",
-	"frame-system-benchmarking",
-	"hex-literal",
+	"parachain-info/std",
+	"cumulus-pallet-aura-ext/std",
+	"cumulus-pallet-dmp-queue/std",
+	"cumulus-pallet-parachain-system/std",
+	"cumulus-pallet-xcmp-queue/std",
+	"cumulus-pallet-xcm/std",
+	"cumulus-primitives-core/std",
+	"cumulus-primitives-utility/std",
+	"xcm/std",
+	"xcm-builder/std",
+	"xcm-executor/std",
+	"pallet-aura/std",
+	"sp-consensus-aura/std",
 ]

@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -71,6 +71,10 @@ pallet-authority-discovery = { version = "3.0.0" }
 pallet-staking = { version = "3.0.0" }
 pallet-grandpa = { version = "3.0.0" }
 
+# ZenlinkProtocol dependencies
+zenlink-protocol-runtime-api = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api" }
+zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
+
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
 node-primitives = { path = "../primitives" }
@@ -98,17 +102,15 @@ wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.18", optional = true }
 
 # Cumulus dependencies
-cumulus-cli = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
-cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
-cumulus-client-network = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.1" }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.1" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.1" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
-polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.1" }
+polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.1" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.1" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.1" }
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.9.0", optional = true, features = [ "wasmtime" ] }
@@ -118,9 +120,6 @@ sp-trie = { version = "3.0.0", default-features = false, features = ["memory-tra
 [dev-dependencies]
 sc-keystore = { version = "3.0.0" }
 sc-consensus = { version = "0.9.0" }
-sc-consensus-babe = { version = "0.9.0", features = ["test-helpers"] }
-sc-consensus-epochs = { version = "0.9.0" }
-#sc-service-test = { version = "3.0.0" }
 futures = "0.3.9"
 tempfile = "3.1.0"
 assert_cmd = "1.0"
@@ -159,18 +158,12 @@ runtime-benchmarks = [
 	"frame-benchmarking-cli",
 ]
 with-asgard-runtime = [
-	"node-service/with-bifrost-runtime",
 	"node-service/with-asgard-runtime",
 ]
 with-bifrost-runtime = [
 	"node-service/with-bifrost-runtime",
 ]
-with-rococo-runtime = [
-	"node-service/with-bifrost-runtime",
-	"node-service/with-rococo-runtime",
-]
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",
-	"with-rococo-runtime",
 ]

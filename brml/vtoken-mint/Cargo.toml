@@ -1,6 +1,6 @@
 [package]
 name = "brml-vtoken-mint"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Jamie Deng <djptux@gmail.com>"]
 edition = "2018"
 
@@ -10,13 +10,23 @@ node-primitives = { path = "../../bin/node/primitives", default-features = false
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 log = { version = "0.4.14", default-features = false }
-serde = { version = "1.0.124", optional = true }
+serde = { version = "1.0.118", optional = true }
+sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
+zenlink-protocol = { path = "../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false}
+
 
 [dev-dependencies]
-assets = { package = "brml-assets", path = "../assets" }
-sp-core = { version = "3.0.0" }
-sp-io = { version = "3.0.0" }
+brml-minter-reward = { path = "../minter-reward" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master" }
+pallet-balances = "3.0.0"
+pallet-randomness-collective-flip = "3.0.0"
+sp-core = "3.0.0"
+sp-io = "3.0.0"
 
 [features]
 default = ["std"]
@@ -27,5 +37,12 @@ std = [
 	"frame-system/std",
 	"log/std",
 	"serde/std",
+	"sp-core/std",
 	"sp-runtime/std",
+	"sp-std/std",
+	"orml-traits/std",
+	"zenlink-protocol/std",
+	"orml-traits/std",
+	"orml-currencies/std",
+	"orml-tokens/std"
 ]

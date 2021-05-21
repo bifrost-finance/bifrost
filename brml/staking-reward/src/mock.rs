@@ -22,6 +22,10 @@ use crate as pallet_staking_reward;
 use frame_support::{construct_runtime, parameter_types};
 use sp_core::H256;
 use sp_runtime::{traits::{BlakeTwo256, IdentityLookup}, testing::Header};
+use node_primitives::{CurrencyId, TokenSymbol};
+pub type BlockNumber = u64;
+pub type Amount = i64;
+pub type Balance = u64;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -32,9 +36,11 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		Assets: assets::{Module, Call, Storage, Event<T>},
-		StakingReward: pallet_staking_reward::{Module, Call, Storage},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Assets: orml_tokens::{Pallet, Storage, Event<T>},
+		Balances: pallet_balances ::{Pallet, Call, Storage, Event<T>},
+		StakingReward: pallet_staking_reward::{Pallet, Call, Storage},
 	}
 );
 
@@ -50,9 +56,9 @@ impl frame_system::Config for Test {
 	type DbWeight = ();
 	type Origin = Origin;
 	type Index = u64;
+	type Call = Call;
 	type BlockNumber = u64;
 	type Hash = H256;
-	type Call = Call;
 	type Hashing = BlakeTwo256;
 	type AccountId = u64;
 	type Lookup = IdentityLookup<Self::AccountId>;
@@ -61,28 +67,62 @@ impl frame_system::Config for Test {
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<u64>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
-impl assets::Config for Test {
+parameter_types! {
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+pub type AdaptedBasicCurrency =
+	orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Test {
 	type Event = Event;
-	type Balance = u64;
-	type AssetId = u32;
-	type Price = u64;
-	type VtokenMint = u64;
-	type AssetRedeem = ();
-	type FetchVtokenMintPrice = ();
+	type MultiCurrency = Assets;
+	type NativeCurrency = AdaptedBasicCurrency;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const ExistentialDeposit: u64 = 1;
+}
+
+impl pallet_balances::Config for Test {
+	type Balance = u64;
+	type Event = Event;
+	type DustRemoval = ();
+	type ExistentialDeposit = ExistentialDeposit;
+	type AccountStore = System;
+	type MaxLocks = ();
+	type WeightInfo = ();
+}
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		0
+	};
+}
+
+impl orml_tokens::Config for Test {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = i64;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = orml_tokens::TransferDust<Test, ()>;
 }
 
 impl crate::Config for Test {
 	type Balance = u64;
-	type AssetId = u32;
-	type AssetTrait = Assets;
+	type CurrenciesHandler = Currencies;
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
