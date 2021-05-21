@@ -88,7 +88,7 @@ node-rpc = { path = "../rpc" }
 jsonrpc-core = "15.1.0"
 
 # zenlink rpc
-zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
+zenlink-protocol-rpc = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git" }
 
 # Bifrost rpc
 brml-charge-transaction-fee-rpc = { path = "../../../brml/charge-transaction-fee/rpc" }

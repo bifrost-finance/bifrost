@@ -15,7 +15,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
 serde = { version = "1.0.106", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
-zenlink-protocol = { path = "../../../Zenlink-DEX-Module/zenlink-protocol", default-features = false }
+zenlink-protocol = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git", default-features = false }
 
 [dev-dependencies]
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master" }
