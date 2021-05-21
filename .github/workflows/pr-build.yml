@@ -25,7 +25,9 @@ jobs:
         with:
           repository: bifrost-finance/Zenlink-DEX-Module
           token: ${{ secrets.ZENLINK_TOKEN }}
-          path: '../Zenlink-DEX-Module'
+          path: './Zenlink-DEX-Module'
+      - name: Diable zenlink workspace
+        run: rm Zenlink-DEX-Module/Cargo.toml
       - name: Cache cargo registry and index
         uses: actions/cache@v2
         with:

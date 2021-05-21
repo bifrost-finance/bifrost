@@ -72,8 +72,8 @@ pallet-staking = { version = "3.0.0" }
 pallet-grandpa = { version = "3.0.0" }
 
 # ZenlinkProtocol dependencies
-zenlink-protocol-runtime-api = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api" }
-zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
+zenlink-protocol-runtime-api = { path = "../../../Zenlink-DEX-Module/zenlink-protocol/rpc/runtime-api" }
+zenlink-protocol-rpc = { path = "../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
 
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
