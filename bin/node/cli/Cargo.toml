@@ -76,7 +76,7 @@ zenlink-protocol-runtime-api = { path = "../../../../Zenlink-DEX-Module/zenlink-
 zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
 
 # node-specific dependencies
-node-service = { path = "../service" }
+node-service = { path = "../service", default-features = false }
 node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
@@ -143,7 +143,7 @@ package = "sc-cli"
 optional = true
 
 [features]
-default = [ "cli", "with-bifrost-runtime" ]
+default = [ "cli" ]
 cli = [
 	"node-inspect",
 	"sc-cli",

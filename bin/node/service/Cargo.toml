@@ -97,7 +97,7 @@ brml-charge-transaction-fee-rpc = { path = "../../../brml/charge-transaction-fee
 env_logger = "0.8.1"
 
 [features]
-default = [ "std", "with-bifrost-runtime" ]
+default = [ "std" ]
 std = []
 with-asgard-runtime = [
 	"asgard-runtime",
