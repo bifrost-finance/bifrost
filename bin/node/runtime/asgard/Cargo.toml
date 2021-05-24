@@ -63,24 +63,20 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
 
 # bifrost pallets
-#brml-assets = { path = "../../../../brml/assets", default-features = false }
-#brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
+brml-assets = { path = "../../../../brml/assets", default-features = false }
+brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
 #brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
-#brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
-#brml-voucher = { path = "../../../../brml/voucher", default-features = false }
+brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
+brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 #brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
 #brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # orml
 #orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-#orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-#orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 #orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 #orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-
-# zenlink
-# zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
-# zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", default-features = false }
 
 zenlink-protocol = { version = "0.4.0", default-features = false }
 zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
@@ -120,14 +116,6 @@ std = [
 	"sp-runtime/std",
 	"sp-session/std",
 	"sp-transaction-pool/std",
-	"sp-version/std",
-#	"brml-assets/std",
-#	"brml-vtoken-mint/std",
-#	"brml-vtoken-mint-rpc-runtime-api/std",
-#	"brml-minter-reward/std",
-#	'brml-voucher/std',
-#	"brml-charge-transaction-fee/std",
-#	"brml-charge-transaction-fee-rpc-runtime-api/std",
 	"parachain-info/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
@@ -139,9 +127,18 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"pallet-aura/std",
+	"sp-consensus-aura/std",
+	"brml-assets/std",
+	"brml-vtoken-mint/std",
+#	"brml-vtoken-mint-rpc-runtime-api/std",
+	"brml-minter-reward/std",
+	'brml-voucher/std',
+#	"brml-charge-transaction-fee/std",
+#	"brml-charge-transaction-fee-rpc-runtime-api/std",
 #	"orml-currencies/std",
-#	"orml-traits/std",
-#	"orml-tokens/std",
+	"orml-traits/std",
+	"orml-tokens/std",
 #	"orml-xtokens/std",
 #	"orml-xcm-support/std",
 ]
