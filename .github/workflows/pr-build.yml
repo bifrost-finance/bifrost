@@ -36,10 +36,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo
-      - name: Update OS
-        run: sudo apt-get update -qq
-      - name: Install dependencies
-        run: sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
+#      - name: Update OS
+#        run: sudo apt-get update -qq
+#      - name: Install dependencies
+#        run: sudo apt install -y cmake pkg-config libssl-dev git gcc build-essential clang libclang-dev
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
