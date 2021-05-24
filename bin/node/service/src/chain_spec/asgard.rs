@@ -14,23 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use hex_literal::hex;
-use sc_chain_spec::ChainType;
-use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, sr25519};
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use asgard_runtime::{
 	AccountId, AuraId,
-	constants::{currency::DOLLARS, time::DAYS},
-	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig, MinterRewardConfig,
+	constants::{currency::DOLLARS},
+	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
+	ParachainInfoConfig, WASM_BINARY,
 };
+use sc_service::ChainType;
+use sc_telemetry::TelemetryEndpoints;
+use sp_core::{crypto::UncheckedInto, sr25519};
+
 use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
-/// The `ChainSpec` parametrised for the asgard runtime.
+/// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
 pub fn config() -> Result<ChainSpec, String> {
@@ -105,7 +106,9 @@ pub fn testnet_genesis(
 
 	GenesisConfig {
 		frame_system: SystemConfig {
-			code: wasm_binary_unwrap().to_vec(),
+			code: WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
 		pallet_balances: BalancesConfig {
@@ -121,69 +124,73 @@ pub fn testnet_genesis(
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
-		brml_voucher: {
-			if let Some(vouchers) = initialize_all_vouchers() {
-				VoucherConfig { voucher: vouchers }
-			} else {
-				Default::default()
-			}
-		},
-		orml_tokens: AssetsConfig {
-			endowed_accounts: endowed_accounts
-				.iter()
-				.chain(super::faucet_accounts().iter())
-				.flat_map(|x| {
-					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
-						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
-					]
-				})
-				.collect(),
-		},
-		brml_minter_reward: MinterRewardConfig {
-			wegiths: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
-				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
-				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
-			],
-			reward_by_one_block: 5 * DOLLARS / 100,
-			round_index: 1,
-			storage_version: Default::default(),
-		},
-		brml_vtoken_mint: VtokenMintConfig {
-			pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
-			],
-			staking_lock_period: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
-				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
-				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
-			],
-			rate_of_interest_each_block: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
-			],
-			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
-				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
-			],
-		},
+		// brml_voucher: {
+		// 	if let Some(vouchers) = initialize_all_vouchers() {
+		// 		VoucherConfig { voucher: vouchers }
+		// 	} else {
+		// 		Default::default()
+		// 	}
+		// },
+		// orml_tokens: AssetsConfig {
+		// 	endowed_accounts: endowed_accounts
+		// 		.iter()
+		// 		.chain(super::faucet_accounts().iter())
+		// 		.flat_map(|x| {
+		// 			vec![
+		// 				(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
+		// 				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+		// 				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+		// 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+		// 			]
+		// 		})
+		// 		.collect(),
+		// },
+		// brml_minter_reward: MinterRewardConfig {
+		// 	wegiths: vec![
+		// 		(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
+		// 		(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
+		// 		(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
+		// 	],
+		// 	reward_by_one_block: 5 * DOLLARS / 100,
+		// 	round_index: 1,
+		// 	storage_version: Default::default(),
+		// },
+		// brml_vtoken_mint: VtokenMintConfig {
+		// 	pools: vec![
+		// 		(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
+		// 		(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
+		// 		(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
+		// 		(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+		// 		(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
+		// 		(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
+		// 	],
+		// 	staking_lock_period: vec![
+		// 		(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
+		// 		(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
+		// 		(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
+		// 	],
+		// 	rate_of_interest_each_block: vec![
+		// 		(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+		// 		(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
+		// 		(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
+		// 	],
+		// 	yield_rate: vec![
+		// 		(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
+		// 		(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+		// 		(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
+		// 	],
+		// },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
+		pallet_aura: AuraConfig {
+			authorities: initial_authorities,
+		},
+		cumulus_pallet_aura_ext: Default::default(),
 	}
 }
 
 fn development_config_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	testnet_genesis(
-		vec![authority_keys_from_seed("Alice")],
+		vec![get_from_seed::<AuraId>("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
@@ -213,8 +220,8 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 fn local_testnet_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	testnet_genesis(
 		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
+			get_from_seed::<AuraId>("Alice"),
+			get_from_seed::<AuraId>("Bob"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
@@ -287,7 +294,6 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	)
 }
 
-/// Configure genesis for bifrost test
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let initial_authorities: Vec<AuraId> = vec![
 		// 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
@@ -316,4 +322,4 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		Some(endowed_accounts),
 		id,
 	)
-} 
+}
