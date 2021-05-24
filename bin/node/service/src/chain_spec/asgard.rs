@@ -18,15 +18,18 @@ use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use asgard_runtime::{
 	AccountId, AuraId,
-	constants::{currency::DOLLARS},
-	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
+	constants::{currency::DOLLARS, time::DAYS},
+	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
+	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig,
 	ParachainInfoConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_runtime::Permill;
 
-use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
+use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed, initialize_all_vouchers};
+use node_primitives::{CurrencyId, TokenSymbol};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
@@ -124,62 +127,62 @@ pub fn testnet_genesis(
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
-		// brml_voucher: {
-		// 	if let Some(vouchers) = initialize_all_vouchers() {
-		// 		VoucherConfig { voucher: vouchers }
-		// 	} else {
-		// 		Default::default()
-		// 	}
-		// },
-		// orml_tokens: AssetsConfig {
-		// 	endowed_accounts: endowed_accounts
-		// 		.iter()
-		// 		.chain(super::faucet_accounts().iter())
-		// 		.flat_map(|x| {
-		// 			vec![
-		// 				(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
-		// 				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-		// 				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
-		// 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
-		// 			]
-		// 		})
-		// 		.collect(),
-		// },
-		// brml_minter_reward: MinterRewardConfig {
-		// 	wegiths: vec![
-		// 		(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
-		// 		(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
-		// 		(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
-		// 	],
-		// 	reward_by_one_block: 5 * DOLLARS / 100,
-		// 	round_index: 1,
-		// 	storage_version: Default::default(),
-		// },
-		// brml_vtoken_mint: VtokenMintConfig {
-		// 	pools: vec![
-		// 		(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-		// 		(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
-		// 		(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
-		// 		(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
-		// 		(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
-		// 		(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
-		// 	],
-		// 	staking_lock_period: vec![
-		// 		(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
-		// 		(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
-		// 		(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
-		// 	],
-		// 	rate_of_interest_each_block: vec![
-		// 		(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-		// 		(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-		// 		(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
-		// 	],
-		// 	yield_rate: vec![
-		// 		(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
-		// 		(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
-		// 		(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
-		// 	],
-		// },
+		brml_voucher: {
+			if let Some(vouchers) = initialize_all_vouchers() {
+				VoucherConfig { voucher: vouchers }
+			} else {
+				Default::default()
+			}
+		},
+		orml_tokens: AssetsConfig {
+			endowed_accounts: endowed_accounts
+				.iter()
+				.chain(super::faucet_accounts().iter())
+				.flat_map(|x| {
+					vec![
+						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
+						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+					]
+				})
+				.collect(),
+		},
+		brml_minter_reward: MinterRewardConfig {
+			wegiths: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
+			],
+			reward_by_one_block: 5 * DOLLARS / 100,
+			round_index: 1,
+			storage_version: Default::default(),
+		},
+		brml_vtoken_mint: VtokenMintConfig {
+			pools: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
+			],
+			staking_lock_period: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
+				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
+				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
+			],
+			rate_of_interest_each_block: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
+			],
+			yield_rate: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
+			],
+		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		pallet_aura: AuraConfig {
 			authorities: initial_authorities,

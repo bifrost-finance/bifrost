@@ -29,7 +29,7 @@ use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT},
+	traits::{BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -40,7 +40,7 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types, match_type,
+	construct_runtime, parameter_types, match_type, PalletId,
 	traits::{Randomness, IsInVec, All},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -59,7 +59,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::Moment;
+use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -75,6 +75,8 @@ use xcm_executor::{Config, XcmExecutor};
 use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
 use xcm::v0::Xcm;
 use frame_system::EnsureRoot;
+
+mod weights;
 
 pub type SessionHandlers = ();
 
@@ -421,51 +423,52 @@ impl pallet_aura::Config for Runtime {
 
 // bifrost runtime start
 
-// impl brml_voucher::Config for Runtime {
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
-// }
-//
-// parameter_types! {
-// 	// 3 hours(1800 blocks) as an era
-// 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
-// 	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
-// }
-// impl brml_vtoken_mint::Config for Runtime {
-// 	type Event = Event;
-// 	type MultiCurrency = Assets;
-// 	type PalletId = StakingPalletId;
-// 	type MinterReward = MinterReward;
-// 	type DEXOperations = ZenlinkProtocol;
-// 	type RandomnessSource = RandomnessCollectiveFlip;
-// 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
-// }
-//
-// parameter_type_with_key! {
-// 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
-// 		match currency_id {
-// 			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
-// 			_ => Zero::zero(),
-// 		}
-// 	};
-// }
-//
-// impl brml_assets::Config for Runtime {
-// 	type Event = Event;
-// 	type MultiCurrency = Assets;
-// 	type WeightInfo = ();
-// }
-//
-// impl orml_tokens::Config for Runtime {
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type Amount = Amount;
-// 	type CurrencyId = CurrencyId;
-// 	type WeightInfo = ();
-// 	type ExistentialDeposits = ExistentialDeposits;
-// 	type OnDust = ();
-// }
+impl brml_voucher::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
+}
+
+parameter_types! {
+	// 3 hours(1800 blocks) as an era
+	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
+	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
+}
+impl brml_vtoken_mint::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type PalletId = StakingPalletId;
+	type MinterReward = MinterReward;
+	// type DEXOperations = ZenlinkProtocol;
+	type RandomnessSource = RandomnessCollectiveFlip;
+	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
+}
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
+			_ => Zero::zero(),
+		}
+	};
+}
+
+impl brml_assets::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type WeightInfo = ();
+}
+
+impl orml_tokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type Amount = Amount;
+	type CurrencyId = CurrencyId;
+	type WeightInfo = ();
+	type ExistentialDeposits = ExistentialDeposits;
+	type OnDust = ();
+	type MaxLocks = MaxLocks;
+}
 // parameter_types! {
 // 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 // }
@@ -480,24 +483,24 @@ impl pallet_aura::Config for Runtime {
 // 	type OnUnbalanced = ();
 // 	type NativeCurrencyId = NativeCurrencyId;
 // }
-//
-// parameter_types! {
-// 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
-// 	pub const RewardPeriod: BlockNumber = 50;
-// 	pub const MaximumExtendedPeriod: BlockNumber = 100;
-// 	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
-// }
-//
-// impl brml_minter_reward::Config for Runtime {
-// 	type Event = Event;
-// 	type MultiCurrency = Currencies;
-// 	type TwoYear = TwoYear;
-// 	type PalletId = ShareWeightPalletId;
-// 	type RewardPeriod = RewardPeriod;
-// 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
-// 	type DEXOperations = ZenlinkProtocol;
-// 	type ShareWeight = Balance;
-// }
+
+parameter_types! {
+	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
+	pub const RewardPeriod: BlockNumber = 50;
+	pub const MaximumExtendedPeriod: BlockNumber = 100;
+	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+}
+
+impl brml_minter_reward::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type TwoYear = TwoYear;
+	type PalletId = ShareWeightPalletId;
+	type RewardPeriod = RewardPeriod;
+	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	// type DEXOperations = ZenlinkProtocol;
+	type ShareWeight = Balance;
+}
 
 // bifrost runtime end
 
@@ -539,15 +542,15 @@ construct_runtime! {
 		// XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
-		// BrmlAssets: brml_assets::{Pallet, Call, Event<T>} = 10,
-		// VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
-		// MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
-		// Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
+		BrmlAssets: brml_assets::{Pallet, Call, Event<T>} = 10,
+		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
+		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
+		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
 		// ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		// Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 17,
+		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 17,
 		// Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink
