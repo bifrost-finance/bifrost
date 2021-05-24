@@ -88,7 +88,7 @@ node-rpc = { path = "../rpc" }
 jsonrpc-core = "15.1.0"
 
 # zenlink rpc
-zenlink-protocol-rpc = { path = "../../../../Zenlink-DEX-Module/zenlink-protocol/rpc" }
+zenlink-protocol-rpc = "0.4.0"
 
 # Bifrost rpc
 brml-charge-transaction-fee-rpc = { path = "../../../brml/charge-transaction-fee/rpc" }
