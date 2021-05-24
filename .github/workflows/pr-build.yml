@@ -20,6 +20,15 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
+      - name: Add SSH key
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: |
+          mkdir -p /home/runner/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/github_actions
+          chmod 600 /home/runner/.ssh/github_actions
+          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
+          ssh-add /home/runner/.ssh/github_actions
       - name: Cache cargo registry and index
         uses: actions/cache@v2
         with:
@@ -39,9 +48,13 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
       - name: Check
-        run: cargo check --all
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: cargo check --features with-bifrost-runtime
       - name: Run tests
-        run: cargo test --all
+        env:
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        run: cargo test --features with-bifrost-runtime
       - uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
         with:
