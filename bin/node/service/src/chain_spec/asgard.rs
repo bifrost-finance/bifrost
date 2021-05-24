@@ -14,23 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
 
-use hex_literal::hex;
-use sc_chain_spec::ChainType;
-use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, sr25519};
 use cumulus_primitives_core::ParaId;
+use hex_literal::hex;
 use asgard_runtime::{
 	AccountId, AuraId,
 	constants::{currency::DOLLARS, time::DAYS},
-	BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, VoucherConfig,
-	ParachainInfoConfig, WASM_BINARY, wasm_binary_unwrap, AssetsConfig, VtokenMintConfig, MinterRewardConfig,
+	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
+	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig,
+	ParachainInfoConfig, WASM_BINARY,
 };
-use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
+use sc_service::ChainType;
+use sc_telemetry::TelemetryEndpoints;
+use sp_core::{crypto::UncheckedInto, sr25519};
+use sp_runtime::Permill;
+
+use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed, initialize_all_vouchers};
+use node_primitives::{CurrencyId, TokenSymbol};
 
 const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
-/// The `ChainSpec` parametrised for the asgard runtime.
+/// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
 pub fn config() -> Result<ChainSpec, String> {
@@ -105,7 +109,9 @@ pub fn testnet_genesis(
 
 	GenesisConfig {
 		frame_system: SystemConfig {
-			code: wasm_binary_unwrap().to_vec(),
+			code: WASM_BINARY
+				.expect("WASM binary was not build, please build it!")
+				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
 		pallet_balances: BalancesConfig {
@@ -178,12 +184,16 @@ pub fn testnet_genesis(
 			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
+		pallet_aura: AuraConfig {
+			authorities: initial_authorities,
+		},
+		cumulus_pallet_aura_ext: Default::default(),
 	}
 }
 
 fn development_config_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	testnet_genesis(
-		vec![authority_keys_from_seed("Alice")],
+		vec![get_from_seed::<AuraId>("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
@@ -213,8 +223,8 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 fn local_testnet_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	testnet_genesis(
 		vec![
-			authority_keys_from_seed("Alice"),
-			authority_keys_from_seed("Bob"),
+			get_from_seed::<AuraId>("Alice"),
+			get_from_seed::<AuraId>("Bob"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
@@ -287,7 +297,6 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	)
 }
 
-/// Configure genesis for bifrost test
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let initial_authorities: Vec<AuraId> = vec![
 		// 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
@@ -316,4 +325,4 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		Some(endowed_accounts),
 		id,
 	)
-} 
+}

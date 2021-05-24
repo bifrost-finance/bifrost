@@ -275,20 +275,37 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
-			runner.sync_run(|config| cmd.run::<
-				service::bifrost_runtime::Block,
-				service::bifrost_runtime::RuntimeApi,
-				service::BifrostExecutor
-			>(config))
+			return runner.sync_run(|config| {
+				#[cfg(feature = "with-asgard-runtime")]
+				return cmd.run::<
+					service::asgard_runtime::Block,
+					service::asgard_runtime::RuntimeApi,
+					service::AsgardExecutor
+				>(config);
+				#[cfg(not(feature = "with-asgard-runtime"))]
+				return cmd.run::<
+					service::bifrost_runtime::Block,
+					service::bifrost_runtime::RuntimeApi,
+					service::BifrostExecutor
+				>(config);
+			});
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 
-				runner.sync_run(|config| cmd.run::<
-					service::bifrost_runtime::Block,
-					service::BifrostExecutor
-				>(config))
+				return runner.sync_run(|config| {
+					#[cfg(feature = "with-asgard-runtime")]
+						return cmd.run::<
+						service::asgard_runtime::Block,
+						service::AsgardExecutor
+					>(config);
+					#[cfg(not(feature = "with-asgard-runtime"))]
+						return cmd.run::<
+						service::bifrost_runtime::Block,
+						service::BifrostExecutor
+					>(config);
+				});
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`.".into())
