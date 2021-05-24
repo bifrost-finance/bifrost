@@ -195,6 +195,10 @@ checksum = "5a2f58b0bb10c380af2b26e57212856b8c9a59e0925b4c20f4a174a49734eaf7"
 name = "asgard-runtime"
 version = "0.8.0"
 dependencies = [
+ "brml-assets",
+ "brml-minter-reward",
+ "brml-voucher",
+ "brml-vtoken-mint",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -209,6 +213,8 @@ dependencies = [
  "hex-literal 0.3.1",
  "log",
  "node-primitives",
+ "orml-tokens",
+ "orml-traits",
  "pallet-aura",
  "pallet-balances",
  "pallet-indices",
@@ -12057,3 +12063,18 @@ dependencies = [
  "cc",
  "libc",
 ]
+
+[[patch.unused]]
+name = "orml-currencies"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=cfe19133f02dac83dd6652473f9981852c02493f#cfe19133f02dac83dd6652473f9981852c02493f"
+
+[[patch.unused]]
+name = "orml-tokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=cfe19133f02dac83dd6652473f9981852c02493f#cfe19133f02dac83dd6652473f9981852c02493f"
+
+[[patch.unused]]
+name = "orml-traits"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=cfe19133f02dac83dd6652473f9981852c02493f#cfe19133f02dac83dd6652473f9981852c02493f"
