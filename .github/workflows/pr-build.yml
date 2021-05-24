@@ -25,10 +25,10 @@ jobs:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
           mkdir -p /home/ubuntu/runner/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/github_actions
-          chmod 600 /home/runner/.ssh/github_actions
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/ubuntu/runner/.ssh/github_actions
+          chmod 600 /home/ubuntu/runner/.ssh/github_actions
           ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-          ssh-add /home/runner/.ssh/github_actions
+          ssh-add /home/ubuntu/runner/.ssh/github_actions
       - name: Cache cargo registry and index
         uses: actions/cache@v2
         with:
