@@ -195,3 +195,7 @@ substrate-build-script-utils = { git = "https://github.com/paritytech/substrate"
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
 substrate-frame-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
+zenlink-protocol = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git" }
+zenlink-protocol-rpc = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git" }
+zenlink-protocol-runtime-api = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git" }
+
