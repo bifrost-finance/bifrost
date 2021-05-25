@@ -11303,12 +11303,12 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 name = "vsbond-auction"
 version = "0.7.0"
 dependencies = [
+ "brml-assets",
  "frame-support",
  "frame-system",
  "node-primitives",
- "orml-assets",
  "orml-traits",
- "parity-scale-codec 2.0.0",
+ "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-io",
