@@ -29,6 +29,10 @@ jobs:
 #          chmod 600 /home/ubuntu/runner/.ssh/github_actions
 #          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
 #          ssh-add /home/ubuntu/runner/.ssh/github_actions
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Cache cargo registry and index
         uses: actions/cache@v2
         with:
