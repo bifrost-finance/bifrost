@@ -147,70 +147,67 @@ impl From<TokenSymbol> for Vec<u8> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum CurrencyId {
+	Native(TokenSymbol),
+	Stable(TokenSymbol),
 	Token(TokenSymbol),
+	VToken(TokenSymbol),
+	VSToken(TokenSymbol),
+	VSBond(TokenSymbol),
 }
 
 impl Default for CurrencyId {
 	fn default() -> Self {
-		Self::Token(TokenSymbol::ASG)
+		Self::Native(Default::default())
 	}
 }
 
 impl From<TokenSymbol> for CurrencyId {
 	fn from(symbol: TokenSymbol) -> Self {
-		CurrencyId::Token(symbol)
+		Self::Token(symbol)
+	}
+}
+
+impl CurrencyId {
+	pub fn to_token(&self) -> Result<Self, ()> {
+		match self {
+			Self::VToken(symbol) => Ok(Self::Token(symbol.clone())),
+			_ => Err(()),
+		}
+	}
+
+	pub fn to_vtoken(&self) -> Result<Self, ()> {
+		match self {
+			Self::Token(symbol) => Ok(Self::VToken(symbol.clone())),
+			_ => Err(()),
+		}
 	}
 }
 
 impl CurrencyIdExt for CurrencyId {
-	/// This pair means (EOS, vEOS), token is ahead of vtoken.
-	type PairTokens = (TokenSymbol, TokenSymbol);
 	type TokenSymbol = TokenSymbol;
+
 	fn is_vtoken(&self) -> bool {
-		matches!(
-			self.as_ref(),
-			TokenSymbol::vDOT | TokenSymbol::vKSM | TokenSymbol::vETH | TokenSymbol::vEOS | TokenSymbol::vIOST
-		)
+		matches!(self, CurrencyId::VToken(_))
 	}
 
 	fn is_token(&self) -> bool {
-		matches!(
-			self.as_ref(),
-			TokenSymbol::DOT | TokenSymbol::KSM | TokenSymbol::ETH | TokenSymbol::EOS | TokenSymbol::IOST
-		)
+        matches!(self, CurrencyId::Token(_))
+    }
+
+	fn is_vstoken(&self) -> bool {
+		matches!(self, CurrencyId::VSToken(_))
+	}
+
+	fn is_vsbond(&self) -> bool {
+		matches!(self, CurrencyId::VSBond(_))
 	}
 
 	fn is_native(&self) -> bool {
-		matches!(self.as_ref(), TokenSymbol::ASG)
+		matches!(self, CurrencyId::Native(_))
 	}
 
-	fn is_stable_token(&self) -> bool {
-		matches!(self.as_ref(), TokenSymbol::aUSD)
-	}
-
-	fn get_native_token(&self) -> Option<Self::TokenSymbol> {
-		match self.as_ref() {
-			TokenSymbol::ASG => Some(TokenSymbol::ASG),
-			_ => None,
-		}
-	}
-
-	fn get_stable_token(&self) -> Option<Self::TokenSymbol> {
-		match self.as_ref() {
-			TokenSymbol::aUSD => Some(TokenSymbol::aUSD),
-			_ => None,
-		}
-	}
-
-	fn get_token_pair(&self) -> Option<Self::PairTokens> {
-		match self.as_ref() {
-			TokenSymbol::DOT | TokenSymbol::vDOT => Some((TokenSymbol::DOT, TokenSymbol::vDOT)),
-			TokenSymbol::KSM | TokenSymbol::vKSM => Some((TokenSymbol::KSM, TokenSymbol::vKSM)),
-			TokenSymbol::ETH | TokenSymbol::vETH => Some((TokenSymbol::ETH, TokenSymbol::vETH)),
-			TokenSymbol::EOS | TokenSymbol::vEOS => Some((TokenSymbol::EOS, TokenSymbol::vEOS)),
-			TokenSymbol::IOST | TokenSymbol::vIOST => Some((TokenSymbol::IOST, TokenSymbol::vIOST)),
-			_ => None,
-		}
+	fn is_stable(&self) -> bool {
+		matches!(self, CurrencyId::Stable(_))
 	}
 
 	fn into(symbol: Self::TokenSymbol) -> Self {
@@ -222,20 +219,17 @@ impl Deref for CurrencyId {
 	type Target = TokenSymbol;
 	fn deref(&self) -> &Self::Target {
 		match *self {
-			Self::Token(ref symbol) => symbol
+			Self::Native(ref symbol) => symbol,
+			Self::Stable(ref symbol) => symbol,
+			Self::Token(ref symbol) => symbol,
+			Self::VToken(ref symbol) => symbol,
+			Self::VSToken(ref symbol) => symbol,
+			Self::VSBond(ref symbol) => symbol,
 		}
 	}
 }
 
-impl AsRef<TokenSymbol>  for CurrencyId {
-	fn as_ref(&self) -> &TokenSymbol {
-		match *self {
-			Self::Token(ref symbol) => symbol
-		}
-	}
-}
-
-/// CurrencyId from a number 
+/// CurrencyId from a number
 impl From<u8> for CurrencyId {
 	fn from(n: u8) -> Self {
 		match n {

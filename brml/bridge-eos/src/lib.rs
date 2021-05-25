@@ -867,8 +867,7 @@ impl<T: Config> Module<T> {
 		let target = Self::into_account(account_data)?;
 
 		let eos_id: CurrencyId = Self::eos_asset_id();
-		let (_, v_eos_id_token_symbol) = eos_id.get_token_pair().ok_or(Error::<T>::TokenNotExist)?;
-		let v_eos_id = CurrencyId::Token(v_eos_id_token_symbol);
+		let v_eos_id = eos_id.to_vtoken().map_err(|_| Error::<T>::TokenNotExist)?;
 		let token_id = {
 			match split_memo.len() {
 				2 => eos_id,

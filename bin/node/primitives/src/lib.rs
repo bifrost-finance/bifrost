@@ -27,7 +27,6 @@ use sp_runtime::{
 	MultiSignature, OpaqueExtrinsic, RuntimeDebug, SaturatedConversion,
 };
 use sp_std::{convert::Into, prelude::*};
-use sp_application_crypto::TryFrom;
 
 mod currency;
 pub mod traits;
@@ -145,7 +144,7 @@ impl TokenType {
 		*self == TokenType::Native
 	}
 
-	pub fn is_stable_token(&self) -> bool {
+	pub fn is_stable(&self) -> bool {
 		*self == TokenType::Stable
 	}
 
@@ -410,11 +409,7 @@ mod tests {
 		assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
 		assert_eq!(TokenSymbol::DOT as u8, 2u8);
 		assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
-		assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
-		assert_eq!(
-			CurrencyId::Token(TokenSymbol::ASG).get_native_token(),
-			Some(TokenSymbol::ASG)
-		);
+		assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable(), true);
 		assert_eq!(
 			CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(),
 			Some((TokenSymbol::DOT, TokenSymbol::vDOT))

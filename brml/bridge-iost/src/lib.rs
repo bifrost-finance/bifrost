@@ -624,8 +624,7 @@ impl<T: Config> Module<T> {
 		let target = Self::into_account(account_data)?;
 
 		let iost_id = Self::iost_asset_id();
-		let (_, v_iost_id_symbol) = iost_id.get_token_pair().ok_or(Error::<T>::TokenNotExist)?;
-		let v_iost_id = CurrencyId::Token(v_iost_id_symbol);
+		let v_iost_id = iost_id.to_vtoken().map_err(|_| Error::<T>::TokenNotExist)?;
 
 		let token_id = {
 			match split_memo.len() {
