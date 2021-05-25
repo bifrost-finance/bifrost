@@ -1,0 +1,31 @@
+[package]
+name = "vsbond-auction"
+version = "0.7.0"
+authors = ["Allen Pocket <AllenPocketGamer@Gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+frame-system = { version = "3.0.0", default-features = false }
+frame-support = { version = "3.0.0", default-features = false }
+serde = { version = "1.0.124", optional = true }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master" }
+
+[dev-dependencies]
+sp-io = { version = "3.0.0", default-features = false, features = ["std"] }
+sp-core = { version = "3.0.0", default-features = false, features = ["std"] }
+sp-runtime = { version = "3.0.0", default-features = false, features = ["std"] }
+orml-assets = { path = "../orml-assets", default-features = false, features = ["std"] }
+node-primitives = { path = "../../bin/node/primitives", default-features = false, features = ["std"] }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-system/std",
+    "frame-support/std",
+    "serde/std",
+    "orml-traits/std",
+]
