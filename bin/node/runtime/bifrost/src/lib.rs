@@ -41,7 +41,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types, match_type,
-	traits::{Randomness, IsInVec, All},
+	traits::{Randomness, IsInVec, All, Filter},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -139,6 +139,16 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 6;
 }
 
+pub struct CallFilter;
+impl Filter<Call> for CallFilter {
+    fn filter(c: &Call) -> bool {
+		match *c {
+			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
+			_ => true,
+		}
+	}
+}
+
 impl frame_system::Config for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
@@ -170,7 +180,7 @@ impl frame_system::Config for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type DbWeight = ();
-	type BaseCallFilter = ();
+	type BaseCallFilter = CallFilter;
 	type SystemWeightInfo = ();
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
