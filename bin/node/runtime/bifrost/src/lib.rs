@@ -26,7 +26,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
-use sp_core::{OpaqueMetadata, u32_trait::{_1, _2, _3, _4, _5}};
+use sp_core::{OpaqueMetadata, u32_trait::{_1, _2, _3, _4}};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT},

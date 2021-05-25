@@ -217,6 +217,8 @@ dependencies = [
  "orml-traits",
  "pallet-aura",
  "pallet-balances",
+ "pallet-collective",
+ "pallet-democracy",
  "pallet-indices",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",

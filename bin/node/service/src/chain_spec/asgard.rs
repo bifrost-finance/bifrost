@@ -20,8 +20,8 @@ use asgard_runtime::{
 	AccountId, AuraId,
 	constants::{currency::DOLLARS, time::DAYS},
 	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
-	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig,
-	ParachainInfoConfig, WASM_BINARY,
+	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
+	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
@@ -104,6 +104,7 @@ pub fn testnet_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
+	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
@@ -123,6 +124,15 @@ pub fn testnet_genesis(
 		},
 		pallet_indices: IndicesConfig {
 			indices: vec![],
+		},
+		pallet_democracy: DemocracyConfig::default(),
+		pallet_collective_Instance1: CouncilConfig::default(),
+		pallet_collective_Instance2: TechnicalCommitteeConfig {
+			members: endowed_accounts.iter()
+				.take((num_endowed_accounts + 1) / 2)
+				.cloned()
+				.collect(),
+			phantom: Default::default(),
 		},
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
