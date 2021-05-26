@@ -21,12 +21,13 @@ use codec::{Encode, Decode};
 use crate::traits::{CurrencyIdExt, TokenInfo};
 use sp_runtime::RuntimeDebug;
 use sp_std::{
-	convert::{Into, TryFrom, TryInto},
+	convert::{Into, TryFrom},
 	ops::Deref,
 	prelude::*,
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use crate::{ParaId, LeasePeriod};
 
 macro_rules! create_currency_id {
     ($(#[$meta:meta])*
@@ -75,7 +76,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::Token(TokenSymbol::$symbol) => $val,)*
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $val,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $val,)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol) => $val,)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $val,)*
 				}
 			}
 			fn name(&self) -> &str {
@@ -85,7 +86,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::Token(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $name,)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol) => $name,)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $name,)*
 				}
 			}
 			fn symbol(&self) -> &str {
@@ -95,7 +96,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::Token(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => stringify!($symbol),)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol) => stringify!($symbol),)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
 				}
 			}
 			fn decimals(&self) -> u8 {
@@ -105,7 +106,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::Token(TokenSymbol::$symbol) => $deci,)*
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $deci,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $deci,)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol) => $deci,)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $deci,)*
 				}
 			}
 		}
@@ -157,7 +158,7 @@ pub enum CurrencyId {
 	Native(TokenSymbol),
 	Stable(TokenSymbol),
 	VSToken(TokenSymbol),
-	VSBond(TokenSymbol),
+	VSBond(TokenSymbol, ParaId, LeasePeriod, LeasePeriod),
 }
 
 impl Default for CurrencyId {
@@ -204,7 +205,7 @@ impl CurrencyIdExt for CurrencyId {
 	}
 
 	fn is_vsbond(&self) -> bool {
-		matches!(self, CurrencyId::VSBond(_))
+		matches!(self, CurrencyId::VSBond(..))
 	}
 
 	fn is_native(&self) -> bool {
@@ -229,7 +230,7 @@ impl Deref for CurrencyId {
 			Self::Token(ref symbol) => symbol,
 			Self::VToken(ref symbol) => symbol,
 			Self::VSToken(ref symbol) => symbol,
-			Self::VSBond(ref symbol) => symbol,
+			Self::VSBond(ref symbol, ..) => symbol,
 		}
 	}
 }
