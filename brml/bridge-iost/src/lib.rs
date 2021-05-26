@@ -52,7 +52,7 @@ use core::{convert::TryFrom, fmt::Debug, iter::FromIterator};
 use node_primitives::{BlockchainType, BridgeAssetBalance,
 	BridgeAssetSymbol,BridgeAssetTo, 
 };
-use node_primitives::{TokenSymbol, CurrencyId, CurrencyIdExt, GetDecimals, VtokenMintExt};
+use node_primitives::{CurrencyId, CurrencyIdExt, TokenInfo, VtokenMintExt};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::transaction::IostTxOut;
@@ -508,9 +508,8 @@ decl_module! {
 			ensure!(CrossChainBackEnable::get(), Error::<T>::CrossChainBackDisabled);
 
 			let asset_id: CurrencyId = Self::iost_asset_id();
-			let tk_symbol: TokenSymbol = asset_id.into();
-			let symbol_code:Vec<u8> = tk_symbol.into();
-			let symbol_precise = tk_symbol.decimals();
+			let symbol_code:Vec<u8> = asset_id.symbol().as_bytes().to_vec();
+			let symbol_precise = asset_id.decimals();
 
 			//
 			let balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
@@ -624,8 +623,7 @@ impl<T: Config> Module<T> {
 		let target = Self::into_account(account_data)?;
 
 		let iost_id = Self::iost_asset_id();
-		let (_, v_iost_id_symbol) = iost_id.get_token_pair().ok_or(Error::<T>::TokenNotExist)?;
-		let v_iost_id = CurrencyId::Token(v_iost_id_symbol);
+		let v_iost_id = iost_id.to_vtoken().map_err(|_| Error::<T>::TokenNotExist)?;
 
 		let token_id = {
 			match split_memo.len() {
@@ -645,10 +643,9 @@ impl<T: Config> Module<T> {
 		// but in the future, we will support both token, let user to which token he wants to get
 		// according to the convert price
 
-		let token = Self::iost_asset_id();
-		let tk_symbol: TokenSymbol = token.into();
-		let _symbol_code:Vec<u8> = tk_symbol.into();
-		let symbol_precise = tk_symbol.decimals();
+		let token: CurrencyId = Self::iost_asset_id();
+		let _symbol_code: Vec<u8> = token.symbol().as_bytes().to_vec();
+		let symbol_precise = token.decimals();
 		let align_precision = 12 - symbol_precise;
 
 		let transfer_amount = action_transfer
@@ -915,7 +912,7 @@ impl<T: Config> Module<T> {
 			.map(|bto| {
 				match bto {
 					IostTxOut::<T::AccountId, CurrencyIdOf<T>>::Generated(_) => {
-						let _author = <pallet_authorship::Module<T>>::author();
+						let _author = <pallet_authorship::Pallet<T>>::author();
 						let mut ret = bto.clone();
 						let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
 

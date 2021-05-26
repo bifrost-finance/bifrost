@@ -26,22 +26,22 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-/// Get tokens precision
-pub trait GetDecimals {
-	fn decimals(&self) -> u32;
+pub trait TokenInfo {
+	fn currency_id(&self) -> u8;
+	fn name(&self) -> &str;
+	fn symbol(&self) -> &str;
+	fn decimals(&self) -> u8;
 }
 
 /// Extension trait for CurrencyId
 pub trait CurrencyIdExt {
-	type PairTokens;
 	type TokenSymbol;
 	fn is_vtoken(&self) -> bool;
 	fn is_token(&self) -> bool;
+	fn is_vstoken(&self) -> bool;
+	fn is_vsbond(&self) -> bool;
 	fn is_native(&self) -> bool;
-	fn is_stable_token(&self) -> bool;
-	fn get_native_token(&self) -> Option<Self::TokenSymbol>;
-	fn get_stable_token(&self) -> Option<Self::TokenSymbol>;
-	fn get_token_pair(&self) -> Option<Self::PairTokens>;
+	fn is_stable(&self) -> bool;
 	fn into(symbol: Self::TokenSymbol) -> Self;
 }
 

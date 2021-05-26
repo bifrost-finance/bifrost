@@ -327,7 +327,7 @@ decl_module! {
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
-			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(token_amount_in > Zero::zero(), Error::<T>::AmountBelowZero);
@@ -383,7 +383,7 @@ decl_module! {
 		) -> DispatchResult {
 			let provider = ensure_signed(origin)?;
 
-			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(new_pool_token >= T::MinimumPassedInPoolTokenShares::get(), Error::<T>::LessThanMinimumPassedInPoolTokenShares);
@@ -438,7 +438,7 @@ decl_module! {
 		) -> DispatchResult {
 			let remover = ensure_signed(origin)?;
 
-			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(pool_token_out >= T::MinimumPassedInPoolTokenShares::get(), Error::<T>::LessThanMinimumPassedInPoolTokenShares);
@@ -493,7 +493,7 @@ decl_module! {
 			// out-token's balance in the pool, which is the number of the specific token.
 			let out_token_balance_in_pool = TokenBalancesInPool::<T>::get(pool_id, asset_id);
 
-			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(asset_id.is_vtoken() || asset_id.is_token() || asset_id.is_native() || asset_id.is_stable(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			ensure!(token_amount > Zero::zero(), Error::<T>::AmountBelowZero);
@@ -595,8 +595,8 @@ decl_module! {
 			let swapper = ensure_signed(origin)?;
 
 			ensure!(token_in_asset_id != token_out_asset_id, Error::<T>::ForbidSameTokenSwap);
-			ensure!(token_in_asset_id.is_vtoken() || token_in_asset_id.is_token() || token_in_asset_id.is_native() || token_in_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
-			ensure!(token_out_asset_id.is_vtoken() || token_out_asset_id.is_token() || token_out_asset_id.is_native() || token_out_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(token_in_asset_id.is_vtoken() || token_in_asset_id.is_token() || token_in_asset_id.is_native() || token_in_asset_id.is_stable(), Error::<T>::TokenNotExist);
+			ensure!(token_out_asset_id.is_vtoken() || token_out_asset_id.is_token() || token_out_asset_id.is_native() || token_out_asset_id.is_stable(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 			// get the user's balance for a specific token
@@ -669,8 +669,8 @@ decl_module! {
 		) -> DispatchResult {
 			let swapper = ensure_signed(origin)?;
 			ensure!(token_in_asset_id != token_out_asset_id, Error::<T>::ForbidSameTokenSwap);
-			ensure!(token_in_asset_id.is_vtoken() || token_in_asset_id.is_token() || token_in_asset_id.is_native() || token_in_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
-			ensure!(token_out_asset_id.is_vtoken() || token_out_asset_id.is_token() || token_out_asset_id.is_native() || token_out_asset_id.is_stable_token(), Error::<T>::TokenNotExist);
+			ensure!(token_in_asset_id.is_vtoken() || token_in_asset_id.is_token() || token_in_asset_id.is_native() || token_in_asset_id.is_stable(), Error::<T>::TokenNotExist);
+			ensure!(token_out_asset_id.is_vtoken() || token_out_asset_id.is_token() || token_out_asset_id.is_native() || token_out_asset_id.is_stable(), Error::<T>::TokenNotExist);
 			ensure!(Pools::<T>::contains_key(pool_id), Error::<T>::PoolNotExist);
 			ensure!(Pools::<T>::get(pool_id).active, Error::<T>::PoolNotActive);
 
@@ -783,7 +783,7 @@ decl_module! {
 			let map_iter_1 = token_for_pool_vec.iter();
 			// ensure all the elements of the tokenForPoolMap are ok.
 			for token_info in map_iter_1 {
-				ensure!((token_info.token_id).is_vtoken() || (token_info.token_id).is_token() || (token_info.token_id).is_native() || (token_info.token_id).is_stable_token(), Error::<T>::TokenNotExist);
+				ensure!((token_info.token_id).is_vtoken() || (token_info.token_id).is_token() || (token_info.token_id).is_native() || (token_info.token_id).is_stable(), Error::<T>::TokenNotExist);
 				ensure!(token_info.token_balance > Zero::zero(), Error::<T>::AmountBelowZero);
 
 				// get the user's balance for a specific token
