@@ -26,9 +26,11 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-/// Get tokens precision
-pub trait GetDecimals {
-	fn decimals(&self) -> u32;
+pub trait TokenInfo {
+	fn currency_id(&self) -> u8;
+	fn name(&self) -> &str;
+	fn symbol(&self) -> &str;
+	fn decimals(&self) -> u8;
 }
 
 /// Extension trait for CurrencyId
