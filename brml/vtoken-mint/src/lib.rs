@@ -220,18 +220,17 @@ pub mod pallet {
 		#[transactional]
 		pub fn set_vtoken_pool(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			token_id: CurrencyIdOf<T>,
 			#[pallet::compact] new_token_pool: BalanceOf<T>,
 			#[pallet::compact] new_vtoken_pool: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin.clone())?;
 
-			let (token_id, vtoken_id) = currency_id
-				.get_token_pair()
-				.ok_or(Error::<T>::NotSupportTokenType)?;
+			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 
-			Self::expand_mint_pool(token_id.into(), new_token_pool)?;
-			Self::expand_mint_pool(vtoken_id.into(), new_vtoken_pool)?;
+			Self::expand_mint_pool(token_id, new_token_pool)?;
+			Self::expand_mint_pool(vtoken_id, new_vtoken_pool)?;
 
 			Self::deposit_event(Event::UpdateVtokenPoolSuccess);
 
@@ -246,26 +245,24 @@ pub mod pallet {
 		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			token_id: CurrencyIdOf<T>,
 			#[pallet::compact] token_amount: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			let minter = ensure_signed(origin)?;
 
 			ensure!(!token_amount.is_zero(), Error::<T>::BalanceZero);
-			ensure!(currency_id.is_vtoken(), Error::<T>::NotSupportTokenType);
+			ensure!(token_id.is_vtoken(), Error::<T>::NotSupportTokenType);
 
-			// Get paired tokens.
-			let (token_id, _vtoken_id) = currency_id
-				.get_token_pair()
-				.ok_or(Error::<T>::NotSupportTokenType)?;
+			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 
-			let token_balances = T::MultiCurrency::free_balance(token_id.into(), &minter);
+			let token_balances = T::MultiCurrency::free_balance(token_id, &minter);
 			ensure!(token_balances >= token_amount, Error::<T>::BalanceLow);
 
 			// Total amount of tokens.
-			let token_pool = Self::get_mint_pool(token_id.into());
+			let token_pool = Self::get_mint_pool(token_id);
 			// Total amount of vtokens.
-			let vtoken_pool = Self::get_mint_pool(currency_id);
+			let vtoken_pool = Self::get_mint_pool(vtoken_id);
 			ensure!(
 				!token_pool.is_zero() && !vtoken_pool.is_zero(),
 				Error::<T>::EmptyVtokenPool
@@ -273,19 +270,19 @@ pub mod pallet {
 
 			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
 
-			T::MultiCurrency::withdraw(token_id.into(), &minter, token_amount)?;
-			T::MultiCurrency::deposit(currency_id, &minter, vtokens_buy)?;
+			T::MultiCurrency::withdraw(token_id, &minter, token_amount)?;
+			T::MultiCurrency::deposit(vtoken_id, &minter, vtokens_buy)?;
 
 			// Alter mint pool
-			Self::expand_mint_pool(token_id.into(), token_amount)?;
-			Self::expand_mint_pool(currency_id, vtokens_buy)?;
+			Self::expand_mint_pool(token_id, token_amount)?;
+			Self::expand_mint_pool(vtoken_id, vtokens_buy)?;
 
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			// reward mint reward
-			let _r = T::MinterReward::reward_minted_vtoken(&minter, _vtoken_id.into(), vtokens_buy, current_block);
+			let _r = T::MinterReward::reward_minted_vtoken(&minter, vtoken_id, vtokens_buy, current_block);
 
-			Self::deposit_event(Event::Minted(minter, currency_id, vtokens_buy));
+			Self::deposit_event(Event::Minted(minter, vtoken_id, vtokens_buy));
 
 			Ok(().into())
 		}
@@ -298,34 +295,32 @@ pub mod pallet {
 		#[transactional]
 		pub fn redeem(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			token_id: CurrencyIdOf<T>,
 			#[pallet::compact] vtoken_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let redeemer = ensure_signed(origin)?;
 
 			ensure!(!vtoken_amount.is_zero(), Error::<T>::BalanceZero);
-			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
+			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
 			
-			// Get paired tokens.
-			let (_token_id, vtoken_id) = currency_id
-				.get_token_pair()
-				.ok_or(Error::<T>::NotSupportTokenType)?;
-			
-			let vtoken_balances = T::MultiCurrency::free_balance(vtoken_id.into(), &redeemer);
+			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+
+			let vtoken_balances = T::MultiCurrency::free_balance(vtoken_id, &redeemer);
 			ensure!(vtoken_balances >= vtoken_amount, Error::<T>::BalanceLow);
 
-			Self::update_redeem_record(currency_id, &redeemer, vtoken_amount);
+			Self::update_redeem_record(token_id, &redeemer, vtoken_amount);
 
 			// Just record which vtoken is minted
-			if !UserStakingRevenue::<T>::contains_key(&redeemer, vtoken_id) {
-				UserStakingRevenue::<T>::insert(&redeemer, vtoken_id, BalanceOf::<T>::from(0u32));
+			if !UserStakingRevenue::<T>::contains_key(&redeemer, *vtoken_id) {
+				UserStakingRevenue::<T>::insert(&redeemer, *vtoken_id, BalanceOf::<T>::from(0u32));
 			}
 
 			// Reach the end of staking period, begin to redeem.
 			// Total amount of tokens.
-			let token_pool = Self::get_mint_pool(currency_id);
+			let token_pool = Self::get_mint_pool(token_id);
 			// Total amount of vtokens.
-			let vtoken_pool = Self::get_mint_pool(vtoken_id.into());
+			let vtoken_pool = Self::get_mint_pool(vtoken_id);
 			ensure!(
 				!token_pool.is_zero() && !vtoken_pool.is_zero(),
 				Error::<T>::EmptyVtokenPool
@@ -338,15 +333,15 @@ pub mod pallet {
 			);
 
 			// Alter redeemer's balance
-			T::MultiCurrency::withdraw(vtoken_id.into(), &redeemer, vtoken_amount)?;
-			T::MultiCurrency::deposit(currency_id.into(), &redeemer, tokens_redeem)?;
+			T::MultiCurrency::withdraw(vtoken_id, &redeemer, vtoken_amount)?;
+			T::MultiCurrency::deposit(token_id, &redeemer, tokens_redeem)?;
 
 			// Alter mint pool
-			Self::reduce_mint_pool(currency_id, tokens_redeem)?;
-			Self::reduce_mint_pool(vtoken_id.into(), vtoken_amount)?;
+			Self::reduce_mint_pool(token_id, tokens_redeem)?;
+			Self::reduce_mint_pool(vtoken_id, vtoken_amount)?;
 
 			let current_block = <frame_system::Pallet<T>>::block_number();
-			Self::deposit_event(Event::RedeemStarted(redeemer, currency_id, vtoken_amount, current_block));
+			Self::deposit_event(Event::RedeemStarted(redeemer, vtoken_id, vtoken_amount, current_block));
 
 			Ok(().into())
 		}

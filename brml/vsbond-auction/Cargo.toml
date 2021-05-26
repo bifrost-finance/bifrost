@@ -1,6 +1,6 @@
 [package]
 name = "vsbond-auction"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Allen Pocket <AllenPocketGamer@Gmail.com>"]
 edition = "2018"
 

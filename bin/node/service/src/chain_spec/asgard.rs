@@ -150,7 +150,7 @@ pub fn testnet_genesis(
 				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
+						(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
@@ -171,11 +171,11 @@ pub fn testnet_genesis(
 		brml_vtoken_mint: VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
+				(CurrencyId::VToken(TokenSymbol::DOT), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+				(CurrencyId::VToken(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
+				(CurrencyId::VToken(TokenSymbol::KSM), 1000 * DOLLARS),
 			],
 			staking_lock_period: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),

@@ -9,7 +9,7 @@ edition = "2018"
 
 [[bin]]
 name = "bifrost"
-path = "bin/main.rs"
+path = "src/main.rs"
 required-features = ["cli"]
 
 [lib]
