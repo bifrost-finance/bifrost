@@ -415,7 +415,7 @@ decl_module! {
 			let should_deposit = slash_deposit.saturating_add(onetime_payment);
 
 			// get the corresponding token id by vtoken id.
-			let token_id = CurrencyId::Token(vtoken.get_token_pair().unwrap_or_default().0);
+			let token_id = vtoken.to_token().map_err(|_| Error::<T>::TokenNotExist)?;
 			let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
 				<T as frame_system::Config>::AccountId,
 			>>::free_balance(token_id, &bidder);
@@ -691,7 +691,7 @@ impl<T: Config> Module<T> {
 			Self::calculate_order_onetime_payment(*vtoken, votes_matched, *annual_roi)?;
 		let should_deposit = slash_deposit.saturating_add(onetime_payment);
 		// get the corresponding token id by vtoken id.
-		let token_id = CurrencyId::Token(vtoken.get_token_pair().unwrap_or_default().0);
+		let token_id = vtoken.to_token().map_err(|_| Error::<T>::TokenNotExist)?;
 		let user_token_balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
 			<T as frame_system::Config>::AccountId,
 		>>::free_balance(token_id, &bidder);
@@ -1152,7 +1152,7 @@ impl<T: Config> Module<T> {
 			SlashForOrdersInService::<T>::remove(order_id);
 		}
 
-		let token_id = CurrencyId::Token((order_detail.token_id).get_token_pair().unwrap_or_default().0);
+		let token_id = order_detail.token_id.to_token().map_err(|_| Error::<T>::TokenNotExist)?;
 		<<T as Config>::CurrenciesHandler as MultiReservableCurrency<<T as frame_system::Config>::AccountId,
 			>>::unreserve(token_id, &order_detail.bidder_id, original_slash_deposit);
 

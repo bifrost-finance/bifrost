@@ -46,7 +46,7 @@ use frame_system::{
 };
 use node_primitives::{
 	BridgeAssetBalance,  BridgeAssetTo, BridgeAssetSymbol, BlockchainType,
-	VtokenMintExt, TokenSymbol, CurrencyId, CurrencyIdExt, GetDecimals
+	VtokenMintExt, CurrencyId, CurrencyIdExt, TokenInfo,
 };
 use sp_application_crypto::RuntimeAppPublic;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -707,9 +707,8 @@ decl_module! {
 			ensure!(CrossChainBackEnable::get(), Error::<T>::CrossChainBackDisabled);
 
 			let asset_id: CurrencyId = Self::eos_asset_id();
-			let tk_symbol: TokenSymbol = asset_id.into();
-			let symbol_code:Vec<u8> = tk_symbol.into();
-			let symbol_precise = tk_symbol.decimals();
+			let symbol_code:Vec<u8> = asset_id.symbol().as_bytes().to_vec();
+			let symbol_precise = asset_id.decimals();
 
 			let balance = <<T as Config>::CurrenciesHandler as MultiCurrency<
 				<T as frame_system::Config>::AccountId>>::free_balance(asset_id, &origin);
@@ -867,8 +866,7 @@ impl<T: Config> Module<T> {
 		let target = Self::into_account(account_data)?;
 
 		let eos_id: CurrencyId = Self::eos_asset_id();
-		let (_, v_eos_id_token_symbol) = eos_id.get_token_pair().ok_or(Error::<T>::TokenNotExist)?;
-		let v_eos_id = CurrencyId::Token(v_eos_id_token_symbol);
+		let v_eos_id = eos_id.to_vtoken().map_err(|_| Error::<T>::TokenNotExist)?;
 		let token_id = {
 			match split_memo.len() {
 				2 => eos_id,
@@ -891,13 +889,13 @@ impl<T: Config> Module<T> {
 
 		let symbol = action_transfer.quantity.symbol;
 		let symbol_code = symbol.code().to_string().into_bytes();
-		let symbol_precision = symbol.precision() as u32;
+		let symbol_precision = symbol.precision();
 		// ensure symbol and precision matched
-		let existed_token_symbol: TokenSymbol = eos_id.into();
-		let symbol_v8u: Vec<u8> = existed_token_symbol.into();
+		let symbol_decimals = eos_id.decimals();
+		let symbol_v8u: Vec<u8> = eos_id.symbol().as_bytes().to_vec();
 
 		ensure!(
-			symbol_v8u == symbol_code && existed_token_symbol.decimals() == symbol_precision,
+			symbol_v8u == symbol_code && symbol_decimals == symbol_precision,
 			Error::<T>::EOSSymbolMismatch
 		);
 
@@ -933,13 +931,13 @@ impl<T: Config> Module<T> {
 
 				let symbol = action_transfer.quantity.symbol;
 				let symbol_code = symbol.code().to_string().into_bytes();
-				let symbol_precision = symbol.precision() as u32;
+				let symbol_precision = symbol.precision();
 				// ensure symbol and precision matched
-				let existed_token_symbol: TokenSymbol = asset_id.into();
-				let symbol_v8u: Vec<u8> = existed_token_symbol.into();
+				let symbol_decimals = asset_id.decimals();
+				let symbol_v8u: Vec<u8> = asset_id.symbol().as_bytes().to_vec();
 
 				ensure!(
-					symbol_v8u == symbol_code && existed_token_symbol.decimals() == symbol_precision,
+					symbol_v8u == symbol_code && symbol_decimals == symbol_precision,
 					Error::<T>::EOSSymbolMismatch
 				);
 
@@ -1045,7 +1043,7 @@ impl<T: Config> Module<T> {
 					}
 				}
 				(TxOut::<T::AccountId, CurrencyIdOf<T>>::Created(_), TransactionStatus::Created) => {
-					let author = <pallet_authorship::Module<T>>::author();
+					let author = <pallet_authorship::Pallet<T>>::author();
 					// ensure current node has the right to sign a cross trade
 					if NotaryKeys::<T>::get().contains(&author) {
 						match trx.clone().sign::<T>(sk.clone(), author.clone()) {
