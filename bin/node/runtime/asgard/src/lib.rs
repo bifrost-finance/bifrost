@@ -63,19 +63,23 @@ use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiAsset, MultiLocation, MultiLocation::*, Junction::*, BodyId, NetworkId};
+use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
 use xcm_builder::{
-	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SovereignSignedViaLocation, EnsureXcmOrigin, AllowUnpaidExecutionFrom, ParentAsSuperuser,
-	AllowTopLevelPaidExecutionFrom, TakeWeightCredit, FixedWeightBounds, IsConcrete, NativeAsset,
-	UsingComponents, SignedToAccountId32,
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
+    EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+    ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+    SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+    SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
-use xcm_executor::{Config, XcmExecutor};
+use xcm_executor::{traits::ShouldExecute, Config, XcmExecutor};
 use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
-use xcm::v0::Xcm;
 use frame_system::EnsureRoot;
-use zenlink_protocol::{ZenlinkMultiAssets,LocalAssetHandler, AssetId, AssetBalance};
+
+// orml imports
+use orml_currencies::BasicCurrencyAdapter;
+
+// zenlink imports
+use zenlink_protocol::{ZenlinkMultiAssets, make_x2_location, AssetId, AssetBalance};
 
 mod weights;
 
@@ -261,169 +265,160 @@ impl pallet_sudo::Config for Runtime {
 }
 
 // culumus runtime start
-//-------------XCM-HELPER--------------------start
 parameter_types! {
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
+	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
-    type Event = Event;
-    type OnValidationData = ();
-    type SelfParaId = parachain_info::Pallet<Runtime>;
-    type OutboundXcmpMessageSource = XcmpQueue;
-    type DmpMessageHandler = DmpQueue;
-    type ReservedDmpWeight = ReservedDmpWeight;
-    type XcmpMessageHandler = XcmpQueue;
-    type ReservedXcmpWeight = ReservedXcmpWeight;
+	type Event = Event;
+	type OnValidationData = ();
+	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type OutboundXcmpMessageSource = XcmpQueue;
+	type DmpMessageHandler = DmpQueue;
+	type ReservedDmpWeight = ReservedDmpWeight;
+	type XcmpMessageHandler = XcmpQueue;
+	type ReservedXcmpWeight = ReservedXcmpWeight;
 }
 
 impl parachain_info::Config for Runtime {}
 
+impl cumulus_pallet_aura_ext::Config for Runtime {}
+
 parameter_types! {
-    pub const RocLocation: MultiLocation = X1(Parent);
-    pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub Ancestry: MultiLocation = X1(Parachain(ParachainInfo::parachain_id().into()));
+	pub const RocLocation: MultiLocation = X1(Parent);
+	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
+	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+	pub Ancestry: MultiLocation = X1(Parachain(ParachainInfo::parachain_id().into()));
 }
 
 /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
-    // The parent (Relay-chain) origin converts to the default `AccountId`.
-    ParentIsDefault<AccountId>,
-    // Sibling parachain origins convert to AccountId via the `ParaId::into`.
-    SiblingParachainConvertsVia<Sibling, AccountId>,
-    // Straight up local `AccountId32` origins just alias directly to `AccountId`.
-    AccountId32Aliases<RococoNetwork, AccountId>,
+	// The parent (Relay-chain) origin converts to the default `AccountId`.
+	ParentIsDefault<AccountId>,
+	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
+	AccountId32Aliases<RococoNetwork, AccountId>,
 );
 
 /// Means for transacting assets on this chain.
 pub type LocalAssetTransactor = CurrencyAdapter<
-    // Use this currency:
-    Balances,
-    // Use this currency when it is a fungible asset matching the given location or name:
-    IsConcrete<RocLocation>,
-    // Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-    LocationToAccountId,
-    // Our chain's account ID type (we can't get away without mentioning it explicitly):
-    AccountId,
-    // We don't track any teleports.
-    (),
+	// Use this currency:
+	Balances,
+	// Use this currency when it is a fungible asset matching the given location or name:
+	IsConcrete<RocLocation>,
+	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+	LocationToAccountId,
+	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+	AccountId,
+	// We don't track any teleports.
+	(),
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
 /// biases the kind of local `Origin` it will become.
 pub type XcmOriginToTransactDispatchOrigin = (
-    // Sovereign account converter; this attempts to derive an `AccountId` from the origin location
-    // using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
-    // foreign chains who want to have a local sovereign account on this chain which they control.
-    SovereignSignedViaLocation<LocationToAccountId, Origin>,
-    // Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-    // recognised.
-    RelayChainAsNative<RelayChainOrigin, Origin>,
-    // Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-    // recognised.
-    SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-    // Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
-    // transaction from the Root origin.
-    ParentAsSuperuser<Origin>,
-    // Native signed account converter; this just converts an `AccountId32` origin into a normal
-    // `Origin::Signed` origin of the same 32-byte value.
-    SignedAccountId32AsNative<RococoNetwork, Origin>,
-    // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
-    XcmPassthrough<Origin>,
+	// Sovereign account converter; this attempts to derive an `AccountId` from the origin location
+	// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
+	// foreign chains who want to have a local sovereign account on this chain which they control.
+	SovereignSignedViaLocation<LocationToAccountId, Origin>,
+	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
+	// recognised.
+	RelayChainAsNative<RelayChainOrigin, Origin>,
+	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
+	// recognised.
+	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
+	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
+	// transaction from the Root origin.
+	ParentAsSuperuser<Origin>,
+	// Native signed account converter; this just converts an `AccountId32` origin into a normal
+	// `Origin::Signed` origin of the same 32-byte value.
+	SignedAccountId32AsNative<RococoNetwork, Origin>,
+	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
+	XcmPassthrough<Origin>,
 );
 
 parameter_types! {
-    // One XCM operation is 1_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: Weight = 1_000_000;
-    // One ROC buys 1 second of weight.
-    pub const WeightPrice: (MultiLocation, u128) = (X1(Parent), DOTS);
+	// One XCM operation is 1_000_000 weight - almost certainly a conservative estimate.
+	pub UnitWeightCost: Weight = 1_000_000;
+	// One ROC buys 1 second of weight.
+	pub const WeightPrice: (MultiLocation, u128) = (X1(Parent), BNCS);
 }
 
 match_type! {
-    pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
-        X1(Parent)
-        | X2(Parent, Plurality { id: BodyId::Unit, .. })
-    };
+	pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
+		X1(Parent) | X2(Parent, Plurality { id: BodyId::Unit, .. })
+	};
 }
 
 pub type Barrier = (
-    TakeWeightCredit,
-    AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
-    AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
-    // ^^^ Parent & its unit plurality gets free execution
-    ZenlinkAllowUnpaid<ZenlinkRegistedParaChains>,
-);
-
-pub type Transactors = (
-    TransactorAdaptor<
-        ZenlinkMultiAssets<ZenlinkProtocol, Balances>,
-        LocationToAccountId,
-        AccountId,
-    >,
-    LocalAssetTransactor,
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
+	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+	// ^^^ Parent & its unit plurality gets free execution
 );
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
-    type Call = Call;
-    type XcmSender = XcmRouter;
-    // How to withdraw and deposit an asset.
-    type AssetTransactor = Transactors;
-    type OriginConverter = XcmOriginToTransactDispatchOrigin;
-    type IsReserve = TrustedParas<ZenlinkRegistedParaChains>;
-    type IsTeleporter = NativeAsset; // <- should be enough to allow teleportation of ROC
-    type LocationInverter = LocationInverter<Ancestry>;
-    type Barrier = Barrier;
-    type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-    type Trader = UsingComponents<IdentityFee<Balance>, RocLocation, AccountId, Balances, ()>;
-    type ResponseHandler = (); // Don't handle responses for now.
+	type Call = Call;
+	type XcmSender = XcmRouter;
+	// How to withdraw and deposit an asset.
+	type AssetTransactor = LocalAssetTransactor;
+	type OriginConverter = XcmOriginToTransactDispatchOrigin;
+	type IsReserve = NativeAsset;
+	type IsTeleporter = NativeAsset;	// <- should be enough to allow teleportation of ROC
+	type LocationInverter = LocationInverter<Ancestry>;
+	type Barrier = Barrier;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type Trader = UsingComponents<IdentityFee<Balance>, RocLocation, AccountId, Balances, ()>;
+	type ResponseHandler = ();	// Don't handle responses for now.
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
-pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RococoNetwork>,);
+pub type LocalOriginToLocation = (
+	SignedToAccountId32<Origin, AccountId, RococoNetwork>,
+);
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
 pub type XcmRouter = (
-    // Two routers - use UMP to communicate with the relay chain:
-    cumulus_primitives_utility::ParentAsUmp<ParachainSystem>,
-    // ..and XCMP to communicate with the sibling chains.
-    XcmpQueue,
+	// Two routers - use UMP to communicate with the relay chain:
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem>,
+	// ..and XCMP to communicate with the sibling chains.
+	XcmpQueue,
 );
 
 impl pallet_xcm::Config for Runtime {
-    type Event = Event;
-    type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type XcmRouter = XcmRouter;
-    type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-    type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-    type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type Event = Event;
+	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type XcmRouter = XcmRouter;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ChannelInfo = ParachainSystem;
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type ChannelInfo = ParachainSystem;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
-    type Event = Event;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type ExecuteOverweightOrigin = frame_system::EnsureRoot<AccountId>;
+	type Event = Event;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type ExecuteOverweightOrigin = frame_system::EnsureRoot<AccountId>;
 }
-//-------------XCM-HELPER--------------------end
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
@@ -449,6 +444,7 @@ impl brml_vtoken_mint::Config for Runtime {
 	type MultiCurrency = Assets;
 	type PalletId = StakingPalletId;
 	type MinterReward = MinterReward;
+	// type DEXOperations = ZenlinkProtocol;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -478,20 +474,20 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 }
-
-parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-}
-
-impl brml_charge_transaction_fee::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type WeightInfo = ();
-	type CurrenciesHandler = Currencies;
-	type Currency = Balances;
-	type OnUnbalanced = ();
-	type NativeCurrencyId = NativeCurrencyId;
-}
+// parameter_types! {
+// 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+// }
+//
+// impl brml_charge_transaction_fee::Config for Runtime {
+// 	type Event = Event;
+// 	type Balance = Balance;
+// 	type WeightInfo = ();
+// 	type CurrenciesHandler = Currencies;
+// 	type Currency = Balances;
+// 	type ZenlinkDEX = ZenlinkProtocol;
+// 	type OnUnbalanced = ();
+// 	type NativeCurrencyId = NativeCurrencyId;
+// }
 
 parameter_types! {
 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
@@ -504,37 +500,16 @@ impl brml_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type TwoYear = TwoYear;
-	type PalletId = ShareWeightPalletId;
+	type SystemPalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	// type DEXOperations = ZenlinkProtocol;
 	type ShareWeight = Balance;
 }
 
 // bifrost runtime end
 
 // zenlink runtime start
-
-type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
-
-impl zenlink_protocol::Config for Runtime {
-    type Event = Event;
-    type GetExchangeFee = GetExchangeFee;
-    type MultiAssetsHandler = MultiAssets;
-    type PalletId = ZenlinkPalletId;
-    type SelfParaId = ParachainInfo;
-
-    type TargetChains = ZenlinkRegistedParaChains;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type Conversion = ZenlinkLocationToAccountId;
-}
-
-pub type ZenlinkLocationToAccountId = (
-    // Sibling parachain origins convert to AccountId via the `ParaId::into`.
-    SiblingParachainConvertsVia<Sibling, AccountId>,
-    // Straight up local `AccountId32` origins just alias directly to `AccountId`.
-    AccountId32Aliases<AnyNetwork, AccountId>,
-);
-
 parameter_types! {
     pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
     pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
@@ -558,70 +533,46 @@ parameter_types! {
     ];
 }
 
-type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+impl zenlink_protocol::Config for Runtime {
+    type Event = Event;
+    type GetExchangeFee = GetExchangeFee;
+    type MultiAssetsHandler = MultiAssets;
+    type PalletId = ZenlinkPalletId;
+    type SelfParaId = ParachainInfo;
 
-// Below is the implementation of tokens manipulation functions other than native token.
-pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
-
-impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
-where
-	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
-{
-	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.into();
-		Local::free_balance(currency_id, &who).saturated_into()
-	}
-
-	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.into();
-		Local::total_issuance(currency_id).saturated_into()
-	}
-
-	fn local_is_exists(asset_id: AssetId) -> bool {
-		let currency_id: CurrencyId = asset_id.into();
-		currency_id.exist()
-	}
-
-	fn local_transfer(
-		asset_id: AssetId,
-		origin: &AccountId,
-		target: &AccountId,
-		amount: AssetBalance,
-	) -> DispatchResult {
-		let currency_id: CurrencyId = asset_id.into();
-		Local::transfer(
-			currency_id,
-			&origin,
-			&target,
-			amount.unique_saturated_into(),
-		)?;
-
-		Ok(())
-	}
-
-	fn local_deposit(
-		asset_id: AssetId,
-		origin: &AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.into();
-		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
-		return Ok(amount)
-	}
-
-	fn local_withdraw(
-		asset_id: AssetId,
-		origin: &AccountId,
-		amount: AssetBalance,
-	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.into();
-		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
-
-		Ok(amount)
-	}
+    type TargetChains = ZenlinkRegistedParaChains;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type Conversion = ZenlinkLocationToAccountId;
 }
 
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+pub type ZenlinkLocationToAccountId = (
+    // Sibling parachain origins convert to AccountId via the `ParaId::into`.
+    SiblingParachainConvertsVia<Sibling, AccountId>,
+    // Straight up local `AccountId32` origins just alias directly to `AccountId`.
+    AccountId32Aliases<AnyNetwork, AccountId>,
+);
+
+
 // zenlink runtime end
+
+// orml runtime start
+parameter_types! {
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = BifrostToken;
+	type GetNativeCurrencyId = GetBifrostTokenId;
+	type WeightInfo = ();
+}
+
+// orml runtime end
 
 construct_runtime! {
 	pub enum Runtime where
@@ -638,7 +589,7 @@ construct_runtime! {
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 5,
 
 		// Parachain modules
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 20,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 6,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
 
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
@@ -656,7 +607,7 @@ construct_runtime! {
 
 		// parachain modules
 		// ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
+		// TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
 		// ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
 		// XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
 
@@ -665,7 +616,7 @@ construct_runtime! {
 		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
+		// ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
@@ -808,88 +759,79 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
-			match rs {
-				Ok(val) => val,
-				_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
-			}
-		}
-	}
+	// impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
+	// 	fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+	// 	let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+	// 		match rs {
+	// 			Ok(val) => val,
+	// 			_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
+	// 		}
+	// 	}
+	// }
 
-	//zenlink runtime outer apis
-	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-        fn get_assets() -> Vec<AssetId> {
-            ZenlinkProtocol::get_assets()
-        }
-
-        fn get_balance(
-            asset_id: AssetId,
-            owner: AccountId
-        ) -> AssetBalance {
-            <Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
-        }
-
-        fn get_sovereigns_info(
-            asset_id: AssetId
-        ) -> Vec<(u32, AccountId, AssetBalance)> {
-            ZenlinkProtocol::get_sovereigns_info(&asset_id)
-        }
-
-        fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>> {
-            ZenlinkProtocol::get_all_pairs()
-        }
-
-        fn get_owner_pairs(
-            owner: AccountId
-        ) -> Vec<PairInfo<AccountId, AssetBalance>> {
-            ZenlinkProtocol::get_owner_pairs(&owner)
-        }
-
-        fn get_pair_by_asset_id(
-            asset_0: AssetId,
-            asset_1: AssetId
-        ) -> Option<PairInfo<AccountId, AssetBalance>> {
-            ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
-        }
-
-        fn get_amount_in_price(
-            supply: AssetBalance,
-            path: Vec<AssetId>
-        ) -> AssetBalance {
-            ZenlinkProtocol::desired_in_amount(supply, path)
-        }
-
-        fn get_amount_out_price(
-            supply: AssetBalance,
-            path: Vec<AssetId>
-        ) -> AssetBalance {
-            ZenlinkProtocol::supply_out_amount(supply, path)
-        }
-
-        fn get_estimate_lptoken(
-            token_0: AssetId,
-            token_1: AssetId,
-            amount_0_desired: AssetBalance,
-            amount_1_desired: AssetBalance,
-            amount_0_min: AssetBalance,
-            amount_1_min: AssetBalance,
-        ) -> AssetBalance{
-            ZenlinkProtocol::get_estimate_lptoken(
-                token_0,
-                token_1,
-                amount_0_desired,
-                amount_1_desired,
-                amount_0_min,
-                amount_1_min
-            )
-        }
-    }
+	// zenlink runtime outer apis
+	// impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+	// 	fn get_assets() -> Vec<AssetId> {
+	// 		ZenlinkProtocol::assets_list()
+	// 	}
+	//
+	// 	fn get_balance(
+	// 		asset_id: AssetId,
+	// 		owner: AccountId
+	// 	) -> TokenBalance {
+	// 		ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
+	// 	}
+	//
+	// 	fn get_sovereigns_info(
+	// 		asset_id: AssetId
+	// 	) -> Vec<(u32, AccountId, TokenBalance)> {
+	// 		ZenlinkProtocol::get_sovereigns_info(&asset_id)
+	// 	}
+	//
+	// 	fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
+	// 		ZenlinkProtocol::get_all_pairs()
+	// 	}
+	//
+	// 	fn get_owner_pairs(
+	// 		owner: AccountId
+	// 	) -> Vec<PairInfo<AccountId, TokenBalance>> {
+	// 		ZenlinkProtocol::get_owner_pairs(&owner)
+	// 	}
+	//
+	// 	fn get_amount_in_price(
+	// 		supply: TokenBalance,
+	// 		path: Vec<AssetId>
+	// 	) -> TokenBalance {
+	// 		ZenlinkProtocol::desired_in_amount(supply, path)
+	// 	}
+	//
+	// 	fn get_amount_out_price(
+	// 		supply: TokenBalance,
+	// 		path: Vec<AssetId>
+	// 	) -> TokenBalance {
+	// 		ZenlinkProtocol::supply_out_amount(supply, path)
+	// 	}
+	//
+	// 	fn get_estimate_lptoken(
+	// 		token_0: AssetId,
+	// 		token_1: AssetId,
+	// 		amount_0_desired: TokenBalance,
+	// 		amount_1_desired: TokenBalance,
+	// 		amount_0_min: TokenBalance,
+	// 		amount_1_min: TokenBalance,
+	// 	) -> TokenBalance{
+	// 		ZenlinkProtocol::get_estimate_lptoken(
+	// 			token_0,
+	// 			token_1,
+	// 			amount_0_desired,
+	// 			amount_1_desired,
+	// 			amount_0_min,
+	// 			amount_1_min)
+	// 	}
+	// }
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(
 	Runtime,
-	cumulus_pallet_aura_ext::BlockExecutor::<
-	Runtime, Executive>,
+	cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
 );

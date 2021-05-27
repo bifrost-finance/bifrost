@@ -72,14 +72,14 @@ brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 #brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # orml
-#orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 #orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 #orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 
 zenlink-protocol = { version = "0.4.0", default-features = false }
-zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
+# zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
@@ -141,4 +141,5 @@ std = [
 	"orml-tokens/std",
 #	"orml-xtokens/std",
 #	"orml-xcm-support/std",
+	"zenlink-protocol/std",
 ]
