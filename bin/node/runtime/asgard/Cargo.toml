@@ -65,11 +65,11 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features 
 # bifrost pallets
 brml-assets = { path = "../../../../brml/assets", default-features = false }
 brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
-#brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
+# brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
 brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
 brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
-#brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
+brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # orml
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
@@ -79,7 +79,7 @@ orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-li
 #orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 
 zenlink-protocol = { version = "0.4.0", default-features = false }
-# zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
+zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.1" }
@@ -131,15 +131,16 @@ std = [
 	"sp-consensus-aura/std",
 	"brml-assets/std",
 	"brml-vtoken-mint/std",
-#	"brml-vtoken-mint-rpc-runtime-api/std",
+	# "brml-vtoken-mint-rpc-runtime-api/std",
 	"brml-minter-reward/std",
 	'brml-voucher/std',
 	"brml-charge-transaction-fee/std",
-#	"brml-charge-transaction-fee-rpc-runtime-api/std",
+	"brml-charge-transaction-fee-rpc-runtime-api/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 #	"orml-xtokens/std",
 #	"orml-xcm-support/std",
 	"zenlink-protocol/std",
+	"zenlink-protocol-runtime-api/std",
 ]

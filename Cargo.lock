@@ -197,6 +197,7 @@ version = "0.8.0"
 dependencies = [
  "brml-assets",
  "brml-charge-transaction-fee",
+ "brml-charge-transaction-fee-rpc-runtime-api",
  "brml-minter-reward",
  "brml-voucher",
  "brml-vtoken-mint",
@@ -252,6 +253,7 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]

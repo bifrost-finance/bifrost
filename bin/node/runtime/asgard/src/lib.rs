@@ -72,8 +72,8 @@ use xcm_builder::{
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
     SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
-use xcm_executor::{traits::ShouldExecute, Config, XcmExecutor};
-use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
+use xcm_executor::{Config, XcmExecutor};
+use pallet_xcm::XcmPassthrough;
 use frame_system::EnsureRoot;
 
 // orml imports
@@ -81,7 +81,7 @@ use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
 
 // zenlink imports
-use zenlink_protocol::{ZenlinkMultiAssets, LocalAssetHandler, make_x2_location, AssetId, AssetBalance};
+use zenlink_protocol::{ZenlinkMultiAssets, LocalAssetHandler, MultiAssetsHandler, make_x2_location, AssetId, AssetBalance, PairInfo};
 
 mod weights;
 
@@ -822,76 +822,84 @@ impl_runtime_apis! {
 		}
 	}
 
-	// impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
-	// 	fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-	// 	let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
-	// 		match rs {
-	// 			Ok(val) => val,
-	// 			_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
-	// 		}
-	// 	}
-	// }
+	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
+			}
+		}
+	}
 
 	// zenlink runtime outer apis
-	// impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-	// 	fn get_assets() -> Vec<AssetId> {
-	// 		ZenlinkProtocol::assets_list()
-	// 	}
-	//
-	// 	fn get_balance(
-	// 		asset_id: AssetId,
-	// 		owner: AccountId
-	// 	) -> TokenBalance {
-	// 		ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
-	// 	}
-	//
-	// 	fn get_sovereigns_info(
-	// 		asset_id: AssetId
-	// 	) -> Vec<(u32, AccountId, TokenBalance)> {
-	// 		ZenlinkProtocol::get_sovereigns_info(&asset_id)
-	// 	}
-	//
-	// 	fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
-	// 		ZenlinkProtocol::get_all_pairs()
-	// 	}
-	//
-	// 	fn get_owner_pairs(
-	// 		owner: AccountId
-	// 	) -> Vec<PairInfo<AccountId, TokenBalance>> {
-	// 		ZenlinkProtocol::get_owner_pairs(&owner)
-	// 	}
-	//
-	// 	fn get_amount_in_price(
-	// 		supply: TokenBalance,
-	// 		path: Vec<AssetId>
-	// 	) -> TokenBalance {
-	// 		ZenlinkProtocol::desired_in_amount(supply, path)
-	// 	}
-	//
-	// 	fn get_amount_out_price(
-	// 		supply: TokenBalance,
-	// 		path: Vec<AssetId>
-	// 	) -> TokenBalance {
-	// 		ZenlinkProtocol::supply_out_amount(supply, path)
-	// 	}
-	//
-	// 	fn get_estimate_lptoken(
-	// 		token_0: AssetId,
-	// 		token_1: AssetId,
-	// 		amount_0_desired: TokenBalance,
-	// 		amount_1_desired: TokenBalance,
-	// 		amount_0_min: TokenBalance,
-	// 		amount_1_min: TokenBalance,
-	// 	) -> TokenBalance{
-	// 		ZenlinkProtocol::get_estimate_lptoken(
-	// 			token_0,
-	// 			token_1,
-	// 			amount_0_desired,
-	// 			amount_1_desired,
-	// 			amount_0_min,
-	// 			amount_1_min)
-	// 	}
-	// }
+    impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+        fn get_assets() -> Vec<AssetId> {
+            ZenlinkProtocol::get_assets()
+        }
+
+        fn get_balance(
+            asset_id: AssetId,
+            owner: AccountId
+        ) -> AssetBalance {
+            <Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
+        }
+
+        fn get_sovereigns_info(
+            asset_id: AssetId
+        ) -> Vec<(u32, AccountId, AssetBalance)> {
+            ZenlinkProtocol::get_sovereigns_info(&asset_id)
+        }
+
+        fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>> {
+            ZenlinkProtocol::get_all_pairs()
+        }
+
+        fn get_owner_pairs(
+            owner: AccountId
+        ) -> Vec<PairInfo<AccountId, AssetBalance>> {
+            ZenlinkProtocol::get_owner_pairs(&owner)
+        }
+
+        fn get_pair_by_asset_id(
+            asset_0: AssetId,
+            asset_1: AssetId
+        ) -> Option<PairInfo<AccountId, AssetBalance>> {
+            ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+        }
+
+        fn get_amount_in_price(
+            supply: AssetBalance,
+            path: Vec<AssetId>
+        ) -> AssetBalance {
+            ZenlinkProtocol::desired_in_amount(supply, path)
+        }
+
+        fn get_amount_out_price(
+            supply: AssetBalance,
+            path: Vec<AssetId>
+        ) -> AssetBalance {
+            ZenlinkProtocol::supply_out_amount(supply, path)
+        }
+
+        fn get_estimate_lptoken(
+            token_0: AssetId,
+            token_1: AssetId,
+            amount_0_desired: AssetBalance,
+            amount_1_desired: AssetBalance,
+            amount_0_min: AssetBalance,
+            amount_1_min: AssetBalance,
+        ) -> AssetBalance{
+            ZenlinkProtocol::get_estimate_lptoken(
+                token_0,
+                token_1,
+                amount_0_desired,
+                amount_1_desired,
+                amount_0_min,
+                amount_1_min
+            )
+        }
+    }
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(
