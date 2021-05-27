@@ -196,6 +196,7 @@ name = "asgard-runtime"
 version = "0.8.0"
 dependencies = [
  "brml-assets",
+ "brml-charge-transaction-fee",
  "brml-minter-reward",
  "brml-voucher",
  "brml-vtoken-mint",

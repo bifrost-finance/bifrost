@@ -476,20 +476,20 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 }
-// parameter_types! {
-// 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-// }
-//
-// impl brml_charge_transaction_fee::Config for Runtime {
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type WeightInfo = ();
-// 	type CurrenciesHandler = Currencies;
-// 	type Currency = Balances;
-// 	type ZenlinkDEX = ZenlinkProtocol;
-// 	type OnUnbalanced = ();
-// 	type NativeCurrencyId = NativeCurrencyId;
-// }
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+}
+
+impl brml_charge_transaction_fee::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type WeightInfo = ();
+	type CurrenciesHandler = Currencies;
+	type Currency = Balances;
+	type OnUnbalanced = ();
+	type NativeCurrencyId = NativeCurrencyId;
+}
 
 parameter_types! {
 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
@@ -679,7 +679,7 @@ construct_runtime! {
 		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		// ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
+		ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,

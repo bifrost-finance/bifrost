@@ -68,7 +68,7 @@ brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = f
 #brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
 brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
 brml-voucher = { path = "../../../../brml/voucher", default-features = false }
-#brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
+brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
 #brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # orml
@@ -134,9 +134,9 @@ std = [
 #	"brml-vtoken-mint-rpc-runtime-api/std",
 	"brml-minter-reward/std",
 	'brml-voucher/std',
-#	"brml-charge-transaction-fee/std",
+	"brml-charge-transaction-fee/std",
 #	"brml-charge-transaction-fee-rpc-runtime-api/std",
-#	"orml-currencies/std",
+	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 #	"orml-xtokens/std",
