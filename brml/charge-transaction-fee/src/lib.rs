@@ -42,7 +42,7 @@ use sp_std::{vec, vec::Vec};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use zenlink_protocol::{AssetId, DEXOperations, TokenBalance};
+use zenlink_protocol::{AssetId, AssetBalance};
 
 mod default_weight;
 mod mock;
@@ -61,7 +61,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
+	pub trait Config: frame_system::Config + pallet_transaction_payment::Config + zenlink_protocol::Config{
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The units in which we record balances.
@@ -85,8 +85,6 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
-		/// Zenlink DEX operations handler
-		type ZenlinkDEX: DEXOperations<Self::AccountId>;
 
 		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
@@ -209,7 +207,7 @@ impl<T: Config> Pallet<T> {
 
 				// If native token balance is below existential deposit requirement,
 				// go exchange fee + existential deposit. Else to exchange fee amount.
-				let amount_out: TokenBalance;
+				let amount_out: AssetBalance;
 				if native_balance > T::Balance::from(existential_deposit) {
 					amount_out = fee.saturated_into();
 				} else {
@@ -219,13 +217,13 @@ impl<T: Config> Pallet<T> {
 				let asset_balance = T::CurrenciesHandler::free_balance(currency_id, who);
 				let asset_id: AssetId = AssetId::from(currency_id);
 				let path = vec![asset_id, native_asset_id];
-				let amount_in_max: TokenBalance = asset_balance.saturated_into();
+				let amount_in_max: AssetBalance = asset_balance.saturated_into();
 
 				// query for amount in
-				let amounts = T::ZenlinkDEX::get_amount_in_by_path_zenlink(amount_out, &path)
+				let amounts = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)
 					.map_or(vec![0], |v| v);
 
-				if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens_zenlink(
+				if zenlink_protocol::Pallet::<T>::inner_swap_tokens_for_exact_tokens(
 					who,
 					amount_out,
 					amount_in_max,
@@ -252,7 +250,7 @@ impl<T: Config> Pallet<T> {
 
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
-		let amount_out: TokenBalance = fee.saturated_into();
+		let amount_out: AssetBalance = fee.saturated_into();
 		let native_asset_id: AssetId = AssetId::from(T::NativeCurrencyId::get());
 
 		// charge the fee by the order of the above order list.
@@ -275,7 +273,7 @@ impl<T: Config> Pallet<T> {
 				let token_asset_id: AssetId = AssetId::from(currency_id);
 				let path = vec![native_asset_id.clone(), token_asset_id];
 
-				let amount_vec = T::ZenlinkDEX::get_amount_in_by_path_zenlink(amount_out, &path)?;
+				let amount_vec = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)?;
 				let amount_in = amount_vec[0];
 				let amount_in_balance = amount_in.saturated_into();
 

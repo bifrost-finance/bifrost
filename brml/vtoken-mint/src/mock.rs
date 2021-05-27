@@ -151,7 +151,6 @@ impl brml_minter_reward::Config for Runtime {
 	type PalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
-	// type DEXOperations = ZenlinkProtocol;
 	type DEXOperations = ();
 	type ShareWeight = Balance;
 }

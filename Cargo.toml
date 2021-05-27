@@ -20,6 +20,7 @@ members = [
 	"brml/staking-reward",
 	"brml/swap",
 	"brml/voucher",
+	"brml/charge-transaction-fee",
 ]
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates

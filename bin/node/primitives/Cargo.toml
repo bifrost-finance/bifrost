@@ -12,6 +12,7 @@ sp-application-crypto = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
+zenlink-protocol = { version = "0.4.0", default-features = false }
 
 [dev-dependencies]
 sp-serializer = { version = "3.0.0" }
@@ -26,5 +27,6 @@ std = [
 	"sp-application-crypto/std",
 	"sp-core/std",
 	"sp-runtime/std",
-	"sp-std/std"
+	"sp-std/std",
+	"zenlink-protocol/std",
 ]

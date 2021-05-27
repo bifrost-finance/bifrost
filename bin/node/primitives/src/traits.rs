@@ -39,6 +39,7 @@ pub trait CurrencyIdExt {
 	fn is_token(&self) -> bool;
 	fn is_native(&self) -> bool;
 	fn is_stable_token(&self) -> bool;
+	fn exist(&self) -> bool;
 	fn get_native_token(&self) -> Option<Self::TokenSymbol>;
 	fn get_stable_token(&self) -> Option<Self::TokenSymbol>;
 	fn get_token_pair(&self) -> Option<Self::PairTokens>;

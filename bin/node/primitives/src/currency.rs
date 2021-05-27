@@ -19,10 +19,11 @@
 use codec::{Encode, Decode};
 use core::{convert::TryFrom, ops::Deref};
 use crate::traits::{CurrencyIdExt, GetDecimals};
-use sp_runtime::RuntimeDebug;
+use sp_runtime::{RuntimeDebug, SaturatedConversion};
 use sp_std::vec::Vec;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use zenlink_protocol::{AssetId, NATIVE, LOCAL};
 
 /// Bifrost Tokens list
 #[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
@@ -188,6 +189,13 @@ impl CurrencyIdExt for CurrencyId {
 		matches!(self.as_ref(), TokenSymbol::aUSD)
 	}
 
+	fn exist(&self) -> bool {
+		matches!(
+			self.as_ref(),
+			TokenSymbol::ASG | TokenSymbol::aUSD | TokenSymbol::vDOT | TokenSymbol::vKSM | TokenSymbol::vETH | TokenSymbol::vEOS | TokenSymbol::vIOST | TokenSymbol::DOT | TokenSymbol::KSM | TokenSymbol::ETH | TokenSymbol::EOS | TokenSymbol::IOST
+		)
+	}
+
 	fn get_native_token(&self) -> Option<Self::TokenSymbol> {
 		match self.as_ref() {
 			TokenSymbol::ASG => Some(TokenSymbol::ASG),
@@ -276,5 +284,76 @@ impl TryFrom<Vec<u8>> for CurrencyId {
 			_ => Err(()),
 		}
 	}
+}
+
+// Below is the trait which can convert between Zenlink AssetId type and Bifrost CurrencyId type
+pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost parachain id
+
+// impl AssetId {
+//     pub fn is_para_currency(&self) -> bool {
+//         let _bnc_u32_id = 0;
+//         matches!(self.asset_index, _bnc_u32_id)
+//     }
+// }
+
+// impl From<u32> for AssetId {
+//     fn from(id: u32) -> Self {
+//         let mut module_idx = LOCAL;
+//         if id == 0u32 {
+//             module_idx = NATIVE;
+//         }
+
+//         Self {
+//             chain_id: BIFROST_PARACHAIN_ID,
+//             asset_type: module_idx,
+//             asset_index: id,
+//         }
+//     }
+// }
+
+// impl From<u128> for AssetId {
+//     fn from(id: u128) -> Self {
+//         let mut module_idx = LOCAL;
+//     if id == 0u128 {
+//         module_idx = NATIVE;
+//     }
+
+//         Self {
+//             chain_id: BIFROST_PARACHAIN_ID,
+//             asset_type: module_idx,
+//             asset_index: id as u32,
+//         }
+//     }
+// }
+
+impl From<CurrencyId> for AssetId {
+    fn from(id: CurrencyId) -> Self {
+        if id.is_native() {
+            Self {
+                chain_id: BIFROST_PARACHAIN_ID,
+                asset_type: NATIVE,
+                asset_index: 0u32,
+            }
+        } else {
+            match id {
+                CurrencyId::Token(some_id) => {
+                    let u32_id = some_id as u32;
+                    Self {
+                        chain_id: BIFROST_PARACHAIN_ID,
+                        asset_type: LOCAL,
+                        asset_index: u32_id,
+                    }
+                }
+                _ => todo!("Not support now."),
+            }
+        }
+    }
+}
+
+impl Into<CurrencyId> for AssetId {
+    fn into(self) -> CurrencyId {
+        let id: u8 = self.asset_index.saturated_into();
+        CurrencyId::Token(TokenSymbol::from(id))
+    }
 }
 

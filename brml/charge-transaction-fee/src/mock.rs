@@ -30,12 +30,14 @@ use frame_support::PalletId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 	Perbill,
 };
+// pub use polkadot_parachain::primitives::Id;
+pub use cumulus_primitives_core::ParaId;
 
-use node_primitives::{CurrencyId, TokenSymbol};
-use zenlink_protocol::{make_x2_location, MultiLocation, NativeCurrencyAdaptor, OtherAssetAdaptor};
+use node_primitives::{CurrencyId, TokenSymbol, CurrencyIdExt};
+use zenlink_protocol::{ZenlinkMultiAssets,LocalAssetHandler};
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -56,7 +58,7 @@ frame_support::construct_runtime!(
 		Balances: balances::{Pallet, Call, Storage, Event<T>},
 		// TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ChargeTransactionFee: charge_transaction_fee::{Pallet, Call, Storage,Event<T>},
-		Zenlink: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -71,12 +73,12 @@ impl system::Config for Test {
 	type BlockLength = ();
 	type DbWeight = ();
 	type Origin = Origin;
-	type Index = u64;
+	type Index = u64;  
 	type Call = Call;
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u128;
+	type AccountId = u128;  // needs to be u128 against u64, otherwise the account address will be half cut.
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -140,6 +142,10 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
+parameter_types! {
+	pub MaxLocks: u32 = 2;
+}
+
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = Balance;
@@ -148,6 +154,7 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Test, ()>;
+	type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
@@ -156,12 +163,11 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type Event = Event;
-	type Balance = u64;
+	type Balance = u64;  
 	type WeightInfo = ();
 	type CurrenciesHandler = Currencies;
 	type Currency = Balances;
 	type OnUnbalanced = ();
-	type ZenlinkDEX = Zenlink;
 	type NativeCurrencyId = NativeCurrencyId;
 }
 
@@ -181,36 +187,86 @@ impl orml_currencies::Config for Test {
 }
 
 parameter_types! {
-	pub const ZenlinkPalletId: PalletId = PalletId(*b"zenlink1");
-	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
-		// Phala local and live, 1 PHA
-		(make_x2_location(30),	1_000_000_000_000),
-		// Sherpax live
-		(make_x2_location(59),  500),
-		// Bifrost local and live, 0.01 BNC
-		(make_x2_location(1024),   10_000_000_000),
-		// Zenlink live
-		(make_x2_location(188), 500),
-		// Zenlink local
-		(make_x2_location(200), 500),
-		// Sherpax local
-		(make_x2_location(300), 500),
-		// Plasm local and live, 0.001 PLM
-		(make_x2_location(5000), 1_000_000_000_000)
-	];
+    pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+	// pub const SelfParaId: ParaId = ParaId{0: 2001};
 }
 
 impl zenlink_protocol::Config for Test {
-	type Event = Event;
-	type XcmExecutor = ();
-	type AccountIdConverter = ();
-	type AccountId32Converter = ();
-	type ParaId = ();
-	type PalletId = ZenlinkPalletId;
-	type TargetChains = ();
-	type NativeCurrency = NativeCurrencyAdaptor<Test, Balances>;
-	type OtherAssets = OtherAssetAdaptor<Test, Currencies>;
+    type Event = Event;
+    type GetExchangeFee = GetExchangeFee;
+    type MultiAssetsHandler = MultiAssets;
+    type PalletId = ZenlinkPalletId;
+    // type SelfParaId = SelfParaId; 
+	type SelfParaId = ();
+    type TargetChains = ();
+    type XcmExecutor = ();
+    type Conversion = ();
 }
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
+{
+	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: AssetId) -> bool {
+		let currency_id: CurrencyId = asset_id.into();
+		currency_id.exist()
+	}
+
+	fn local_transfer(
+		asset_id: AssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount)
+	}
+
+	fn local_withdraw(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
+
 
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
