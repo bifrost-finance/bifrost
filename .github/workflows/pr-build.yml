@@ -17,22 +17,20 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Check to latest commit
+        uses: actions/checkout@v2
         with:
           submodules: recursive
-#      - name: Add SSH key
-#        env:
-#          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-#        run: |
-#          [ ! -d "/home/ubuntu/runner/.ssh" ] && mkdir -p /home/ubuntu/runner/.ssh
-#          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/ubuntu/runner/.ssh/github_actions
-#          chmod 600 /home/ubuntu/runner/.ssh/github_actions
-#          ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-#          ssh-add /home/ubuntu/runner/.ssh/github_actions
-      - name: Install SSH Key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Add SSH key
+        env:
+            SSH_AUTH_SOCK: /tmp/ssh_bifrost.sock
+        run: |
+          [ ! -d "${HOME}/.ssh/" ] && mkdir -p ${HOME}/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ${HOME}/.ssh/github_actions
+          chmod 600 ${HOME}/.ssh/github_actions
+          [ ! -e "/tmp/ssh_bifrost.sock" ]  && eval "$(ssh-agent -a /tmp/ssh_bifrost.sock)"
+          ssh-add ${HOME}/.ssh/github_actions
+          echo "::set-env name=SSH_AUTH_SOCK::$SSH_AUTH_SOCK"
       - name: Cache cargo registry and index
         uses: actions/cache@v2
         with:
@@ -48,9 +46,9 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
       - name: Check
-        run: cargo check --features with-bifrost-runtime
+        run: make check-bifrost
       - name: Run tests
-        run: cargo test --features with-bifrost-runtime
+        run: make test-bifrost
       - uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
         with:
