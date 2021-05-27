@@ -213,6 +213,7 @@ dependencies = [
  "hex-literal 0.3.1",
  "log",
  "node-primitives",
+ "orml-currencies",
  "orml-tokens",
  "orml-traits",
  "pallet-aura",
@@ -250,7 +251,6 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "zenlink-protocol",
- "zenlink-protocol-runtime-api",
 ]
 
 [[package]]

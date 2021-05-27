@@ -29,9 +29,9 @@ use sp_api::impl_runtime_apis;
 use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, Zero},
+	traits::{BlakeTwo256, Block as BlockT, Zero, UniqueSaturatedInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult,DispatchError,DispatchResult,SaturatedConversion,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -55,11 +55,12 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_std::marker::PhantomData;
 
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol};
+use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol, CurrencyIdExt};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -77,9 +78,10 @@ use frame_system::EnsureRoot;
 
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::MultiCurrency;
 
 // zenlink imports
-use zenlink_protocol::{ZenlinkMultiAssets, make_x2_location, AssetId, AssetBalance};
+use zenlink_protocol::{ZenlinkMultiAssets, LocalAssetHandler, make_x2_location, AssetId, AssetBalance};
 
 mod weights;
 
@@ -553,6 +555,67 @@ pub type ZenlinkLocationToAccountId = (
     // Straight up local `AccountId32` origins just alias directly to `AccountId`.
     AccountId32Aliases<AnyNetwork, AccountId>,
 );
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
+{
+	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: AssetId) -> bool {
+		let currency_id: CurrencyId = asset_id.into();
+		currency_id.exist()
+	}
+
+	fn local_transfer(
+		asset_id: AssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount)
+	}
+
+	fn local_withdraw(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.into();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
 
 
 // zenlink runtime end
