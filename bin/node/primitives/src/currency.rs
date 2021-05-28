@@ -24,7 +24,7 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 use sp_std::{
-	convert::{Into, TryFrom},
+	convert::{Into, TryFrom, TryInto},
 	ops::Deref,
 	prelude::*,
 };
@@ -217,18 +217,6 @@ impl CurrencyIdExt for CurrencyId {
 		matches!(self, CurrencyId::Stable(_))
 	}
 
-	fn exist(&self) -> bool {
-		matches!(
-			self,
-			CurrencyId::VToken(_)
-				| CurrencyId::Token(_)
-				| CurrencyId::VSToken(_)
-				| CurrencyId::VSBond(..)
-				| CurrencyId::Native(_)
-				| CurrencyId::Stable(_)
-		)
-	}
-
 	fn into(symbol: Self::TokenSymbol) -> Self {
 		CurrencyId::Token(symbol)
 	}
@@ -248,78 +236,109 @@ impl Deref for CurrencyId {
 	}
 }
 
-// This part is for EOS and ISOT bridge.
-// impl TryFrom<Vec<u8>> for CurrencyId {
-// 	type Error = ();
+/// Temporay Solution: CurrencyId from a number
+impl TryFrom<u8> for CurrencyId {
+	type Error = ();
 
-// 	fn try_from(v: Vec<u8>) -> Result<Self, Self::Error> {
-// 		match v.as_slice() {
-// 			b"ASG" => Ok(CurrencyId::Native(TokenSymbol::ASG)),
-// 			b"AUSD" => Ok(CurrencyId::Stable(TokenSymbol::AUSD)),
-// 			b"DOT" => Ok(CurrencyId::Token(TokenSymbol::DOT)),
-// 			b"vDOT" => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
-// 			b"KSM" => Ok(CurrencyId::Token(TokenSymbol::KSM)),
-// 			b"vKSM" => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
-// 			b"ETH" => Ok(CurrencyId::Token(TokenSymbol::ETH)),
-// 			b"vETH" => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
-// 			b"EOS" => Ok(CurrencyId::Token(TokenSymbol::EOS)),
-// 			b"vEOS" => Ok(CurrencyId::VToken(TokenSymbol::EOS)),
-// 			b"IOST" => Ok(CurrencyId::Token(TokenSymbol::IOST)),
-// 			b"vIOST" => Ok(CurrencyId::VToken(TokenSymbol::IOST)),
-// 			_ => Err(()),
-// 		}
-// 	}
-// }
+	fn try_from(n: u8) -> Result<Self, Self::Error> {
+		match n {
+			0 => Ok(CurrencyId::Native(TokenSymbol::ASG)),
+			2 => Ok(CurrencyId::Stable(TokenSymbol::AUSD)),
+			3 => Ok(CurrencyId::Token(TokenSymbol::DOT)),
+			4 => Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			5 => Ok(CurrencyId::Token(TokenSymbol::ETH)),
+			6 => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
+			7 => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
+			8 => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
+			_ => Err(()),
+		}
+	}
+}
 
 // Below is the trait which can convert between Zenlink AssetId type and Bifrost CurrencyId type
 pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost parachain id
 
 // Temporary solution for conversion from Bifrost CurrencyId to Zenlink AssetId
-impl From<CurrencyId> for AssetId {
-	fn from(id: CurrencyId) -> Self {
+impl TryFrom<CurrencyId> for AssetId {
+	type Error = ();
+
+	fn try_from(id: CurrencyId) -> Result<Self, Self::Error> {
 		if id.is_native() {
-			Self {
+			Ok(Self {
 				chain_id: BIFROST_PARACHAIN_ID,
 				asset_type: NATIVE,
 				asset_index: 0u32,
-			}
+			})
 		} else {
-			let u8_id = match id {
-				CurrencyId::Stable(TokenSymbol::AUSD) => 2,
+			match id {
+				CurrencyId::Stable(TokenSymbol::AUSD) => 
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 2 as u32,
+					}),
 
-				CurrencyId::Token(TokenSymbol::DOT) => 3,
-				CurrencyId::Token(TokenSymbol::KSM) => 4,
-				CurrencyId::Token(TokenSymbol::ETH) => 5,
+				CurrencyId::Token(TokenSymbol::DOT) => 
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 3 as u32,
+					}),
+				CurrencyId::Token(TokenSymbol::KSM) => 
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 4 as u32,
+					}),
+				CurrencyId::Token(TokenSymbol::ETH) => 					
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 5 as u32,
+					}),
 
-				CurrencyId::VToken(TokenSymbol::DOT) => 6,
-				CurrencyId::VToken(TokenSymbol::KSM) => 7,
-				CurrencyId::VToken(TokenSymbol::ETH) => 8,
-				_ => todo!("Not support now."),
-			};
-			Self {
-				chain_id: BIFROST_PARACHAIN_ID,
-				asset_type: LOCAL,
-				asset_index: u8_id as u32,
+				CurrencyId::VToken(TokenSymbol::DOT) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 6 as u32,
+					}),
+				CurrencyId::VToken(TokenSymbol::KSM) => 
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 7 as u32,
+					}),
+				CurrencyId::VToken(TokenSymbol::ETH) => 
+				Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 8 as u32,
+				}),
+				_ => Err(())
 			}
 		}
 	}
 }
 
-impl Into<CurrencyId> for AssetId {
-	fn into(self) -> CurrencyId {
+
+impl TryInto<CurrencyId> for AssetId {
+	type Error = ();
+
+	fn try_into(self) -> Result<CurrencyId, Self::Error> {
 		let id: u8 = self.asset_index.saturated_into();
 		match id {
-			0 => CurrencyId::Native(TokenSymbol::ASG),
-			2 => CurrencyId::Stable(TokenSymbol::AUSD),
+			0 => Ok(CurrencyId::Native(TokenSymbol::ASG)),
+			2 => Ok(CurrencyId::Stable(TokenSymbol::AUSD)),
 
-			3 => CurrencyId::Token(TokenSymbol::DOT),
-			4 => CurrencyId::Token(TokenSymbol::KSM),
-			5 => CurrencyId::Token(TokenSymbol::ETH),
+			3 => Ok(CurrencyId::Token(TokenSymbol::DOT)),
+			4 => Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			5 => Ok(CurrencyId::Token(TokenSymbol::ETH)),
 
-			6 => CurrencyId::VToken(TokenSymbol::DOT),
-			7 => CurrencyId::VToken(TokenSymbol::KSM),
-			8 => CurrencyId::VToken(TokenSymbol::ETH),
-			_ => todo!("Not support now."),
+			6 => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
+			7 => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
+			8 => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
+			_ => Err(())
 		}
 	}
 }

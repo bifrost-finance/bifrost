@@ -41,7 +41,6 @@ pub trait CurrencyIdExt {
 	fn is_vstoken(&self) -> bool;
 	fn is_vsbond(&self) -> bool;
 	fn is_native(&self) -> bool;
-	fn exist(&self) -> bool;	
 	fn is_stable(&self) -> bool;
 	fn into(symbol: Self::TokenSymbol) -> Self;
 }

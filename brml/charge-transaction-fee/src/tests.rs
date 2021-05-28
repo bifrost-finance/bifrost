@@ -29,7 +29,7 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::testing::TestXt;
-use std::convert::TryInto;
+use std::convert::{TryInto,TryFrom};
 use zenlink_protocol::{AssetId};
 
 // some common variables
@@ -74,9 +74,9 @@ fn basic_setup() {
 	assert_ok!(Currencies::deposit(CURRENCY_ID_4, &DICK, 100000));
 
 	// create DEX pair
-	let asset_0_currency_id: AssetId = AssetId::from(CURRENCY_ID_0);
-	let asset_1_currency_id: AssetId = AssetId::from(CURRENCY_ID_1);
-	let asset_2_currency_id: AssetId = AssetId::from(CURRENCY_ID_2);
+	let asset_0_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
+	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
+	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
 
 	println!("asset_0_currency_id: {:?}", asset_0_currency_id);
 	println!("asset_1_currency_id: {:?}", asset_1_currency_id);
@@ -168,12 +168,12 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		];
 
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		default_order_list.push(CurrencyId::from(0 as u8));
-		default_order_list.push(CurrencyId::from(1 as u8));
-		default_order_list.push(CurrencyId::from(2 as u8));
-		default_order_list.push(CurrencyId::from(3 as u8));
-		default_order_list.push(CurrencyId::from(6 as u8));
-		default_order_list.push(CurrencyId::from(7 as u8));
+		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(2 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(3 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(4 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(5 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(6 as u8).unwrap());
 
 		assert_eq!(
 			ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
@@ -208,7 +208,7 @@ fn ensure_can_charge_fee_should_work() {
 		];
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
 		for i in 0..12 {
-			default_order_list.push(CurrencyId::from(i as u8));
+			default_order_list.push(CurrencyId::try_from(i as u8).unwrap());
 		}
 
 		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
@@ -217,8 +217,8 @@ fn ensure_can_charge_fee_should_work() {
 			Some(asset_order_list_vec.clone()),
 		);
 
-		let native_asset_id: AssetId = AssetId::from(CURRENCY_ID_0);
-		let asset_id: AssetId = AssetId::from(CURRENCY_ID_1);
+		let native_asset_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
+		let asset_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
 
 		let path = vec![asset_id, native_asset_id];
 

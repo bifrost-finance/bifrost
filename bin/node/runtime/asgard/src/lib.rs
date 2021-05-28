@@ -37,6 +37,7 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use core::convert::TryInto;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -670,8 +671,11 @@ where
 	}
 
 	fn local_is_exists(asset_id: AssetId) -> bool {
-		let currency_id: CurrencyId = asset_id.into();
-		currency_id.exist()
+	
+		match asset_id.try_into() {
+			Ok(_) => true,
+			Err(_) => false
+		}
 	}
 
 	fn local_transfer(
