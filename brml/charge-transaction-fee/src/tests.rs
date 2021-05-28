@@ -171,9 +171,9 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
 		default_order_list.push(CurrencyId::try_from(2 as u8).unwrap());
 		default_order_list.push(CurrencyId::try_from(3 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(4 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(5 as u8).unwrap());
 		default_order_list.push(CurrencyId::try_from(6 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(5 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(8 as u8).unwrap());
 
 		assert_eq!(
 			ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
@@ -207,7 +207,8 @@ fn ensure_can_charge_fee_should_work() {
 			CURRENCY_ID_0,
 		];
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		for i in 0..12 {
+		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
+		for i in 2..9 {
 			default_order_list.push(CurrencyId::try_from(i as u8).unwrap());
 		}
 
