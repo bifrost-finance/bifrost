@@ -220,6 +220,8 @@ dependencies = [
  "orml-traits",
  "pallet-aura",
  "pallet-balances",
+ "pallet-collective",
+ "pallet-democracy",
  "pallet-indices",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
@@ -639,6 +641,8 @@ dependencies = [
  "node-primitives",
  "pallet-aura",
  "pallet-balances",
+ "pallet-collective",
+ "pallet-democracy",
  "pallet-indices",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
@@ -1084,6 +1088,12 @@ dependencies = [
  "memchr",
  "regex-automata",
 ]
+
+[[package]]
+name = "bstringify"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd769563b4ea2953e2825c9e6b7470a5f55f67e0be00030bf3e390a2a6071f64"
 
 [[package]]
 name = "build-helper"
@@ -4974,6 +4984,7 @@ dependencies = [
 name = "node-primitives"
 version = "0.8.0"
 dependencies = [
+ "bstringify",
  "frame-system",
  "parity-scale-codec",
  "pretty_assertions",
@@ -11324,6 +11335,22 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
+
+[[package]]
+name = "vsbond-auction"
+version = "0.8.0"
+dependencies = [
+ "brml-assets",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
 
 [[package]]
 name = "wait-timeout"

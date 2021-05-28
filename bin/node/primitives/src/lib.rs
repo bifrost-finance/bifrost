@@ -19,6 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
+use core::convert::TryFrom;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -33,7 +34,8 @@ pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	GetDecimals, CurrencyIdExt, AssetReward, RewardHandler, VtokenMintExt, MinterRewardExt, RewardTrait, BridgeAssetFrom, BridgeAssetTo
+	CurrencyIdExt, AssetReward, RewardHandler, VtokenMintExt, MinterRewardExt, RewardTrait,
+	BridgeAssetFrom, BridgeAssetTo, TokenInfo,
 };
 
 /// An index to a block.
@@ -120,6 +122,12 @@ pub type TokenBalance = u128;
 /// The pair id of the zenlink dex.
 pub type PairId = u32;
 
+/// Parachain Id
+pub type ParaId = u32;
+
+/// The measurement type for counting lease periods (generally the same as `BlockNumber`).
+type LeasePeriod = BlockNumber;
+
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
 pub enum TokenType {
@@ -144,7 +152,7 @@ impl TokenType {
 		*self == TokenType::Native
 	}
 
-	pub fn is_stable_token(&self) -> bool {
+	pub fn is_stable(&self) -> bool {
 		*self == TokenType::Stable
 	}
 
@@ -329,10 +337,10 @@ impl From<CurrencyId> for ZenlinkAssetId {
 impl Into<CurrencyId> for ZenlinkAssetId {
 	fn into(self) -> CurrencyId {
 		match self {
-			ZenlinkAssetId::NativeCurrency => CurrencyId::Token(TokenSymbol::ASG),
+			ZenlinkAssetId::NativeCurrency => CurrencyId::Native(TokenSymbol::ASG),
 			ZenlinkAssetId::ParaCurrency(some_id) => {
 				let id: u8 = some_id.saturated_into();
-				CurrencyId::Token(TokenSymbol::from(id))
+				CurrencyId::Token(TokenSymbol::try_from(id).unwrap())
 			}
 		}
 	}
@@ -388,35 +396,25 @@ pub mod report {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use currency::TokenInfo;
 
 	#[test]
 	fn currency_id_from_string_should_work() {
-		let currency_id_str = "ASG";
-		let bnc_currency_id = CurrencyId::try_from(currency_id_str.as_bytes().to_vec());
-		assert!(bnc_currency_id.is_ok());
-		assert_eq!(
-			bnc_currency_id.unwrap(),
-			CurrencyId::Token(TokenSymbol::ASG)
-		);
+		let currency_id = CurrencyId::try_from("DOT".as_bytes().to_vec());
+		assert!(currency_id.is_ok());
+		assert_eq!(currency_id.unwrap(), CurrencyId::Token(TokenSymbol::DOT));
 	}
 
 	#[test]
-	fn currency_id_ext_test_should_work() {
-		let currency_id_str = "ASG";
-		let bnc_currency_id = CurrencyId::Token(TokenSymbol::ASG);
-		assert_eq!(bnc_currency_id.is_native(), true);
-		// assert_eq!(CurrencyId::from(TokenSymbol::vDOT),CurrencyId::Token(TokenSymbol::vDOT).);
-		assert_eq!(TokenSymbol::DOT.decimals(), 10u32);
-		assert_eq!(TokenSymbol::DOT as u8, 2u8);
-		assert_eq!(CurrencyId::Token(TokenSymbol::vDOT).is_vtoken(), true);
-		assert_eq!(CurrencyId::Token(TokenSymbol::aUSD).is_stable_token(), true);
-		assert_eq!(
-			CurrencyId::Token(TokenSymbol::ASG).get_native_token(),
-			Some(TokenSymbol::ASG)
-		);
-		assert_eq!(
-			CurrencyId::Token(TokenSymbol::vDOT).get_token_pair(),
-			Some((TokenSymbol::DOT, TokenSymbol::vDOT))
-		);
+	fn currency_id_test_should_work() {
+		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).decimals(), 12u8);
+		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).currency_id(), 1u8);
+		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).symbol(), "DOT");
+		assert_eq!(CurrencyId::Native(TokenSymbol::DOT).is_native(), true);
+		assert_eq!(CurrencyId::Stable(TokenSymbol::DOT).is_stable(), true);
+		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).is_token(), true);
+		assert_eq!(CurrencyId::VToken(TokenSymbol::DOT).is_vtoken(), true);
+		assert_eq!(CurrencyId::VSToken(TokenSymbol::DOT).is_vstoken(), true);
+		assert_eq!(CurrencyId::VSBond(TokenSymbol::DOT).is_vsbond(), true);
 	}
 }

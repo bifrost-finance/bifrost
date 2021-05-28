@@ -37,10 +37,10 @@ pub const ALICE: u128 = 1;
 pub const BOB: u128 = 2;
 pub const CHARLIE: u128 = 3;
 pub const DICK: u128 = 4;
-pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
+pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const CURRENCY_ID_3: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
+pub const CURRENCY_ID_3: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const CURRENCY_ID_4: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 fn basic_setup() {

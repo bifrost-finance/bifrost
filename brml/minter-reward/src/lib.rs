@@ -329,11 +329,11 @@ pub mod pallet {
 			};
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = Weights::<T>::get(&currency_id);
-				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // aUSD
+				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
 				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
 					/ (total_weight * total_vtoken_mint);
 				let _ =
-					T::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::ASG), &minter, reward);
+					T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::ASG), &minter, reward);
 				// let _ = T::NativeCurrency::deposit(&minter, reward);
 
 				// Record all BNC rewards the user receives.

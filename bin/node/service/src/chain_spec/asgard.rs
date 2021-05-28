@@ -16,6 +16,13 @@
 
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
+// use asgard_runtime::{
+// 	AccountId, AuraId,
+// 	constants::{currency::DOLLARS, time::DAYS},
+// 	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
+// 	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
+// 	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
+// };
 use asgard_runtime::{
 	AccountId, AuraId,
 	constants::{currency::DOLLARS, time::DAYS},
@@ -104,6 +111,7 @@ pub fn testnet_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
+	let num_endowed_accounts = endowed_accounts.len();
 
 	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
@@ -124,6 +132,15 @@ pub fn testnet_genesis(
 		pallet_indices: IndicesConfig {
 			indices: vec![],
 		},
+		// pallet_democracy: DemocracyConfig::default(),
+		// pallet_collective_Instance1: CouncilConfig::default(),
+		// pallet_collective_Instance2: TechnicalCommitteeConfig {
+		// 	members: endowed_accounts.iter()
+		// 		.take((num_endowed_accounts + 1) / 2)
+		// 		.cloned()
+		// 		.collect(),
+		// 	phantom: Default::default(),
+		// },
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
@@ -140,7 +157,7 @@ pub fn testnet_genesis(
 				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Token(TokenSymbol::aUSD), ENDOWMENT * 10_000),
+						(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
@@ -161,11 +178,11 @@ pub fn testnet_genesis(
 		brml_vtoken_mint: VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vDOT), 1000 * DOLLARS),
+				(CurrencyId::VToken(TokenSymbol::DOT), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vETH), 1000 * DOLLARS),
+				(CurrencyId::VToken(TokenSymbol::ETH), 1000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::vKSM), 1000 * DOLLARS),
+				(CurrencyId::VToken(TokenSymbol::KSM), 1000 * DOLLARS),
 			],
 			staking_lock_period: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),

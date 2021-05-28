@@ -35,6 +35,8 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false }
+pallet-collective = { version = "3.0.0", default-features = false }
+pallet-democracy = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
 pallet-sudo = { version = "3.0.0", default-features = false }
@@ -99,6 +101,8 @@ std = [
 	"frame-system/std",
 	"node-primitives/std",
 	"pallet-balances/std",
+	"pallet-collective/std",
+	"pallet-democracy/std",
 	"pallet-indices/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",

@@ -111,12 +111,12 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
 		[
-			CurrencyId::Token(TokenSymbol::ASG),
-			CurrencyId::Token(TokenSymbol::aUSD),
+			CurrencyId::Native(TokenSymbol::ASG),
+			CurrencyId::Stable(TokenSymbol::AUSD),
 			CurrencyId::Token(TokenSymbol::DOT),
-			CurrencyId::Token(TokenSymbol::vDOT),
+			CurrencyId::VToken(TokenSymbol::DOT),
 			CurrencyId::Token(TokenSymbol::ETH),
-			CurrencyId::Token(TokenSymbol::vETH),
+			CurrencyId::VToken(TokenSymbol::ETH),
 		]
 		.to_vec()
 	}
