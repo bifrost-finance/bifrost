@@ -12,9 +12,6 @@ env:
 jobs:
   build:
     runs-on: self-hosted
-    strategy:
-      fail-fast: false
-
     steps:
       - name: Check to latest commit
         uses: actions/checkout@v2
@@ -42,7 +39,8 @@ jobs:
         run: make check-bifrost
       - name: Test bifrost
         run: make test-bifrost
-      - uses: 8398a7/action-slack@v3
+      - name: Inform buddies online
+        uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
         with:
           status: ${{ job.status }}
