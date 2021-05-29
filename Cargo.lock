@@ -195,12 +195,12 @@ checksum = "5a2f58b0bb10c380af2b26e57212856b8c9a59e0925b4c20f4a174a49734eaf7"
 name = "asgard-runtime"
 version = "0.8.0"
 dependencies = [
- "brml-assets",
- "brml-charge-transaction-fee",
- "brml-charge-transaction-fee-rpc-runtime-api",
- "brml-minter-reward",
- "brml-voucher",
- "brml-vtoken-mint",
+ "bifrost-assets",
+ "bifrost-charge-transaction-fee",
+ "bifrost-charge-transaction-fee-rpc-runtime-api",
+ "bifrost-minter-reward",
+ "bifrost-voucher",
+ "bifrost-vtoken-mint",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -622,6 +622,115 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-assets"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bifrost-bid"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "num-traits",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-charge-transaction-fee"
+version = "0.8.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "serde",
+ "smallvec 1.6.1",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "zenlink-protocol",
+]
+
+[[package]]
+name = "bifrost-charge-transaction-fee-rpc"
+version = "0.8.0"
+dependencies = [
+ "bifrost-charge-transaction-fee-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "node-primitives",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-charge-transaction-fee-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+]
+
+[[package]]
+name = "bifrost-minter-reward"
+version = "0.8.0"
+dependencies = [
+ "fixed",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "zenlink-protocol",
+]
+
+[[package]]
 name = "bifrost-runtime"
 version = "0.8.0"
 dependencies = [
@@ -675,6 +784,122 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "bifrost-staking-reward"
+version = "0.8.0"
+dependencies = [
+ "bifrost-assets",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-swap"
+version = "0.8.0"
+dependencies = [
+ "float-cmp",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "substrate-fixed",
+]
+
+[[package]]
+name = "bifrost-vesting"
+version = "0.8.0"
+dependencies = [
+ "enumflags2",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.1",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-storage",
+]
+
+[[package]]
+name = "bifrost-voucher"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-vtoken-mint"
+version = "0.8.0"
+dependencies = [
+ "bifrost-minter-reward",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-randomness-collective-flip",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "zenlink-protocol",
+]
+
+[[package]]
+name = "bifrost-vtoken-mint-rpc"
+version = "0.8.0"
+dependencies = [
+ "bifrost-vtoken-mint-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-vtoken-mint-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
@@ -839,231 +1064,6 @@ dependencies = [
  "fastrand",
  "futures-lite",
  "once_cell",
-]
-
-[[package]]
-name = "brml-assets"
-version = "0.8.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
-
-[[package]]
-name = "brml-bid"
-version = "0.8.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "num-traits",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-charge-transaction-fee"
-version = "0.8.0"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-transaction-payment",
- "parity-scale-codec",
- "serde",
- "smallvec 1.6.1",
- "sp-arithmetic",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "zenlink-protocol",
-]
-
-[[package]]
-name = "brml-charge-transaction-fee-rpc"
-version = "0.8.0"
-dependencies = [
- "brml-charge-transaction-fee-rpc-runtime-api",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "node-primitives",
- "pallet-transaction-payment-rpc-runtime-api",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-core",
- "sp-rpc",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-charge-transaction-fee-rpc-runtime-api"
-version = "0.8.0"
-dependencies = [
- "node-primitives",
- "parity-scale-codec",
- "sp-api",
-]
-
-[[package]]
-name = "brml-minter-reward"
-version = "0.8.0"
-dependencies = [
- "fixed",
- "frame-support",
- "frame-system",
- "log",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "zenlink-protocol",
-]
-
-[[package]]
-name = "brml-staking-reward"
-version = "0.8.0"
-dependencies = [
- "brml-assets",
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-swap"
-version = "0.8.0"
-dependencies = [
- "float-cmp",
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "substrate-fixed",
-]
-
-[[package]]
-name = "brml-vesting"
-version = "0.8.0"
-dependencies = [
- "enumflags2",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal 0.3.1",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "sp-storage",
-]
-
-[[package]]
-name = "brml-voucher"
-version = "0.8.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "log",
- "parity-scale-codec",
- "serde",
- "serde_json",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-vtoken-mint"
-version = "0.8.0"
-dependencies = [
- "brml-minter-reward",
- "frame-support",
- "frame-system",
- "log",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-randomness-collective-flip",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "zenlink-protocol",
-]
-
-[[package]]
-name = "brml-vtoken-mint-rpc"
-version = "0.8.0"
-dependencies = [
- "brml-vtoken-mint-rpc-runtime-api",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
-]
-
-[[package]]
-name = "brml-vtoken-mint-rpc-runtime-api"
-version = "0.8.0"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
 ]
 
 [[package]]
@@ -5031,8 +5031,8 @@ name = "node-service"
 version = "0.8.0"
 dependencies = [
  "asgard-runtime",
+ "bifrost-charge-transaction-fee-rpc",
  "bifrost-runtime",
- "brml-charge-transaction-fee-rpc",
  "bs58 0.3.1",
  "cumulus-client-collator",
  "cumulus-client-consensus-aura",
@@ -11340,7 +11340,7 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 name = "vsbond-auction"
 version = "0.8.0"
 dependencies = [
- "brml-assets",
+ "bifrost-assets",
  "frame-support",
  "frame-system",
  "node-primitives",
