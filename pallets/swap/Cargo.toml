@@ -9,7 +9,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 fixed-point = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
-node-primitives = { path = "../../bin/node/primitives", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
 serde = { version = "1.0.124", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
