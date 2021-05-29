@@ -46,6 +46,10 @@ check-all:
 check-tests:
 	cargo check --no-default-features --features "with-all-runtime" --tests
 
+.PHONY: test-bifrost
+test-bifrost:
+	cargo test --features "with-bifrost"
+
 .PHONY: clean
 clean:
 	cargo clean
