@@ -13,7 +13,7 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 hex = { version = "0.4.2", default-features = false }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
-node-primitives = { path = "../../bin/node/primitives", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
 sp-application-crypto = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
