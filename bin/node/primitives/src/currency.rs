@@ -271,26 +271,26 @@ impl TryFrom<CurrencyId> for AssetId {
 			})
 		} else {
 			match id {
-				CurrencyId::Stable(TokenSymbol::AUSD) => 
+				CurrencyId::Stable(TokenSymbol::AUSD) =>
 					Ok(Self {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
 						asset_index: 2 as u32,
 					}),
 
-				CurrencyId::Token(TokenSymbol::DOT) => 
+				CurrencyId::Token(TokenSymbol::DOT) =>
 					Ok(Self {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
 						asset_index: 3 as u32,
 					}),
-				CurrencyId::Token(TokenSymbol::KSM) => 
+				CurrencyId::Token(TokenSymbol::KSM) =>
 					Ok(Self {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
 						asset_index: 4 as u32,
 					}),
-				CurrencyId::Token(TokenSymbol::ETH) => 					
+				CurrencyId::Token(TokenSymbol::ETH) =>
 					Ok(Self {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
@@ -303,13 +303,13 @@ impl TryFrom<CurrencyId> for AssetId {
 						asset_type: LOCAL,
 						asset_index: 6 as u32,
 					}),
-				CurrencyId::VToken(TokenSymbol::KSM) => 
+				CurrencyId::VToken(TokenSymbol::KSM) =>
 					Ok(Self {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
 						asset_index: 7 as u32,
 					}),
-				CurrencyId::VToken(TokenSymbol::ETH) => 
+				CurrencyId::VToken(TokenSymbol::ETH) =>
 				Ok(Self {
 					chain_id: BIFROST_PARACHAIN_ID,
 					asset_type: LOCAL,

@@ -661,18 +661,18 @@ where
 	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
 {
 	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.into();
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::free_balance(currency_id, &who).saturated_into()
 	}
 
 	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
-		let currency_id: CurrencyId = asset_id.into();
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::total_issuance(currency_id).saturated_into()
 	}
 
 	fn local_is_exists(asset_id: AssetId) -> bool {
-	
-		match asset_id.try_into() {
+		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
+		match currency_id {
 			Ok(_) => true,
 			Err(_) => false
 		}
@@ -684,7 +684,7 @@ where
 		target: &AccountId,
 		amount: AssetBalance,
 	) -> DispatchResult {
-		let currency_id: CurrencyId = asset_id.into();
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::transfer(
 			currency_id,
 			&origin,
@@ -700,7 +700,7 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.into();
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
 		return Ok(amount)
 	}
@@ -710,7 +710,7 @@ where
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
-		let currency_id: CurrencyId = asset_id.into();
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
 
 		Ok(amount)
