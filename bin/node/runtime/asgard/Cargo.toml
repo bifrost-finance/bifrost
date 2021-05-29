@@ -65,13 +65,13 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.1" }
 
 # bifrost pallets
-brml-assets = { path = "../../../../brml/assets", default-features = false }
-brml-vtoken-mint = { path = "../../../../brml/vtoken-mint", default-features = false }
-#brml-vtoken-mint-rpc-runtime-api = { path = "../../../../brml/vtoken-mint/rpc/runtime-api", default-features = false }
-brml-minter-reward = { path = "../../../../brml/minter-reward", default-features = false }
-brml-voucher = { path = "../../../../brml/voucher", default-features = false }
-#brml-charge-transaction-fee = { path = "../../../../brml/charge-transaction-fee", default-features = false }
-#brml-charge-transaction-fee-rpc-runtime-api = { path = "../../../../brml/charge-transaction-fee/rpc/runtime-api", default-features = false }
+bifrost-assets = { path = "../../../../pallets/assets", default-features = false }
+bifrost-vtoken-mint = { path = "../../../../pallets/vtoken-mint", default-features = false }
+#bifrost-vtoken-mint-rpc-runtime-api = { path = "../../../../pallets/vtoken-mint/rpc/runtime-api", default-features = false }
+bifrost-minter-reward = { path = "../../../../pallets/minter-reward", default-features = false }
+bifrost-voucher = { path = "../../../../pallets/voucher", default-features = false }
+#bifrost-charge-transaction-fee = { path = "../../../../pallets/charge-transaction-fee", default-features = false }
+#bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../../../pallets/charge-transaction-fee/rpc/runtime-api", default-features = false }
 
 # orml
 #orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
@@ -133,13 +133,13 @@ std = [
 	"xcm-executor/std",
 	"pallet-aura/std",
 	"sp-consensus-aura/std",
-	"brml-assets/std",
-	"brml-vtoken-mint/std",
-#	"brml-vtoken-mint-rpc-runtime-api/std",
-	"brml-minter-reward/std",
-	'brml-voucher/std',
-#	"brml-charge-transaction-fee/std",
-#	"brml-charge-transaction-fee-rpc-runtime-api/std",
+	"bifrost-assets/std",
+	"bifrost-vtoken-mint/std",
+#	"bifrost-vtoken-mint-rpc-runtime-api/std",
+	"bifrost-minter-reward/std",
+	'bifrost-voucher/std',
+#	"bifrost-charge-transaction-fee/std",
+#	"bifrost-charge-transaction-fee-rpc-runtime-api/std",
 #	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",

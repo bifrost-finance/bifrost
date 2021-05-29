@@ -137,7 +137,7 @@ pub fn testnet_genesis(
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
-		brml_voucher: {
+		bifrost_voucher: {
 			if let Some(vouchers) = initialize_all_vouchers() {
 				VoucherConfig { voucher: vouchers }
 			} else {
@@ -158,7 +158,7 @@ pub fn testnet_genesis(
 				})
 				.collect(),
 		},
-		brml_minter_reward: MinterRewardConfig {
+		bifrost_minter_reward: MinterRewardConfig {
 			wegiths: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
@@ -168,7 +168,7 @@ pub fn testnet_genesis(
 			round_index: 1,
 			storage_version: Default::default(),
 		},
-		brml_vtoken_mint: VtokenMintConfig {
+		bifrost_vtoken_mint: VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
 				(CurrencyId::VToken(TokenSymbol::DOT), 1000 * DOLLARS),

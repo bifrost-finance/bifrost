@@ -519,7 +519,7 @@ impl pallet_aura::Config for Runtime {
 
 // bifrost runtime start
 
-impl brml_voucher::Config for Runtime {
+impl bifrost_voucher::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
@@ -530,7 +530,7 @@ parameter_types! {
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
 	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
 }
-impl brml_vtoken_mint::Config for Runtime {
+impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type PalletId = StakingPalletId;
@@ -549,7 +549,7 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
-impl brml_assets::Config for Runtime {
+impl bifrost_assets::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type WeightInfo = ();
@@ -569,7 +569,7 @@ impl orml_tokens::Config for Runtime {
 // 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 // }
 //
-// impl brml_charge_transaction_fee::Config for Runtime {
+// impl bifrost_charge_transaction_fee::Config for Runtime {
 // 	type Event = Event;
 // 	type Balance = Balance;
 // 	type WeightInfo = ();
@@ -587,7 +587,7 @@ parameter_types! {
 	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
 }
 
-impl brml_minter_reward::Config for Runtime {
+impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type TwoYear = TwoYear;
@@ -641,11 +641,11 @@ construct_runtime! {
 		// XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
-		BrmlAssets: brml_assets::{Pallet, Call, Event<T>} = 10,
-		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
-		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
-		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		// ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
+		bifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 10,
+		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
+		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
+		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
+		// ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
@@ -788,7 +788,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	// impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
+	// impl bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
 	// 	fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
 	// 	let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
 	// 		match rs {
