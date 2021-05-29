@@ -35,8 +35,8 @@ jobs:
           toolchain: nightly
           target: wasm32-unknown-unknown
           default: true
-      - name: Check bifrost
-        run: make check-bifrost
+      - name: Check All
+        run: make check-all
       - name: Test bifrost
         run: make test-bifrost
       - name: Inform buddies online
