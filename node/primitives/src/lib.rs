@@ -396,7 +396,6 @@ pub mod report {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use currency::TokenInfo;
 
 	#[test]
 	fn currency_id_from_string_should_work() {
@@ -407,14 +406,14 @@ mod tests {
 
 	#[test]
 	fn currency_id_test_should_work() {
-		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).decimals(), 12u8);
-		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).currency_id(), 1u8);
+		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).decimals(), 10u8);
+		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).currency_id(), 3u8);
 		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).symbol(), "DOT");
 		assert_eq!(CurrencyId::Native(TokenSymbol::DOT).is_native(), true);
 		assert_eq!(CurrencyId::Stable(TokenSymbol::DOT).is_stable(), true);
 		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).is_token(), true);
 		assert_eq!(CurrencyId::VToken(TokenSymbol::DOT).is_vtoken(), true);
 		assert_eq!(CurrencyId::VSToken(TokenSymbol::DOT).is_vstoken(), true);
-		assert_eq!(CurrencyId::VSBond(TokenSymbol::DOT).is_vsbond(), true);
+		assert_eq!(CurrencyId::VSBond(TokenSymbol::DOT, 0, 0, 3).is_vsbond(), true);
 	}
 }
