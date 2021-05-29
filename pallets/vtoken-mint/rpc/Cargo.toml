@@ -1,0 +1,15 @@
+[package]
+name = "bifrost-vtoken-mint-rpc"
+version = "0.8.0"
+authors = ["Jamie Deng <djptux@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+vtoken-mint-rpc-runtime-api = { package = "bifrost-vtoken-mint-rpc-runtime-api", path = "./runtime-api" }
+jsonrpc-core = "15.1.0"
+jsonrpc-core-client = "15.1.0"
+jsonrpc-derive = "15.1.0"
+sp-api = "3.0.0"
+sp-runtime = "3.0.0"
+sp-blockchain = "3.0.0"
