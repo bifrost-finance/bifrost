@@ -16,18 +16,19 @@
 
 //! Low-level types used throughout the Bifrost code.
 
-use bstringify::bstringify;
-use codec::{Encode, Decode};
 use crate::traits::{CurrencyIdExt, TokenInfo};
-use sp_runtime::RuntimeDebug;
+use crate::{LeasePeriod, ParaId};
+use bstringify::bstringify;
+use codec::{Decode, Encode};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
+use sp_runtime::{RuntimeDebug, SaturatedConversion};
 use sp_std::{
-	convert::{Into, TryFrom},
+	convert::{Into, TryFrom, TryInto},
 	ops::Deref,
 	prelude::*,
 };
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-use crate::{ParaId, LeasePeriod};
+use zenlink_protocol::{AssetId, LOCAL, NATIVE};
 
 macro_rules! create_currency_id {
     ($(#[$meta:meta])*
@@ -197,8 +198,8 @@ impl CurrencyIdExt for CurrencyId {
 	}
 
 	fn is_token(&self) -> bool {
-        matches!(self, CurrencyId::Token(_))
-    }
+		matches!(self, CurrencyId::Token(_))
+	}
 
 	fn is_vstoken(&self) -> bool {
 		matches!(self, CurrencyId::VSToken(_))
@@ -231,6 +232,113 @@ impl Deref for CurrencyId {
 			Self::VToken(ref symbol) => symbol,
 			Self::VSToken(ref symbol) => symbol,
 			Self::VSBond(ref symbol, ..) => symbol,
+		}
+	}
+}
+
+/// Temporay Solution: CurrencyId from a number
+impl TryFrom<u8> for CurrencyId {
+	type Error = ();
+
+	fn try_from(n: u8) -> Result<Self, Self::Error> {
+		match n {
+			0 => Ok(CurrencyId::Native(TokenSymbol::ASG)),
+			2 => Ok(CurrencyId::Stable(TokenSymbol::AUSD)),
+			3 => Ok(CurrencyId::Token(TokenSymbol::DOT)),
+			4 => Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			5 => Ok(CurrencyId::Token(TokenSymbol::ETH)),
+			6 => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
+			7 => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
+			8 => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
+			_ => Err(()),
+		}
+	}
+}
+
+// Below is the trait which can convert between Zenlink AssetId type and Bifrost CurrencyId type
+pub const BIFROST_PARACHAIN_ID: u32 = 2001; // bifrost parachain id
+
+// Temporary solution for conversion from Bifrost CurrencyId to Zenlink AssetId
+impl TryFrom<CurrencyId> for AssetId {
+	type Error = ();
+
+	fn try_from(id: CurrencyId) -> Result<Self, Self::Error> {
+		if id.is_native() {
+			Ok(Self {
+				chain_id: BIFROST_PARACHAIN_ID,
+				asset_type: NATIVE,
+				asset_index: 0u32,
+			})
+		} else {
+			match id {
+				CurrencyId::Stable(TokenSymbol::AUSD) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 2 as u32,
+					}),
+
+				CurrencyId::Token(TokenSymbol::DOT) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 3 as u32,
+					}),
+				CurrencyId::Token(TokenSymbol::KSM) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 4 as u32,
+					}),
+				CurrencyId::Token(TokenSymbol::ETH) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 5 as u32,
+					}),
+
+				CurrencyId::VToken(TokenSymbol::DOT) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 6 as u32,
+					}),
+				CurrencyId::VToken(TokenSymbol::KSM) =>
+					Ok(Self {
+						chain_id: BIFROST_PARACHAIN_ID,
+						asset_type: LOCAL,
+						asset_index: 7 as u32,
+					}),
+				CurrencyId::VToken(TokenSymbol::ETH) =>
+				Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 8 as u32,
+				}),
+				_ => Err(())
+			}
+		}
+	}
+}
+
+
+impl TryInto<CurrencyId> for AssetId {
+	type Error = ();
+
+	fn try_into(self) -> Result<CurrencyId, Self::Error> {
+		let id: u8 = self.asset_index.saturated_into();
+		match id {
+			0 => Ok(CurrencyId::Native(TokenSymbol::ASG)),
+			2 => Ok(CurrencyId::Stable(TokenSymbol::AUSD)),
+
+			3 => Ok(CurrencyId::Token(TokenSymbol::DOT)),
+			4 => Ok(CurrencyId::Token(TokenSymbol::KSM)),
+			5 => Ok(CurrencyId::Token(TokenSymbol::ETH)),
+
+			6 => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
+			7 => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
+			8 => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
+			_ => Err(())
 		}
 	}
 }

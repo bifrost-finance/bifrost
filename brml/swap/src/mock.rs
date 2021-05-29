@@ -81,7 +81,7 @@ impl frame_system::Config for Test {
 }
 
 parameter_types! {
-	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+	pub const GetNativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
 
 pub type AdaptedBasicCurrency =
@@ -132,7 +132,7 @@ parameter_types! {
 	pub const MaximumSwapFee: u64 = 10_000; // 10%
 	pub const FeePrecision: u64 = 100_000;
 	pub const WeightPrecision: u64 = 100_000;
-	pub const BNCAssetId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+	pub const BNCAssetId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const InitialPoolSupply: u64 = 1_000;
 
 	pub const NumberOfSupportedTokens: u8 = 8;

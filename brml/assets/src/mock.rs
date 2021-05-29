@@ -28,11 +28,11 @@ use sp_runtime::{
 };
 
 pub type AccountId = AccountId32;
-pub const BNC: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const vDOT: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
+pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub const vKSM: CurrencyId = CurrencyId::Token(TokenSymbol::vKSM);
+pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 

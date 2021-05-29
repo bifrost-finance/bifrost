@@ -23,6 +23,7 @@ use asgard_runtime::{
 	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
 	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
 };
+
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
