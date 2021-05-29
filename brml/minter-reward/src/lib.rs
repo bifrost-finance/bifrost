@@ -17,32 +17,28 @@
 
 use core::marker::PhantomData;
 use fixed::{types::extra::U0, FixedU128};
-use frame_support::{
-	Parameter, traits::{Get, Hooks}, PalletId,
-	pallet_prelude::{
-		Blake2_128Concat, StorageMap, StorageValue,
-		ValueQuery, StorageDoubleMap, IsType, DispatchResultWithPostInfo
-	}
-};
 #[cfg(feature = "std")]
 pub use frame_support::traits::GenesisBuild;
-use frame_system::pallet_prelude::{BlockNumberFor, OriginFor, ensure_signed};
+use frame_support::{
+	pallet_prelude::{
+		Blake2_128Concat, DispatchResultWithPostInfo, IsType, StorageDoubleMap, StorageMap,
+		StorageValue, ValueQuery,
+	},
+	traits::{Get, Hooks},
+	PalletId as SystemPalletId, Parameter,
+};
+use frame_system::pallet_prelude::{ensure_signed, BlockNumberFor, OriginFor};
 use node_primitives::{CurrencyId, MinterRewardExt, TokenSymbol};
-use sp_runtime::{
-	traits::{
-		AtLeast32Bit, Member, Saturating, Zero, MaybeSerializeDeserialize,
-		SaturatedConversion, UniqueSaturatedFrom
-	}
-};
 use orml_traits::{
-	currency::TransferAll,
-	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
-};
-use zenlink_protocol::{
-	// DEXOperations,
-	AssetId
+	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	MultiReservableCurrency,
 };
 pub use pallet::*;
+use sp_runtime::traits::{
+	AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating,
+	UniqueSaturatedFrom, Zero,
+};
+use zenlink_protocol::AssetId;
 
 mod mock;
 mod tests;
@@ -53,22 +49,20 @@ pub mod pallet {
 
 	pub type Fixed = FixedU128<U0>;
 	pub type IsExtended = bool;
-	pub type BalanceOf<T> = 
-		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub type CurrencyIdOf<T> =
-		<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+	pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::Balance;
+	pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::CurrencyId;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + zenlink_protocol::Config {
 		/// A handler to manipulate assets module.
 		type MultiCurrency: TransferAll<Self::AccountId>
-		+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
-		+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
-		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
-
-		// type NativeCurrency: BasicCurrencyExtended<Self::AccountId, Balance = BalanceOf<Self>, Amount = AmountOf<Self>>
-		// 	+ BasicLockableCurrency<Self::AccountId, Balance = BalanceOf<Self>>
-		// 	+ BasicReservableCurrency<Self::AccountId, Balance = BalanceOf<Self>>;
+			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
 
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -90,7 +84,7 @@ pub mod pallet {
 
 		/// Identifier for adjusting weight
 		#[pallet::constant]
-		type PalletId: Get<PalletId>;
+		type SystemPalletId: Get<SystemPalletId>;
 
 		type ShareWeight: Member
 			+ Parameter
@@ -115,25 +109,14 @@ pub mod pallet {
 	// BNC reward will be issued by weight calculation.
 	#[pallet::storage]
 	#[pallet::getter(fn weight)]
-	pub type Weights<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		T::ShareWeight,
-		ValueQuery
-	>;
+	pub type Weights<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, T::ShareWeight, ValueQuery>;
 
 	// Total vtoken minted while in one Period
 	#[pallet::storage]
 	#[pallet::getter(fn total_vtoken_minted)]
-	pub type TotalVtokenMinted<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		BalanceOf<T>,
-		ValueQuery
-	>;
-	
+	pub type TotalVtokenMinted<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 	/// Who mints vtoken
 	#[pallet::storage]
 	#[pallet::getter(fn minter)]
@@ -144,7 +127,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
 		BalanceOf<T>,
-		ValueQuery
+		ValueQuery,
 	>;
 
 	/// Record maximum vtoken value is minted and when minted
@@ -154,37 +137,25 @@ pub mod pallet {
 		_,
 		// (when, amount, currency _id, extended)
 		(BlockNumberFor<T>, BalanceOf<T>, CurrencyIdOf<T>, IsExtended),
-		ValueQuery
+		ValueQuery,
 	>;
 
 	/// Record a user how much bnc s/he reveives.
 	#[pallet::storage]
 	#[pallet::getter(fn user_bnc_reward)]
-	pub(crate) type UserBNCReward<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		T::AccountId,
-		BalanceOf<T>,
-		ValueQuery
-	>;
+	pub(crate) type UserBNCReward<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
 	/// Current storage version
 	#[pallet::storage]
 	#[pallet::getter(fn storage_version)]
-	pub(crate) type StorageVersion<T: Config> = StorageValue<
-		_,
-		node_primitives::StorageVersion, 
-		ValueQuery,
-	>;
+	pub(crate) type StorageVersion<T: Config> =
+		StorageValue<_, node_primitives::StorageVersion, ValueQuery>;
 
 	/// Record maximum vtoken value is minted and when minted
 	#[pallet::storage]
 	#[pallet::getter(fn current_round)]
-	pub(crate) type CurrentRound<T: Config> = StorageValue<
-		_,
-		u8,
-		ValueQuery
-	>;
+	pub(crate) type CurrentRound<T: Config> = StorageValue<_, u8, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::metadata(BalanceOf<T> = "Balance", CurrencyIdOf<T> = "CurrencyId")]
@@ -193,7 +164,6 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
-	
 	/// No call in this pallet.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -212,7 +182,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 	}
-
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -234,17 +203,19 @@ pub mod pallet {
 					*reward /= BalanceOf::<T>::from(2u32);
 				});
 			}
-			// if extended, 
+			// if extended,
 			// check BNC should be issued or not
 			// check reaching the period or not
 			let started_block_num = CurrentRoundStartAt::<T>::get();
 			if n - started_block_num >= T::RewardPeriod::get() && started_block_num > Zero::zero() {
 				// mint period is not extended.
-				let (last_max_minted_block, _current_max_minted, _last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
+				let (last_max_minted_block, _current_max_minted, _last_currency_id, is_extended) =
+					MaximumVtokenMinted::<T>::get();
 				// not extended
 				if !is_extended {
 					// issue BNC reward to minters
-					let period = BalanceOf::<T>::from(T::RewardPeriod::get().saturated_into::<u32>());
+					let period =
+						BalanceOf::<T>::from(T::RewardPeriod::get().saturated_into::<u32>());
 					// let period: BalanceOf<T> = T::RewardPeriod::get().unique_saturated_into();
 					let toal_reward = period * BNCRewardByOneBlock::<T>::get();
 					Self::issue_bnc_reward(toal_reward);
@@ -258,7 +229,8 @@ pub mod pallet {
 					// mint period is extended
 					// two senario need to consider
 					if n - last_max_minted_block >= T::RewardPeriod::get() {
-						let period = BalanceOf::<T>::from((n - started_block_num).saturated_into::<u32>());
+						let period =
+							BalanceOf::<T>::from((n - started_block_num).saturated_into::<u32>());
 						let toal_reward = period * BNCRewardByOneBlock::<T>::get();
 						Self::issue_bnc_reward(toal_reward);
 						// after issued reward, need to clean this round data
@@ -271,7 +243,8 @@ pub mod pallet {
 					let max_extended_period = T::MaximumExtendedPeriod::get();
 					// reaching the MaximumExtendedPeriod, must issue BNC reward.
 					if n - started_block_num >= max_extended_period {
-						let period = BalanceOf::<T>::from(max_extended_period.saturated_into::<u32>());
+						let period =
+							BalanceOf::<T>::from(max_extended_period.saturated_into::<u32>());
 						let toal_reward = period * BNCRewardByOneBlock::<T>::get();
 						Self::issue_bnc_reward(toal_reward);
 						// after issued reward, need to clean this round data
@@ -292,7 +265,6 @@ pub mod pallet {
 		pub round_index: u8,
 		pub storage_version: node_primitives::StorageVersion,
 	}
-	
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> GenesisConfig<T> {
@@ -323,20 +295,22 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			ausd_amount: BalanceOf<T>,
 			block_num: BlockNumberFor<T>,
-		) -> Result<(), Error::<T>> {
+		) -> Result<(), Error<T>> {
 			let _current_block = <frame_system::Pallet<T>>::block_number();
 			// let ausd_amount = get_ausd_amount_by_zenlink(minted_vtoken)?;
 
-			let (_last_block, current_max_minted, _last_currency_id, is_extended) = MaximumVtokenMinted::<T>::get();
+			let (_last_block, current_max_minted, _last_currency_id, is_extended) =
+				MaximumVtokenMinted::<T>::get();
 			if ausd_amount > current_max_minted {
 				MaximumVtokenMinted::<T>::mutate(|max_minted| {
-					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get()) >= T::RewardPeriod::get() {
+					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get())
+						>= T::RewardPeriod::get()
+					{
 						if !is_extended {
 							max_minted.3 = true;
 						}
 					}
 					max_minted.0 = block_num;
-					
 					max_minted.1 = ausd_amount;
 					max_minted.2 = currency_id;
 				});
@@ -346,21 +320,20 @@ pub mod pallet {
 		}
 
 		pub fn issue_bnc_reward(bnc_reward: BalanceOf<T>) {
-			let total_weight: BalanceOf<T>  = {
+			let total_weight: BalanceOf<T> = {
 				let mut total: T::ShareWeight = Zero::zero();
 				for (_, _weight) in Weights::<T>::iter() {
 					total = total.saturating_add(_weight);
 				}
 				total.into()
 			};
-			
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = Weights::<T>::get(&currency_id);
-				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // aUSD
-				let reward = bnc_reward
-					.saturating_mul(weight.into()
-					.saturating_mul(vtoken_amount)) / (total_weight * total_vtoken_mint);
-				let _ = T::MultiCurrency::deposit(CurrencyId::Token(TokenSymbol::ASG), &minter, reward);
+				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
+				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
+					/ (total_weight * total_vtoken_mint);
+				let _ =
+					T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::ASG), &minter, reward);
 				// let _ = T::NativeCurrency::deposit(&minter, reward);
 
 				// Record all BNC rewards the user receives.
@@ -376,42 +349,43 @@ pub mod pallet {
 
 		pub fn get_ausd_amount_by_zenlink(
 			vtoken_amount: BalanceOf<T>,
-			currency_id: CurrencyId
-		) -> Result<BalanceOf::<T>, Error::<T>> {
-			// let ausd_amount = T::DEXOperations::get_amount_out_by_path_zenlink(
-			// 	vtoken_amount.saturated_into(),
-			// 	&[
-			// 	AssetId {
-			// 		chain_id: 1024u32,
-			// 		module_index: 2,
-			// 		asset_index: *currency_id as u32,
-			// 	},
-			// 	AssetId {
-			// 		chain_id: 1024u32,
-			// 		module_index: 2,
-			// 		asset_index: 1u32,
-			// 	}
-			// ]
-			// )
-			// .map_err(|_| Error::<T>::FailToGetSwapPrice)?
-			// .last()
-			// .copied()
-			// .ok_or(Error::<T>::FailToGetSwapPrice)?;
-			//
-			// Ok(BalanceOf::<T>::unique_saturated_from(ausd_amount))
-			Ok(BalanceOf::<T>::unique_saturated_from(0_u32))
+			currency_id: CurrencyId,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let ausd_amount = zenlink_protocol::Pallet::<T>::get_amount_out_by_path(
+				vtoken_amount.saturated_into(),
+				&[
+					AssetId {
+						chain_id: 1024 as u32,
+						asset_type: 2,
+						asset_index: *currency_id as u32,
+					},
+					AssetId {
+						chain_id: 1024 as u32,
+						asset_type: 2,
+						asset_index: 1 as u32,
+					},
+				],
+			)
+			.map_err(|_| Error::<T>::FailToGetSwapPrice)?
+			.last()
+			.copied()
+			.ok_or(Error::<T>::FailToGetSwapPrice)?;
+
+			Ok(BalanceOf::<T>::unique_saturated_from(ausd_amount))
 		}
 	}
 }
 
-impl<T: Config> MinterRewardExt<T::AccountId, BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>> for Pallet<T> {
+impl<T: Config> MinterRewardExt<T::AccountId, BalanceOf<T>, CurrencyIdOf<T>, BlockNumberFor<T>>
+	for Pallet<T>
+{
 	type Error = Error<T>;
 
 	fn reward_minted_vtoken(
 		minter: &T::AccountId,
 		currency_id: CurrencyId,
 		minted_vtoken: BalanceOf<T>,
-		block_num: BlockNumberFor<T>
+		block_num: BlockNumberFor<T>,
 	) -> Result<(), Self::Error> {
 		let ausd_amount = Self::get_ausd_amount_by_zenlink(minted_vtoken, currency_id)?;
 

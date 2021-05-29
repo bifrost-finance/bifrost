@@ -94,7 +94,7 @@ where
         at: Option<<Block as BlockT>::Hash>,
     ) -> JsonRpcResult<(CurrencyId, NumberOrHex)> {
         // Ok((
-        //     CurrencyId::Token(TokenSymbol::BNC),
+        //     CurrencyId::Native(TokenSymbol::BNC),
         //     sp_rpc::number::NumberOrHex::Number(1200),
         // ))
 

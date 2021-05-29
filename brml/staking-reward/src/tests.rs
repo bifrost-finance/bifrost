@@ -33,7 +33,7 @@ fn query_vtoken_should_be_ok() {
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (CurrencyId::Token(TokenSymbol::vDOT), CurrencyId::Token(TokenSymbol::vEOS), 11111111 as u64, 22222222 as u64, 60 as u64);
+		) = (CurrencyId::VToken(TokenSymbol::DOT), CurrencyId::VToken(TokenSymbol::EOS), 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
 		let referer_one_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_one));
@@ -62,7 +62,7 @@ fn record_reward_should_be_ok() {
 
 pub fn common() {
 	// Ready data
-	let vdot_id = CurrencyId::Token(TokenSymbol::vDOT);
+	let vdot_id = CurrencyId::VToken(TokenSymbol::DOT);
 	// Bind value:" convert_amount、 referer_one、referer_two "
 	let convert_amount = 100 as u64;
 	let (referer_one, referer_two) = (11111111 as u64, 22222222 as u64);
@@ -83,7 +83,7 @@ pub fn common() {
 	assert_eq!(200, crate::Reward::<Test>::get(vdot_id)[0].record_amount);
 	
 	// Increase different vtoken （another one vec）
-	let veos_id = CurrencyId::Token(TokenSymbol::vEOS);
+	let veos_id = CurrencyId::VToken(TokenSymbol::EOS);
 	assert_ok!(<crate::Module<Test>>::record_reward(veos_id, convert_amount, referer_one));
 	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(veos_id).len());
 	assert_eq!(100, crate::Module::<Test>::vtoken_reward(veos_id)[0].record_amount);
@@ -100,7 +100,7 @@ fn dispatch_reward_is_be_ok() {
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (CurrencyId::Token(TokenSymbol::vDOT), CurrencyId::Token(TokenSymbol::vIOST), 11111111 as u64, 22222222 as u64, 60 as u64);
+		) = (CurrencyId::VToken(TokenSymbol::DOT), CurrencyId::VToken(TokenSymbol::IOST), 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
 		let referer_one_assets = <Test as Config>::CurrenciesHandler::free_balance(vdot_id, &referer_one);
@@ -134,7 +134,7 @@ fn more_than_256_dispatch_reward_is_be_ok() {
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (CurrencyId::Token(TokenSymbol::vDOT), 11111111 as u64, 22222222 as u64, 2560 as u64);
+		) = (CurrencyId::VToken(TokenSymbol::DOT), 11111111 as u64, 22222222 as u64, 2560 as u64);
 		
 		// The first query asset
 		let referer_one_assets = <Test as Config>::CurrenciesHandler::free_balance(vdot_id, &referer_one);

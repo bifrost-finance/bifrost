@@ -240,7 +240,7 @@
   "TokenSymbol": {
     "_enum": [
       "ASG",
-      "aUSD",
+      "AUSD",
       "DOT",
       "vDOT",
       "KSM",

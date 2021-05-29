@@ -337,7 +337,7 @@ impl From<CurrencyId> for ZenlinkAssetId {
 impl Into<CurrencyId> for ZenlinkAssetId {
 	fn into(self) -> CurrencyId {
 		match self {
-			ZenlinkAssetId::NativeCurrency => CurrencyId::Token(TokenSymbol::ASG),
+			ZenlinkAssetId::NativeCurrency => CurrencyId::Native(TokenSymbol::ASG),
 			ZenlinkAssetId::ParaCurrency(some_id) => {
 				let id: u8 = some_id.saturated_into();
 				CurrencyId::Token(TokenSymbol::try_from(id).unwrap())
