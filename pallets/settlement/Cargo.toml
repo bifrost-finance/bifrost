@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 bifrost-assets = { path = "../assets", default-features = false }
 codec = { package = "parity-scale-codec", version = "1.3.1", default-features = false, features = ["derive"] }
-node-primitives = { path = "../../bin/node/primitives", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
 frame-support = { version = "2.0.0-rc4", default-features = false }
 sp-core = { version = "2.0.0-rc4", default-features = false }
 sp-runtime = { version = "2.0.0-rc4", default-features = false }
