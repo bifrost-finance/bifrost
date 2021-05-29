@@ -33,7 +33,6 @@ use orml_traits::{
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
 };
 use sp_runtime::{Permill, traits::{Saturating, Zero}, DispatchResult};
-// use zenlink_protocol::{DEXOperations};
 
 pub use pallet::*;
 
@@ -72,9 +71,6 @@ pub mod pallet {
 		/// Identifier for the staking lock.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
-
-		// /// Get swap price from zenlink module
-		// type DEXOperations: DEXOperations<Self::AccountId>;
 
 		/// Record mint reward
 		type MinterReward: MinterRewardExt<Self::AccountId, BalanceOf<Self>, CurrencyIdOf<Self>, Self::BlockNumber>;

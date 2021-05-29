@@ -361,7 +361,7 @@ fn deposit_should_work() {
 		let origin = Origin::signed(origin_id);
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"AUSD".to_vec(), 18)); // let dot start from 1
 
 		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 		let dot_id = Assets::next_asset_id() - 1;
@@ -397,7 +397,7 @@ fn deposit_not_enough_free_balance_should_error() {
 		let origin = Origin::signed(origin_id);
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"AUSD".to_vec(), 18)); // let dot start from 1
 		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
@@ -443,7 +443,7 @@ fn withdraw_should_ok() {
 		let origin = Origin::signed(origin_id);
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"AUSD".to_vec(), 18)); // let dot start from 1
 		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
@@ -477,7 +477,7 @@ fn withdraw_not_enough_locked_balance_should_error() {
 		let origin = Origin::signed(origin_id);
 		let precision = 8;
 
-		assert_ok!(Assets::create(Origin::root(), b"aUSD".to_vec(), 18)); // let dot start from 1
+		assert_ok!(Assets::create(Origin::root(), b"AUSD".to_vec(), 18)); // let dot start from 1
 		assert_ok!(Assets::create(Origin::root(), b"DOT".to_vec(), precision));
 
 		let dot_id = Assets::next_asset_id() - 1;
@@ -520,7 +520,7 @@ fn withdraw_not_registered_should_error() {
 #[test]
 fn validator_deduct_should_ok() {
 	new_test_ext().execute_with(|| {
-		let token_symbol = TokenSymbol::aUSD;
+		let token_symbol = TokenSymbol::AUSD;
 		set_global_asset(token_symbol);
 
 		let origin_id = 1;
@@ -531,7 +531,7 @@ fn validator_deduct_should_ok() {
 		assert_ok!(ProxyValidator::validator_register(origin.clone(), token_symbol, need, reward_per_block, validator_address));
 
 		let deposit_amount = 100_000_000_000_000;
-		asset_issue(origin_id, b"aUSD".to_vec(), token_symbol, deposit_amount);
+		asset_issue(origin_id, b"AUSD".to_vec(), token_symbol, deposit_amount);
 		assert_ok!(ProxyValidator::deposit(origin.clone(), token_symbol, deposit_amount));
 
 		let target = 1;

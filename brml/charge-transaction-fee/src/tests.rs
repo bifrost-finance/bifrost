@@ -29,18 +29,18 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::testing::TestXt;
-use std::convert::TryInto;
-use zenlink_protocol::{AssetId, DEXOperations};
+use std::convert::{TryInto,TryFrom};
+use zenlink_protocol::{AssetId};
 
 // some common variables
 pub const ALICE: u128 = 1;
 pub const BOB: u128 = 2;
 pub const CHARLIE: u128 = 3;
 pub const DICK: u128 = 4;
-pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Token(TokenSymbol::aUSD);
+pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
-pub const CURRENCY_ID_3: CurrencyId = CurrencyId::Token(TokenSymbol::vDOT);
+pub const CURRENCY_ID_3: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const CURRENCY_ID_4: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 fn basic_setup() {
@@ -74,46 +74,46 @@ fn basic_setup() {
 	assert_ok!(Currencies::deposit(CURRENCY_ID_4, &DICK, 100000));
 
 	// create DEX pair
-	let asset_0_currency_id: AssetId = AssetId::from(CURRENCY_ID_0);
-	let asset_1_currency_id: AssetId = AssetId::from(CURRENCY_ID_1);
-	let asset_2_currency_id: AssetId = AssetId::from(CURRENCY_ID_2);
+	let asset_0_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
+	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
+	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
 
-	assert_ok!(Zenlink::inner_create_pair_zenlink(
-		&asset_0_currency_id,
-		&asset_1_currency_id
+	println!("asset_0_currency_id: {:?}", asset_0_currency_id);
+	println!("asset_1_currency_id: {:?}", asset_1_currency_id);
+
+	assert_ok!(ZenlinkProtocol::create_pair(
+		Origin::signed(ALICE),
+		asset_0_currency_id,
+		asset_1_currency_id
 	)); // asset 0 and 1
-	let pool_0_1_account =
-		Zenlink::get_pair_from_asset_id_zenlink(&asset_0_currency_id, &asset_1_currency_id)
-			.unwrap()
-			.account;
+	let pool_0_1_account = ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_1_currency_id)).unwrap().0;
 
 	// need to deposit some money into the pools
 	// pool 0 1
-	assert_ok!(Zenlink::inner_add_liquidity_zenlink(
+	assert_ok!(ZenlinkProtocol::inner_add_liquidity(
 		&DICK,
-		&asset_0_currency_id,
-		&asset_1_currency_id,
+		asset_0_currency_id,
+		asset_1_currency_id,
 		1000,
 		1000,
 		1,
 		1
 	));
 
-	assert_ok!(Zenlink::inner_create_pair_zenlink(
-		&asset_0_currency_id,
-		&asset_2_currency_id
+	assert_ok!(ZenlinkProtocol::create_pair(
+		Origin::signed(ALICE),
+		asset_0_currency_id,
+		asset_2_currency_id
 	)); // asset 0 and 2
 
-	let pool_0_2_account =
-		Zenlink::get_pair_from_asset_id_zenlink(&asset_0_currency_id, &asset_2_currency_id)
-			.unwrap()
-			.account;
+	let pool_0_2_account =ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_2_currency_id)).unwrap().0;
+	println!("pool_0_2_account: {:?}", pool_0_2_account);
 
 	// pool 0 2
-	assert_ok!(Zenlink::inner_add_liquidity_zenlink(
+	assert_ok!(ZenlinkProtocol::inner_add_liquidity(
 		&DICK,
-		&asset_0_currency_id,
-		&asset_2_currency_id,
+		asset_0_currency_id,
+		asset_2_currency_id,
 		1000,
 		1000,
 		1,
@@ -168,12 +168,12 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		];
 
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		default_order_list.push(CurrencyId::from(0 as u8));
-		default_order_list.push(CurrencyId::from(1 as u8));
-		default_order_list.push(CurrencyId::from(2 as u8));
-		default_order_list.push(CurrencyId::from(3 as u8));
-		default_order_list.push(CurrencyId::from(6 as u8));
-		default_order_list.push(CurrencyId::from(7 as u8));
+		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(2 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(3 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(6 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(5 as u8).unwrap());
+		default_order_list.push(CurrencyId::try_from(8 as u8).unwrap());
 
 		assert_eq!(
 			ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
@@ -207,8 +207,9 @@ fn ensure_can_charge_fee_should_work() {
 			CURRENCY_ID_0,
 		];
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		for i in 0..12 {
-			default_order_list.push(CurrencyId::from(i as u8));
+		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
+		for i in 2..9 {
+			default_order_list.push(CurrencyId::try_from(i as u8).unwrap());
 		}
 
 		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
@@ -217,25 +218,20 @@ fn ensure_can_charge_fee_should_work() {
 			Some(asset_order_list_vec.clone()),
 		);
 
-		let native_asset_id: AssetId = AssetId::from(CURRENCY_ID_0);
-		let asset_id: AssetId = AssetId::from(CURRENCY_ID_1);
+		let native_asset_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
+		let asset_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
 
 		let path = vec![asset_id, native_asset_id];
 
-		let pool_0_1_account = Zenlink::get_pair_from_asset_id_zenlink(&asset_id, &native_asset_id)
-			.unwrap()
-			.account;
+		let (asset_a, asset_b) = ZenlinkProtocol::sort_asset_id(asset_id, native_asset_id);
+		let pool_0_1_account = ZenlinkProtocol::lp_metadata((asset_a, asset_b)).unwrap().0;
 
 		println!("pool_0_1_account: {:?}", pool_0_1_account);
 
-		let pool_0_1_price =
-			<Test as crate::Config>::ZenlinkDEX::get_amount_in_by_path_zenlink(100, &path);
-		let pool_0_1_account = <Test as crate::Config>::ZenlinkDEX::get_pair_from_asset_id_zenlink(
-			&native_asset_id,
-			&asset_id,
-		)
-		.unwrap()
-		.account;
+		let pool_0_1_price =ZenlinkProtocol::get_amount_in_by_path(100, &path);
+		let (asset_a, asset_b) = ZenlinkProtocol::sort_asset_id(native_asset_id,asset_id);
+		let pool_0_1_account = ZenlinkProtocol::lp_metadata((asset_a, asset_b)).unwrap().0;
+
 		println!("pool_0_1_price: {:?}", pool_0_1_price);
 		println!(
 			"crrency 0 total balance of pool_0_1: {:?}",

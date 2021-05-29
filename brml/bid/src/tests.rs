@@ -204,7 +204,7 @@ fn register_vtoken_for_bidding_should_work() {
 
 		// create assets
 		let token_id = CurrencyId::Token(TokenSymbol::DOT);
-		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
+		let vtoken_id = CurrencyId::VToken(TokenSymbol::DOT);
 
 		assert_eq!(token_id.is_token(), true);
 		assert_eq!(vtoken_id.is_vtoken(), true);
@@ -271,7 +271,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 
 		// create assets
 		let token_id = CurrencyId::Token(TokenSymbol::DOT);
-		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
+		let vtoken_id = CurrencyId::VToken(TokenSymbol::DOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -355,7 +355,7 @@ fn set_block_number_per_era_should_work() {
 
 		// create assets
 		let token_id = CurrencyId::Token(TokenSymbol::DOT);
-		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
+		let vtoken_id = CurrencyId::VToken(TokenSymbol::DOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -407,7 +407,7 @@ fn set_service_stop_block_num_lag_should_work() {
 
 		// create assets
 		let token_id = CurrencyId::Token(TokenSymbol::DOT);
-		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
+		let vtoken_id = CurrencyId::VToken(TokenSymbol::DOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -470,7 +470,7 @@ fn set_slash_margin_rates_should_work() {
 
 		// create assets
 		let token_id = CurrencyId::Token(TokenSymbol::DOT);
-		let vtoken_id = CurrencyId::Token(TokenSymbol::vDOT);
+		let vtoken_id = CurrencyId::VToken(TokenSymbol::DOT);
 
 		// register vtoken
 		Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id).unwrap_or_default();
@@ -839,7 +839,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		);
 
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
-		assert_eq!(BiddingQueues::<Test>::contains_key(CurrencyId::Token(0u8.into())), false);
+		assert_eq!(BiddingQueues::<Test>::contains_key(CurrencyId::Native(0u8.into())), false);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 0);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).is_empty(), true);
 		assert_eq!(ProposalsInQueue::<Test>::contains_key(0), false);

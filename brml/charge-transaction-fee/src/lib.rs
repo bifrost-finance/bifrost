@@ -19,7 +19,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::convert::Into;
+use core::convert::{Into, TryFrom};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
@@ -42,7 +42,7 @@ use sp_std::{vec, vec::Vec};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use zenlink_protocol::{AssetId, DEXOperations, TokenBalance};
+use zenlink_protocol::{AssetId, AssetBalance};
 
 mod default_weight;
 mod mock;
@@ -61,7 +61,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
+	pub trait Config: frame_system::Config + pallet_transaction_payment::Config + zenlink_protocol::Config{
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The units in which we record balances.
@@ -85,8 +85,6 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
-		/// Zenlink DEX operations handler
-		type ZenlinkDEX: DEXOperations<Self::AccountId>;
 
 		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
@@ -113,12 +111,12 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
 		[
-			CurrencyId::Token(TokenSymbol::ASG),
-			CurrencyId::Token(TokenSymbol::aUSD),
+			CurrencyId::Native(TokenSymbol::ASG),
+			CurrencyId::Stable(TokenSymbol::AUSD),
 			CurrencyId::Token(TokenSymbol::DOT),
-			CurrencyId::Token(TokenSymbol::vDOT),
+			CurrencyId::VToken(TokenSymbol::DOT),
 			CurrencyId::Token(TokenSymbol::ETH),
-			CurrencyId::Token(TokenSymbol::vETH),
+			CurrencyId::VToken(TokenSymbol::ETH),
 		]
 		.to_vec()
 	}
@@ -136,6 +134,11 @@ pub mod pallet {
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(PhantomData<T>);
+
+	#[pallet::error]
+	pub enum Error<T> {
+		ConversionError,
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -171,7 +174,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens rather than BNC.
-	fn ensure_can_charge_fee(who: &T::AccountId, fee: PalletBalanceOf<T>, reason: WithdrawReasons) {
+	fn ensure_can_charge_fee(who: &T::AccountId, fee: PalletBalanceOf<T>, reason: WithdrawReasons)-> Result<(), Error<T>> {
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
 		let existential_deposit = <<T as Config>::Currency as Currency<
@@ -181,7 +184,7 @@ impl<T: Config> Pallet<T> {
 		// charge the fee by the order of the above order list.
 		// first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
 		for currency_id in user_fee_charge_order_list {
-			let native_asset_id: AssetId = AssetId::from(T::NativeCurrencyId::get());
+			let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get()).map_err(|_| Error::ConversionError)?;
 			// If it is mainnet currency
 			if currency_id == T::NativeCurrencyId::get() {
 				// check native balance if is enough
@@ -209,7 +212,7 @@ impl<T: Config> Pallet<T> {
 
 				// If native token balance is below existential deposit requirement,
 				// go exchange fee + existential deposit. Else to exchange fee amount.
-				let amount_out: TokenBalance;
+				let amount_out: AssetBalance;
 				if native_balance > T::Balance::from(existential_deposit) {
 					amount_out = fee.saturated_into();
 				} else {
@@ -217,15 +220,16 @@ impl<T: Config> Pallet<T> {
 				}
 
 				let asset_balance = T::CurrenciesHandler::free_balance(currency_id, who);
-				let asset_id: AssetId = AssetId::from(currency_id);
+				let asset_id: AssetId = AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
+
 				let path = vec![asset_id, native_asset_id];
-				let amount_in_max: TokenBalance = asset_balance.saturated_into();
+				let amount_in_max: AssetBalance = asset_balance.saturated_into();
 
 				// query for amount in
-				let amounts = T::ZenlinkDEX::get_amount_in_by_path_zenlink(amount_out, &path)
+				let amounts = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)
 					.map_or(vec![0], |v| v);
 
-				if T::ZenlinkDEX::inner_swap_tokens_for_exact_tokens_zenlink(
+				if zenlink_protocol::Pallet::<T>::inner_swap_tokens_for_exact_tokens(
 					who,
 					amount_out,
 					amount_in_max,
@@ -239,7 +243,9 @@ impl<T: Config> Pallet<T> {
 					break;
 				}
 			}
+			
 		}
+		Ok(())
 	}
 
 	/// This function is for runtime-api to call
@@ -252,8 +258,8 @@ impl<T: Config> Pallet<T> {
 
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
-		let amount_out: TokenBalance = fee.saturated_into();
-		let native_asset_id: AssetId = AssetId::from(T::NativeCurrencyId::get());
+		let amount_out: AssetBalance = fee.saturated_into();
+		let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get()).map_err(|_| DispatchError::Other("Conversion Error"))?;
 
 		// charge the fee by the order of the above order list.
 		// first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
@@ -272,10 +278,10 @@ impl<T: Config> Pallet<T> {
 			} else {
 				// If it is other assets
 				let asset_balance = T::CurrenciesHandler::total_balance(currency_id, who);
-				let token_asset_id: AssetId = AssetId::from(currency_id);
+				let token_asset_id: AssetId = AssetId::try_from(currency_id).map_err(|_| DispatchError::Other("Conversion Error"))?;
 				let path = vec![native_asset_id.clone(), token_asset_id];
 
-				let amount_vec = T::ZenlinkDEX::get_amount_in_by_path_zenlink(amount_out, &path)?;
+				let amount_vec = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)?;
 				let amount_in = amount_vec[0];
 				let amount_in_balance = amount_in.saturated_into();
 
@@ -322,7 +328,7 @@ where
 			WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
 		};
 		// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens rather than BNC.
-		Self::ensure_can_charge_fee(who, fee, withdraw_reason);
+		Self::ensure_can_charge_fee(who, fee, withdraw_reason).map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
 		match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
 			Ok(imbalance) => Ok(Some(imbalance)),

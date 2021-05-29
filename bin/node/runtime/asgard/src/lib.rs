@@ -29,14 +29,15 @@ use sp_api::impl_runtime_apis;
 use sp_core::{OpaqueMetadata, u32_trait::{_1, _2, _3, _4}};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, Zero},
+	traits::{BlakeTwo256, Block as BlockT, Zero, UniqueSaturatedInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult,DispatchError,DispatchResult,SaturatedConversion,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use core::convert::TryInto;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -55,26 +56,33 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_std::marker::PhantomData;
 
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol};
+use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol, CurrencyIdExt};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiAsset, MultiLocation, MultiLocation::*, Junction::*, BodyId, NetworkId};
+use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
 use xcm_builder::{
-	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SovereignSignedViaLocation, EnsureXcmOrigin, AllowUnpaidExecutionFrom, ParentAsSuperuser,
-	AllowTopLevelPaidExecutionFrom, TakeWeightCredit, FixedWeightBounds, IsConcrete, NativeAsset,
-	UsingComponents, SignedToAccountId32,
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
+    EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+    ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+    SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+    SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
-use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
-use xcm::v0::Xcm;
+use pallet_xcm::XcmPassthrough;
 use frame_system::{EnsureRoot, EnsureOneOf};
+
+// orml imports
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::MultiCurrency;
+
+// zenlink imports
+use zenlink_protocol::{ZenlinkMultiAssets, LocalAssetHandler, MultiAssetsHandler, make_x2_location, AssetId, AssetBalance, PairInfo};
 
 mod weights;
 
@@ -543,7 +551,7 @@ impl brml_vtoken_mint::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Token(TokenSymbol::ASG) => 1 * CENTS,
+			&CurrencyId::Native(TokenSymbol::ASG) => 1 * CENTS,
 			_ => Zero::zero(),
 		}
 	};
@@ -565,20 +573,20 @@ impl orml_tokens::Config for Runtime {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 }
-// parameter_types! {
-// 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-// }
-//
-// impl brml_charge_transaction_fee::Config for Runtime {
-// 	type Event = Event;
-// 	type Balance = Balance;
-// 	type WeightInfo = ();
-// 	type CurrenciesHandler = Currencies;
-// 	type Currency = Balances;
-// 	type ZenlinkDEX = ZenlinkProtocol;
-// 	type OnUnbalanced = ();
-// 	type NativeCurrencyId = NativeCurrencyId;
-// }
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+}
+
+impl brml_charge_transaction_fee::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type WeightInfo = ();
+	type CurrenciesHandler = Currencies;
+	type Currency = Balances;
+	type OnUnbalanced = ();
+	type NativeCurrencyId = NativeCurrencyId;
+}
 
 parameter_types! {
 	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
@@ -591,7 +599,7 @@ impl brml_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type TwoYear = TwoYear;
-	type PalletId = ShareWeightPalletId;
+	type SystemPalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	// type DEXOperations = ZenlinkProtocol;
@@ -599,6 +607,135 @@ impl brml_minter_reward::Config for Runtime {
 }
 
 // bifrost runtime end
+
+// zenlink runtime start
+parameter_types! {
+    pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+    pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+
+    // xcm
+    pub const AnyNetwork: NetworkId = NetworkId::Any;
+    pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
+        // Bifrost local and live, 0.01 BNC
+        (make_x2_location(2001), 10_000_000_000),
+        // Phala local and live, 1 PHA
+        (make_x2_location(2004), 1_000_000_000_000),
+        // Plasm local and live, 0.0000000000001 SDN
+        (make_x2_location(2007), 1_000_000),
+        // Sherpax live, 0 KSX
+        (make_x2_location(2013), 0),
+
+        // Zenlink local 1 for test
+        (make_x2_location(200), 1_000_000),
+        // Zenlink local 2 for test
+        (make_x2_location(300), 1_000_000),
+    ];
+}
+
+impl zenlink_protocol::Config for Runtime {
+    type Event = Event;
+    type GetExchangeFee = GetExchangeFee;
+    type MultiAssetsHandler = MultiAssets;
+    type PalletId = ZenlinkPalletId;
+    type SelfParaId = ParachainInfo;
+
+    type TargetChains = ZenlinkRegistedParaChains;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type Conversion = ZenlinkLocationToAccountId;
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+pub type ZenlinkLocationToAccountId = (
+    // Sibling parachain origins convert to AccountId via the `ParaId::into`.
+    SiblingParachainConvertsVia<Sibling, AccountId>,
+    // Straight up local `AccountId32` origins just alias directly to `AccountId`.
+    AccountId32Aliases<AnyNetwork, AccountId>,
+);
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
+{
+	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: AssetId) -> bool {
+		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
+		match currency_id {
+			Ok(_) => true,
+			Err(_) => false
+		}
+	}
+
+	fn local_transfer(
+		asset_id: AssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount)
+	}
+
+	fn local_withdraw(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
+
+
+// zenlink runtime end
+
+// orml runtime start
+parameter_types! {
+	pub const GetBifrostTokenId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+}
+
+pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Assets;
+	type NativeCurrency = BifrostToken;
+	type GetNativeCurrencyId = GetBifrostTokenId;
+	type WeightInfo = ();
+}
+
+// orml runtime end
 
 construct_runtime! {
 	pub enum Runtime where
@@ -618,7 +755,7 @@ construct_runtime! {
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
 
 		// Parachain modules
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 20,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 12,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
 
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
@@ -645,15 +782,15 @@ construct_runtime! {
 		VtokenMint: brml_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: brml_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
 		Voucher: brml_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		// ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
+		ChargeTransactionFee: brml_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
 		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 17,
-		// Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
+		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink
-		// ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 19,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 19,
 	}
 }
 
@@ -788,76 +925,84 @@ impl_runtime_apis! {
 		}
 	}
 
-	// impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
-	// 	fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-	// 	let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
-	// 		match rs {
-	// 			Ok(val) => val,
-	// 			_ => (CurrencyId::Token(TokenSymbol::ASG), Zero::zero()),
-	// 		}
-	// 	}
-	// }
+	impl brml_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),
+			}
+		}
+	}
 
 	// zenlink runtime outer apis
-	// impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-	// 	fn get_assets() -> Vec<AssetId> {
-	// 		ZenlinkProtocol::assets_list()
-	// 	}
-	//
-	// 	fn get_balance(
-	// 		asset_id: AssetId,
-	// 		owner: AccountId
-	// 	) -> TokenBalance {
-	// 		ZenlinkProtocol::multi_asset_balance_of(&asset_id, &owner)
-	// 	}
-	//
-	// 	fn get_sovereigns_info(
-	// 		asset_id: AssetId
-	// 	) -> Vec<(u32, AccountId, TokenBalance)> {
-	// 		ZenlinkProtocol::get_sovereigns_info(&asset_id)
-	// 	}
-	//
-	// 	fn get_all_pairs() -> Vec<PairInfo<AccountId, TokenBalance>> {
-	// 		ZenlinkProtocol::get_all_pairs()
-	// 	}
-	//
-	// 	fn get_owner_pairs(
-	// 		owner: AccountId
-	// 	) -> Vec<PairInfo<AccountId, TokenBalance>> {
-	// 		ZenlinkProtocol::get_owner_pairs(&owner)
-	// 	}
-	//
-	// 	fn get_amount_in_price(
-	// 		supply: TokenBalance,
-	// 		path: Vec<AssetId>
-	// 	) -> TokenBalance {
-	// 		ZenlinkProtocol::desired_in_amount(supply, path)
-	// 	}
-	//
-	// 	fn get_amount_out_price(
-	// 		supply: TokenBalance,
-	// 		path: Vec<AssetId>
-	// 	) -> TokenBalance {
-	// 		ZenlinkProtocol::supply_out_amount(supply, path)
-	// 	}
-	//
-	// 	fn get_estimate_lptoken(
-	// 		token_0: AssetId,
-	// 		token_1: AssetId,
-	// 		amount_0_desired: TokenBalance,
-	// 		amount_1_desired: TokenBalance,
-	// 		amount_0_min: TokenBalance,
-	// 		amount_1_min: TokenBalance,
-	// 	) -> TokenBalance{
-	// 		ZenlinkProtocol::get_estimate_lptoken(
-	// 			token_0,
-	// 			token_1,
-	// 			amount_0_desired,
-	// 			amount_1_desired,
-	// 			amount_0_min,
-	// 			amount_1_min)
-	// 	}
-	// }
+    impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+        fn get_assets() -> Vec<AssetId> {
+            ZenlinkProtocol::get_assets()
+        }
+
+        fn get_balance(
+            asset_id: AssetId,
+            owner: AccountId
+        ) -> AssetBalance {
+            <Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
+        }
+
+        fn get_sovereigns_info(
+            asset_id: AssetId
+        ) -> Vec<(u32, AccountId, AssetBalance)> {
+            ZenlinkProtocol::get_sovereigns_info(&asset_id)
+        }
+
+        fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>> {
+            ZenlinkProtocol::get_all_pairs()
+        }
+
+        fn get_owner_pairs(
+            owner: AccountId
+        ) -> Vec<PairInfo<AccountId, AssetBalance>> {
+            ZenlinkProtocol::get_owner_pairs(&owner)
+        }
+
+        fn get_pair_by_asset_id(
+            asset_0: AssetId,
+            asset_1: AssetId
+        ) -> Option<PairInfo<AccountId, AssetBalance>> {
+            ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+        }
+
+        fn get_amount_in_price(
+            supply: AssetBalance,
+            path: Vec<AssetId>
+        ) -> AssetBalance {
+            ZenlinkProtocol::desired_in_amount(supply, path)
+        }
+
+        fn get_amount_out_price(
+            supply: AssetBalance,
+            path: Vec<AssetId>
+        ) -> AssetBalance {
+            ZenlinkProtocol::supply_out_amount(supply, path)
+        }
+
+        fn get_estimate_lptoken(
+            token_0: AssetId,
+            token_1: AssetId,
+            amount_0_desired: AssetBalance,
+            amount_1_desired: AssetBalance,
+            amount_0_min: AssetBalance,
+            amount_1_min: AssetBalance,
+        ) -> AssetBalance{
+            ZenlinkProtocol::get_estimate_lptoken(
+                token_0,
+                token_1,
+                amount_0_desired,
+                amount_1_desired,
+                amount_0_min,
+                amount_1_min
+            )
+        }
+    }
 }
 
 cumulus_pallet_parachain_system::register_validate_block!(
