@@ -16,4 +16,4 @@ sp-core = "3.0.0"
 sp-rpc = "3.0.0"
 pallet-transaction-payment-rpc-runtime-api = "3.0.0"
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }
-node-primitives = { path = "../../../bin/node/primitives", default-features = false }
+node-primitives = { path = "../../../node/primitives", default-features = false }
