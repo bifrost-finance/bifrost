@@ -641,7 +641,7 @@ construct_runtime! {
 		// XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
 
 		// bifrost modules
-		bifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 10,
+		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 10,
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
 		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
 		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,

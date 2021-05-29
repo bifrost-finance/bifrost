@@ -32,7 +32,7 @@ fn issue_and_burn_should_work_as_expected() {
 			System::set_block_number(1);
 
 			// Issue vKSM to alice
-			assert_ok!(bifrostAssets::issue(RawOrigin::Root.into(), ALICE, vKSM, to_issue));
+			assert_ok!(BifrostAssets::issue(RawOrigin::Root.into(), ALICE, vKSM, to_issue));
 			// Check Alice vKSMs
 			assert_eq!(Assets::free_balance(vKSM, &ALICE), to_issue);
 			// Check totoal issuance
@@ -43,7 +43,7 @@ fn issue_and_burn_should_work_as_expected() {
 			assert!(System::events().iter().any(|record| record.event == issue_event));
 
 			// Issue vKSM to bob
-			assert_ok!(bifrostAssets::issue(RawOrigin::Root.into(), BOB, vKSM, to_issue));
+			assert_ok!(BifrostAssets::issue(RawOrigin::Root.into(), BOB, vKSM, to_issue));
 			// Check Alice vKSMs
 			assert_eq!(Assets::free_balance(vKSM, &BOB), to_issue);
 			// Check totoal issuance
@@ -52,13 +52,13 @@ fn issue_and_burn_should_work_as_expected() {
 			// Destroy some vKSM from alice and bob
 			let destroy_alice = 20;
 			let destroy_bob = 50;
-			assert_ok!(bifrostAssets::burn(RawOrigin::Root.into(), ALICE, vKSM, destroy_alice));
+			assert_ok!(BifrostAssets::burn(RawOrigin::Root.into(), ALICE, vKSM, destroy_alice));
 
 			// Check event
 			let burn_event = mock::Event::bifrost_assets(crate::Event::Burned(ALICE, vKSM, destroy_alice));
 			assert!(System::events().iter().any(|record| record.event == burn_event));
 
-			assert_ok!(bifrostAssets::burn(RawOrigin::Root.into(), BOB, vKSM, destroy_bob));
+			assert_ok!(BifrostAssets::burn(RawOrigin::Root.into(), BOB, vKSM, destroy_bob));
 
 			// // Check Alice and Bob vKSMs
 			assert_eq!(Assets::free_balance(vKSM, &ALICE), to_issue - destroy_alice);
@@ -67,7 +67,7 @@ fn issue_and_burn_should_work_as_expected() {
 			assert_eq!(Assets::total_issuance(vKSM), to_issue * 2 - destroy_alice - destroy_bob);
 
 			// Alice and Bob should have no right to issue and butn tokens
-			assert!(bifrostAssets::issue(mock::Origin::signed(ALICE), ALICE, vKSM, to_issue).is_err());
-			assert!(bifrostAssets::burn(mock::Origin::signed(BOB), ALICE, vKSM, destroy_alice).is_err());
+			assert!(BifrostAssets::issue(mock::Origin::signed(ALICE), ALICE, vKSM, to_issue).is_err());
+			assert!(BifrostAssets::burn(mock::Origin::signed(BOB), ALICE, vKSM, destroy_alice).is_err());
 		});
 }

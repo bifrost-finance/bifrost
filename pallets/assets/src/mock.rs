@@ -45,7 +45,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Assets: orml_tokens::{Pallet, Storage, Event<T>},
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		bifrostAssets: bifrost_assets::{Pallet, Call, Event<T>},
+		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>},
 	}
 );
 
