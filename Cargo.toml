@@ -15,7 +15,6 @@ members = [
 	"pallets/bid",
 #	"pallets/bridge-eos",
 #	"pallets/bridge-iost",
-#	"pallets/poa-manager",
 	"pallets/vesting",
 	"pallets/staking-reward",
 	"pallets/swap",
