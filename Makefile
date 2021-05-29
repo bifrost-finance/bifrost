@@ -48,7 +48,7 @@ check-tests:
 
 .PHONY: test-bifrost
 test-bifrost:
-	cargo test --features "with-bifrost"
+	cargo test --features "with-bifrost-runtime"
 
 .PHONY: clean
 clean:
