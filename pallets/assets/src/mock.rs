@@ -107,9 +107,11 @@ impl orml_tokens::Config for Runtime {
 	type Balance = Balance;
 	type Amount = i128;
 	type CurrencyId = CurrencyId;
+	type MaxLocks = ();
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+
 }
 
 impl crate::Config for Runtime {
