@@ -379,18 +379,3 @@ impl TryInto<CurrencyId> for AssetId {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn currency_id_to_u32_should_work() {
-		todo!()
-	}
-
-	#[test]
-	fn u32_to_currency_id_should_work() {
-		todo!()
-	}
-}

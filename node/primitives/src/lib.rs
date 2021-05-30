@@ -405,15 +405,176 @@ mod tests {
 	}
 
 	#[test]
-	fn currency_id_test_should_work() {
-		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).decimals(), 10u8);
-		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).currency_id(), 3u8);
-		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).symbol(), "DOT");
-		assert_eq!(CurrencyId::Native(TokenSymbol::DOT).is_native(), true);
-		assert_eq!(CurrencyId::Stable(TokenSymbol::DOT).is_stable(), true);
-		assert_eq!(CurrencyId::Token(TokenSymbol::DOT).is_token(), true);
-		assert_eq!(CurrencyId::VToken(TokenSymbol::DOT).is_vtoken(), true);
-		assert_eq!(CurrencyId::VSToken(TokenSymbol::DOT).is_vstoken(), true);
-		assert_eq!(CurrencyId::VSBond(TokenSymbol::DOT, 0, 0, 3).is_vsbond(), true);
+	fn currency_id_to_u32_should_work() {
+		let e00 = CurrencyId::Token(TokenSymbol::ASG);
+		let e01 = CurrencyId::Token(TokenSymbol::BNC);
+		let e02 = CurrencyId::Token(TokenSymbol::AUSD);
+		let e03 = CurrencyId::Token(TokenSymbol::DOT);
+		let e04 = CurrencyId::Token(TokenSymbol::KSM);
+		let e05 = CurrencyId::Token(TokenSymbol::ETH);
+
+		assert_eq!(0x00_00_00_00, e00.currency_id());
+		assert_eq!(0x01_00_00_00, e01.currency_id());
+		assert_eq!(0x02_00_00_00, e02.currency_id());
+		assert_eq!(0x03_00_00_00, e03.currency_id());
+		assert_eq!(0x04_00_00_00, e04.currency_id());
+		assert_eq!(0x05_00_00_00, e05.currency_id());
+
+		let e10 = CurrencyId::VToken(TokenSymbol::ASG);
+		let e11 = CurrencyId::VToken(TokenSymbol::BNC);
+		let e12 = CurrencyId::VToken(TokenSymbol::AUSD);
+		let e13 = CurrencyId::VToken(TokenSymbol::DOT);
+		let e14 = CurrencyId::VToken(TokenSymbol::KSM);
+		let e15 = CurrencyId::VToken(TokenSymbol::ETH);
+
+		assert_eq!(0x10_00_00_00, e10.currency_id());
+		assert_eq!(0x11_00_00_00, e11.currency_id());
+		assert_eq!(0x12_00_00_00, e12.currency_id());
+		assert_eq!(0x13_00_00_00, e13.currency_id());
+		assert_eq!(0x14_00_00_00, e14.currency_id());
+		assert_eq!(0x15_00_00_00, e15.currency_id());
+
+		let e20 = CurrencyId::Native(TokenSymbol::ASG);
+		let e21 = CurrencyId::Native(TokenSymbol::BNC);
+		let e22 = CurrencyId::Native(TokenSymbol::AUSD);
+		let e23 = CurrencyId::Native(TokenSymbol::DOT);
+		let e24 = CurrencyId::Native(TokenSymbol::KSM);
+		let e25 = CurrencyId::Native(TokenSymbol::ETH);
+
+		assert_eq!(0x20_00_00_00, e20.currency_id());
+		assert_eq!(0x21_00_00_00, e21.currency_id());
+		assert_eq!(0x22_00_00_00, e22.currency_id());
+		assert_eq!(0x23_00_00_00, e23.currency_id());
+		assert_eq!(0x24_00_00_00, e24.currency_id());
+		assert_eq!(0x25_00_00_00, e25.currency_id());
+
+		let e30 = CurrencyId::Stable(TokenSymbol::ASG);
+		let e31 = CurrencyId::Stable(TokenSymbol::BNC);
+		let e32 = CurrencyId::Stable(TokenSymbol::AUSD);
+		let e33 = CurrencyId::Stable(TokenSymbol::DOT);
+		let e34 = CurrencyId::Stable(TokenSymbol::KSM);
+		let e35 = CurrencyId::Stable(TokenSymbol::ETH);
+
+		assert_eq!(0x30_00_00_00, e30.currency_id());
+		assert_eq!(0x31_00_00_00, e31.currency_id());
+		assert_eq!(0x32_00_00_00, e32.currency_id());
+		assert_eq!(0x33_00_00_00, e33.currency_id());
+		assert_eq!(0x34_00_00_00, e34.currency_id());
+		assert_eq!(0x35_00_00_00, e35.currency_id());
+
+		let e40 = CurrencyId::VSToken(TokenSymbol::ASG);
+		let e41 = CurrencyId::VSToken(TokenSymbol::BNC);
+		let e42 = CurrencyId::VSToken(TokenSymbol::AUSD);
+		let e43 = CurrencyId::VSToken(TokenSymbol::DOT);
+		let e44 = CurrencyId::VSToken(TokenSymbol::KSM);
+		let e45 = CurrencyId::VSToken(TokenSymbol::ETH);
+
+		assert_eq!(0x40_00_00_00, e40.currency_id());
+		assert_eq!(0x41_00_00_00, e41.currency_id());
+		assert_eq!(0x42_00_00_00, e42.currency_id());
+		assert_eq!(0x43_00_00_00, e43.currency_id());
+		assert_eq!(0x44_00_00_00, e44.currency_id());
+		assert_eq!(0x45_00_00_00, e45.currency_id());
+
+		let e50 = CurrencyId::VSBond(TokenSymbol::ASG, 0x01, 0x00, 0xf0);
+		let e51 = CurrencyId::VSBond(TokenSymbol::BNC, 0x02, 0x01, 0xf1);
+		let e52 = CurrencyId::VSBond(TokenSymbol::AUSD, 0x03, 0x02, 0xf2);
+		let e53 = CurrencyId::VSBond(TokenSymbol::DOT, 0x04, 0x03, 0xf3);
+		let e54 = CurrencyId::VSBond(TokenSymbol::KSM, 0x05, 0x04, 0xf4);
+		let e55 = CurrencyId::VSBond(TokenSymbol::ETH, 0x06, 0x05, 0xf5);
+
+		assert_eq!(0x50_01_00_f0, e50.currency_id());
+		assert_eq!(0x51_02_01_f1, e51.currency_id());
+		assert_eq!(0x52_03_02_f2, e52.currency_id());
+		assert_eq!(0x53_04_03_f3, e53.currency_id());
+		assert_eq!(0x54_05_04_f4, e54.currency_id());
+		assert_eq!(0x55_06_05_f5, e55.currency_id());
+	}
+
+	#[test]
+	fn u32_to_currency_id_should_work() {
+		let e00 = CurrencyId::Token(TokenSymbol::ASG);
+		let e01 = CurrencyId::Token(TokenSymbol::BNC);
+		let e02 = CurrencyId::Token(TokenSymbol::AUSD);
+		let e03 = CurrencyId::Token(TokenSymbol::DOT);
+		let e04 = CurrencyId::Token(TokenSymbol::KSM);
+		let e05 = CurrencyId::Token(TokenSymbol::ETH);
+
+		assert_eq!(e00, CurrencyId::try_from(0x00_00_00_00).unwrap());
+		assert_eq!(e01, CurrencyId::try_from(0x01_00_00_00).unwrap());
+		assert_eq!(e02, CurrencyId::try_from(0x02_00_00_00).unwrap());
+		assert_eq!(e03, CurrencyId::try_from(0x03_00_00_00).unwrap());
+		assert_eq!(e04, CurrencyId::try_from(0x04_00_00_00).unwrap());
+		assert_eq!(e05, CurrencyId::try_from(0x05_00_00_00).unwrap());
+
+		let e10 = CurrencyId::VToken(TokenSymbol::ASG);
+		let e11 = CurrencyId::VToken(TokenSymbol::BNC);
+		let e12 = CurrencyId::VToken(TokenSymbol::AUSD);
+		let e13 = CurrencyId::VToken(TokenSymbol::DOT);
+		let e14 = CurrencyId::VToken(TokenSymbol::KSM);
+		let e15 = CurrencyId::VToken(TokenSymbol::ETH);
+
+		assert_eq!(e10, CurrencyId::try_from(0x10_00_00_00).unwrap());
+		assert_eq!(e11, CurrencyId::try_from(0x11_00_00_00).unwrap());
+		assert_eq!(e12, CurrencyId::try_from(0x12_00_00_00).unwrap());
+		assert_eq!(e13, CurrencyId::try_from(0x13_00_00_00).unwrap());
+		assert_eq!(e14, CurrencyId::try_from(0x14_00_00_00).unwrap());
+		assert_eq!(e15, CurrencyId::try_from(0x15_00_00_00).unwrap());
+
+		let e20 = CurrencyId::Native(TokenSymbol::ASG);
+		let e21 = CurrencyId::Native(TokenSymbol::BNC);
+		let e22 = CurrencyId::Native(TokenSymbol::AUSD);
+		let e23 = CurrencyId::Native(TokenSymbol::DOT);
+		let e24 = CurrencyId::Native(TokenSymbol::KSM);
+		let e25 = CurrencyId::Native(TokenSymbol::ETH);
+
+		assert_eq!(e20, CurrencyId::try_from(0x20_00_00_00).unwrap());
+		assert_eq!(e21, CurrencyId::try_from(0x21_00_00_00).unwrap());
+		assert_eq!(e22, CurrencyId::try_from(0x22_00_00_00).unwrap());
+		assert_eq!(e23, CurrencyId::try_from(0x23_00_00_00).unwrap());
+		assert_eq!(e24, CurrencyId::try_from(0x24_00_00_00).unwrap());
+		assert_eq!(e25, CurrencyId::try_from(0x25_00_00_00).unwrap());
+
+		let e30 = CurrencyId::Stable(TokenSymbol::ASG);
+		let e31 = CurrencyId::Stable(TokenSymbol::BNC);
+		let e32 = CurrencyId::Stable(TokenSymbol::AUSD);
+		let e33 = CurrencyId::Stable(TokenSymbol::DOT);
+		let e34 = CurrencyId::Stable(TokenSymbol::KSM);
+		let e35 = CurrencyId::Stable(TokenSymbol::ETH);
+
+		assert_eq!(e30, CurrencyId::try_from(0x30_00_00_00).unwrap());
+		assert_eq!(e31, CurrencyId::try_from(0x31_00_00_00).unwrap());
+		assert_eq!(e32, CurrencyId::try_from(0x32_00_00_00).unwrap());
+		assert_eq!(e33, CurrencyId::try_from(0x33_00_00_00).unwrap());
+		assert_eq!(e34, CurrencyId::try_from(0x34_00_00_00).unwrap());
+		assert_eq!(e35, CurrencyId::try_from(0x35_00_00_00).unwrap());
+
+		let e40 = CurrencyId::VSToken(TokenSymbol::ASG);
+		let e41 = CurrencyId::VSToken(TokenSymbol::BNC);
+		let e42 = CurrencyId::VSToken(TokenSymbol::AUSD);
+		let e43 = CurrencyId::VSToken(TokenSymbol::DOT);
+		let e44 = CurrencyId::VSToken(TokenSymbol::KSM);
+		let e45 = CurrencyId::VSToken(TokenSymbol::ETH);
+
+		assert_eq!(e40, CurrencyId::try_from(0x40_00_00_00).unwrap());
+		assert_eq!(e41, CurrencyId::try_from(0x41_00_00_00).unwrap());
+		assert_eq!(e42, CurrencyId::try_from(0x42_00_00_00).unwrap());
+		assert_eq!(e43, CurrencyId::try_from(0x43_00_00_00).unwrap());
+		assert_eq!(e44, CurrencyId::try_from(0x44_00_00_00).unwrap());
+		assert_eq!(e45, CurrencyId::try_from(0x45_00_00_00).unwrap());
+
+		let e50 = CurrencyId::VSBond(TokenSymbol::ASG, 0x01, 0x00, 0xf0);
+		let e51 = CurrencyId::VSBond(TokenSymbol::BNC, 0x02, 0x01, 0xf1);
+		let e52 = CurrencyId::VSBond(TokenSymbol::AUSD, 0x03, 0x02, 0xf2);
+		let e53 = CurrencyId::VSBond(TokenSymbol::DOT, 0x04, 0x03, 0xf3);
+		let e54 = CurrencyId::VSBond(TokenSymbol::KSM, 0x05, 0x04, 0xf4);
+		let e55 = CurrencyId::VSBond(TokenSymbol::ETH, 0x06, 0x05, 0xf5);
+
+		assert_eq!(e50, CurrencyId::try_from(0x50_01_00_f0).unwrap());
+		assert_eq!(e51, CurrencyId::try_from(0x51_02_01_f1).unwrap());
+		assert_eq!(e52, CurrencyId::try_from(0x52_03_02_f2).unwrap());
+		assert_eq!(e53, CurrencyId::try_from(0x53_04_03_f3).unwrap());
+		assert_eq!(e54, CurrencyId::try_from(0x54_05_04_f4).unwrap());
+		assert_eq!(e55, CurrencyId::try_from(0x55_06_05_f5).unwrap());
 	}
 }
