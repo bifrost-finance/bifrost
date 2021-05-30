@@ -51,14 +51,6 @@ macro_rules! create_currency_id {
 			}
 		}
 
-		impl Into<u8> for TokenSymbol {
-			fn into(self) -> u8 {
-				match self {
-					$(TokenSymbol::$symbol => ($val),)*
-				}
-			}
-		}
-
 		impl TryFrom<Vec<u8>> for CurrencyId {
 			type Error = ();
 			fn try_from(v: Vec<u8>) -> Result<CurrencyId, ()> {
@@ -124,7 +116,7 @@ macro_rules! create_currency_id {
     }
 }
 
-/// Bifrost Tokens list
+// Bifrost Tokens list
 create_currency_id! {
 	// Represent a Token symbol with 8 bit
 	// Bit 8 : 0 for Pokladot Ecosystem, 1 for Kusama Ecosystem
