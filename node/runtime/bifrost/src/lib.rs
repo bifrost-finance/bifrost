@@ -63,7 +63,7 @@ use node_primitives::Moment;
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiAsset, MultiLocation, MultiLocation::*, Junction::*, BodyId, NetworkId};
+use xcm::v0::{MultiAsset, MultiLocation, MultiLocation::*, Junction::*, BodyId, NetworkId, Junction};
 use xcm_builder::{
 	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
@@ -75,6 +75,9 @@ use xcm_executor::{Config, XcmExecutor};
 use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
 use xcm::v0::Xcm;
 use frame_system::{EnsureRoot, EnsureOneOf};
+use sp_std::marker::PhantomData;
+use frame_support::traits::Contains;
+use xcm_executor::traits::{ShouldExecute, FilterAssetLocation};
 
 pub type SessionHandlers = ();
 
@@ -454,11 +457,58 @@ match_type! {
 	};
 }
 
+/// Transparent XcmTransact Barrier for sybil demo. Polkadot will probably come up with a
+/// better solution for this. Currently, they have not setup a barrier config for `XcmTransact`
+pub struct AllowXcmTransactFrom<T>(PhantomData<T>);
+impl<T: Contains<MultiLocation>> ShouldExecute for AllowXcmTransactFrom<T> {
+	fn should_execute<Call>(
+		_origin: &MultiLocation,
+		_top_level: bool,
+		message: &Xcm<Call>,
+		_shallow_weight: Weight,
+		_weight_credit: &mut Weight,
+	) -> Result<(), ()> {
+		match message {
+			Xcm::Transact { origin_type: _ , require_weight_at_most: _, call: _ } => Ok(()),
+			_ => Err(())
+		}
+	}
+}
+
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
-	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
 	// ^^^ Parent & its unit plurality gets free execution
+	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+	AllowXcmTransactFrom<All<MultiLocation>>,
+);
+
+pub struct CrosschainConcreteAsset;
+impl FilterAssetLocation for CrosschainConcreteAsset {
+	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		use xcm::v0::{
+			MultiAsset::{All, ConcreteFungible}, Junction::{AccountId32,Parachain,Parent},
+		};
+		match asset {
+			MultiAsset::ConcreteFungible {..} => {
+				match origin {
+					Null | X1(Plurality { .. }) => true,
+					X1(AccountId32 { .. }) => true,
+					X1(Parent { .. }) => true,
+					X1(Parachain { .. }) => true,
+					X2(Parachain{..}, _ ) => true,
+					X2(Parent{..}, _ ) => true,
+					_ => false
+				}
+            },
+			_ => false
+		}
+	}
+}
+
+pub type ReserveAsset = (
+	NativeAsset,
+	CrosschainConcreteAsset,
 );
 
 pub struct XcmConfig;
@@ -468,8 +518,8 @@ impl Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
-	type IsTeleporter = NativeAsset;	// <- should be enough to allow teleportation of ROC
+	type IsReserve = ReserveAsset;
+	type IsTeleporter = ReserveAsset;	// <- should be enough to allow teleportation of ROC
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
