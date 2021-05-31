@@ -64,13 +64,13 @@ macro_rules! create_currency_id {
 		impl TokenInfo for CurrencyId {
 			// DATA LAYOUT
     		//
-    		// Currency Discriminant:       4bit
-    		// TokenSymbol Discriminant:    4bit
-    		// ParaId:                      8bit
-    		// LeasePeriod:                 8bit
-    		// LeasePeriod:                 8bit
-			fn currency_id(&self) -> u32 {
-				let c_discr = self.discriminant();
+    		// Currency Discriminant:       1byte
+    		// TokenSymbol Discriminant:    1byte
+    		// ParaId:                      2byte
+    		// LeasePeriod:                 2byte
+    		// LeasePeriod:                 2byte
+			fn currency_id(&self) -> u64 {
+				let c_discr = self.discriminant() as u64;
 
 				let t_discr = match *self {
 					Self::Token(ts)
@@ -79,28 +79,33 @@ macro_rules! create_currency_id {
 					| Self::Stable(ts)
 					| Self::VSToken(ts)
 					| Self::VSBond(ts, ..) => ts as u8,
-				};
+				} as u64;
 
-        		let discr = ((c_discr << 4) + t_discr) as u32;
+        		let discr = (c_discr << 8) + t_discr;
 
 				match *self {
 					Self::Token(..)
 					| Self::VToken(..)
 					| Self::Native(..)
 					| Self::Stable(..)
-					| Self::VSToken(..) => discr << 24,
+					| Self::VSToken(..) => discr << 48,
 					Self::VSBond(_, pid, lp1, lp2) => {
-						// TODO: ParaId representation
+						// NOTE: ParaId representation
 						//
 						// The current goal is for Polkadot to support up to 100 parachains which `u8` could hold.
 						// But `paraId` be represented like 2001, 2002 and so on which exceeds the range which `u8`
 						//  could be represented.
+						// So `u16` is a choice better than `u8`.
 
-						// TODO: LeasePeriod representation
+						// NOTE: LeasePeriod representation
 						//
-						// The range of `LeasePeriod` is a mystery until now.
+						// `u16` can hold the range of `LeasePeriod`
 
-						(discr << 24) + (pid << 16) + (lp1 << 8) + lp2
+						let pid = (0x0000_ffff & pid) as u64;
+						let lp1 = (0x0000_ffff & lp1) as u64;
+						let lp2 = (0x0000_ffff & lp2) as u64;
+
+						(discr << 48) + (pid << 32) + (lp1 << 16) + lp2
 					}
         		}
 			}
@@ -275,16 +280,16 @@ impl Deref for CurrencyId {
 }
 
 /// Temporay Solution: CurrencyId from a number
-impl TryFrom<u32> for CurrencyId {
+impl TryFrom<u64> for CurrencyId {
 	type Error = ();
 
-	fn try_from(id: u32) -> Result<Self, Self::Error> {
-		let c_discr = ((id & 0xf0_00_00_00) >> 28) as u8;
-		let t_discr = ((id & 0x0f_00_00_00) >> 24) as u8;
+	fn try_from(id: u64) -> Result<Self, Self::Error> {
+		let c_discr = ((id & 0xff00_0000_0000_0000) >> 56) as u8;
+		let t_discr = ((id & 0x00ff_0000_0000_0000) >> 48) as u8;
 
-		let pid = ((id & 0x00_ff_00_00) >> 16) as u32;
-		let lp1 = ((id & 0x00_00_ff_00) >> 8) as u32;
-		let lp2 = (id & 0x00_00_00_ff) as u32;
+		let pid = ((id & 0x0000_ffff_0000_0000) >> 32) as u32;
+		let lp1 = ((id & 0x0000_0000_ffff_0000) >> 16) as u32;
+		let lp2 = ((id & 0x0000_0000_0000_ffff) >> 00) as u32;
 
 		let token_symbol = TokenSymbol::try_from(t_discr)?;
 

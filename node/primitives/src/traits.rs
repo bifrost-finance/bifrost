@@ -27,7 +27,7 @@ use sp_runtime::{
 use sp_std::{fmt::Debug, vec::Vec};
 
 pub trait TokenInfo {
-	fn currency_id(&self) -> u32;
+	fn currency_id(&self) -> u64;
 	fn name(&self) -> &str;
 	fn symbol(&self) -> &str;
 	fn decimals(&self) -> u8;
