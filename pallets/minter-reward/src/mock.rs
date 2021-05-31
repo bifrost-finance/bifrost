@@ -25,12 +25,13 @@ use frame_support::{parameter_types, PalletId, traits::GenesisBuild};
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header, AccountId32, Permill,
-	traits::{BlakeTwo256, IdentityLookup, Zero},DispatchError,DispatchResult,
+	testing::Header, AccountId32, Permill,SaturatedConversion,
+	traits::{BlakeTwo256, IdentityLookup, Zero, UniqueSaturatedInto},DispatchError,DispatchResult,
 };
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
 use orml_traits::MultiCurrency;
 use core::marker::PhantomData;
+use std::convert::TryInto;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
@@ -61,6 +62,7 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		MinterReward: bifrost_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>},
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -138,6 +140,7 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+	type MaxLocks = ();
 }
 
 parameter_types! {
@@ -166,7 +169,7 @@ impl zenlink_protocol::Config for Runtime {
     type Conversion = ();
 }
 
-type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, PalletBalances, LocalAssetAdaptor<Currencies>>;
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -261,6 +264,17 @@ impl ExtBuilder {
 	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
 		self.endowed_accounts = endowed_accounts;
 		self
+	}
+
+	pub fn ten_thousand_for_alice(self) -> Self {
+		self.balances(vec![
+			(ALICE, BNC, 100000),
+			(ALICE, AUSD, 10000),
+			(ALICE, vDOT, 10000),
+			(ALICE, vKSM, 10000),
+			(ALICE, DOT, 10000),
+			(ALICE, KSM, 10000),
+		])
 	}
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {

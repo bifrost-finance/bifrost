@@ -123,6 +123,7 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Test, ()>;
+	type MaxLocks = ();
 }
 
 parameter_types! {

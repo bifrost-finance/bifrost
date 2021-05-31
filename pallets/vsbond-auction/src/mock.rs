@@ -20,9 +20,9 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Config, Storage, Event<T>},
-		OrmlAssets: orml_assets::{Module, Call, Config<T>, Storage, Event<T>},
-		VSBondAuction: vsbond_auction::{Module, Call, Storage, Event<T>},
+		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		OrmlAssets: orml_tokens::{Pallet, Call, Storage, Event<T>},
+		VSBondAuction: vsbond_auction::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -54,6 +54,7 @@ impl frame_system::Config for Test {
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
+	type OnSetCode = ();
 }
 
 orml_traits::parameter_type_with_key! {
@@ -61,7 +62,7 @@ orml_traits::parameter_type_with_key! {
 		0
 	};
 }
-impl orml_assets::Config for Test {
+impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = Balance;
 	type Amount = Amount;
@@ -69,12 +70,13 @@ impl orml_assets::Config for Test {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
+	type MaxLocks = ();
 }
 
 impl vsbond_auction::Config for Test {
 	type Event = Event;
 
-	type Assets = orml_assets::Pallet<Self>;
+	type Assets = orml_tokens::Pallet<Self>;
 }
 
 // mockup runtime
@@ -83,14 +85,14 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		.build_storage::<Test>()
 		.unwrap();
 
-	orml_assets::GenesisConfig::<Test> {
-		endowed_accounts: vec![
-			(ACCOUNT_ALICE, CURRENCY_OWNED_BY_ALICE, BALANCE_OWNED),
-			(ACCOUNT_BRUCE, CURRENCY_OWNED_BY_BRUCE, BALANCE_OWNED),
-		],
-	}
-	.assimilate_storage(&mut fs_gc)
-	.unwrap();
+	// orml_tokens::GenesisConfig::<Test> {
+	// 	endowed_accounts: vec![
+	// 		(ACCOUNT_ALICE, CURRENCY_OWNED_BY_ALICE, BALANCE_OWNED),
+	// 		(ACCOUNT_BRUCE, CURRENCY_OWNED_BY_BRUCE, BALANCE_OWNED),
+	// 	],
+	// }
+	// .assimilate_storage(&mut fs_gc)
+	// .unwrap();
 
 	fs_gc.into()
 }

@@ -31,9 +31,9 @@ fn initialize_pool_for_dispatches() {
 	// initialize some parameters used to dispatch the create_pool call.
 	let alice = 1;
 	let bob = 2;
-	let asud_id = CurrencyId::Stable(2u8.into());
-	let dot_id = CurrencyId::Token(3u8.into());
-	let ksm_id = CurrencyId::Token(4u8.into());
+	let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+	let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+	let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 	// issue tokens to Alice's account.
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(asud_id, &alice, 10_000));
@@ -139,9 +139,9 @@ fn create_pool_should_work() {
 	new_test_ext().execute_with(|| {
 		// initialize some parameters used to dispatch the create_pool call.
 		let alice = 1;
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		// issue tokens to Alice's account.
 		assert_ok!(<Test as Config>::CurrenciesHandler::deposit(asud_id, &alice, 10_000));
@@ -357,9 +357,9 @@ fn add_liquidity_given_shares_in_should_work() {
 		let pool_id = 0;
 		let new_pool_token = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		assert_ok!(Swap::add_liquidity_given_shares_in(
 			creator,
@@ -464,7 +464,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 		let bob = 2;
 		let creator = Origin::signed(bob);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(2u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
 		let asset_id = asud_id;
 		let token_amount_in = 5_000;
 
@@ -591,9 +591,9 @@ fn add_single_liquidity_given_shares_in_should_work() {
 		let pool_id = 0;
 		let new_pool_token = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		let asset_id = asud_id;
 		assert_ok!(Swap::add_single_liquidity_given_shares_in(
@@ -727,9 +727,9 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 		let pool_id = 0;
 		let pool_token_out = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		let asset_id = asud_id;
 		assert_ok!(Swap::remove_single_asset_liquidity_given_shares_in(
@@ -879,7 +879,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 		let remover = Origin::signed(alice);
 		let pool_id = 0;
 		let token_amount = 400; // Alice initial pool token amount is 1000.
-		let asud_id = CurrencyId::Stable(2u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
 		let asset_id = asud_id;
 		assert_ok!(Swap::remove_single_asset_liquidity_given_amount_in(
 			remover,
@@ -1035,9 +1035,9 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 		let alice = 1;
 		let remover = Origin::signed(alice);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		let pool_amount_out = 500; // The pool token share that Alice wants to withdraw from the pool.
 		assert_ok!(Swap::remove_assets_liquidity_given_shares_in(
@@ -1166,9 +1166,9 @@ fn swap_exact_in_should_work() {
 		let bob = 2;
 		let swapper = Origin::signed(bob);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		let token_in_asset_id = asud_id;
 		let token_out_asset_id = dot_id;
@@ -1334,9 +1334,9 @@ fn swap_exact_out_should_work() {
 		let bob = 2;
 		let swapper = Origin::signed(bob);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(2u8.into());
-		let dot_id = CurrencyId::Token(3u8.into());
-		let ksm_id = CurrencyId::Token(4u8.into());
+		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		let token_in_asset_id = asud_id;
 		let token_out_asset_id = dot_id;
@@ -1506,7 +1506,7 @@ fn claim_bonus_should_work() {
 		let charlie = 3;
 		let claimer = Origin::signed(bob);
 		let pool_id = 0;
-		let bnc_id = CurrencyId::Token(0u8.into());
+		let bnc_id = CurrencyId::Native(TokenSymbol::ASG);
 		let new_pool_token = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
 		assert_ok!(Swap::add_liquidity_given_shares_in(
