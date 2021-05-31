@@ -31,6 +31,7 @@ parameter_types! {
 	pub BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
+
 impl frame_system::Config for Test {
 	type BaseCallFilter = ();
 	type BlockWeights = ();
@@ -62,6 +63,11 @@ orml_traits::parameter_type_with_key! {
 		0
 	};
 }
+
+parameter_types! {
+	pub const MaxLocks: u32 = 999;
+}
+
 impl orml_tokens::Config for Test {
 	type Event = Event;
 	type Balance = Balance;
@@ -70,7 +76,7 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
-	type MaxLocks = ();
+	type MaxLocks = MaxLocks;
 }
 
 impl vsbond_auction::Config for Test {
@@ -85,14 +91,14 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		.build_storage::<Test>()
 		.unwrap();
 
-	// orml_tokens::GenesisConfig::<Test> {
-	// 	endowed_accounts: vec![
-	// 		(ACCOUNT_ALICE, CURRENCY_OWNED_BY_ALICE, BALANCE_OWNED),
-	// 		(ACCOUNT_BRUCE, CURRENCY_OWNED_BY_BRUCE, BALANCE_OWNED),
-	// 	],
-	// }
-	// .assimilate_storage(&mut fs_gc)
-	// .unwrap();
+	orml_tokens::GenesisConfig::<Test> {
+		endowed_accounts: vec![
+			(ACCOUNT_ALICE, CURRENCY_OWNED_BY_ALICE, BALANCE_OWNED),
+			(ACCOUNT_BRUCE, CURRENCY_OWNED_BY_BRUCE, BALANCE_OWNED),
+		],
+	}
+	.assimilate_storage(&mut fs_gc)
+	.unwrap();
 
 	fs_gc.into()
 }

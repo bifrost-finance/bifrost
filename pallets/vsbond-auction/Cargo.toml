@@ -29,4 +29,5 @@ std = [
     "frame-support/std",
     "serde/std",
     "orml-traits/std",
+    "orml-tokens/std",
 ]
