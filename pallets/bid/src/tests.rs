@@ -28,50 +28,43 @@ fn storages_initialization() {
 	let alice = 1;
 	let bob = 2;
 	let charlie = 3;
-	// let dole = 4;
-	// let eddie = 5;
-	// let frank = 6;
-	// let gorge = 7;
-	// let henry = 8;
-	// let ian = 9;
-	// let jerry = 10;
 
-	let dot_id: CurrencyId = 2u8.into();
-	let ksm_id = 4u8.into();
-	let eos_id = 6u8.into();
-	let iost_id = 8u8.into();
+	let dot_id: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+	let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
+	// let eos_id = 6u8.into();
+	// let iost_id = 8u8.into();
 
 	let amount = 100_000_000;
 	// create some assets for bidder Alice
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &alice, amount));
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(ksm_id, &alice, amount));
-	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &alice, amount));
-	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &alice, amount));
+	// assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &alice, amount));
+	// assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &alice, amount));
 
 	let amount = 10_000;
 	// create some assets for bidder Bob
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &bob, amount));
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(ksm_id, &bob, amount));
-	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &bob, amount));
-	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &bob, amount));
+	// assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &bob, amount));
+	// assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &bob, amount));
 
 	let amount = 100;
 	// create some assets for bidder Charlie
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &charlie, amount));
 	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(ksm_id, &charlie, amount));
-	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &charlie, amount));
-	assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &charlie, amount));
+	// assert_ok!(<Test as Config>::CurrenciesHandler::deposit(eos_id, &charlie, amount));
+	// assert_ok!(<Test as Config>::CurrenciesHandler::deposit(iost_id, &charlie, amount));
 
 	// register vtokens
 	let origin_root = Origin::root();
-	let vdot_id = 3u8.into();
-	let vksm_id = 5u8.into();
-	let veos_id = 7u8.into();
-	let viost_id = 9u8.into();
+	let vdot_id = CurrencyId::VToken(TokenSymbol::DOT);
+	let vksm_id = CurrencyId::VToken(TokenSymbol::KSM);
+	// let veos_id = 7u8.into();
+	// let viost_id = 9u8.into();
 	Bid::register_vtoken_for_bidding(origin_root.clone(), vdot_id).unwrap_or_default();
 	Bid::register_vtoken_for_bidding(origin_root.clone(), vksm_id).unwrap_or_default();
-	Bid::register_vtoken_for_bidding(origin_root.clone(), veos_id).unwrap_or_default();
-	Bid::register_vtoken_for_bidding(origin_root.clone(), viost_id).unwrap_or_default();
+	// Bid::register_vtoken_for_bidding(origin_root.clone(), veos_id).unwrap_or_default();
+	// Bid::register_vtoken_for_bidding(origin_root.clone(), viost_id).unwrap_or_default();
 
 	let minimum_lasting_block_num_vdot = 43_200;
 	let maximum_lasting_block_num_vdot = 432_000;
@@ -92,25 +85,25 @@ fn storages_initialization() {
 	)
 	.unwrap_or_default();
 
-	let minimum_lasting_block_num_veos = 3_600;
-	let maximum_lasting_block_num_veos = 36_000;
-	Bid::set_min_max_order_lasting_block_num(
-		origin_root.clone(),
-		veos_id,
-		minimum_lasting_block_num_veos,
-		maximum_lasting_block_num_veos,
-	)
-	.unwrap_or_default();
+	// let minimum_lasting_block_num_veos = 3_600;
+	// let maximum_lasting_block_num_veos = 36_000;
+	// Bid::set_min_max_order_lasting_block_num(
+	// 	origin_root.clone(),
+	// 	veos_id,
+	// 	minimum_lasting_block_num_veos,
+	// 	maximum_lasting_block_num_veos,
+	// )
+	// .unwrap_or_default();
 
-	let minimum_lasting_block_num_viost = 3_600;
-	let maximum_lasting_block_num_viost = 36_000;
-	Bid::set_min_max_order_lasting_block_num(
-		origin_root.clone(),
-		viost_id,
-		minimum_lasting_block_num_viost,
-		maximum_lasting_block_num_viost,
-	)
-	.unwrap_or_default();
+	// let minimum_lasting_block_num_viost = 3_600;
+	// let maximum_lasting_block_num_viost = 36_000;
+	// Bid::set_min_max_order_lasting_block_num(
+	// 	origin_root.clone(),
+	// 	viost_id,
+	// 	minimum_lasting_block_num_viost,
+	// 	maximum_lasting_block_num_viost,
+	// )
+	// .unwrap_or_default();
 
 	// set blocks number per era
 	let block_num_per_era_vdot = 14_400;
@@ -121,13 +114,13 @@ fn storages_initialization() {
 	Bid::set_block_number_per_era(origin_root.clone(), vksm_id, block_num_per_era_vksm)
 		.unwrap_or_default();
 
-	let block_num_per_era_veos = 172_800;
-	Bid::set_block_number_per_era(origin_root.clone(), veos_id, block_num_per_era_veos)
-		.unwrap_or_default();
+	// let block_num_per_era_veos = 172_800;
+	// Bid::set_block_number_per_era(origin_root.clone(), veos_id, block_num_per_era_veos)
+	// 	.unwrap_or_default();
 
-	let block_num_per_era_viost = 172_800;
-	Bid::set_block_number_per_era(origin_root.clone(), viost_id, block_num_per_era_viost)
-		.unwrap_or_default();
+	// let block_num_per_era_viost = 172_800;
+	// Bid::set_block_number_per_era(origin_root.clone(), viost_id, block_num_per_era_viost)
+	// 	.unwrap_or_default();
 
 	// set_service_stop_block_num_lag
 	let service_stop_lag_block_num_vdot = 0;
@@ -146,21 +139,21 @@ fn storages_initialization() {
 	)
 	.unwrap_or_default();
 
-	let service_stop_lag_block_num_veos = 0;
-	Bid::set_service_stop_block_num_lag(
-		origin_root.clone(),
-		veos_id,
-		service_stop_lag_block_num_veos,
-	)
-	.unwrap_or_default();
+	// let service_stop_lag_block_num_veos = 0;
+	// Bid::set_service_stop_block_num_lag(
+	// 	origin_root.clone(),
+	// 	veos_id,
+	// 	service_stop_lag_block_num_veos,
+	// )
+	// .unwrap_or_default();
 
-	let service_stop_lag_block_num_viost = 518_400;
-	Bid::set_service_stop_block_num_lag(
-		origin_root.clone(),
-		viost_id,
-		service_stop_lag_block_num_viost,
-	)
-	.unwrap_or_default();
+	// let service_stop_lag_block_num_viost = 518_400;
+	// Bid::set_service_stop_block_num_lag(
+	// 	origin_root.clone(),
+	// 	viost_id,
+	// 	service_stop_lag_block_num_viost,
+	// )
+	// .unwrap_or_default();
 
 	// set_slash_margin_rates
 	let set_slash_margin_rates_vdot = 30;
@@ -171,13 +164,13 @@ fn storages_initialization() {
 	Bid::set_slash_margin_rates(origin_root.clone(), vksm_id, set_slash_margin_rates_vksm)
 		.unwrap_or_default();
 
-	let set_slash_margin_rates_veos = 30;
-	Bid::set_slash_margin_rates(origin_root.clone(), veos_id, set_slash_margin_rates_veos)
-		.unwrap_or_default();
+	// let set_slash_margin_rates_veos = 30;
+	// Bid::set_slash_margin_rates(origin_root.clone(), veos_id, set_slash_margin_rates_veos)
+	// 	.unwrap_or_default();
 
-	let set_slash_margin_rates_viost = 30;
-	Bid::set_slash_margin_rates(origin_root.clone(), viost_id, set_slash_margin_rates_viost)
-		.unwrap_or_default();
+	// let set_slash_margin_rates_viost = 30;
+	// Bid::set_slash_margin_rates(origin_root.clone(), viost_id, set_slash_margin_rates_viost)
+	// 	.unwrap_or_default();
 
 	// create a proposal for Bob
 	let bob = 2;
@@ -537,8 +530,8 @@ fn create_bidding_proposal_should_work() {
 		// Alice creates a proposal
 		let alice = 1;
 		let origin_alice = Origin::signed(alice);
-		let dot_id = 2u8.into();
-		let vdot_id = 3u8.into();
+		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
+		let vdot_id = CurrencyId::VToken(TokenSymbol::DOT);
 		let votes_needed_alice = 10_000;
 		let annual_roi_alice = 1_500; // 15% annual roi
 		let validator = alice;
@@ -776,7 +769,7 @@ fn cancel_a_bidding_proposal_should_work() {
 
 		let alice = 1;
 		let bob = 2;
-		let vksm_id: CurrencyId = 5u8.into();
+		let vksm_id: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 		let origin_bob = Origin::signed(bob);
 		let origin_alice = Origin::signed(alice);
 		// make sure bob's proposal exists
@@ -824,7 +817,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		// There was an vksm order of 200 votes from Bob in the storage initialization. So the pool should has only 3800
 		// votes left and Bob should have a 200 vksm order.Decode
 		let bob = 2;
-		let vksm_id = 5u8.into();
+		let vksm_id = CurrencyId::VToken(TokenSymbol::KSM);
 		// BiddingQueues::<Test>::get(vksm_id)
 		// assert_eq!(ProposalsInQueue::<Test>::get(0).votes, 3800);
 
@@ -839,7 +832,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		);
 
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
-		assert_eq!(BiddingQueues::<Test>::contains_key(CurrencyId::Native(0u8.into())), false);
+		assert_eq!(BiddingQueues::<Test>::contains_key(CurrencyId::Native(TokenSymbol::ASG)), false);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 0);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).is_empty(), true);
 		assert_eq!(ProposalsInQueue::<Test>::contains_key(0), false);
