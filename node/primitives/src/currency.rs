@@ -51,14 +51,6 @@ macro_rules! create_currency_id {
 			}
 		}
 
-		impl Into<u8> for TokenSymbol {
-			fn into(self) -> u8 {
-				match self {
-					$(TokenSymbol::$symbol => ($val),)*
-				}
-			}
-		}
-
 		impl TryFrom<Vec<u8>> for CurrencyId {
 			type Error = ();
 			fn try_from(v: Vec<u8>) -> Result<CurrencyId, ()> {
@@ -70,16 +62,54 @@ macro_rules! create_currency_id {
 		}
 
 		impl TokenInfo for CurrencyId {
-			fn currency_id(&self) -> u8 {
-				match self {
-					$(CurrencyId::Native(TokenSymbol::$symbol) => $val,)*
-					$(CurrencyId::Stable(TokenSymbol::$symbol) => $val,)*
-					$(CurrencyId::Token(TokenSymbol::$symbol) => $val,)*
-					$(CurrencyId::VToken(TokenSymbol::$symbol) => $val,)*
-					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $val,)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $val,)*
-				}
+			// DATA LAYOUT
+    		//
+    		// Currency Discriminant:       1byte
+    		// TokenSymbol Discriminant:    1byte
+    		// ParaId:                      2byte
+    		// LeasePeriod:                 2byte
+    		// LeasePeriod:                 2byte
+			fn currency_id(&self) -> u64 {
+				let c_discr = self.discriminant() as u64;
+
+				let t_discr = match *self {
+					Self::Token(ts)
+					| Self::VToken(ts)
+					| Self::Native(ts)
+					| Self::Stable(ts)
+					| Self::VSToken(ts)
+					| Self::VSBond(ts, ..) => ts as u8,
+				} as u64;
+
+        		let discr = (c_discr << 8) + t_discr;
+
+				match *self {
+					Self::Token(..)
+					| Self::VToken(..)
+					| Self::Native(..)
+					| Self::Stable(..)
+					| Self::VSToken(..) => discr << 48,
+					Self::VSBond(_, pid, lp1, lp2) => {
+						// NOTE: ParaId representation
+						//
+						// The current goal is for Polkadot to support up to 100 parachains which `u8` could hold.
+						// But `paraId` be represented like 2001, 2002 and so on which exceeds the range which `u8`
+						//  could be represented.
+						// So `u16` is a choice better than `u8`.
+
+						// NOTE: LeasePeriod representation
+						//
+						// `u16` can hold the range of `LeasePeriod`
+
+						let pid = (0x0000_ffff & pid) as u64;
+						let lp1 = (0x0000_ffff & lp1) as u64;
+						let lp2 = (0x0000_ffff & lp2) as u64;
+
+						(discr << 48) + (pid << 32) + (lp1 << 16) + lp2
+					}
+        		}
 			}
+
 			fn name(&self) -> &str {
 				match self {
 					$(CurrencyId::Native(TokenSymbol::$symbol) => $name,)*
@@ -90,6 +120,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $name,)*
 				}
 			}
+
 			fn symbol(&self) -> &str {
 				match self {
 					$(CurrencyId::Native(TokenSymbol::$symbol) => stringify!($symbol),)*
@@ -100,6 +131,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
 				}
 			}
+
 			fn decimals(&self) -> u8 {
 				match self {
 					$(CurrencyId::Native(TokenSymbol::$symbol) => $deci,)*
@@ -124,7 +156,7 @@ macro_rules! create_currency_id {
     }
 }
 
-/// Bifrost Tokens list
+// Bifrost Tokens list
 create_currency_id! {
 	// Represent a Token symbol with 8 bit
 	// Bit 8 : 0 for Pokladot Ecosystem, 1 for Kusama Ecosystem
@@ -188,6 +220,17 @@ impl CurrencyId {
 			_ => Err(()),
 		}
 	}
+
+	pub fn discriminant(&self) -> u8 {
+		match *self {
+			Self::Token(..) => 0,
+			Self::VToken(..) => 1,
+			Self::Native(..) => 2,
+			Self::Stable(..) => 3,
+			Self::VSToken(..) => 4,
+			Self::VSBond(..) => 5,
+		}
+	}
 }
 
 impl CurrencyIdExt for CurrencyId {
@@ -237,19 +280,26 @@ impl Deref for CurrencyId {
 }
 
 /// Temporay Solution: CurrencyId from a number
-impl TryFrom<u8> for CurrencyId {
+impl TryFrom<u64> for CurrencyId {
 	type Error = ();
 
-	fn try_from(n: u8) -> Result<Self, Self::Error> {
-		match n {
-			0 => Ok(CurrencyId::Native(TokenSymbol::ASG)),
-			2 => Ok(CurrencyId::Stable(TokenSymbol::AUSD)),
-			3 => Ok(CurrencyId::Token(TokenSymbol::DOT)),
-			4 => Ok(CurrencyId::Token(TokenSymbol::KSM)),
-			5 => Ok(CurrencyId::Token(TokenSymbol::ETH)),
-			6 => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
-			7 => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
-			8 => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
+	fn try_from(id: u64) -> Result<Self, Self::Error> {
+		let c_discr = ((id & 0xff00_0000_0000_0000) >> 56) as u8;
+		let t_discr = ((id & 0x00ff_0000_0000_0000) >> 48) as u8;
+
+		let pid = ((id & 0x0000_ffff_0000_0000) >> 32) as u32;
+		let lp1 = ((id & 0x0000_0000_ffff_0000) >> 16) as u32;
+		let lp2 = ((id & 0x0000_0000_0000_ffff) >> 00) as u32;
+
+		let token_symbol = TokenSymbol::try_from(t_discr)?;
+
+		match c_discr {
+			0 => Ok(Self::Token(token_symbol)),
+			1 => Ok(Self::VToken(token_symbol)),
+			2 => Ok(Self::Native(token_symbol)),
+			3 => Ok(Self::Stable(token_symbol)),
+			4 => Ok(Self::VSToken(token_symbol)),
+			5 => Ok(Self::VSBond(token_symbol, pid, lp1, lp2)),
 			_ => Err(()),
 		}
 	}
@@ -271,56 +321,48 @@ impl TryFrom<CurrencyId> for AssetId {
 			})
 		} else {
 			match id {
-				CurrencyId::Stable(TokenSymbol::AUSD) =>
-					Ok(Self {
-						chain_id: BIFROST_PARACHAIN_ID,
-						asset_type: LOCAL,
-						asset_index: 2 as u32,
-					}),
+				CurrencyId::Stable(TokenSymbol::AUSD) => Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 2 as u32,
+				}),
 
-				CurrencyId::Token(TokenSymbol::DOT) =>
-					Ok(Self {
-						chain_id: BIFROST_PARACHAIN_ID,
-						asset_type: LOCAL,
-						asset_index: 3 as u32,
-					}),
-				CurrencyId::Token(TokenSymbol::KSM) =>
-					Ok(Self {
-						chain_id: BIFROST_PARACHAIN_ID,
-						asset_type: LOCAL,
-						asset_index: 4 as u32,
-					}),
-				CurrencyId::Token(TokenSymbol::ETH) =>
-					Ok(Self {
-						chain_id: BIFROST_PARACHAIN_ID,
-						asset_type: LOCAL,
-						asset_index: 5 as u32,
-					}),
+				CurrencyId::Token(TokenSymbol::DOT) => Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 3 as u32,
+				}),
+				CurrencyId::Token(TokenSymbol::KSM) => Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 4 as u32,
+				}),
+				CurrencyId::Token(TokenSymbol::ETH) => Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 5 as u32,
+				}),
 
-				CurrencyId::VToken(TokenSymbol::DOT) =>
-					Ok(Self {
-						chain_id: BIFROST_PARACHAIN_ID,
-						asset_type: LOCAL,
-						asset_index: 6 as u32,
-					}),
-				CurrencyId::VToken(TokenSymbol::KSM) =>
-					Ok(Self {
-						chain_id: BIFROST_PARACHAIN_ID,
-						asset_type: LOCAL,
-						asset_index: 7 as u32,
-					}),
-				CurrencyId::VToken(TokenSymbol::ETH) =>
-				Ok(Self {
+				CurrencyId::VToken(TokenSymbol::DOT) => Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 6 as u32,
+				}),
+				CurrencyId::VToken(TokenSymbol::KSM) => Ok(Self {
+					chain_id: BIFROST_PARACHAIN_ID,
+					asset_type: LOCAL,
+					asset_index: 7 as u32,
+				}),
+				CurrencyId::VToken(TokenSymbol::ETH) => Ok(Self {
 					chain_id: BIFROST_PARACHAIN_ID,
 					asset_type: LOCAL,
 					asset_index: 8 as u32,
 				}),
-				_ => Err(())
+				_ => Err(()),
 			}
 		}
 	}
 }
-
 
 impl TryInto<CurrencyId> for AssetId {
 	type Error = ();
@@ -338,7 +380,7 @@ impl TryInto<CurrencyId> for AssetId {
 			6 => Ok(CurrencyId::VToken(TokenSymbol::DOT)),
 			7 => Ok(CurrencyId::VToken(TokenSymbol::KSM)),
 			8 => Ok(CurrencyId::VToken(TokenSymbol::ETH)),
-			_ => Err(())
+			_ => Err(()),
 		}
 	}
 }
