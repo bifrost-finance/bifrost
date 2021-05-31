@@ -34,8 +34,8 @@ pub mod traits;
 
 pub use crate::currency::{CurrencyId, TokenSymbol};
 pub use crate::traits::{
-	CurrencyIdExt, AssetReward, RewardHandler, VtokenMintExt, MinterRewardExt, RewardTrait,
-	BridgeAssetFrom, BridgeAssetTo, TokenInfo,
+	AssetReward, BridgeAssetFrom, BridgeAssetTo, CurrencyIdExt, MinterRewardExt, RewardHandler,
+	RewardTrait, TokenInfo, VtokenMintExt,
 };
 
 /// An index to a block.
@@ -569,7 +569,6 @@ mod tests {
 		let e53 = CurrencyId::VSBond(TokenSymbol::DOT, 0x07d3, 0x002f, 0x003f);
 		let e54 = CurrencyId::VSBond(TokenSymbol::KSM, 0x07d4, 0x003f, 0x004f);
 		let e55 = CurrencyId::VSBond(TokenSymbol::ETH, 0x07d5, 0x004f, 0x005f);
-
 
 		assert_eq!(e50, CurrencyId::try_from(0x0500_07d0_0000_000f).unwrap());
 		assert_eq!(e51, CurrencyId::try_from(0x0501_07d1_000f_001f).unwrap());

@@ -224,6 +224,6 @@ pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
 		minter: &AccountId,
 		currency_id: CurrencyId,
 		minted_vtoken: Balance,
-		block_num: BlockNumber
+		block_num: BlockNumber,
 	) -> Result<(), Self::Error>;
 }
