@@ -27,7 +27,7 @@ use sp_runtime::{
 use sp_std::{fmt::Debug, vec::Vec};
 
 pub trait TokenInfo {
-	fn currency_id(&self) -> u8;
+	fn currency_id(&self) -> u64;
 	fn name(&self) -> &str;
 	fn symbol(&self) -> &str;
 	fn decimals(&self) -> u8;
@@ -224,6 +224,6 @@ pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
 		minter: &AccountId,
 		currency_id: CurrencyId,
 		minted_vtoken: Balance,
-		block_num: BlockNumber
+		block_num: BlockNumber,
 	) -> Result<(), Self::Error>;
 }
