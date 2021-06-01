@@ -61,7 +61,7 @@ use sp_std::marker::PhantomData;
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol, CurrencyIdExt};
+use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;

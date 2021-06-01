@@ -29,18 +29,18 @@ fn query_vtoken_should_be_ok() {
 		common();
 		let (
 			vdot_id,
-			veos_id,
+			vksm_id,
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (CurrencyId::VToken(TokenSymbol::DOT), CurrencyId::VToken(TokenSymbol::EOS), 11111111 as u64, 22222222 as u64, 60 as u64);
+		) = (CurrencyId::VToken(TokenSymbol::DOT), CurrencyId::VToken(TokenSymbol::KSM), 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
 		let referer_one_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_one));
 		assert_eq!(100, referer_one_vtoken_amount);
 		let referer_two_vtoken_amount = crate::Point::<Test>::get((vdot_id, referer_two));
 		assert_eq!(200, referer_two_vtoken_amount);
-		let referer_one_vtoken_amount = crate::Point::<Test>::get((veos_id, referer_one));
+		let referer_one_vtoken_amount = crate::Point::<Test>::get((vksm_id, referer_one));
 		assert_eq!(100, referer_one_vtoken_amount);
 		
 		// Dispatch vDOT reward Success:
@@ -83,10 +83,10 @@ pub fn common() {
 	assert_eq!(200, crate::Reward::<Test>::get(vdot_id)[0].record_amount);
 	
 	// Increase different vtoken （another one vec）
-	let veos_id = CurrencyId::VToken(TokenSymbol::EOS);
-	assert_ok!(<crate::Module<Test>>::record_reward(veos_id, convert_amount, referer_one));
-	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(veos_id).len());
-	assert_eq!(100, crate::Module::<Test>::vtoken_reward(veos_id)[0].record_amount);
+	let vksm_id = CurrencyId::VToken(TokenSymbol::KSM);
+	assert_ok!(<crate::Module<Test>>::record_reward(vksm_id, convert_amount, referer_one));
+	assert_eq!(1, <crate::Module<Test>>::vtoken_reward(vksm_id).len());
+	assert_eq!(100, crate::Module::<Test>::vtoken_reward(vksm_id)[0].record_amount);
 }
 
 #[test]
@@ -96,11 +96,11 @@ fn dispatch_reward_is_be_ok() {
 		common();
 		let (
 			vdot_id,
-			viost_id,
+			veth_id,
 			referer_one,
 			referer_two,
 			staking_profit
-		) = (CurrencyId::VToken(TokenSymbol::DOT), CurrencyId::VToken(TokenSymbol::IOST), 11111111 as u64, 22222222 as u64, 60 as u64);
+		) = (CurrencyId::VToken(TokenSymbol::DOT), CurrencyId::VToken(TokenSymbol::ETH), 11111111 as u64, 22222222 as u64, 60 as u64);
 		
 		// The first query asset
 		let referer_one_assets = <Test as Config>::CurrenciesHandler::free_balance(vdot_id, &referer_one);
@@ -111,8 +111,8 @@ fn dispatch_reward_is_be_ok() {
 		// Dispatch vDOT reward Success:
 		assert_ok!(crate::Module::<Test>::dispatch_reward(vdot_id, staking_profit));
 		
-		// Dispatch vIOST reward Failure:
-		assert!(crate::Module::<Test>::dispatch_reward(viost_id, staking_profit).is_err());
+		// Dispatch vETH reward Failure:
+		assert!(crate::Module::<Test>::dispatch_reward(veth_id, staking_profit).is_err());
 		
 		// The second query asset
 		let referer_one_assets = <Test as Config>::CurrenciesHandler::free_balance(vdot_id, &referer_one);
