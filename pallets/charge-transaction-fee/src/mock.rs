@@ -37,7 +37,7 @@ use sp_runtime::{
 // pub use polkadot_parachain::primitives::Id;
 pub use cumulus_primitives_core::ParaId;
 
-use node_primitives::{CurrencyId, TokenSymbol, CurrencyIdExt};
+use node_primitives::{CurrencyId, TokenSymbol};
 use zenlink_protocol::{ZenlinkMultiAssets,LocalAssetHandler};
 
 pub type BlockNumber = u64;

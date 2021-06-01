@@ -92,13 +92,13 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		0
 	};
 }
@@ -107,9 +107,11 @@ impl orml_tokens::Config for Runtime {
 	type Balance = Balance;
 	type Amount = i128;
 	type CurrencyId = CurrencyId;
+	type MaxLocks = ();
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+
 }
 
 impl crate::Config for Runtime {

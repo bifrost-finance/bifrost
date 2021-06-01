@@ -25,12 +25,13 @@ use frame_support::{parameter_types, PalletId, traits::GenesisBuild};
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header, AccountId32, Permill,
-	traits::{BlakeTwo256, IdentityLookup, Zero},DispatchError,DispatchResult,
+	testing::Header, AccountId32, SaturatedConversion,
+	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},DispatchError,DispatchResult,
 };
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
 use orml_traits::MultiCurrency;
 use core::marker::PhantomData;
+use std::convert::TryInto;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
@@ -41,7 +42,7 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
-pub const CENTS: Balance = 1_000_000_000_000 / 100;
+// pub const CENTS: Balance = 1_000_000_000_000 / 100;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -61,6 +62,7 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		MinterReward: bifrost_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>},
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -120,13 +122,13 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		0
 	};
 }
@@ -138,6 +140,7 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+	type MaxLocks = ();
 }
 
 parameter_types! {
@@ -166,7 +169,7 @@ impl zenlink_protocol::Config for Runtime {
     type Conversion = ();
 }
 
-type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, PalletBalances, LocalAssetAdaptor<Currencies>>;
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -263,27 +266,38 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+	pub fn ten_thousand_for_alice(self) -> Self {
 		self.balances(vec![
-			(ALICE, BNC, 100),
-			(BOB, BNC, 100),
-			(ALICE, DOT, 100),
-			(ALICE, vDOT, 400),
-			(BOB, DOT, 100),
-			(BOB, KSM, 100),
+			(ALICE, BNC, 100000),
+			(ALICE, AUSD, 10000),
+			(ALICE, vDOT, 10000),
+			(ALICE, vKSM, 10000),
+			(ALICE, DOT, 10000),
+			(ALICE, KSM, 10000),
 		])
 	}
 
-	pub fn zero_for_alice_n_bob(self) -> Self {
-		self.balances(vec![
-			(ALICE, BNC, 100),
-			(BOB, BNC, 100),
-			(ALICE, DOT, 0),
-			(ALICE, vDOT, 100),
-			(BOB, DOT, 0),
-			(BOB, KSM, 100),
-		])
-	}
+	// pub fn one_hundred_for_alice_n_bob(self) -> Self {
+	// 	self.balances(vec![
+	// 		(ALICE, BNC, 100),
+	// 		(BOB, BNC, 100),
+	// 		(ALICE, DOT, 100),
+	// 		(ALICE, vDOT, 400),
+	// 		(BOB, DOT, 100),
+	// 		(BOB, KSM, 100),
+	// 	])
+	// }
+
+	// pub fn zero_for_alice_n_bob(self) -> Self {
+	// 	self.balances(vec![
+	// 		(ALICE, BNC, 100),
+	// 		(BOB, BNC, 100),
+	// 		(ALICE, DOT, 0),
+	// 		(ALICE, vDOT, 100),
+	// 		(BOB, DOT, 0),
+	// 		(BOB, KSM, 100),
+	// 	])
+	// }
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()

@@ -72,7 +72,7 @@ use xcm_builder::{
 	UsingComponents, SignedToAccountId32,
 };
 use xcm_executor::{Config, XcmExecutor};
-use pallet_xcm::{XcmPassthrough, EnsureXcm, IsMajorityOfBody};
+use pallet_xcm::{XcmPassthrough};
 use xcm::v0::Xcm;
 use frame_system::{EnsureRoot, EnsureOneOf};
 use sp_std::marker::PhantomData;

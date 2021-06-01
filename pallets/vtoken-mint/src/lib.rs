@@ -241,16 +241,15 @@ pub mod pallet {
 		#[transactional]
 		pub fn mint(
 			origin: OriginFor<T>,
-			token_id: CurrencyIdOf<T>,
+			vtoken_id: CurrencyIdOf<T>,
 			#[pallet::compact] token_amount: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			let minter = ensure_signed(origin)?;
 
 			ensure!(!token_amount.is_zero(), Error::<T>::BalanceZero);
-			ensure!(token_id.is_vtoken(), Error::<T>::NotSupportTokenType);
+			ensure!(vtoken_id.is_vtoken(), Error::<T>::NotSupportTokenType);
 
-			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
-			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
 
 			let token_balances = T::MultiCurrency::free_balance(token_id, &minter);
 			ensure!(token_balances >= token_amount, Error::<T>::BalanceLow);
