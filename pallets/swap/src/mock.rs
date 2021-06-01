@@ -19,8 +19,7 @@
 use super::*;
 use crate as pallet_swap;
 use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{OnFinalize, OnInitialize},
+	parameter_types, traits::{OnFinalize, OnInitialize},
 };
 use sp_core::H256;
 use sp_runtime::{
@@ -110,7 +109,7 @@ impl pallet_balances::Config for Test {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		0
 	};
 }

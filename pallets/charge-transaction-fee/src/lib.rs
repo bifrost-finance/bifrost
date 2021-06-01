@@ -39,9 +39,8 @@ pub use pallet::*;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::{vec, vec::Vec};
 use frame_system::RawOrigin;
-use frame_support::traits::OriginTrait;
 
-use node_primitives::{CurrencyId, TokenSymbol, AccountId, BlockNumber};
+use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use zenlink_protocol::{AssetId, AssetBalance};

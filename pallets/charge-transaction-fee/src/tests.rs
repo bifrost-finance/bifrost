@@ -86,9 +86,8 @@ fn basic_setup() {
 		Origin::signed(ALICE),
 		asset_0_currency_id,
 		asset_1_currency_id
-	)); // asset 0 and 1
-	let pool_0_1_account = ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_1_currency_id)).unwrap().0;
-
+	)); 
+	
 	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() + <Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
@@ -171,12 +170,12 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		];
 
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(2 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(3 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(6 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(5 as u8).unwrap());
-		default_order_list.push(CurrencyId::try_from(8 as u8).unwrap());
+		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
+		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
 
 		assert_eq!(
 			ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
@@ -213,10 +212,15 @@ fn ensure_can_charge_fee_should_work() {
 			CURRENCY_ID_0,
 		];
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
-		default_order_list.push(CurrencyId::try_from(0 as u8).unwrap());
-		for i in 2..9 {
-			default_order_list.push(CurrencyId::try_from(i as u8).unwrap());
-		}
+
+		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
+		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
 
 		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
 		let _ = ChargeTransactionFee::set_user_fee_charge_order(
@@ -245,11 +249,11 @@ fn ensure_can_charge_fee_should_work() {
 			Currencies::total_balance(CURRENCY_ID_1, &pool_0_1_account)
 		);
 
-		ChargeTransactionFee::ensure_can_charge_fee(
+		assert_ok!(ChargeTransactionFee::ensure_can_charge_fee(
 			&ALICE,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
-		);
+		));
 
 		// Alice should be deducted 100 from Asset 1 since Asset 0 doesn't have enough balance. asset1 : 200-100=100
 		// asset0: 50+100 = 150
@@ -259,11 +263,11 @@ fn ensure_can_charge_fee_should_work() {
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&ALICE), 150);
 
 		// Bob
-		ChargeTransactionFee::ensure_can_charge_fee(
+		assert_ok!(ChargeTransactionFee::ensure_can_charge_fee(
 			&BOB,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
-		);
+		));
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&BOB), 200); // exitential deposit check should be more than 0 balance kept for charging 100 fee
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &BOB), 60);
 	});

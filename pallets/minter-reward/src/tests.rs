@@ -21,7 +21,7 @@
 
 use crate::*;
 use crate::mock::*;
-use frame_support::{assert_ok, assert_noop};
+use frame_support::{assert_ok};
 use std::convert::TryFrom;
 
 pub(crate) fn run_to_block(n: u64) {
@@ -46,7 +46,7 @@ fn minter_reward_should_work() {
 			run_to_block(2);
 
 			let to_sell_vdot = 20;
-			let to_sell_ksm = 20;
+			// let to_sell_ksm = 20;
 
 			// create DEX pair
 			let ausd_asset_id: AssetId = AssetId::try_from(CurrencyId::Stable(TokenSymbol::AUSD)).unwrap();
@@ -60,7 +60,7 @@ fn minter_reward_should_work() {
 			assert_ok!(ZenlinkProtocol::create_pair(Origin::signed(ALICE), ausd_asset_id, ksm_asset_id));
 			assert_ok!(ZenlinkProtocol::create_pair(Origin::signed(ALICE), ausd_asset_id, vksm_asset_id));
 
-			let mut deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() + <Runtime as frame_system::Config>::BlockNumber::from(100u32);
+			let deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() + <Runtime as frame_system::Config>::BlockNumber::from(100u32);
 			assert_ok!(ZenlinkProtocol::add_liquidity(Origin::signed(ALICE), ausd_asset_id, dot_asset_id, 1000, 1000, 1, 1, deadline));
 			assert_ok!(ZenlinkProtocol::add_liquidity(Origin::signed(ALICE), ausd_asset_id, vdot_asset_id, 1000, 1000, 1, 1, deadline));
 			assert_ok!(ZenlinkProtocol::add_liquidity(Origin::signed(ALICE), ausd_asset_id, ksm_asset_id, 1000, 1000, 1, 1, deadline));

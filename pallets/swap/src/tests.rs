@@ -1475,7 +1475,7 @@ fn swap_exact_out_should_work() {
 		// swap more than the user has
 		let max_token_amount_in = Some(2000);
 		let token_amount_out = 400;
-		<Test as Config>::CurrenciesHandler::withdraw(token_in_asset_id, &bob, 999_800); // destroy most of bob's AUSD
+		assert_ok!(<Test as Config>::CurrenciesHandler::withdraw(token_in_asset_id, &bob, 999_800)); // destroy most of bob's AUSD
 		assert_eq!(
 			Swap::swap_exact_out(
 				swapper.clone(),
