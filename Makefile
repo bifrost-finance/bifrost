@@ -50,6 +50,10 @@ check-tests:
 test-bifrost:
 	cargo test --features "with-bifrost-runtime"
 
+.PHONY: test-asgard
+test-asgard:
+	cargo test --features "with-asgard-runtime"
+
 .PHONY: clean
 clean:
 	cargo clean
