@@ -499,6 +499,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmReserveTransferFilter = ();
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
@@ -611,6 +612,7 @@ impl bifrost_minter_reward::Config for Runtime {
 // zenlink runtime start
 parameter_types! {
     pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const SelfParaId: u32 = 2001;
     pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 
     // xcm
@@ -637,7 +639,7 @@ impl zenlink_protocol::Config for Runtime {
     type GetExchangeFee = GetExchangeFee;
     type MultiAssetsHandler = MultiAssets;
     type PalletId = ZenlinkPalletId;
-    type SelfParaId = ParachainInfo;
+    type SelfParaId = SelfParaId;
 
     type TargetChains = ZenlinkRegistedParaChains;
     type XcmExecutor = XcmExecutor<XcmConfig>;
