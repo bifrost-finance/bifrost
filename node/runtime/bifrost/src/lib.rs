@@ -63,7 +63,7 @@ use node_primitives::Moment;
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{MultiAsset, MultiLocation, MultiLocation::*, Junction::*, BodyId, NetworkId, Junction};
+use xcm::v0::{MultiAsset, MultiLocation, MultiLocation::*, Junction::*, BodyId, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
@@ -486,9 +486,6 @@ pub type Barrier = (
 pub struct CrosschainConcreteAsset;
 impl FilterAssetLocation for CrosschainConcreteAsset {
 	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		use xcm::v0::{
-			MultiAsset::{All, ConcreteFungible}, Junction::{AccountId32,Parachain,Parent},
-		};
 		match asset {
 			MultiAsset::ConcreteFungible {..} => {
 				match origin {
