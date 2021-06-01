@@ -12,6 +12,7 @@ frame-system = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 serde = { version = "1.0.124", optional = true }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false}
 
 [dev-dependencies]
 sp-io = { version = "3.0.0", default-features = false, features = ["std"] }
@@ -28,4 +29,5 @@ std = [
     "frame-support/std",
     "serde/std",
     "orml-traits/std",
+    "orml-tokens/std",
 ]

@@ -29,7 +29,7 @@ use frame_support::{
 	weights::Weight,
 };
 use sp_runtime::{
-	traits::{AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
+	traits::{AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero, StaticLookup},
 	transaction_validity::TransactionValidityError,
 };
 
@@ -38,6 +38,7 @@ use frame_system::pallet_prelude::*;
 pub use pallet::*;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::{vec, vec::Vec};
+use frame_system::RawOrigin;
 
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
@@ -229,12 +230,15 @@ impl<T: Config> Pallet<T> {
 				let amounts = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)
 					.map_or(vec![0], |v| v);
 
-				if zenlink_protocol::Pallet::<T>::inner_swap_tokens_for_exact_tokens(
-					who,
+				let deadline: BlockNumberFor<T> = <frame_system::Pallet<T>>::block_number() + T::BlockNumber::from(100u32);
+				let org: OriginFor<T> = RawOrigin::from(Some(who.clone())).into();
+				if zenlink_protocol::Pallet::<T>::swap_tokens_for_exact_tokens(
+					org,
 					amount_out,
 					amount_in_max,
-					&path,
-					who,
+					path,
+					T::Lookup::unlookup((*who).clone()),
+					deadline
 				)
 				.is_ok()
 				{

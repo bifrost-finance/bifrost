@@ -24,9 +24,13 @@ use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header, AccountId32, Permill,
-	traits::{BlakeTwo256, IdentityLookup, Zero},
+	testing::Header, AccountId32, Permill,DispatchError, DispatchResult,
+	traits::{BlakeTwo256, IdentityLookup, Zero, UniqueSaturatedInto}, SaturatedConversion
 };
+use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
+use orml_traits::MultiCurrency;
+use core::marker::PhantomData;
+use std::convert::TryInto;
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
@@ -59,6 +63,8 @@ frame_support::construct_runtime!(
 		VtokenMint: vtoken_mint::{Pallet, Call, Storage, Event<T>},
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
 		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>},
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
+
 	}
 );
 
@@ -117,7 +123,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
@@ -135,6 +141,7 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+	type MaxLocks = ();
 }
 
 parameter_types! {
@@ -148,10 +155,9 @@ impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Assets;
 	type TwoYear = TwoYear;
-	type PalletId = ShareWeightPalletId;
+	type SystemPalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
-	type DEXOperations = ();
 	type ShareWeight = Balance;
 }
 
@@ -174,10 +180,97 @@ impl crate::Config for Runtime {
 	type MultiCurrency = Assets;
 	type PalletId = StakingPalletId;
 	type MinterReward = MinterReward;
-	type DEXOperations = ();
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = ();
 }
+
+// zenlink runtime mock starts
+
+parameter_types! {
+    pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+	// pub const SelfParaId: ParaId = ParaId{0: 2001};
+}
+
+impl zenlink_protocol::Config for Runtime {
+    type Event = Event;
+    type GetExchangeFee = GetExchangeFee;
+    type MultiAssetsHandler = MultiAssets;
+    type PalletId = ZenlinkPalletId;
+    // type SelfParaId = SelfParaId; 
+	type SelfParaId = ();
+    type TargetChains = ();
+    type XcmExecutor = ();
+    type Conversion = ();
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, PalletBalances, LocalAssetAdaptor<Currencies>>;
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
+{
+	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: AssetId) -> bool {
+		let rs: Result<CurrencyId, _> = asset_id.try_into();
+		match rs {
+			Ok(_) => true,
+			Err(_) => false
+		}
+	}
+
+
+	fn local_transfer(
+		asset_id: AssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::transfer(
+			currency_id,
+			&origin,
+			&target,
+			amount.unique_saturated_into(),
+		)?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount)
+	}
+
+	fn local_withdraw(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
+
 
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,

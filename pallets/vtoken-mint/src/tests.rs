@@ -105,7 +105,7 @@ fn redeem_token_should_be_ok() {
 			assert_ok!(VtokenMint::redeem(Origin::signed(ALICE), DOT, to_sell_vdot));
 
 			// Check event
-			let redeem_token_event = mock::Event::vtoken_mint(crate::Event::RedeemStarted(ALICE, DOT, to_sell_vdot, 1));
+			let redeem_token_event = mock::Event::vtoken_mint(crate::Event::RedeemStarted(ALICE, vDOT, to_sell_vdot, 1));
 			assert!(System::events().iter().any(|record| {
 					record.event == redeem_token_event
 				})

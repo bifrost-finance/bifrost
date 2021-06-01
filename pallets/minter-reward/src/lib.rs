@@ -355,14 +355,14 @@ pub mod pallet {
 				vtoken_amount.saturated_into(),
 				&[
 					AssetId {
-						chain_id: 1024 as u32,
+						chain_id: 2001 as u32,
 						asset_type: 2,
 						asset_index: *currency_id as u32,
 					},
 					AssetId {
-						chain_id: 1024 as u32,
+						chain_id: 2001 as u32,
 						asset_type: 2,
-						asset_index: 1 as u32,
+						asset_index: 2 as u32,
 					},
 				],
 			)
