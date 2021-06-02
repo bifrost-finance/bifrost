@@ -24,9 +24,9 @@ serde = { version = "1.0.124", optional = true }
 serde_json = { version = "1.0.60", default-features = false, features = ["alloc"] }
 lite-json = { version = "0.1.0", git = "https://github.com/xlc/lite-json", default-features = false, features = ["float"]}
 log = { version = "0.4.14", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master" }
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false}
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false}
 minter-reward = { package = "bifrost-minter-reward", path = "../minter-reward" }
 
 [dev-dependencies]

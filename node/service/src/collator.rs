@@ -95,7 +95,8 @@ where
 		Block,
 		StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
 	> + sp_offchain::OffchainWorkerApi<Block>
-	+ sp_block_builder::BlockBuilder<Block>,
+	+ sp_block_builder::BlockBuilder<Block>
+	+ cumulus_primitives_core::CollectCollationInfo<Block>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIQ: FnOnce(
@@ -250,14 +251,14 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	let prometheus_registry = parachain_config.prometheus_registry().cloned();
 	let transaction_pool = params.transaction_pool.clone();
 	let mut task_manager = params.task_manager;
-	let import_queue = params.import_queue;
+	let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
 	let (network, network_status_sinks, system_rpc_tx, start_network) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &parachain_config,
 			client: client.clone(),
 			transaction_pool: transaction_pool.clone(),
 			spawn_handle: task_manager.spawn_handle(),
-			import_queue,
+			import_queue: import_queue.clone(),
 			on_demand: None,
 			block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
 		})?;
@@ -311,6 +312,7 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 			relay_chain_full_node,
 			spawner,
 			parachain_consensus,
+			import_queue,
 		};
 
 		start_collator(params).await?;
@@ -320,7 +322,7 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 			announce_block,
 			task_manager: &mut task_manager,
 			para_id: id,
-			polkadot_full_node: relay_chain_full_node,
+			relay_chain_full_node,
 		};
 
 		start_full_node(params)?;
@@ -347,13 +349,6 @@ pub fn asgard_parachain_build_import_queue(
 > {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-	let block_import = cumulus_client_consensus_aura::AuraBlockImport::<
-		_,
-		_,
-		_,
-		sp_consensus_aura::sr25519::AuthorityPair,
-	>::new(client.clone(), client.clone());
-
 	cumulus_client_consensus_aura::import_queue::<
 		sp_consensus_aura::sr25519::AuthorityPair,
 		_,
@@ -363,7 +358,7 @@ pub fn asgard_parachain_build_import_queue(
 		_,
 		_,
 	>(cumulus_client_consensus_aura::ImportQueueParams {
-		block_import,
+		block_import: client.clone(),
 		client: client.clone(),
 		create_inherent_data_providers: move |_, _| async move {
 			let time = sp_timestamp::InherentDataProvider::from_system_time();
@@ -400,13 +395,6 @@ pub fn bifrost_parachain_build_import_queue(
 > {
 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-	let block_import = cumulus_client_consensus_aura::AuraBlockImport::<
-		_,
-		_,
-		_,
-		sp_consensus_aura::sr25519::AuthorityPair,
-	>::new(client.clone(), client.clone());
-
 	cumulus_client_consensus_aura::import_queue::<
 		sp_consensus_aura::sr25519::AuthorityPair,
 		_,
@@ -416,7 +404,7 @@ pub fn bifrost_parachain_build_import_queue(
 		_,
 		_,
 	>(cumulus_client_consensus_aura::ImportQueueParams {
-		block_import,
+		block_import: client.clone(),
 		client: client.clone(),
 		create_inherent_data_providers: move |_, _| async move {
 			let time = sp_timestamp::InherentDataProvider::from_system_time();
