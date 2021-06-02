@@ -232,7 +232,7 @@ impl<T: Config> Pallet<T> {
 
 				let deadline: BlockNumberFor<T> = <frame_system::Pallet<T>>::block_number() + T::BlockNumber::from(100u32);
 				let org: OriginFor<T> = RawOrigin::from(Some(who.clone())).into();
-				if zenlink_protocol::Pallet::<T>::swap_tokens_for_exact_tokens(
+				if zenlink_protocol::Pallet::<T>::swap_assets_for_exact_assets(
 					org,
 					amount_out,
 					amount_in_max,
