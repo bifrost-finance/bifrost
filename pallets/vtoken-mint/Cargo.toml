@@ -15,14 +15,13 @@ sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 zenlink-protocol = { version = "0.4.0", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false}
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
 
 
 [dev-dependencies]
 bifrost-minter-reward = { path = "../minter-reward" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master" }
 pallet-balances = "3.0.0"
 pallet-randomness-collective-flip = "3.0.0"
 sp-core = "3.0.0"
