@@ -201,6 +201,6 @@ zenlink-protocol = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Mod
 zenlink-protocol-rpc = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git", tag = "v0.4.2" }
 zenlink-protocol-runtime-api = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git", tag = "v0.4.2" }
 
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "cfe19133f02dac83dd6652473f9981852c02493f" }
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "cfe19133f02dac83dd6652473f9981852c02493f" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "cfe19133f02dac83dd6652473f9981852c02493f" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "6862e1ced561c1c970afc8c5d00d2e023fc3b965" }
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "6862e1ced561c1c970afc8c5d00d2e023fc3b965" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "6862e1ced561c1c970afc8c5d00d2e023fc3b965" }
