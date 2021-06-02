@@ -12,9 +12,9 @@ frame-system = { version = "3.0.0", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 serde = { version = "1.0.124", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "master", default-features = false}
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false}
 
 [dev-dependencies]
 float-cmp = "0.8.0"

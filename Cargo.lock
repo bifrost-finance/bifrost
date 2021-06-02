@@ -5393,7 +5393,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5409,7 +5409,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5423,7 +5423,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5439,7 +5439,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -12291,18 +12291,3 @@ dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "orml-currencies"
-version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
-
-[[patch.unused]]
-name = "orml-tokens"
-version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
-
-[[patch.unused]]
-name = "orml-traits"
-version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=6862e1ced561c1c970afc8c5d00d2e023fc3b965#6862e1ced561c1c970afc8c5d00d2e023fc3b965"
