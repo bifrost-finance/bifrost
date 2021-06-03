@@ -59,7 +59,7 @@ pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::Moment;
+use node_primitives::{Moment};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -457,55 +457,11 @@ match_type! {
 	};
 }
 
-/// Transparent XcmTransact Barrier for sybil demo. Polkadot will probably come up with a
-/// better solution for this. Currently, they have not setup a barrier config for `XcmTransact`
-pub struct AllowXcmTransactFrom<T>(PhantomData<T>);
-impl<T: Contains<MultiLocation>> ShouldExecute for AllowXcmTransactFrom<T> {
-	fn should_execute<Call>(
-		_origin: &MultiLocation,
-		_top_level: bool,
-		message: &Xcm<Call>,
-		_shallow_weight: Weight,
-		_weight_credit: &mut Weight,
-	) -> Result<(), ()> {
-		match message {
-			Xcm::Transact { origin_type: _ , require_weight_at_most: _, call: _ } => Ok(()),
-			_ => Err(())
-		}
-	}
-}
-
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
 	// ^^^ Parent & its unit plurality gets free execution
 	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
-	AllowXcmTransactFrom<All<MultiLocation>>,
-);
-
-pub struct CrosschainConcreteAsset;
-impl FilterAssetLocation for CrosschainConcreteAsset {
-	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		match asset {
-			MultiAsset::ConcreteFungible {..} => {
-				match origin {
-					Null | X1(Plurality { .. }) => true,
-					X1(AccountId32 { .. }) => true,
-					X1(Parent { .. }) => true,
-					X1(Parachain { .. }) => true,
-					X2(Parachain{..}, _ ) => true,
-					X2(Parent{..}, _ ) => true,
-					_ => false
-				}
-            },
-			_ => false
-		}
-	}
-}
-
-pub type ReserveAsset = (
-	NativeAsset,
-	CrosschainConcreteAsset,
 );
 
 pub struct XcmConfig;
@@ -515,8 +471,8 @@ impl Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = ReserveAsset;
-	type IsTeleporter = ReserveAsset;	// <- should be enough to allow teleportation of ROC
+	type IsReserve = NativeAsset;
+	type IsTeleporter = NativeAsset;	// <- should be enough to allow teleportation of ROC
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
