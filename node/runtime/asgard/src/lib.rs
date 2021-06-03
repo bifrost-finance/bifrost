@@ -80,7 +80,7 @@ use frame_system::{EnsureRoot, EnsureOneOf};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
-use orml_xcm_support::{BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostXcmTransactFilter, BifrostFilteredAssets};
+use xcm_support::{BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostXcmTransactFilter, BifrostFilteredAssets};
 
 
 // zenlink imports

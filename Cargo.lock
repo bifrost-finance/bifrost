@@ -218,7 +218,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "orml-xcm-support",
  "pallet-aura",
  "pallet-balances",
  "pallet-collective",
@@ -255,6 +254,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "xcm-support",
  "zenlink-protocol",
  "zenlink-protocol-runtime-api",
 ]
@@ -5450,23 +5450,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "orml-xcm-support"
-version = "0.4.1-dev"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "node-primitives",
- "orml-traits",
- "parity-scale-codec",
- "polkadot-parachain",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
@@ -12198,6 +12181,23 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+]
+
+[[package]]
+name = "xcm-support"
+version = "0.4.1-dev"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "node-primitives",
+ "orml-traits",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]

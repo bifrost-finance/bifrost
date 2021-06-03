@@ -1,5 +1,5 @@
 [package]
-name = "orml-xcm-support"
+name = "xcm-support"
 description = "Supporting module for XCM integration."
 license = "Apache-2.0"
 version = "0.4.1-dev"
