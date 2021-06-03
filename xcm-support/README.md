@@ -1,4 +1,4 @@
-# XCM Support Module.
+# XCM Support Module
 
 ## Overview
 
