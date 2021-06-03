@@ -78,7 +78,7 @@ orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 #orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
-#orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
+orml-xcm-support = { path = "../../../xcm-support", default-features = false }
 
 zenlink-protocol = { version = "0.4.0", default-features = false }
 zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
@@ -144,7 +144,7 @@ std = [
 	"orml-traits/std",
 	"orml-tokens/std",
 #	"orml-xtokens/std",
-#	"orml-xcm-support/std",
+	"orml-xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 ]
