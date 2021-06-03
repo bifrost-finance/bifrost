@@ -68,7 +68,7 @@ use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-    EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset,
+    EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter,
     ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
     SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
@@ -80,6 +80,8 @@ use frame_system::{EnsureRoot, EnsureOneOf};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
+use xcm_support::{BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostXcmTransactFilter, BifrostFilteredAssets};
+
 
 // zenlink imports
 use zenlink_protocol::{ZenlinkMultiAssets, LocalAssetHandler, MultiAssetsHandler, make_x2_location, AssetId, AssetBalance, PairInfo};
@@ -400,7 +402,7 @@ pub type LocationToAccountId = (
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<RococoNetwork, AccountId>,
+	AccountId32Aliases<AnyNetwork, AccountId>,
 );
 
 /// Means for transacting assets on this chain.
@@ -436,7 +438,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	ParentAsSuperuser<Origin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `Origin::Signed` origin of the same 32-byte value.
-	SignedAccountId32AsNative<RococoNetwork, Origin>,
+	SignedAccountId32AsNative<AnyNetwork, Origin>,
 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
 	XcmPassthrough<Origin>,
 );
@@ -457,9 +459,19 @@ match_type! {
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
-	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
 	// ^^^ Parent & its unit plurality gets free execution
+	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+	BifrostXcmTransactFilter<All<MultiLocation>>,
 );
+
+pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
+	Assets,
+	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert>,
+	AccountId,
+	LocationToAccountId,
+	CurrencyId,
+	BifrostCurrencyIdConvert,
+>;
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
@@ -468,8 +480,8 @@ impl Config for XcmConfig {
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
-	type IsTeleporter = NativeAsset;	// <- should be enough to allow teleportation of ROC
+	type IsReserve = BifrostFilteredAssets;
+	type IsTeleporter = BifrostFilteredAssets;
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
