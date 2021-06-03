@@ -3,7 +3,7 @@ name = "orml-xcm-support"
 description = "Supporting module for XCM integration."
 license = "Apache-2.0"
 version = "0.4.1-dev"
-authors = ["Acala Developers"]
+authors = ["Bifrost Developers"]
 edition = "2018"
 
 [dependencies]
@@ -16,7 +16,7 @@ cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", defau
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3", default-features = false }
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library.git", default-features = false, branch = "master"}
+orml-traits = { version = "0.4.1-dev", default-features = false }
 node-primitives = { default-features = false, path = "../node/primitives" }
 
 [features]
