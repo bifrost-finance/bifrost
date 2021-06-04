@@ -75,9 +75,6 @@ use xcm_executor::{Config, XcmExecutor};
 use pallet_xcm::{XcmPassthrough};
 use xcm::v0::Xcm;
 use frame_system::{EnsureRoot, EnsureOneOf};
-use sp_std::marker::PhantomData;
-use frame_support::traits::Contains;
-use xcm_executor::traits::{ShouldExecute, FilterAssetLocation};
 
 pub type SessionHandlers = ();
 
