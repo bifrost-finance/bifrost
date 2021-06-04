@@ -170,18 +170,6 @@ impl SubstrateCli for RelayChainCli {
 	}
 }
 
-fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
-	use sp_core::crypto::Ss58AddressFormat;
-
-	let ss58_version = if spec.is_asgard() {
-		Ss58AddressFormat::BifrostAccount
-	} else {
-		Ss58AddressFormat::BifrostAccount
-	};
-
-	sp_core::crypto::set_default_ss58_version(ss58_version);
-}
-
 fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
 	let mut storage = chain_spec.build_storage()?;
 
@@ -222,6 +210,7 @@ macro_rules! construct_async_run {
 }
 
 /// Parse command line arguments into service configuration.
+#[allow(unreachable_code)]
 pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
 
