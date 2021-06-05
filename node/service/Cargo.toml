@@ -106,7 +106,7 @@ with-bifrost-runtime = [
 	"bifrost-runtime",
 ]
 with-all-runtime = [
-	"asgard-runtime",
-	"bifrost-runtime",
+	"with-asgard-runtime",
+	"with-bifrost-runtime",
 ]
 
