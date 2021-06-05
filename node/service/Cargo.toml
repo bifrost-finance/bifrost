@@ -88,7 +88,7 @@ node-rpc = { path = "../rpc" }
 jsonrpc-core = "15.1.0"
 
 # zenlink rpc
-zenlink-protocol-rpc = "0.4.0"
+zenlink-protocol-rpc = "*"
 
 # Bifrost rpc
 bifrost-charge-transaction-fee-rpc = { path = "../../pallets/charge-transaction-fee/rpc" }
