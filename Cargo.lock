@@ -5153,6 +5153,8 @@ dependencies = [
  "sp-keystore",
  "sp-runtime",
  "sp-transaction-pool",
+ "zenlink-protocol-rpc",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]

@@ -41,6 +41,7 @@ use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
 
 use bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi as FeeRuntimeApi;
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -63,11 +64,13 @@ where
 	C: Send + Sync + 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
 	use bifrost_charge_transaction_fee_rpc::{ChargeTransactionFeeStruct, FeeRpcApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 
 	let FullDeps { client, .. } = deps;
 
@@ -78,6 +81,10 @@ where
 	)));
 
 	io.extend_with(FeeRpcApi::to_delegate(ChargeTransactionFeeStruct::new(
+		client.clone(),
+	)));
+
+	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
 		client.clone(),
 	)));
 

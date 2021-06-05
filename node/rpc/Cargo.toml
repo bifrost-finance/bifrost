@@ -23,3 +23,5 @@ sp-transaction-pool = { version = "3.0.0" }
 pallet-transaction-payment-rpc = { version = "3.0.0" }
 bifrost-charge-transaction-fee-rpc = { path = "../../pallets/charge-transaction-fee/rpc" }
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../pallets/charge-transaction-fee/rpc/runtime-api" }
+zenlink-protocol-rpc = "*"
+zenlink-protocol-runtime-api = "*"
