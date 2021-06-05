@@ -942,7 +942,7 @@ impl_runtime_apis! {
 
 	impl bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
 		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),
