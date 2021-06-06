@@ -57,7 +57,10 @@ pub struct FullDeps<C, P> {
 pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
 /// Instantiate all Full RPC extensions.
-pub fn create_full<C, P>(deps: FullDeps<C, P>) -> RpcExtension
+///
+/// NOTE: It's a `PATCH` for the RPC of asgard runtime.
+#[allow(non_snake_case)]
+pub fn PATCH_FOR_ASGARD_create_full<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
@@ -65,12 +68,9 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + 'static,
 {
-	use bifrost_charge_transaction_fee_rpc::{ChargeTransactionFeeStruct, FeeRpcApi};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
-	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 
 	let FullDeps { client, .. } = deps;
 
@@ -79,6 +79,9 @@ where
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
 		client.clone(),
 	)));
+
+	use bifrost_charge_transaction_fee_rpc::{ChargeTransactionFeeStruct, FeeRpcApi};
+	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 
 	io.extend_with(FeeRpcApi::to_delegate(ChargeTransactionFeeStruct::new(
 		client.clone(),
