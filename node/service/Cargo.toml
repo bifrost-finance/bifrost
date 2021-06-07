@@ -88,10 +88,12 @@ node-rpc = { path = "../rpc" }
 jsonrpc-core = "15.1.0"
 
 # zenlink rpc
-zenlink-protocol-rpc = "0.4.0"
+zenlink-protocol-rpc = "*"
+zenlink-protocol-runtime-api = "*"
 
 # Bifrost rpc
 bifrost-charge-transaction-fee-rpc = { path = "../../pallets/charge-transaction-fee/rpc" }
+bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../pallets/charge-transaction-fee/rpc/runtime-api" }
 
 [dev-dependencies]
 env_logger = "0.8.1"
@@ -106,7 +108,7 @@ with-bifrost-runtime = [
 	"bifrost-runtime",
 ]
 with-all-runtime = [
-	"asgard-runtime",
-	"bifrost-runtime",
+	"with-asgard-runtime",
+	"with-bifrost-runtime",
 ]
 

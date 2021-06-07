@@ -15,7 +15,7 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 serde = { version = "1.0.106", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
-zenlink-protocol = { version = "0.4.0", default-features = false }
+zenlink-protocol = { version = "*", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
