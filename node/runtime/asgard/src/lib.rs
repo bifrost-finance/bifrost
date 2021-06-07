@@ -573,7 +573,7 @@ orml_traits::parameter_type_with_key! {
 
 impl bifrost_assets::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Currencies;
 	type WeightInfo = ();
 }
 
