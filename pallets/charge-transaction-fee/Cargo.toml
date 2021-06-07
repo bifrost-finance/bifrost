@@ -13,7 +13,7 @@ serde = { version = "1.0.118", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
-zenlink-protocol = {package = "zenlink-protocol", version = "0.4.0", default-features = false}
+zenlink-protocol = { version = "*", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-currencies = { version = "0.4.1-dev", default-features = false }
