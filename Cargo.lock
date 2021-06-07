@@ -199,6 +199,7 @@ dependencies = [
  "bifrost-charge-transaction-fee",
  "bifrost-charge-transaction-fee-rpc-runtime-api",
  "bifrost-minter-reward",
+ "bifrost-salp",
  "bifrost-voucher",
  "bifrost-vtoken-mint",
  "cumulus-pallet-aura-ext",
@@ -786,6 +787,21 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "bifrost-salp"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

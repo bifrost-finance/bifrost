@@ -72,6 +72,7 @@ bifrost-minter-reward = { path = "../../../pallets/minter-reward", default-featu
 bifrost-voucher = { path = "../../../pallets/voucher", default-features = false }
 bifrost-charge-transaction-fee = { path = "../../../pallets/charge-transaction-fee", default-features = false }
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../../pallets/charge-transaction-fee/rpc/runtime-api", default-features = false }
+bifrost-salp= {path = "../../../pallets/salp",default-features = false}
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -140,6 +141,7 @@ std = [
 	'bifrost-voucher/std',
 	"bifrost-charge-transaction-fee/std",
 	"bifrost-charge-transaction-fee-rpc-runtime-api/std",
+	"bifrost-salp/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",

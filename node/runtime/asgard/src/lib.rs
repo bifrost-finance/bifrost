@@ -620,6 +620,23 @@ impl bifrost_minter_reward::Config for Runtime {
 	type ShareWeight = Balance;
 }
 
+parameter_types! {
+	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
+	pub const MinContribution: Balance = 1 * DOLLARS;
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"py/bfund");
+	pub const RemoveKeysLimit: u32 = 500;
+}
+
+impl bifrost_salp::Config for Runtime {
+	type Event = Event;
+	type PalletId = BifrostCrowdloanId;
+    type Currency = Balances;
+	type MultiCurrency = Assets;
+	type SubmissionDeposit = SubmissionDeposit;
+	type MinContribution = MinContribution;
+	type RemoveKeysLimit = RemoveKeysLimit;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -798,6 +815,7 @@ construct_runtime! {
 		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
 		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
 		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 66,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
