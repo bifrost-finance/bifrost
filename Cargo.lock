@@ -12185,7 +12185,7 @@ dependencies = [
 
 [[package]]
 name = "xcm-support"
-version = "0.4.1-dev"
+version = "0.8.0"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
