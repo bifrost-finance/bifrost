@@ -573,7 +573,7 @@ orml_traits::parameter_type_with_key! {
 
 impl bifrost_assets::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Currencies;
 	type WeightInfo = ();
 }
 
@@ -801,7 +801,7 @@ construct_runtime! {
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 17,
+		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink
