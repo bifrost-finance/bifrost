@@ -219,7 +219,7 @@ impl<
 			(who, currency_id, Some(amount)) =>
 			{
 				MultiCurrency::withdraw(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
-					.map_err(|e| XcmError::FailedToTransactAsset(e.into()));
+					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 				Ok(xcm_executor::Assets::new())
 			}
 			_ => Err(XcmError::AssetNotFound),
