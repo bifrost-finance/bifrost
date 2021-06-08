@@ -623,14 +623,14 @@ impl bifrost_minter_reward::Config for Runtime {
 parameter_types! {
 	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
 	pub const MinContribution: Balance = 1 * DOLLARS;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"py/bfund");
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
 }
 
 impl bifrost_salp::Config for Runtime {
 	type Event = Event;
 	type PalletId = BifrostCrowdloanId;
-    type Currency = Balances;
+	type Currency = Balances;
 	type MultiCurrency = Assets;
 	type SubmissionDeposit = SubmissionDeposit;
 	type MinContribution = MinContribution;

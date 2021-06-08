@@ -35,7 +35,6 @@ pub mod pallet {
 	use node_primitives::{CurrencyId};
 	use frame_support::PalletId;
 	use frame_support::pallet_prelude::storage::child;
-	use frame_support::sp_runtime::AccountId32;
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -81,6 +80,7 @@ pub mod pallet {
 
 	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+	type AccountId<T> = <T as frame_system::Config>::AccountId;
 
 	type LeasePeriodOf<T> = <T as frame_system::Config>::BlockNumber;
 
@@ -127,11 +127,11 @@ pub mod pallet {
 		/// Create a new crowdloaning campaign. [fund_index]
 		Created(ParaId),
 		/// Contributed to a crowd sale. [who, fund_index, amount]
-		Contributed(AccountId32, ParaId, BalanceOf<T>),
+		Contributed(AccountId<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
-		Withdrew(AccountId32, ParaId, BalanceOf<T>),
+		Withdrew(AccountId<T>, ParaId, BalanceOf<T>),
 		/// Redeemed full balance of a contributor. [who, fund_index, amount]
-		Redeemed(T::AccountId, ParaId, BalanceOf<T>),
+		Redeemed(AccountId<T>, ParaId, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -308,10 +308,10 @@ pub mod pallet {
 		pub(super) fn contribute(
 			_origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-			contributor: AccountId32,
+			contributor: AccountId<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let who = contributor;//ensure_signed(origin)?;
+			let who = contributor.clone();//ensure_signed(origin)?;
 
 			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -356,7 +356,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub(super) fn withdraw(
 			origin: OriginFor<T>,
-			who: AccountId32,
+			who: AccountId<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
@@ -386,7 +386,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub(super) fn redeem_from_bancor_pool(
 			_origin: OriginFor<T>,
-			who: T::AccountId,
+			who: AccountId<T>,
 			#[pallet::compact] index: ParaId,
 			amount: Option<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
@@ -428,23 +428,23 @@ pub mod pallet {
 
 		pub fn id_from_index(index: TrieIndex) -> child::ChildInfo {
 			let mut buf = Vec::new();
-			buf.extend_from_slice(b"crowdloan");
+			buf.extend_from_slice(&(T::PalletId::get().0));
 			buf.extend_from_slice(&index.encode()[..]);
 			child::ChildInfo::new_default(T::Hashing::hash(&buf[..]).as_ref())
 		}
 
-		pub fn contribution_put(index: TrieIndex, who: &AccountId32, balance: &BalanceOf<T>) {
+		pub fn contribution_put(index: TrieIndex, who: &AccountId<T>, balance: &BalanceOf<T>) {
 			who.using_encoded(|b| child::put(&Self::id_from_index(index), b, &(balance)));
 		}
 
-		pub fn contribution_get(index: TrieIndex, who: &AccountId32) -> BalanceOf<T> {
+		pub fn contribution_get(index: TrieIndex, who: &AccountId<T>) -> BalanceOf<T> {
 			who.using_encoded(|b| child::get_or_default::<BalanceOf<T>>(
 				&Self::id_from_index(index),
 				b,
 			))
 		}
 
-		pub fn contribution_kill(index: TrieIndex, who: &AccountId32) {
+		pub fn contribution_kill(index: TrieIndex, who: &AccountId<T>) {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
 
