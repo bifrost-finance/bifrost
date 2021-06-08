@@ -1,18 +1,20 @@
-// Copyright 2019-2021 Liebi Technologies.
 // This file is part of Bifrost.
 
-// Bifrost is free software: you can redistribute it and/or modify
+// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Bifrost is distributed in the hope that it will be useful,
+// This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Bifrost.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 //! # XCM Support Module.
 //!
@@ -24,32 +26,38 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#[allow(unused_must_use)]
 
-use frame_support::dispatch::{Weight};
-use sp_runtime::traits::{CheckedConversion, Convert};
-use sp_std::{convert::TryFrom, marker::PhantomData, prelude::*};
+
 use codec::FullCodec;
-use sp_runtime::traits::{MaybeSerializeDeserialize};
+use frame_support::{dispatch::Weight, traits::Contains};
+use node_primitives::{AccountId, CurrencyId, TokenSymbol};
+use polkadot_parachain::primitives::Sibling;
+use sp_runtime::traits::{CheckedConversion, Convert, MaybeSerializeDeserialize};
 use sp_std::{
 	cmp::{Eq, PartialEq},
-	fmt::Debug
+	convert::TryFrom,
+	fmt::Debug,
+	marker::PhantomData,
+	prelude::*,
 };
-
-use xcm::v0::{NetworkId, Xcm, MultiLocation, MultiAsset, Junction};
-use xcm_executor::traits::{FilterAssetLocation, MatchesFungible, ShouldExecute, Convert as xcmConvert, TransactAsset};
-use frame_support::traits::{Contains};
-use node_primitives::{CurrencyId, TokenSymbol, AccountId};
-use polkadot_parachain::primitives::Sibling;
-
 use xcm::v0::{
-	MultiLocation::{X1,X2,Null},
+	prelude::{XcmError, XcmResult},
+	Junction, MultiAsset, MultiLocation,
+	MultiLocation::{Null, X1, X2},
+	NetworkId, Xcm,
 };
-use xcm_builder::{ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, NativeAsset};
-use xcm::v0::prelude::{XcmResult, XcmError};
+use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
+use xcm_executor::traits::{
+	Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
+};
 
 /// Bifrost Asset Matcher
-pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(PhantomData<(CurrencyId, CurrencyIdConvert)>);
-impl<CurrencyId, CurrencyIdConvert, Amount> MatchesFungible<Amount> for BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>
+pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
+	PhantomData<(CurrencyId, CurrencyIdConvert)>,
+);
+impl<CurrencyId, CurrencyIdConvert, Amount> MatchesFungible<Amount>
+	for BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>
 where
 	CurrencyIdConvert: Convert<MultiLocation, Option<CurrencyId>>,
 	Amount: TryFrom<u128>,
@@ -79,12 +87,13 @@ pub struct BifrostCurrencyIdConvert;
 
 impl Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert {
 	fn convert(l: MultiLocation) -> Option<CurrencyId> {
-		#[allow(unused_variables)] {
+		#[allow(unused_variables)]
+		{
 			let para_id: u32;
 			match l {
 				X2(Junction::Parent, Junction::Parachain(para_id)) => {
 					Some(CurrencyId::Token(TokenSymbol::KSM))
-				}
+				},
 				_ => None,
 			}
 		}
@@ -111,38 +120,36 @@ impl<T: Contains<MultiLocation>> ShouldExecute for BifrostXcmTransactFilter<T> {
 		_weight_credit: &mut Weight,
 	) -> Result<(), ()> {
 		match message {
-			Xcm::Transact { origin_type: _ , require_weight_at_most: _, call: _ } => Ok(()),
-			_ => Err(())
+			Xcm::Transact {
+				origin_type: _,
+				require_weight_at_most: _,
+				call: _,
+			} => Ok(()),
+			_ => Err(()),
 		}
 	}
 }
-
 
 /// Bifrost Filtered Assets
 pub struct BifrostFilterAsset;
 impl FilterAssetLocation for BifrostFilterAsset {
 	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		match asset {
-			MultiAsset::ConcreteFungible {..} => {
-				match origin {
-					Null | X1(Junction::Plurality { .. }) => true,
-					X1(Junction::AccountId32 { .. }) => true,
-					X1(Junction::Parent { .. }) => true,
-					X1(Junction::Parachain { .. }) => true,
-					X2(Junction::Parachain{..}, _ ) => true,
-					X2(Junction::Parent{..}, _ ) => true,
-					_ => false
-				}
+			MultiAsset::ConcreteFungible { .. } => match origin {
+				Null | X1(Junction::Plurality { .. }) => true,
+				X1(Junction::AccountId32 { .. }) => true,
+				X1(Junction::Parent { .. }) => true,
+				X1(Junction::Parachain { .. }) => true,
+				X2(Junction::Parachain { .. }, _) => true,
+				X2(Junction::Parent { .. }, _) => true,
+				_ => false,
 			},
-			_ => false
+			_ => false,
 		}
 	}
 }
 
-pub type BifrostFilteredAssets = (
-	NativeAsset,
-	BifrostFilterAsset,
-);
+pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 /// The `TransactAsset` implementation, to handle `MultiAsset` deposit/withdraw.
 ///
@@ -167,21 +174,21 @@ pub struct BifrostCurrencyAdapter<
 );
 
 impl<
-	MultiCurrency: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-	Matcher: MatchesFungible<MultiCurrency::Balance>,
-	AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
-	AccountIdConvert: xcmConvert<MultiLocation, AccountId>,
-	CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
-	CurrencyIdConvert: xcmConvert<MultiAsset, Option<CurrencyId>>,
-> TransactAsset
-for BifrostCurrencyAdapter<
-	MultiCurrency,
-	Matcher,
-	AccountId,
-	AccountIdConvert,
-	CurrencyId,
-	CurrencyIdConvert,
->
+		MultiCurrency: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+		Matcher: MatchesFungible<MultiCurrency::Balance>,
+		AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
+		AccountIdConvert: xcmConvert<MultiLocation, AccountId>,
+		CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
+		CurrencyIdConvert: xcmConvert<MultiAsset, Option<CurrencyId>>,
+	> TransactAsset
+	for BifrostCurrencyAdapter<
+		MultiCurrency,
+		Matcher,
+		AccountId,
+		AccountIdConvert,
+		CurrencyId,
+		CurrencyIdConvert,
+	>
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
 		match (
@@ -190,29 +197,32 @@ for BifrostCurrencyAdapter<
 			Matcher::matches_fungible(&asset),
 		) {
 			// known asset
-			(who, currency_id, Some(amount)) => {
-				#[allow(unused_must_use)] {
-					MultiCurrency::deposit(currency_id.unwrap().unwrap(), &who.unwrap(), amount).map_err(|e| XcmError::FailedToTransactAsset(e.into()))
-				}
+			(who, currency_id, Some(amount)) =>
+			{
+				MultiCurrency::deposit(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
+					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
 			}
-			_ => Err(XcmError::AssetNotFound)
+			_ => Err(XcmError::AssetNotFound),
 		}
 	}
 
-	fn withdraw_asset(asset: &MultiAsset, location: &MultiLocation) -> Result<xcm_executor::Assets, XcmError>  {
+	fn withdraw_asset(
+		asset: &MultiAsset,
+		location: &MultiLocation,
+	) -> Result<xcm_executor::Assets, XcmError> {
 		match (
 			AccountIdConvert::convert(location.clone()),
 			CurrencyIdConvert::convert(asset.clone()),
 			Matcher::matches_fungible(&asset),
 		) {
 			// known asset
-			(who, currency_id, Some(amount)) => {
-				#[allow(unused_must_use)] {
-					MultiCurrency::withdraw(currency_id.unwrap().unwrap(), &who.unwrap(), amount).map_err(|e| XcmError::FailedToTransactAsset(e.into()));
-					Ok(xcm_executor::Assets::new())
-				}
+			(who, currency_id, Some(amount)) =>
+			{
+				MultiCurrency::withdraw(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
+					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+				Ok(xcm_executor::Assets::new())
 			}
-			_ => Err(XcmError::AssetNotFound)
+			_ => Err(XcmError::AssetNotFound),
 		}
 	}
 }

@@ -1,8 +1,7 @@
 [package]
 name = "xcm-support"
 description = "Supporting module for XCM integration."
-license = "Apache-2.0"
-version = "0.4.1-dev"
+version = "0.8.0"
 authors = ["Bifrost Developers"]
 edition = "2018"
 

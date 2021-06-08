@@ -18,82 +18,90 @@
 
 //! Bifrost Client meta trait
 
-use std::sync::Arc;
-use sp_api::{ProvideRuntimeApi, CallApiAt, NumberFor};
-use sp_blockchain::HeaderBackend;
-use sp_runtime::{
-	Justifications, generic::{BlockId, SignedBlock}, traits::{Block as BlockT, BlakeTwo256},
-};
-use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
-use sp_storage::{StorageData, StorageKey, ChildInfo, PrefixedStorageKey};
-use node_primitives::{Block, AccountId, Nonce, Balance, Header, BlockNumber, Hash};
-use sp_consensus as consensus_common;
 use consensus_common::BlockStatus;
+use node_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
+use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
+use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
+use sp_blockchain::HeaderBackend;
+use sp_consensus as consensus_common;
+use sp_runtime::{
+	generic::{BlockId, SignedBlock},
+	traits::{BlakeTwo256, Block as BlockT},
+	Justifications,
+};
+use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
+use std::sync::Arc;
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::ApiExt<Block>
-	+ babe_primitives::BabeApi<Block>
-	+ grandpa_primitives::GrandpaApi<Block>
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
-	+ sp_authority_discovery::AuthorityDiscoveryApi<Block>
+	+ cumulus_primitives_core::CollectCollationInfo<Block>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{}
+{
+}
 
 impl<Api> RuntimeApiCollection for Api
 where
 	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::ApiExt<Block>
-		+ babe_primitives::BabeApi<Block>
-		+ grandpa_primitives::GrandpaApi<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
-		+ sp_authority_discovery::AuthorityDiscoveryApi<Block>,
+		+ cumulus_primitives_core::CollectCollationInfo<Block>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-{}
+{
+}
+
+use sc_service::{TFullBackend, TFullClient};
+
+type FullBackend = TFullBackend<Block>;
+type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
 
 /// Trait that abstracts over all available client implementations.
 ///
 /// For a concrete type there exists [`Client`].
 pub trait AbstractClient<Block, Backend>:
-	BlockchainEvents<Block> + Sized + Send + Sync
+	BlockchainEvents<Block>
+	+ Sized
+	+ Send
+	+ Sync
 	+ ProvideRuntimeApi<Block>
 	+ HeaderBackend<Block>
-	+ CallApiAt<
-		Block,
-		StateBackend = Backend::State
-	>
-	where
-		Block: BlockT,
-		Backend: BackendT<Block>,
-		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
-{}
+	+ CallApiAt<Block, StateBackend = Backend::State>
+where
+	Block: BlockT,
+	Backend: BackendT<Block>,
+	Backend::State: sp_api::StateBackend<BlakeTwo256>,
+	Self::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+{
+}
 
 impl<Block, Backend, Client> AbstractClient<Block, Backend> for Client
-	where
-		Block: BlockT,
-		Backend: BackendT<Block>,
-		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Client: BlockchainEvents<Block> + ProvideRuntimeApi<Block> + HeaderBackend<Block>
-			+ Sized + Send + Sync
-			+ CallApiAt<
-				Block,
-				StateBackend = Backend::State
-			>,
-		Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
-{}
+where
+	Block: BlockT,
+	Backend: BackendT<Block>,
+	Backend::State: sp_api::StateBackend<BlakeTwo256>,
+	Client: BlockchainEvents<Block>
+		+ ProvideRuntimeApi<Block>
+		+ HeaderBackend<Block>
+		+ Sized
+		+ Send
+		+ Sync
+		+ CallApiAt<Block, StateBackend = Backend::State>,
+	Client::Api: RuntimeApiCollection<StateBackend = Backend::State>,
+{
+}
 
 /// Execute something with the client instance.
 ///
@@ -112,12 +120,12 @@ pub trait ExecuteWithClient {
 
 	/// Execute whatever should be executed with the given client instance.
 	fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
-		where
-			<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-			Backend: sc_client_api::Backend<Block>,
-			Backend::State: sp_api::StateBackend<BlakeTwo256>,
-			Api: crate::RuntimeApiCollection<StateBackend = Backend::State>,
-			Client: AbstractClient<Block, Backend, Api = Api> + 'static;
+	where
+		<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
+		Backend: sc_client_api::Backend<Block>,
+		Backend::State: sp_api::StateBackend<BlakeTwo256>,
+		Api: crate::RuntimeApiCollection<StateBackend = Backend::State>,
+		Client: AbstractClient<Block, Backend, Api = Api> + 'static;
 }
 
 /// A handle to a Polkadot client instance.
@@ -138,19 +146,23 @@ pub trait ClientHandle {
 /// See [`ExecuteWithClient`] for more information.
 #[derive(Clone)]
 pub enum Client {
-	Asgard(Arc<crate::FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
-	Bifrost(Arc<crate::FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
+	#[cfg(feature = "with-asgard-runtime")]
+	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, crate::AsgardExecutor>>),
+	#[cfg(feature = "with-bifrost-runtime")]
+	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
 }
 
 impl ClientHandle for Client {
 	fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => {
-				T::execute_with_client::<_, _, crate::FullBackend>(t, client.clone())
-			},
+				T::execute_with_client::<_, _, FullBackend>(t, client.clone())
+			}
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => {
-				T::execute_with_client::<_, _, crate::FullBackend>(t, client.clone())
-			},
+				T::execute_with_client::<_, _, FullBackend>(t, client.clone())
+			}
 		}
 	}
 }
@@ -158,7 +170,9 @@ impl ClientHandle for Client {
 impl sc_client_api::UsageProvider<Block> for Client {
 	fn usage_info(&self) -> sc_client_api::ClientInfo<Block> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.usage_info(),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.usage_info(),
 		}
 	}
@@ -167,67 +181,78 @@ impl sc_client_api::UsageProvider<Block> for Client {
 impl sc_client_api::BlockBackend<Block> for Client {
 	fn block_body(
 		&self,
-		id: &BlockId<Block>
+		id: &BlockId<Block>,
 	) -> sp_blockchain::Result<Option<Vec<<Block as BlockT>::Extrinsic>>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.block_body(id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_body(id),
 		}
 	}
 
 	fn block(&self, id: &BlockId<Block>) -> sp_blockchain::Result<Option<SignedBlock<Block>>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.block(id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block(id),
 		}
 	}
 
 	fn block_status(&self, id: &BlockId<Block>) -> sp_blockchain::Result<BlockStatus> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.block_status(id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_status(id),
 		}
 	}
 
-	fn justifications(
-		&self,
-		id: &BlockId<Block>
-	) -> sp_blockchain::Result<Option<Justifications>> {
+	fn justifications(&self, id: &BlockId<Block>) -> sp_blockchain::Result<Option<Justifications>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.justifications(id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.justifications(id),
 		}
 	}
 
 	fn block_hash(
 		&self,
-		number: NumberFor<Block>
+		number: NumberFor<Block>,
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.block_hash(number),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_hash(number),
 		}
 	}
 
 	fn indexed_transaction(
 		&self,
-		id: &<Block as BlockT>::Hash
+		id: &<Block as BlockT>::Hash,
 	) -> sp_blockchain::Result<Option<Vec<u8>>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.indexed_transaction(id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.indexed_transaction(id),
 		}
 	}
 }
 
-impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
+impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 	fn storage(
 		&self,
 		id: &BlockId<Block>,
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<StorageData>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.storage(id, key),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage(id, key),
 		}
 	}
@@ -238,7 +263,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key_prefix: &StorageKey,
 	) -> sp_blockchain::Result<Vec<StorageKey>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.storage_keys(id, key_prefix),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_keys(id, key_prefix),
 		}
 	}
@@ -249,7 +276,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.storage_hash(id, key),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_hash(id, key),
 		}
 	}
@@ -260,7 +289,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key_prefix: &StorageKey,
 	) -> sp_blockchain::Result<Vec<(StorageKey, StorageData)>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.storage_pairs(id, key_prefix),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_pairs(id, key_prefix),
 		}
 	}
@@ -270,9 +301,13 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		id: &BlockId<Block>,
 		prefix: Option<&'a StorageKey>,
 		start_key: Option<&StorageKey>,
-	) -> sp_blockchain::Result<KeyIterator<'a, <crate::FullBackend as sc_client_api::Backend<Block>>::State, Block>> {
+	) -> sp_blockchain::Result<
+		KeyIterator<'a, <FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+	> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.storage_keys_iter(id, prefix, start_key),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_keys_iter(id, prefix, start_key),
 		}
 	}
@@ -284,7 +319,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<StorageData>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.child_storage(id, child_info, key),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.child_storage(id, child_info, key),
 		}
 	}
@@ -296,7 +333,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key_prefix: &StorageKey,
 	) -> sp_blockchain::Result<Vec<StorageKey>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.child_storage_keys(id, child_info, key_prefix),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.child_storage_keys(id, child_info, key_prefix),
 		}
 	}
@@ -308,7 +347,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.child_storage_hash(id, child_info, key),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.child_storage_hash(id, child_info, key),
 		}
 	}
@@ -319,7 +360,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		last: BlockId<Block>,
 	) -> sp_blockchain::Result<Option<(NumberFor<Block>, BlockId<Block>)>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.max_key_changes_range(first, last),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.max_key_changes_range(first, last),
 		}
 	}
@@ -332,7 +375,9 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 		key: &StorageKey,
 	) -> sp_blockchain::Result<Vec<(NumberFor<Block>, u32)>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.key_changes(first, last, storage_key, key),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.key_changes(first, last, storage_key, key),
 		}
 	}
@@ -341,35 +386,45 @@ impl sc_client_api::StorageProvider<Block, crate::FullBackend> for Client {
 impl sp_blockchain::HeaderBackend<Block> for Client {
 	fn header(&self, id: BlockId<Block>) -> sp_blockchain::Result<Option<Header>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.header(&id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.header(&id),
 		}
 	}
 
 	fn info(&self) -> sp_blockchain::Info<Block> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.info(),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.info(),
 		}
 	}
 
 	fn status(&self, id: BlockId<Block>) -> sp_blockchain::Result<sp_blockchain::BlockStatus> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.status(id),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.status(id),
 		}
 	}
 
 	fn number(&self, hash: Hash) -> sp_blockchain::Result<Option<BlockNumber>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.number(hash),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.number(hash),
 		}
 	}
 
 	fn hash(&self, number: BlockNumber) -> sp_blockchain::Result<Option<Hash>> {
 		match self {
+			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard(client) => client.hash(number),
+			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.hash(number),
 		}
 	}

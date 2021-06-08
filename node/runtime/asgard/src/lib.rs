@@ -62,7 +62,7 @@ use sp_std::marker::PhantomData;
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol};
+use node_primitives::{Moment, Amount, CurrencyId, TokenSymbol, Nonce};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -573,7 +573,7 @@ orml_traits::parameter_type_with_key! {
 
 impl bifrost_assets::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Currencies;
 	type WeightInfo = ();
 }
 
@@ -819,7 +819,7 @@ construct_runtime! {
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		Assets: orml_tokens::{Pallet, Storage, Event<T>, Config<T>} = 17,
+		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink
@@ -875,6 +875,15 @@ pub type Executive = frame_executive::Executive<
 >;
 
 impl_runtime_apis! {
+	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
+		fn validate_transaction(
+			source: TransactionSource,
+			tx: <Block as BlockT>::Extrinsic,
+		) -> TransactionValidity {
+			Executive::validate_transaction(source, tx)
+		}
+	}
+
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
@@ -886,12 +895,6 @@ impl_runtime_apis! {
 
 		fn initialize_block(header: &<Block as BlockT>::Header) {
 			Executive::initialize_block(header)
-		}
-	}
-
-	impl sp_api::Metadata<Block> for Runtime {
-		fn metadata() -> OpaqueMetadata {
-			Runtime::metadata().into()
 		}
 	}
 
@@ -915,12 +918,28 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-		fn validate_transaction(
-			source: TransactionSource,
-			tx: <Block as BlockT>::Extrinsic,
-		) -> TransactionValidity {
-			Executive::validate_transaction(source, tx)
+	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+		fn account_nonce(account: AccountId) -> Nonce {
+			System::account_nonce(account)
+		}
+	}
+
+	impl pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<
+		Block,
+		Balance,
+	> for Runtime {
+		fn query_info(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment::RuntimeDispatchInfo<Balance> {
+			TransactionPayment::query_info(uxt, len)
+		}
+
+		fn query_fee_details(uxt: <Block as BlockT>::Extrinsic, len: u32) -> pallet_transaction_payment_rpc_runtime_api::FeeDetails<Balance> {
+			TransactionPayment::query_fee_details(uxt, len)
+		}
+	}
+
+	impl sp_api::Metadata<Block> for Runtime {
+		fn metadata() -> OpaqueMetadata {
+			Runtime::metadata().into()
 		}
 	}
 
@@ -942,6 +961,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+			ParachainSystem::collect_collation_info()
+		}
+	}
+
 	impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
 		fn slot_duration() -> sp_consensus_aura::SlotDuration {
 			sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
@@ -952,15 +977,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
-		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
-			ParachainSystem::collect_collation_info()
-		}
-	}
-
 	impl bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
 		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-		let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),

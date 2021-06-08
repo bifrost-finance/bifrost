@@ -20,9 +20,15 @@
 
 //! Service implementation. Specialized wrapper over substrate service.
 
+// use sc_service::{TFullBackend, TFullClient};
+
+pub use collator::*;
+pub use client::*;
+
 pub mod chain_spec;
 pub mod collator;
-pub use collator::*;
+mod client;
+
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {

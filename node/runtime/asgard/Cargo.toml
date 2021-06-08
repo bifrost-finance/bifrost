@@ -81,8 +81,8 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 #orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 xcm-support = { path = "../../../xcm-support", default-features = false }
 
-zenlink-protocol = { version = "0.4.0", default-features = false }
-zenlink-protocol-runtime-api = { version = "0.4.0", default-features = false }
+zenlink-protocol = { version = "*", default-features = false }
+zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
