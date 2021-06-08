@@ -48,6 +48,3 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
         self.id().starts_with("bifrost") || self.id().starts_with("bnc")
     }
 }
-
-// type FullBackend = TFullBackend<Block>;
-// type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
