@@ -26,6 +26,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+#[allow(unused_must_use)]
+
 
 use codec::FullCodec;
 use frame_support::{dispatch::Weight, traits::Contains};
@@ -196,7 +198,6 @@ impl<
 		) {
 			// known asset
 			(who, currency_id, Some(amount)) =>
-			#[allow(unused_must_use)]
 			{
 				MultiCurrency::deposit(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
 					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
@@ -216,7 +217,6 @@ impl<
 		) {
 			// known asset
 			(who, currency_id, Some(amount)) =>
-			#[allow(unused_must_use)]
 			{
 				MultiCurrency::withdraw(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
 					.map_err(|e| XcmError::FailedToTransactAsset(e.into()));
