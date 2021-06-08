@@ -635,6 +635,8 @@ impl bifrost_salp::Config for Runtime {
 	type SubmissionDeposit = SubmissionDeposit;
 	type MinContribution = MinContribution;
 	type RemoveKeysLimit = RemoveKeysLimit;
+	type XcmSender = XcmRouter;
+	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 }
 
 // bifrost runtime end

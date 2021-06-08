@@ -35,6 +35,8 @@ pub mod pallet {
 	use node_primitives::{CurrencyId};
 	use frame_support::PalletId;
 	use frame_support::pallet_prelude::storage::child;
+	use xcm::v0::{MultiLocation, SendXcm};
+	use frame_support::storage::ChildTriePrefixIterator;
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -115,6 +117,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
+		type XcmSender: SendXcm;
+
+		type SendXcmOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin, Success=MultiLocation>;
+
 	}
 
 	#[pallet::pallet]
@@ -178,6 +184,8 @@ pub mod pallet {
 		InvalidSignature,
 		/// Invalid fund status.
 		InvalidFundStatus,
+		/// Insufficient Balance.
+		InsufficientBalance,
 	}
 
 	#[pallet::storage]
@@ -306,12 +314,14 @@ pub mod pallet {
 		/// slot is unable to be purchased and the timeout expires.
 		#[pallet::weight(0)]
 		pub(super) fn contribute(
-			_origin: OriginFor<T>,
+			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			contributor: AccountId<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let who = contributor.clone();//ensure_signed(origin)?;
+			let _origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin)?;
+
+			let who = contributor.clone();
 
 			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -324,9 +334,49 @@ pub mod pallet {
 			let balance = old_balance.saturating_add(value);
 			Self::contribution_put(fund.trie_index, &who, &balance);
 
-			// TODO deposit KSM/DOT to fund_account
+			// TODO
+			// deposit KSM/DOT to fund_account
 			// issue vsToken/vsBond to sender
-			// call XcmHandler with cross-chain transaction to contribute KSM/DOT on relay chain
+
+			Funds::<T>::insert(index, Some(fund));
+
+			Self::deposit_event(Event::Contributed(who, index, value));
+
+			Ok(().into())
+		}
+
+		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
+		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
+		/// slot is unable to be purchased and the timeout expires.
+		#[pallet::weight(0)]
+		pub(super) fn partially_withdraw(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			contributor: AccountId<T>,
+			#[pallet::compact] value: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let _origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin)?;
+
+			let who = contributor.clone();
+
+			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
+			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+
+			let old_balance = Self::contribution_get(fund.trie_index, &who);
+			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			ensure!(old_balance >= value, Error::<T>::InsufficientBalance);
+			let balance = old_balance.saturating_sub(value);
+			Self::contribution_put(fund.trie_index, &who, &balance);
+
+			ensure!(fund.raised >= value, Error::<T>::InsufficientBalance);
+			fund.raised = fund.raised.saturating_sub(value);
+			// fund.raised = fund.raised.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
+			// TODO withdraw vsToken/vsBond from sender and withdraw KSM/DOT to fund_account
+			let _fund_account = Self::fund_account_id(index);
+			// T::Currency::withdraw(vsToken,contributor,value);
+			// T::Currency::withdraw(vsBond,contributor,value);
+			// T::Currency::withdraw(vsKsm,fund_account,value);
 
 			Funds::<T>::insert(index, Some(fund));
 
@@ -372,11 +422,11 @@ pub mod pallet {
 
 			Funds::<T>::insert(index, Some(fund));
 
-			// TODO destroy vsToken/vsBond from sender
-			// T::Currency::destroy(vsToken);
-			// T::Currency::destroy(vsBond);
-			// TODO withdraw KSM/DOT to fund_account
-			// T::Currency::withdraw(token);
+			// TODO destroy vsToken/vsBond from sender& withdraw KSM/DOT to fund_account
+			let _fund_account = Self::fund_account_id(index);
+			// T::Currency::destroy(vsToken,who);
+			// T::Currency::destroy(vsBond,who);
+			// T::Currency::withdraw(token,balance);
 
 			Self::deposit_event(Event::Withdrew(who, index, balance));
 
@@ -450,6 +500,12 @@ pub mod pallet {
 
 		pub fn crowdloan_kill(index: TrieIndex) -> child::KillChildStorageResult {
 			child::kill_storage(&Self::id_from_index(index), Some(T::RemoveKeysLimit::get()))
+		}
+
+		pub fn contribution_iterator(
+			index: TrieIndex
+		) -> ChildTriePrefixIterator<(T::AccountId, (BalanceOf<T>, Vec<u8>))> {
+			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(&Self::id_from_index(index), &[])
 		}
 	}
 }
