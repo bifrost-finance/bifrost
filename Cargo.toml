@@ -21,6 +21,7 @@ members = [
 	"pallets/voucher",
 	"pallets/charge-transaction-fee",
 	"pallets/vsbond-auction",
+	"pallets/bancor",
 	"xcm-support",
 ]
 
