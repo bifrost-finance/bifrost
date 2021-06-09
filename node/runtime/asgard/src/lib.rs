@@ -512,7 +512,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type XcmReserveTransferFilter = ();
+	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
