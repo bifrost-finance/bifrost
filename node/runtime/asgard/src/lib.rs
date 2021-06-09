@@ -784,7 +784,7 @@ construct_runtime! {
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 5,
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config, Event<T>} = 6,
+		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 6,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
 

@@ -220,8 +220,6 @@ pub fn run() -> Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
-				let key = sp_core::Pair::generate().0;
-
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
@@ -258,7 +256,7 @@ pub fn run() -> Result<()> {
 					}
 				);
 
-				service::collator::start_node(config, key, polkadot_config, id)
+				service::collator::start_node(config, polkadot_config, id)
 					.await
 					.map_err(Into::into)
 			})

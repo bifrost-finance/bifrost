@@ -48,24 +48,24 @@ pallet-scheduler = { version = "3.0.0", default-features = false }
 pallet-aura = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
 
 # Polkadot dependencies
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
 
 [build-dependencies]
-substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3" }
+substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 
 [dev-dependencies]
 sp-io = { version = "3.0.0" }

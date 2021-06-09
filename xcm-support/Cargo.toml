@@ -7,14 +7,14 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.3", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.3" }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.3" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 node-primitives = { default-features = false, path = "../node/primitives" }
 
