@@ -23,7 +23,7 @@ use bifrost_runtime::{
 	AccountId, AuraId,
 	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
 	ParachainInfoConfig, WASM_BINARY,
-	DemocracyConfig, CouncilConfig, TechnicalCommitteeConfig,
+	DemocracyConfig, CouncilConfig, TechnicalCommitteeConfig, VestingConfig,
 
 };
 use super::TELEMETRY_URL;
@@ -96,6 +96,7 @@ pub fn bifrost_genesis(
 		},
 		cumulus_pallet_aura_ext: Default::default(),
 		cumulus_pallet_parachain_system: Default::default(),
+		bifrost_vesting: VestingConfig { vesting: vec![] },
 	}
 }
 
