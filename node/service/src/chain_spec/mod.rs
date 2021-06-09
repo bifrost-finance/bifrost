@@ -21,7 +21,7 @@ pub mod asgard;
 #[cfg(feature = "with-bifrost-runtime")]
 pub mod bifrost;
 
-use std::{fs::File, path::PathBuf};
+use std::{fs::{File, read_dir}, path::PathBuf};
 use hex_literal::hex;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
@@ -167,4 +167,22 @@ fn config_from_json_file<T: DeserializeOwned>(path: PathBuf) -> Result<T, String
 		.map_err(|e| format!("Error parsing config file: {}", e))?;
 
 	Ok(config)
+}
+
+fn config_from_json_files<T: DeserializeOwned>(dir: PathBuf) -> Result<Vec<T>, String> {
+	let mut configs = vec![];
+
+	if dir.is_dir() {
+		let iter = read_dir(&dir)
+			.map_err(|e| format!("Error opening directory: {}", e))?;
+		for entry in iter {
+			let path = entry.map_err(|e| format!("{}", e))?.path();
+
+			if !path.is_dir() {
+				configs.push(config_from_json_file(path)?);
+			}
+		}
+	}
+
+	Ok(configs)
 }

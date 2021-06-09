@@ -21,7 +21,6 @@ use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use bifrost_runtime::{
 	AccountId, AuraId,
-	constants::{currency::DOLLARS},
 	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
 	ParachainInfoConfig, WASM_BINARY,
 	DemocracyConfig, CouncilConfig, TechnicalCommitteeConfig,
@@ -48,11 +47,13 @@ pub fn bifrost_genesis(
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
 
-	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
-
-	let balances_config: BalancesConfig =
-		super::config_from_json_file(PathBuf::from("./res/genesis_config/bifrost/balances.json"))
+	let balances_configs: Vec<BalancesConfig> =
+		super::config_from_json_files(PathBuf::from("./res/genesis_config/balances/"))
 			.unwrap();
+
+	let balances_config = BalancesConfig {
+		balances: balances_configs.into_iter().flat_map(|bc| bc.balances).collect(),
+	};
 
 	GenesisConfig {
 		frame_system: SystemConfig {
