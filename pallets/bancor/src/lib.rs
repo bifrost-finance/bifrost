@@ -42,6 +42,10 @@ pub struct BancorPool<T: Config> {
 	pub(crate) vstoken_base_supply: BalanceOf<T>,  // initial supply of vstoken for the pool
 }
 
+pub trait BancorHandler<Balance> {
+	fn add_token(currency_id: CurrencyId, amount: Balance) -> Result<(), DispatchError>;
+}
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -187,6 +191,23 @@ impl<T: Config> Pallet<T> {
 		ensure!(price <= pool_info.token_pool, Error::<T>::TokenSupplyNotEnought);
 
 		Ok(price)
+	}
+}
+
+impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T>{
+	fn add_token(currency_id: CurrencyId, amount: BalanceOf<T>) -> Result<(), DispatchError> {
+
+		BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
+			match pool {
+				Some(pool_info) => {
+					pool_info.token_pool = pool_info.token_pool.saturating_add(amount);
+					Ok(())
+				},
+				_ => Err(Error::<T>::BancorPoolNotExist)
+			}
+		})?;
+
+		Ok(())
 	}
 }
 

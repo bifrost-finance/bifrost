@@ -30,6 +30,8 @@ use sp_runtime::{
 
 const TWELVE_TEN: Balance = 1_000_000_000_000;
 pub type AccountId = AccountId32;
+pub const VSDOT_BASE_SUPPLY: Balance = 10_000 * TWELVE_TEN;
+pub const VSKSM_BASE_SUPPLY: Balance = 1_000_000 * TWELVE_TEN;
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const VSDOT: CurrencyId = CurrencyId::VSToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -154,8 +156,8 @@ impl ExtBuilder {
 
 		crate::GenesisConfig::<Test> {
 			bancor_pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * TWELVE_TEN),
-				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * TWELVE_TEN),
+				(CurrencyId::Token(TokenSymbol::DOT), VSDOT_BASE_SUPPLY),
+				(CurrencyId::Token(TokenSymbol::KSM), VSKSM_BASE_SUPPLY),
 			],
 		}
 		.assimilate_storage(&mut t)

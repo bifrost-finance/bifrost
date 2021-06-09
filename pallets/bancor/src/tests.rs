@@ -34,8 +34,8 @@ fn exchange_should_work() {
 		let ksm_pool = Bancor::get_bancor_pool(KSM).unwrap();
 		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
 
-		assert_eq!(ksm_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::KSM), token_pool: 0, vstoken_pool: 0, token_base_supply: 2000000000000000000, vstoken_base_supply: 1000000000000000000 });
-		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 0, vstoken_pool: 0, token_base_supply: 20000000000000000, vstoken_base_supply: 10000000000000000 });
+		assert_eq!(ksm_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::KSM), token_pool: 0, vstoken_pool: 0, token_base_supply: 2 * VSKSM_BASE_SUPPLY, vstoken_base_supply: VSKSM_BASE_SUPPLY });
+		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 0, vstoken_pool: 0, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 
 		// the pool has no real DOT
 		assert_noop!(Bancor::exchange(Origin::signed(ALICE), DOT, 50), Error::<Test>::TokenSupplyNotEnought);
@@ -54,10 +54,24 @@ fn exchange_should_work() {
 		// exchange succeeds.
 		assert_ok!(Bancor::exchange(Origin::signed(ALICE), DOT, 50));
 		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
-		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 50, vstoken_pool: 50, token_base_supply: 20000000000000000, vstoken_base_supply: 10000000000000000 });
+		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 50, vstoken_pool: 50, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 
 		// check ALICE's account balances. ALICE should have 1000-50 VSDOT, and 1000+50 DOT.
 		assert_eq!(Assets::free_balance(DOT, &ALICE), 1050);
 		assert_eq!(Assets::free_balance(VSDOT, &ALICE), 950);
 });
+}
+
+#[test]
+fn add_token_should_work() {
+	ExtBuilder::default()
+	.one_thousand_for_alice_n_bob()
+	.build()
+	.execute_with(|| {
+		assert_ok!(Bancor::add_token(DOT, 4000));
+
+		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
+		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 4000, vstoken_pool: 0, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
+
+	});
 }
