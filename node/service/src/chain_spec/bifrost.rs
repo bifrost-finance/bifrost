@@ -55,6 +55,14 @@ pub fn bifrost_genesis(
 		balances: balances_configs.into_iter().flat_map(|bc| bc.balances).collect(),
 	};
 
+	let vesting_configs: Vec<VestingConfig> =
+		super::config_from_json_files(PathBuf::from("./res/genesis_config/vesting/"))
+			.unwrap();
+
+	let vesting_config = VestingConfig {
+		vesting: vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
+	};
+
 	GenesisConfig {
 		frame_system: SystemConfig {
 			code: WASM_BINARY
@@ -96,7 +104,7 @@ pub fn bifrost_genesis(
 		},
 		cumulus_pallet_aura_ext: Default::default(),
 		cumulus_pallet_parachain_system: Default::default(),
-		bifrost_vesting: VestingConfig { vesting: vec![] },
+		bifrost_vesting: vesting_config,
 	}
 }
 
