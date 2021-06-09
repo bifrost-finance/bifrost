@@ -102,15 +102,15 @@ wasm-bindgen = { version = "0.2.57", optional = true }
 wasm-bindgen-futures = { version = "0.4.18", optional = true }
 
 # Cumulus dependencies
-cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.3" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.3" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.3" }
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3" }
-polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
+polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
 
 [target.'cfg(target_arch="x86_64")'.dependencies]
 sc-cli = { version = "0.9.0", optional = true, features = [ "wasmtime" ] }

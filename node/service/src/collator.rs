@@ -235,7 +235,7 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	let transaction_pool = params.transaction_pool.clone();
 	let mut task_manager = params.task_manager;
 	let import_queue = cumulus_client_service::SharedImportQueue::new(params.import_queue);
-	let (network, network_status_sinks, system_rpc_tx, start_network) =
+	let (network, system_rpc_tx, start_network) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
 			config: &parachain_config,
 			client: client.clone(),
@@ -260,7 +260,6 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 		keystore: params.keystore_container.sync_keystore(),
 		backend: backend.clone(),
 		network: network.clone(),
-		network_status_sinks,
 		system_rpc_tx,
 		telemetry: telemetry.as_mut(),
 	})?;
