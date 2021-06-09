@@ -76,6 +76,10 @@ use xcm_executor::{Config, XcmExecutor};
 use pallet_xcm::{XcmPassthrough};
 use xcm::v0::Xcm;
 use frame_system::{EnsureRoot, EnsureOneOf};
+use frame_support::sp_runtime::traits::ConvertInto;
+
+// Weights used in the runtime.
+mod weights;
 
 pub type SessionHandlers = ();
 
@@ -585,6 +589,19 @@ impl pallet_collator_selection::Config for Runtime {
 
 // culumus runtime end
 
+
+parameter_types! {
+	pub const MinVestedTransfer: Balance = 100 * CENTS;
+}
+
+impl bifrost_vesting::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BlockNumberToBalance = ConvertInto;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
+}
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -627,6 +644,9 @@ construct_runtime! {
 		// utilities
 		Utility: pallet_utility::{Pallet, Call, Event} = 50,
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
+
+		// Vesting. Usable initially, but removed once all vesting is finished.
+		Vesting: bifrost_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
 	}
 }
 
