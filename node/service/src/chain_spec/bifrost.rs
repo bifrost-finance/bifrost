@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::path::PathBuf;
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use bifrost_runtime::{
@@ -49,6 +50,10 @@ pub fn bifrost_genesis(
 
 	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
+	let balances_config: BalancesConfig =
+		super::config_from_json_file(PathBuf::from("./res/genesis_config/bifrost/balances.json"))
+			.unwrap();
+
 	GenesisConfig {
 		frame_system: SystemConfig {
 			code: WASM_BINARY
@@ -56,13 +61,7 @@ pub fn bifrost_genesis(
 				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: BalancesConfig {
-			balances: endowed_accounts.iter()
-				.chain(super::faucet_accounts().iter())
-				.cloned()
-				.map(|x| (x, ENDOWMENT))
-				.collect()
-		},
+		pallet_balances: balances_config,
 		pallet_indices: IndicesConfig {
 			indices: vec![],
 		},
