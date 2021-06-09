@@ -25,7 +25,7 @@ use asgard_runtime::{
 	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
 	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
 };
-
+use super::TELEMETRY_URL;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
@@ -34,73 +34,13 @@ use sp_runtime::Permill;
 use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed, initialize_all_vouchers};
 use node_primitives::{CurrencyId, TokenSymbol};
 
-const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
 /// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
-pub fn config() -> Result<ChainSpec, String> {
-	ChainSpec::from_json_bytes(&include_bytes!("../../res/asgard.json")[..])
-}
-
-fn staging_testnet_config_genesis(id: ParaId) -> GenesisConfig {
-	// stash, controller, session-key
-	// generated with secret:
-	// for i in 1 2 3 4 ; do for j in stash controller; do subkey inspect "$secret"/fir/$j/$i; done; done
-	// and
-	// for i in 1 2 3 4 ; do for j in session; do subkey --ed25519 inspect "$secret"//fir//$j//$i; done; done
-
-	let initial_authorities: Vec<AuraId> = vec![
-		// 5EZaeQ8djPcq9pheJUhgerXQZt9YaHnMJpiHMRhwQeinqUW8
-		hex!["6e7e4eb42cbd2e0ab4cae8708ce5509580b8c04d11f6758dbf686d50fe9f9106"].unchecked_into(),
-		// 5DhLtiaQd1L1LU9jaNeeu9HJkP6eyg3BwXA7iNMzKm7qqruQ
-		hex!["482dbd7297a39fa145c570552249c2ca9dd47e281f0c500c971b59c9dcdcd82e"].unchecked_into(),
-		// 5DhKqkHRkndJu8vq7pi2Q5S3DfftWJHGxbEUNH43b46qNspH
-		hex!["482a3389a6cf42d8ed83888cfd920fec738ea30f97e44699ada7323f08c3380a"].unchecked_into(),
-		// 5C4vDQxA8LTck2xJEy4Yg1hM9qjDt4LvTQaMo4Y8ne43aU6x
-		hex!["00299981a2b92f878baaf5dbeba5c18d4e70f2a1fcd9c61b32ea18daf38f4378"].unchecked_into(),
-	];
-
-	// generated with secret: subkey inspect "$secret"/fir
-	let root_key: AccountId = hex![
-		// 5Ff3iXP75ruzroPWRP2FYBHWnmGGBSb63857BgnzCoXNxfPo
-		"9ee5e5bdc0ec239eb164f865ecc345ce4c88e76ee002e0f7e318097347471809"
-	].into();
-
-	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
-
-	testnet_genesis(
-		initial_authorities,
-		root_key,
-		Some(endowed_accounts),
-		id,
-	)
-}
-
-pub fn staging_testnet_config(id: ParaId) -> ChainSpec {
-	let boot_nodes = vec![];
-	ChainSpec::from_genesis(
-		"Asgard Staging Testnet",
-		"asgard_staging_testnet",
-		ChainType::Live,
-		move || {
-			staging_testnet_config_genesis(id)
-		},
-		boot_nodes,
-		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-			.expect("Staging telemetry url is valid; qed")),
-		None,
-		None,
-		RelayExtensions {
-			relay_chain: "westend-dev".into(),
-			para_id: id.into(),
-		},
-	)
-}
-
 /// Helper function to create asgard GenesisConfig for testing
-pub fn testnet_genesis(
+pub fn asgard_genesis(
 	initial_authorities: Vec<AuraId>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
@@ -204,8 +144,8 @@ pub fn testnet_genesis(
 	}
 }
 
-fn development_config_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
-	testnet_genesis(
+fn development_config_genesis(id: ParaId) -> GenesisConfig {
+	asgard_genesis(
 		vec![get_from_seed::<AuraId>("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
@@ -213,15 +153,12 @@ fn development_config_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig 
 	)
 }
 
-/// Asgard development config (single validator Alice)
 pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Asgard development wasm not available")?;
-
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
 		ChainType::Development,
-		move || development_config_genesis(wasm_binary, id),
+		move || development_config_genesis(id),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
@@ -233,8 +170,8 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 	))
 }
 
-fn local_testnet_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
-	testnet_genesis(
+fn local_config_genesis(id: ParaId) -> GenesisConfig {
+	asgard_genesis(
 		vec![
 			get_from_seed::<AuraId>("Alice"),
 			get_from_seed::<AuraId>("Bob"),
@@ -245,45 +182,27 @@ fn local_testnet_genesis(_wasm_binary: &[u8], id: ParaId) -> GenesisConfig {
 	)
 }
 
-/// Asgard local testnet config (multivalidator Alice + Bob)
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
-	let wasm_binary = WASM_BINARY.ok_or("Asgard development wasm not available")?;
-
 	Ok(ChainSpec::from_genesis(
 		"Asgard Local Testnet",
 		"asgard_local_testnet",
 		ChainType::Local,
-		move || local_testnet_genesis(wasm_binary, id),
+		move || local_config_genesis(id),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		RelayExtensions {
-			relay_chain: "westend-dev".into(),
+			relay_chain: "westend-local".into(),
 			para_id: id.into(),
 		},
 	))
 }
 
 pub fn chainspec_config(id: ParaId) -> ChainSpec {
-	let properties = {
-		let mut props = serde_json::Map::new();
-
-		props.insert(
-			"ss58Format".to_owned(),
-			serde_json::value::to_value(6u8).expect("The ss58Format cannot be convert to json value.")
-		);
-		props.insert(
-			"tokenDecimals".to_owned(),
-			serde_json::value::to_value(12u8).expect("The tokenDecimals cannot be convert to json value.")
-		);
-		props.insert(
-			"tokenSymbol".to_owned(),
-			serde_json::value::to_value("ASG".to_owned()).expect("The tokenSymbol cannot be convert to json value.")
-		);
-		Some(props)
-	};
-	let protocol_id = Some("asgard");
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "ASG".into());
+	properties.insert("tokenDecimals".into(), 12.into());
 
 	ChainSpec::from_genesis(
 		"Bifrost Asgard CC4",
@@ -299,12 +218,11 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 			"/ip4/124.156.223.229/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
 			"/ip4/124.156.217.80/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
 		],
-		Some(TelemetryEndpoints::new(vec![(STAGING_TELEMETRY_URL.to_string(), 0)])
-			.expect("Asgard Testnet telemetry url is valid; qed")),
-		protocol_id,
-		properties,
+		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
+		Some(DEFAULT_PROTOCOL_ID),
+		Some(properties),
 		RelayExtensions {
-			relay_chain: "westend-dev".into(),
+			relay_chain: "westend".into(),
 			para_id: id.into(),
 		},
 	)
@@ -332,7 +250,7 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
-	testnet_genesis(
+	asgard_genesis(
 		initial_authorities,
 		root_key,
 		Some(endowed_accounts),

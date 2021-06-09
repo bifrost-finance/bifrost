@@ -53,21 +53,25 @@ fn load_spec(
 	} else { id };
 	Ok(match id {
 		#[cfg(feature = "with-asgard-runtime")]
-		"asgard" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
+		"asgard" => Box::new(service::chain_spec::asgard::ChainSpec::from_json_bytes(
+			&include_bytes!("../../service/res/asgard.json")[..],
+		)?),
+		#[cfg(feature = "with-asgard-runtime")]
+		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-asgard-runtime")]
-		"asgard-staging" => Box::new(service::chain_spec::asgard::staging_testnet_config(para_id)),
 		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
+		"bifrost" => Box::new(service::chain_spec::bifrost::ChainSpec::from_json_bytes(
+			&include_bytes!("../../service/res/bifrost.json")[..],
+		)?),
+		#[cfg(feature = "with-bifrost-runtime")]
+		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-dev" => Box::new(service::chain_spec::bifrost::development_config(para_id)?),
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-staging" => Box::new(service::chain_spec::bifrost::staging_testnet_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {

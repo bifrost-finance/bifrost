@@ -29,6 +29,8 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, VtokenPool};
 
+pub const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
+
 type AccountPublic = <Signature as Verify>::Signer;
 
 /// Node `ChainSpec` extensions.
