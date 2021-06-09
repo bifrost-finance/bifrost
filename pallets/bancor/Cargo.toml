@@ -8,9 +8,9 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-frame-system = { version = "3.0.0", default-features = false }
-frame-support = { version = "3.0.0", default-features = false }
-sp-runtime = { version = "3.0.0", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
 serde = { version = "1.0.124", optional = true }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -18,11 +18,8 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 num-integer = { version = "0.1.36", default-features = false }
 
 [dev-dependencies]
-sp-io = { version = "3.0.0", default-features = false, features = ["std"] }
-sp-core = { version = "3.0.0", default-features = false, features = ["std"] }
-sp-runtime = { version = "3.0.0", default-features = false, features = ["std"] }
-bifrost-assets = { path = "../assets", default-features = false, features = ["std"] }
-node-primitives = { path = "../../node/primitives", default-features = false, features = ["std"] }
+sp-core = "3.0.0"
+
 
 [features]
 default = ["std"]
@@ -30,8 +27,10 @@ std = [
     "codec/std",
     "frame-system/std",
     "frame-support/std",
+    "sp-runtime/std",
     "serde/std",
     "orml-traits/std",
     "orml-tokens/std",
-    "num-integer/std"
+    "num-integer/std",
+    "node-primitives/std"
 ]
