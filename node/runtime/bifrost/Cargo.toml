@@ -15,7 +15,6 @@ hex-literal = { version = "0.3.1", optional = true }
 
 # primitives
 node-primitives = { default-features = false, path = "../../primitives" }
-sp-consensus-babe = { version = "0.9.0", default-features = false }
 sp-block-builder = { default-features = false, version = "3.0.0"}
 sp-inherents = { version = "3.0.0", default-features = false }
 sp-offchain = { version = "3.0.0", default-features = false }
@@ -97,7 +96,7 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"serde",
-	"sp-consensus-babe/std",
+	"sp-consensus-aura/std",
 	"sp-block-builder/std",
 	"sp-inherents/std",
 	"sp-offchain/std",
@@ -119,6 +118,7 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"pallet-aura/std",
-	"sp-consensus-aura/std",
+	"pallet-collator-selection/std",
+	"pallet-session/std",
 	"pallet-vesting/std",
 ]

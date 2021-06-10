@@ -779,7 +779,6 @@ dependencies = [
  "sp-api",
  "sp-block-builder",
  "sp-consensus-aura",
- "sp-consensus-babe",
  "sp-core",
  "sp-inherents",
  "sp-io",
@@ -5636,6 +5635,7 @@ name = "pallet-collator-selection"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.4#08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

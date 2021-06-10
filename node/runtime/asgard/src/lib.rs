@@ -98,9 +98,10 @@ impl_opaque_keys! {
 }
 
 /// This runtime version.
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("bifrost-parachain"),
-	impl_name: create_runtime_str!("bifrost-parachain"),
+	spec_name: create_runtime_str!("asgard"),
+	impl_name: create_runtime_str!("asgard"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
