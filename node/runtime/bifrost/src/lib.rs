@@ -150,6 +150,8 @@ impl Filter<Call> for CallFilter {
     fn filter(c: &Call) -> bool {
 		match *c {
 			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
+			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
+			Call::Vesting(..) => false,
 			_ => true,
 		}
 	}
