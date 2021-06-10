@@ -36,7 +36,7 @@ function getFiles(path) {
     }
 }
 
-const patt = /(?<=\[")[a-zA-Z0-9]*(?=",)/g;
+const patt = /(?<=\[").*(?=",)/g;
 
 const arg = process.argv[2];
 const files = getFiles(arg);
@@ -48,7 +48,7 @@ files.forEach(file => {
 
     addrs.forEach(addr => {
         if(!checkSS58(addr)) {
-            console.log(`Invalid Addr: ${addr} in ${file}.`);
+            console.log(`Invalid Addr: "${addr}" in ${file}.`);
         }
     });
 });
