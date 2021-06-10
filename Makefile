@@ -70,4 +70,4 @@ copy-genesis-config:
 .PHONY: copy-genesis-config-release
 copy-genesis-config-release:
 	mkdir -p "target/release/res"
-	cp -r bin/node/service/res/genesis_config target/release/res
+	cp -r node/service/res/genesis_config target/release/res
