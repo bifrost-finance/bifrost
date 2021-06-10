@@ -34,8 +34,8 @@ files.forEach(file => {
 
     let blen = barr.length;
 
-    for(qptr = 0; qptr < blen - 1; qptr++) {
-        for(sptr = qptr + 1; sptr < blen; sptr++) {
+    for(let qptr = 0; qptr < blen - 1; qptr++) {
+        for(let sptr = qptr + 1; sptr < blen; sptr++) {
             let qaddr = barr[qptr][0];
             let saddr = barr[sptr][0];
 
