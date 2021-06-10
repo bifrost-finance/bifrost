@@ -146,7 +146,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
-
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Local Testnet",
 		"bifrost_local_testnet",
@@ -189,24 +188,24 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
-			 // 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
-		 	hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].into(),
-		 	hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
+			// hLqx71MpQBZhDGFBCfTFDMGWs2URK29ZgeiMJ3xo8voQcmT
+		 	hex!["f88bc809a34f3f6e2e7ea7627d07f188e6a26cfc551aa623d068887c8726692f"].into(),
+		 	hex!["f88bc809a34f3f6e2e7ea7627d07f188e6a26cfc551aa623d068887c8726692f"].unchecked_into(),
 		),
 		(
-			// 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
-			hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].into(),
-			hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
+			// cSxD6oVWLkC9MdBENkQVv44R7Z4yxA86YLTEg7CgGreRxjb
+			hex!["2007279d9f709e6d290af3c41ab80a4f0d2598557cf73f1c7b273634bc637433"].into(),
+			hex!["2007279d9f709e6d290af3c41ab80a4f0d2598557cf73f1c7b273634bc637433"].unchecked_into(),
 		),
 		(
-			// 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
-			hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].into(),
-			hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
+			// cQQ4djADuJj47F8EKVvKaGi5F5ArzB1iK4iTfyEn8emXx5v
+			hex!["1e14736ff893c6c374787f1ac236ed0338b78d97a5dadf709cbb453725c92568"].into(),
+			hex!["1e14736ff893c6c374787f1ac236ed0338b78d97a5dadf709cbb453725c92568"].unchecked_into(),
 		),
 		(
-			// 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
-			hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].into(),
-			hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
+			// fquGAMUNzgdfW1KMr6F93KSpHTXpp5zQaq78mGXeS7gYCuL
+			hex!["b63c9403a688247bdf77131e090c2eacba4e73ac18b0acd582fd96437bc0d87a"].into(),
+			hex!["b63c9403a688247bdf77131e090c2eacba4e73ac18b0acd582fd96437bc0d87a"].unchecked_into(),
 		),
 	 ];
 
