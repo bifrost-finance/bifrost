@@ -151,7 +151,9 @@ impl Filter<Call> for CallFilter {
 		match *c {
 			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
 			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
-			Call::Vesting(..) => false,
+			Call::Vesting(pallet_vesting::Call::<Runtime>::vest(..)) => false,
+			Call::Vesting(pallet_vesting::Call::<Runtime>::vest_other(..)) => false,
+			Call::Vesting(pallet_vesting::Call::<Runtime>::vested_transfer(..)) => false,
 			_ => true,
 		}
 	}
