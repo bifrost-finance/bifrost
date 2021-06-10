@@ -22,8 +22,8 @@ use hex_literal::hex;
 use bifrost_runtime::{
 	AccountId, AuraId,
 	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
-	ParachainInfoConfig, WASM_BINARY,
-	DemocracyConfig, CouncilConfig, TechnicalCommitteeConfig, VestingConfig,
+	ParachainInfoConfig, VestingConfig,
+	WASM_BINARY,
 
 };
 use super::TELEMETRY_URL;
@@ -45,7 +45,6 @@ pub fn bifrost_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-	let num_endowed_accounts = endowed_accounts.len();
 
 	let balances_configs: Vec<BalancesConfig> =
 		super::config_from_json_files(PathBuf::from("./res/genesis_config/balances/"))
@@ -74,15 +73,6 @@ pub fn bifrost_genesis(
 		pallet_indices: IndicesConfig {
 			indices: vec![],
 		},
-		pallet_democracy: DemocracyConfig::default(),
-		pallet_collective_Instance1: CouncilConfig::default(),
-		pallet_collective_Instance2: TechnicalCommitteeConfig {
-			members: endowed_accounts.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
-			phantom: Default::default(),
-		},
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
@@ -104,7 +94,7 @@ pub fn bifrost_genesis(
 		},
 		cumulus_pallet_aura_ext: Default::default(),
 		cumulus_pallet_parachain_system: Default::default(),
-		bifrost_vesting: vesting_config,
+		pallet_vesting: vesting_config,
 	}
 }
 

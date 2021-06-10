@@ -27,7 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
-use sp_core::{OpaqueMetadata, u32_trait::{_1, _2, _3, _4}};
+use sp_core::OpaqueMetadata;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT},
@@ -75,7 +75,7 @@ use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 use pallet_xcm::{XcmPassthrough};
 use xcm::v0::Xcm;
-use frame_system::{EnsureRoot, EnsureOneOf};
+use frame_system::EnsureRoot;
 use frame_support::sp_runtime::traits::ConvertInto;
 
 // Weights used in the runtime.
@@ -90,9 +90,10 @@ impl_opaque_keys! {
 }
 
 /// This runtime version.
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("bifrost-parachain"),
-	impl_name: create_runtime_str!("bifrost-parachain"),
+	spec_name: create_runtime_str!("bifrost"),
+	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
 	spec_version: 1,
 	impl_version: 0,
@@ -260,102 +261,6 @@ impl pallet_balances::Config for Runtime {
 	type MaxLocks = MaxLocks;
 }
 
-parameter_types! {
-	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
-	pub const CouncilMaxProposals: u32 = 100;
-	pub const CouncilMaxMembers: u32 = 100;
-}
-
-type CouncilCollective = pallet_collective::Instance1;
-impl pallet_collective::Config<CouncilCollective> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = CouncilMotionDuration;
-	type MaxProposals = CouncilMaxProposals;
-	type MaxMembers = CouncilMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const TechnicalMotionDuration: BlockNumber = 3 * DAYS;
-	pub const TechnicalMaxProposals: u32 = 100;
-	pub const TechnicalMaxMembers: u32 = 100;
-}
-
-type TechnicalCollective = pallet_collective::Instance2;
-impl pallet_collective::Config<TechnicalCollective> for Runtime {
-	type Origin = Origin;
-	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = TechnicalMotionDuration;
-	type MaxProposals = TechnicalMaxProposals;
-	type MaxMembers = TechnicalMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
-	pub const VotingPeriod: BlockNumber = 7 * DAYS;
-	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub const MinimumDeposit: Balance = 100 * CENTS;
-	pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
-	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
-	pub const InstantAllowed: bool = true;
-	// One cent: $10,000 / MB
-	pub const PreimageByteDeposit: Balance = 1 * CENTS;
-	pub const MaxVotes: u32 = 100;
-	pub const MaxProposals: u32 = 100;
-}
-
-impl pallet_democracy::Config for Runtime {
-	type Proposal = Call;
-	type Event = Event;
-	type Currency = Balances;
-	type EnactmentPeriod = EnactmentPeriod;
-	type LaunchPeriod = LaunchPeriod;
-	type VotingPeriod = VotingPeriod;
-	type MinimumDeposit = MinimumDeposit;
-	/// A straight majority of the council can decide what their next motion is.
-	type ExternalOrigin = pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
-	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
-	type ExternalMajorityOrigin = pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
-	/// A unanimous council can have the next scheduled referendum be a straight default-carries
-	/// (NTB) vote.
-	type ExternalDefaultOrigin = pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
-	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
-	/// be tabled immediately and with a shorter voting/enactment period.
-	type FastTrackOrigin = pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
-	type InstantOrigin = pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
-	type InstantAllowed = InstantAllowed;
-	type FastTrackVotingPeriod = FastTrackVotingPeriod;
-	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-	type CancellationOrigin = pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
-	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
-	// Root must agree.
-	type CancelProposalOrigin = EnsureOneOf<
-		AccountId,
-		EnsureRoot<AccountId>,
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
-	>;
-	type BlacklistOrigin = EnsureRoot<AccountId>;
-	// Any single technical committee member may veto a coming council proposal, however they can
-	// only do it once and it lasts only for the cool-off period.
-	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
-	type CooloffPeriod = CooloffPeriod;
-	type PreimageByteDeposit = PreimageByteDeposit;
-	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-	// NOTE: Treasury replaced by `()`.
-	type Slash = ();
-	type Scheduler = Scheduler;
-	type PalletsOrigin = OriginCaller;
-	type MaxVotes = MaxVotes;
-	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
-	type MaxProposals = MaxProposals;
-}
-
 impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
 	type TransactionByteFee = TransactionByteFee;
@@ -390,8 +295,8 @@ impl parachain_info::Config for Runtime {}
 impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
-	pub const RocLocation: MultiLocation = X1(Parent);
-	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
+	pub const KsmLocation: MultiLocation = X1(Parent);
+	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = X1(Parachain(ParachainInfo::parachain_id().into()));
 }
@@ -405,7 +310,7 @@ pub type LocationToAccountId = (
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<RococoNetwork, AccountId>,
+	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
 /// Means for transacting assets on this chain.
@@ -413,7 +318,7 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RocLocation>,
+	IsConcrete<KsmLocation>,
 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -441,7 +346,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	ParentAsSuperuser<Origin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `Origin::Signed` origin of the same 32-byte value.
-	SignedAccountId32AsNative<RococoNetwork, Origin>,
+	SignedAccountId32AsNative<RelayNetwork, Origin>,
 	// Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
 	XcmPassthrough<Origin>,
 );
@@ -478,13 +383,13 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-	type Trader = UsingComponents<IdentityFee<Balance>, RocLocation, AccountId, Balances, ()>;
+	type Trader = UsingComponents<IdentityFee<Balance>, KsmLocation, AccountId, Balances, ()>;
 	type ResponseHandler = ();	// Don't handle responses for now.
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = (
-	SignedToAccountId32<Origin, AccountId, RococoNetwork>,
+	SignedToAccountId32<Origin, AccountId, RelayNetwork>,
 );
 
 /// The means for routing XCM messages which are not for local execution into the right message
@@ -568,16 +473,10 @@ parameter_types! {
 	pub const MaxInvulnerables: u32 = 100;
 }
 
-type EnsureRootOrHalfGeneralCouncil = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
->;
-
 impl pallet_collator_selection::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type UpdateOrigin = EnsureRootOrHalfGeneralCouncil;
+	type UpdateOrigin = EnsureRoot<AccountId>;
 	type PotId = PotId;
 	type MaxCandidates = MaxCandidates;
 	type MaxInvulnerables = MaxInvulnerables;
@@ -594,7 +493,7 @@ parameter_types! {
 	pub const MinVestedTransfer: Balance = 100 * CENTS;
 }
 
-impl bifrost_vesting::Config for Runtime {
+impl pallet_vesting::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type BlockNumberToBalance = ConvertInto;
@@ -631,9 +530,9 @@ construct_runtime! {
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
 
 		// Governance stuff
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
+		// Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
+		// Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
+		// TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -646,7 +545,7 @@ construct_runtime! {
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
-		Vesting: bifrost_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 28,
+		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 	}
 }
 
