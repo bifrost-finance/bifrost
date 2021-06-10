@@ -187,8 +187,8 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	 ];
 
 	let root_key: AccountId = hex![
-		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
-		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+		// cjAZA391BNi2S1Je7PNGHiX4UoJh3SbknQSDQ7qh3g4Aa9H
+		"2c64a40ec236d0a0823065791946f6254c4577c6110f512614bd6ece1a3fa22b"
 	].into();
 
 	let balances_configs: Vec<BalancesConfig> =
