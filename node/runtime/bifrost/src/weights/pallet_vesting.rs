@@ -44,7 +44,7 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions for pallet_vesting.
 pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> bifrost_vesting::WeightInfo for WeightInfo<T> {
+impl<T: frame_system::Config> pallet_vesting::WeightInfo for WeightInfo<T> {
 	fn vest_locked(l: u32, ) -> Weight {
 		(40_504_000 as Weight)
 			// Standard Error: 20_000
