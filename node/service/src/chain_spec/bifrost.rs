@@ -19,19 +19,14 @@
 use std::path::PathBuf;
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use bifrost_runtime::{
-	AccountId, AuraId,
-	AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig,
-	ParachainInfoConfig, VestingConfig,
-	WASM_BINARY,
-
-};
+use bifrost_runtime::{AccountId, AuraId, Balance, AuraConfig, BalancesConfig, GenesisConfig, IndicesConfig, SudoConfig, SystemConfig, ParachainInfoConfig, VestingConfig, WASM_BINARY, BlockNumber};
 use super::TELEMETRY_URL;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
 
-use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
+use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, get_from_seed};
+use bifrost_runtime::constants::currency::DOLLARS;
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
@@ -41,27 +36,10 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 pub fn bifrost_genesis(
 	initial_authorities: Vec<AuraId>,
 	root_key: AccountId,
-	endowed_accounts: Option<Vec<AccountId>>,
+	balances: Vec<(AccountId, Balance)>,
+	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-
-	let balances_configs: Vec<BalancesConfig> =
-		super::config_from_json_files(PathBuf::from("./res/genesis_config/balances/"))
-			.unwrap();
-
-	let balances_config = BalancesConfig {
-		balances: balances_configs.into_iter().flat_map(|bc| bc.balances).collect(),
-	};
-
-	let vesting_configs: Vec<VestingConfig> =
-		super::config_from_json_files(PathBuf::from("./res/genesis_config/vesting/"))
-			.unwrap();
-
-	let vesting_config = VestingConfig {
-		vesting: vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
-	};
-
 	GenesisConfig {
 		frame_system: SystemConfig {
 			code: WASM_BINARY
@@ -69,7 +47,9 @@ pub fn bifrost_genesis(
 				.to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: balances_config,
+		pallet_balances: BalancesConfig {
+			balances
+		},
 		pallet_indices: IndicesConfig {
 			indices: vec![],
 		},
@@ -94,15 +74,23 @@ pub fn bifrost_genesis(
 		},
 		cumulus_pallet_aura_ext: Default::default(),
 		cumulus_pallet_parachain_system: Default::default(),
-		pallet_vesting: vesting_config,
+		pallet_vesting:  VestingConfig {
+			vesting: vestings
+		},
 	}
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
+	let endowed_accounts: Vec<AccountId> = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice")
+	];
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+
 	bifrost_genesis(
 		vec![get_from_seed::<AuraId>("Alice")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
+		endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect(),
+		endowed_accounts.iter().cloned().map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT/4)).collect(),
 		id,
 	)
 }
@@ -125,13 +113,20 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 }
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
+	let endowed_accounts: Vec<AccountId> = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+	];
+	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+
 	bifrost_genesis(
 		vec![
 			get_from_seed::<AuraId>("Alice"),
 			get_from_seed::<AuraId>("Bob"),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
+		endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect(),
+		endowed_accounts.iter().cloned().map(|x| (x, 0u32, 100u32, ENDOWMENT/4)).collect(),
 		id,
 	)
 }
@@ -191,18 +186,24 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		 hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
 	 ];
 
-	// generated with secret: subkey inspect "$secret"/fir
 	let root_key: AccountId = hex![
 		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	].into();
 
-	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
+	let balances_configs: Vec<BalancesConfig> =
+		super::config_from_json_files(PathBuf::from("./res/genesis_config/balances/"))
+			.unwrap();
+
+	let vesting_configs: Vec<VestingConfig> =
+		super::config_from_json_files(PathBuf::from("./res/genesis_config/vesting/"))
+			.unwrap();
 
 	bifrost_genesis(
 		initial_authorities,
 		root_key,
-		Some(endowed_accounts),
+		balances_configs.into_iter().flat_map(|bc| bc.balances).collect(),
+		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 	)
 }
