@@ -1,0 +1,10 @@
+{
+	"name": "bifrost-genesis-calculator",
+	"version": "1.0.0",
+	"scripts": {
+		"calculate": "node scripts/calc_genesis.js"
+	},
+	"dependencies": {
+		"big.js": "^6.1.1"
+	}
+}
