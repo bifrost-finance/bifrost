@@ -5,9 +5,6 @@ const PATH = require("path");
 const { decodeAddress, encodeAddress } = require("@polkadot/keyring");
 const { hexToU8a, isHex } = require("@polkadot/util");
 
-// Specify an address to test.
-const address = "14wCTjDZsrvL6SsEsdErvnvzjfnerbTMefvnTzjBgAzwcK3k";
-
 function checkSS58(address) {
     try {
         encodeAddress(isHex(address) ? hexToU8a(address) : decodeAddress(address));
