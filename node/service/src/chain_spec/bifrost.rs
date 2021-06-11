@@ -224,6 +224,31 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		super::config_from_json_files(exe_dir.join("res/genesis_config/balances"))
 			.unwrap();
 
+	let mut total_issuance: Balance = Zero::zero();
+	let balances = balances_configs
+		.into_iter()
+		.flat_map(|bc| bc.balances)
+		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
+			if let Some(balance) = acc.get_mut(&account_id) {
+				*balance = balance.checked_add(amount).expect("balance cannot overflow when building genesis");
+			} else {
+				acc.insert(account_id.clone(), amount);
+			}
+
+			total_issuance = total_issuance
+				.checked_add(amount)
+				.expect("total insurance cannot overflow when building genesis");
+			acc
+		})
+		.into_iter()
+		.collect();
+
+	assert_eq!(
+		total_issuance,
+		320_000_000 * DOLLARS,
+		"total issuance must be equal to 320 million"
+	);
+
 	let vesting_configs: Vec<VestingConfig> =
 		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting"))
 			.unwrap();
@@ -232,20 +257,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	bifrost_genesis(
 		invulnerables,
 		root_key,
-		balances_configs
-			.into_iter()
-			.flat_map(|bc| bc.balances)
-			.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
-				if let Some(balance) = acc.get_mut(&account_id) {
-					*balance = balance.checked_add(amount).expect("balance cannot overflow when building genesis");
-				} else {
-					acc.insert(account_id.clone(), amount);
-				}
-
-				acc
-			})
-			.into_iter()
-			.collect(),
+		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 	)

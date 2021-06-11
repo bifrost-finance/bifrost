@@ -49,4 +49,6 @@ let result = {
 	vesting:vestingBalanceTotal
 }
 console.log(result)
+let total = Object.keys(accountBalanceTotal).map(key => accountBalanceTotal[key].total).reduce((acc, val) => Big(acc).plus(Big(val)), 0);
+console.log(total.toString())
 fs.writeFileSync('./result.json', JSON.stringify(result,null,2));
