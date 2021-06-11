@@ -80,6 +80,7 @@ pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+#[allow(dead_code)]
 fn testnet_accounts() -> Vec<AccountId> {
 	vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
