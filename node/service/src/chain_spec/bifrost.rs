@@ -238,7 +238,6 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 			.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
 				if let Some(balance) = acc.get_mut(&account_id) {
 					*balance = balance.checked_add(amount).expect("balance cannot overflow when building genesis");
-					println!("DAddress: {}", account_id);
 				} else {
 					acc.insert(account_id.clone(), amount);
 				}
