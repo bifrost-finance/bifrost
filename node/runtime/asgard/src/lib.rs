@@ -492,7 +492,7 @@ impl Config for XcmConfig {
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = (
-	SignedToAccountId32<Origin, AccountId, RococoNetwork>,
+	SignedToAccountId32<Origin, AccountId, AnyNetwork>,
 );
 
 /// The means for routing XCM messages which are not for local execution into the right message
@@ -512,7 +512,7 @@ impl pallet_xcm::Config for Runtime {
 	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type XcmReserveTransferFilter = ();
+	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
@@ -635,6 +635,8 @@ impl bifrost_salp::Config for Runtime {
 	type SubmissionDeposit = SubmissionDeposit;
 	type MinContribution = MinContribution;
 	type RemoveKeysLimit = RemoveKeysLimit;
+	type XcmSender = XcmRouter;
+	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 }
 
 impl bifrost_bancor::Config for Runtime {
