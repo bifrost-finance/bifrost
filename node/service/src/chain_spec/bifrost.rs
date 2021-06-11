@@ -245,7 +245,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 
 	assert_eq!(
 		total_issuance,
-		320_000_000 * DOLLARS,
+		32_000_000 * DOLLARS,
 		"total issuance must be equal to 320 million"
 	);
 
