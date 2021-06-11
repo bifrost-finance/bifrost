@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use bifrost_runtime::{
@@ -214,12 +213,19 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		"2c64a40ec236d0a0823065791946f6254c4577c6110f512614bd6ece1a3fa22b"
 	].into();
 
+	let exe_dir = {
+		let mut exe_dir = std::env::current_exe().unwrap();
+		exe_dir.pop();
+
+		exe_dir
+	};
+
 	let balances_configs: Vec<BalancesConfig> =
-		super::config_from_json_files(PathBuf::from("./res/genesis_config/balances/"))
+		super::config_from_json_files(exe_dir.join("res/genesis_config/balances"))
 			.unwrap();
 
 	let vesting_configs: Vec<VestingConfig> =
-		super::config_from_json_files(PathBuf::from("./res/genesis_config/vesting/"))
+		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting"))
 			.unwrap();
 
 	bifrost_genesis(

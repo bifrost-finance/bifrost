@@ -172,15 +172,13 @@ fn config_from_json_file<T: DeserializeOwned>(path: PathBuf) -> Result<T, String
 fn config_from_json_files<T: DeserializeOwned>(dir: PathBuf) -> Result<Vec<T>, String> {
 	let mut configs = vec![];
 
-	if dir.is_dir() {
-		let iter = read_dir(&dir)
-			.map_err(|e| format!("Error opening directory: {}", e))?;
-		for entry in iter {
-			let path = entry.map_err(|e| format!("{}", e))?.path();
+	let iter = read_dir(&dir)
+		.map_err(|e| format!("Error opening directory: {}", e))?;
+	for entry in iter {
+		let path = entry.map_err(|e| format!("{}", e))?.path();
 
-			if !path.is_dir() {
-				configs.push(config_from_json_file(path)?);
-			}
+		if !path.is_dir() {
+			configs.push(config_from_json_file(path)?);
 		}
 	}
 
