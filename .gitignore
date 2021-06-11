@@ -9,3 +9,4 @@ polkadot.*
 .DS_Store
 .cargo-remote.toml
 .gitignore
+node_modules
