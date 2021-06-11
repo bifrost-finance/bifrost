@@ -188,6 +188,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-assets",
  "bifrost-bancor",
+ "bifrost-bancor-runtime-api",
  "bifrost-charge-transaction-fee",
  "bifrost-charge-transaction-fee-rpc-runtime-api",
  "bifrost-minter-reward",
@@ -660,6 +661,14 @@ dependencies = [
  "serde",
  "sp-core",
  "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-bancor-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]

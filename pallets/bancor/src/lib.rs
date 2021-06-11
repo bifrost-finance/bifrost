@@ -172,7 +172,7 @@ impl<T: Config> Pallet<T> {
 	/// Supply: The total amount of DOT currently Sent in
 	/// Balance: The total amount of vsDOT currently Sent in
 	/// CW: Constant, here is 1/2
-	pub(crate) fn calculate_price_for_token(token_id: CurrencyId, vstoken_amount: BalanceOf<T>) -> Result<BalanceOf<T>, Error<T>> {
+	pub fn calculate_price_for_token(token_id: CurrencyId, vstoken_amount: BalanceOf<T>) -> Result<BalanceOf<T>, Error<T>> {
 		// ensure!(token_id.exist(), Error::<T>::CurrencyIdNotExist);
 		ensure!(vstoken_amount > Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
 
