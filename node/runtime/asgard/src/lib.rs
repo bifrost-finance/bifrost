@@ -492,7 +492,7 @@ impl Config for XcmConfig {
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = (
-	SignedToAccountId32<Origin, AccountId, RococoNetwork>,
+	SignedToAccountId32<Origin, AccountId, AnyNetwork>,
 );
 
 /// The means for routing XCM messages which are not for local execution into the right message

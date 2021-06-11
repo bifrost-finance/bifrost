@@ -14,7 +14,7 @@ sp-std = { version = "3.0.0", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.3", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
 
 [features]
 default = ["std"]
