@@ -993,6 +993,16 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
+		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
+			let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
+		}
+	}
+
 	// zenlink runtime outer apis
     impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
         fn get_assets() -> Vec<AssetId> {
