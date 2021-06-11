@@ -228,10 +228,25 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting"))
 			.unwrap();
 
+	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
 		invulnerables,
 		root_key,
-		balances_configs.into_iter().flat_map(|bc| bc.balances).collect(),
+		balances_configs
+			.into_iter()
+			.flat_map(|bc| bc.balances)
+			.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
+				if let Some(balance) = acc.get_mut(&account_id) {
+					*balance = balance.checked_add(amount).expect("balance cannot overflow when building genesis");
+					println!("DAddress: {}", account_id);
+				} else {
+					acc.insert(account_id.clone(), amount);
+				}
+
+				acc
+			})
+			.into_iter()
+			.collect(),
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 	)
