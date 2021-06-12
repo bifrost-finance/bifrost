@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Bifrost.  If not, see <http:#www.gnu.org/licenses/>.
 
-FROM ubuntu:latest as builder
+FROM ubuntu:20.04 as builder
 LABEL description="The first stage for building a release bifrost binary."
 
 ARG PROFILE=release
@@ -23,22 +23,25 @@ WORKDIR /src
 ENV DEBIAN_FRONTEND noninteractive
 
 COPY . /src
+COPY ./id_rsa /root/.ssh/id_rsa
 
 RUN apt-get update && \
 	apt-get dist-upgrade -y && \
-	apt-get install -y cmake pkg-config libssl-dev git clang curl apt-utils
+	apt-get install -y cmake pkg-config libssl-dev git clang curl apt-utils ssh
 
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 	export PATH="$PATH:$HOME/.cargo/bin" && \
 	rustup toolchain install nightly && \
 	rustup target add wasm32-unknown-unknown --toolchain nightly && \
-	rustup default nightly && \
-	rustup default stable && \
-	cargo build "--$PROFILE"
+	rustup default stable
+
+RUN export PATH="$PATH:$HOME/.cargo/bin" && \
+	eval `ssh-agent` && ssh-add /root/.ssh/id_rsa && \
+	make build-bifrost-release
 
 # ===== SECOND STAGE ======
 
-FROM ubuntu:latest
+FROM ubuntu:20.04
 LABEL description="The second stage for configuring the image."
 ARG PROFILE=release
 WORKDIR /bifrost
