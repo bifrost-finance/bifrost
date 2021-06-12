@@ -1,0 +1,61 @@
+{
+  "relaychain": {
+    "bin": "../polkadot/target/release/polkadot",
+    "chain": "kusama-local",
+    "nodes": [
+      {
+        "name": "alice",
+        "wsPort": 19944,
+        "port": 39944,
+        "flags": [
+          "--unsafe-ws-external",
+          "--unsafe-rpc-external",
+          "--rpc-cors=all",
+          "--rpc-port=29944",
+          "--rpc-external"
+        ]
+      },
+      {
+        "name": "bob",
+        "wsPort": 19945,
+        "port": 39945
+      }
+    ],
+    "runtime_genesis_config": {
+      "parachainsConfiguration": {
+        "config": {
+          "validation_upgrade_frequency": 1,
+          "validation_upgrade_delay": 1
+        }
+      }
+    }
+  },
+  "parachains": [
+    {
+      "bin": "../bifrost/target/release/bifrost",
+      "id": "3000",
+      "balance": "1000000000000000000000",
+      "chain": "bifrost-genesis",
+      "nodes": [
+        {
+          "wsPort": 19948,
+          "port": 39948,
+          "flags": [
+            "--unsafe-ws-external",
+            "--unsafe-rpc-external",
+            "--rpc-external",
+            "--rpc-cors=all",
+            "--rpc-port=29948",
+            "--node-key=4bd2b2c1dad3dbe3fa37dc6ad5a4e32ddd8ad84b938179ac905b0622880e86e7",
+            "--",
+            "--execution=wasm"
+          ]
+        }
+      ]
+    }
+  ],
+  "hrmpChannels": [
+  ],
+  "types": {},
+  "finalization": false
+}
