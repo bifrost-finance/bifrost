@@ -19,3 +19,5 @@
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
 
 //! A list of the different weight modules for our runtime.
+
+pub mod pallet_vesting;
