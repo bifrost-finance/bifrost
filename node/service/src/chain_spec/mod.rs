@@ -21,13 +21,17 @@ pub mod asgard;
 #[cfg(feature = "with-bifrost-runtime")]
 pub mod bifrost;
 
+use std::{fs::{File, read_dir}, path::PathBuf};
 use hex_literal::hex;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sp_core::{sr25519, Pair, Public};
+use serde_json as json;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 pub use node_primitives::{AccountId, AccountAsset, Balance, Signature, VtokenPool};
+
+pub const TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 type AccountPublic = <Signature as Verify>::Signer;
 
@@ -76,6 +80,7 @@ pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
+#[allow(dead_code)]
 fn testnet_accounts() -> Vec<AccountId> {
 	vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -106,7 +111,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 	let file = std::fs::File::open(path).ok()?;
 	let reader = std::io::BufReader::new(file);
 
-	let vouchers_str: Vec<(String, String)> = serde_json::from_reader(reader).ok()?;
+	let vouchers_str: Vec<(String, String)> = json::from_reader(reader).ok()?;
 	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str.iter().map(|v| {
 		(parse_address(&v.0), v.1.parse().expect("Balance is invalid."))
 	}).collect();
@@ -152,4 +157,31 @@ pub fn faucet_accounts() -> Vec<AccountId> {
 		hex!["803feefeab8e5c81c3d268038b6c494d3018714fc8c5d08cf027111fd8114b06"].into(), // tieqiao testing account
 		hex!["8898ffd2cb04fb751655ede7bc0081b6b6ebe13cd0bdee5bbb9273e6dcc9b91c"].into(), // tyrone testing account
 	]
+}
+
+fn config_from_json_file<T: DeserializeOwned>(path: PathBuf) -> Result<T, String>
+{
+	let file = File::open(&path)
+		.map_err(|e| format!("Error opening genesis config: {}", e))?;
+
+	let config = json::from_reader(file)
+		.map_err(|e| format!("Error parsing config file: {}", e))?;
+
+	Ok(config)
+}
+
+fn config_from_json_files<T: DeserializeOwned>(dir: PathBuf) -> Result<Vec<T>, String> {
+	let mut configs = vec![];
+
+	let iter = read_dir(&dir)
+		.map_err(|e| format!("Error opening directory: {}", e))?;
+	for entry in iter {
+		let path = entry.map_err(|e| format!("{}", e))?.path();
+
+		if !path.is_dir() {
+			configs.push(config_from_json_file(path)?);
+		}
+	}
+
+	Ok(configs)
 }

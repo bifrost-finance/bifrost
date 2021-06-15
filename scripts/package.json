@@ -1,0 +1,10 @@
+{
+	"name": "bifrost-calculator",
+	"version": "1.0.0",
+	"scripts": {
+		"sum": "node sum_balance.js"
+	},
+	"dependencies": {
+		"big.js": "^6.1.1"
+	}
+}

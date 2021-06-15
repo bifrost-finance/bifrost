@@ -9,7 +9,7 @@ build-asgard:
 	cargo build -p node-cli --locked --features "with-asgard-runtime"
 
 .PHONY: build-bifrost
-build-bifrost:
+build-bifrost: copy-genesis-config
 	cargo build -p node-cli --locked --features "with-bifrost-runtime"
 
 .PHONY: build-all
@@ -23,7 +23,7 @@ build-asgard-release:
 	cargo build -p node-cli --locked --features "with-asgard-runtime" --release
 
 .PHONY: build-bifrost-release
-build-bifrost-release:
+build-bifrost-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-runtime" --release
 
 .PHONY: build-all-release
@@ -62,4 +62,12 @@ test-all:
 clean:
 	cargo clean
 
-# TODO: Copy genesis_config JSON files to target directory
+.PHONY: copy-genesis-config
+copy-genesis-config:
+	mkdir -p "target/debug/res"
+	cp -r node/service/res/genesis_config target/debug/res
+
+.PHONY: copy-genesis-config-release
+copy-genesis-config-release:
+	mkdir -p "target/release/res"
+	cp -r node/service/res/genesis_config target/release/res
