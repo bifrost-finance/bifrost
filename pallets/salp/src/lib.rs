@@ -33,10 +33,11 @@ pub mod pallet {
 	use orml_traits::currency::TransferAll;
 	use orml_traits::{MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency};
 	use node_primitives::{CurrencyId};
-	use frame_support::PalletId;
+	use frame_support::{PalletId, log};
 	use frame_support::pallet_prelude::storage::child;
-	use xcm::v0::{MultiLocation, SendXcm};
+	use xcm::v0::{MultiLocation, SendXcm, Xcm, OriginKind, Junction};
 	use frame_support::storage::ChildTriePrefixIterator;
+	use frame_support::sp_runtime::MultiSignature;
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -89,6 +90,34 @@ pub mod pallet {
 	type ParaId = u32;
 
 	type TrieIndex = u32;
+
+	#[derive(Encode, Decode)]
+	pub enum CrowdloanPalletCall<BalanceOf> {
+		#[codec(index = 27)] // the index should match the position of the module in `construct_runtime!`
+		CrowdloanContribute(ContributeCall<BalanceOf>),
+	}
+
+	#[derive(Debug, PartialEq, Encode, Decode)]
+	pub struct Contribution<BalanceOf> {
+		#[codec(compact)]
+		index: ParaId,
+		#[codec(compact)]
+		value: BalanceOf,
+		signature: Option<MultiSignature>,
+	}
+
+	#[derive(Encode, Decode)]
+	pub enum ContributeCall<BalanceOf> {
+		#[codec(index = 1)] // the index should match the position of the dispatchable in the target pallet
+		Contribute(Contribution<BalanceOf>),
+	}
+
+	/// Error type for something that went wrong with leasing.
+	#[derive(Debug)]
+	pub enum XcmError {
+		/// Unable to send contribute
+		ContributeSentFailed,
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -316,12 +345,12 @@ pub mod pallet {
 		pub(super) fn contribute(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-			contributor: AccountId<T>,
+			//contributor: AccountId<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let _origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin)?;
+			let _origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin.clone())?;
 
-			let who = contributor.clone();
+			let who = ensure_signed(origin)?;//contributor.clone();
 
 			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -337,6 +366,8 @@ pub mod pallet {
 			// TODO
 			// deposit KSM/DOT to fund_account
 			// issue vsToken/vsBond to sender
+
+			Self::xcm_ump_contribute(who.clone(),index,value);
 
 			Funds::<T>::insert(index, Some(fund));
 
@@ -506,6 +537,39 @@ pub mod pallet {
 			index: TrieIndex
 		) -> ChildTriePrefixIterator<(T::AccountId, (BalanceOf<T>, Vec<u8>))> {
 			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(&Self::id_from_index(index), &[])
+		}
+
+		pub fn xcm_ump_contribute(_account: AccountId<T>,para_id: ParaId, value: BalanceOf<T>) -> Result<(), XcmError> {
+			// let para_id = T::SelfParaId::get();
+
+			let contribution = Contribution{ index: para_id, value, signature: None };
+
+			let call = CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution)).encode();
+
+			let msg = Xcm::Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: u64::MAX,
+				call: call.into(),
+			};
+
+			match T::XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), msg.clone()) {
+				Ok(()) => {
+					log::info!(
+						target: "salp",
+						"crowdloan transact sent success message as {:?}",
+						msg,
+					);
+				},
+				Err(e) => {
+					log::error!(
+						target: "salp",
+						"crowdloan transact sent failed error as {:?}",
+						e,
+					);
+					return Err(XcmError::ContributeSentFailed);
+				}
+			}
+			Ok(())
 		}
 	}
 }
