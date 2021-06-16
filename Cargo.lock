@@ -10701,11 +10701,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-<<<<<<< HEAD
-source = "git+https://github.com/paritytech/substrate?branch=master#6749c701900747accaa35eaf2101586f09baef9e"
-=======
 source = "git+https://github.com/paritytech/substrate?branch=master#9f621a936eb5c692ad8efea22a9bb9ecf3bd93d3"
->>>>>>> 30a5bd0bf743b434a08f5fa12b08dd71d1c16f2c
 dependencies = [
  "async-std",
  "derive_more",
