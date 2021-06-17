@@ -9,15 +9,13 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
-serde = { version = "1.0.124", optional = true }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
-assets = { package = "bifrost-assets", path = "../assets" }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
 sp-io = { version = "3.0.0" }
 pallet-balances = { version = "3.0.0" }
 
@@ -28,7 +26,6 @@ std = [
 	"node-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
-	"serde/std",
 	"sp-runtime/std",
 	"sp-core/std",
 	"orml-traits/std",

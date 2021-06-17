@@ -15,10 +15,6 @@ sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 
-[dev-dependencies]
-sp-serializer = { version = "3.0.0" }
-pretty_assertions = "0.6.1"
-
 [features]
 default = ["std"]
 std = [

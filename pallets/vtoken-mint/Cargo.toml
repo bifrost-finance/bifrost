@@ -9,18 +9,14 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
-log = { version = "0.4.14", default-features = false }
-serde = { version = "1.0.118", optional = true }
 sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
-sp-std = { version = "3.0.0", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
-orml-tokens = { version = "0.4.1-dev", default-features = false }
-
 
 [dev-dependencies]
+orml-tokens = { version = "0.4.1-dev" }
+orml-currencies = { version = "0.4.1-dev" }
 bifrost-minter-reward = { path = "../minter-reward" }
 pallet-balances = "3.0.0"
 pallet-randomness-collective-flip = "3.0.0"
@@ -34,14 +30,9 @@ std = [
 	"node-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
-	"log/std",
-	"serde/std",
 	"sp-core/std",
 	"sp-runtime/std",
-	"sp-std/std",
 	"orml-traits/std",
 	"zenlink-protocol/std",
 	"orml-traits/std",
-	"orml-currencies/std",
-	"orml-tokens/std"
 ]
