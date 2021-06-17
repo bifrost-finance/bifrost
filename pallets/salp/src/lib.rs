@@ -112,9 +112,11 @@ pub mod pallet {
 		Contribute(Contribution<BalanceOf>),
 	}
 
-	/// Error type for something that went wrong with leasing.
+	/// Error type for something that went wrong with xcm communication.
 	#[derive(Debug)]
 	pub enum XcmError {
+		/// Convert origin error
+		ConvertOriginFailed,
 		/// Unable to send contribute
 		ContributeSentFailed,
 	}
@@ -215,6 +217,8 @@ pub mod pallet {
 		InvalidFundStatus,
 		/// Insufficient Balance.
 		InsufficientBalance,
+		/// Crosschain xcm failed
+		XcmFailed,
 	}
 
 	#[pallet::storage]
@@ -345,18 +349,18 @@ pub mod pallet {
 		pub(super) fn contribute(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-			//contributor: AccountId<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let _origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin.clone())?;
 
-			let who = ensure_signed(origin)?;//contributor.clone();
+			let who = ensure_signed(origin.clone())?;
 
 			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
 			fund.raised  = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
+
+			Self::xcm_ump_contribute_to_parachain(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			let old_balance = Self::contribution_get(fund.trie_index, &who);
 
@@ -366,8 +370,6 @@ pub mod pallet {
 			// TODO
 			// deposit KSM/DOT to fund_account
 			// issue vsToken/vsBond to sender
-
-			Self::xcm_ump_contribute(who.clone(),index,value);
 
 			Funds::<T>::insert(index, Some(fund));
 
@@ -539,8 +541,9 @@ pub mod pallet {
 			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(&Self::id_from_index(index), &[])
 		}
 
-		pub fn xcm_ump_contribute(_account: AccountId<T>,para_id: ParaId, value: BalanceOf<T>) -> Result<(), XcmError> {
-			// let para_id = T::SelfParaId::get();
+		pub fn xcm_ump_contribute_to_parachain(origin: OriginFor<T>, para_id: ParaId, value: BalanceOf<T>) -> Result<(), XcmError> {
+
+			let origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::ConvertOriginFailed)?;
 
 			let contribution = Contribution{ index: para_id, value, signature: None };
 
@@ -552,12 +555,14 @@ pub mod pallet {
 				call: call.into(),
 			};
 
-			match T::XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), msg.clone()) {
+			let message = Xcm::<()>::RelayedFrom { who:origin_location, message: Box::new(msg) };
+
+			match T::XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message.clone()) {
 				Ok(()) => {
 					log::info!(
 						target: "salp",
 						"crowdloan transact sent success message as {:?}",
-						msg,
+						message,
 					);
 				},
 				Err(e) => {
