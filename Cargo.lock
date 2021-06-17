@@ -1850,30 +1850,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cumulus-client-consensus-relay-chain"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.4#08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae"
-dependencies = [
- "async-trait",
- "cumulus-client-consensus-common",
- "cumulus-primitives-core",
- "futures 0.3.15",
- "parity-scale-codec",
- "parking_lot 0.10.2",
- "polkadot-service",
- "sc-client-api",
- "sp-api",
- "sp-block-builder",
- "sp-blockchain",
- "sp-consensus",
- "sp-core",
- "sp-inherents",
- "sp-runtime",
- "substrate-prometheus-endpoint 0.9.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4)",
- "tracing",
-]
-
-[[package]]
 name = "cumulus-client-network"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.4#08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae"
@@ -5072,44 +5048,26 @@ name = "node-service"
 version = "0.8.0"
 dependencies = [
  "asgard-runtime",
- "bifrost-charge-transaction-fee-rpc",
  "bifrost-charge-transaction-fee-rpc-runtime-api",
  "bifrost-runtime",
  "bs58 0.3.1",
- "cumulus-client-collator",
  "cumulus-client-consensus-aura",
  "cumulus-client-consensus-common",
- "cumulus-client-consensus-relay-chain",
  "cumulus-client-network",
  "cumulus-client-service",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
- "env_logger 0.8.3",
- "frame-benchmarking",
  "frame-system-rpc-runtime-api",
- "futures 0.3.15",
  "hex-literal 0.2.1",
  "jsonrpc-core",
- "lazy_static",
- "log",
  "node-primitives",
  "node-rpc",
  "pallet-transaction-payment-rpc-runtime-api",
- "parity-scale-codec",
- "parking_lot 0.11.1",
- "polkadot-primitives",
  "polkadot-service",
- "sc-authority-discovery",
  "sc-basic-authorship",
- "sc-block-builder",
  "sc-chain-spec",
- "sc-cli",
  "sc-client-api",
- "sc-client-db",
- "sc-consensus",
- "sc-consensus-slots",
  "sc-executor",
- "sc-finality-grandpa",
  "sc-network",
  "sc-rpc",
  "sc-service",
@@ -5118,17 +5076,13 @@ dependencies = [
  "sc-transaction-pool",
  "serde",
  "serde_json",
- "slog",
  "sp-api",
- "sp-authority-discovery",
  "sp-block-builder",
  "sp-blockchain",
  "sp-consensus",
  "sp-consensus-aura",
  "sp-core",
  "sp-finality-grandpa",
- "sp-inherents",
- "sp-io",
  "sp-keystore",
  "sp-offchain",
  "sp-runtime",
@@ -5138,7 +5092,6 @@ dependencies = [
  "sp-transaction-pool",
  "substrate-prometheus-endpoint 0.9.0 (git+https://github.com/paritytech/substrate?branch=master)",
  "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "zenlink-protocol-rpc",
  "zenlink-protocol-runtime-api",
 ]
 
