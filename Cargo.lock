@@ -820,19 +820,15 @@ dependencies = [
 name = "bifrost-vesting"
 version = "0.8.0"
 dependencies = [
- "enumflags2",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
- "hex-literal 0.3.1",
  "pallet-balances",
  "parity-scale-codec",
- "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
- "sp-storage",
 ]
 
 [[package]]
