@@ -18,62 +18,16 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "2.0.0" }
-serde = { version = "1.0.124", features = ["derive"] }
-serde_json = "1.0.60"
-futures = { version = "0.3.9", features = ["compat"] }
-hex-literal = "0.3.1"
 log = "0.4.8"
-rand = "0.7.2"
 structopt = { version = "0.3.8", optional = true }
-parking_lot = "0.11.1"
 
 # primitives
-sp-authority-discovery = { version = "3.0.0" }
-sp-consensus-babe = { version = "0.9.0" }
-grandpa-primitives = { version = "3.0.0", package = "sp-finality-grandpa" }
 sp-core = { version = "3.0.0" }
 sp-runtime = { version = "3.0.0" }
-sp-timestamp = { version = "3.0.0", default-features = false }
-sp-inherents = { version = "3.0.0" }
-sp-keyring = { version = "3.0.0" }
-sp-keystore = { version = "0.9.0" }
-sp-io = { version = "3.0.0" }
-sp-consensus = { version = "0.9.0" }
-sp-transaction-pool = { version = "3.0.0" }
 
 # client dependencies
-sc-client-api = { version = "3.0.0" }
-sc-chain-spec = { version = "3.0.0" }
-sc-consensus = { version = "0.9.0" }
-sc-transaction-pool = { version = "3.0.0" }
-sc-network = { version = "0.9.0" }
-sc-consensus-slots = { version = "0.9.0" }
-sc-consensus-babe = { version = "0.9.0" }
-grandpa = { version = "0.9.0", package = "sc-finality-grandpa" }
-sc-client-db = { version = "0.9.0", default-features = false }
-sc-offchain = { version = "3.0.0" }
-sc-rpc = { version = "3.0.0" }
-sc-basic-authorship = { version = "0.9.0" }
-sc-service = { version = "0.9.0", default-features = false }
+sc-service = { version = "0.9.0", optional = true }
 sc-tracing = { version = "3.0.0" }
-sc-telemetry = { version = "3.0.0" }
-sc-authority-discovery = { version = "0.9.0" }
-sc-finality-grandpa-warp-sync = { version = "0.9.0", optional = true }
-
-# frame dependencies
-pallet-indices = { version = "3.0.0" }
-pallet-timestamp = { version = "3.0.0", default-features = false }
-frame-system = { version = "3.0.0" }
-pallet-balances = { version = "3.0.0" }
-pallet-transaction-payment = { version = "3.0.0" }
-frame-support = { version = "3.0.0", default-features = false }
-pallet-authority-discovery = { version = "3.0.0" }
-pallet-staking = { version = "3.0.0" }
-pallet-grandpa = { version = "3.0.0" }
-
-# ZenlinkProtocol dependencies
-zenlink-protocol-runtime-api = "*"
-zenlink-protocol-rpc = "*"
 
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
@@ -84,23 +38,6 @@ sc-cli = { version = "0.9.0", optional = true }
 frame-benchmarking-cli = { version = "3.0.0", optional = true }
 node-inspect = { version = "0.8.0", optional = true }
 
-# new added after removed local node-rpc, node-primitives
-sc-executor = "0.9.0"
-sp-api = "3.0.0"
-pallet-transaction-payment-rpc = "3.0.0"
-substrate-frame-rpc-system = "3.0.0"
-sc-consensus-babe-rpc = "0.9.0"
-sc-consensus-epochs = "0.9.0"
-sp-blockchain = "3.0.0"
-sc-rpc-api = "0.9.0"
-sc-sync-state-rpc = "0.9.0"
-sp-block-builder = "3.0.0"
-frame-benchmarking = "3.0.0"
-
-# WASM-specific dependencies
-wasm-bindgen = { version = "0.2.57", optional = true }
-wasm-bindgen-futures = { version = "0.4.18", optional = true }
-
 # Cumulus dependencies
 cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
@@ -108,49 +45,20 @@ cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branc
 
 # Polkadot dependencies
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
-polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
 polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
 
-[target.'cfg(target_arch="x86_64")'.dependencies]
-sc-cli = { version = "0.9.0", optional = true, features = [ "wasmtime" ] }
-sc-service = { version = "0.9.0", default-features = false, features = [ "wasmtime" ] }
-sp-trie = { version = "3.0.0", default-features = false, features = ["memory-tracker"] }
-
-[dev-dependencies]
-sc-keystore = { version = "3.0.0" }
-sc-consensus = { version = "0.9.0" }
-futures = "0.3.9"
-tempfile = "3.1.0"
-assert_cmd = "1.0"
-nix = "0.19"
-serde_json = "1.0"
-regex = "1"
-platforms = "1.1"
-async-std = { version = "1.6.5", features = ["attributes"] }
-soketto = "0.4.2"
-
 [build-dependencies]
-structopt = { version = "0.3.8", optional = true }
-node-inspect = { version = "0.8.0", optional = true }
-frame-benchmarking-cli = { version = "3.0.0", optional = true }
 substrate-build-script-utils = { version = "3.0.0", optional = true }
-substrate-frame-cli = { version = "3.0.0", optional = true }
-
-[build-dependencies.sc-cli]
-version = "0.9.0"
-package = "sc-cli"
-optional = true
 
 [features]
-default = [ "cli" ]
+default = [ "wasmtime", "cli" ]
+wasmtime = [ "sc-cli/wasmtime", "sc-service/wasmtime" ]
 cli = [
 	"node-inspect",
 	"sc-cli",
 	"frame-benchmarking-cli",
-	"substrate-frame-cli",
-	"sc-service/db",
-	"sc-finality-grandpa-warp-sync",
+	"sc-service",
 	"structopt",
 	"substrate-build-script-utils",
 ]
