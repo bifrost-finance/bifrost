@@ -16,7 +16,7 @@ zenlink-protocol = { version = "*", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
-orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev" }
 pallet-balances = { version = "3.0.0" }
 sp-io = { version = "3.0.0" }
 sp-core = { version = "3.0.0" }
@@ -30,7 +30,6 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
-	"orml-currencies/std",
 	"sp-runtime/std",
 	"zenlink-protocol/std",
 ]

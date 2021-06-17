@@ -15,8 +15,8 @@ zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
-orml-tokens = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev" }
+orml-currencies = { version = "0.4.1-dev" }
 bifrost-minter-reward = { path = "../minter-reward" }
 pallet-balances = "3.0.0"
 pallet-randomness-collective-flip = "3.0.0"
@@ -35,6 +35,4 @@ std = [
 	"orml-traits/std",
 	"zenlink-protocol/std",
 	"orml-traits/std",
-	"orml-currencies/std",
-	"orml-tokens/std"
 ]
