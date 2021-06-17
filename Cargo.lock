@@ -785,7 +785,6 @@ dependencies = [
 name = "bifrost-staking-reward"
 version = "0.8.0"
 dependencies = [
- "bifrost-assets",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -794,7 +793,6 @@ dependencies = [
  "orml-traits",
  "pallet-balances",
  "parity-scale-codec",
- "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
