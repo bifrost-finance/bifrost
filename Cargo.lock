@@ -859,7 +859,6 @@ dependencies = [
  "bifrost-minter-reward",
  "frame-support",
  "frame-system",
- "log",
  "node-primitives",
  "orml-currencies",
  "orml-tokens",
@@ -867,11 +866,9 @@ dependencies = [
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "parity-scale-codec",
- "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "zenlink-protocol",
 ]
 
