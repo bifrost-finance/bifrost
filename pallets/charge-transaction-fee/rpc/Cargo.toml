@@ -17,3 +17,15 @@ sp-rpc = "3.0.0"
 pallet-transaction-payment-rpc-runtime-api = "3.0.0"
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "sp-api/std",
+    "sp-runtime/std",
+    "sp-core/std",
+    "pallet-transaction-payment-rpc-runtime-api/std",
+    "bifrost-charge-transaction-fee-rpc-runtime-api/std",
+    "node-primitives/std",
+]

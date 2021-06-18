@@ -11996,7 +11996,6 @@ dependencies = [
 name = "xcm-support"
 version = "0.8.0"
 dependencies = [
- "cumulus-primitives-core",
  "frame-support",
  "node-primitives",
  "orml-traits",
