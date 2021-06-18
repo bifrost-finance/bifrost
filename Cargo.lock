@@ -187,6 +187,8 @@ name = "asgard-runtime"
 version = "0.8.0"
 dependencies = [
  "bifrost-assets",
+ "bifrost-bancor",
+ "bifrost-bancor-runtime-api",
  "bifrost-charge-transaction-fee",
  "bifrost-charge-transaction-fee-rpc-runtime-api",
  "bifrost-minter-reward",
@@ -620,6 +622,31 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-bancor"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "num-integer",
+ "orml-tokens",
+ "orml-traits",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-bancor-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
