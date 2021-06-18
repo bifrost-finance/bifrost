@@ -5,7 +5,7 @@ init:
 # Build Debug
 
 .PHONY: build-asgard
-build-asgard:
+build-asgard: copy-genesis-config
 	cargo build -p node-cli --locked --features "with-asgard-runtime"
 
 .PHONY: build-bifrost
@@ -13,13 +13,13 @@ build-bifrost: copy-genesis-config
 	cargo build -p node-cli --locked --features "with-bifrost-runtime"
 
 .PHONY: build-all
-build-all:
+build-all: copy-genesis-config
 	cargo build -p node-cli --locked --features "with-all-runtime"
 
 # Build Release
 
 .PHONY: build-asgard-release
-build-asgard-release:
+build-asgard-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-asgard-runtime" --release
 
 .PHONY: build-bifrost-release
@@ -27,7 +27,7 @@ build-bifrost-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-runtime" --release
 
 .PHONY: build-all-release
-build-all-release:
+build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
 .PHONY: check-asgard

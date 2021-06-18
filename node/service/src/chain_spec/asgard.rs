@@ -31,7 +31,7 @@ use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Permill;
 
-use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed, initialize_all_vouchers};
+use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
 use node_primitives::{CurrencyId, TokenSymbol};
 
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
@@ -148,6 +148,43 @@ pub fn asgard_genesis(
 		},
 		cumulus_pallet_aura_ext: Default::default(),
 	}
+}
+
+#[allow(dead_code)]
+fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>>
+{
+	use std::collections::HashSet;
+
+	let exe_dir = {
+		let mut exe_dir = std::env::current_exe().unwrap();
+		exe_dir.pop();
+
+		exe_dir
+	};
+
+	let balances_configs: Vec<BalancesConfig> =
+		super::config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
+
+	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = balances_configs
+		.into_iter()
+		.flat_map(|bc| bc.balances)
+		.map(|v| (v.0.clone(), v.1))
+		.into_iter()
+		.collect();
+
+	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
+	let mut final_vouchers = Vec::new();
+	for i in set.iter() {
+		let mut sum = 0;
+		for j in vouchers.iter() {
+			if *i == j.0 {
+				sum += j.1;
+			}
+		}
+		final_vouchers.push((i.clone(), sum));
+	}
+
+	Some(final_vouchers)
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
