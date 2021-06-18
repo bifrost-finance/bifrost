@@ -638,6 +638,11 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 }
 
+impl bifrost_bancor::Config for Runtime {
+	type Event = Event;
+	type MultiCurrenciesHandler = Currencies;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -817,6 +822,7 @@ construct_runtime! {
 		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
 		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 66,
+		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 67,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
@@ -984,6 +990,16 @@ impl_runtime_apis! {
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),
+			}
+		}
+	}
+
+	impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
+		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
+			let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
 			}
 		}
 	}

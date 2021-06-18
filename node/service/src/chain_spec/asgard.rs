@@ -21,7 +21,7 @@ use hex_literal::hex;
 use asgard_runtime::{
 	AccountId, AuraId,
 	constants::{currency::DOLLARS, time::DAYS},
-	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
+	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, BancorConfig,
 	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
 	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
 };
@@ -100,6 +100,12 @@ pub fn asgard_genesis(
 					]
 				})
 				.collect(),
+		},
+		bifrost_bancor: BancorConfig {
+			bancor_pools: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
+			],
 		},
 		bifrost_minter_reward: MinterRewardConfig {
 			wegiths: vec![

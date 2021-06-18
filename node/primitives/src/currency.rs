@@ -223,6 +223,13 @@ impl CurrencyId {
 		}
 	}
 
+	pub fn to_vstoken(&self) -> Result<Self, ()> {
+		match self {
+			Self::Token(symbol) => Ok(Self::VSToken(symbol.clone())),
+			_ => Err(()),
+		}
+	}
+
 	pub fn discriminant(&self) -> u8 {
 		match *self {
 			Self::Token(..) => 0,
