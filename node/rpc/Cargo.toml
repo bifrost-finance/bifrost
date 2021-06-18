@@ -10,15 +10,10 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 jsonrpc-core = "15.1.0"
 node-primitives = { path = "../primitives" }
-sc-client-api = { version = "3.0.0" }
 sc-rpc-api = { version = "0.9.0" }
 sc-rpc = { version = "3.0.0" }
 sp-api = { version = "3.0.0" }
-sp-block-builder = { version = "3.0.0" }
 sp-blockchain = { version = "3.0.0" }
-sp-keystore = { version = "0.9.0" }
-sp-consensus = { version = "0.9.0" }
-sp-runtime = { version = "3.0.0" }
 sp-transaction-pool = { version = "3.0.0" }
 pallet-transaction-payment-rpc = { version = "3.0.0" }
 bifrost-charge-transaction-fee-rpc = { path = "../../pallets/charge-transaction-fee/rpc" }
