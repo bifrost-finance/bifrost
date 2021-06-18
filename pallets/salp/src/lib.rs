@@ -25,19 +25,24 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
-	use frame_support::pallet_prelude::*;
+	use frame_support::{
+		log,
+		pallet_prelude::{storage::child, *},
+		sp_runtime::{
+			traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
+			MultiSignature,
+		},
+		storage::ChildTriePrefixIterator,
+		PalletId,
+	};
 	use frame_system::pallet_prelude::*;
+	use node_primitives::{CurrencyId, TokenSymbol, LeasePeriod};
+	use orml_traits::{
+		currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+		MultiReservableCurrency,
+	};
 	use sp_std::prelude::*;
-	use frame_support::traits::{ReservableCurrency, Currency};
-	use frame_support::sp_runtime::traits::{AccountIdConversion, Hash, CheckedAdd, Saturating, Zero};
-	use orml_traits::currency::TransferAll;
-	use orml_traits::{MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency};
-	use node_primitives::{CurrencyId};
-	use frame_support::{PalletId, log};
-	use frame_support::pallet_prelude::storage::child;
-	use xcm::v0::{MultiLocation, SendXcm, Xcm, OriginKind, Junction};
-	use frame_support::storage::ChildTriePrefixIterator;
-	use frame_support::sp_runtime::MultiSignature;
+	use xcm::v0::{Junction, MultiLocation, OriginKind, SendXcm, Xcm};
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -65,7 +70,7 @@ pub mod pallet {
 		/// The total amount raised.
 		raised: Balance,
 		/// Block number after which the funding must have succeeded. If not successful at this number
-        /// then everyone may withdraw their funds.
+		/// then everyone may withdraw their funds.
 		end: BlockNumber,
 		/// A hard-cap on the amount that may be contributed.
 		cap: Balance,
@@ -81,11 +86,9 @@ pub mod pallet {
 		status: FundStatus,
 	}
 
-	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
-	type AccountId<T> = <T as frame_system::Config>::AccountId;
-
-	type LeasePeriodOf<T> = <T as frame_system::Config>::BlockNumber;
+	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 	type ParaId = u32;
 
@@ -93,7 +96,8 @@ pub mod pallet {
 
 	#[derive(Encode, Decode)]
 	pub enum CrowdloanPalletCall<BalanceOf> {
-		#[codec(index = 27)] // the index should match the position of the module in `construct_runtime!`
+		#[codec(index = 27)]
+		// the index should match the position of the module in `construct_runtime!`
 		CrowdloanContribute(ContributeCall<BalanceOf>),
 	}
 
@@ -108,7 +112,8 @@ pub mod pallet {
 
 	#[derive(Encode, Decode)]
 	pub enum ContributeCall<BalanceOf> {
-		#[codec(index = 1)] // the index should match the position of the dispatchable in the target pallet
+		#[codec(index = 1)]
+		// the index should match the position of the dispatchable in the target pallet
 		Contribute(Contribution<BalanceOf>),
 	}
 
@@ -137,21 +142,24 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinContribution: Get<BalanceOf<Self>>;
 
-		/// The currency type in which the lease is taken.
-		type Currency: ReservableCurrency<Self::AccountId>;
+		#[pallet::constant]
+		type TokenType: Get<TokenSymbol>;
 
 		type MultiCurrency: TransferAll<Self::AccountId>
-		+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
-		+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
-		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+			+ MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
+			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
 
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
 		type XcmSender: SendXcm;
 
-		type SendXcmOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin, Success=MultiLocation>;
-
+		type SendXcmOrigin: EnsureOrigin<
+			<Self as frame_system::Config>::Origin,
+			Success = MultiLocation,
+		>;
 	}
 
 	#[pallet::pallet]
@@ -164,11 +172,11 @@ pub mod pallet {
 		/// Create a new crowdloaning campaign. [fund_index]
 		Created(ParaId),
 		/// Contributed to a crowd sale. [who, fund_index, amount]
-		Contributed(AccountId<T>, ParaId, BalanceOf<T>),
+		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
-		Withdrew(AccountId<T>, ParaId, BalanceOf<T>),
+		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Redeemed full balance of a contributor. [who, fund_index, amount]
-		Redeemed(AccountId<T>, ParaId, BalanceOf<T>),
+		Redeemed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -223,12 +231,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn validators)]
-	pub(super) type Validators<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
+	pub(super) type Validators<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, bool, ValueQuery>;
 
 	/// Tracker for the next available trie index
 	#[pallet::storage]
 	#[pallet::getter(fn next_trie_index)]
-	pub(super) type NextTrieIndex<T: Config> = StorageValue<_, TrieIndex,ValueQuery>;
+	pub(super) type NextTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
 
 	/// Info on all of the funds.
 	#[pallet::storage]
@@ -237,13 +246,12 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		ParaId,
-		Option<FundInfo<T::AccountId, BalanceOf<T>, T::BlockNumber, LeasePeriodOf<T>>>,
-		ValueQuery
+		Option<FundInfo<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, LeasePeriod>>,
+		ValueQuery,
 	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
 		#[pallet::weight(0)]
 		pub(super) fn fund_success(
 			origin: OriginFor<T>,
@@ -252,7 +260,10 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Ongoing,
+				Error::<T>::InvalidFundStatus
+			);
 			fund.status = FundStatus::Success;
 			Funds::<T>::insert(index, Some(fund));
 
@@ -272,7 +283,10 @@ pub mod pallet {
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Ongoing,
+				Error::<T>::InvalidFundStatus
+			);
 			fund.status = FundStatus::Failed;
 			Funds::<T>::insert(index, Some(fund));
 			// TODO enable vsToken/vsBond transfer
@@ -290,7 +304,10 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Success, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Success,
+				Error::<T>::InvalidFundStatus
+			);
 			fund.status = FundStatus::Retired;
 			Funds::<T>::insert(index, Some(fund));
 
@@ -303,16 +320,24 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] cap: BalanceOf<T>,
-			#[pallet::compact] first_slot: LeasePeriodOf<T>,
-			#[pallet::compact] last_slot: LeasePeriodOf<T>,
-			#[pallet::compact] end: T::BlockNumber,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
+			#[pallet::compact] end: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
 			let depositor = ensure_signed(origin)?;
 
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
-			let last_slot_limit = first_slot.checked_add(&3u32.into()).ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
-			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
-			ensure!(end > frame_system::Pallet::<T>::block_number(), Error::<T>::CannotEndInPast);
+			let last_slot_limit = first_slot
+				.checked_add(3u32.into())
+				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
+			ensure!(
+				last_slot <= last_slot_limit,
+				Error::<T>::LastSlotTooFarInFuture
+			);
+			ensure!(
+				end > frame_system::Pallet::<T>::block_number(),
+				Error::<T>::CannotEndInPast
+			);
 
 			// There should not be an existing fund.
 			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundNotEnded);
@@ -323,17 +348,20 @@ pub mod pallet {
 			let deposit = T::SubmissionDeposit::get();
 			// T::Currency::reserve(&depositor, deposit)?;
 
-			Funds::<T>::insert(index, Some(FundInfo {
-				depositor,
-				deposit,
-				raised: Zero::zero(),
-				end,
-				cap,
-				first_slot,
-				last_slot,
-				trie_index,
-				status: FundStatus::Ongoing,
-			}));
+			Funds::<T>::insert(
+				index,
+				Some(FundInfo {
+					depositor,
+					deposit,
+					raised: Zero::zero(),
+					end,
+					cap,
+					first_slot,
+					last_slot,
+					trie_index,
+					status: FundStatus::Ongoing,
+				}),
+			);
 
 			NextTrieIndex::<T>::put(new_trie_index);
 
@@ -351,16 +379,25 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-
 			let who = ensure_signed(origin.clone())?;
 
-			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
+			ensure!(
+				value >= T::MinContribution::get(),
+				Error::<T>::ContributionTooSmall
+			);
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-			fund.raised  = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			ensure!(
+				fund.status == FundStatus::Ongoing,
+				Error::<T>::InvalidFundStatus
+			);
+			fund.raised = fund
+				.raised
+				.checked_add(&value)
+				.ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
 
-			Self::xcm_ump_contribute_to_parachain(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
+			Self::xcm_ump_contribute_to_parachain(origin, index, value)
+				.map_err(|_e| Error::<T>::XcmFailed)?;
 
 			let old_balance = Self::contribution_get(fund.trie_index, &who);
 
@@ -385,19 +422,28 @@ pub mod pallet {
 		pub(super) fn partially_withdraw(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-			contributor: AccountId<T>,
+			contributor: AccountIdOf<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let _origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin)?;
+			let _origin_location: MultiLocation = T::SendXcmOrigin::ensure_origin(origin)?;
 
 			let who = contributor.clone();
 
-			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
+			ensure!(
+				value >= T::MinContribution::get(),
+				Error::<T>::ContributionTooSmall
+			);
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Ongoing,
+				Error::<T>::InvalidFundStatus
+			);
 
 			let old_balance = Self::contribution_get(fund.trie_index, &who);
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Ongoing,
+				Error::<T>::InvalidFundStatus
+			);
 			ensure!(old_balance >= value, Error::<T>::InsufficientBalance);
 			let balance = old_balance.saturating_sub(value);
 			Self::contribution_put(fund.trie_index, &who, &balance);
@@ -439,13 +485,16 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub(super) fn withdraw(
 			origin: OriginFor<T>,
-			who: AccountId<T>,
+			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Failed, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Failed,
+				Error::<T>::InvalidFundStatus
+			);
 
 			let balance = Self::contribution_get(fund.trie_index, &who);
 			ensure!(balance > Zero::zero(), Error::<T>::NoContributions);
@@ -469,13 +518,15 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub(super) fn redeem_from_bancor_pool(
 			_origin: OriginFor<T>,
-			who: AccountId<T>,
+			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
 			amount: Option<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
-
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Retired, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Retired,
+				Error::<T>::InvalidFundStatus
+			);
 
 			// TODO call Bancor function
 			// T::Bancor::swap();
@@ -488,13 +539,12 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-
-		fn on_finalize(_n: T::BlockNumber) {
+		fn on_finalize(_n: BlockNumberFor<T>) {
 			// TODO check & release x% KSM/DOT to Bancor pool
 			// TODO check & lock if vsBond if expired
 		}
 
-		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
+		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
 			// TODO estimate weight
 			Zero::zero()
 		}
@@ -505,7 +555,7 @@ pub mod pallet {
 		///
 		/// This actually does computation. If you need to keep using it, then make sure you cache the
 		/// value and only call this once.
-		pub fn fund_account_id(index: ParaId) -> T::AccountId {
+		pub fn fund_account_id(index: ParaId) -> AccountIdOf<T> {
 			T::PalletId::get().into_sub_account(index)
 		}
 
@@ -516,18 +566,17 @@ pub mod pallet {
 			child::ChildInfo::new_default(T::Hashing::hash(&buf[..]).as_ref())
 		}
 
-		pub fn contribution_put(index: TrieIndex, who: &AccountId<T>, balance: &BalanceOf<T>) {
+		pub fn contribution_put(index: TrieIndex, who: &AccountIdOf<T>, balance: &BalanceOf<T>) {
 			who.using_encoded(|b| child::put(&Self::id_from_index(index), b, &(balance)));
 		}
 
-		pub fn contribution_get(index: TrieIndex, who: &AccountId<T>) -> BalanceOf<T> {
-			who.using_encoded(|b| child::get_or_default::<BalanceOf<T>>(
-				&Self::id_from_index(index),
-				b,
-			))
+		pub fn contribution_get(index: TrieIndex, who: &AccountIdOf<T>) -> BalanceOf<T> {
+			who.using_encoded(|b| {
+				child::get_or_default::<BalanceOf<T>>(&Self::id_from_index(index), b)
+			})
 		}
 
-		pub fn contribution_kill(index: TrieIndex, who: &AccountId<T>) {
+		pub fn contribution_kill(index: TrieIndex, who: &AccountIdOf<T>) {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
 
@@ -536,18 +585,31 @@ pub mod pallet {
 		}
 
 		pub fn contribution_iterator(
-			index: TrieIndex
-		) -> ChildTriePrefixIterator<(T::AccountId, (BalanceOf<T>, Vec<u8>))> {
-			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(&Self::id_from_index(index), &[])
+			index: TrieIndex,
+		) -> ChildTriePrefixIterator<(AccountIdOf<T>, (BalanceOf<T>, Vec<u8>))> {
+			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(
+				&Self::id_from_index(index),
+				&[],
+			)
 		}
 
-		pub fn xcm_ump_contribute_to_parachain(origin: OriginFor<T>, para_id: ParaId, value: BalanceOf<T>) -> Result<(), XcmError> {
+		pub fn xcm_ump_contribute_to_parachain(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+			value: BalanceOf<T>,
+		) -> Result<(), XcmError> {
+			let origin_location: MultiLocation = T::SendXcmOrigin::ensure_origin(origin)
+				.map_err(|_e| XcmError::ConvertOriginFailed)?;
 
-			let origin_location:MultiLocation = T::SendXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::ConvertOriginFailed)?;
+			let contribution = Contribution {
+				index: para_id,
+				value,
+				signature: None,
+			};
 
-			let contribution = Contribution{ index: para_id, value, signature: None };
-
-			let call = CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution)).encode();
+			let call =
+				CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution))
+					.encode();
 
 			let msg = Xcm::Transact {
 				origin_type: OriginKind::SovereignAccount,
@@ -555,7 +617,10 @@ pub mod pallet {
 				call: call.into(),
 			};
 
-			let message = Xcm::<()>::RelayedFrom { who:origin_location, message: Box::new(msg) };
+			let message = Xcm::<()>::RelayedFrom {
+				who: origin_location,
+				message: Box::new(msg),
+			};
 
 			match T::XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message.clone()) {
 				Ok(()) => {
@@ -564,7 +629,7 @@ pub mod pallet {
 						"crowdloan transact sent success message as {:?}",
 						message,
 					);
-				},
+				}
 				Err(e) => {
 					log::error!(
 						target: "salp",
