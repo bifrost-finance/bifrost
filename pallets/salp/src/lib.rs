@@ -29,20 +29,23 @@ pub mod pallet {
 		log,
 		pallet_prelude::{storage::child, *},
 		sp_runtime::{
-			traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
+			traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
 			MultiSignature,
 		},
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{CurrencyId, TokenSymbol, LeasePeriod};
+	use node_primitives::{CurrencyId, LeasePeriod, TokenSymbol};
 	use orml_traits::{
-		currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-		MultiReservableCurrency,
+		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
+		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use sp_std::prelude::*;
 	use xcm::v0::{Junction, MultiLocation, OriginKind, SendXcm, Xcm};
+
+	pub const VSTOKEN_LOCK: LockIdentifier = *b"VSTOKEN ";
+	pub const VSBOND_LOCK: LockIdentifier = *b"VSBOND  ";
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -385,6 +388,7 @@ pub mod pallet {
 				value >= T::MinContribution::get(),
 				Error::<T>::ContributionTooSmall
 			);
+
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
 				fund.status == FundStatus::Ongoing,
@@ -396,18 +400,29 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
 
+			T::MultiCurrency::total_issuance(CurrencyId::VSToken(T::TokenType::get()))
+				.checked_add(&value)
+				.ok_or(Error::<T>::Overflow)?;
+			T::MultiCurrency::total_issuance(CurrencyId::VSBond(
+				T::TokenType::get(),
+				index,
+				fund.first_slot,
+				fund.last_slot,
+			))
+			.checked_add(&value)
+			.ok_or(Error::<T>::Overflow)?;
+
+			let new_balance = Self::contribution_get(fund.trie_index, &who)
+				.checked_add(&value)
+				.ok_or(Error::<T>::Overflow)?;
+
 			Self::xcm_ump_contribute_to_parachain(origin, index, value)
 				.map_err(|_e| Error::<T>::XcmFailed)?;
 
-			let old_balance = Self::contribution_get(fund.trie_index, &who);
+			// Recalculate the contribution of contributor to the fund.
+			Self::contribution_put(fund.trie_index, &who, &new_balance);
 
-			let balance = old_balance.saturating_add(value);
-			Self::contribution_put(fund.trie_index, &who, &balance);
-
-			// TODO
-			// deposit KSM/DOT to fund_account
-			// issue vsToken/vsBond to sender
-
+			// Recalculate the fund.
 			Funds::<T>::insert(index, Some(fund));
 
 			Self::deposit_event(Event::Contributed(who, index, value));
@@ -640,6 +655,56 @@ pub mod pallet {
 				}
 			}
 			Ok(())
+		}
+
+		// FAKE-CODE: Just for demonstrating the process.
+		// async safe err?
+		fn contribute_callback(
+			origin: OriginFor<T>,
+			index: ParaId,
+			value: BalanceOf<T>,
+			is_success: bool,
+		) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			if is_success {
+				let vstoken = CurrencyId::VSToken(T::TokenType::get());
+				let vsbond =
+					CurrencyId::VSBond(T::TokenType::get(), index, fund.first_slot, fund.last_slot);
+
+				// Issue locked vsToken/vsBond to contributor.
+				T::MultiCurrency::deposit(vstoken, &who, value)?;
+				T::MultiCurrency::deposit(vsbond, &who, value)?;
+
+				// Lock the vsToken/vsBond.
+				T::MultiCurrency::extend_lock(VSTOKEN_LOCK, vstoken, &who, value);
+				T::MultiCurrency::extend_lock(VSBOND_LOCK, vsbond, &who, value);
+
+			// TODO: Raise an `XCM` call up to rely-chain to do deposit operation.
+
+			// TODO: deposit event?
+			} else {
+				let mut fund = fund;
+
+				// Revoke contribution.
+				let new_balance = Self::contribution_get(fund.trie_index, &who)
+					.checked_sub(&value)
+					.ok_or(Error::<T>::Overflow)?;
+
+				// Revoke fund.
+				fund.raised = fund
+					.raised
+					.checked_sub(&value)
+					.ok_or(Error::<T>::Overflow)?;
+
+				Self::contribution_put(fund.trie_index, &who, &new_balance);
+				Funds::<T>::insert(index, Some(fund));
+
+				// TODO: Deposit event?
+			}
+
+			Ok(().into())
 		}
 	}
 }
