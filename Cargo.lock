@@ -5100,10 +5100,6 @@ dependencies = [
  "sp-transaction-pool",
  "substrate-prometheus-endpoint 0.9.0 (git+https://github.com/paritytech/substrate?branch=master)",
  "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
-<<<<<<< HEAD
- "zenlink-protocol-rpc",
-=======
->>>>>>> develop
  "zenlink-protocol-runtime-api",
 ]
 
@@ -9874,21 +9870,6 @@ dependencies = [
 name = "sp-keyring"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
-<<<<<<< HEAD
-dependencies = [
- "lazy_static",
- "sp-core",
- "sp-runtime",
- "strum",
-]
-
-[[package]]
-name = "sp-keyring"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b59f2b0e94b2048d4984aa6eb40eef2e4c05d3adf27a083dd3c9b0fce74ef7a"
-=======
->>>>>>> develop
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -10030,19 +10011,6 @@ dependencies = [
 name = "sp-serializer"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
-<<<<<<< HEAD
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "sp-serializer"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "982d793f01eb9eea9f30ffc63b821170068b9f0d9edf715d8ba77dc4de9c300f"
-=======
->>>>>>> develop
 dependencies = [
  "serde",
  "serde_json",
