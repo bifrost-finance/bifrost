@@ -88,7 +88,7 @@ pub fn asgard_genesis(
 			}
 		},
 		orml_tokens: AssetsConfig {
-			endowed_accounts: endowed_accounts
+			balances: endowed_accounts
 				.iter()
 				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
