@@ -745,7 +745,7 @@ pub mod pallet {
 
 			if is_success {
 				// Burn the vsToken/vsBond.
-				T::MultiCurrency::withdraw(Self::token(), &who, value)?;
+				T::MultiCurrency::withdraw(Self::vstoken(), &who, value)?;
 				T::MultiCurrency::withdraw(
 					Self::vsbond(index, fund.first_slot, fund.last_slot),
 					&who,
