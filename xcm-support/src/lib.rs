@@ -41,16 +41,12 @@ use sp_std::{
 	marker::PhantomData,
 	prelude::*,
 };
-use xcm::v0::{
-	prelude::{XcmError, XcmResult},
-	Junction, MultiAsset, MultiLocation,
-	MultiLocation::{Null, X1, X2},
-	NetworkId, Xcm,
-};
+use xcm::v0::{prelude::{XcmError, XcmResult}, Junction, MultiAsset, MultiLocation, MultiLocation::{Null, X1, X2}, NetworkId, Xcm, OriginKind, SendXcm};
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
 use xcm_executor::traits::{
 	Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
 };
+use xcm::DoubleEncoded;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -226,3 +222,32 @@ impl<
 		}
 	}
 }
+
+pub trait BifrostXcmExecutor {
+	fn send_ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>, _relay: bool) -> XcmResult {
+		Err(XcmError::Unimplemented)
+	}
+}
+
+pub struct BifrostXcmAdaptor<XcmSender>(PhantomData<XcmSender>);
+
+impl <
+	XcmSender:SendXcm
+> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender> {
+	fn send_ump_transact(origin: MultiLocation, call: DoubleEncoded<()>, relay: bool) -> XcmResult {
+
+		let mut message = Xcm::Transact {
+			origin_type: OriginKind::SovereignAccount,
+			require_weight_at_most: u64::MAX,
+			call,
+		};
+
+		if relay {
+			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message) };
+		}
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
+	}
+}
+
+

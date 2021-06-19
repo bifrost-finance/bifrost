@@ -81,7 +81,7 @@ use frame_system::{EnsureRoot, EnsureOneOf};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
-use xcm_support::{BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostXcmTransactFilter, BifrostFilteredAssets};
+use xcm_support::{BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostXcmTransactFilter, BifrostFilteredAssets, BifrostXcmAdaptor};
 
 
 // zenlink imports
@@ -626,18 +626,19 @@ parameter_types! {
 	pub const MinContribution: Balance = 1 * DOLLARS;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
+	pub const TokenType: TokenSymbol = TokenSymbol::KSM;
 }
 
 impl bifrost_salp::Config for Runtime {
 	type Event = Event;
 	type PalletId = BifrostCrowdloanId;
-	type Currency = Balances;
 	type MultiCurrency = Assets;
 	type SubmissionDeposit = SubmissionDeposit;
 	type MinContribution = MinContribution;
 	type RemoveKeysLimit = RemoveKeysLimit;
-	type XcmSender = XcmRouter;
-	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
+	type TokenType = TokenType;
 }
 
 impl bifrost_bancor::Config for Runtime {

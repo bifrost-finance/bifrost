@@ -43,6 +43,8 @@ pub mod pallet {
 	};
 	use sp_std::prelude::*;
 	use xcm::v0::{Junction, MultiLocation, OriginKind, SendXcm, Xcm};
+	use xcm::v0::prelude::{XcmError, XcmResult};
+	use xcm_support::BifrostXcmExecutor;
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -115,14 +117,6 @@ pub mod pallet {
 		Contribute(Contribution<BalanceOf>),
 	}
 
-	/// Error type for something that went wrong with xcm communication.
-	#[derive(Debug)]
-	pub enum XcmError {
-		/// Convert origin error
-		ConvertOriginFailed,
-		/// Unable to send contribute
-		ContributeSentFailed,
-	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -152,12 +146,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
-		type XcmSender: SendXcm;
+		type ExecuteXcmOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin, Success=MultiLocation>;
 
-		type SendXcmOrigin: EnsureOrigin<
-			<Self as frame_system::Config>::Origin,
-			Success = MultiLocation,
-		>;
+		type BifrostXcmExecutor: BifrostXcmExecutor;
+
 	}
 
 	#[pallet::pallet]
@@ -416,12 +408,11 @@ pub mod pallet {
 		/// slot is unable to be purchased and the timeout expires.
 		#[pallet::weight(0)]
 		pub(super) fn partially_withdraw(
-			origin: OriginFor<T>,
+			_origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			contributor: AccountIdOf<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let _origin_location: MultiLocation = T::SendXcmOrigin::ensure_origin(origin)?;
 
 			let who = contributor.clone();
 
@@ -589,53 +580,15 @@ pub mod pallet {
 			)
 		}
 
-		pub fn xcm_ump_contribute_to_parachain(
-			origin: OriginFor<T>,
-			para_id: ParaId,
-			value: BalanceOf<T>,
-		) -> Result<(), XcmError> {
-			let origin_location: MultiLocation = T::SendXcmOrigin::ensure_origin(origin)
-				.map_err(|_e| XcmError::ConvertOriginFailed)?;
+		pub fn xcm_ump_contribute_to_parachain(origin: OriginFor<T>, para_id: ParaId, value: BalanceOf<T>) -> XcmResult {
 
-			let contribution = Contribution {
-				index: para_id,
-				value,
-				signature: None,
-			};
+			let origin_location:MultiLocation = T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
 
-			let call =
-				CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution))
-					.encode();
+			let contribution = Contribution{ index: para_id, value, signature: None };
 
-			let msg = Xcm::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: u64::MAX,
-				call: call.into(),
-			};
+			let call = CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution)).encode().into();
 
-			let message = Xcm::<()>::RelayedFrom {
-				who: origin_location,
-				message: Box::new(msg),
-			};
-
-			match T::XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message.clone()) {
-				Ok(()) => {
-					log::info!(
-						target: "salp",
-						"crowdloan transact sent success message as {:?}",
-						message,
-					);
-				}
-				Err(e) => {
-					log::error!(
-						target: "salp",
-						"crowdloan transact sent failed error as {:?}",
-						e,
-					);
-					return Err(XcmError::ContributeSentFailed);
-				}
-			}
-			Ok(())
+			T::BifrostXcmExecutor::send_ump_transact(origin_location, call, false)
 		}
 
 		fn vstoken() -> CurrencyId {
