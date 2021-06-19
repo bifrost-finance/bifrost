@@ -28,7 +28,7 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::{
-			traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
+			traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
 			MultiSignature,
 		},
 		storage::ChildTriePrefixIterator,
@@ -41,8 +41,8 @@ pub mod pallet {
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use sp_std::prelude::*;
-	use xcm::v0::MultiLocation;
 	use xcm::v0::prelude::{XcmError, XcmResult};
+	use xcm::v0::MultiLocation;
 	use xcm_support::BifrostXcmExecutor;
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -116,7 +116,6 @@ pub mod pallet {
 		Contribute(Contribution<BalanceOf>),
 	}
 
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -145,10 +144,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
-		type ExecuteXcmOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin, Success=MultiLocation>;
+		type ExecuteXcmOrigin: EnsureOrigin<
+			<Self as frame_system::Config>::Origin,
+			Success = MultiLocation,
+		>;
 
 		type BifrostXcmExecutor: BifrostXcmExecutor;
-
 	}
 
 	#[pallet::pallet]
@@ -160,10 +161,18 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Create a new crowdloaning campaign. [fund_index]
 		Created(ParaId),
+		/// Contributing to a crowd sale. [who, fund_index, amount]
+		Contributing(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Contributed to a crowd sale. [who, fund_index, amount]
 		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		/// Fail on contribute to crowd sale. [who, fund_index, amount]
+		ContributeFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		/// Withdrawing full balance of a contributor. [who, fund_index, amount]
+		Withdrawing(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
+		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Redeemed full balance of a contributor. [who, fund_index, amount]
 		Redeemed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 	}
@@ -248,17 +257,26 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
 				fund.status == FundStatus::Ongoing,
 				Error::<T>::InvalidFundStatus
 			);
-			fund.status = FundStatus::Success;
-			Funds::<T>::insert(index, Some(fund));
+			Funds::<T>::mutate(index, |fund| {
+				if let Some(fund) = fund {
+					fund.status = FundStatus::Success;
+				}
+			});
 
-			// TODO enable vsToken/vsBond transfer
-			// T::AssetHandler::unlockToken(paraId)
-			// T::AssetHandler::unlockVsBond(paraId)
+			// Unlock vsToken/vsBond
+			for (who, _) in Self::contribution_iterator(fund.trie_index) {
+				T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
+				T::MultiCurrency::remove_lock(
+					vslock(index),
+					Self::vsbond(index, fund.first_slot, fund.last_slot),
+					&who,
+				)?;
+			}
 
 			Ok(().into())
 		}
@@ -278,9 +296,6 @@ pub mod pallet {
 			);
 			fund.status = FundStatus::Failed;
 			Funds::<T>::insert(index, Some(fund));
-			// TODO enable vsToken/vsBond transfer
-			// T::AssetHandler::unlockToken(paraId)
-			// T::AssetHandler::unlockVsBond(paraId)
 
 			Ok(().into())
 		}
@@ -380,7 +395,9 @@ pub mod pallet {
 				fund.status == FundStatus::Ongoing,
 				Error::<T>::InvalidFundStatus
 			);
-			fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			fund.raised
+				.checked_add(&value)
+				.ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
 
 			Self::contribution_get(fund.trie_index, &who)
@@ -397,7 +414,7 @@ pub mod pallet {
 			Self::xcm_ump_contribute_to_parachain(origin, index, value)
 				.map_err(|_e| Error::<T>::XcmFailed)?;
 
-			Self::deposit_event(Event::Contributed(who, index, value));
+			Self::deposit_event(Event::Contributing(who, index, value));
 
 			Ok(().into())
 		}
@@ -412,40 +429,36 @@ pub mod pallet {
 			contributor: AccountIdOf<T>,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-
 			let who = contributor.clone();
 
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
-				value >= T::MinContribution::get(),
-				Error::<T>::ContributionTooSmall
-			);
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Ongoing,
+				fund.status == FundStatus::Failed,
 				Error::<T>::InvalidFundStatus
 			);
-
-			let old_balance = Self::contribution_get(fund.trie_index, &who);
-			ensure!(
-				fund.status == FundStatus::Ongoing,
-				Error::<T>::InvalidFundStatus
-			);
-			ensure!(old_balance >= value, Error::<T>::InsufficientBalance);
-			let balance = old_balance.saturating_sub(value);
-			Self::contribution_put(fund.trie_index, &who, &balance);
-
 			ensure!(fund.raised >= value, Error::<T>::InsufficientBalance);
-			fund.raised = fund.raised.saturating_sub(value);
-			// fund.raised = fund.raised.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
-			// TODO withdraw vsToken/vsBond from sender and withdraw KSM/DOT to fund_account
-			let _fund_account = Self::fund_account_id(index);
-			// T::Currency::withdraw(vsToken,contributor,value);
-			// T::Currency::withdraw(vsBond,contributor,value);
-			// T::Currency::withdraw(vsKsm,fund_account,value);
 
-			Funds::<T>::insert(index, Some(fund));
+			let balance = Self::contribution_get(fund.trie_index, &who);
+			ensure!(balance >= value, Error::<T>::InsufficientBalance);
 
-			Self::deposit_event(Event::Contributed(who, index, value));
+			let vstoken = Self::vstoken();
+			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
+
+			let remainder = balance.saturating_sub(value);
+
+			// Fix: It's ugly and could raise err;
+			//	Because `MultiCurrency` doesn't have method to query the locked balances of a currency by lock-identifier.
+			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, remainder)?;
+			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, remainder)?;
+			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
+			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
+			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, balance)?;
+			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, balance)?;
+
+			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
+			// 	Transfer token from bifrost_account to contributor.
+
+			Self::deposit_event(Event::Withdrawing(who, index, value));
 
 			Ok(().into())
 		}
@@ -476,7 +489,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
 				fund.status == FundStatus::Failed,
 				Error::<T>::InvalidFundStatus
@@ -485,24 +498,28 @@ pub mod pallet {
 			let balance = Self::contribution_get(fund.trie_index, &who);
 			ensure!(balance > Zero::zero(), Error::<T>::NoContributions);
 
-			Self::contribution_kill(fund.trie_index, &who);
-			fund.raised = fund.raised.saturating_sub(balance);
+			let vstoken = Self::vstoken();
+			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
 
-			Funds::<T>::insert(index, Some(fund));
+			// Fix: It's ugly and could raise err;
+			//	Because `MultiCurrency` doesn't have method to query the locked balances of a currency by lock-identifier.
+			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, 0)?;
+			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, 0)?;
+			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, balance)?;
+			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, balance)?;
+			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, balance)?;
+			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, balance)?;
 
-			// TODO destroy vsToken/vsBond from sender& withdraw KSM/DOT to fund_account
-			let _fund_account = Self::fund_account_id(index);
-			// T::Currency::destroy(vsToken,who);
-			// T::Currency::destroy(vsBond,who);
-			// T::Currency::withdraw(token,balance);
+			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
+			// 	Transfer token from bifrost_account to contributor.
 
-			Self::deposit_event(Event::Withdrew(who, index, balance));
+			Self::deposit_event(Event::Withdrawing(who, index, balance));
 
 			Ok(().into())
 		}
 
 		#[pallet::weight(0)]
-		pub(super) fn redeem_from_bancor_pool(
+		pub(super) fn redeem(
 			_origin: OriginFor<T>,
 			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
@@ -579,13 +596,24 @@ pub mod pallet {
 			)
 		}
 
-		pub fn xcm_ump_contribute_to_parachain(origin: OriginFor<T>, para_id: ParaId, value: BalanceOf<T>) -> XcmResult {
+		pub fn xcm_ump_contribute_to_parachain(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+			value: BalanceOf<T>,
+		) -> XcmResult {
+			let origin_location: MultiLocation =
+				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
 
-			let origin_location:MultiLocation = T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
+			let contribution = Contribution {
+				index: para_id,
+				value,
+				signature: None,
+			};
 
-			let contribution = Contribution{ index: para_id, value, signature: None };
-
-			let call = CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution)).encode().into();
+			let call =
+				CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution))
+					.encode()
+					.into();
 
 			T::BifrostXcmExecutor::send_ump_transact(origin_location, call, false)
 		}
@@ -619,7 +647,7 @@ pub mod pallet {
 				// Recalculate the fund.
 				Funds::<T>::mutate(index, |fund| {
 					if let Some(fund) = fund {
-						fund.raised += value;
+						fund.raised.saturating_add(value);
 					}
 				});
 
@@ -632,9 +660,44 @@ pub mod pallet {
 				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, value)?;
 
 				// TODO: Raise an `XCM` call up to rely-chain to do deposit operation.
-				// TODO: deposit event?
+
+				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
-				// TODO: Deposit event?
+				Self::deposit_event(Event::ContributeFailed(who, index, value));
+			}
+
+			Ok(().into())
+		}
+
+		// FAKE-CODE: Just for demonstrating the process.
+		#[allow(dead_code)]
+		fn withdraw_callback(
+			who: AccountIdOf<T>,
+			index: ParaId,
+			is_success: bool,
+		) -> DispatchResultWithPostInfo {
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let balance = Self::contribution_get(fund.trie_index, &who);
+
+			if is_success {
+				Self::contribution_kill(fund.trie_index, &who);
+				Funds::<T>::mutate(index, |fund| {
+					if let Some(fund) = fund {
+						fund.raised.saturating_sub(balance);
+					}
+				});
+
+				// Slash vsToken/vsBond.
+				let vstoken = Self::vstoken();
+				let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
+				T::MultiCurrency::remove_lock(vslock(index), vstoken, &who)?;
+				T::MultiCurrency::remove_lock(vslock(index), vsbond, &who)?;
+				T::MultiCurrency::withdraw(vstoken, &who, balance)?;
+				T::MultiCurrency::withdraw(vsbond, &who, balance)?;
+
+				Self::deposit_event(Event::Withdrew(who, index, balance));
+			} else {
+				Self::deposit_event(Event::WithdrawFailed(who, index, balance));
 			}
 
 			Ok(().into())
