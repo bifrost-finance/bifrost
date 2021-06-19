@@ -400,19 +400,24 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
 
-			Self::contribution_get(fund.trie_index, &who)
+			let new_balance = Self::contribution_get(fund.trie_index, &who)
 				.checked_add(&value)
 				.ok_or(Error::<T>::Overflow)?;
 
-			T::MultiCurrency::total_issuance(Self::vstoken())
-				.checked_add(&value)
-				.ok_or(Error::<T>::Overflow)?;
-			T::MultiCurrency::total_issuance(Self::vsbond(index, fund.first_slot, fund.last_slot))
-				.checked_add(&value)
-				.ok_or(Error::<T>::Overflow)?;
-
+			// Raise an `XCM` call up to rely-chain to do contribution operation.
+			//	Transfer token(rely-chain) from contributor to bifrost_account.
 			Self::xcm_ump_contribute_to_parachain(origin, index, value)
 				.map_err(|_e| Error::<T>::XcmFailed)?;
+
+			// Recalculate fund raised.
+			Funds::<T>::mutate(index, |fund| {
+				if let Some(fund) = fund {
+					fund.raised = fund.raised.saturating_add(value);
+				}
+			});
+
+			// Recalculate the contribution of contributor to the fund.
+			Self::contribution_put(fund.trie_index, &who, &new_balance);
 
 			Self::deposit_event(Event::Contributing(who, index, value));
 
@@ -436,27 +441,15 @@ pub mod pallet {
 				fund.status == FundStatus::Failed,
 				Error::<T>::InvalidFundStatus
 			);
-			ensure!(fund.raised >= value, Error::<T>::InsufficientBalance);
 
-			let balance = Self::contribution_get(fund.trie_index, &who);
-			ensure!(balance >= value, Error::<T>::InsufficientBalance);
-
-			let vstoken = Self::vstoken();
-			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-
-			let remainder = balance.saturating_sub(value);
-
-			// Fix: It's ugly and could raise err;
-			//	Because `MultiCurrency` doesn't have method to query the locked balances of a currency by lock-identifier.
-			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, remainder)?;
-			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, remainder)?;
-			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
-			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
-			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, balance)?;
-			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, balance)?;
+			let new_balance = Self::contribution_get(fund.trie_index, &who)
+				.checked_sub(value)
+				.ok_or(Error::<T>::InsufficientBalance)?;
 
 			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
 			// 	Transfer token from bifrost_account to contributor.
+
+			Self::contribution_put(fund.trie_index, &who, &new_balance);
 
 			Self::deposit_event(Event::Withdrawing(who, index, value));
 
@@ -498,20 +491,11 @@ pub mod pallet {
 			let balance = Self::contribution_get(fund.trie_index, &who);
 			ensure!(balance > Zero::zero(), Error::<T>::NoContributions);
 
-			let vstoken = Self::vstoken();
-			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-
-			// Fix: It's ugly and could raise err;
-			//	Because `MultiCurrency` doesn't have method to query the locked balances of a currency by lock-identifier.
-			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, 0)?;
-			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, 0)?;
-			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, balance)?;
-			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, balance)?;
-			T::MultiCurrency::set_lock(vslock(index), vstoken, &who, balance)?;
-			T::MultiCurrency::set_lock(vslock(index), vsbond, &who, balance)?;
-
 			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
 			// 	Transfer token from bifrost_account to contributor.
+
+			// Recalculate the contribution of contributor to the fund.
+			Self::contribution_put(fund.trie_index, &who, &Zero::zero());
 
 			Self::deposit_event(Event::Withdrawing(who, index, balance));
 
@@ -635,27 +619,14 @@ pub mod pallet {
 			value: BalanceOf<T>,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let vstoken = Self::vstoken();
+			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
+
 			if is_success {
-				let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-				let vstoken = Self::vstoken();
-				let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-
-				// Recalculate the contribution of contributor to the fund.
-				let new_balance = Self::contribution_get(fund.trie_index, &who) + value;
-				Self::contribution_put(fund.trie_index, &who, &new_balance);
-
-				// Recalculate the fund.
-				Funds::<T>::mutate(index, |fund| {
-					if let Some(fund) = fund {
-						fund.raised.saturating_add(value);
-					}
-				});
-
-				// Issue vsToken/vsBond to contributor.
+				// Issue lock vsToken/vsBond to contributor.
 				T::MultiCurrency::deposit(vstoken, &who, value)?;
 				T::MultiCurrency::deposit(vsbond, &who, value)?;
-
-				// Lock the vsToken/vsBond.
 				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, value)?;
 				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, value)?;
 
@@ -663,6 +634,18 @@ pub mod pallet {
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
+				// Revoke the fund raised.
+				Funds::<T>::mutate(index, |fund| {
+					if let Some(fund) = fund {
+						fund.raised = fund.raised.saturating_sub(value);
+					}
+				});
+
+				// Revoke the contribution of contributor to the fund.
+				let new_balance = Self::contribution_get(fund.trie_index, &who)
+					.saturating_sub(value);
+				Self::contribution_put(fund.trie_index, &who, &new_balance);
+
 				Self::deposit_event(Event::ContributeFailed(who, index, value));
 			}
 
@@ -674,29 +657,33 @@ pub mod pallet {
 		fn withdraw_callback(
 			who: AccountIdOf<T>,
 			index: ParaId,
+			value: BalanceOf<T>,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let balance = Self::contribution_get(fund.trie_index, &who);
 
 			if is_success {
-				Self::contribution_kill(fund.trie_index, &who);
-				Funds::<T>::mutate(index, |fund| {
-					if let Some(fund) = fund {
-						fund.raised.saturating_sub(balance);
-					}
-				});
-
-				// Slash vsToken/vsBond.
 				let vstoken = Self::vstoken();
 				let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-				T::MultiCurrency::remove_lock(vslock(index), vstoken, &who)?;
-				T::MultiCurrency::remove_lock(vslock(index), vsbond, &who)?;
-				T::MultiCurrency::withdraw(vstoken, &who, balance)?;
-				T::MultiCurrency::withdraw(vsbond, &who, balance)?;
+
+				T::MultiCurrency::set_lock(vslock(index), vstoken, &who, balance)?;
+				T::MultiCurrency::set_lock(vslock(index), vsbond, &who, balance)?;
+				T::MultiCurrency::withdraw(vstoken, &who, value)?;
+				T::MultiCurrency::withdraw(vstoken, &who, value)?;
+
+				if balance == Zero::zero() {
+					Self::contribution_kill(fund.trie_index, &who);
+
+					T::MultiCurrency::remove_lock(vslock(index), vstoken, &who)?;
+					T::MultiCurrency::remove_lock(vslock(index), vsbond, &who)?;
+				}
 
 				Self::deposit_event(Event::Withdrew(who, index, balance));
 			} else {
+				// Revoke the contribution..
+				Self::contribution_put(fund.trie_index, &who, &balance.saturating_add(value));
+
 				Self::deposit_event(Event::WithdrawFailed(who, index, balance));
 			}
 
