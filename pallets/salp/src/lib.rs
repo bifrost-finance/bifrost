@@ -117,7 +117,7 @@ pub mod pallet {
 	}
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be ```ModuleId(*b"py/cfund")```
@@ -134,6 +134,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type TokenType: Get<TokenSymbol>;
+
+		#[pallet::constant]
+		type VSBondValidPeriod: Get<LeasePeriod>;
 
 		type MultiCurrency: TransferAll<Self::AccountId>
 			+ MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>
@@ -173,8 +176,12 @@ pub mod pallet {
 		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
 		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
-		/// Redeemed full balance of a contributor. [who, fund_index, amount]
-		Redeemed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		/// Redeeming token(rely-chain) by vsToken/vsBond. [who, fund_index, amount]
+		Redeeming(AccountIdOf<T>, BalanceOf<T>),
+		/// Redeemed token(rely-chain) by vsToken/vsBond. [who, fund_index, amount]
+		Redeemed(AccountIdOf<T>, BalanceOf<T>),
+		/// Fail on redeem token(rely-chain) by vsToken/vsBond. [who, fund_index, amount]
+		RedeemFailed(AccountIdOf<T>, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -211,6 +218,8 @@ pub mod pallet {
 		FundNotRetired,
 		/// The crowdloan has not yet ended.
 		FundNotEnded,
+		/// Fund has been expired.
+		FundExpired,
 		/// There are no contributions stored in this crowdloan.
 		NoContributions,
 		/// This crowdloan has an active parachain and cannot be dissolved.
@@ -247,6 +256,11 @@ pub mod pallet {
 		Option<FundInfo<AccountIdOf<T>, BalanceOf<T>, BlockNumberFor<T>, LeasePeriod>>,
 		ValueQuery,
 	>;
+
+	/// The balance of the token(rely-chain) can be redeemed.
+	#[pallet::storage]
+	#[pallet::getter(fn redeem_pool)]
+	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -307,13 +321,21 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
 				fund.status == FundStatus::Success,
 				Error::<T>::InvalidFundStatus
 			);
-			fund.status = FundStatus::Retired;
-			Funds::<T>::insert(index, Some(fund));
+			Funds::<T>::mutate(index, |fund| {
+				if let Some(fund) = fund {
+					fund.status = FundStatus::Retired;
+				}
+			});
+
+			// Recharge into the 1:1 redeem pool.
+			RedeemPool::<T>::mutate(|balance| {
+				*balance = balance.saturating_add(fund.raised);
+			});
 
 			Ok(().into())
 		}
@@ -443,7 +465,7 @@ pub mod pallet {
 			);
 
 			let new_balance = Self::contribution_get(fund.trie_index, &who)
-				.checked_sub(value)
+				.checked_sub(&value)
 				.ok_or(Error::<T>::InsufficientBalance)?;
 
 			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
@@ -504,21 +526,37 @@ pub mod pallet {
 
 		#[pallet::weight(0)]
 		pub(super) fn redeem(
-			_origin: OriginFor<T>,
-			who: AccountIdOf<T>,
+			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-			amount: Option<BalanceOf<T>>,
+			value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
+			let block_number = <frame_system::Pallet<T>>::block_number();
+			let who = ensure_signed(origin)?;
+
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
 				fund.status == FundStatus::Retired,
-				Error::<T>::InvalidFundStatus
+				Error::<T>::FundNotRetired
+			);
+			ensure!(
+				(block_number - fund.last_slot) <= T::VSBondValidPeriod::get(),
+				Error::<T>::FundExpired
 			);
 
-			// TODO call Bancor function
-			// T::Bancor::swap();
+			let new_redeem_balance = Self::redeem_pool()
+				.checked_sub(&value)
+				.ok_or(Error::<T>::InsufficientBalance)?;
 
-			Self::deposit_event(Event::Redeemed(who, index, amount.unwrap_or(Zero::zero())));
+			let vstoken = Self::vstoken();
+			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
+			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
+			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
+
+			// TODO: Raise an `XCM` call up to `rely-chain` to transfer balance from bifrsot_account to redeemer.
+
+			RedeemPool::<T>::put(new_redeem_balance);
+
+			Self::deposit_event(Event::Redeeming(who, value));
 
 			Ok(().into())
 		}
@@ -642,8 +680,8 @@ pub mod pallet {
 				});
 
 				// Revoke the contribution of contributor to the fund.
-				let new_balance = Self::contribution_get(fund.trie_index, &who)
-					.saturating_sub(value);
+				let new_balance =
+					Self::contribution_get(fund.trie_index, &who).saturating_sub(value);
 				Self::contribution_put(fund.trie_index, &who, &new_balance);
 
 				Self::deposit_event(Event::ContributeFailed(who, index, value));
@@ -685,6 +723,28 @@ pub mod pallet {
 				Self::contribution_put(fund.trie_index, &who, &balance.saturating_add(value));
 
 				Self::deposit_event(Event::WithdrawFailed(who, index, balance));
+			}
+
+			Ok(().into())
+		}
+
+		// FAKE-CODE: Just for demonstrating the process.
+		#[allow(dead_code)]
+		fn redeem_callback(who: AccountIdOf<T>, index: ParaId, value: BalanceOf<T>, is_success: bool) -> DispatchResultWithPostInfo {
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			if is_success {
+				// Burn the vsToken/vsBond.
+				T::MultiCurrency::withdraw(Self::token(), &who, value)?;
+				T::MultiCurrency::withdraw(Self::vsbond(index, fund.first_slot, fund.last_slot), &who, value)?;
+
+				Self::deposit_event(Event::Redeemed(who, value));
+			} else {
+				// Revoke the redeem pool.
+				let new_redeem_balance = Self::redeem_pool().saturating_add(value);
+				RedeemPool::<T>::put(new_redeem_balance);
+
+				Self::deposit_event(Event::RedeemFailed(who, value));
 			}
 
 			Ok(().into())
