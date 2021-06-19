@@ -730,13 +730,22 @@ pub mod pallet {
 
 		// FAKE-CODE: Just for demonstrating the process.
 		#[allow(dead_code)]
-		fn redeem_callback(who: AccountIdOf<T>, index: ParaId, value: BalanceOf<T>, is_success: bool) -> DispatchResultWithPostInfo {
+		fn redeem_callback(
+			who: AccountIdOf<T>,
+			index: ParaId,
+			value: BalanceOf<T>,
+			is_success: bool,
+		) -> DispatchResultWithPostInfo {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			if is_success {
 				// Burn the vsToken/vsBond.
 				T::MultiCurrency::withdraw(Self::token(), &who, value)?;
-				T::MultiCurrency::withdraw(Self::vsbond(index, fund.first_slot, fund.last_slot), &who, value)?;
+				T::MultiCurrency::withdraw(
+					Self::vsbond(index, fund.first_slot, fund.last_slot),
+					&who,
+					value,
+				)?;
 
 				Self::deposit_event(Event::Redeemed(who, value));
 			} else {
