@@ -27,6 +27,9 @@ use sp_runtime::{
 	DispatchResult,
 };
 use sp_std::{fmt::Debug, vec::Vec};
+use xcm::v0::MultiLocation;
+use xcm::DoubleEncoded;
+use xcm::v0::prelude::XcmResult;
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -228,4 +231,11 @@ pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
 		minted_vtoken: Balance,
 		block_num: BlockNumber,
 	) -> Result<(), Self::Error>;
+}
+
+/// Bifrost Xcm Executor
+pub trait BifrostXcmExecutor {
+	fn ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>) -> XcmResult;
+
+	fn ump_transfer_to_parachain(_origin: MultiLocation, para_id:u32, _amount: u128) -> XcmResult;
 }

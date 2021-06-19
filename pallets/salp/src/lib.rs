@@ -26,7 +26,6 @@ pub use pallet::*;
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use frame_support::{
-		log,
 		pallet_prelude::{storage::child, *},
 		sp_runtime::{
 			traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
@@ -42,9 +41,10 @@ pub mod pallet {
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use sp_std::prelude::*;
-	use xcm::v0::{Junction, MultiLocation, OriginKind, SendXcm, Xcm};
+	use xcm::v0::{MultiLocation};
 	use xcm::v0::prelude::{XcmError, XcmResult};
-	use xcm_support::BifrostXcmExecutor;
+	use sp_std::convert::TryInto;
+	use node_primitives::traits::BifrostXcmExecutor;
 
 	pub const VSTOKEN_LOCK: LockIdentifier = *b"VSTOKEN ";
 	pub const VSBOND_LOCK: LockIdentifier = *b"VSBOND  ";
@@ -603,11 +603,15 @@ pub mod pallet {
 
 			let origin_location:MultiLocation = T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
 
-			let contribution = Contribution{ index: para_id, value, signature: None };
+			let contribution = Contribution{ index: para_id, value: value.clone(), signature: None };
 
 			let call = CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution)).encode().into();
 
-			T::BifrostXcmExecutor::send_ump_transact(origin_location, call, false)
+			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
+
+			let _result = T::BifrostXcmExecutor::ump_transfer_to_parachain(origin_location.clone(), para_id,amount)?;
+
+			T::BifrostXcmExecutor::ump_transact(origin_location, call)
 		}
 
 		// FAKE-CODE: Just for demonstrating the process.
