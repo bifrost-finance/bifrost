@@ -26,7 +26,6 @@ pub use pallet::*;
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use frame_support::{
-		log,
 		pallet_prelude::{storage::child, *},
 		sp_runtime::{
 			traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
@@ -42,7 +41,7 @@ pub mod pallet {
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use sp_std::prelude::*;
-	use xcm::v0::{Junction, MultiLocation, OriginKind, SendXcm, Xcm};
+	use xcm::v0::MultiLocation;
 	use xcm::v0::prelude::{XcmError, XcmResult};
 	use xcm_support::BifrostXcmExecutor;
 
