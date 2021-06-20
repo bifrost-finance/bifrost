@@ -237,5 +237,6 @@ pub trait MinterRewardExt<AccountId, Balance, CurrencyId, BlockNumber> {
 pub trait BifrostXcmExecutor {
 	fn ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>) -> XcmResult;
 
-	fn ump_transfer_to_parachain(_origin: MultiLocation, para_id:u32, _amount: u128) -> XcmResult;
+	fn ump_transfer_asset(_origin: MultiLocation, _dest:MultiLocation, _amount: u128,_relay: bool) -> XcmResult;
+
 }
