@@ -627,6 +627,7 @@ parameter_types! {
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const TokenType: TokenSymbol = TokenSymbol::KSM;
+	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -639,6 +640,7 @@ impl bifrost_salp::Config for Runtime {
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
 	type TokenType = TokenType;
+	type VSBondValidPeriod = VSBondValidPeriod;
 }
 
 impl bifrost_bancor::Config for Runtime {

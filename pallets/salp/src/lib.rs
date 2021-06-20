@@ -41,10 +41,12 @@ pub mod pallet {
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use sp_std::prelude::*;
-	use xcm::v0::{MultiLocation};
+	use xcm::v0::{MultiLocation, Junction};
 	use xcm::v0::prelude::{XcmError, XcmResult};
 	use sp_std::convert::TryInto;
 	use node_primitives::traits::BifrostXcmExecutor;
+	use sp_std::fmt::Debug;
+	use polkadot_parachain::primitives::Id as PolkadotParaId;
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -88,17 +90,24 @@ pub mod pallet {
 		status: FundStatus,
 	}
 
+	#[allow(type_alias_bounds)]
 	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
+	#[allow(type_alias_bounds)]
 	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 	type TrieIndex = u32;
 
 	#[derive(Encode, Decode)]
-	pub enum CrowdloanPalletCall<BalanceOf> {
+	pub enum CrowdloanContributeCall<BalanceOf> {
 		#[codec(index = 27)]
-		// the index should match the position of the module in `construct_runtime!`
 		CrowdloanContribute(ContributeCall<BalanceOf>),
+	}
+
+	#[derive(Encode, Decode)]
+	pub enum CrowdloanWithdrawCall<AccountIdOf> {
+		#[codec(index = 27)]
+		CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
 	}
 
 	#[derive(Debug, PartialEq, Encode, Decode)]
@@ -113,8 +122,20 @@ pub mod pallet {
 	#[derive(Encode, Decode)]
 	pub enum ContributeCall<BalanceOf> {
 		#[codec(index = 1)]
-		// the index should match the position of the dispatchable in the target pallet
 		Contribute(Contribution<BalanceOf>),
+	}
+
+	#[derive(Debug, PartialEq, Encode, Decode)]
+	pub struct Withdraw<AccountIdOf> {
+		who: AccountIdOf,
+		#[codec(compact)]
+		index: ParaId,
+	}
+
+	#[derive(Encode, Decode)]
+	pub enum WithdrawCall<AccountIdOf> {
+		#[codec(index = 2)]
+		Withdraw(Withdraw<AccountIdOf>),
 	}
 
 	#[pallet::config]
@@ -175,6 +196,8 @@ pub mod pallet {
 		Withdrawing(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		/// parachain withdrew
+		WithdrewAll(ParaId),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
 		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Redeeming token(rely-chain) by vsToken/vsBond. [who, fund_index, amount]
@@ -429,7 +452,7 @@ pub mod pallet {
 
 			// Raise an `XCM` call up to rely-chain to do contribution operation.
 			//	Transfer token(rely-chain) from contributor to bifrost_account.
-			Self::xcm_ump_contribute_to_parachain(origin, index, value)
+			Self::xcm_ump_contribute(origin, index, value)
 				.map_err(|_e| Error::<T>::XcmFailed)?;
 
 			// Recalculate fund raised.
@@ -447,41 +470,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
-		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
-		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight(0)]
-		pub(super) fn partially_withdraw(
-			_origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-			contributor: AccountIdOf<T>,
-			#[pallet::compact] value: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
-			let who = contributor.clone();
-
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Failed,
-				Error::<T>::InvalidFundStatus
-			);
-
-			let new_balance = Self::contribution_get(fund.trie_index, &who)
-				.checked_sub(&value)
-				.ok_or(Error::<T>::InsufficientBalance)?;
-
-			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
-			// 	Transfer token from bifrost_account to contributor.
-
-			Self::contribution_put(fund.trie_index, &who, &new_balance);
-
-			Self::deposit_event(Event::Withdrawing(who, index, value));
-
-			Ok(().into())
-		}
-
 		/// Withdraw full balance of a contributor.
 		///
-		/// Origin must be signed.
+		/// Origin must be root.
 		///
 		/// The fund must be either in, or ready for, retirement. For a fund to be *in* retirement, then the retirement
 		/// flag must be set. For a fund to be ready for retirement, then:
@@ -500,10 +491,9 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub(super) fn withdraw(
 			origin: OriginFor<T>,
-			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
-			ensure_signed(origin)?;
+			ensure_root(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -511,16 +501,12 @@ pub mod pallet {
 				Error::<T>::InvalidFundStatus
 			);
 
-			let balance = Self::contribution_get(fund.trie_index, &who);
-			ensure!(balance > Zero::zero(), Error::<T>::NoContributions);
-
 			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
 			// 	Transfer token from bifrost_account to contributor.
+			Self::xcm_ump_withdraw(origin,index).map_err(|_e| Error::<T>::XcmFailed)?;
 
-			// Recalculate the contribution of contributor to the fund.
-			Self::contribution_put(fund.trie_index, &who, &Zero::zero());
 
-			Self::deposit_event(Event::Withdrawing(who, index, balance));
+			Self::deposit_event(Event::WithdrewAll(index));
 
 			Ok(().into())
 		}
@@ -532,7 +518,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let block_number = <frame_system::Pallet<T>>::block_number();
-			let who = ensure_signed(origin)?;
+			let who = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -554,6 +540,7 @@ pub mod pallet {
 			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
 
 			// TODO: Raise an `XCM` call up to `rely-chain` to transfer balance from bifrsot_account to redeemer.
+			Self::xcm_ump_redeem(origin,index,value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			RedeemPool::<T>::put(new_redeem_balance);
 
@@ -619,7 +606,7 @@ pub mod pallet {
 			)
 		}
 
-		pub fn xcm_ump_contribute_to_parachain(
+		pub fn xcm_ump_contribute(
 			origin: OriginFor<T>,
 			para_id: ParaId,
 			value: BalanceOf<T>,
@@ -634,15 +621,49 @@ pub mod pallet {
 			};
 
 			let call =
-				CrowdloanPalletCall::CrowdloanContribute(ContributeCall::Contribute(contribution))
+				CrowdloanContributeCall::CrowdloanContribute(ContributeCall::Contribute(contribution))
 					.encode()
 					.into();
 
 			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
 
-			let _result = T::BifrostXcmExecutor::ump_transfer_to_parachain(origin_location.clone(), para_id,amount)?;
+			let _result = T::BifrostXcmExecutor::ump_transfer_asset(origin_location.clone(), MultiLocation::X1(Junction::Parachain(para_id)),amount, true)?;
 
 			T::BifrostXcmExecutor::ump_transact(origin_location, call)
+		}
+
+		pub fn xcm_ump_withdraw(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+		) -> XcmResult {
+			let origin_location: MultiLocation =
+				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
+
+			let who:AccountIdOf<T> = PolkadotParaId::from(para_id).into_account();
+
+			let withdraw = Withdraw {
+				who,
+				index: para_id,
+			};
+			let call =
+				CrowdloanWithdrawCall::CrowdloanWithdraw(WithdrawCall::Withdraw(withdraw))
+					.encode()
+					.into();
+			T::BifrostXcmExecutor::ump_transact(origin_location, call)
+		}
+
+		pub fn xcm_ump_redeem(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+			value: BalanceOf<T>,
+		) -> XcmResult {
+			let origin_location: MultiLocation =
+				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
+
+			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
+
+			T::BifrostXcmExecutor::ump_transfer_asset(MultiLocation::X1(Junction::Parachain(para_id)), origin_location,amount,false)
+
 		}
 
 		fn vstoken() -> CurrencyId {

@@ -831,6 +831,7 @@ dependencies = [
  "node-primitives",
  "orml-traits",
  "parity-scale-codec",
+ "polkadot-parachain",
  "sp-runtime",
  "sp-std",
  "xcm",

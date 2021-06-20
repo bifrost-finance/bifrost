@@ -241,19 +241,18 @@ impl<
         XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
     }
 
-    fn ump_transfer_to_parachain(origin: MultiLocation, para_id:u32, amount: u128) -> XcmResult {
-        let message = Xcm::<()>::RelayedFrom {
-            who: origin,
-            message: Box::new(Xcm::WithdrawAsset {
-                assets: vec![MultiAsset::ConcreteFungible { id: MultiLocation::X1(Junction::Parent), amount }],
-                effects: vec![
-                    Order::DepositAsset {
-                        assets: vec![MultiAsset::All],
-                        dest: MultiLocation::X1(Junction::Parachain(para_id)),
-                    }
-                ]
-            }),
+    fn ump_transfer_asset(origin: MultiLocation, dest:MultiLocation, amount: u128, relay:bool) -> XcmResult {
+        let mut message = Xcm::TransferAsset {
+            assets: vec![MultiAsset::ConcreteFungible { id: MultiLocation::Null, amount }],
+            dest,
         };
+
+        if relay {
+            message = Xcm::<()>::RelayedFrom {
+                who: origin,
+                message: Box::new(message),
+            };
+        }
 
         XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
     }
