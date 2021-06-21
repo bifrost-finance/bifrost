@@ -36,7 +36,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{
-		traits::BifrostXcmExecutor, CurrencyId, LeasePeriod, ParaId, TokenSymbol,
+		traits::{BifrostXcmExecutor, BancorHandler}, CurrencyId, LeasePeriod, ParaId, TokenSymbol,
 	};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
@@ -171,11 +171,13 @@ pub mod pallet {
 		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
 		type ReleaseRatio: Get<U1F127>;
 
-		type MultiCurrency: TransferAll<Self::AccountId>
-			+ MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>
-			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
-			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
-			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+		type MultiCurrency: TransferAll<AccountIdOf<Self>>
+			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+
+		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
@@ -576,7 +578,10 @@ pub mod pallet {
 							*b = b.saturating_sub(release_amount);
 						});
 
-						// TODO: Increase the balance of bancor-pool by release amount.
+						// Increase the balance of bancor-pool by release amount.
+						if let Err(err) = T::BancorPool::add_token(T::TokenType::get().into(), release_amount) {
+							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
+						}
 					}
 				} else {
 					log::warn!("Overflow: The balance of redeem-pool exceeds u128.");
