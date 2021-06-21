@@ -828,12 +828,14 @@ version = "0.8.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "log",
  "node-primitives",
  "orml-traits",
  "parity-scale-codec",
  "polkadot-parachain",
  "sp-runtime",
  "sp-std",
+ "substrate-fixed 0.5.6 (git+https://github.com/encointer/substrate-fixed?rev=b33d186888c60f38adafcfc0ec3a21aab263aef1)",
  "xcm",
  "xcm-support",
 ]
@@ -874,7 +876,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "substrate-fixed",
+ "substrate-fixed 0.5.6 (git+https://github.com/encointer/substrate-fixed)",
 ]
 
 [[package]]
@@ -10638,6 +10640,15 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "platforms",
+]
+
+[[package]]
+name = "substrate-fixed"
+version = "0.5.6"
+source = "git+https://github.com/encointer/substrate-fixed?rev=b33d186888c60f38adafcfc0ec3a21aab263aef1#b33d186888c60f38adafcfc0ec3a21aab263aef1"
+dependencies = [
+ "parity-scale-codec",
+ "typenum",
 ]
 
 [[package]]

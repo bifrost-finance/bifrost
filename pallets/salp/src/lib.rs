@@ -35,18 +35,20 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
+	use node_primitives::{
+		traits::BifrostXcmExecutor, CurrencyId, LeasePeriod, ParaId, TokenSymbol,
+	};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
-	use sp_std::prelude::*;
-	use xcm::v0::{MultiLocation, Junction};
-	use xcm::v0::prelude::{XcmError, XcmResult};
-	use sp_std::convert::TryInto;
-	use node_primitives::traits::BifrostXcmExecutor;
-	use sp_std::fmt::Debug;
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
+	use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
+	use substrate_fixed::types::U1F127;
+	use xcm::v0::{
+		prelude::{XcmError, XcmResult},
+		Junction, MultiLocation,
+	};
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	pub enum FundStatus {
@@ -159,6 +161,16 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type VSBondValidPeriod: Get<LeasePeriod>;
+
+		/// The time interval from 1:1 redeem-pool to bancor-pool to release.
+		#[pallet::constant]
+		type ReleaseCycle: Get<LeasePeriod>;
+
+		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
+		///
+		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
+		#[pallet::constant]
+		type ReleaseRatio: Get<U1F127>;
 
 		type MultiCurrency: TransferAll<Self::AccountId>
 			+ MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>
@@ -452,8 +464,7 @@ pub mod pallet {
 
 			// Raise an `XCM` call up to rely-chain to do contribution operation.
 			//	Transfer token(rely-chain) from contributor to bifrost_account.
-			Self::xcm_ump_contribute(origin, index, value)
-				.map_err(|_e| Error::<T>::XcmFailed)?;
+			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			// Recalculate fund raised.
 			Funds::<T>::mutate(index, |fund| {
@@ -503,8 +514,7 @@ pub mod pallet {
 
 			// TODO: Raise an `XCM` call to rely-chain to do withdraw operation.
 			// 	Transfer token from bifrost_account to contributor.
-			Self::xcm_ump_withdraw(origin,index).map_err(|_e| Error::<T>::XcmFailed)?;
-
+			Self::xcm_ump_withdraw(origin, index).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			Self::deposit_event(Event::WithdrewAll(index));
 
@@ -540,7 +550,7 @@ pub mod pallet {
 			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
 
 			// TODO: Raise an `XCM` call up to `rely-chain` to transfer balance from bifrsot_account to redeemer.
-			Self::xcm_ump_redeem(origin,index,value).map_err(|_e| Error::<T>::XcmFailed)?;
+			Self::xcm_ump_redeem(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			RedeemPool::<T>::put(new_redeem_balance);
 
@@ -552,9 +562,29 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(_n: BlockNumberFor<T>) {
-			// TODO check & release x% KSM/DOT to Bancor pool
-			// TODO check & lock if vsBond if expired
+		fn on_finalize(n: BlockNumberFor<T>) {
+			// Release x% KSM/DOT from 1:1 redeem-pool to bancor-pool per cycle.
+			if (n % T::ReleaseCycle::get()) == 0 {
+				if let Ok(redeem_pool_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
+					// Calculate the release amount by `(redeem_pool_balance * T::ReleaseRatio).main_part()`.
+					let release_amount =
+						redeem_pool_balance * T::ReleaseRatio::get().to_num::<u128>();
+
+					// Must be ok.
+					if let Ok(release_amount) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
+						// Decrease the balance of redeem-pool by release amount.
+						RedeemPool::<T>::mutate(|b| {
+							*b = b.saturating_sub(release_amount);
+						});
+
+						// TODO: Increase the balance of bancor-pool by release amount.
+					}
+				} else {
+					log::warn!("Overflow: The balance of redeem-pool exceed to u128.");
+				}
+			}
+
+			// TODO: check & lock if vsBond if expired ???
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
@@ -620,35 +650,37 @@ pub mod pallet {
 				signature: None,
 			};
 
-			let call =
-				CrowdloanContributeCall::CrowdloanContribute(ContributeCall::Contribute(contribution))
-					.encode()
-					.into();
+			let call = CrowdloanContributeCall::CrowdloanContribute(ContributeCall::Contribute(
+				contribution,
+			))
+			.encode()
+			.into();
 
 			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
 
-			let _result = T::BifrostXcmExecutor::ump_transfer_asset(origin_location.clone(), MultiLocation::X1(Junction::Parachain(para_id)),amount, true)?;
+			let _result = T::BifrostXcmExecutor::ump_transfer_asset(
+				origin_location.clone(),
+				MultiLocation::X1(Junction::Parachain(para_id)),
+				amount,
+				true,
+			)?;
 
 			T::BifrostXcmExecutor::ump_transact(origin_location, call)
 		}
 
-		pub fn xcm_ump_withdraw(
-			origin: OriginFor<T>,
-			para_id: ParaId,
-		) -> XcmResult {
+		pub fn xcm_ump_withdraw(origin: OriginFor<T>, para_id: ParaId) -> XcmResult {
 			let origin_location: MultiLocation =
 				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
 
-			let who:AccountIdOf<T> = PolkadotParaId::from(para_id).into_account();
+			let who: AccountIdOf<T> = PolkadotParaId::from(para_id).into_account();
 
 			let withdraw = Withdraw {
 				who,
 				index: para_id,
 			};
-			let call =
-				CrowdloanWithdrawCall::CrowdloanWithdraw(WithdrawCall::Withdraw(withdraw))
-					.encode()
-					.into();
+			let call = CrowdloanWithdrawCall::CrowdloanWithdraw(WithdrawCall::Withdraw(withdraw))
+				.encode()
+				.into();
 			T::BifrostXcmExecutor::ump_transact(origin_location, call)
 		}
 
@@ -662,8 +694,12 @@ pub mod pallet {
 
 			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
 
-			T::BifrostXcmExecutor::ump_transfer_asset(MultiLocation::X1(Junction::Parachain(para_id)), origin_location,amount,false)
-
+			T::BifrostXcmExecutor::ump_transfer_asset(
+				MultiLocation::X1(Junction::Parachain(para_id)),
+				origin_location,
+				amount,
+				false,
+			)
 		}
 
 		fn vstoken() -> CurrencyId {
