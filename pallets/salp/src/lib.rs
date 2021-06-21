@@ -169,7 +169,6 @@ pub mod pallet {
 		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
 		///
 		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
-		#[pallet::constant]
 		type ReleaseRatio: Get<U1F127>;
 
 		type MultiCurrency: TransferAll<Self::AccountId>

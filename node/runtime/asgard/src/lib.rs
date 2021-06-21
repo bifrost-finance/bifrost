@@ -87,6 +87,8 @@ use xcm_support::{BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyId
 // zenlink imports
 use zenlink_protocol::{ZenlinkMultiAssets, LocalAssetHandler, MultiAssetsHandler, make_x2_location, AssetId, AssetBalance, PairInfo};
 
+use substrate_fixed::types::U1F127;
+
 mod weights;
 
 pub type SessionHandlers = ();
@@ -628,6 +630,8 @@ parameter_types! {
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const TokenType: TokenSymbol = TokenSymbol::KSM;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
+	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+	pub ReleaseRatio: U1F127 = U1F127::from_num(0.5);
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -641,6 +645,8 @@ impl bifrost_salp::Config for Runtime {
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
 	type TokenType = TokenType;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type ReleaseCycle = ReleaseCycle;
+	type ReleaseRatio = ReleaseRatio;
 }
 
 impl bifrost_bancor::Config for Runtime {

@@ -244,6 +244,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
+ "substrate-fixed 0.5.6 (git+https://github.com/encointer/substrate-fixed?rev=b33d186888c60f38adafcfc0ec3a21aab263aef1)",
  "substrate-wasm-builder 4.0.0",
  "xcm",
  "xcm-builder",
