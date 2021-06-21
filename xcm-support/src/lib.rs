@@ -30,7 +30,7 @@
 #[allow(unused_must_use)]
 use codec::FullCodec;
 use frame_support::{dispatch::Weight, traits::Contains};
-use node_primitives::{AccountId, CurrencyId, TokenSymbol, Balance};
+use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::{CheckedConversion, Convert, MaybeSerializeDeserialize};
 use sp_std::{
@@ -40,7 +40,7 @@ use sp_std::{
     marker::PhantomData,
     prelude::*,
 };
-use xcm::v0::{prelude::{XcmError, XcmResult}, Junction, MultiAsset, MultiLocation, MultiLocation::{Null, X1, X2}, NetworkId, Xcm, OriginKind, SendXcm, Order};
+use xcm::v0::{prelude::{XcmError, XcmResult}, Junction, MultiAsset, MultiLocation, MultiLocation::{Null, X1, X2}, NetworkId, Xcm, OriginKind, SendXcm};
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
 use xcm_executor::traits::{
     Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
@@ -231,8 +231,8 @@ pub struct BifrostXcmAdaptor<XcmSender>(PhantomData<XcmSender>);
 impl<
     XcmSender: SendXcm
 > BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender> {
-    fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>) -> XcmResult {
-        let mut message = Xcm::Transact {
+    fn ump_transact(_origin: MultiLocation, call: DoubleEncoded<()>) -> XcmResult {
+        let message = Xcm::Transact {
             origin_type: OriginKind::SovereignAccount,
             require_weight_at_most: u64::MAX,
             call,
