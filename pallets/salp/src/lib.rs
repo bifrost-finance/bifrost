@@ -464,7 +464,7 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
 
-			Self::checkFundOwner(origin.clone(),index)?;
+			Self::check_fund_owner(origin.clone(), index)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
 				fund.status == FundStatus::Failed,
@@ -524,7 +524,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
-			Self::checkFundOwner(origin,index)?;
+			Self::check_fund_owner(origin, index)?;
 			Self::redeem_callback(who,index,value,is_success)
 		}
 	}
@@ -674,7 +674,7 @@ pub mod pallet {
 			)
 		}
 
-		fn checkFundOwner(
+		fn check_fund_owner(
 			origin: OriginFor<T>,
 			para_id: ParaId,
 		) -> DispatchResultWithPostInfo {

@@ -110,7 +110,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		.unwrap();
 
 	orml_tokens::GenesisConfig::<Test> {
-		endowed_accounts: vec![
+		balances: vec![
 			(ACCOUNT_ALICE, CURRENCY_OWNED_BY_ALICE, BALANCE_OWNED),
 			(ACCOUNT_BRUCE, CURRENCY_OWNED_BY_BRUCE, BALANCE_OWNED),
 		],
