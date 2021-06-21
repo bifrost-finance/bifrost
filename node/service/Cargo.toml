@@ -6,16 +6,9 @@ edition = "2018"
 
 [dependencies]
 # Substrate Client
-sc-authority-discovery = { version = "0.9.0" }
 sc-basic-authorship = { version = "0.9.0" }
-sc-finality-grandpa = { version = "0.9.0" }
-sc-block-builder = { version = "0.9.0" }
 sc-chain-spec = { version = "3.0.0" }
-sc-cli = { version = "0.9.0" }
 sc-client-api = { version = "3.0.0" }
-sc-client-db = { version = "0.9.0" }
-sc-consensus = { version = "0.9.0" }
-sc-consensus-slots = { version = "0.9.0" }
 sc-executor = { version = "0.9.0" }
 sc-network = { version = "0.9.0" }
 sc-telemetry = { version = "3.0.0" }
@@ -24,16 +17,13 @@ sc-tracing = { version = "3.0.0" }
 sc-service = { version = "0.9.0", default-features = false }
 
 # Substrate Primitives
-sp-authority-discovery = { version = "3.0.0" }
 sp-consensus-aura = { version = "0.9.0" }
 sp-consensus = { version = "0.9.0" }
 grandpa_primitives = { package = "sp-finality-grandpa", version = "3.0.0" }
-sp-inherents = { version = "3.0.0" }
 sp-api = { version = "3.0.0" }
 sp-block-builder = { version = "3.0.0" }
 sp-blockchain = { version = "3.0.0" }
 sp-core = { version = "3.0.0" }
-sp-io = { version = "3.0.0" }
 sp-keystore = { version = "0.9.0" }
 sp-offchain = { package = "sp-offchain", version = "3.0.0" }
 sc-rpc = { version = "3.0.0" }
@@ -48,33 +38,23 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0" }
 
 # Substrate Other
-frame-benchmarking = { version = "3.0.0" }
 frame-system-rpc-runtime-api = { version = "3.0.0" }
 prometheus-endpoint = { package = "substrate-prometheus-endpoint", version = "0.9.0" }
 
 # Cumulus dependencies
 cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 cumulus-client-consensus-common = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
-cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
-cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 cumulus-client-network = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.4" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
 
 # External Crates
-codec = { package = "parity-scale-codec", version = "2.0.1" }
-futures = "0.3.9"
 hex-literal = "0.2.1"
-lazy_static = "1.4.0"
-log = "0.4.8"
-parking_lot = "0.11.1"
 serde = { version = "1.0.124", features = ["derive"] }
-slog = "2.5.2"
 bs58 = { version = "0.3.0", default-features = false, features = ["alloc"] }
 serde_json = "1.0.60"
 
@@ -88,15 +68,10 @@ node-rpc = { path = "../rpc" }
 jsonrpc-core = "15.1.0"
 
 # zenlink rpc
-zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"
 
 # Bifrost rpc
-bifrost-charge-transaction-fee-rpc = { path = "../../pallets/charge-transaction-fee/rpc" }
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../pallets/charge-transaction-fee/rpc/runtime-api" }
-
-[dev-dependencies]
-env_logger = "0.8.1"
 
 [features]
 default = [ "std" ]

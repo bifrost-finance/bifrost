@@ -13,5 +13,6 @@ node-primitives = { path = "../../../../node/primitives", default-features = fal
 default = ["std"]
 std = [
 	"codec/std",
-	"sp-api/std"
+	"sp-api/std",
+	"node-primitives/std",
 ]

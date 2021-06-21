@@ -10,10 +10,8 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-serde = { version = "1.0.118", optional = true }
 sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
-sp-std = { version = "3.0.0", default-features = false }
 
 [dev-dependencies]
 orml-tokens = "0.4.1-dev"
@@ -28,8 +26,6 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
-	"serde",
 	"sp-core/std",
 	"sp-runtime/std",
-	"sp-std/std",
 ]

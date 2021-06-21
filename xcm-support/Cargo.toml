@@ -12,7 +12,6 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
@@ -22,11 +21,15 @@ node-primitives = { default-features = false, path = "../node/primitives" }
 [features]
 default = ["std"]
 std = [
+	"codec/std",
 	"sp-std/std",
 	"sp-runtime/std",
 	"frame-system/std",
 	"frame-support/std",
+	"polkadot-parachain/std",
 	"xcm/std",
+	"xcm-builder/std",
 	"xcm-executor/std",
 	"orml-traits/std",
+	"node-primitives/std",
 ]

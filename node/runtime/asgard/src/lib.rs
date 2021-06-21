@@ -643,6 +643,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
+	type BancorPool = Bancor;
 	type TokenType = TokenType;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type ReleaseCycle = ReleaseCycle;

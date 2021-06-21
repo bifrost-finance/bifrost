@@ -19,7 +19,7 @@ num-integer = { version = "0.1.36", default-features = false }
 
 [dev-dependencies]
 sp-core = "3.0.0"
-
+sp-io = "3.0.0"
 
 [features]
 default = ["std"]

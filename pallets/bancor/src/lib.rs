@@ -154,7 +154,7 @@ pub mod pallet {
 			// make changes in account balance
 			T::MultiCurrenciesHandler::withdraw(vstoken_id, &exchanger,  vstoken_amount)?;
 			T::MultiCurrenciesHandler::deposit(currency_id, &exchanger, token_amount)?;
-
+			
 			Self::deposit_event(Event::TokenSold(exchanger, currency_id, vstoken_amount, token_amount));
 
 			Ok(().into())
