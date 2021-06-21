@@ -580,7 +580,7 @@ pub mod pallet {
 						// TODO: Increase the balance of bancor-pool by release amount.
 					}
 				} else {
-					log::warn!("Overflow: The balance of redeem-pool exceed to u128.");
+					log::warn!("Overflow: The balance of redeem-pool exceeds u128.");
 				}
 			}
 
