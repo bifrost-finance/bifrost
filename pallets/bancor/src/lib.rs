@@ -23,7 +23,7 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_runtime::{SaturatedConversion, traits::{Zero, Saturating}};
 use num_integer::Roots;
-use node_primitives::{TokenSymbol, CurrencyId};
+use node_primitives::{TokenSymbol, CurrencyId, traits::BancorHandler};
 
 mod mock;
 mod tests;
@@ -43,11 +43,6 @@ pub struct BancorPool<T: Config> {
 	pub(crate) token_base_supply: BalanceOf<T>, // initial supply of token for the pool
 	pub(crate) vstoken_base_supply: BalanceOf<T>,  // initial supply of vstoken for the pool
 }
-
-pub trait BancorHandler<Balance> {
-	fn add_token(currency_id: CurrencyId, amount: Balance) -> Result<(), DispatchError>;
-}
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -159,7 +154,7 @@ pub mod pallet {
 			// make changes in account balance
 			T::MultiCurrenciesHandler::withdraw(vstoken_id, &exchanger,  vstoken_amount)?;
 			T::MultiCurrenciesHandler::deposit(currency_id, &exchanger, token_amount)?;
-			
+
 			Self::deposit_event(Event::TokenSold(exchanger, currency_id, vstoken_amount, token_amount));
 
 			Ok(().into())
@@ -197,16 +192,11 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T>{
-	fn add_token(currency_id: CurrencyId, amount: BalanceOf<T>) -> Result<(), DispatchError> {
-
-		BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
-			match pool {
-				Some(pool_info) => {
-					pool_info.token_pool = pool_info.token_pool.saturating_add(amount);
-					Ok(())
-				},
-				_ => Err(Error::<T>::BancorPoolNotExist)
-			}
+	fn add_token(currency_id: CurrencyId, amount: BalanceOf<T>) -> DispatchResult {
+		BancorPools::<T>::mutate(currency_id, |pool| -> DispatchResult {
+			let pool = pool.as_mut().ok_or(Error::<T>::BancorPoolNotExist)?;
+			pool.token_pool = pool.token_pool.saturating_add(amount);
+			Ok(())
 		})?;
 
 		Ok(())

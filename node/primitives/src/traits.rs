@@ -240,3 +240,7 @@ pub trait BifrostXcmExecutor {
 	fn ump_transfer_asset(_origin: MultiLocation, _dest:MultiLocation, _amount: u128,_relay: bool) -> XcmResult;
 
 }
+
+pub trait BancorHandler<Balance> {
+	fn add_token(currency_id: super::CurrencyId, amount: Balance) -> DispatchResult;
+}
