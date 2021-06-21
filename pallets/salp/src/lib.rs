@@ -36,7 +36,8 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{
-		traits::{BifrostXcmExecutor, BancorHandler}, CurrencyId, LeasePeriod, ParaId, TokenSymbol,
+		traits::{BancorHandler, BifrostXcmExecutor},
+		CurrencyId, LeasePeriod, ParaId, TokenSymbol,
 	};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
@@ -463,7 +464,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
-
 			Self::check_fund_owner(origin.clone(), index)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -505,7 +505,7 @@ pub mod pallet {
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
 			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
 			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
-			
+
 			Self::xcm_ump_redeem(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			RedeemPool::<T>::put(new_redeem_balance);
@@ -525,7 +525,7 @@ pub mod pallet {
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
 			Self::check_fund_owner(origin, index)?;
-			Self::redeem_callback(who,index,value,is_success)
+			Self::redeem_callback(who, index, value, is_success)
 		}
 	}
 
@@ -547,7 +547,9 @@ pub mod pallet {
 						});
 
 						// Increase the balance of bancor-pool by release amount.
-						if let Err(err) = T::BancorPool::add_token(T::TokenType::get().into(), release_amount) {
+						if let Err(err) =
+							T::BancorPool::add_token(T::TokenType::get().into(), release_amount)
+						{
 							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
 						}
 					}
@@ -674,17 +676,12 @@ pub mod pallet {
 			)
 		}
 
-		fn check_fund_owner(
-			origin: OriginFor<T>,
-			para_id: ParaId,
-		) -> DispatchResultWithPostInfo {
+		fn check_fund_owner(origin: OriginFor<T>, para_id: ParaId) -> DispatchResultWithPostInfo {
 			let owner = ensure_signed(origin)?;
 			let fund = Self::funds(para_id).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(owner == fund.depositor, Error::<T>::InvalidOrigin);
 			Ok(().into())
 		}
-
-
 
 		fn vstoken() -> CurrencyId {
 			CurrencyId::VSToken(T::TokenType::get())
