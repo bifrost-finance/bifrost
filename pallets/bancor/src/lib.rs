@@ -30,24 +30,21 @@ mod tests;
 
 pub use pallet::*;
 
-#[allow(type_alias_bounds)]
-type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> = <<T as Config>::MultiCurrenciesHandler as MultiCurrency<AccountIdOf<T>>>::Balance;
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+type BalanceOf<T> = <<T as Config>::MultiCurrenciesHandler as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
-pub struct BancorPool<T: Config> {
+pub struct BancorPool<Balance>{
 	pub(crate) currency_id: CurrencyId,  // ksm, dot, etc.
-	pub(crate) token_pool: BalanceOf<T>,  // token balance of the pool
-	pub(crate) vstoken_pool: BalanceOf<T>, // vstoken balance of the pool
-	pub(crate) token_base_supply: BalanceOf<T>, // initial supply of token for the pool
-	pub(crate) vstoken_base_supply: BalanceOf<T>,  // initial supply of vstoken for the pool
+	pub(crate) token_pool: Balance,  // token balance of the pool
+	pub(crate) vstoken_pool: Balance, // vstoken balance of the pool
+	pub(crate) token_base_supply: Balance, // initial supply of token for the pool
+	pub(crate) vstoken_base_supply: Balance,  // initial supply of vstoken for the pool
 }
 
 pub trait BancorHandler<Balance> {
 	fn add_token(currency_id: CurrencyId, amount: Balance) -> Result<(), DispatchError>;
 }
-
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -83,7 +80,7 @@ pub mod pallet {
 	// key is token, value is BancorPool struct.
 	#[pallet::storage]
 	#[pallet::getter(fn get_bancor_pool)]
-	pub type BancorPools<T> = StorageMap<Hasher = Blake2_128Concat, Key = CurrencyId, Value = BancorPool<T>>;
+	pub type BancorPools<T> = StorageMap<Hasher = Blake2_128Concat, Key = CurrencyId, Value = BancorPool<BalanceOf<T>>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
