@@ -42,7 +42,7 @@ fn create_order_for_test(
 	};
 
 	TotalOrders::<Test>::insert(order_id, order_info);
-	SellerOrderIds::<Test>::mutate(owner, currency_sold, |order_ids| order_ids.push(order_id));
+	Pallet::<Test>::order_ids_or_create(owner, order_state).insert(order_id);
 
 	order_id
 }
