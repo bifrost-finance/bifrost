@@ -207,8 +207,6 @@ pub mod pallet {
 		Withdrawing(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
-		/// parachain withdrew
-		WithdrewAll(ParaId),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
 		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Redeeming token(rely-chain) by vsToken/vsBond. [who, fund_index, amount]
@@ -465,7 +463,11 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
 			Self::check_fund_owner(origin.clone(), index)?;
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			let owner = ensure_signed(origin)?;
+			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
+				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
 			ensure!(
 				fund.status == FundStatus::Failed,
 				Error::<T>::InvalidFundStatus
@@ -473,9 +475,21 @@ pub mod pallet {
 
 			Self::xcm_ump_withdraw(origin, index).map_err(|_e| Error::<T>::XcmFailed)?;
 
-			Self::deposit_event(Event::WithdrewAll(index));
+			Self::deposit_event(Event::Withdrawing(owner, index, fund.raised));
 
 			Ok(().into())
+		}
+
+		/// Confirm withdraw by fund owner temporarily
+		#[pallet::weight(0)]
+		pub(super) fn confirm_withdraw(
+			origin: OriginFor<T>,
+			index: ParaId,
+			is_success: bool,
+		) -> DispatchResultWithPostInfo {
+			Self::check_fund_owner(origin, index)?;
+			let who = ensure_signed(origin.clone())?;
+			Self::withdraw_callback(who, index, is_success)
 		}
 
 		#[pallet::weight(0)]
@@ -738,33 +752,16 @@ pub mod pallet {
 		fn withdraw_callback(
 			who: AccountIdOf<T>,
 			index: ParaId,
-			value: BalanceOf<T>,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let balance = Self::contribution_get(fund.trie_index, &who);
+			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
+				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			if is_success {
-				let vstoken = Self::vstoken();
-				let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-
-				T::MultiCurrency::set_lock(vslock(index), vstoken, &who, balance)?;
-				T::MultiCurrency::set_lock(vslock(index), vsbond, &who, balance)?;
-				T::MultiCurrency::withdraw(vstoken, &who, value)?;
-				T::MultiCurrency::withdraw(vsbond, &who, value)?;
-
-				if balance == Zero::zero() {
-					Self::contribution_kill(fund.trie_index, &who);
-
-					T::MultiCurrency::remove_lock(vslock(index), vstoken, &who)?;
-					T::MultiCurrency::remove_lock(vslock(index), vsbond, &who)?;
-				}
-
+				let new_redeem_balance = Self::redeem_pool().saturating_add(fund.raised);
+				RedeemPool::<T>::put(new_redeem_balance);
 				Self::deposit_event(Event::Withdrew(who, index, balance));
 			} else {
-				// Revoke the contribution..
-				Self::contribution_put(fund.trie_index, &who, &balance.saturating_add(value));
-
 				Self::deposit_event(Event::WithdrawFailed(who, index, balance));
 			}
 
