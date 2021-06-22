@@ -464,7 +464,8 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			Self::check_fund_owner(origin.clone(), index)?;
 
-			let owner = ensure_signed(origin)?;
+			let owner = ensure_signed(origin.clone())?;
+
 			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
@@ -487,8 +488,8 @@ pub mod pallet {
 			index: ParaId,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
-			Self::check_fund_owner(origin, index)?;
-			let who = ensure_signed(origin.clone())?;
+			Self::check_fund_owner(origin.clone(), index)?;
+			let who = ensure_signed(origin)?;
 			Self::withdraw_callback(who, index, is_success)
 		}
 
@@ -760,9 +761,9 @@ pub mod pallet {
 			if is_success {
 				let new_redeem_balance = Self::redeem_pool().saturating_add(fund.raised);
 				RedeemPool::<T>::put(new_redeem_balance);
-				Self::deposit_event(Event::Withdrew(who, index, balance));
+				Self::deposit_event(Event::Withdrew(who, index, fund.raised));
 			} else {
-				Self::deposit_event(Event::WithdrawFailed(who, index, balance));
+				Self::deposit_event(Event::WithdrawFailed(who, index, fund.raised));
 			}
 
 			Ok(().into())
