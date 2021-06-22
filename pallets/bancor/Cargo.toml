@@ -11,6 +11,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4", default-features = false }
 serde = { version = "1.0.124", optional = true }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
