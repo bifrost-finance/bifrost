@@ -97,10 +97,15 @@ impl orml_tokens::Config for Test {
 	type MaxLocks = MaxLocks;
 }
 
+parameter_types! {
+	pub const MaxInTradeOrderNum: u32 = 5;
+}
+
 impl vsbond_auction::Config for Test {
 	type Event = Event;
 
-	type Assets = orml_tokens::Pallet<Self>;
+	type MultiCurrency = orml_tokens::Pallet<Self>;
+	type MaxInTradeOrderNum = MaxInTradeOrderNum;
 }
 
 // mockup runtime

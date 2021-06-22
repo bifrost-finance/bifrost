@@ -21,6 +21,7 @@ use frame_system::pallet_prelude::*;
 use orml_traits::{
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
+use sp_std::collections::btree_set::BTreeSet;
 
 mod mock;
 mod tests;
@@ -55,7 +56,9 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type Assets: MultiCurrency<AccountIdOf<Self>>
+		type MaxInTradeOrderNum: Get<u32>;
+
+		type MultiCurrency: MultiCurrency<AccountIdOf<Self>>
 			+ MultiCurrencyExtended<AccountIdOf<Self>>
 			+ MultiLockableCurrency<AccountIdOf<Self>>
 			+ MultiReservableCurrency<AccountIdOf<Self>>;
@@ -71,6 +74,7 @@ pub mod module {
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
 		ForbidClinchOrderWithinOwnership,
+		ExceedMaxInTradeNum,
 	}
 
 	#[pallet::event]
@@ -101,17 +105,19 @@ pub mod module {
 	pub type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
 
 	#[pallet::storage]
-	pub type SellerOrders<T: Config> = StorageDoubleMap<
+	#[pallet::getter(fn order_ids)]
+	pub type SellerOrderIds<T: Config> = StorageDoubleMap<
 		_,
 		Twox64Concat,
 		AccountIdOf<T>,
 		Twox64Concat,
-		CurrencyIdOf<T>,
-		Vec<OrderId>,
+		OrderState,
+		BTreeSet<OrderId>,
 		ValueQuery,
 	>;
 
 	#[pallet::storage]
+	#[pallet::getter(fn order)]
 	pub type TotalOrders<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderInfo<T>>;
 
 	#[pallet::pallet]
@@ -134,15 +140,18 @@ pub mod module {
 			let owner = ensure_signed(origin)?;
 
 			// Check assets
-			let free_balance_currency_sold = T::Assets::free_balance(currency_sold, &owner);
-			ensure!(
-				free_balance_currency_sold >= amount_sold,
-				Error::<T>::NotEnoughCurrencySold
-			);
+			T::MultiCurrency::ensure_can_withdraw(currency_sold, &owner, amount_sold)
+				.map_err(|_| Error::<T>::NotEnoughCurrencySold)?;
 
 			ensure!(
 				currency_sold != currency_expected,
 				Error::<T>::ForbidCreateOrderWithSameCurrency
+			);
+
+			ensure!(
+				Self::order_count(owner.clone(), OrderState::InTrade)
+					< T::MaxInTradeOrderNum::get(),
+				Error::<T>::ExceedMaxInTradeNum,
 			);
 
 			// Create order
@@ -157,12 +166,12 @@ pub mod module {
 				order_state: OrderState::InTrade,
 			};
 
-			TotalOrders::<T>::insert(order_id, order_info);
-			SellerOrders::<T>::mutate(owner.clone(), currency_sold, |orders| orders.push(order_id));
-
 			// Lock the balance of currency_sold
 			let lock_iden = order_id.to_be_bytes();
-			T::Assets::set_lock(lock_iden, currency_sold, &owner, amount_sold)?;
+			T::MultiCurrency::set_lock(lock_iden, currency_sold, &owner, amount_sold)?;
+
+			TotalOrders::<T>::insert(order_id, order_info);
+			Self::order_ids_or_create(owner.clone(), OrderState::InTrade).insert(order_id);
 
 			Self::deposit_event(Event::OrderCreated(
 				order_id,
@@ -178,13 +187,11 @@ pub mod module {
 
 		#[pallet::weight(1_000)]
 		pub fn revoke_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
-			// Check order
-			ensure!(
-				TotalOrders::<T>::contains_key(order_id),
-				Error::<T>::NotFindOrderInfo
-			);
+			// Check origin
+			let from = ensure_signed(origin)?;
 
-			let order_info = TotalOrders::<T>::get(order_id).unwrap();
+			// Check order
+			let order_info = Self::order(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
 
 			// Check order state
 			ensure!(
@@ -192,8 +199,7 @@ pub mod module {
 				Error::<T>::ForbidRevokeOrderNotInTrade
 			);
 
-			// Check origin
-			let from = ensure_signed(origin)?;
+			// Check order owner
 			ensure!(
 				order_info.owner == from,
 				Error::<T>::ForbidRevokeOrderWithoutOwnership
@@ -201,15 +207,19 @@ pub mod module {
 
 			// Unlock the balance of currency_sold
 			let lock_iden = order_info.order_id.to_be_bytes();
-			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &from)?;
+			T::MultiCurrency::remove_lock(lock_iden, order_info.currency_sold, &from)?;
 
 			// Revoke order
-			TotalOrders::<T>::mutate(order_id, |oi| match oi {
-				Some(oi) => {
-					oi.order_state = OrderState::Revoked;
-				}
-				_ => {}
-			});
+			TotalOrders::<T>::insert(
+				order_id,
+				OrderInfo {
+					order_state: OrderState::Revoked,
+					..order_info
+				},
+			);
+			// Move order_id from `InTrade` to `Revoked`.
+			Self::order_ids(from.clone(), OrderState::InTrade).remove(&order_id);
+			Self::order_ids_or_create(from.clone(), OrderState::Revoked).insert(order_id);
 
 			Self::deposit_event(Event::OrderRevoked(order_id, from));
 
@@ -218,13 +228,11 @@ pub mod module {
 
 		#[pallet::weight(1_000)]
 		pub fn clinch_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
-			// Check order
-			ensure!(
-				TotalOrders::<T>::contains_key(order_id),
-				Error::<T>::NotFindOrderInfo
-			);
+			// Check origin
+			let buyer = ensure_signed(origin)?;
 
-			let order_info = TotalOrders::<T>::get(order_id).unwrap();
+			// Check order
+			let order_info = Self::order(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
 
 			// Check order state
 			ensure!(
@@ -232,48 +240,52 @@ pub mod module {
 				Error::<T>::ForbidClinchOrderNotInTrade
 			);
 
-			// Check origin
-			let buyer = ensure_signed(origin)?;
+			// Check order owner
 			ensure!(
 				order_info.owner != buyer,
 				Error::<T>::ForbidClinchOrderWithinOwnership
 			);
 
-			// Check currency
-			let free_balance_currency_expected =
-				T::Assets::free_balance(order_info.currency_expected, &buyer);
-			ensure!(
-				free_balance_currency_expected >= order_info.amount_expected,
-				Error::<T>::NotEnoughCurrencyExpected
-			);
+			// Check the balance of currency
+			T::MultiCurrency::ensure_can_withdraw(
+				order_info.currency_expected,
+				&buyer,
+				order_info.amount_expected,
+			)
+			.map_err(|_| Error::<T>::NotEnoughCurrencyExpected)?;
 
 			// Unlock the balance of currency_sold
 			let lock_iden = order_info.order_id.to_be_bytes();
-			T::Assets::remove_lock(lock_iden, order_info.currency_sold, &order_info.owner)?;
+			T::MultiCurrency::remove_lock(lock_iden, order_info.currency_sold, &order_info.owner)?;
 
 			// Exchange assets
-			T::Assets::transfer(
+			T::MultiCurrency::transfer(
 				order_info.currency_sold,
 				&order_info.owner,
 				&buyer,
 				order_info.amount_sold,
 			)?;
-			T::Assets::transfer(
+			T::MultiCurrency::transfer(
 				order_info.currency_expected,
 				&buyer,
 				&order_info.owner,
 				order_info.amount_expected,
 			)?;
 
+			let owner = order_info.owner.clone();
 			// Clinch order
-			TotalOrders::<T>::mutate(order_id, |oi| match oi {
-				Some(oi) => {
-					oi.order_state = OrderState::Clinchd;
-				}
-				_ => {}
-			});
+			TotalOrders::<T>::insert(
+				order_id,
+				OrderInfo {
+					order_state: OrderState::Clinchd,
+					..order_info
+				},
+			);
+			// Move order_id from `InTrade` to `Clinchd`.
+			Self::order_ids(owner.clone(), OrderState::InTrade).remove(&order_id);
+			Self::order_ids_or_create(owner.clone(), OrderState::Clinchd).insert(order_id);
 
-			Self::deposit_event(Event::<T>::OrderClinchd(order_id, order_info.owner, buyer));
+			Self::deposit_event(Event::<T>::OrderClinchd(order_id, owner, buyer));
 
 			Ok(().into())
 		}
@@ -286,6 +298,21 @@ impl<T: Config> Pallet<T> {
 		NextOrderId::<T>::mutate(|current| *current + 1);
 		next_order_id
 	}
+
+	pub(crate) fn order_ids_or_create(
+		who: AccountIdOf<T>,
+		order_state: OrderState,
+	) -> BTreeSet<OrderId> {
+		if !SellerOrderIds::<T>::contains_key(who.clone(), order_state) {
+			SellerOrderIds::<T>::insert(who.clone(), order_state, BTreeSet::<OrderId>::new());
+		};
+
+		Self::order_ids(who, order_state)
+	}
+
+	pub(crate) fn order_count(who: AccountIdOf<T>, order_state: OrderState) -> u32 {
+		Self::order_ids_or_create(who, order_state).len() as u32
+	}
 }
 
 // TODO: Maybe impl Auction trait for vsbond-auction
@@ -293,6 +320,8 @@ impl<T: Config> Pallet<T> {
 #[allow(type_alias_bounds)]
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 #[allow(type_alias_bounds)]
-type BalanceOf<T: Config> = <<T as Config>::Assets as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T: Config> =
+	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 #[allow(type_alias_bounds)]
-type CurrencyIdOf<T: Config> = <<T as Config>::Assets as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
+type CurrencyIdOf<T: Config> =
+	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
