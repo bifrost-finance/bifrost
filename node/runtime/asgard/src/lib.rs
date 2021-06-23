@@ -1002,6 +1002,14 @@ impl_runtime_apis! {
 				_ => Zero::zero(),
 			}
 		}
+
+		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
+			let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
+		}
 	}
 
 	// zenlink runtime outer apis

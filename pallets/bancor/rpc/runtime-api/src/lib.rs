@@ -28,5 +28,8 @@ decl_runtime_apis! {
 	{
 		/// pass in vstoken_amount and the token_id that wants to exchange for. And we can get the number of token accquired.
 		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance;
+
+		/// pass in token_amount and the token_id to exchange for vstoken. And we can get the number of vstoken accquired.
+		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance;
 	}
 }

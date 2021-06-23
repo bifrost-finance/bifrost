@@ -49,13 +49,19 @@ impl<C, Block> BancorStruct<C, Block> {
 
 #[rpc]
 pub trait BancorRpcApi<BlockHash, CurrencyId, Balance> {
-    /// rpc method get balances by account id
-    /// useage: curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0","id":1,"method":"chargeTransactionFee_getFeeTokenAndAmount","params": ["0x0e0626477621754200486f323e3858cd5f28fcbe52c69b2581aecb622e384764", "0xa0040400008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48cef70500"]}’
     #[rpc(name = "bancor_getBancorTokenAmountOut")]
     fn get_bancor_token_amount_out(
         &self,
         token_id: CurrencyId,
         vstoken_amount: Balance,
+        at: Option<BlockHash>,
+    ) -> JsonRpcResult<Balance>;
+
+    #[rpc(name = "bancor_getBancorVstokenAmountOut")]
+    fn get_bancor_vstoken_amount_out(
+        &self,
+        token_id: CurrencyId,
+        token_amount: Balance,
         at: Option<BlockHash>,
     ) -> JsonRpcResult<Balance>;
 }
@@ -98,6 +104,22 @@ where
         api.get_bancor_token_amount_out(&at, token_id, vstoken_amount).map_err(|e| RpcError {
 			code: ErrorCode::InternalError,
 			message: "Failed to get bancor token amount out.".to_owned(),
+			data: Some(format!("{:?}", e).into()),
+		})
+    }
+
+    fn get_bancor_vstoken_amount_out(
+        &self,
+        token_id: CurrencyId,
+        token_amount: Balance,
+        at: Option<BlockHash>,
+    ) -> JsonRpcResult<Balance>{
+		let api = self.client.runtime_api();
+		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+        api.get_bancor_vstoken_amount_out(&at, token_id, token_amount).map_err(|e| RpcError {
+			code: ErrorCode::InternalError,
+			message: "Failed to get bancor vstoken amount out.".to_owned(),
 			data: Some(format!("{:?}", e).into()),
 		})
     }
