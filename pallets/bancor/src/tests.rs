@@ -38,7 +38,7 @@ fn exchange_for_token_should_work() {
 		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 0, vstoken_pool: 0, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 
 		// the pool has no real DOT
-		assert_noop!(Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 50), Error::<Test>::TokenSupplyNotEnought);
+		assert_noop!(Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 50, 48), Error::<Test>::TokenSupplyNotEnought);
 
 		let updated_pool = BancorPool  {
 			currency_id: dot_pool.currency_id,
@@ -52,7 +52,7 @@ fn exchange_for_token_should_work() {
 		BancorPools::<Test>::insert(DOT, updated_pool);
 
 		// exchange succeeds.
-		assert_ok!(Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 50));
+		assert_ok!(Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 50, 48));
 		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
 		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 50, vstoken_pool: 50, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 
@@ -77,7 +77,7 @@ fn exchange_for_vstoken_should_work() {
 		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 0, vstoken_pool: 0, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 
 		// the pool has no real VSDOT
-		assert_noop!(Bancor::exchange_for_vstoken(Origin::signed(ALICE), DOT, 50), Error::<Test>::VSTokenSupplyNotEnought);
+		assert_noop!(Bancor::exchange_for_vstoken(Origin::signed(ALICE), DOT, 50, 48), Error::<Test>::VSTokenSupplyNotEnought);
 
 		let updated_pool = BancorPool  {
 			currency_id: dot_pool.currency_id,
@@ -93,7 +93,7 @@ fn exchange_for_vstoken_should_work() {
 		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 0, vstoken_pool: 100, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 
 		// exchange succeeds.
-		assert_ok!(Bancor::exchange_for_vstoken(Origin::signed(ALICE), DOT, 50));
+		assert_ok!(Bancor::exchange_for_vstoken(Origin::signed(ALICE), DOT, 50, 48));
 		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
 		assert_eq!(dot_pool, BancorPool { currency_id: CurrencyId::Token(TokenSymbol::DOT), token_pool: 50, vstoken_pool: 50, token_base_supply: 2 * VSDOT_BASE_SUPPLY, vstoken_base_supply: VSDOT_BASE_SUPPLY });
 

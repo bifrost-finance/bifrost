@@ -68,7 +68,8 @@ pub mod pallet {
 		BancorPoolNotExist,
 		ConversionError,
 		TokenSupplyNotEnought,
-		VSTokenSupplyNotEnought
+		VSTokenSupplyNotEnought,
+		PriceNotQualified
 	}
 
 	#[pallet::event]
@@ -136,6 +137,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			vstoken_amount: BalanceOf<T>,
+			token_out_min: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -147,6 +149,8 @@ pub mod pallet {
 
 			// make changes in the bancor pool
 			let token_amount = Self::calculate_price_for_token(currency_id, vstoken_amount)?;
+			ensure!(token_amount >= token_out_min, Error::<T>::PriceNotQualified);
+
 			BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
 				match pool {
 					Some(pool_info) => {
@@ -174,6 +178,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			token_amount: BalanceOf<T>,
+			vstoken_out_min: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
@@ -185,6 +190,7 @@ pub mod pallet {
 
 			// make changes in the bancor pool
 			let vstoken_amount = Self::calculate_price_for_vstoken(currency_id, token_amount)?;
+			ensure!(vstoken_amount >= vstoken_out_min, Error::<T>::PriceNotQualified);
 
 			BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
 				match pool {
