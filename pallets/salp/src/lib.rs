@@ -57,6 +57,7 @@ pub mod pallet {
 		Retired,
 		Success,
 		Failed,
+		Withdrew,
 	}
 
 	impl Default for FundStatus {
@@ -249,6 +250,8 @@ pub mod pallet {
 		FundsNotReturned,
 		/// Fund has not yet retired.
 		FundNotRetired,
+		/// Fund has not withdrew.
+		FundNotWithdrew,
 		/// The crowdloan has not yet ended.
 		FundNotEnded,
 		/// Fund has been expired.
@@ -455,6 +458,24 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Confirm contribute
+		#[pallet::weight(0)]
+		pub(super) fn confirm_contribute(
+			origin: OriginFor<T>,
+			who: AccountIdOf<T>,
+			index: ParaId,
+			#[pallet::compact] value: BalanceOf<T>,
+			is_success: bool,
+		) -> DispatchResultWithPostInfo {
+			Self::check_fund_owner(origin.clone(), index)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(
+				fund.status == FundStatus::Ongoing,
+				Error::<T>::InvalidFundStatus
+			);
+			Self::contribute_callback(who, index, value, is_success)
+		}
+
 		/// Withdraw full balance of the parachain.
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::weight(0)]
@@ -470,7 +491,7 @@ pub mod pallet {
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			ensure!(
-				fund.status == FundStatus::Failed,
+				fund.status == FundStatus::Failed || fund.status == FundStatus::Retired,
 				Error::<T>::InvalidFundStatus
 			);
 
@@ -489,6 +510,14 @@ pub mod pallet {
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
 			Self::check_fund_owner(origin.clone(), index)?;
+
+			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
+				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			ensure!(
+				fund.status == FundStatus::Failed || fund.status == FundStatus::Retired,
+				Error::<T>::InvalidFundStatus
+			);
 			let who = ensure_signed(origin)?;
 			Self::withdraw_callback(who, index, is_success)
 		}
@@ -504,8 +533,8 @@ pub mod pallet {
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
-				fund.status == FundStatus::Retired,
-				Error::<T>::FundNotRetired
+				fund.status == FundStatus::Withdrew,
+				Error::<T>::FundNotWithdrew
 			);
 			ensure!(
 				(block_number - fund.last_slot) <= T::VSBondValidPeriod::get(),
@@ -540,6 +569,11 @@ pub mod pallet {
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
 			Self::check_fund_owner(origin, index)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(
+				fund.status == FundStatus::Withdrew,
+				Error::<T>::FundNotWithdrew
+			);
 			Self::redeem_callback(who, index, value, is_success)
 		}
 	}
@@ -726,7 +760,6 @@ pub mod pallet {
 				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, value)?;
 				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, value)?;
 
-				// TODO: Raise an `XCM` call up to rely-chain to do deposit operation.
 				let new_balance = Self::contribution_get(fund.trie_index, &who)
 					.checked_add(&value)
 					.ok_or(Error::<T>::Overflow)?;
@@ -755,12 +788,12 @@ pub mod pallet {
 			index: ParaId,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
-			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
+			let mut fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			if is_success {
-				let new_redeem_balance = Self::redeem_pool().saturating_add(fund.raised);
-				RedeemPool::<T>::put(new_redeem_balance);
+				fund.status = FundStatus::Withdrew;
+				Funds::<T>::insert(index, Some(fund.clone()));
 				Self::deposit_event(Event::Withdrew(who, index, fund.raised));
 			} else {
 				Self::deposit_event(Event::WithdrawFailed(who, index, fund.raised));
