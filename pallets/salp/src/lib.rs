@@ -44,8 +44,8 @@ pub mod pallet {
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
-	use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
 	use sp_arithmetic::Percent;
+	use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
 	use xcm::v0::{
 		prelude::{XcmError, XcmResult},
 		Junction, MultiLocation,
@@ -158,8 +158,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelyChainToken: Get<CurrencyId>;
 
+		/// The number of blocks over which a single period lasts.
 		#[pallet::constant]
-		type VSBondValidPeriod: Get<LeasePeriod>;
+		type LeasePeriod: Get<BlockNumberFor<Self>>;
+
+		#[pallet::constant]
+		type VSBondValidPeriod: Get<BlockNumberFor<Self>>;
 
 		/// The time interval from 1:1 redeem-pool to bancor-pool to release.
 		#[pallet::constant]
@@ -168,7 +172,11 @@ pub mod pallet {
 		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
 		///
 		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
+		#[pallet::constant]
 		type ReleaseRatio: Get<Percent>;
+
+		#[pallet::constant]
+		type RemoveKeysLimit: Get<u32>;
 
 		type MultiCurrency: TransferAll<AccountIdOf<Self>>
 			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -177,9 +185,6 @@ pub mod pallet {
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		type BancorPool: BancorHandler<BalanceOf<Self>>;
-
-		#[pallet::constant]
-		type RemoveKeysLimit: Get<u32>;
 
 		type ExecuteXcmOrigin: EnsureOrigin<
 			<Self as frame_system::Config>::Origin,
@@ -255,7 +260,7 @@ pub mod pallet {
 		/// The crowdloan has not yet ended.
 		FundNotEnded,
 		/// Fund has been expired.
-		FundExpired,
+		VSBondExpired,
 		/// There are no contributions stored in this crowdloan.
 		NoContributions,
 		/// This crowdloan has an active parachain and cannot be dissolved.
@@ -528,7 +533,6 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			value: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			let block_number = <frame_system::Pallet<T>>::block_number();
 			let who = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -536,9 +540,13 @@ pub mod pallet {
 				fund.status == FundStatus::Withdrew,
 				Error::<T>::FundNotWithdrew
 			);
+
+			// TODO: Temp solution, move the check to `Assets` later.
+			let cur_block = <frame_system::Pallet<T>>::block_number();
+			let end_block = (fund.last_slot + 1) * T::LeasePeriod::get();
 			ensure!(
-				(block_number - fund.last_slot) <= T::VSBondValidPeriod::get(),
-				Error::<T>::FundExpired
+				cur_block < end_block || (cur_block - end_block) <= T::VSBondValidPeriod::get(),
+				Error::<T>::VSBondExpired
 			);
 
 			let new_redeem_balance = Self::redeem_pool()
@@ -549,6 +557,10 @@ pub mod pallet {
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
 			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
 			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
+
+			// Lock the vsToken/vsBond.
+			T::MultiCurrency::extend_lock(REDEEM_LOCK, vstoken, &who, value)?;
+			T::MultiCurrency::extend_lock(REDEEM_LOCK, vsbond, &who, value)?;
 
 			Self::xcm_ump_redeem(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
@@ -595,9 +607,10 @@ pub mod pallet {
 						});
 
 						// Increase the balance of bancor-pool by release amount.
-						if let Err(err) =
-							T::BancorPool::add_token(T::RelyChainToken::get().into(), release_amount)
-						{
+						if let Err(err) = T::BancorPool::add_token(
+							T::RelyChainToken::get().into(),
+							release_amount,
+						) {
 							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
 						}
 					}
@@ -811,18 +824,20 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
+			let vstoken = Self::vstoken();
+			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
+
+			T::MultiCurrency::remove_lock(REDEEM_LOCK, vstoken, &who)?;
+			T::MultiCurrency::remove_lock(REDEEM_LOCK, vsbond, &who)?;
+
 			if is_success {
 				// Update contribution trie
 				let old_balance = Self::contribution_get(fund.trie_index, &who);
 				let balance = old_balance.saturating_sub(value);
 				Self::contribution_put(fund.trie_index, &who, &balance);
 				// Burn the vsToken/vsBond.
-				T::MultiCurrency::withdraw(Self::vstoken(), &who, value)?;
-				T::MultiCurrency::withdraw(
-					Self::vsbond(index, fund.first_slot, fund.last_slot),
-					&who,
-					value,
-				)?;
+				T::MultiCurrency::withdraw(vstoken, &who, value)?;
+				T::MultiCurrency::withdraw(vsbond, &who, value)?;
 
 				Self::deposit_event(Event::Redeemed(who, value));
 			} else {
@@ -840,4 +855,6 @@ pub mod pallet {
 	const fn vslock(index: ParaId) -> LockIdentifier {
 		(index as u64).to_be_bytes()
 	}
+
+	const REDEEM_LOCK: LockIdentifier = *b"REDEEMLC";
 }

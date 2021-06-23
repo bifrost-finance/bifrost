@@ -641,6 +641,7 @@ parameter_types! {
 	pub const TokenType: TokenSymbol = TokenSymbol::KSM;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 }
 
@@ -658,6 +659,7 @@ impl bifrost_salp::Config for Runtime {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type ReleaseCycle = ReleaseCycle;
 	type ReleaseRatio = ReleaseRatio;
+	type LeasePeriod = LeasePeriod;
 }
 
 impl bifrost_bancor::Config for Runtime {
