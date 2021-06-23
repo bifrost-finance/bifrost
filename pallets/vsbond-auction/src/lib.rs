@@ -135,9 +135,9 @@ pub mod module {
 		pub fn create_order(
 			origin: OriginFor<T>,
 			currency_sold: CurrencyIdOf<T>,
-			amount_sold: BalanceOf<T>,
+			#[pallet::compact] amount_sold: BalanceOf<T>,
 			currency_expected: CurrencyIdOf<T>,
-			amount_expected: BalanceOf<T>,
+			#[pallet::compact] amount_expected: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
@@ -189,7 +189,10 @@ pub mod module {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn revoke_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
+		pub fn revoke_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let from = ensure_signed(origin)?;
 
@@ -230,7 +233,10 @@ pub mod module {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn clinch_order(origin: OriginFor<T>, order_id: OrderId) -> DispatchResultWithPostInfo {
+		pub fn clinch_order(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let buyer = ensure_signed(origin)?;
 
