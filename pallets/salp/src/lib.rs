@@ -100,13 +100,13 @@ pub mod pallet {
 
 	#[derive(Encode, Decode)]
 	pub enum CrowdloanContributeCall<BalanceOf> {
-		#[codec(index = 27)]
+		#[codec(index = 73)]
 		CrowdloanContribute(ContributeCall<BalanceOf>),
 	}
 
 	#[derive(Encode, Decode)]
 	pub enum CrowdloanWithdrawCall<AccountIdOf> {
-		#[codec(index = 27)]
+		#[codec(index = 73)]
 		CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
 	}
 
