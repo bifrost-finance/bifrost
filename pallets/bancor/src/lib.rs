@@ -34,6 +34,9 @@ pub use pallet::*;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrenciesHandler as MultiCurrency<AccountIdOf<T>>>::Balance;
 
+const TWELVE_TEN: u128 = 1_000_000_000_000;
+const MILLION: u128 = 1_000_000;
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct BancorPool<Balance>{
 	pub(crate) currency_id: CurrencyId,  // ksm, dot, etc.
@@ -50,8 +53,6 @@ pub trait BancorHandler<Balance> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-
-	const TWELVE_TEN: u128 = 1_000_000_000_000;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -209,8 +210,8 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	/// Formula: Supply * ((1 + vsDOT/Balance) ^CW -1)
-	/// Supply: The total amount of DOT currently Sent in
-	/// Balance: The total amount of vsDOT currently Sent in
+	/// Supply: The total amount of DOT currently Sent in plus initiated virtual amount of DOT
+	/// Balance: The total amount of vsDOT currently Sent in plus initiated virtual amount of vsDOT
 	/// CW: Constant, here is 1/2
 	pub fn calculate_price_for_token(token_id: CurrencyId, vstoken_amount: BalanceOf<T>) -> Result<BalanceOf<T>, Error<T>> {
 		// ensure!(token_id.exist(), Error::<T>::CurrencyIdNotExist);
@@ -220,7 +221,8 @@ impl<T: Config> Pallet<T> {
 		ensure!(pool_info.token_pool > Zero::zero(), Error::<T>::TokenSupplyNotEnought);
 
 		let (token_supply, vstoken_supply) = (pool_info.token_base_supply + pool_info.token_pool, pool_info.vstoken_base_supply + pool_info.vstoken_pool);
-		ensure!(vstoken_supply > Zero::zero(), Error::<T>::VSTokenSupplyNotEnought);
+		// According to the formula, we can exchange for no more than the number of supply units out(in the case of token_base_supply is zero), which means ((1 + vsDOT/Balance) ^CW -1) should be less than or equal to 1.
+		ensure!(vstoken_amount <= BalanceOf::<T>::saturated_from(3u128).saturating_mul(vstoken_supply), Error::<T>::VSTokenSupplyNotEnought);
 
 		let token_supply_squre = token_supply.saturating_mul(token_supply);
 
@@ -228,11 +230,16 @@ impl<T: Config> Pallet<T> {
 		let result = lhs.nth_root(2).saturating_sub(token_supply.saturated_into());
 		let price = BalanceOf::<T>::saturated_from(result);
 
+		// We can not exchage for more than that the the pool has
 		ensure!(price <= pool_info.token_pool, Error::<T>::TokenSupplyNotEnought);
 
 		Ok(price)
 	}
 
+	/// Formula: Balance * (1 - (1 - DOT/Supply)^ (1/CW))
+	/// Supply: The total amount of DOT currently Sent in plus initiated virtual amount of DOT
+	/// Balance: The total amount of vsDOT currently Sent in plus initiated virtual amount of vsDOT
+	/// CW: Constant, here is 1/2
 	pub fn calculate_price_for_vstoken(token_id: CurrencyId, token_amount: BalanceOf<T>) -> Result<BalanceOf<T>, Error<T>> {
 		// ensure!(token_id.exist(), Error::<T>::CurrencyIdNotExist);
 		ensure!(token_amount > Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
@@ -241,9 +248,10 @@ impl<T: Config> Pallet<T> {
 		ensure!(pool_info.vstoken_pool > Zero::zero(), Error::<T>::VSTokenSupplyNotEnought);
 
 		let (token_supply, vstoken_supply) = (pool_info.token_base_supply + pool_info.token_pool, pool_info.vstoken_base_supply + pool_info.vstoken_pool);
-		ensure!(token_supply > Zero::zero(), Error::<T>::TokenSupplyNotEnought);
+		// According to the formula, we can exchange for no more than the number of balance units out(in the case of vstoken_base_supply is zero), which means (1 - (1 - DOT/Supply)^ (1/CW)) should be less than or equal to 1.
+		ensure!(token_amount <= BalanceOf::<T>::saturated_from(2u128).saturating_mul(token_supply), Error::<T>::TokenSupplyNotEnought);
 
-		let item_1 = {
+		let item = {
 			if token_supply > token_amount {
 				token_supply - token_amount
 			} else {
@@ -251,11 +259,15 @@ impl<T: Config> Pallet<T> {
 			}
 		};
 
-		let square_item_1 = Permill::from_rational_approximation(item_1, token_supply).square();
+		let square_item = Permill::from_rational_approximation(item, token_supply).square();
 
-		let result = BalanceOf::<T>::saturated_from(square_item_1.deconstruct());
-		let price = result.saturating_mul(vstoken_supply);
+		// Destruct the nominator from permill and divide the result by the denominator of a million.
+		let rhs = Permill::one().saturating_sub(square_item);
+		let rhs_nominator = BalanceOf::<T>::saturated_from(rhs.deconstruct());
 
+		let price = rhs_nominator.saturating_mul(vstoken_supply) / BalanceOf::<T>::saturated_from(MILLION);
+
+		// We can not exchage for more than that the the pool has
 		ensure!(price <= pool_info.vstoken_pool, Error::<T>::VSTokenSupplyNotEnought);
 
 		Ok(price)
