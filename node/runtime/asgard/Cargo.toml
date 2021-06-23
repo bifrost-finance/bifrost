@@ -12,7 +12,6 @@ log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
-substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false, rev = "b33d186888c60f38adafcfc0ec3a21aab263aef1" }
 
 # primitives
 node-primitives = { default-features = false, path = "../../primitives" }
@@ -27,6 +26,7 @@ sp-session = { version = "3.0.0", default-features = false }
 sp-transaction-pool = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
 sp-consensus-aura = { version = "0.9.0",  default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
 
 # frame dependencies
 frame-executive = { version = "3.0.0", default-features = false }
@@ -94,7 +94,6 @@ with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"codec/std",
 	"log/std",
-	"substrate-fixed/std",
 	"frame-executive/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
@@ -118,6 +117,7 @@ std = [
 	"sp-runtime/std",
 	"sp-session/std",
 	"sp-transaction-pool/std",
+	"sp-arithmetic/std",
 	"parachain-info/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",

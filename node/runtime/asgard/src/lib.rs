@@ -43,6 +43,8 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+use sp_arithmetic::Percent;
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -94,8 +96,6 @@ use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	ZenlinkMultiAssets,
 };
-
-use substrate_fixed::types::U1F127;
 
 mod weights;
 
@@ -641,7 +641,7 @@ parameter_types! {
 	pub const TokenType: TokenSymbol = TokenSymbol::KSM;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
-	pub ReleaseRatio: U1F127 = U1F127::from_num(0.5);
+	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -654,7 +654,7 @@ impl bifrost_salp::Config for Runtime {
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
 	type BancorPool = Bancor;
-	type TokenType = TokenType;
+	type RelyChainToken = TokenType;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type ReleaseCycle = ReleaseCycle;
 	type ReleaseRatio = ReleaseRatio;

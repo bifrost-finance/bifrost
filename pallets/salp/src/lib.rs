@@ -37,7 +37,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{
 		traits::{BancorHandler, BifrostXcmExecutor},
-		CurrencyId, LeasePeriod, ParaId, TokenSymbol,
+		CurrencyId, LeasePeriod, ParaId,
 	};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
@@ -45,7 +45,7 @@ pub mod pallet {
 	};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
-	use substrate_fixed::types::U1F127;
+	use sp_arithmetic::Percent;
 	use xcm::v0::{
 		prelude::{XcmError, XcmResult},
 		Junction, MultiLocation,
@@ -155,7 +155,7 @@ pub mod pallet {
 		type MinContribution: Get<BalanceOf<Self>>;
 
 		#[pallet::constant]
-		type TokenType: Get<TokenSymbol>;
+		type RelyChainToken: Get<CurrencyId>;
 
 		#[pallet::constant]
 		type VSBondValidPeriod: Get<LeasePeriod>;
@@ -167,7 +167,7 @@ pub mod pallet {
 		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
 		///
 		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
-		type ReleaseRatio: Get<U1F127>;
+		type ReleaseRatio: Get<Percent>;
 
 		type MultiCurrency: TransferAll<AccountIdOf<Self>>
 			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -551,8 +551,7 @@ pub mod pallet {
 			if (n % T::ReleaseCycle::get()) == 0 {
 				if let Ok(redeem_pool_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
 					// Calculate the release amount by `(redeem_pool_balance * T::ReleaseRatio).main_part()`.
-					let release_amount =
-						redeem_pool_balance * T::ReleaseRatio::get().to_num::<u128>();
+					let release_amount = T::ReleaseRatio::get() * redeem_pool_balance;
 
 					// Must be ok.
 					if let Ok(release_amount) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
@@ -563,7 +562,7 @@ pub mod pallet {
 
 						// Increase the balance of bancor-pool by release amount.
 						if let Err(err) =
-							T::BancorPool::add_token(T::TokenType::get().into(), release_amount)
+							T::BancorPool::add_token(T::RelyChainToken::get().into(), release_amount)
 						{
 							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
 						}
@@ -699,11 +698,11 @@ pub mod pallet {
 		}
 
 		fn vstoken() -> CurrencyId {
-			CurrencyId::VSToken(T::TokenType::get())
+			T::RelyChainToken::get().to_vstoken().unwrap()
 		}
 
 		fn vsbond(index: ParaId, first_slot: LeasePeriod, last_slot: LeasePeriod) -> CurrencyId {
-			CurrencyId::VSBond(T::TokenType::get(), index, first_slot, last_slot)
+			CurrencyId::VSBond(*T::RelyChainToken::get(), index, first_slot, last_slot)
 		}
 
 		// FAKE-CODE: Just for demonstrating the process.

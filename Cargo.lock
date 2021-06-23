@@ -219,6 +219,7 @@ dependencies = [
  "polkadot-parachain",
  "serde",
  "sp-api",
+ "sp-arithmetic",
  "sp-block-builder",
  "sp-consensus-aura",
  "sp-core",
@@ -230,7 +231,6 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "static_assertions",
- "substrate-fixed 0.5.6 (git+https://github.com/encointer/substrate-fixed?rev=b33d186888c60f38adafcfc0ec3a21aab263aef1)",
  "substrate-wasm-builder 4.0.0",
  "xcm",
  "xcm-builder",
@@ -794,9 +794,9 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "polkadot-parachain",
+ "sp-arithmetic",
  "sp-runtime",
  "sp-std",
- "substrate-fixed 0.5.6 (git+https://github.com/encointer/substrate-fixed?rev=b33d186888c60f38adafcfc0ec3a21aab263aef1)",
  "xcm",
  "xcm-support",
 ]
@@ -834,7 +834,7 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "substrate-fixed 0.5.6 (git+https://github.com/encointer/substrate-fixed)",
+ "substrate-fixed",
 ]
 
 [[package]]
@@ -4977,8 +4977,10 @@ dependencies = [
 [[package]]
 name = "node-inspect"
 version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "derive_more",
+ "log",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",
@@ -4992,10 +4994,8 @@ dependencies = [
 [[package]]
 name = "node-inspect"
 version = "0.8.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "derive_more",
- "log",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",
@@ -5087,8 +5087,8 @@ dependencies = [
  "sp-storage",
  "sp-timestamp",
  "sp-transaction-pool",
- "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-prometheus-endpoint 0.9.0 (git+https://github.com/paritytech/substrate?branch=master)",
+ "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -10404,15 +10404,6 @@ dependencies = [
 [[package]]
 name = "substrate-fixed"
 version = "0.5.6"
-source = "git+https://github.com/encointer/substrate-fixed?rev=b33d186888c60f38adafcfc0ec3a21aab263aef1#b33d186888c60f38adafcfc0ec3a21aab263aef1"
-dependencies = [
- "parity-scale-codec",
- "typenum",
-]
-
-[[package]]
-name = "substrate-fixed"
-version = "0.5.6"
 source = "git+https://github.com/encointer/substrate-fixed#b33d186888c60f38adafcfc0ec3a21aab263aef1"
 dependencies = [
  "parity-scale-codec",
@@ -10445,21 +10436,6 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
-dependencies = [
- "async-std",
- "derive_more",
- "futures-util",
- "hyper 0.13.10",
- "log",
- "prometheus",
- "tokio 0.2.25",
-]
-
-[[package]]
-name = "substrate-prometheus-endpoint"
-version = "0.9.0"
 source = "git+https://github.com/paritytech/substrate?branch=master#d03a91a181d0b22d00a6b9ba2a8007dc254779e3"
 dependencies = [
  "async-std",
@@ -10475,6 +10451,21 @@ dependencies = [
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
+dependencies = [
+ "async-std",
+ "derive_more",
+ "futures-util",
+ "hyper 0.13.10",
+ "log",
+ "prometheus",
+ "tokio 0.2.25",
+]
+
+[[package]]
+name = "substrate-prometheus-endpoint"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
 dependencies = [
  "async-std",
  "derive_more",
