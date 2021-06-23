@@ -185,6 +185,7 @@ pub mod pallet {
 
 			// make changes in the bancor pool
 			let vstoken_amount = Self::calculate_price_for_vstoken(currency_id, token_amount)?;
+
 			BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
 				match pool {
 					Some(pool_info) => {
@@ -248,6 +249,7 @@ impl<T: Config> Pallet<T> {
 		ensure!(pool_info.vstoken_pool > Zero::zero(), Error::<T>::VSTokenSupplyNotEnought);
 
 		let (token_supply, vstoken_supply) = (pool_info.token_base_supply + pool_info.token_pool, pool_info.vstoken_base_supply + pool_info.vstoken_pool);
+		
 		// According to the formula, we can exchange for no more than the number of balance units out(in the case of vstoken_base_supply is zero), which means (1 - (1 - DOT/Supply)^ (1/CW)) should be less than or equal to 1.
 		ensure!(token_amount <= BalanceOf::<T>::saturated_from(2u128).saturating_mul(token_supply), Error::<T>::TokenSupplyNotEnought);
 
@@ -260,11 +262,9 @@ impl<T: Config> Pallet<T> {
 		};
 
 		let square_item = Permill::from_rational_approximation(item, token_supply).square();
-
 		// Destruct the nominator from permill and divide the result by the denominator of a million.
 		let rhs = Permill::one().saturating_sub(square_item);
 		let rhs_nominator = BalanceOf::<T>::saturated_from(rhs.deconstruct());
-
 		let price = rhs_nominator.saturating_mul(vstoken_supply) / BalanceOf::<T>::saturated_from(MILLION);
 
 		// We can not exchage for more than that the the pool has
@@ -272,13 +272,10 @@ impl<T: Config> Pallet<T> {
 
 		Ok(price)
 	}
-
-
 }
 
 impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T>{
 	fn add_token(currency_id: CurrencyId, amount: BalanceOf<T>) -> Result<(), DispatchError> {
-
 		BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
 			match pool {
 				Some(pool_info) => {

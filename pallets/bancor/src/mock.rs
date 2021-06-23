@@ -28,10 +28,9 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
-const TWELVE_TEN: Balance = 1_000_000_000_000;
 pub type AccountId = AccountId32;
-pub const VSDOT_BASE_SUPPLY: Balance = 10_000 * TWELVE_TEN;
-pub const VSKSM_BASE_SUPPLY: Balance = 1_000_000 * TWELVE_TEN;
+pub const VSDOT_BASE_SUPPLY: Balance = 10_000;
+pub const VSKSM_BASE_SUPPLY: Balance = 1_000_000;
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const VSDOT: CurrencyId = CurrencyId::VSToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
