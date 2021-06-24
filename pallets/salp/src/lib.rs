@@ -324,6 +324,7 @@ pub mod pallet {
 			});
 
 			// Unlock vsToken/vsBond
+			// TODO: unweightable iter.
 			for (who, _) in Self::contribution_iterator(fund.trie_index) {
 				T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
 				T::MultiCurrency::remove_lock(
@@ -745,7 +746,7 @@ pub mod pallet {
 		}
 
 		fn vstoken() -> CurrencyId {
-			T::RelyChainToken::get().to_vstoken().unwrap()
+			CurrencyId::VSToken(*T::RelyChainToken::get())
 		}
 
 		fn vsbond(index: ParaId, first_slot: LeasePeriod, last_slot: LeasePeriod) -> CurrencyId {

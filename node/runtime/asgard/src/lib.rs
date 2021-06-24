@@ -638,7 +638,7 @@ parameter_types! {
 	pub const MinContribution: Balance = 1 * DOLLARS;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
-	pub const TokenType: TokenSymbol = TokenSymbol::KSM;
+	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
