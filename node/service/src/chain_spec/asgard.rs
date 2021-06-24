@@ -19,7 +19,7 @@
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use asgard_runtime::{
-	AccountId, AuraId,
+	AccountId, AuraId, Balance,
 	constants::{currency::DOLLARS, time::DAYS},
 	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, BancorConfig,
 	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
@@ -45,6 +45,7 @@ pub fn asgard_genesis(
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
+	vouchers: Vec<(AccountId, Balance)>,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
@@ -80,12 +81,8 @@ pub fn asgard_genesis(
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
-		bifrost_voucher: {
-			if let Some(vouchers) = initialize_all_vouchers() {
-				VoucherConfig { voucher: vouchers }
-			} else {
-				Default::default()
-			}
+		bifrost_voucher: VoucherConfig {
+			voucher: vouchers
 		},
 		orml_tokens: AssetsConfig {
 			balances: endowed_accounts
@@ -151,8 +148,7 @@ pub fn asgard_genesis(
 }
 
 #[allow(dead_code)]
-fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>>
-{
+fn initialize_all_vouchers() -> Vec<(AccountId, Balance)> {
 	use std::collections::HashSet;
 
 	let exe_dir = {
@@ -184,7 +180,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 		final_vouchers.push((i.clone(), sum));
 	}
 
-	Some(final_vouchers)
+	final_vouchers
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
@@ -193,6 +189,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
+		vec![],
 	)
 }
 
@@ -222,6 +219,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
+		vec![],
 	)
 }
 
@@ -298,5 +296,6 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		root_key,
 		Some(endowed_accounts),
 		id,
+		initialize_all_vouchers(),
 	)
 }
