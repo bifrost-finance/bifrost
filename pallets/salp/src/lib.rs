@@ -66,6 +66,21 @@ pub mod pallet {
 		}
 	}
 
+	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
+	pub enum ContributionStatus {
+		None,
+		Contributing,
+		Contributed,
+		Redeeming,
+		Redeemed,
+	}
+
+	impl Default for ContributionStatus {
+		fn default() -> Self {
+			ContributionStatus::None
+		}
+	}
+
 	/// Information on a funding effort for a pre-existing parachain. We assume that the parachain ID
 	/// is known as it's used for the key of the storage item for which this is the value (`Funds`).
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
@@ -275,6 +290,8 @@ pub mod pallet {
 		InsufficientBalance,
 		/// Crosschain xcm failed
 		XcmFailed,
+		/// Contribute Invalid
+		ContributionInvalid,
 	}
 
 	#[pallet::storage]
@@ -457,7 +474,21 @@ pub mod pallet {
 				.ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
 
+			let (_, status) = Self::contribution_get(fund.trie_index, &who);
+
+			ensure!(
+				status == ContributionStatus::Contributed || status == ContributionStatus::None,
+				Error::<T>::ContributionInvalid
+			);
+
 			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
+
+			let _balance = Self::update_contribution(
+				fund.trie_index,
+				who.clone(),
+				Zero::zero(),
+				ContributionStatus::Contributing,
+			);
 
 			Self::deposit_event(Event::Contributing(who, index, value));
 
@@ -479,19 +510,22 @@ pub mod pallet {
 				fund.status == FundStatus::Ongoing,
 				Error::<T>::InvalidFundStatus
 			);
+			let (_, status) = Self::contribution_get(fund.trie_index, &who);
+			ensure!(
+				status == ContributionStatus::Contributing,
+				Error::<T>::ContributionInvalid
+			);
 			Self::contribute_callback(who, index, value, is_success)
 		}
 
-		/// Withdraw full balance of the parachain.
+		/// Withdraw full balance of the parachain. this function may need to be called multiple times
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::weight(0)]
 		pub(super) fn withdraw(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
-			Self::check_fund_owner(origin.clone(), index)?;
-
-			let owner = ensure_signed(origin.clone())?;
+			let owner = Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -515,7 +549,7 @@ pub mod pallet {
 			index: ParaId,
 			is_success: bool,
 		) -> DispatchResultWithPostInfo {
-			Self::check_fund_owner(origin.clone(), index)?;
+			let owner = Self::check_fund_owner(origin, index)?;
 
 			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -524,8 +558,7 @@ pub mod pallet {
 				fund.status == FundStatus::Failed || fund.status == FundStatus::Retired,
 				Error::<T>::InvalidFundStatus
 			);
-			let who = ensure_signed(origin)?;
-			Self::withdraw_callback(who, index, is_success)
+			Self::withdraw_callback(owner, index, is_success)
 		}
 
 		#[pallet::weight(0)]
@@ -554,6 +587,13 @@ pub mod pallet {
 				.checked_sub(&value)
 				.ok_or(Error::<T>::InsufficientBalance)?;
 
+			let (_, status) = Self::contribution_get(fund.trie_index, &who);
+
+			ensure!(
+				status == ContributionStatus::Contributed,
+				Error::<T>::ContributionInvalid
+			);
+
 			let vstoken = Self::vstoken();
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
 			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
@@ -566,6 +606,13 @@ pub mod pallet {
 			Self::xcm_ump_redeem(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			RedeemPool::<T>::put(new_redeem_balance);
+
+			let _balance = Self::update_contribution(
+				fund.trie_index,
+				who.clone(),
+				Zero::zero(),
+				ContributionStatus::Redeeming,
+			);
 
 			Self::deposit_event(Event::Redeeming(who, value));
 
@@ -645,13 +692,24 @@ pub mod pallet {
 			child::ChildInfo::new_default(T::Hashing::hash(&buf[..]).as_ref())
 		}
 
-		pub fn contribution_put(index: TrieIndex, who: &AccountIdOf<T>, balance: &BalanceOf<T>) {
-			who.using_encoded(|b| child::put(&Self::id_from_index(index), b, &(balance)));
+		pub fn contribution_put(
+			index: TrieIndex,
+			who: &AccountIdOf<T>,
+			balance: &BalanceOf<T>,
+			status: ContributionStatus,
+		) {
+			who.using_encoded(|b| child::put(&Self::id_from_index(index), b, &(balance, status)));
 		}
 
-		pub fn contribution_get(index: TrieIndex, who: &AccountIdOf<T>) -> BalanceOf<T> {
+		pub fn contribution_get(
+			index: TrieIndex,
+			who: &AccountIdOf<T>,
+		) -> (BalanceOf<T>, ContributionStatus) {
 			who.using_encoded(|b| {
-				child::get_or_default::<BalanceOf<T>>(&Self::id_from_index(index), b)
+				child::get_or_default::<(BalanceOf<T>, ContributionStatus)>(
+					&Self::id_from_index(index),
+					b,
+				)
 			})
 		}
 
@@ -665,11 +723,36 @@ pub mod pallet {
 
 		pub fn contribution_iterator(
 			index: TrieIndex,
-		) -> ChildTriePrefixIterator<(AccountIdOf<T>, (BalanceOf<T>, Vec<u8>))> {
+		) -> ChildTriePrefixIterator<(AccountIdOf<T>, (BalanceOf<T>, ContributionStatus))> {
 			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(
 				&Self::id_from_index(index),
 				&[],
 			)
+		}
+
+		pub fn update_contribution(
+			index: ParaId,
+			who: AccountIdOf<T>,
+			value: BalanceOf<T>,
+			status: ContributionStatus,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			let (balance, _) = Self::contribution_get(fund.trie_index, &who);
+
+			let new_balance = match status {
+				ContributionStatus::Contributing | ContributionStatus::Contributed => {
+					balance.checked_add(&value).ok_or(Error::<T>::Overflow)?
+				}
+				ContributionStatus::Redeeming | ContributionStatus::Redeemed => balance
+					.checked_sub(&value)
+					.ok_or(Error::<T>::InsufficientBalance)?,
+				_ => Zero::zero(),
+			};
+
+			Self::contribution_put(fund.trie_index, &who, &new_balance, status);
+
+			Ok(new_balance)
 		}
 
 		pub fn xcm_ump_contribute(
@@ -738,11 +821,14 @@ pub mod pallet {
 			)
 		}
 
-		fn check_fund_owner(origin: OriginFor<T>, para_id: ParaId) -> DispatchResultWithPostInfo {
-			let owner = ensure_signed(origin)?;
+		fn check_fund_owner(
+			origin: OriginFor<T>,
+			para_id: ParaId,
+		) -> Result<AccountIdOf<T>, Error<T>> {
+			let owner = ensure_signed(origin).map_err(|_e| Error::<T>::InvalidOrigin)?;
 			let fund = Self::funds(para_id).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(owner == fund.depositor, Error::<T>::InvalidOrigin);
-			Ok(().into())
+			Ok(owner)
 		}
 
 		fn vstoken() -> CurrencyId {
@@ -753,9 +839,6 @@ pub mod pallet {
 			CurrencyId::VSBond(*T::RelyChainToken::get(), index, first_slot, last_slot)
 		}
 
-		// FAKE-CODE: Just for demonstrating the process.
-		// async safe err?
-		#[allow(dead_code)]
 		fn contribute_callback(
 			who: AccountIdOf<T>,
 			index: ParaId,
@@ -773,9 +856,6 @@ pub mod pallet {
 				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, value)?;
 				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, value)?;
 
-				let new_balance = Self::contribution_get(fund.trie_index, &who)
-					.checked_add(&value)
-					.ok_or(Error::<T>::Overflow)?;
 				// Recalculate fund raised.
 				Funds::<T>::mutate(index, |fund| {
 					if let Some(fund) = fund {
@@ -784,7 +864,12 @@ pub mod pallet {
 				});
 
 				// Recalculate the contribution of contributor to the fund.
-				Self::contribution_put(fund.trie_index, &who, &new_balance);
+				let _balance = Self::update_contribution(
+					fund.trie_index,
+					who.clone(),
+					value,
+					ContributionStatus::Contributed,
+				);
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
@@ -794,8 +879,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// FAKE-CODE: Just for demonstrating the process.
-		#[allow(dead_code)]
 		fn withdraw_callback(
 			who: AccountIdOf<T>,
 			index: ParaId,
@@ -815,8 +898,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// FAKE-CODE: Just for demonstrating the process.
-		#[allow(dead_code)]
 		fn redeem_callback(
 			who: AccountIdOf<T>,
 			index: ParaId,
@@ -832,13 +913,17 @@ pub mod pallet {
 			T::MultiCurrency::remove_lock(REDEEM_LOCK, vsbond, &who)?;
 
 			if is_success {
-				// Update contribution trie
-				let old_balance = Self::contribution_get(fund.trie_index, &who);
-				let balance = old_balance.saturating_sub(value);
-				Self::contribution_put(fund.trie_index, &who, &balance);
 				// Burn the vsToken/vsBond.
 				T::MultiCurrency::withdraw(vstoken, &who, value)?;
 				T::MultiCurrency::withdraw(vsbond, &who, value)?;
+
+				//Update contribution trie
+				let _balance = Self::update_contribution(
+					fund.trie_index,
+					who.clone(),
+					value,
+					ContributionStatus::Redeemed,
+				);
 
 				Self::deposit_event(Event::Redeemed(who, value));
 			} else {
