@@ -327,7 +327,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -359,7 +359,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			Self::check_fund_owner(origin.clone(), index)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -368,7 +368,12 @@ pub mod pallet {
 				Error::<T>::InvalidFundStatus
 			);
 			fund.status = FundStatus::Failed;
-			Funds::<T>::insert(index, Some(fund));
+			Funds::<T>::insert(index, Some(fund.clone()));
+
+			// Recharge into the 1:1 redeem pool.
+			RedeemPool::<T>::mutate(|balance| {
+				*balance = balance.saturating_add(fund.raised);
+			});
 
 			Ok(().into())
 		}
@@ -378,7 +383,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResultWithPostInfo {
-			ensure_root(origin)?;
+			Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -484,11 +489,11 @@ pub mod pallet {
 			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			let _balance = Self::update_contribution(
-				fund.trie_index,
+				index,
 				who.clone(),
 				Zero::zero(),
 				ContributionStatus::Contributing,
-			);
+			)?;
 
 			Self::deposit_event(Event::Contributing(who, index, value));
 
@@ -590,7 +595,7 @@ pub mod pallet {
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
 			ensure!(
-				status == ContributionStatus::Contributed,
+				status == ContributionStatus::Contributed || status == ContributionStatus::Redeemed,
 				Error::<T>::ContributionInvalid
 			);
 
@@ -608,11 +613,11 @@ pub mod pallet {
 			RedeemPool::<T>::put(new_redeem_balance);
 
 			let _balance = Self::update_contribution(
-				fund.trie_index,
+				index,
 				who.clone(),
 				Zero::zero(),
 				ContributionStatus::Redeeming,
-			);
+			)?;
 
 			Self::deposit_event(Event::Redeeming(who, value));
 
@@ -633,6 +638,11 @@ pub mod pallet {
 			ensure!(
 				fund.status == FundStatus::Withdrew,
 				Error::<T>::FundNotWithdrew
+			);
+			let (_, status) = Self::contribution_get(fund.trie_index, &who);
+			ensure!(
+				status == ContributionStatus::Redeeming,
+				Error::<T>::ContributionInvalid
 			);
 			Self::redeem_callback(who, index, value, is_success)
 		}
@@ -747,7 +757,7 @@ pub mod pallet {
 				ContributionStatus::Redeeming | ContributionStatus::Redeemed => balance
 					.checked_sub(&value)
 					.ok_or(Error::<T>::InsufficientBalance)?,
-				_ => Zero::zero(),
+				_ => balance,
 			};
 
 			Self::contribution_put(fund.trie_index, &who, &new_balance, status);
@@ -865,11 +875,11 @@ pub mod pallet {
 
 				// Recalculate the contribution of contributor to the fund.
 				let _balance = Self::update_contribution(
-					fund.trie_index,
+					index,
 					who.clone(),
 					value,
 					ContributionStatus::Contributed,
-				);
+				)?;
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
@@ -919,11 +929,11 @@ pub mod pallet {
 
 				//Update contribution trie
 				let _balance = Self::update_contribution(
-					fund.trie_index,
+					index,
 					who.clone(),
 					value,
 					ContributionStatus::Redeemed,
-				);
+				)?;
 
 				Self::deposit_event(Event::Redeemed(who, value));
 			} else {
