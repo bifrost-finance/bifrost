@@ -106,9 +106,14 @@ impl orml_tokens::Config for Test {
 	type MaxLocks = MaxLocks;
 }
 
+parameter_types! {
+	pub const InterventionPercentage: u128 = 75;
+}
+
 impl bancor::Config for Test {
 	type Event = Event;
 	type MultiCurrenciesHandler = Assets;
+	type InterventionPercentage = InterventionPercentage;
 }
 
 pub struct ExtBuilder {
