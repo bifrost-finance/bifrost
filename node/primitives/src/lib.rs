@@ -128,7 +128,7 @@ pub type PairId = u32;
 pub type ParaId = u32;
 
 /// The measurement type for counting lease periods (generally the same as `BlockNumber`).
-type LeasePeriod = BlockNumber;
+pub type LeasePeriod = BlockNumber;
 
 #[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
 #[cfg_attr(feature = "std", derive(Deserialize, Serialize))]

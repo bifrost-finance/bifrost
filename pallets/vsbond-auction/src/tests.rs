@@ -34,7 +34,7 @@ fn create_order_for_test(
 	let order_info = OrderInfo {
 		owner: owner.clone(),
 		currency_sold,
-		amount_sold,
+		amount_sold: amount_sold,
 		currency_expected,
 		amount_expected,
 		order_id,
@@ -97,7 +97,7 @@ fn create_order_without_enough_currency_should_fail() {
 				CURRENCY_OWNED_BY_BRUCE,
 				BALANCE_OWNED
 			),
-			Error::<Test>::NotEnoughCurrencySold,
+			Error::<Test>::NotEnoughVSBondToSell,
 		);
 		assert_noop!(
 			VSBondAuction::create_order(
@@ -107,7 +107,7 @@ fn create_order_without_enough_currency_should_fail() {
 				CURRENCY_OWNED_BY_ALICE,
 				BALANCE_OWNED
 			),
-			Error::<Test>::NotEnoughCurrencySold,
+			Error::<Test>::NotEnoughVSBondToSell,
 		);
 	});
 }
@@ -333,7 +333,7 @@ fn clinch_order_without_enough_currency_expected_should_fail() {
 
 		assert_noop!(
 			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), order_id),
-			Error::<Test>::NotEnoughCurrencyExpected
+			Error::<Test>::NotEnoughCurrencyToBuy
 		);
 	});
 }

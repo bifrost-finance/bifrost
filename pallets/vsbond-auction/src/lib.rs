@@ -20,7 +20,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::pallet_prelude::*;
+use frame_support::sp_runtime::traits::Saturating;
 use frame_system::pallet_prelude::*;
+use node_primitives::{CurrencyId, LeasePeriod};
 use orml_traits::{
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
@@ -32,15 +34,33 @@ mod tests;
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct OrderInfo<T: Config> {
 	owner: AccountIdOf<T>,
-	currency_sold: CurrencyIdOf<T>,
+	vsbond_type: CurrencyId,
 	amount_sold: BalanceOf<T>,
-	currency_expected: CurrencyIdOf<T>,
-	amount_expected: BalanceOf<T>,
+	unit_price: BalanceOf<T>,
 	order_id: OrderId,
 	order_state: OrderState,
 }
 
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
+impl<T: Config> OrderInfo<T> {
+	pub fn total_price(&self) -> BalanceOf<T> {
+		self.amount_sold.saturating_mul(self.unit_price)
+	}
+}
+
+impl<T: Config> core::fmt::Debug for OrderInfo<T> {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		f.debug_tuple("")
+			.field(&self.owner)
+			.field(&self.vsbond_type)
+			.field(&self.amount_sold)
+			.field(&self.unit_price)
+			.field(&self.order_id)
+			.field(&self.order_state)
+			.finish()
+	}
+}
+
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum OrderState {
 	InTrade,
 	Revoked,
@@ -56,24 +76,26 @@ pub mod module {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		#[pallet::constant]
+		type InvoicingCurrency: Get<CurrencyId>;
 
 		#[pallet::constant]
 		type MaximumOrderInTrade: Get<u32>;
 
-		type MultiCurrency: MultiCurrency<AccountIdOf<Self>>
-			+ MultiCurrencyExtended<AccountIdOf<Self>>
-			+ MultiLockableCurrency<AccountIdOf<Self>>
-			+ MultiReservableCurrency<AccountIdOf<Self>>;
+		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
+			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotEnoughCurrencySold,
-		NotEnoughCurrencyExpected,
+		NotEnoughVSBondToSell,
+		NotEnoughCurrencyToBuy,
 		NotFindOrderInfo,
-		ForbidCreateOrderWithSameCurrency,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
@@ -87,15 +109,8 @@ pub mod module {
 	pub enum Event<T: Config> {
 		/// The order has been created.
 		///
-		/// [order_id, order_owner, currency_sold, amount_sold, currency_expected, amount_expected]
-		OrderCreated(
-			OrderId,
-			AccountIdOf<T>,
-			CurrencyIdOf<T>,
-			BalanceOf<T>,
-			CurrencyIdOf<T>,
-			BalanceOf<T>,
-		),
+		/// [order_id, order_info]
+		OrderCreated(OrderId, OrderInfo<T>),
 		/// The order has been revoked.
 		///
 		/// [order_id_revoked, order_owner]
@@ -139,24 +154,22 @@ pub mod module {
 		#[pallet::weight(1_000)]
 		pub fn create_order(
 			origin: OriginFor<T>,
-			currency_sold: CurrencyIdOf<T>,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] first_slot: LeasePeriodOf<T>,
+			#[pallet::compact] last_slot: LeasePeriodOf<T>,
 			#[pallet::compact] amount_sold: BalanceOf<T>,
-			currency_expected: CurrencyIdOf<T>,
-			#[pallet::compact] amount_expected: BalanceOf<T>,
+			#[pallet::compact] unit_price: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
 
-			// TODO: Check `currency_sold` is `CurrencyId::VSBond(..)`
+			// Construct vsbond
+			let vsbond_type =
+				CurrencyId::VSBond(*T::InvoicingCurrency::get(), index, first_slot, last_slot);
 
 			// Check assets
-			T::MultiCurrency::ensure_can_withdraw(currency_sold, &owner, amount_sold)
-				.map_err(|_| Error::<T>::NotEnoughCurrencySold)?;
-
-			ensure!(
-				currency_sold != currency_expected,
-				Error::<T>::ForbidCreateOrderWithSameCurrency
-			);
+			T::MultiCurrency::ensure_can_withdraw(vsbond_type, &owner, amount_sold)
+				.map_err(|_| Error::<T>::NotEnoughVSBondToSell)?;
 
 			let pending_order_count = {
 				if let Some(sets) = Self::in_trade_order_ids(&owner) {
@@ -174,19 +187,18 @@ pub mod module {
 			let order_id = Self::next_order_id();
 			let order_info = OrderInfo::<T> {
 				owner: owner.clone(),
-				currency_sold,
+				vsbond_type,
 				amount_sold,
-				currency_expected,
-				amount_expected,
+				unit_price,
 				order_id,
 				order_state: OrderState::InTrade,
 			};
 
-			// Lock the balance of currency_sold
+			// Lock the balance of vsbond_type
 			let lock_iden = order_id.to_be_bytes();
-			T::MultiCurrency::set_lock(lock_iden, currency_sold, &owner, amount_sold)?;
+			T::MultiCurrency::set_lock(lock_iden, vsbond_type, &owner, amount_sold)?;
 
-			TotalOrders::<T>::insert(order_id, order_info);
+			TotalOrders::<T>::insert(order_id, order_info.clone());
 
 			if !InTradeOrderIds::<T>::contains_key(&owner) {
 				InTradeOrderIds::<T>::insert(owner.clone(), BTreeSet::<OrderId>::new());
@@ -195,14 +207,7 @@ pub mod module {
 				.ok_or(Error::<T>::Unexpected)?
 				.insert(order_id);
 
-			Self::deposit_event(Event::OrderCreated(
-				order_id,
-				owner,
-				currency_sold,
-				amount_sold,
-				currency_expected,
-				amount_expected,
-			));
+			Self::deposit_event(Event::OrderCreated(order_id, order_info));
 
 			Ok(().into())
 		}
@@ -230,9 +235,9 @@ pub mod module {
 				Error::<T>::ForbidRevokeOrderWithoutOwnership
 			);
 
-			// Unlock the balance of currency_sold
+			// Unlock the balance of vsbond_type
 			let lock_iden = order_info.order_id.to_be_bytes();
-			T::MultiCurrency::remove_lock(lock_iden, order_info.currency_sold, &from)?;
+			T::MultiCurrency::remove_lock(lock_iden, order_info.vsbond_type, &from)?;
 
 			// Revoke order
 			TotalOrders::<T>::insert(
@@ -284,28 +289,28 @@ pub mod module {
 
 			// Check the balance of currency
 			T::MultiCurrency::ensure_can_withdraw(
-				order_info.currency_expected,
+				T::InvoicingCurrency::get(),
 				&buyer,
-				order_info.amount_expected,
+				order_info.total_price(),
 			)
-			.map_err(|_| Error::<T>::NotEnoughCurrencyExpected)?;
+			.map_err(|_| Error::<T>::NotEnoughCurrencyToBuy)?;
 
-			// Unlock the balance of currency_sold
+			// Unlock the balance of vsbond_type
 			let lock_iden = order_info.order_id.to_be_bytes();
-			T::MultiCurrency::remove_lock(lock_iden, order_info.currency_sold, &order_info.owner)?;
+			T::MultiCurrency::remove_lock(lock_iden, order_info.vsbond_type, &order_info.owner)?;
 
 			// Exchange assets
 			T::MultiCurrency::transfer(
-				order_info.currency_sold,
+				order_info.vsbond_type,
 				&order_info.owner,
 				&buyer,
 				order_info.amount_sold,
 			)?;
 			T::MultiCurrency::transfer(
-				order_info.currency_expected,
+				T::InvoicingCurrency::get(),
 				&buyer,
 				&order_info.owner,
-				order_info.amount_expected,
+				order_info.total_price(),
 			)?;
 
 			let owner = order_info.owner.clone();
@@ -352,5 +357,5 @@ type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 #[allow(type_alias_bounds)]
-type CurrencyIdOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
+type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
+type ParaId = u32;
