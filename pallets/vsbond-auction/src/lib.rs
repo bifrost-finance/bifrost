@@ -59,7 +59,8 @@ pub mod module {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		type MaxInTradeOrderNum: Get<u32>;
+		#[pallet::constant]
+		type MaximumOrderInTrade: Get<u32>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>>
 			+ MultiCurrencyExtended<AccountIdOf<Self>>
@@ -77,7 +78,8 @@ pub mod module {
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
 		ForbidClinchOrderWithinOwnership,
-		ExceedMaxInTradeNum,
+		ExceedMaximumOrderInTrade,
+		Unexpected,
 	}
 
 	#[pallet::event]
@@ -108,16 +110,19 @@ pub mod module {
 	pub type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn order_ids)]
-	pub type SellerOrderIds<T: Config> = StorageDoubleMap<
-		_,
-		Twox64Concat,
-		AccountIdOf<T>,
-		Twox64Concat,
-		OrderState,
-		BTreeSet<OrderId>,
-		ValueQuery,
-	>;
+	#[pallet::getter(fn in_trade_order_ids)]
+	pub type InTradeOrderIds<T: Config> =
+		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn revoked_order_ids)]
+	pub type RevokedOrderIds<T: Config> =
+		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn clinchd_order_ids)]
+	pub type ClinchdOrderIds<T: Config> =
+		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn order)]
@@ -142,6 +147,8 @@ pub mod module {
 			// Check origin
 			let owner = ensure_signed(origin)?;
 
+			// TODO: Check `currency_sold` is `CurrencyId::VSBond(..)`
+
 			// Check assets
 			T::MultiCurrency::ensure_can_withdraw(currency_sold, &owner, amount_sold)
 				.map_err(|_| Error::<T>::NotEnoughCurrencySold)?;
@@ -151,10 +158,16 @@ pub mod module {
 				Error::<T>::ForbidCreateOrderWithSameCurrency
 			);
 
+			let pending_order_count = {
+				if let Some(sets) = Self::in_trade_order_ids(&owner) {
+					sets.len() as u32
+				} else {
+					0
+				}
+			};
 			ensure!(
-				Self::order_count(owner.clone(), OrderState::InTrade)
-					< T::MaxInTradeOrderNum::get(),
-				Error::<T>::ExceedMaxInTradeNum,
+				pending_order_count < T::MaximumOrderInTrade::get(),
+				Error::<T>::ExceedMaximumOrderInTrade,
 			);
 
 			// Create order
@@ -174,7 +187,13 @@ pub mod module {
 			T::MultiCurrency::set_lock(lock_iden, currency_sold, &owner, amount_sold)?;
 
 			TotalOrders::<T>::insert(order_id, order_info);
-			Self::order_ids_or_create(owner.clone(), OrderState::InTrade).insert(order_id);
+
+			if !InTradeOrderIds::<T>::contains_key(&owner) {
+				InTradeOrderIds::<T>::insert(owner.clone(), BTreeSet::<OrderId>::new());
+			}
+			Self::in_trade_order_ids(&owner)
+				.ok_or(Error::<T>::Unexpected)?
+				.insert(order_id);
 
 			Self::deposit_event(Event::OrderCreated(
 				order_id,
@@ -223,9 +242,17 @@ pub mod module {
 					..order_info
 				},
 			);
+
 			// Move order_id from `InTrade` to `Revoked`.
-			Self::order_ids(from.clone(), OrderState::InTrade).remove(&order_id);
-			Self::order_ids_or_create(from.clone(), OrderState::Revoked).insert(order_id);
+			Self::in_trade_order_ids(&from)
+				.ok_or(Error::<T>::Unexpected)?
+				.remove(&order_id);
+			if !RevokedOrderIds::<T>::contains_key(&from) {
+				RevokedOrderIds::<T>::insert(from.clone(), BTreeSet::<OrderId>::new());
+			}
+			Self::revoked_order_ids(&from)
+				.ok_or(Error::<T>::Unexpected)?
+				.insert(order_id);
 
 			Self::deposit_event(Event::OrderRevoked(order_id, from));
 
@@ -290,9 +317,17 @@ pub mod module {
 					..order_info
 				},
 			);
+
 			// Move order_id from `InTrade` to `Clinchd`.
-			Self::order_ids(owner.clone(), OrderState::InTrade).remove(&order_id);
-			Self::order_ids_or_create(owner.clone(), OrderState::Clinchd).insert(order_id);
+			Self::in_trade_order_ids(&owner)
+				.ok_or(Error::<T>::Unexpected)?
+				.remove(&order_id);
+			if !ClinchdOrderIds::<T>::contains_key(&owner) {
+				ClinchdOrderIds::<T>::insert(owner.clone(), BTreeSet::<OrderId>::new());
+			}
+			Self::clinchd_order_ids(&owner)
+				.ok_or(Error::<T>::Unexpected)?
+				.insert(order_id);
 
 			Self::deposit_event(Event::<T>::OrderClinchd(order_id, owner, buyer));
 
@@ -306,21 +341,6 @@ impl<T: Config> Pallet<T> {
 		let next_order_id = NextOrderId::<T>::get();
 		NextOrderId::<T>::mutate(|current| *current + 1);
 		next_order_id
-	}
-
-	pub(crate) fn order_ids_or_create(
-		who: AccountIdOf<T>,
-		order_state: OrderState,
-	) -> BTreeSet<OrderId> {
-		if !SellerOrderIds::<T>::contains_key(who.clone(), order_state) {
-			SellerOrderIds::<T>::insert(who.clone(), order_state, BTreeSet::<OrderId>::new());
-		};
-
-		Self::order_ids(who, order_state)
-	}
-
-	pub(crate) fn order_count(who: AccountIdOf<T>, order_state: OrderState) -> u32 {
-		Self::order_ids_or_create(who, order_state).len() as u32
 	}
 }
 

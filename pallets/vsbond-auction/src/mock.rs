@@ -105,7 +105,7 @@ impl vsbond_auction::Config for Test {
 	type Event = Event;
 
 	type MultiCurrency = orml_tokens::Pallet<Self>;
-	type MaxInTradeOrderNum = MaxInTradeOrderNum;
+	type MaximumOrderInTrade = MaxInTradeOrderNum;
 }
 
 // mockup runtime

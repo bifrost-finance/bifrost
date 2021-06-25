@@ -644,14 +644,14 @@ impl bifrost_bancor::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxInTradeOrderNum: u32 = 5;
+	pub const MaximumOrderInTrade: u32 = 5;
 }
 
 impl bifrost_vsbond_auction::Config for Runtime {
 	type Event = Event;
 
 	type MultiCurrency = Assets;
-	type MaxInTradeOrderNum = MaxInTradeOrderNum;
+	type MaximumOrderInTrade = MaximumOrderInTrade;
 }
 
 // bifrost runtime end
