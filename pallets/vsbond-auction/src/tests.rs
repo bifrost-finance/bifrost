@@ -34,14 +34,14 @@ fn create_order_for_test(
 	let order_info = OrderInfo {
 		owner: owner.clone(),
 		currency_sold,
-		amount_sold: amount_sold,
+		supply: amount_sold,
 		currency_expected,
 		amount_expected,
 		order_id,
 		order_state,
 	};
 
-	TotalOrders::<Test>::insert(order_id, order_info);
+	TotalOrderInfos::<Test>::insert(order_id, order_info);
 	Pallet::<Test>::order_ids(owner, order_state).insert(order_id);
 
 	order_id
