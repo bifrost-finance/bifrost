@@ -79,11 +79,17 @@ pub mod module {
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+		/// The currency type that buyer to pay
 		#[pallet::constant]
 		type InvoicingCurrency: Get<CurrencyId>;
 
+		/// The amount of orders in-trade that user can hold
 		#[pallet::constant]
 		type MaximumOrderInTrade: Get<u32>;
+
+		/// The sale quantity needs to be greater than `MinimumSupply` to create an order
+		#[pallet::constant]
+		type MinimumSupply: Get<BalanceOf<Self>>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -95,6 +101,7 @@ pub mod module {
 	pub enum Error<T> {
 		NotEnoughVSBondToSell,
 		NotEnoughCurrencyToBuy,
+		NotEnoughSupply,
 		NotFindOrderInfo,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
@@ -161,10 +168,11 @@ pub mod module {
 			#[pallet::compact] supply: BalanceOf<T>,
 			#[pallet::compact] unit_price: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			// TODO: Check Zero
-
 			// Check origin
 			let owner = ensure_signed(origin)?;
+
+			// Check supply
+			ensure!(supply >= T::MinimumSupply::get(), Error::<T>::NotEnoughSupply)?;
 
 			// Construct vsbond
 			let vsbond =
@@ -317,11 +325,8 @@ pub mod module {
 				.ok_or(Error::<T>::Overflow)?;
 
 			// Check the balance of buyer
-			T::MultiCurrency::ensure_can_withdraw(
-				T::InvoicingCurrency::get(),
-				&buyer,
-				total_price,
-			)?;
+			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, total_price)
+				.map_err(|_| Error::<T>::NotEnoughCurrencyToBuy);
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
@@ -347,6 +352,8 @@ pub mod module {
 				new_order_info.remain,
 			)?;
 
+			// TODO: Maybe Double Lock?
+
 			// Exchange: Transfer vsbond from owner to buyer
 			T::MultiCurrency::transfer(
 				new_order_info.vsbond,
@@ -369,7 +376,10 @@ pub mod module {
 					.ok_or(Error::<T>::Unexpected)?
 					.remove(&order_id);
 				if !ClinchdOrderIds::<T>::contains_key(&new_order_info.owner) {
-					ClinchdOrderIds::<T>::insert(new_order_info.owner.clone(), BTreeSet::<OrderId>::new());
+					ClinchdOrderIds::<T>::insert(
+						new_order_info.owner.clone(),
+						BTreeSet::<OrderId>::new(),
+					);
 				}
 				Self::clinchd_order_ids(&owner)
 					.ok_or(Error::<T>::Unexpected)?
