@@ -128,6 +128,7 @@ pub mod module {
 	}
 
 	#[pallet::storage]
+	#[pallet::getter(fn order_id)]
 	pub type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
 
 	#[pallet::storage]
@@ -171,7 +172,7 @@ pub mod module {
 
 			// Check supply
 			ensure!(
-				supply >= T::MinimumSupply::get(),
+				supply > T::MinimumSupply::get(),
 				Error::<T>::NotEnoughSupply
 			);
 
@@ -182,7 +183,7 @@ pub mod module {
 			// Check the balance of vsbond
 			T::MultiCurrency::ensure_can_withdraw(vsbond, &owner, supply)?;
 
-			let pending_order_count = {
+			let order_in_trade_amount = {
 				if let Some(sets) = Self::in_trade_order_ids(&owner) {
 					sets.len() as u32
 				} else {
@@ -190,7 +191,7 @@ pub mod module {
 				}
 			};
 			ensure!(
-				pending_order_count < T::MaximumOrderInTrade::get(),
+				order_in_trade_amount < T::MaximumOrderInTrade::get(),
 				Error::<T>::ExceedMaximumOrderInTrade,
 			);
 
@@ -217,9 +218,13 @@ pub mod module {
 			if !InTradeOrderIds::<T>::contains_key(&owner) {
 				InTradeOrderIds::<T>::insert(owner.clone(), BTreeSet::<OrderId>::new());
 			}
-			Self::in_trade_order_ids(&owner)
-				.ok_or(Error::<T>::Unexpected)?
-				.insert(order_id);
+			InTradeOrderIds::<T>::try_mutate(owner.clone(), |list| match list {
+				Some(list) => {
+					list.insert(order_id);
+					Ok(())
+				}
+				None => Err(Error::<T>::Unexpected),
+			})?;
 
 			Self::deposit_event(Event::OrderCreated(order_id, order_info));
 
@@ -398,8 +403,8 @@ pub mod module {
 
 impl<T: Config> Pallet<T> {
 	pub(crate) fn next_order_id() -> OrderId {
-		let next_order_id = NextOrderId::<T>::get();
-		NextOrderId::<T>::mutate(|current| *current + 1);
+		let next_order_id = Self::order_id();
+		NextOrderId::<T>::mutate(|current| *current += 1);
 		next_order_id
 	}
 }
