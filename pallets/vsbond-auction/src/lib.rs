@@ -362,7 +362,7 @@ pub mod module {
 				quantity_clinchd,
 			)?;
 			// Exchange: Transfer token from buyer to owner
-			// TODO: Add callback to reovke changes if the follow failed?
+			// TODO: Add callback to revoke changes if the follow failed?
 			T::MultiCurrency::transfer(
 				T::InvoicingCurrency::get(),
 				&buyer,
