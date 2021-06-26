@@ -179,7 +179,7 @@ pub mod module {
 			let vsbond =
 				CurrencyId::VSBond(*T::InvoicingCurrency::get(), index, first_slot, last_slot);
 
-			// Check assets
+			// Check the balance of vsbond
 			T::MultiCurrency::ensure_can_withdraw(vsbond, &owner, supply)?;
 
 			let pending_order_count = {
@@ -210,8 +210,10 @@ pub mod module {
 			let lock_iden = order_id.to_be_bytes();
 			T::MultiCurrency::set_lock(lock_iden, vsbond, &owner, supply)?;
 
+			// Insert OrderInfo to Storage
 			TotalOrderInfos::<T>::insert(order_id, order_info.clone());
 
+			// Add order_id to the order_ids in-trade of account
 			if !InTradeOrderIds::<T>::contains_key(&owner) {
 				InTradeOrderIds::<T>::insert(owner.clone(), BTreeSet::<OrderId>::new());
 			}
@@ -226,52 +228,52 @@ pub mod module {
 
 		#[pallet::weight(1_000)]
 		pub fn revoke_order(
-			_origin: OriginFor<T>,
-			#[pallet::compact] _order_id: OrderId,
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: OrderId,
 		) -> DispatchResultWithPostInfo {
-			// // Check origin
-			// let from = ensure_signed(origin)?;
-			//
-			// // Check order
-			// let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
-			//
-			// // Check order state
-			// ensure!(
-			// 	order_info.order_state == OrderState::InTrade,
-			// 	Error::<T>::ForbidRevokeOrderNotInTrade
-			// );
-			//
-			// // Check order owner
-			// ensure!(
-			// 	order_info.owner == from,
-			// 	Error::<T>::ForbidRevokeOrderWithoutOwnership
-			// );
-			//
-			// // Unlock the balance of vsbond_type
-			// let lock_iden = order_info.order_id.to_be_bytes();
-			// T::MultiCurrency::remove_lock(lock_iden, order_info.vsbond_type, &from)?;
-			//
-			// // Revoke order
-			// TotalOrderInfos::<T>::insert(
-			// 	order_id,
-			// 	OrderInfo {
-			// 		order_state: OrderState::Revoked,
-			// 		..order_info
-			// 	},
-			// );
-			//
-			// // Move order_id from `InTrade` to `Revoked`.
-			// Self::in_trade_order_ids(&from)
-			// 	.ok_or(Error::<T>::Unexpected)?
-			// 	.remove(&order_id);
-			// if !RevokedOrderIds::<T>::contains_key(&from) {
-			// 	RevokedOrderIds::<T>::insert(from.clone(), BTreeSet::<OrderId>::new());
-			// }
-			// Self::revoked_order_ids(&from)
-			// 	.ok_or(Error::<T>::Unexpected)?
-			// 	.insert(order_id);
-			//
-			// Self::deposit_event(Event::OrderRevoked(order_id, from));
+			// Check origin
+			let from = ensure_signed(origin)?;
+
+			// Check OrderInfo
+			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
+
+			// Check OrderState
+			ensure!(
+				order_info.order_state == OrderState::InTrade,
+				Error::<T>::ForbidRevokeOrderNotInTrade
+			);
+
+			// Check OrderOwner
+			ensure!(
+				order_info.owner == from,
+				Error::<T>::ForbidRevokeOrderWithoutOwnership
+			);
+
+			// Unlock the vsbond
+			let lock_iden = order_info.order_id.to_be_bytes();
+			T::MultiCurrency::remove_lock(lock_iden, order_info.vsbond, &from)?;
+
+			// Revoke order
+			TotalOrderInfos::<T>::insert(
+				order_id,
+				OrderInfo {
+					order_state: OrderState::Revoked,
+					..order_info
+				},
+			);
+
+			// Move order_id from `InTrade` to `Revoked`.
+			Self::in_trade_order_ids(&from)
+				.ok_or(Error::<T>::Unexpected)?
+				.remove(&order_id);
+			if !RevokedOrderIds::<T>::contains_key(&from) {
+				RevokedOrderIds::<T>::insert(from.clone(), BTreeSet::<OrderId>::new());
+			}
+			Self::revoked_order_ids(&from)
+				.ok_or(Error::<T>::Unexpected)?
+				.insert(order_id);
+
+			Self::deposit_event(Event::OrderRevoked(order_id, from));
 
 			Ok(().into())
 		}
