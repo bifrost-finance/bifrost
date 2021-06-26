@@ -326,7 +326,7 @@ pub mod pallet {
 		pub(super) fn fund_success(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -351,14 +351,14 @@ pub mod pallet {
 				)?;
 			}
 
-			Ok(().into())
+			Ok(())
 		}
 
 		#[pallet::weight(0)]
 		pub(super) fn fund_fail(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
@@ -375,14 +375,14 @@ pub mod pallet {
 				*balance = balance.saturating_add(fund.raised);
 			});
 
-			Ok(().into())
+			Ok(())
 		}
 
 		#[pallet::weight(0)]
 		pub(super) fn fund_retire(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -401,7 +401,7 @@ pub mod pallet {
 				*balance = balance.saturating_add(fund.raised);
 			});
 
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
@@ -412,7 +412,7 @@ pub mod pallet {
 			#[pallet::compact] cap: BalanceOf<T>,
 			#[pallet::compact] first_slot: LeasePeriod,
 			#[pallet::compact] last_slot: LeasePeriod,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
@@ -450,7 +450,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::Created(index));
 
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
@@ -461,7 +461,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] value: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 
 			ensure!(
@@ -497,7 +497,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::Contributing(who, index, value));
 
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Confirm contribute
@@ -508,7 +508,7 @@ pub mod pallet {
 			index: ParaId,
 			#[pallet::compact] value: BalanceOf<T>,
 			is_success: bool,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -529,7 +529,7 @@ pub mod pallet {
 		pub(super) fn withdraw(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let owner = Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
@@ -544,7 +544,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::Withdrawing(owner, index, fund.raised));
 
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Confirm withdraw by fund owner temporarily
@@ -553,7 +553,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			index: ParaId,
 			is_success: bool,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let owner = Self::check_fund_owner(origin, index)?;
 
 			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
@@ -571,7 +571,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			value: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -621,7 +621,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::Redeeming(who, value));
 
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Confirm redeem by fund owner temporarily
@@ -632,7 +632,7 @@ pub mod pallet {
 			index: ParaId,
 			value: BalanceOf<T>,
 			is_success: bool,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::check_fund_owner(origin, index)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -854,7 +854,7 @@ pub mod pallet {
 			index: ParaId,
 			value: BalanceOf<T>,
 			is_success: bool,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let vstoken = Self::vstoken();
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
@@ -886,14 +886,14 @@ pub mod pallet {
 				Self::deposit_event(Event::ContributeFailed(who, index, value));
 			}
 
-			Ok(().into())
+			Ok(())
 		}
 
 		fn withdraw_callback(
 			who: AccountIdOf<T>,
 			index: ParaId,
 			is_success: bool,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let mut fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
@@ -905,7 +905,7 @@ pub mod pallet {
 				Self::deposit_event(Event::WithdrawFailed(who, index, fund.raised));
 			}
 
-			Ok(().into())
+			Ok(())
 		}
 
 		fn redeem_callback(
@@ -913,7 +913,7 @@ pub mod pallet {
 			index: ParaId,
 			value: BalanceOf<T>,
 			is_success: bool,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			let vstoken = Self::vstoken();
@@ -944,7 +944,7 @@ pub mod pallet {
 				Self::deposit_event(Event::RedeemFailed(who, value));
 			}
 
-			Ok(().into())
+			Ok(())
 		}
 	}
 
