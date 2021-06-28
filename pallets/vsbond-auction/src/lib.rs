@@ -268,15 +268,23 @@ pub mod module {
 			);
 
 			// Move order_id from `InTrade` to `Revoked`.
-			Self::in_trade_order_ids(&from)
-				.ok_or(Error::<T>::Unexpected)?
-				.remove(&order_id);
+			InTradeOrderIds::<T>::try_mutate(from.clone(), |list| match list {
+				Some(list) => {
+					list.remove(&order_id);
+					Ok(())
+				}
+				None => Err(Error::<T>::Unexpected),
+			})?;
 			if !RevokedOrderIds::<T>::contains_key(&from) {
 				RevokedOrderIds::<T>::insert(from.clone(), BTreeSet::<OrderId>::new());
 			}
-			Self::revoked_order_ids(&from)
-				.ok_or(Error::<T>::Unexpected)?
-				.insert(order_id);
+			RevokedOrderIds::<T>::try_mutate(from.clone(), |list| match list {
+				Some(list) => {
+					list.insert(order_id);
+					Ok(())
+				}
+				None => Err(Error::<T>::Unexpected),
+			})?;
 
 			Self::deposit_event(Event::OrderRevoked(order_id, from));
 
@@ -289,6 +297,12 @@ pub mod module {
 			#[pallet::compact] order_id: OrderId,
 		) -> DispatchResultWithPostInfo {
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
+
+			// Check OrderState
+			ensure!(
+				order_info.order_state == OrderState::InTrade,
+				Error::<T>::ForbidClinchOrderNotInTrade
+			);
 
 			Self::partial_clinch_order(origin, order_id, order_info.remain)?;
 
@@ -373,18 +387,26 @@ pub mod module {
 
 			// Move order_id from InTrade to Clinchd if meets condition
 			if new_order_info.order_state == OrderState::Clinchd {
-				Self::in_trade_order_ids(&new_order_info.owner)
-					.ok_or(Error::<T>::Unexpected)?
-					.remove(&order_id);
+				InTradeOrderIds::<T>::try_mutate(new_order_info.owner.clone(), |list| match list {
+					Some(list) => {
+						list.remove(&order_id);
+						Ok(())
+					}
+					None => Err(Error::<T>::Unexpected),
+				})?;
 				if !ClinchdOrderIds::<T>::contains_key(&new_order_info.owner) {
 					ClinchdOrderIds::<T>::insert(
 						new_order_info.owner.clone(),
 						BTreeSet::<OrderId>::new(),
 					);
 				}
-				Self::clinchd_order_ids(&new_order_info.owner)
-					.ok_or(Error::<T>::Unexpected)?
-					.insert(order_id);
+				ClinchdOrderIds::<T>::try_mutate(new_order_info.owner.clone(), |list| match list {
+					Some(list) => {
+						list.insert(order_id);
+						Ok(())
+					}
+					None => Err(Error::<T>::Unexpected),
+				})?;
 			}
 			// Change the OrderInfo in Storage
 			TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
