@@ -644,16 +644,19 @@ impl bifrost_bancor::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaximumOrderInTrade: u32 = 5;
 	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const MaximumOrderInTrade: u32 = 5;
+	pub const MinimumSupply: Balance = 0;
 }
 
 impl bifrost_vsbond_auction::Config for Runtime {
 	type Event = Event;
 
-	type MultiCurrency = Assets;
 	type InvoicingCurrency = InvoicingCurrency;
 	type MaximumOrderInTrade = MaximumOrderInTrade;
+	type MinimumSupply = MinimumSupply;
+
+	type MultiCurrency = Assets;
 }
 
 // bifrost runtime end
