@@ -246,8 +246,6 @@ impl<T: Config> Pallet<T> {
 
 		let price = BalanceOf::<T>::saturated_from(result_convert);
 
-		println!("price: {:?}", price);
-
 		// We can not exchage for more than that the the pool has
 		ensure!(price <= pool_info.token_ceiling, Error::<T>::TokenSupplyNotEnought);
 

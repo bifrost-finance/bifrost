@@ -638,9 +638,14 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 }
 
+parameter_types! {
+	pub const InterventionPercentage: Balance = 75;
+}
+
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type MultiCurrenciesHandler = Currencies;
+	type InterventionPercentage = InterventionPercentage;
 }
 
 // bifrost runtime end
@@ -1011,7 +1016,7 @@ impl_runtime_apis! {
 			}
 		}
 
-		fn get_instant_vstoken_price(currency_id: CurrencyId) -> Balance {
+		fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
 			let rs = Bancor::get_instant_vstoken_price(currency_id);
 			match rs {
 				Ok((nominator, denominator)) => (nominator, denominator),
@@ -1019,7 +1024,7 @@ impl_runtime_apis! {
 			}
 		}
 
-		fn get_instant_token_price(currency_id: CurrencyId) -> Balance {
+		fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
 			let rs = Bancor::get_instant_token_price(currency_id);
 			match rs {
 				Ok((nominator, denominator)) => (nominator, denominator),
