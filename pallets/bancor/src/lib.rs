@@ -21,10 +21,10 @@
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
-use sp_runtime::{SaturatedConversion, traits::{Zero, Saturating}};
-use num_integer::Roots;
+use sp_runtime::{SaturatedConversion, traits::{Zero, Saturating, CheckedSub, CheckedMul, CheckedAdd, CheckedDiv}};
 use node_primitives::{TokenSymbol, CurrencyId};
-use sp_arithmetic::per_things::Permill;
+use sp_arithmetic::per_things::Perbill;
+use num_bigint::BigUint;
 
 mod mock;
 mod tests;
@@ -35,7 +35,7 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrenciesHandler as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 const TWELVE_TEN: u128 = 1_000_000_000_000;
-const MILLION: u128 = 1_000_000;
+const BILLION: u128 = 1_000_000_000;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct BancorPool<Balance>{
@@ -74,7 +74,8 @@ pub mod pallet {
 		ConversionError,
 		TokenSupplyNotEnought,
 		VSTokenSupplyNotEnought,
-		PriceNotQualified
+		PriceNotQualified,
+		CalculationOverflow
 	}
 
 	#[pallet::event]
@@ -155,6 +156,7 @@ pub mod pallet {
 
 			// make changes in the bancor pool
 			let token_amount = Self::calculate_price_for_token(currency_id, vstoken_amount)?;
+
 			ensure!(token_amount >= token_out_min, Error::<T>::PriceNotQualified);
 
 			Self::revise_bancor_pool_vstoken_buy_token(currency_id, token_amount, vstoken_amount)?;
@@ -186,6 +188,7 @@ pub mod pallet {
 
 			// make changes in the bancor pool
 			let vstoken_amount = Self::calculate_price_for_vstoken(currency_id, token_amount)?;
+
 			ensure!(vstoken_amount >= vstoken_out_min, Error::<T>::PriceNotQualified);
 
 			Self::revise_bancor_pool_token_buy_vstoken(currency_id, token_amount, vstoken_amount)?;
@@ -211,20 +214,42 @@ impl<T: Config> Pallet<T> {
 		ensure!(vstoken_amount > Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
 
 		let pool_info = Self::get_bancor_pool(token_id).ok_or(Error::<T>::BancorPoolNotExist)?;
-		ensure!(pool_info.token_pool > Zero::zero(), Error::<T>::TokenSupplyNotEnought);
+		// Only if token_ceiling is not zero, then exchangers can exchange vstokens for tokens.
+		ensure!(pool_info.token_ceiling > Zero::zero(), Error::<T>::TokenSupplyNotEnought);
 
 		let (token_supply, vstoken_supply) = (pool_info.token_base_supply + pool_info.token_pool, pool_info.vstoken_base_supply + pool_info.vstoken_pool);
-		// According to the formula, we can exchange for no more than the number of supply units out(in the case of token_base_supply is zero), which means ((1 + vsDOT/Balance) ^CW -1) should be less than or equal to 1.
-		ensure!(vstoken_amount <= BalanceOf::<T>::saturated_from(3u128).saturating_mul(vstoken_supply), Error::<T>::VSTokenSupplyNotEnought);
+		ensure!(vstoken_supply > Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
 
-		let token_supply_squre = token_supply.saturating_mul(token_supply);
+		// To avoid overflow, we introduce num-bigint package.
+		let vstoken_amount = {
+			let temp: u128 = vstoken_amount.saturated_into();
+			BigUint::from(temp)
+		};
+		let vstoken_supply = {
+			let temp: u128 = vstoken_supply.saturated_into();
+			BigUint::from(temp)
+		};
+		let token_supply = {
+			let temp: u128 = token_supply.saturated_into();
+			BigUint::from(temp)
+		};
+		let token_supply_squre = token_supply.checked_mul(&token_supply).ok_or(Error::<T>::CalculationOverflow)?;
 
-		let lhs: u128 = (vstoken_amount.saturating_mul(token_supply_squre)/ vstoken_supply).saturating_add(token_supply_squre).saturated_into();
-		let result = lhs.nth_root(2).saturating_sub(token_supply.saturated_into());
-		let price = BalanceOf::<T>::saturated_from(result);
+		let nominator_lhs = token_supply_squre.checked_mul(&vstoken_supply).ok_or(Error::<T>::CalculationOverflow)?;
+		let nominator_rhs = token_supply_squre.checked_mul(&vstoken_amount).ok_or(Error::<T>::CalculationOverflow)?;
+		let nominator = nominator_lhs.checked_add(&nominator_rhs).ok_or(Error::<T>::CalculationOverflow)?;
+
+		let inside = nominator.checked_div(&vstoken_supply).ok_or(Error::<T>::CalculationOverflow)?;
+		let squre_root = inside.nth_root(2);
+		let result = squre_root.checked_sub(&token_supply).ok_or(Error::<T>::CalculationOverflow)?;
+		let result_convert: u128 = u128::from_str_radix(&result.to_str_radix(10), 10).map_err(|_| Error::<T>::ConversionError)?;
+
+		let price = BalanceOf::<T>::saturated_from(result_convert);
+
+		println!("price: {:?}", price);
 
 		// We can not exchage for more than that the the pool has
-		ensure!(price <= pool_info.token_pool, Error::<T>::TokenSupplyNotEnought);
+		ensure!(price <= pool_info.token_ceiling, Error::<T>::TokenSupplyNotEnought);
 
 		Ok(price)
 	}
@@ -242,22 +267,14 @@ impl<T: Config> Pallet<T> {
 
 		let (token_supply, vstoken_supply) = (pool_info.token_base_supply + pool_info.token_pool, pool_info.vstoken_base_supply + pool_info.vstoken_pool);
 		
-		// According to the formula, we can exchange for no more than the number of balance units out(in the case of vstoken_base_supply is zero), which means (1 - (1 - DOT/Supply)^ (1/CW)) should be less than or equal to 1.
-		ensure!(token_amount <= BalanceOf::<T>::saturated_from(2u128).saturating_mul(token_supply), Error::<T>::TokenSupplyNotEnought);
+		// Since token_amount will be deducted from the total token_supply, token_amount should be less than or eqaul to token_supply.
+		ensure!(token_amount <= token_supply, Error::<T>::TokenSupplyNotEnought);
+		let square_item = Perbill::from_rational_approximation(token_supply - token_amount, token_supply).square();
 
-		let item = {
-			if token_supply > token_amount {
-				token_supply - token_amount
-			} else {
-				token_amount -token_supply
-			}
-		};
-
-		let square_item = Permill::from_rational_approximation(item, token_supply).square();
 		// Destruct the nominator from permill and divide the result by the denominator of a million.
-		let rhs = Permill::one().saturating_sub(square_item);
+		let rhs = Perbill::one().saturating_sub(square_item);
 		let rhs_nominator = BalanceOf::<T>::saturated_from(rhs.deconstruct());
-		let price = rhs_nominator.saturating_mul(vstoken_supply) / BalanceOf::<T>::saturated_from(MILLION);
+		let price = rhs_nominator.saturating_mul(vstoken_supply) / BalanceOf::<T>::saturated_from(BILLION);
 
 		// We can not exchage for more than that the the pool has
 		ensure!(price <= pool_info.vstoken_pool, Error::<T>::VSTokenSupplyNotEnought);
@@ -315,11 +332,13 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
+	// 这里需要做些调整。看看ceiling和池子里的总数加起来够不够购买。两边都要做交易
 	pub(crate) fn revise_bancor_pool_vstoken_buy_token(currency_id: CurrencyId, token_amount: BalanceOf<T>, vstoken_amount: BalanceOf<T>) -> Result<(), Error<T>> {
 		BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
 			match pool {
 				Some(pool_info) => {
 					ensure!(pool_info.token_ceiling >= token_amount, Error::<T>::TokenSupplyNotEnought);
+					pool_info.token_ceiling = pool_info.token_ceiling.saturating_sub(token_amount);
 					pool_info.token_pool = pool_info.token_pool.saturating_add(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_add(vstoken_amount);
 					Ok(())

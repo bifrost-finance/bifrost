@@ -123,4 +123,34 @@ where
 			data: Some(format!("{:?}", e).into()),
 		})
     }
+
+    fn get_instant_vstoken_price(
+        &self,
+        currency_id: CurrencyId,
+        at: Option<BlockHash>,
+    ) -> JsonRpcResult<Balance>{
+		let api = self.client.runtime_api();
+		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+        api.get_instant_vstoken_price(&at, currency_id).map_err(|e| RpcError {
+			code: ErrorCode::InternalError,
+			message: "Failed to get bancor instant vstoken price.".to_owned(),
+			data: Some(format!("{:?}", e).into()),
+		})
+    }
+
+    fn get_instant_token_price(
+        &self,
+        currency_id: CurrencyId,
+        at: Option<BlockHash>,
+    ) -> JsonRpcResult<Balance>{
+		let api = self.client.runtime_api();
+		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+        api.get_instant_token_price(&at, currency_id).map_err(|e| RpcError {
+			code: ErrorCode::InternalError,
+			message: "Failed to get bancor instant token price.".to_owned(),
+			data: Some(format!("{:?}", e).into()),
+		})
+    }
 }

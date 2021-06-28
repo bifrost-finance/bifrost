@@ -16,7 +16,7 @@ serde = { version = "1.0.124", optional = true }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
-num-integer = { version = "0.1.36", default-features = false }
+num-bigint = { version = "0.4", default-features = false }
 
 [dev-dependencies]
 sp-core = "3.0.0"
@@ -33,6 +33,6 @@ std = [
     "serde/std",
     "orml-traits/std",
     "orml-tokens/std",
-    "num-integer/std",
-    "node-primitives/std"
+    "node-primitives/std",
+    "num-bigint/std"
 ]

@@ -1010,6 +1010,22 @@ impl_runtime_apis! {
 				_ => Zero::zero(),
 			}
 		}
+
+		fn get_instant_vstoken_price(currency_id: CurrencyId) -> Balance {
+			let rs = Bancor::get_instant_vstoken_price(currency_id);
+			match rs {
+				Ok((nominator, denominator)) => (nominator, denominator),
+				_ => (Zero::zero(), Zero::zero()),
+			}
+		}
+
+		fn get_instant_token_price(currency_id: CurrencyId) -> Balance {
+			let rs = Bancor::get_instant_token_price(currency_id);
+			match rs {
+				Ok((nominator, denominator)) => (nominator, denominator),
+				_ => (Zero::zero(), Zero::zero()),
+			}
+		}
 	}
 
 	// zenlink runtime outer apis

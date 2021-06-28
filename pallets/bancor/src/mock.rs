@@ -147,6 +147,19 @@ impl ExtBuilder {
 		])
 	}
 
+	pub fn hundred_thousand_for_alice_n_bob(self) -> Self {
+		self.balances(vec![
+			(ALICE, KSM, 100_000),
+			(ALICE, DOT, 100_000),
+			(ALICE, VSKSM, 100_000),
+			(ALICE, VSDOT, 100_000),
+			(BOB, KSM, 100_000),
+			(BOB, DOT, 100_000),
+			(BOB, VSKSM, 100_000),
+			(BOB, VSDOT, 100_000),
+		])
+	}
+
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default()
 			.build_storage::<Test>()
