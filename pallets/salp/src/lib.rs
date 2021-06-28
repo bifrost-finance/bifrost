@@ -58,6 +58,7 @@ pub mod pallet {
 		Success,
 		Failed,
 		Withdrew,
+		End,
 	}
 
 	impl Default for FundStatus {
@@ -68,7 +69,6 @@ pub mod pallet {
 
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
 	pub enum ContributionStatus {
-		None,
 		Contributing,
 		Contributed,
 		Redeeming,
@@ -77,7 +77,7 @@ pub mod pallet {
 
 	impl Default for ContributionStatus {
 		fn default() -> Self {
-			ContributionStatus::None
+			ContributionStatus::Contributed
 		}
 	}
 
@@ -239,6 +239,8 @@ pub mod pallet {
 		Redeemed(AccountIdOf<T>, BalanceOf<T>),
 		/// Fail on redeem token(rely-chain) by vsToken/vsBond. [who, fund_index, amount]
 		RedeemFailed(AccountIdOf<T>, BalanceOf<T>),
+		/// Fund is dissolved. [fund_index]
+		Dissolved(ParaId),
 	}
 
 	#[pallet::error]
@@ -407,6 +409,24 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(0)]
+		pub(super) fn fund_end(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+		) -> DispatchResult {
+			Self::check_fund_owner(origin.clone(), index)?;
+
+			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(
+				fund.status == FundStatus::Withdrew,
+				Error::<T>::InvalidFundStatus
+			);
+			fund.status = FundStatus::End;
+			Funds::<T>::insert(index, Some(fund.clone()));
+
+			Ok(())
+		}
+
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
 		#[pallet::weight(0)]
 		pub(super) fn create(
@@ -485,7 +505,7 @@ pub mod pallet {
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
 			ensure!(
-				status == ContributionStatus::Contributed || status == ContributionStatus::None,
+				status == ContributionStatus::Contributed,
 				Error::<T>::ContributionInvalid
 			);
 
@@ -649,6 +669,36 @@ pub mod pallet {
 			);
 			Self::redeem_callback(who, index, value, is_success)
 		}
+
+		/// Remove a fund after the retirement period has ended and all funds have been returned.
+		#[pallet::weight(0)]
+		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
+			Self::check_fund_owner(origin, index)?;
+
+			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(fund.status == FundStatus::End, Error::<T>::FundNotEnded);
+
+			let mut refund_count = 0u32;
+			// Try killing the crowdloan child trie and Assume everyone will be refunded.
+			let contributions = Self::contribution_iterator(fund.trie_index);
+			let mut all_refunded = true;
+			for (who, (balance, _)) in contributions {
+				if refund_count >= T::RemoveKeysLimit::get() {
+					// Not everyone was able to be refunded this time around.
+					all_refunded = false;
+					break;
+				}
+				Self::contribution_kill(fund.trie_index, &who);
+				fund.raised = fund.raised.saturating_sub(balance);
+				refund_count += 1;
+			}
+
+			if all_refunded == true {
+				Funds::<T>::remove(index);
+				Self::deposit_event(Event::<T>::Dissolved(index));
+			}
+			Ok(())
+		}
 	}
 
 	#[pallet::hooks]
@@ -760,7 +810,6 @@ pub mod pallet {
 				ContributionStatus::Redeeming | ContributionStatus::Redeemed => balance
 					.checked_sub(&value)
 					.ok_or(Error::<T>::InsufficientBalance)?,
-				_ => balance,
 			};
 
 			Self::contribution_put(fund.trie_index, &who, &new_balance, status);
