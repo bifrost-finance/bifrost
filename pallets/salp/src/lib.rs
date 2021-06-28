@@ -207,6 +207,9 @@ pub mod pallet {
 		>;
 
 		type BifrostXcmExecutor: BifrostXcmExecutor;
+
+		#[pallet::constant]
+		type SlotLength: Get<LeasePeriod>;
 	}
 
 	#[pallet::pallet]
@@ -417,7 +420,7 @@ pub mod pallet {
 
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
 			let last_slot_limit = first_slot
-				.checked_add(7u32.into())
+				.checked_add(((T::SlotLength::get() as u32) - 1).into())
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
 			ensure!(
 				last_slot <= last_slot_limit,

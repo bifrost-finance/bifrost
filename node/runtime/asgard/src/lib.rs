@@ -643,6 +643,7 @@ parameter_types! {
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -660,6 +661,7 @@ impl bifrost_salp::Config for Runtime {
 	type ReleaseCycle = ReleaseCycle;
 	type ReleaseRatio = ReleaseRatio;
 	type LeasePeriod = LeasePeriod;
+	type SlotLength = SlotLength;
 }
 
 impl bifrost_bancor::Config for Runtime {
