@@ -22,7 +22,7 @@ use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_runtime::{SaturatedConversion, traits::{Zero, Saturating, CheckedSub, CheckedMul, CheckedAdd, CheckedDiv}};
-use node_primitives::{TokenSymbol, CurrencyId};
+use node_primitives::{TokenSymbol, CurrencyId, traits::BancorHandler}};
 use sp_arithmetic::per_things::Perbill;
 use num_bigint::BigUint;
 
@@ -45,10 +45,6 @@ pub struct BancorPool<Balance>{
 	pub(crate) token_ceiling: Balance, // token available for sale
 	pub(crate) token_base_supply: Balance, // initial virtual supply of token for the pool
 	pub(crate) vstoken_base_supply: Balance,  // initial virtual balance of vstoken for the pool
-}
-
-pub trait BancorHandler<Balance> {
-	fn add_token(currency_id: CurrencyId, amount: Balance) -> Result<(), DispatchError>;
 }
 
 #[frame_support::pallet]

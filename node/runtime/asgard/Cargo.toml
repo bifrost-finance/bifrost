@@ -8,6 +8,10 @@ build = "build.rs"
 [dependencies]
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.124", optional = true }
+static_assertions = "1.1.0"
+hex-literal = { version = "0.3.1", optional = true }
 
 # primitives
 node-primitives = { default-features = false, path = "../../primitives" }
@@ -22,6 +26,7 @@ sp-session = { version = "3.0.0", default-features = false }
 sp-transaction-pool = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
 sp-consensus-aura = { version = "0.9.0",  default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
 
 # frame dependencies
 frame-executive = { version = "3.0.0", default-features = false }
@@ -68,6 +73,7 @@ bifrost-charge-transaction-fee = { path = "../../../pallets/charge-transaction-f
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../../pallets/charge-transaction-fee/rpc/runtime-api", default-features = false }
 bifrost-salp= {path = "../../../pallets/salp",default-features = false}
 bifrost-bancor= {path = "../../../pallets/bancor",default-features = false}
+bifrost-vsbond-auction  = { path = "../../../pallets/vsbond-auction", default-features = false }
 bifrost-bancor-runtime-api = { path = "../../../pallets/bancor/rpc/runtime-api", default-features = false }
 
 # orml
@@ -88,6 +94,7 @@ default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"codec/std",
+	"log/std",
 	"frame-executive/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
@@ -111,6 +118,7 @@ std = [
 	"sp-runtime/std",
 	"sp-session/std",
 	"sp-transaction-pool/std",
+	"sp-arithmetic/std",
 	"parachain-info/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
@@ -133,6 +141,7 @@ std = [
 	"bifrost-charge-transaction-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-bancor/std",
+	"bifrost-vsbond-auction/std",
 	"bifrost-bancor-runtime-api/std",
 	"orml-currencies/std",
 	"orml-traits/std",

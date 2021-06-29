@@ -26,12 +26,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::unused_unit)]
+
 #[allow(unused_must_use)]
-
-
 use codec::FullCodec;
 use frame_support::{dispatch::Weight, traits::Contains};
-use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::{CheckedConversion, Convert, MaybeSerializeDeserialize};
 use sp_std::{
@@ -41,21 +39,27 @@ use sp_std::{
 	marker::PhantomData,
 	prelude::*,
 };
-use xcm::v0::{
-	prelude::{XcmError, XcmResult},
-	Junction, MultiAsset, MultiLocation,
-	MultiLocation::{Null, X1, X2},
-	NetworkId, Xcm,
+use xcm::{
+	v0::{
+		prelude::{XcmError, XcmResult},
+		Junction, MultiAsset, MultiLocation,
+		MultiLocation::{Null, X1, X2},
+		NetworkId, OriginKind, SendXcm, Xcm,
+	},
+	DoubleEncoded,
 };
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
 use xcm_executor::traits::{
 	Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
 };
 
+use node_primitives::{traits::BifrostXcmExecutor, AccountId, CurrencyId, TokenSymbol};
+
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
 	PhantomData<(CurrencyId, CurrencyIdConvert)>,
 );
+
 impl<CurrencyId, CurrencyIdConvert, Amount> MatchesFungible<Amount>
 	for BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>
 where
@@ -93,7 +97,7 @@ impl Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert {
 			match l {
 				X2(Junction::Parent, Junction::Parachain(para_id)) => {
 					Some(CurrencyId::Token(TokenSymbol::KSM))
-				},
+				}
 				_ => None,
 			}
 		}
@@ -111,6 +115,7 @@ impl xcmConvert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert {
 
 /// Bifrost Xcm Transact Filter
 pub struct BifrostXcmTransactFilter<T>(PhantomData<T>);
+
 impl<T: Contains<MultiLocation>> ShouldExecute for BifrostXcmTransactFilter<T> {
 	fn should_execute<Call>(
 		_origin: &MultiLocation,
@@ -132,6 +137,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for BifrostXcmTransactFilter<T> {
 
 /// Bifrost Filtered Assets
 pub struct BifrostFilterAsset;
+
 impl FilterAssetLocation for BifrostFilterAsset {
 	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		match asset {
@@ -197,8 +203,7 @@ impl<
 			Matcher::matches_fungible(&asset),
 		) {
 			// known asset
-			(who, currency_id, Some(amount)) =>
-			{
+			(who, currency_id, Some(amount)) => {
 				MultiCurrency::deposit(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
 					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
 			}
@@ -216,13 +221,50 @@ impl<
 			Matcher::matches_fungible(&asset),
 		) {
 			// known asset
-			(who, currency_id, Some(amount)) =>
-			{
+			(who, currency_id, Some(amount)) => {
 				MultiCurrency::withdraw(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
 					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 				Ok(xcm_executor::Assets::new())
 			}
 			_ => Err(XcmError::AssetNotFound),
 		}
+	}
+}
+
+pub struct BifrostXcmAdaptor<XcmSender>(PhantomData<XcmSender>);
+
+impl<XcmSender: SendXcm> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender> {
+	fn ump_transact(_origin: MultiLocation, call: DoubleEncoded<()>) -> XcmResult {
+		let message = Xcm::Transact {
+			origin_type: OriginKind::SovereignAccount,
+			require_weight_at_most: u64::MAX,
+			call,
+		};
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
+	}
+
+	fn ump_transfer_asset(
+		origin: MultiLocation,
+		dest: MultiLocation,
+		amount: u128,
+		relay: bool,
+	) -> XcmResult {
+		let mut message = Xcm::TransferAsset {
+			assets: vec![MultiAsset::ConcreteFungible {
+				id: MultiLocation::Null,
+				amount,
+			}],
+			dest,
+		};
+
+		if relay {
+			message = Xcm::<()>::RelayedFrom {
+				who: origin,
+				message: Box::new(message),
+			};
+		}
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
 	}
 }

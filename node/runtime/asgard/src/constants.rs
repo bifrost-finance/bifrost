@@ -74,4 +74,10 @@ pub mod time {
 	pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
+	pub const WEEKS: BlockNumber = DAYS * 7;
+
+	// The `LeasePeriod` defination from `polkadot`.
+	pub const KUSAMA_LEASE_PERIOD: BlockNumber = 6 * WEEKS;
+	pub const ROCOCO_LEASE_PERIOD: BlockNumber = 1 * DAYS;
+	pub const WESTEND_LEASE_PERIOD: BlockNumber = 28 * DAYS;
 }
