@@ -21,7 +21,7 @@ use hex_literal::hex;
 use asgard_runtime::{
 	AccountId, AuraId,
 	constants::{currency::DOLLARS, time::DAYS},
-	AuraConfig, AssetsConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, BancorConfig,
+	AuraConfig, TokensConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, BancorConfig,
 	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
 	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
 };
@@ -87,7 +87,7 @@ pub fn asgard_genesis(
 				Default::default()
 			}
 		},
-		orml_tokens: AssetsConfig {
+		orml_tokens: TokensConfig {
 			endowed_accounts: endowed_accounts
 				.iter()
 				.chain(super::faucet_accounts().iter())
