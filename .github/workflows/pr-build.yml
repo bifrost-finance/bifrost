@@ -25,13 +25,6 @@ jobs:
         uses: webfactory/ssh-agent@v0.5.2
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-      - name: Cache cargo registry and index
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
