@@ -30,6 +30,7 @@
 #[allow(unused_must_use)]
 use codec::FullCodec;
 use frame_support::{dispatch::Weight, traits::Contains};
+use node_primitives::{traits::BifrostXcmExecutor, AccountId, CurrencyId, TokenSymbol};
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::{CheckedConversion, Convert, MaybeSerializeDeserialize};
 use sp_std::{
@@ -52,8 +53,6 @@ use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParac
 use xcm_executor::traits::{
 	Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
 };
-
-use node_primitives::{traits::BifrostXcmExecutor, AccountId, CurrencyId, TokenSymbol};
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -125,11 +124,7 @@ impl<T: Contains<MultiLocation>> ShouldExecute for BifrostXcmTransactFilter<T> {
 		_weight_credit: &mut Weight,
 	) -> Result<(), ()> {
 		match message {
-			Xcm::Transact {
-				origin_type: _,
-				require_weight_at_most: _,
-				call: _,
-			} => Ok(()),
+			Xcm::Transact { origin_type: _, require_weight_at_most: _, call: _ } => Ok(()),
 			_ => Err(()),
 		}
 	}
@@ -251,18 +246,12 @@ impl<XcmSender: SendXcm> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender> {
 		relay: bool,
 	) -> XcmResult {
 		let mut message = Xcm::TransferAsset {
-			assets: vec![MultiAsset::ConcreteFungible {
-				id: MultiLocation::Null,
-				amount,
-			}],
+			assets: vec![MultiAsset::ConcreteFungible { id: MultiLocation::Null, amount }],
 			dest,
 		};
 
 		if relay {
-			message = Xcm::<()>::RelayedFrom {
-				who: origin,
-				message: Box::new(message),
-			};
+			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message) };
 		}
 
 		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)

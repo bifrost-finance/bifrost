@@ -22,29 +22,28 @@
 
 // use sc_service::{TFullBackend, TFullClient};
 
-pub use collator::*;
 pub use client::*;
+pub use collator::*;
 
 pub mod chain_spec;
-pub mod collator;
 mod client;
-
+pub mod collator;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {
-    /// Returns if this is a configuration for the `Asgard` network.
-    fn is_asgard(&self) -> bool;
+	/// Returns if this is a configuration for the `Asgard` network.
+	fn is_asgard(&self) -> bool;
 
-    /// Returns if this is a configuration for the `Bifrost` network.
-    fn is_bifrost(&self) -> bool;
+	/// Returns if this is a configuration for the `Bifrost` network.
+	fn is_bifrost(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
-    fn is_asgard(&self) -> bool {
-        self.id().starts_with("asgard") || self.id().starts_with("asg")
-    }
+	fn is_asgard(&self) -> bool {
+		self.id().starts_with("asgard") || self.id().starts_with("asg")
+	}
 
-    fn is_bifrost(&self) -> bool {
-        self.id().starts_with("bifrost") || self.id().starts_with("bnc")
-    }
+	fn is_bifrost(&self) -> bool {
+		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
+	}
 }

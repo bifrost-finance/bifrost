@@ -18,15 +18,16 @@
 
 #![cfg(test)]
 
-use crate as bancor;
-
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
-use node_primitives::{CurrencyId, TokenSymbol, Balance};
+use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,AccountId32,
+	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	AccountId32,
 };
+
+use crate as bancor;
 
 pub type AccountId = AccountId32;
 pub const VSDOT_BASE_SUPPLY: Balance = 10_000;
@@ -60,29 +61,29 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = u64;
-	type Hash = H256;
-	type Call = Call;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = ();
-	type OnNewAccount = ();
+	type AccountId = AccountId;
+	type BaseCallFilter = ();
+	type BlockHashCount = BlockHashCount;
+	type BlockLength = ();
+	type BlockNumber = u64;
+	type BlockWeights = ();
+	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type Header = Header;
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
+	type OnNewAccount = ();
 	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = ();
+	type SystemWeightInfo = ();
+	type Version = ();
 }
 
 orml_traits::parameter_type_with_key! {
@@ -96,14 +97,14 @@ parameter_types! {
 }
 
 impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
 	type Amount = i128;
+	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
+	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
 	type MaxLocks = MaxLocks;
+	type OnDust = ();
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -112,8 +113,8 @@ parameter_types! {
 
 impl bancor::Config for Test {
 	type Event = Event;
-	type MultiCurrenciesHandler = Assets;
 	type InterventionPercentage = InterventionPercentage;
+	type MultiCurrenciesHandler = Assets;
 }
 
 pub struct ExtBuilder {
@@ -122,9 +123,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![],
-		}
+		Self { endowed_accounts: vec![] }
 	}
 }
 
@@ -161,15 +160,11 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Test>()
-			.unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		orml_tokens::GenesisConfig::<Test> {
-			balances: self.endowed_accounts
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		orml_tokens::GenesisConfig::<Test> { balances: self.endowed_accounts }
+			.assimilate_storage(&mut t)
+			.unwrap();
 
 		crate::GenesisConfig::<Test> {
 			bancor_pools: vec![

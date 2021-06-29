@@ -20,7 +20,6 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use crate::{AccountAsset, BridgeAssetBalance, Token};
 use codec::FullCodec;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
@@ -31,6 +30,8 @@ use xcm::{
 	v0::{prelude::XcmResult, MultiLocation},
 	DoubleEncoded,
 };
+
+use crate::{AccountAsset, BridgeAssetBalance, Token};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -78,6 +79,7 @@ where
 	Balance: Default,
 {
 	type Error = core::convert::Infallible;
+
 	fn asset_issue(_: CurrencyId, _: &AccountId, _: Balance) {}
 
 	fn asset_destroy(_: CurrencyId, _: &AccountId, _: Balance) {}

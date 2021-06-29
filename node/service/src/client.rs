@@ -18,6 +18,8 @@
 
 //! Bifrost Client meta trait
 
+use std::sync::Arc;
+
 use consensus_common::BlockStatus;
 use node_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
@@ -30,7 +32,6 @@ use sp_runtime::{
 	Justifications,
 };
 use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
-use std::sync::Arc;
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
@@ -130,8 +131,8 @@ pub trait ExecuteWithClient {
 
 /// A handle to a Polkadot client instance.
 ///
-/// The Polkadot service supports multiple different runtimes (Westend, Polkadot itself, etc). As each runtime has a
-/// specialized client, we need to hide them behind a trait. This is this trait.
+/// The Polkadot service supports multiple different runtimes (Westend, Polkadot itself, etc). As
+/// each runtime has a specialized client, we need to hide them behind a trait. This is this trait.
 ///
 /// When wanting to work with the inner client, you need to use `execute_with`.
 ///
@@ -156,13 +157,9 @@ impl ClientHandle for Client {
 	fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output {
 		match self {
 			#[cfg(feature = "with-asgard-runtime")]
-			Self::Asgard(client) => {
-				T::execute_with_client::<_, _, FullBackend>(t, client.clone())
-			}
+			Self::Asgard(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
 			#[cfg(feature = "with-bifrost-runtime")]
-			Self::Bifrost(client) => {
-				T::execute_with_client::<_, _, FullBackend>(t, client.clone())
-			}
+			Self::Bifrost(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
 		}
 	}
 }

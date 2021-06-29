@@ -23,32 +23,34 @@
 
 extern crate alloc;
 
-use alloc::collections::btree_map::BTreeMap;
-use alloc::fmt::Debug;
-use alloc::vec::Vec;
+use alloc::{collections::btree_map::BTreeMap, fmt::Debug, vec::Vec};
+use core::{
+	convert::{From, Into, TryInto},
+	ops::Div,
+};
+
 use codec::{Decode, Encode};
-use core::convert::{From, Into, TryInto};
-use core::ops::Div;
 use fixed_point::{
 	traits::FromFixed,
 	transcendental,
 	types::{extra, *},
 	FixedI128,
 };
-use frame_support::traits::Get;
 use frame_support::{
-	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure, Parameter,
+	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
+	traits::Get, Parameter,
 };
 use frame_system::ensure_signed;
-use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
-use orml_traits::MultiCurrency;
 use node_primitives::{CurrencyId, CurrencyIdExt};
+use orml_traits::MultiCurrency;
+use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero};
 
 mod mock;
 mod tests;
 
-pub type CurrencyIdOf<T> =
-<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+pub type CurrencyIdOf<T> = <<T as Config>::CurrenciesHandler as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 pub trait Config: frame_system::Config {
 	/// event
@@ -173,7 +175,7 @@ decl_error! {
 /// struct for pool details
 #[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug, Copy)]
 pub struct PoolDetails<AccountId, SwapFee> {
-	///The owner of the pool, who has the privileges to set or change the parameters of the pool.
+	/// The owner of the pool, who has the privileges to set or change the parameters of the pool.
 	owner: AccountId,
 	/// The current swap rate of the pool.
 	swap_fee_rate: SwapFee,
@@ -907,9 +909,9 @@ impl<T: Config> Module<T> {
 	}
 
 	pub(crate) fn revise_storages_except_token_balances_when_adding_liquidity(
-		pool_id: T::PoolId,		   // pool id
+		pool_id: T::PoolId,           // pool id
 		new_pool_token: T::PoolToken, // to-be-issued pool token share to the user
-		provider: &T::AccountId,	  // the user account_id
+		provider: &T::AccountId,      // the user account_id
 	) -> DispatchResult {
 		// update the pool token amount of the specific pool
 		PoolTokensInPool::<T>::mutate(pool_id, |pool_token_num| {
@@ -924,10 +926,11 @@ impl<T: Config> Module<T> {
 		Self::update_unclaimed_bonus_related_states(&provider, pool_id)?;
 		Ok(())
 	}
+
 	pub(crate) fn revise_storages_except_token_balances_when_removing_liquidity(
-		pool_id: T::PoolId,		   // pool id
+		pool_id: T::PoolId,           // pool id
 		pool_token_out: T::PoolToken, // to-be-issued pool token share to the user
-		remover: &T::AccountId,	   // the user account_id
+		remover: &T::AccountId,       // the user account_id
 	) -> DispatchResult {
 		// Calculate and update user's unclaimed bonus in the pool.
 		Self::update_unclaimed_bonus_related_states(&remover, pool_id)?;
@@ -952,11 +955,12 @@ impl<T: Config> Module<T> {
 
 	pub(crate) fn update_unclaimed_bonus_related_states(
 		account_id: &T::AccountId, // the user account_id
-		pool_id: T::PoolId,		// pool id
+		pool_id: T::PoolId,        // pool id
 	) -> DispatchResult {
 		// Calculate the unclaimed bonus amount and update the UserUnclaimedBonusInPool map.
 		let unclaimed_amount = {
-			// Get the total amount of BNC bonus for the pool without consideration of the amount users have claimed.
+			// Get the total amount of BNC bonus for the pool without consideration of the amount
+			// users have claimed.
 			let bonus_pool_total_balance = Self::get_bonus_pool_balance(pool_id);
 			let already_claimed_bonus_amount = DeductedBonusAmountInPool::<T>::get(pool_id);
 			let remained_bonus_pool = bonus_pool_total_balance - already_claimed_bonus_amount;
@@ -965,7 +969,7 @@ impl<T: Config> Module<T> {
 			Self::convert_float(amount)?
 		};
 
-		//get current block number update unclaimed bonus in pool.
+		// get current block number update unclaimed bonus in pool.
 		let current_block_num = <frame_system::Pallet<T>>::block_number();
 		if UserUnclaimedBonusInPool::<T>::contains_key(&account_id, pool_id) {
 			UserUnclaimedBonusInPool::<T>::mutate(
@@ -992,14 +996,16 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// ***********************************************************************************************************//
-	///            user_pool_token    min(not calculated bonus block number, constant denominator for block number)//
-	///  ratio =  -----------------  *   ----------------------------------------------                            //
-	///              total_supply            constant denominator for block number                                 //
-	/// ***********************************************************************************************************//
-	/// calculate the un-calculated bonus and update it to the unclaimed bonus storage for the user
-	/// whenever the liquidity share of the user changes.
-	/// This requires a user to claim bonus every (constant block number). Otherwise, the user will lose the chance.
+	/// ********************************************************************************************
+	/// ***************//            user_pool_token    min(not calculated bonus block number,
+	/// constant denominator for block number)//  ratio =  -----------------  *
+	/// ----------------------------------------------                            //              
+	/// total_supply            constant denominator for block number
+	/// // *****************************************************************************************
+	/// ******************// calculate the un-calculated bonus and update it to the unclaimed bonus
+	/// storage for the user whenever the liquidity share of the user changes.
+	/// This requires a user to claim bonus every (constant block number). Otherwise, the user will
+	/// lose the chance.
 	pub(crate) fn calculate_unclaimed_bonus(
 		account_id: &T::AccountId,
 		pool_id: T::PoolId,
@@ -1007,7 +1013,7 @@ impl<T: Config> Module<T> {
 	) -> Result<FixedI128<extra::U64>, Error<T>> {
 		let user_pool_token = UserPoolTokensInPool::<T>::get(&account_id, pool_id);
 		let all_pool_token = PoolTokensInPool::<T>::get(pool_id);
-		let current_block_num = <frame_system::Pallet<T>>::block_number(); //get current block number
+		let current_block_num = <frame_system::Pallet<T>>::block_number(); // get current block number
 
 		// get last unclaimed bonus information for the user
 		let (_last_unclaimed_amount, last_calculate_block_num) =
@@ -1067,16 +1073,17 @@ impl<T: Config> Module<T> {
 		Ok(fixed)
 	}
 
-	///**********************************************************************************************
-	/// calcInGivenOut                                                                               //
-	/// aI = tokenAmountIn                                                                           //
-	/// bO = tokenBalanceOut            /  /     bO      \    (wO / wI)     \                        //
-	/// bI = tokenBalanceIn       bI * |  | ------------  | ^           - 1  |                       //
-	/// aO = tokenAmountOut aI =        \  \ ( bO - aO ) /                   /                       //
-	/// wI = tokenWeightIn        --------------------------------------------                       //
-	/// wO = tokenWeightOut                   ( 1 - sF )                                             //
-	/// sF = swapFee                                                                                 //
-	/// **********************************************************************************************/
+	/// ********************************************************************************************
+	/// ** calcInGivenOut
+	/// // aI = tokenAmountIn
+	/// // bO = tokenBalanceOut            /  /     bO      \    (wO / wI)     \
+	/// // bI = tokenBalanceIn       bI * |  | ------------  | ^           - 1  |
+	/// // aO = tokenAmountOut aI =        \  \ ( bO - aO ) /                   /
+	/// // wI = tokenWeightIn        --------------------------------------------
+	/// // wO = tokenWeightOut                   ( 1 - sF )
+	/// // sF = swapFee
+	/// // *****************************************************************************************
+	/// *****/
 	pub(crate) fn calculate_in_given_out(
 		token_balance_in: T::Balance,
 		token_weight_in: T::PoolWeight,
@@ -1122,16 +1129,17 @@ impl<T: Config> Module<T> {
 		Ok(fixed_token_amount_in)
 	}
 
-	///**********************************************************************************************
-	/// calcOutGivenIn                                                                              //
-	/// aO = tokenAmountOut                                                                         //
-	/// bO = tokenBalanceOut                                                                        //
-	/// bI = tokenBalanceIn            /      /              bI            \     (wI / wO) \        //
-	/// aI = tokenAmountIn  aO = bO * |  1 - | --------------------------  | ^             |        //
-	/// wI = tokenWeightIn             \      \ ( bI + ( aI * ( 1 - sF )) /               /         //
-	/// wO = tokenWeightOut                                                                         //
-	/// sF = swapFee                                                                                //
-	///**********************************************************************************************/
+	/// ********************************************************************************************
+	/// ** calcOutGivenIn
+	/// // aO = tokenAmountOut
+	/// // bO = tokenBalanceOut
+	/// // bI = tokenBalanceIn            /      /              bI            \     (wI / wO) \
+	/// // aI = tokenAmountIn  aO = bO * |  1 - | --------------------------  | ^             |
+	/// // wI = tokenWeightIn             \      \ ( bI + ( aI * ( 1 - sF )) /               /
+	/// // wO = tokenWeightOut
+	/// // sF = swapFee
+	/// // *****************************************************************************************
+	/// *****/
 	pub(crate) fn calculate_out_given_in(
 		token_balance_in: T::Balance,
 		token_weight_in: T::PoolWeight,
@@ -1179,16 +1187,17 @@ impl<T: Config> Module<T> {
 		Ok(fixed_token_amount_out)
 	}
 
-	///**********************************************************************************************
-	/// calcPoolOutGivenSingleIn                                                                   //
-	/// pAo = poolAmountOut      /                                              \                  //
-	/// tAi = tokenAmountIn     ///      /     //    wI \      \\       \     wI \                 //
-	/// wI = tokenWeightIn     //| tAi *| 1 - || 1 - --  | * sF || + tBi \    --  \                //
-	/// tW = totalWeight   pAo=||  \     \     \\    tW /      //         | ^ tW   | * pS - pS     //
-	/// tBi = tokenBalanceIn   \\  ------------------------------------- /        /                //
-	/// pS = poolSupply         \\                    tBi               /        /                 //
-	/// sF = swapFee             \                                              /                  //
-	///**********************************************************************************************/
+	/// ********************************************************************************************
+	/// ** calcPoolOutGivenSingleIn
+	/// // pAo = poolAmountOut      /                                              \
+	/// // tAi = tokenAmountIn     ///      /     //    wI \      \\       \     wI \
+	/// // wI = tokenWeightIn     //| tAi *| 1 - || 1 - --  | * sF || + tBi \    --  \
+	/// // tW = totalWeight   pAo=||  \     \     \\    tW /      //         | ^ tW   | * pS - pS
+	/// // tBi = tokenBalanceIn   \\  ------------------------------------- /        /
+	/// // pS = poolSupply         \\                    tBi               /        /
+	/// // sF = swapFee             \                                              /
+	/// // *****************************************************************************************
+	/// *****/
 	pub(crate) fn calculate_pool_out_given_single_in(
 		token_balance_in: T::Balance,
 		token_weight_in: T::PoolWeight,
@@ -1219,8 +1228,8 @@ impl<T: Config> Module<T> {
 		let weight_ratio = Self::weight_ratio(token_weight_in, T::WeightPrecision::get())?;
 
 		let pool_token_issued = {
-			let fee = FixedI128::<extra::U64>::from_num(1)
-				- FixedI128::<extra::U64>::from_num(1)
+			let fee = FixedI128::<extra::U64>::from_num(1) -
+				FixedI128::<extra::U64>::from_num(1)
 					.saturating_sub(weight_ratio)
 					.saturating_mul(swap_fee);
 			let base = token_amount_in
@@ -1235,16 +1244,17 @@ impl<T: Config> Module<T> {
 		Ok(pool_token_issued)
 	}
 
-	///**********************************************************************************************
-	/// calcSingleInGivenPoolOut                                                                  //
-	/// tAi = tokenAmountIn           //(pS + pAo)\     /    1    \\                              //
-	/// pS = poolSupply              || ---------  | ^ | --------- || * bI - bI                   //
-	/// pAo = poolAmountOut           \\    pS    /     \(wI / tW)//                              //
-	/// bI = balanceIn          tAi =  --------------------------------------------               //
-	/// wI = weightIn                             /       wI  \                                   //
-	/// tW = totalWeight                          |  1 - ----  |  * sF                            //
-	/// sF = swapFee                               \      tW  /                                   //
-	///**********************************************************************************************/
+	/// ********************************************************************************************
+	/// ** calcSingleInGivenPoolOut
+	/// // tAi = tokenAmountIn           //(pS + pAo)\     /    1    \\
+	/// // pS = poolSupply              || ---------  | ^ | --------- || * bI - bI
+	/// // pAo = poolAmountOut           \\    pS    /     \(wI / tW)//
+	/// // bI = balanceIn          tAi =  --------------------------------------------
+	/// // wI = weightIn                             /       wI  \
+	/// // tW = totalWeight                          |  1 - ----  |  * sF
+	/// // sF = swapFee                               \      tW  /
+	/// // *****************************************************************************************
+	/// *****/
 	pub(crate) fn calculate_single_in_given_pool_out(
 		token_balance_in: T::Balance,
 		token_weight_in: T::PoolWeight,
@@ -1275,9 +1285,7 @@ impl<T: Config> Module<T> {
 		let weight_ratio = Self::weight_ratio(token_weight_in, T::WeightPrecision::get())?;
 
 		let token_amount_in = {
-			let base = pool_supply
-				.saturating_add(pool_amount_out)
-				.saturating_div(pool_supply);
+			let base = pool_supply.saturating_add(pool_amount_out).saturating_div(pool_supply);
 			let reversed_weight_ratio =
 				Self::weight_ratio(T::WeightPrecision::get(), token_weight_in)?;
 			let power: FixedI128<extra::U64> = transcendental::pow(base, reversed_weight_ratio)
@@ -1294,17 +1302,18 @@ impl<T: Config> Module<T> {
 		Ok(token_amount_in)
 	}
 
-	///**********************************************************************************************
-	/// calcSingleOutGivenPoolIn                                                                    //
-	/// tAo = tokenAmountOut          /      /                                             \\       //
-	/// bO = tokenBalanceOut         /      // pS - (pAi * (1 - eF)) \     /    1    \      \\      //
-	/// pAi = poolAmountIn          | bO - || ----------------------- | ^ | --------- | * b0 ||     //
-	/// ps = poolSupply              \      \\          pS           /     \(wO / tW)/      //      //
-	/// wI = tokenWeightIn    tAo =   \      \                                            //        //
-	/// tW = totalWeight                    /    /      wO \       \                                //
-	/// sF = swapFee                    *  | 1 -|  1 - ---- | * sF  |                               //
-	///                                     \    \      tW /       /                                //
-	///**********************************************************************************************/
+	/// ********************************************************************************************
+	/// ** calcSingleOutGivenPoolIn
+	/// // tAo = tokenAmountOut          /      /                                             \\
+	/// // bO = tokenBalanceOut         /      // pS - (pAi * (1 - eF)) \     /    1    \      \\
+	/// // pAi = poolAmountIn          | bO - || ----------------------- | ^ | --------- | * b0 ||
+	/// // ps = poolSupply              \      \\          pS           /     \(wO / tW)/      //
+	/// // wI = tokenWeightIn    tAo =   \      \                                            //
+	/// // tW = totalWeight                    /    /      wO \       \
+	/// // sF = swapFee                    *  | 1 -|  1 - ---- | * sF  |
+	/// //                                     \    \      tW /       /
+	/// // *****************************************************************************************
+	/// *****/
 	pub(crate) fn calculate_single_out_given_pool_in(
 		token_weight_in: T::PoolWeight,
 		pool_amount_in: T::PoolToken,
@@ -1355,8 +1364,8 @@ impl<T: Config> Module<T> {
 		Ok(token_amount_out)
 	}
 
-	///*************************************************************************************************/
-	/// calcPoolInGivenSingleOut
+	/// ********************************************************************************************
+	/// *****/ calcPoolInGivenSingleOut
 	/// tAo = tokenAmountOut         /    /                            \               \
 	/// bO = tokenBalanceOut        /    /  /           tAo            \\              \
 	/// pAo = poolAmountOut pAo =  | 1 -|1-| -------------------------- || ^  (wO / tW) | * ps
@@ -1365,7 +1374,8 @@ impl<T: Config> Module<T> {
 	/// tW = totalWeight
 	/// sF = swapFee
 	///
-	///**************************************************************************************************/
+	/// ********************************************************************************************
+	/// ******/
 	pub(crate) fn calculate_pool_in_given_single_out(
 		token_weight_out: T::PoolWeight,
 		token_amount_out: T::Balance,
