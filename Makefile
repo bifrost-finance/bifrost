@@ -1,5 +1,6 @@
 .PHONY: init
 init:
+	git config core.hooksPath .githooks
 	./scripts/init.sh
 
 # Build Debug
@@ -39,7 +40,7 @@ check-bifrost:
 	cargo check -p node-cli --locked --features "with-bifrost-runtime"
 
 .PHONY: check-all
-check-all:
+check-all: format
 	cargo check -p node-cli --locked --features "with-all-runtime"
 
 .PHONY: check-tests
@@ -71,3 +72,8 @@ copy-genesis-config:
 copy-genesis-config-release:
 	mkdir -p "target/release/res"
 	cp -r node/service/res/genesis_config target/release/res
+
+.PHONY: format
+format:
+	rustup component add rustfmt
+	cargo fmt --all -- --check
