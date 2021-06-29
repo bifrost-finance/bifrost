@@ -21,11 +21,12 @@
 use crate as bancor;
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
-use node_primitives::{CurrencyId, TokenSymbol, Balance};
+use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
-	testing::Header,AccountId32,
+	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	AccountId32,
 };
 
 pub type AccountId = AccountId32;
@@ -166,7 +167,7 @@ impl ExtBuilder {
 			.unwrap();
 
 		orml_tokens::GenesisConfig::<Test> {
-			balances: self.endowed_accounts
+			balances: self.endowed_accounts,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
