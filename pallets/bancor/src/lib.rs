@@ -60,7 +60,8 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type MultiCurrenciesHandler: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		// This constant is a percentage number but in an integer presentation. When used, should be divided by 100.
+		// This constant is a percentage number but in an integer presentation. When used, should be
+		// divided by 100.
 		#[pallet::constant]
 		type InterventionPercentage: Get<BalanceOf<Self>>;
 	}

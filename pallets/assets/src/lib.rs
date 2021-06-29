@@ -23,10 +23,10 @@
 // pub use crate::imbalances::{NegativeImbalance, PositiveImbalance};
 
 use frame_support::{ensure, pallet_prelude::*, transactional};
-use frame_system::{pallet_prelude::*};
+use frame_system::pallet_prelude::*;
 use orml_traits::{
-	currency::TransferAll,
-	MultiReservableCurrency, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	MultiReservableCurrency,
 };
 use sp_runtime::traits::StaticLookup;
 
@@ -35,12 +35,12 @@ mod tests;
 
 pub use pallet::*;
 
-type BalanceOf<T> = <
-	<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>
->::Balance;
-type CurrencyIdOf<T> = <
-	<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>
->::CurrencyId;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::Balance;
+type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -77,7 +77,6 @@ pub mod pallet {
 		Issued(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
 		/// Token burn success, \[currency_id, dest, amount\]
 		Burned(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
-
 	}
 
 	#[pallet::pallet]
@@ -98,7 +97,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			dest: <T::Lookup as StaticLookup>::Source,
 			currency_id: CurrencyIdOf<T>,
-			#[pallet::compact] amount: BalanceOf<T>
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
@@ -119,7 +118,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			dest: <T::Lookup as StaticLookup>::Source,
 			currency_id: CurrencyIdOf<T>,
-			#[pallet::compact] amount: BalanceOf<T>
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
@@ -141,7 +140,12 @@ pub mod pallet {
 	}
 
 	impl WeightInfo for () {
-		fn burn() -> Weight { Default::default() }
-		fn issue() -> Weight { Default::default() }
+		fn burn() -> Weight {
+			Default::default()
+		}
+
+		fn issue() -> Weight {
+			Default::default()
+		}
 	}
 }

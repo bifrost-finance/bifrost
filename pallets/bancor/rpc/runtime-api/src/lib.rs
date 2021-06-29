@@ -23,8 +23,8 @@ use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
 	pub trait BancorRuntimeApi<CurrencyId, Balance> where
-        CurrencyId: Codec,
-        Balance: Codec
+		CurrencyId: Codec,
+		Balance: Codec
 	{
 		/// pass in vstoken_amount and the token_id that wants to exchange for. And we can get the number of token accquired.
 		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance;

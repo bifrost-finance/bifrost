@@ -16,29 +16,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::{marker::PhantomData, sync::Arc};
+
 use codec::Codec;
-use jsonrpc_derive::rpc;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
-use std::sync::Arc;
-use std::marker::PhantomData;
+use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+pub use vtoken_mint_rpc_runtime_api::{
+	self as runtime_api, VtokenMintPriceApi as VtokenMintRateRuntimeApi,
+};
+
 pub use self::gen_client::Client as VtokenMintClient;
-pub use vtoken_mint_rpc_runtime_api::{self as runtime_api, VtokenMintPriceApi as VtokenMintRateRuntimeApi};
 
 #[derive(Clone, Debug)]
 pub struct VtokenMint<C, Block> {
 	client: Arc<C>,
-	_marker: PhantomData<Block>
+	_marker: PhantomData<Block>,
 }
 
 impl<C, Block> VtokenMint<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
-		Self {
-			client,
-			_marker: PhantomData
-		}
+		Self { client, _marker: PhantomData }
 	}
 }
 
@@ -46,19 +46,27 @@ impl<C, Block> VtokenMint<C, Block> {
 pub trait VtokenMintPriceApi<BlockHash, AssetId, VtokenMintPrice> {
 	/// rpc method for getting current vtoken mint rate
 	#[rpc(name = "vtokenmint_getVtokenMintRate")]
-	fn get_vtoken_mint_rate(&self, asset_id: AssetId, at: Option<BlockHash>) -> JsonRpcResult<VtokenMintPrice>;
+	fn get_vtoken_mint_rate(
+		&self,
+		asset_id: AssetId,
+		at: Option<BlockHash>,
+	) -> JsonRpcResult<VtokenMintPrice>;
 }
 
-impl<C, Block, AssetId, VtokenMintPrice> VtokenMintPriceApi<<Block as BlockT>::Hash, AssetId, VtokenMintPrice>
-for VtokenMint<C, Block>
-	where
-		Block: BlockT,
-		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: VtokenMintRateRuntimeApi<Block, AssetId, VtokenMintPrice>,
-		AssetId: Codec,
-		VtokenMintPrice: Codec,
+impl<C, Block, AssetId, VtokenMintPrice>
+	VtokenMintPriceApi<<Block as BlockT>::Hash, AssetId, VtokenMintPrice> for VtokenMint<C, Block>
+where
+	Block: BlockT,
+	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+	C::Api: VtokenMintRateRuntimeApi<Block, AssetId, VtokenMintPrice>,
+	AssetId: Codec,
+	VtokenMintPrice: Codec,
 {
-	fn get_vtoken_mint_rate(&self, asset_id: AssetId, at: Option<<Block as BlockT>::Hash>) -> JsonRpcResult<VtokenMintPrice> {
+	fn get_vtoken_mint_rate(
+		&self,
+		asset_id: AssetId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> JsonRpcResult<VtokenMintPrice> {
 		let vtoken_mint_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 

@@ -27,23 +27,6 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
-use sp_api::impl_runtime_apis;
-use sp_core::{
-	u32_trait::{_1, _2, _3, _4},
-	OpaqueMetadata,
-};
-use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
-	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
-};
-use sp_std::prelude::*;
-#[cfg(feature = "std")]
-use sp_version::NativeVersion;
-use sp_version::RuntimeVersion;
-
-use sp_arithmetic::Percent;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -58,19 +41,36 @@ pub use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+use sp_api::impl_runtime_apis;
+use sp_arithmetic::Percent;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
+use sp_core::{
+	u32_trait::{_1, _2, _3, _4},
+	OpaqueMetadata,
+};
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
+use sp_runtime::{
+	create_runtime_str, generic, impl_opaque_keys,
+	traits::{BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
+	transaction_validity::{TransactionSource, TransactionValidity},
+	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
+};
 pub use sp_runtime::{Perbill, Permill};
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, prelude::*};
+#[cfg(feature = "std")]
+use sp_version::NativeVersion;
+use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
-
 // XCM imports
 use frame_system::{EnsureOneOf, EnsureRoot};
+use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
+// orml imports
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::MultiCurrency;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
@@ -82,15 +82,10 @@ use xcm_builder::{
 	UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
-
-// orml imports
-use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::MultiCurrency;
 use xcm_support::{
 	BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostFilteredAssets,
 	BifrostXcmAdaptor, BifrostXcmTransactFilter,
 };
-
 // zenlink imports
 use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
@@ -122,10 +117,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
-	NativeVersion {
-		runtime_version: VERSION,
-		can_author_with: Default::default(),
-	}
+	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
 }
 
 /// We assume that ~10% of the block weight is consumed by `on_initalize` handlers.
@@ -164,42 +156,42 @@ parameter_types! {
 }
 
 impl frame_system::Config for Runtime {
+	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
-	/// The aggregated dispatch type that is available for extrinsics.
-	type Call = Call;
-	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-	type Lookup = Indices;
-	/// The index type for storing how many extrinsics an account has signed.
-	type Index = Index;
+	type BaseCallFilter = ();
+	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+	type BlockHashCount = BlockHashCount;
+	type BlockLength = RuntimeBlockLength;
 	/// The index type for blocks.
 	type BlockNumber = BlockNumber;
+	type BlockWeights = RuntimeBlockWeights;
+	/// The aggregated dispatch type that is available for extrinsics.
+	type Call = Call;
+	type DbWeight = RocksDbWeight;
+	/// The ubiquitous event type.
+	type Event = Event;
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
 	/// The hashing algorithm used.
 	type Hashing = BlakeTwo256;
 	/// The header type.
 	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	/// The ubiquitous event type.
-	type Event = Event;
+	/// The index type for storing how many extrinsics an account has signed.
+	type Index = Index;
+	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
+	type Lookup = Indices;
+	type OnKilledAccount = ();
+	type OnNewAccount = ();
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 	/// The ubiquitous origin type.
 	type Origin = Origin;
-	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
-	type BlockHashCount = BlockHashCount;
-	/// Runtime version.
-	type Version = Version;
 	/// Converts a module to an index of this module in the runtime.
 	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type DbWeight = RocksDbWeight;
-	type BaseCallFilter = ();
-	type SystemWeightInfo = ();
-	type BlockWeights = RuntimeBlockWeights;
-	type BlockLength = RuntimeBlockLength;
 	type SS58Prefix = SS58Prefix;
-	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
+	type SystemWeightInfo = ();
+	/// Runtime version.
+	type Version = Version;
 }
 
 parameter_types! {
@@ -207,10 +199,10 @@ parameter_types! {
 }
 
 impl pallet_timestamp::Config for Runtime {
+	type MinimumPeriod = MinimumPeriod;
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
 	type OnTimestampSet = ();
-	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
 }
 
@@ -223,8 +215,8 @@ parameter_types! {
 }
 
 impl pallet_utility::Config for Runtime {
-	type Event = Event;
 	type Call = Call;
+	type Event = Event;
 	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
 }
 
@@ -235,13 +227,13 @@ parameter_types! {
 }
 
 impl pallet_scheduler::Config for Runtime {
+	type Call = Call;
 	type Event = Event;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type MaximumWeight = MaximumSchedulerWeight;
 	type Origin = Origin;
 	type PalletsOrigin = OriginCaller;
-	type Call = Call;
-	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
-	type MaxScheduledPerBlock = MaxScheduledPerBlock;
 	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
 }
 
@@ -258,15 +250,15 @@ impl pallet_indices::Config for Runtime {
 }
 
 impl pallet_balances::Config for Runtime {
+	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
+	type DustRemoval = ();
 	/// The ubiquitous event type.
 	type Event = Event;
-	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = System;
-	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxLocks = MaxLocks;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -277,13 +269,13 @@ parameter_types! {
 
 type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type Event = Event;
+	type MaxMembers = CouncilMaxMembers;
+	type MaxProposals = CouncilMaxProposals;
+	type MotionDuration = CouncilMotionDuration;
 	type Origin = Origin;
 	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = CouncilMotionDuration;
-	type MaxProposals = CouncilMaxProposals;
-	type MaxMembers = CouncilMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
@@ -295,13 +287,13 @@ parameter_types! {
 
 type TechnicalCollective = pallet_collective::Instance2;
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type Event = Event;
+	type MaxMembers = TechnicalMaxMembers;
+	type MaxProposals = TechnicalMaxProposals;
+	type MotionDuration = TechnicalMotionDuration;
 	type Origin = Origin;
 	type Proposal = Call;
-	type Event = Event;
-	type MotionDuration = TechnicalMotionDuration;
-	type MaxProposals = TechnicalMaxProposals;
-	type MaxMembers = TechnicalMaxMembers;
-	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
@@ -320,34 +312,7 @@ parameter_types! {
 }
 
 impl pallet_democracy::Config for Runtime {
-	type Proposal = Call;
-	type Event = Event;
-	type Currency = Balances;
-	type EnactmentPeriod = EnactmentPeriod;
-	type LaunchPeriod = LaunchPeriod;
-	type VotingPeriod = VotingPeriod;
-	type MinimumDeposit = MinimumDeposit;
-	/// A straight majority of the council can decide what their next motion is.
-	type ExternalOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
-	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
-	type ExternalMajorityOrigin =
-		pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
-	/// A unanimous council can have the next scheduled referendum be a straight default-carries
-	/// (NTB) vote.
-	type ExternalDefaultOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
-	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
-	/// be tabled immediately and with a shorter voting/enactment period.
-	type FastTrackOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
-	type InstantOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
-	type InstantAllowed = InstantAllowed;
-	type FastTrackVotingPeriod = FastTrackVotingPeriod;
-	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
-	type CancellationOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+	type BlacklistOrigin = EnsureRoot<AccountId>;
 	// To cancel a proposal before it has been passed, the technical committee must be unanimous or
 	// Root must agree.
 	type CancelProposalOrigin = EnsureOneOf<
@@ -355,27 +320,54 @@ impl pallet_democracy::Config for Runtime {
 		EnsureRoot<AccountId>,
 		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
 	>;
-	type BlacklistOrigin = EnsureRoot<AccountId>;
+	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
+	type CancellationOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+	type CooloffPeriod = CooloffPeriod;
+	type Currency = Balances;
+	type EnactmentPeriod = EnactmentPeriod;
+	type Event = Event;
+	/// A unanimous council can have the next scheduled referendum be a straight default-carries
+	/// (NTB) vote.
+	type ExternalDefaultOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
+	type ExternalMajorityOrigin =
+		pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+	/// A straight majority of the council can decide what their next motion is.
+	type ExternalOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
+	/// be tabled immediately and with a shorter voting/enactment period.
+	type FastTrackOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+	type FastTrackVotingPeriod = FastTrackVotingPeriod;
+	type InstantAllowed = InstantAllowed;
+	type InstantOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+	type LaunchPeriod = LaunchPeriod;
+	type MaxProposals = MaxProposals;
+	type MaxVotes = MaxVotes;
+	type MinimumDeposit = MinimumDeposit;
+	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
+	type PalletsOrigin = OriginCaller;
+	type PreimageByteDeposit = PreimageByteDeposit;
+	type Proposal = Call;
+	type Scheduler = Scheduler;
+	// NOTE: Treasury replaced by `()`.
+	type Slash = ();
 	// Any single technical committee member may veto a coming council proposal, however they can
 	// only do it once and it lasts only for the cool-off period.
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
-	type CooloffPeriod = CooloffPeriod;
-	type PreimageByteDeposit = PreimageByteDeposit;
-	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilCollective>;
-	// NOTE: Treasury replaced by `()`.
-	type Slash = ();
-	type Scheduler = Scheduler;
-	type PalletsOrigin = OriginCaller;
-	type MaxVotes = MaxVotes;
+	type VotingPeriod = VotingPeriod;
 	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
-	type MaxProposals = MaxProposals;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
+	type FeeMultiplierUpdate = ();
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
-	type FeeMultiplierUpdate = ();
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -390,14 +382,14 @@ parameter_types! {
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
+	type DmpMessageHandler = DmpQueue;
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type OutboundXcmpMessageSource = XcmpQueue;
-	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
-	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
+	type SelfParaId = parachain_info::Pallet<Runtime>;
+	type XcmpMessageHandler = XcmpQueue;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -492,18 +484,18 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
-	type Call = Call;
-	type XcmSender = XcmRouter;
 	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
-	type OriginConverter = XcmOriginToTransactDispatchOrigin;
+	type Barrier = Barrier;
+	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
 	type IsTeleporter = BifrostFilteredAssets;
 	type LocationInverter = LocationInverter<Ancestry>;
-	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type OriginConverter = XcmOriginToTransactDispatchOrigin;
+	type ResponseHandler = ();
 	type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
-	type ResponseHandler = (); // Don't handle responses for now.
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -520,14 +512,14 @@ pub type XcmRouter = (
 
 impl pallet_xcm::Config for Runtime {
 	type Event = Event;
-	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
 	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type XcmRouter = XcmRouter;
+	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -536,15 +528,15 @@ impl cumulus_pallet_xcm::Config for Runtime {
 }
 
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
+	type ChannelInfo = ParachainSystem;
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type ChannelInfo = ParachainSystem;
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type Event = Event;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ExecuteOverweightOrigin = frame_system::EnsureRoot<AccountId>;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 impl pallet_aura::Config for Runtime {
@@ -555,8 +547,8 @@ impl pallet_aura::Config for Runtime {
 // bifrost runtime start
 
 impl bifrost_voucher::Config for Runtime {
-	type Event = Event;
 	type Balance = Balance;
+	type Event = Event;
 	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
 }
 
@@ -567,9 +559,9 @@ parameter_types! {
 }
 impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
+	type MinterReward = MinterReward;
 	type MultiCurrency = Tokens;
 	type PalletId = StakingPalletId;
-	type MinterReward = MinterReward;
 	// type DEXOperations = ZenlinkProtocol;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
@@ -591,14 +583,14 @@ impl bifrost_assets::Config for Runtime {
 }
 
 impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
 	type Amount = Amount;
+	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
+	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
 	type MaxLocks = MaxLocks;
+	type OnDust = ();
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -606,13 +598,13 @@ parameter_types! {
 }
 
 impl bifrost_charge_transaction_fee::Config for Runtime {
-	type Event = Event;
 	type Balance = Balance;
-	type WeightInfo = ();
 	type CurrenciesHandler = Currencies;
 	type Currency = Balances;
-	type OnUnbalanced = ();
+	type Event = Event;
 	type NativeCurrencyId = NativeCurrencyId;
+	type OnUnbalanced = ();
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -624,13 +616,13 @@ parameter_types! {
 
 impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Tokens;
-	type TwoYear = TwoYear;
-	type SystemPalletId = ShareWeightPalletId;
-	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	type MultiCurrency = Tokens;
+	type RewardPeriod = RewardPeriod;
 	// type DEXOperations = ZenlinkProtocol;
 	type ShareWeight = Balance;
+	type SystemPalletId = ShareWeightPalletId;
+	type TwoYear = TwoYear;
 }
 
 parameter_types! {
@@ -647,21 +639,25 @@ parameter_types! {
 }
 
 impl bifrost_salp::Config for Runtime {
-	type Event = Event;
-	type PalletId = BifrostCrowdloanId;
-	type MultiCurrency = Tokens;
-	type SubmissionDeposit = SubmissionDeposit;
-	type MinContribution = MinContribution;
-	type RemoveKeysLimit = RemoveKeysLimit;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
 	type BancorPool = Bancor;
-	type RelyChainToken = TokenType;
-	type VSBondValidPeriod = VSBondValidPeriod;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
+	type Event = Event;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type LeasePeriod = LeasePeriod;
+	type MinContribution = MinContribution;
+	type MultiCurrency = Tokens;
+	type PalletId = BifrostCrowdloanId;
 	type ReleaseCycle = ReleaseCycle;
 	type ReleaseRatio = ReleaseRatio;
-	type LeasePeriod = LeasePeriod;
+	type RelyChainToken = TokenType;
+	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
+	type SubmissionDeposit = SubmissionDeposit;
+	type VSBondValidPeriod = VSBondValidPeriod;
+}
+
+parameter_types! {
+	pub const InterventionPercentage: Balance = 75;
 }
 
 parameter_types! {
@@ -670,6 +666,7 @@ parameter_types! {
 
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
+	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Currencies;
 	type InterventionPercentage = InterventionPercentage;
 }
@@ -682,11 +679,9 @@ parameter_types! {
 
 impl bifrost_vsbond_auction::Config for Runtime {
 	type Event = Event;
-
 	type InvoicingCurrency = InvoicingCurrency;
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumSupply = MinimumSupply;
-
 	type MultiCurrency = Tokens;
 }
 
@@ -718,15 +713,14 @@ parameter_types! {
 }
 
 impl zenlink_protocol::Config for Runtime {
+	type Conversion = ZenlinkLocationToAccountId;
 	type Event = Event;
 	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
-
 	type TargetChains = ZenlinkRegistedParaChains;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type Conversion = ZenlinkLocationToAccountId;
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
@@ -770,12 +764,7 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
-		Local::transfer(
-			currency_id,
-			&origin,
-			&target,
-			amount.unique_saturated_into(),
-		)?;
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
 
 		Ok(())
 	}
@@ -813,9 +802,9 @@ pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNum
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
+	type GetNativeCurrencyId = GetBifrostTokenId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
-	type GetNativeCurrencyId = GetBifrostTokenId;
 	type WeightInfo = ();
 }
 

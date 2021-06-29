@@ -18,7 +18,19 @@
 
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
 
-//! A list of the different weight modules for our runtime.
+use frame_support::{traits::Get, weights::Weight};
+use sp_std::marker::PhantomData;
+pub struct WeightInfo<T>(PhantomData<T>);
+impl<T: frame_system::Config> bifrost_vtoken_mint::WeightInfo for WeightInfo<T> {
+	fn to_vtoken<U: bifrost_vtoken_mint::Config>() -> Weight {
+		let referer_weight = 1000;
+		let db = T::DbWeight::get();
+		db.reads_writes(1, 1).saturating_add(referer_weight) // memo length
+	}
 
-pub mod pallet_vtoken_mint;
-pub mod pallet_voucher;
+	fn to_token() -> Weight {
+		(39_603_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+}

@@ -1,2 +1,21 @@
+# Basic
 hard_tabs = true
-merge_imports=true
+use_small_heuristics = "Max"
+# Imports
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+reorder_imports = true
+# Consistency
+newline_style = "Unix"
+normalize_comments = true
+normalize_doc_attributes = true
+# Misc
+max_width = 100
+comment_width = 100
+chain_width = 80
+wrap_comments = true
+spaces_around_ranges = true
+reorder_impl_items = true
+use_field_init_shorthand = true
+binop_separator = "Back"
+license_template_path = "HEADER-GPL3"

@@ -20,8 +20,9 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
 use core::convert::TryFrom;
+
+use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
@@ -34,10 +35,12 @@ use sp_std::{convert::Into, prelude::*};
 mod currency;
 pub mod traits;
 
-pub use crate::currency::{CurrencyId, TokenSymbol};
-pub use crate::traits::{
-	AssetReward, BridgeAssetFrom, BridgeAssetTo, CurrencyIdExt, MinterRewardExt, RewardHandler,
-	RewardTrait, TokenInfo, VtokenMintExt,
+pub use crate::{
+	currency::{CurrencyId, TokenSymbol},
+	traits::{
+		AssetReward, BridgeAssetFrom, BridgeAssetTo, CurrencyIdExt, MinterRewardExt, RewardHandler,
+		RewardTrait, TokenInfo, VtokenMintExt,
+	},
 };
 
 /// An index to a block.
@@ -185,13 +188,7 @@ impl<AssetId, Balance: Copy> Token<AssetId, Balance> {
 		total_supply: Balance,
 		token_type: TokenType,
 	) -> Self {
-		Self {
-			symbol,
-			precision,
-			total_supply,
-			token_type,
-			pair: None,
-		}
+		Self { symbol, precision, total_supply, token_type, pair: None }
 	}
 
 	pub fn add_pair(&mut self, asset_id: AssetId) {
@@ -224,11 +221,7 @@ pub struct VtokenPool<Balance> {
 
 impl<Balance: Default + Copy> VtokenPool<Balance> {
 	pub fn new(token_amount: Balance, vtoken_amount: Balance) -> Self {
-		Self {
-			token_pool: token_amount,
-			vtoken_pool: vtoken_amount,
-			..Default::default()
-		}
+		Self { token_pool: token_amount, vtoken_pool: vtoken_amount, ..Default::default() }
 	}
 
 	pub fn new_round(&mut self) {
@@ -261,11 +254,7 @@ pub struct BridgeAssetSymbol<Precision> {
 
 impl<Precision> BridgeAssetSymbol<Precision> {
 	pub fn new(blockchain: BlockchainType, symbol: Vec<u8>, precision: Precision) -> Self {
-		BridgeAssetSymbol {
-			blockchain,
-			symbol,
-			precision,
-		}
+		BridgeAssetSymbol { blockchain, symbol, precision }
 	}
 }
 
@@ -368,9 +357,10 @@ impl Default for StorageVersion {
 /// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
 /// account.
 pub mod report {
-	use super::{Signature, Verify};
 	use frame_system::offchain::AppCrypto;
 	use sp_core::crypto::{key_types, KeyTypeId};
+
+	use super::{Signature, Verify};
 
 	/// Key type for the reporting module. Used for reporting BABE and GRANDPA
 	/// equivocations.
@@ -389,9 +379,9 @@ pub mod report {
 	pub struct ReporterAppCrypto;
 
 	impl AppCrypto<<Signature as Verify>::Signer, Signature> for ReporterAppCrypto {
-		type RuntimeAppPublic = ReporterId;
-		type GenericSignature = sp_core::sr25519::Signature;
 		type GenericPublic = sp_core::sr25519::Public;
+		type GenericSignature = sp_core::sr25519::Signature;
+		type RuntimeAppPublic = ReporterId;
 	}
 }
 

@@ -18,9 +18,9 @@
 
 #![cfg(test)]
 
-use crate::mock::*;
-use crate::*;
 use frame_support::{assert_noop, assert_ok};
+use crate::*;
+use crate::mock::*;
 
 #[test]
 fn exchange_for_token_should_work() {

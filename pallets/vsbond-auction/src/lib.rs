@@ -19,15 +19,16 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::traits::{CheckedMul, Saturating, Zero};
+use frame_support::{
+	pallet_prelude::*,
+	sp_runtime::traits::{CheckedMul, Saturating, Zero},
+};
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod};
 use orml_traits::{
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
-use sp_std::cmp::min;
-use sp_std::collections::btree_set::BTreeSet;
+use sp_std::{cmp::min, collections::btree_set::BTreeSet};
 
 mod mock;
 mod tests;
@@ -171,10 +172,7 @@ pub mod module {
 			let owner = ensure_signed(origin)?;
 
 			// Check supply
-			ensure!(
-				supply > T::MinimumSupply::get(),
-				Error::<T>::NotEnoughSupply
-			);
+			ensure!(supply > T::MinimumSupply::get(), Error::<T>::NotEnoughSupply);
 
 			// Construct vsbond
 			let vsbond =
@@ -249,10 +247,7 @@ pub mod module {
 			);
 
 			// Check OrderOwner
-			ensure!(
-				order_info.owner == from,
-				Error::<T>::ForbidRevokeOrderWithoutOwnership
-			);
+			ensure!(order_info.owner == from, Error::<T>::ForbidRevokeOrderWithoutOwnership);
 
 			// Unlock the vsbond
 			let lock_iden = order_info.order_id.to_be_bytes();
@@ -261,10 +256,7 @@ pub mod module {
 			// Revoke order
 			TotalOrderInfos::<T>::insert(
 				order_id,
-				OrderInfo {
-					order_state: OrderState::Revoked,
-					..order_info
-				},
+				OrderInfo { order_state: OrderState::Revoked, ..order_info },
 			);
 
 			// Move order_id from `InTrade` to `Revoked`.
@@ -333,10 +325,7 @@ pub mod module {
 			);
 
 			// Check OrderOwner
-			ensure!(
-				order_info.owner != buyer,
-				Error::<T>::ForbidClinchOrderWithinOwnership
-			);
+			ensure!(order_info.owner != buyer, Error::<T>::ForbidClinchOrderWithinOwnership);
 
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
@@ -347,11 +336,7 @@ pub mod module {
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
-				OrderInfo {
-					remain: Zero::zero(),
-					order_state: OrderState::Clinchd,
-					..order_info
-				}
+				OrderInfo { remain: Zero::zero(), order_state: OrderState::Clinchd, ..order_info }
 			} else {
 				OrderInfo {
 					remain: order_info.remain.saturating_sub(quantity_clinchd),
@@ -387,26 +372,32 @@ pub mod module {
 
 			// Move order_id from InTrade to Clinchd if meets condition
 			if new_order_info.order_state == OrderState::Clinchd {
-				InTradeOrderIds::<T>::try_mutate(new_order_info.owner.clone(), |list| match list {
-					Some(list) => {
-						list.remove(&order_id);
-						Ok(())
-					}
-					None => Err(Error::<T>::Unexpected),
-				})?;
+				InTradeOrderIds::<T>::try_mutate(
+					new_order_info.owner.clone(),
+					|list| match list {
+						Some(list) => {
+							list.remove(&order_id);
+							Ok(())
+						}
+						None => Err(Error::<T>::Unexpected),
+					},
+				)?;
 				if !ClinchdOrderIds::<T>::contains_key(&new_order_info.owner) {
 					ClinchdOrderIds::<T>::insert(
 						new_order_info.owner.clone(),
 						BTreeSet::<OrderId>::new(),
 					);
 				}
-				ClinchdOrderIds::<T>::try_mutate(new_order_info.owner.clone(), |list| match list {
-					Some(list) => {
-						list.insert(order_id);
-						Ok(())
-					}
-					None => Err(Error::<T>::Unexpected),
-				})?;
+				ClinchdOrderIds::<T>::try_mutate(
+					new_order_info.owner.clone(),
+					|list| match list {
+						Some(list) => {
+							list.insert(order_id);
+							Ok(())
+						}
+						None => Err(Error::<T>::Unexpected),
+					},
+				)?;
 			}
 			// Change the OrderInfo in Storage
 			TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());

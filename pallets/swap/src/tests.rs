@@ -20,12 +20,12 @@
 
 #![cfg(test)]
 
-use crate::mock::*;
-use crate::*;
 use fixed_point::{traits::FromFixed, types::extra, FixedI128};
 use float_cmp::approx_eq;
 use frame_support::{assert_ok, dispatch::DispatchError};
 use node_primitives::{CurrencyId, TokenSymbol};
+
+use crate::{mock::*, *};
 
 fn initialize_pool_for_dispatches() {
 	// initialize token asset types.
@@ -51,37 +51,25 @@ fn initialize_pool_for_dispatches() {
 	let creator = Origin::signed(alice);
 	let swap_fee_rate = 5_000;
 
-	let vec_node_1 = PoolCreateTokenDetails {
-		token_id: asud_id,
-		token_balance: 500,
-		token_weight: 20,
-	};
+	let vec_node_1 =
+		PoolCreateTokenDetails { token_id: asud_id, token_balance: 500, token_weight: 20 };
 
-	let vec_node_2 = PoolCreateTokenDetails {
-		token_id: dot_id,
-		token_balance: 1_000,
-		token_weight: 40,
-	};
+	let vec_node_2 =
+		PoolCreateTokenDetails { token_id: dot_id, token_balance: 1_000, token_weight: 40 };
 
-	let vec_node_3 = PoolCreateTokenDetails {
-		token_id: ksm_id,
-		token_balance: 400,
-		token_weight: 40,
-	};
+	let vec_node_3 =
+		PoolCreateTokenDetails { token_id: ksm_id, token_balance: 400, token_weight: 40 };
 
-	let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-		CurrencyIdOf<Test>,
-		<Test as Config>::Balance,
-		<Test as Config>::PoolWeight>,
-	> =
-		vec![vec_node_1, vec_node_2, vec_node_3];
+	let token_for_pool_vec: Vec<
+		PoolCreateTokenDetails<
+			CurrencyIdOf<Test>,
+			<Test as Config>::Balance,
+			<Test as Config>::PoolWeight,
+		>,
+	> = vec![vec_node_1, vec_node_2, vec_node_3];
 	run_to_block(2); // set the block number to 2.
-					 // Dispatch the create_pool call to create a new pool.
-	assert_ok!(Swap::create_pool(
-		creator.clone(),
-		swap_fee_rate,
-		token_for_pool_vec
-	));
+				 // Dispatch the create_pool call to create a new pool.
+	assert_ok!(Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec));
 
 	let pool_id = 0;
 	let new_status = true;
@@ -104,12 +92,7 @@ fn weight_ratio_should_work() {
 
 	let weight_ratio = Swap::weight_ratio(upper, down);
 	assert!(weight_ratio.is_ok());
-	approx_eq!(
-		f32,
-		0.1f32,
-		f32::from_fixed(weight_ratio.unwrap()),
-		epsilon = 0.000_000_000_001
-	);
+	approx_eq!(f32, 0.1f32, f32::from_fixed(weight_ratio.unwrap()), epsilon = 0.000_000_000_001);
 }
 
 #[test]
@@ -154,38 +137,26 @@ fn create_pool_should_work() {
 		let creator = Origin::signed(alice);
 		let swap_fee_rate = 5_000;
 
-		let vec_node_1 = PoolCreateTokenDetails {
-			token_id: asud_id,
-			token_balance: 500,
-			token_weight: 20,
-		};
+		let vec_node_1 =
+			PoolCreateTokenDetails { token_id: asud_id, token_balance: 500, token_weight: 20 };
 
-		let vec_node_2 = PoolCreateTokenDetails {
-			token_id: dot_id,
-			token_balance: 1_000,
-			token_weight: 40,
-		};
+		let vec_node_2 =
+			PoolCreateTokenDetails { token_id: dot_id, token_balance: 1_000, token_weight: 40 };
 
-		let vec_node_3 = PoolCreateTokenDetails {
-			token_id: ksm_id,
-			token_balance: 400,
-			token_weight: 40,
-		};
+		let vec_node_3 =
+			PoolCreateTokenDetails { token_id: ksm_id, token_balance: 400, token_weight: 40 };
 
-		let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-			CurrencyIdOf<Test>,
-			<Test as Config>::Balance,
-			<Test as Config>::PoolWeight>,
-		> =
-			vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
+		let token_for_pool_vec: Vec<
+			PoolCreateTokenDetails<
+				CurrencyIdOf<Test>,
+				<Test as Config>::Balance,
+				<Test as Config>::PoolWeight,
+			>,
+		> = vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
 		run_to_block(2); // set the block number to 2.
 
 		// Dispatch the create_pool call to create a new pool.
-		assert_ok!(Swap::create_pool(
-			creator,
-			swap_fee_rate,
-			token_for_pool_vec
-		));
+		assert_ok!(Swap::create_pool(creator, swap_fee_rate, token_for_pool_vec));
 
 		// validate the value of storage Pools.
 		let result = Swap::pools(0);
@@ -226,12 +197,13 @@ fn create_pool_should_work() {
 
 		// swap fee rate exceeds 100%.
 		let swap_fee_rate = 500_000;
-		let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-			CurrencyIdOf<Test>,
-			<Test as Config>::Balance,
-			<Test as Config>::PoolWeight>,
-		> =
-			vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
+		let token_for_pool_vec: Vec<
+			PoolCreateTokenDetails<
+				CurrencyIdOf<Test>,
+				<Test as Config>::Balance,
+				<Test as Config>::PoolWeight,
+			>,
+		> = vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
@@ -243,12 +215,13 @@ fn create_pool_should_work() {
 
 		// swap fee rate is below 0%.
 		let swap_fee_rate = 0;
-		let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-			CurrencyIdOf<Test>,
-			<Test as Config>::Balance,
-			<Test as Config>::PoolWeight>,
-		> =
-			vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
+		let token_for_pool_vec: Vec<
+			PoolCreateTokenDetails<
+				CurrencyIdOf<Test>,
+				<Test as Config>::Balance,
+				<Test as Config>::PoolWeight,
+			>,
+		> = vec![vec_node_1.clone(), vec_node_2.clone(), vec_node_3.clone()];
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
 			Err(DispatchError::Module {
@@ -258,12 +231,15 @@ fn create_pool_should_work() {
 			})
 		);
 
-		// the length of the vector is 9, which exceeds the biggest supported token number in the pool.
+		// the length of the vector is 9, which exceeds the biggest supported token number in the
+		// pool.
 		let swap_fee_rate = 1_000;
-		let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-			CurrencyIdOf<Test>,
-			<Test as Config>::Balance,
-			<Test as Config>::PoolWeight>,
+		let token_for_pool_vec: Vec<
+			PoolCreateTokenDetails<
+				CurrencyIdOf<Test>,
+				<Test as Config>::Balance,
+				<Test as Config>::PoolWeight,
+			>,
 		> = vec![
 			vec_node_1.clone(),
 			vec_node_1.clone(),
@@ -277,17 +253,13 @@ fn create_pool_should_work() {
 		];
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 6,
-				message: Some("TooManyTokensToPool")
-			})
+			Err(DispatchError::Module { index: 4, error: 6, message: Some("TooManyTokensToPool") })
 		);
 
-		// validate the tokens used in creating a pool exist. Right now it doesn't work for the type Asset Id.
-		// When id changes to asset id in the later version, this test should work.
-		// let vec_node_4 = PoolCreateTokenDetails::<<Test as Config>::Balance, <Test as Config>::PoolWeight> {
-		// 	token_id: TokenSymbol::from(78),
+		// validate the tokens used in creating a pool exist. Right now it doesn't work for the type
+		// Asset Id. When id changes to asset id in the later version, this test should work.
+		// let vec_node_4 = PoolCreateTokenDetails::<<Test as Config>::Balance, <Test as
+		// Config>::PoolWeight> { 	token_id: TokenSymbol::from(78),
 		// 	token_balance: 400,
 		// 	token_weight: 40,
 		// };
@@ -298,51 +270,39 @@ fn create_pool_should_work() {
 		// Err(DispatchError::Module { index: 4, error: 6, message: Some("TokenNotExist") }));
 
 		// validate token amount used to create a pool must be bigger than zero.
-		let vec_node_4 = PoolCreateTokenDetails {
-			token_id: dot_id,
-			token_balance: 0,
-			token_weight: 40,
-		};
+		let vec_node_4 =
+			PoolCreateTokenDetails { token_id: dot_id, token_balance: 0, token_weight: 40 };
 		let swap_fee_rate = 10_000;
 		assert_ok!(<Test as Config>::CurrenciesHandler::deposit(asud_id, &bob, 1_000));
 		assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &bob, 100));
-		let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-			CurrencyIdOf<Test>,
-			<Test as Config>::Balance,
-			<Test as Config>::PoolWeight>,
-		> =
-			vec![vec_node_1.clone(), vec_node_4.clone()];
+		let token_for_pool_vec: Vec<
+			PoolCreateTokenDetails<
+				CurrencyIdOf<Test>,
+				<Test as Config>::Balance,
+				<Test as Config>::PoolWeight,
+			>,
+		> = vec![vec_node_1.clone(), vec_node_4.clone()];
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 13,
-				message: Some("AmountBelowZero")
-			})
+			Err(DispatchError::Module { index: 4, error: 13, message: Some("AmountBelowZero") })
 		);
 
 		// validate token amount used to create a pool must not exceed user's balance.
-		let vec_node_4 = PoolCreateTokenDetails {
-			token_id: dot_id,
-			token_balance: 1_000,
-			token_weight: 40,
-		};
+		let vec_node_4 =
+			PoolCreateTokenDetails { token_id: dot_id, token_balance: 1_000, token_weight: 40 };
 		let swap_fee_rate = 10_000;
 		assert_ok!(<Test as Config>::CurrenciesHandler::deposit(asud_id, &bob, 1_000));
 		assert_ok!(<Test as Config>::CurrenciesHandler::deposit(dot_id, &bob, 100));
-		let token_for_pool_vec: Vec<PoolCreateTokenDetails<
-			CurrencyIdOf<Test>,
-			<Test as Config>::Balance,
-			<Test as Config>::PoolWeight>,
-		> =
-			vec![vec_node_1.clone(), vec_node_4.clone()];
+		let token_for_pool_vec: Vec<
+			PoolCreateTokenDetails<
+				CurrencyIdOf<Test>,
+				<Test as Config>::Balance,
+				<Test as Config>::PoolWeight,
+			>,
+		> = vec![vec_node_1.clone(), vec_node_4.clone()];
 		assert_eq!(
 			Swap::create_pool(creator.clone(), swap_fee_rate, token_for_pool_vec),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 	});
 }
@@ -363,11 +323,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
-		assert_ok!(Swap::add_liquidity_given_shares_in(
-			creator,
-			pool_id,
-			new_pool_token
-		)); // Bob to get 200 share in the pool.
+		assert_ok!(Swap::add_liquidity_given_shares_in(creator, pool_id, new_pool_token)); // Bob to get 200 share in the pool.
 
 		// check whether the pool has added 200 shares.]
 		assert_eq!(Swap::pool_tokens_in_pool(pool_id), 1_200);
@@ -381,18 +337,9 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 480);
 
 		// check wether bob's account has been deducted corresponding amount for different tokens.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob),
-			999_900
-		); // get the user's balance for AUSD
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob),
-			999_800
-		); // get the user's balance for dot
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob),
-			999_920
-		); // get the user's balance for ksm
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_900); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 999_800); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 999_920); // get the user's balance for ksm
 
 		// Below are the incorrect operations.
 
@@ -401,11 +348,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		let creator = Origin::signed(bob);
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool status is false, thus it's not able to add liquidity in.
@@ -413,11 +356,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_ok!(Swap::set_pool_status(Origin::signed(alice), pool_id, false));
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// Every time a user at least adds more than or equal to the MinimumAddedPoolTokenShares
@@ -436,11 +375,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		let new_pool_token = 1_000_000;
 		assert_eq!(
 			Swap::add_liquidity_given_shares_in(creator.clone(), pool_id, new_pool_token),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 
 		// deposit pool token share is more than maximum added share limit.
@@ -487,10 +422,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, asud_id), 5_500);
 
 		// check wether bob's account has been deducted corresponding amount for AUSD.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob),
-			995_000
-		); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 995_000); // get the user's balance for AUSD
 
 		// Below are the incorrect operations.
 
@@ -505,17 +437,13 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount_in
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool not active.
 		let pool_id = 0;
 		assert_ok!(Swap::set_pool_status(Origin::signed(alice), pool_id, false));
-		
+
 		assert_eq!(
 			Swap::add_single_liquidity_given_amount_in(
 				creator.clone(),
@@ -523,11 +451,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount_in
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// token in amount below or equal to zero.
@@ -540,11 +464,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount_in
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 13,
-				message: Some("AmountBelowZero")
-			})
+			Err(DispatchError::Module { index: 4, error: 13, message: Some("AmountBelowZero") })
 		);
 
 		// deposit amount is more than what user has.
@@ -556,11 +476,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount_in
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 
 		// less than the minimum share adding limit.
@@ -617,18 +533,9 @@ fn add_single_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check wether bob's account has been deducted corresponding amount for different tokens.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob),
-			981_396
-		); // get the user's balance for AUSD
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob),
-			1_000_000
-		); // get the user's balance for dot
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob),
-			1_000_000
-		); // get the user's balance for ksm
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 981_396); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 1_000_000); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 1_000_000); // get the user's balance for ksm
 
 		// Below are the incorrect operations.
 
@@ -643,11 +550,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				asset_id,
 				new_pool_token
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool not active.
@@ -660,11 +563,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				asset_id,
 				new_pool_token
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// less than the minimum share adding limit.
@@ -709,11 +608,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 				asset_id,
 				new_pool_token
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 	});
 }
@@ -753,18 +648,9 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check wether Alice's account has been added by corresponding amount for AUSD.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice),
-			9_822
-		); // get the user's balance for AUSD
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(dot_id, &alice),
-			29_000
-		); // get the user's balance for dot
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &alice),
-			29_600
-		); // get the user's balance for ksm
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_822); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &alice), 29_000); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &alice), 29_600); // get the user's balance for ksm
 
 		// Below are the incorrect operations.
 
@@ -779,11 +665,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				asset_id,
 				pool_token_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool not active.
@@ -796,11 +678,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				asset_id,
 				pool_token_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// less than the minimum share adding limit.
@@ -830,11 +708,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				asset_id,
 				pool_token_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 7,
-				message: Some("UserNotInThePool")
-			})
+			Err(DispatchError::Module { index: 4, error: 7, message: Some("UserNotInThePool") })
 		);
 
 		// deposit pool token share is more than maximum added share limit.
@@ -862,11 +736,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 				asset_id,
 				pool_token_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 	});
 }
@@ -900,10 +770,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, asud_id), 100);
 
 		// check wether bob's account has been deducted corresponding amount for AUSD.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice),
-			9_900
-		); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_900); // get the user's balance for AUSD
 
 		// Below are the incorrect operations.
 
@@ -918,11 +785,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool not active.
@@ -935,11 +798,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// token in amount below or equal to zero.
@@ -952,11 +811,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 13,
-				message: Some("AmountBelowZero")
-			})
+			Err(DispatchError::Module { index: 4, error: 13, message: Some("AmountBelowZero") })
 		);
 
 		// bob not in the pool.
@@ -970,11 +825,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 7,
-				message: Some("UserNotInThePool")
-			})
+			Err(DispatchError::Module { index: 4, error: 7, message: Some("UserNotInThePool") })
 		);
 
 		// deposit amount is more than what user has.
@@ -987,11 +838,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 
 		// pool token taken out is more than what the user has.
@@ -1003,11 +850,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 				asset_id,
 				token_amount
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 
 		// less than the minimum pool share limit when adding of removing.
@@ -1060,18 +903,9 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 200);
 
 		// check wether Alice's account has been added corresponding amount for different tokens.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice),
-			9_750
-		); // get the user's balance for AUSD
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(dot_id, &alice),
-			29_500
-		); // get the user's balance for dot
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &alice),
-			29_800
-		); // get the user's balance for ksm
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_750); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &alice), 29_500); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &alice), 29_800); // get the user's balance for ksm
 
 		// Below are the incorrect operations.
 
@@ -1084,11 +918,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_id,
 				pool_amount_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool status is false, thus it's not able to add liquidity in.
@@ -1100,11 +930,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_id,
 				pool_amount_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// bob not in the pool
@@ -1117,11 +943,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_id,
 				pool_amount_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 7,
-				message: Some("UserNotInThePool")
-			})
+			Err(DispatchError::Module { index: 4, error: 7, message: Some("UserNotInThePool") })
 		);
 
 		// Every time a user at least adds more than or equal to the MinimumAddedPoolTokenShares
@@ -1149,11 +971,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 				pool_id,
 				pool_amount_out
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 	});
 }
@@ -1186,29 +1004,14 @@ fn swap_exact_in_should_work() {
 		)); // Bob to swap 100 AUSD for x amount of dot.
 
 		// check whether the pool has added 100 AUSD.
-		assert_eq!(
-			Swap::token_balances_in_pool(pool_id, token_in_asset_id),
-			600
-		);
-		assert_eq!(
-			Swap::token_balances_in_pool(pool_id, token_out_asset_id),
-			917
-		);
+		assert_eq!(Swap::token_balances_in_pool(pool_id, token_in_asset_id), 600);
+		assert_eq!(Swap::token_balances_in_pool(pool_id, token_out_asset_id), 917);
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check whether bob's account has been added and deducted with corresponding amounts.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob),
-			999_900
-		); // get the user's balance for AUSD
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob),
-			1_000_083
-		); // get the user's balance for dot
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob),
-			1_000_000
-		); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_900); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 1_000_083); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 1_000_000); // get the user's balance for dot
 
 		// Below are the incorrect operations.
 
@@ -1223,11 +1026,7 @@ fn swap_exact_in_should_work() {
 				min_token_amount_out,
 				token_in_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 8,
-				message: Some("ForbidSameTokenSwap")
-			})
+			Err(DispatchError::Module { index: 4, error: 8, message: Some("ForbidSameTokenSwap") })
 		);
 
 		// no such pool_id
@@ -1241,11 +1040,7 @@ fn swap_exact_in_should_work() {
 				min_token_amount_out,
 				token_out_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool status is false, thus it's not able to add liquidity in.
@@ -1260,11 +1055,7 @@ fn swap_exact_in_should_work() {
 				min_token_amount_out,
 				token_out_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// swap more than the user has
@@ -1279,11 +1070,7 @@ fn swap_exact_in_should_work() {
 				min_token_amount_out,
 				token_out_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 
 		// swap more than the pool size
@@ -1355,29 +1142,14 @@ fn swap_exact_out_should_work() {
 		)); // Bob to get 200 dot out from the pool.
 
 		// check whether the pool has added 400 shares.
-		assert_eq!(
-			Swap::token_balances_in_pool(pool_id, token_out_asset_id),
-			800
-		);
-		assert_eq!(
-			Swap::token_balances_in_pool(pool_id, token_in_asset_id),
-			562
-		);
+		assert_eq!(Swap::token_balances_in_pool(pool_id, token_out_asset_id), 800);
+		assert_eq!(Swap::token_balances_in_pool(pool_id, token_in_asset_id), 562);
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check whether bob's account has been added and deducted with corresponding amounts.
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob),
-			999_938
-		); // get the user's balance for AUSD
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob),
-			1_000_200
-		); // get the user's balance for dot
-		assert_eq!(
-			<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob),
-			1_000_000
-		); // get the user's balance for ksm
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_938); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 1_000_200); // get the user's balance for dot
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 1_000_000); // get the user's balance for ksm
 
 		// // Below are the incorrect operations.
 
@@ -1392,11 +1164,7 @@ fn swap_exact_out_should_work() {
 				max_token_amount_in,
 				token_out_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 8,
-				message: Some("ForbidSameTokenSwap")
-			})
+			Err(DispatchError::Module { index: 4, error: 8, message: Some("ForbidSameTokenSwap") })
 		);
 
 		// no such pool_id
@@ -1410,11 +1178,7 @@ fn swap_exact_out_should_work() {
 				max_token_amount_in,
 				token_in_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool status is false, thus it's not able to add liquidity in.
@@ -1429,11 +1193,7 @@ fn swap_exact_out_should_work() {
 				max_token_amount_in,
 				token_in_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// swap more than the pool size
@@ -1487,11 +1247,7 @@ fn swap_exact_out_should_work() {
 				max_token_amount_in,
 				token_in_asset_id
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 3,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 3, message: Some("NotEnoughBalance") })
 		);
 	});
 }
@@ -1511,11 +1267,7 @@ fn claim_bonus_should_work() {
 		let bnc_id = CurrencyId::Native(TokenSymbol::ASG);
 		let new_pool_token = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		assert_ok!(Swap::add_liquidity_given_shares_in(
-			claimer.clone(),
-			pool_id,
-			new_pool_token
-		));
+		assert_ok!(Swap::add_liquidity_given_shares_in(claimer.clone(), pool_id, new_pool_token));
 
 		// fake a record in UserUnclaimedBonusInPool
 		UserUnclaimedBonusInPool::<Test>::insert(bob, 0, (50, 1000));
@@ -1531,8 +1283,7 @@ fn claim_bonus_should_work() {
 		// approx_eq!(f32, 23_148.15f32, f32::from_fixed(result), epsilon = 0.000_000_000_001);
 
 		// check user's BNC account to see whether the amount issued is right.
-		let result =
-		<Test as Config>::CurrenciesHandler::free_balance(bnc_id, &bob);
+		let result = <Test as Config>::CurrenciesHandler::free_balance(bnc_id, &bob);
 		assert_eq!(result, 23_198u64);
 
 		// Below are the incorrect operations.
@@ -1541,11 +1292,7 @@ fn claim_bonus_should_work() {
 		let pool_id = 1;
 		assert_eq!(
 			Swap::claim_bonus(claimer.clone(), pool_id),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 0,
-				message: Some("PoolNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 0, message: Some("PoolNotExist") })
 		);
 
 		// pool status is false, thus it's not able to add liquidity in.
@@ -1553,22 +1300,14 @@ fn claim_bonus_should_work() {
 		assert_ok!(Swap::set_pool_status(Origin::signed(alice), pool_id, false));
 		assert_eq!(
 			Swap::claim_bonus(claimer.clone(), pool_id),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("PoolNotActive")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("PoolNotActive") })
 		);
 
 		// charlie doesn't have pool token in pool 0.
 		assert_ok!(Swap::set_pool_status(Origin::signed(alice), pool_id, true));
 		assert_eq!(
 			Swap::claim_bonus(Origin::signed(charlie), pool_id),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 7,
-				message: Some("UserNotInThePool")
-			})
+			Err(DispatchError::Module { index: 4, error: 7, message: Some("UserNotInThePool") })
 		);
 	});
 }
@@ -1593,11 +1332,7 @@ fn set_swap_fee_should_work() {
 		// bob is not the owner of the pool.
 		assert_eq!(
 			Swap::set_swap_fee(Origin::signed(bob), pool_id, new_swap_fee),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 16,
-				message: Some("NotPoolOwner")
-			})
+			Err(DispatchError::Module { index: 4, error: 16, message: Some("NotPoolOwner") })
 		);
 
 		// swap fee rate exceed maximum limit.

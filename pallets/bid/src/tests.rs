@@ -20,11 +20,11 @@
 
 #![cfg(test)]
 
-use crate::mock::*;
-use crate::*;
 use frame_support::{assert_ok, dispatch::DispatchError};
+use node_primitives::{CurrencyId, CurrencyIdExt, TokenSymbol};
 use orml_traits::MultiCurrency;
-use node_primitives::{ CurrencyIdExt, CurrencyId, TokenSymbol};
+
+use crate::{mock::*, *};
 
 fn storages_initialization() {
 	let alice = 1;
@@ -209,19 +209,12 @@ fn register_vtoken_for_bidding_should_work() {
 			Bid::register_vtoken_for_bidding(origin_signed, vtoken_id),
 			Err(DispatchError::BadOrigin)
 		);
-		assert_ok!(Bid::register_vtoken_for_bidding(
-			origin_root.clone(),
-			vtoken_id
-		));
+		assert_ok!(Bid::register_vtoken_for_bidding(origin_root.clone(), vtoken_id));
 
 		// token is not allowed to be registered for bidding
 		assert_eq!(
 			Bid::register_vtoken_for_bidding(origin_root.clone(), token_id),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 1,
-				message: Some("NotValidVtoken")
-			})
+			Err(DispatchError::Module { index: 4, error: 1, message: Some("NotValidVtoken") })
 		);
 
 		// repeatedly registering the same vtoken is not allowed
@@ -235,10 +228,7 @@ fn register_vtoken_for_bidding_should_work() {
 		);
 
 		// vtoken is already in the VtokensRegisteredForBidding storage.
-		assert_eq!(
-			VtokensRegisteredForBidding::<Test>::get().contains(&vtoken_id),
-			true
-		);
+		assert_eq!(VtokensRegisteredForBidding::<Test>::get().contains(&vtoken_id), true);
 
 		// vtoken is already in the BiddingQueues storage.
 		assert_eq!(BiddingQueues::<Test>::contains_key(vtoken_id), true);
@@ -334,10 +324,7 @@ fn set_min_max_order_lasting_block_num_should_work() {
 		));
 
 		// validate the newly revised number
-		assert_eq!(
-			MinMaxOrderLastingBlockNum::<Test>::get(vtoken_id),
-			(20, 200)
-		);
+		assert_eq!(MinMaxOrderLastingBlockNum::<Test>::get(vtoken_id), (20, 200));
 	});
 }
 
@@ -382,11 +369,7 @@ fn set_block_number_per_era_should_work() {
 		assert_eq!(BlockNumberPerEra::<Test>::get(vtoken_id), block_num_per_era);
 
 		// change the block_number_per_era
-		assert_ok!(Bid::set_block_number_per_era(
-			origin_root.clone(),
-			vtoken_id,
-			20_000
-		));
+		assert_ok!(Bid::set_block_number_per_era(origin_root.clone(), vtoken_id, 20_000));
 
 		// validate the newly revised number
 		assert_eq!(BlockNumberPerEra::<Test>::get(vtoken_id), 20_000);
@@ -439,17 +422,10 @@ fn set_service_stop_block_num_lag_should_work() {
 		));
 
 		// check the first time insert number
-		assert_eq!(
-			ServiceStopBlockNumLag::<Test>::get(vtoken_id),
-			service_stop_lag_block_num
-		);
+		assert_eq!(ServiceStopBlockNumLag::<Test>::get(vtoken_id), service_stop_lag_block_num);
 
 		// change the service_stop_block_num_lag
-		assert_ok!(Bid::set_service_stop_block_num_lag(
-			origin_root.clone(),
-			vtoken_id,
-			200
-		));
+		assert_ok!(Bid::set_service_stop_block_num_lag(origin_root.clone(), vtoken_id, 200));
 
 		// validate the newly revised number
 		assert_eq!(ServiceStopBlockNumLag::<Test>::get(vtoken_id), 200);
@@ -496,11 +472,7 @@ fn set_slash_margin_rates_should_work() {
 			})
 		);
 
-		assert_ok!(Bid::set_slash_margin_rates(
-			origin_root.clone(),
-			vtoken_id,
-			slash_margin
-		));
+		assert_ok!(Bid::set_slash_margin_rates(origin_root.clone(), vtoken_id, slash_margin));
 
 		// check the first time insert number
 		assert_eq!(
@@ -509,17 +481,10 @@ fn set_slash_margin_rates_should_work() {
 		);
 
 		// change the set_slash_margin_rates
-		assert_ok!(Bid::set_slash_margin_rates(
-			origin_root.clone(),
-			vtoken_id,
-			50
-		));
+		assert_ok!(Bid::set_slash_margin_rates(origin_root.clone(), vtoken_id, 50));
 
 		// validate the newly revised number
-		assert_eq!(
-			SlashMarginRates::<Test>::get(vtoken_id),
-			Permill::from_parts(50 * 10000)
-		);
+		assert_eq!(SlashMarginRates::<Test>::get(vtoken_id), Permill::from_parts(50 * 10000));
 	});
 }
 
@@ -598,11 +563,7 @@ fn create_bidding_proposal_should_work() {
 				annual_roi,
 				validator
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 4,
-				message: Some("AmountNotAboveZero")
-			})
+			Err(DispatchError::Module { index: 4, error: 4, message: Some("AmountNotAboveZero") })
 		);
 
 		// annual_roi should be above zero
@@ -642,25 +603,16 @@ fn create_bidding_proposal_should_work() {
 		assert_eq!(proposal.validator, validator);
 
 		// BiddingQueues storage
-		assert_eq!(
-			BiddingQueues::<Test>::get(vdot_id).contains(&(roi_permill, proposal_id)),
-			true
-		);
+		assert_eq!(BiddingQueues::<Test>::get(vdot_id).contains(&(roi_permill, proposal_id)), true);
 
 		// ProposalNextId. Bob and Alice have created an bidding proposal respectively.
 		assert_eq!(ProposalNextId::<Test>::get(), 2);
 
 		// BidderProposalInQueue
-		assert_eq!(
-			BidderProposalInQueue::<Test>::get(alice, vdot_id).contains(&proposal_id),
-			true
-		);
+		assert_eq!(BidderProposalInQueue::<Test>::get(alice, vdot_id).contains(&proposal_id), true);
 
 		// TotalProposalsInQueue
-		assert_eq!(
-			TotalProposalsInQueue::<Test>::get(vdot_id),
-			votes_needed_alice
-		);
+		assert_eq!(TotalProposalsInQueue::<Test>::get(vdot_id), votes_needed_alice);
 
 		// charlie only has 100 dot. Thus he doesn't have enough money for creating a proposal.
 		let charlie = 3;
@@ -676,14 +628,11 @@ fn create_bidding_proposal_should_work() {
 				annual_roi_charlie,
 				validator
 			),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 2,
-				message: Some("NotEnoughBalance")
-			})
+			Err(DispatchError::Module { index: 4, error: 2, message: Some("NotEnoughBalance") })
 		);
 
-		// insert 4 more proposals for vdot proposal, so that the 6th vdot proposal should not be allowed to add
+		// insert 4 more proposals for vdot proposal, so that the 6th vdot proposal should not be
+		// allowed to add
 		Bid::create_bidding_proposal(
 			origin_alice.clone(),
 			vdot_id,
@@ -732,8 +681,8 @@ fn create_bidding_proposal_should_work() {
 			})
 		);
 
-		// check whether the order of proposals are correct. Proposal 0 is a vksm order from Bob created in initialization.
-		// proposal_id = 1, roi = 15
+		// check whether the order of proposals are correct. Proposal 0 is a vksm order from Bob
+		// created in initialization. proposal_id = 1, roi = 15
 		// proposal_id = 2, roi = 10
 		// proposal_id = 3, roi = 70
 		// proposal_id = 4, roi = 90
@@ -775,36 +724,22 @@ fn cancel_a_bidding_proposal_should_work() {
 		let origin_bob = Origin::signed(bob);
 		let origin_alice = Origin::signed(alice);
 		// make sure bob's proposal exists
-		assert_eq!(
-			BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0),
-			true
-		);
+		assert_eq!(BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0), true);
 
 		// proposal not exist
 		assert_eq!(
 			Bid::cancel_a_bidding_proposal(origin_bob.clone(), 8),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 16,
-				message: Some("ProposalNotExist")
-			})
+			Err(DispatchError::Module { index: 4, error: 16, message: Some("ProposalNotExist") })
 		);
 
 		// cancel the proposal
 		assert_eq!(
 			Bid::cancel_a_bidding_proposal(origin_alice.clone(), 0),
-			Err(DispatchError::Module {
-				index: 4,
-				error: 17,
-				message: Some("NotProposalOwner",),
-			},)
+			Err(DispatchError::Module { index: 4, error: 17, message: Some("NotProposalOwner",) },)
 		); // not the owner
 
 		assert_ok!(Bid::cancel_a_bidding_proposal(origin_bob.clone(), 0));
-		assert_eq!(
-			BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0),
-			false
-		);
+		assert_eq!(BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0), false);
 	});
 }
 
@@ -816,38 +751,33 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 
 		run_to_block(3); // 4000 vtoken votes are supplied
 
-		// There was an vksm order of 200 votes from Bob in the storage initialization. So the pool should has only 3800
-		// votes left and Bob should have a 200 vksm order.Decode
+		// There was an vksm order of 200 votes from Bob in the storage initialization. So the pool
+		// should has only 3800 votes left and Bob should have a 200 vksm order.Decode
 		let bob = 2;
 		let vksm_id = CurrencyId::VToken(TokenSymbol::KSM);
 		// BiddingQueues::<Test>::get(vksm_id)
 		// assert_eq!(ProposalsInQueue::<Test>::get(0).votes, 3800);
 
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
-			1
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 1);
 
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&0),
-			true
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&0), true);
 
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
-		assert_eq!(BiddingQueues::<Test>::contains_key(CurrencyId::Native(TokenSymbol::ASG)), false);
+		assert_eq!(
+			BiddingQueues::<Test>::contains_key(CurrencyId::Native(TokenSymbol::ASG)),
+			false
+		);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 0);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).is_empty(), true);
 		assert_eq!(ProposalsInQueue::<Test>::contains_key(0), false);
-		assert_eq!(
-			BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0),
-			false
-		);
+		assert_eq!(BidderProposalInQueue::<Test>::get(bob, vksm_id).contains(&0), false);
 		assert_eq!(TotalProposalsInQueue::<Test>::get(vksm_id), 0);
 		assert_eq!(OrdersInService::<Test>::get(0).votes, 200);
 
 		run_to_block(5);
 
-		// order 0 will be released by the end of block 5, while order 1 will be released by the end of block 21
+		// order 0 will be released by the end of block 5, while order 1 will be released by the end
+		// of block 21
 		assert_eq!(OrdersInService::<Test>::contains_key(1), false);
 		assert_eq!(OrdersInService::<Test>::get(2).votes, 5);
 
@@ -855,18 +785,9 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrdersInService::<Test>::get(2).block_num, 21);
 
 		// Bidder Bob has two orders
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
-			1
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&1),
-			false
-		); // order 1 is finished.
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2),
-			true
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 1);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&1), false); // order 1 is finished.
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2), true);
 
 		// TokenOrderROIList has only order 2 in it.
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 1);
@@ -889,22 +810,9 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		// There will be 5 votes release by the end of era 3.
 		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 5);
 		assert_eq!(OrderNextId::<Test>::get(), 3);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
-			1
-		);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0]
-				.1
-				.votes,
-			195
-		);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0]
-				.1
-				.block_num,
-			21
-		);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 1);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].1.votes, 195);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].1.block_num, 21);
 
 		run_to_block(6);
 
@@ -913,28 +821,16 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrdersInService::<Test>::get(3).votes, 195);
 		assert_eq!(OrdersInService::<Test>::get(3).block_num, 21);
 
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
-			0
-		);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 0);
 
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).len(), 2);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&2), true);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&3), true);
 
 		// Bidder Bob orders of 2 and 3.
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
-			2
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2),
-			true
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&3),
-			true
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 2);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2), true);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&3), true);
 
 		// TokenOrderROIList should have to orders，order 2 and revival order 3
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 2);
@@ -953,16 +849,14 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
 		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 200);
 		assert_eq!(OrderNextId::<Test>::get(), 4);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
-			0
-		);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 0);
 
 		run_to_block(10);
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 10);
 
 		assert_eq!(OrderNextId::<Test>::get(), 6);
-		// block 6 has extra votes which enables the forced closed order to revive and gets a new order number of 5.
+		// block 6 has extra votes which enables the forced closed order to revive and gets a new
+		// order number of 5.
 		assert_eq!(OrdersInService::<Test>::contains_key(5), true);
 		assert_eq!(OrdersInService::<Test>::get(5).votes, 5);
 		assert_eq!(OrdersInService::<Test>::get(5).block_num, 21);
@@ -971,22 +865,9 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrdersInService::<Test>::get(2).votes, 5);
 		assert_eq!(OrdersInService::<Test>::get(2).block_num, 21);
 
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
-			1
-		);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0]
-				.1
-				.votes,
-			190
-		);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0]
-				.1
-				.block_num,
-			21
-		);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 1);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].1.votes, 190);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id)[0].1.block_num, 21);
 
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 2);
 		assert_eq!(
@@ -1001,34 +882,22 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		);
 
 		// Bidder Bob orders of 2 and 5
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
-			2
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2),
-			true
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&5),
-			true
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 2);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2), true);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&5), true);
 
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).len(), 2);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&2), true);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&5), true);
 
 		// no votes will be released by the end of current era
-		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0); 
+		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 0)), 0);
 		// 10 votes will be released by the end of era 3
 		assert_eq!(ToReleaseVotesTilEndOfEra::<Test>::get((vksm_id, 3)), 10);
 
 		run_to_block(11); // 211 votes are available
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 200);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
-			0
-		);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 0);
 
 		assert_eq!(OrderNextId::<Test>::get(), 7);
 		assert_eq!(OrdersInService::<Test>::contains_key(2), true);
@@ -1036,7 +905,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(OrdersInService::<Test>::contains_key(6), true);
 		// order 6 has 190 votes
 		assert_eq!(OrdersInService::<Test>::get(6).votes, 190);
-		 // order 6 will release all the votes by the end of block 21
+		// order 6 will release all the votes by the end of block 21
 		assert_eq!(OrdersInService::<Test>::get(6).block_num, 21);
 
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id).len(), 3);
@@ -1057,22 +926,10 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		);
 
 		// Bidder Bob has orders of 2\5\6
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
-			3
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2),
-			true
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&5),
-			true
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&6),
-			true
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 3);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&2), true);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&5), true);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).contains(&6), true);
 
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).len(), 3);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).contains(&2), true);
@@ -1109,10 +966,7 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(ProposalsInQueue::<Test>::get(ord_id).votes, 89);
 
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 211);
-		assert_eq!(
-			ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(),
-			0
-		);
+		assert_eq!(ForciblyUnbondOrdersInCurrentEra::<Test>::get(vksm_id).len(), 0);
 		assert_eq!(OrderNextId::<Test>::get(), 8);
 		assert_eq!(OrdersInService::<Test>::contains_key(2), true);
 		assert_eq!(OrdersInService::<Test>::contains_key(5), true);
@@ -1148,18 +1002,9 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		assert_eq!(TokenOrderROIList::<Test>::get(vksm_id)[3].1, 7);
 
 		// Bidder Bob has 3 orders，alice has only 1 order.
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(),
-			3
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(alice, vksm_id).len(),
-			1
-		);
-		assert_eq!(
-			BidderTokenOrdersInService::<Test>::get(alice, vksm_id).contains(&7),
-			true
-		);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(bob, vksm_id).len(), 3);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(alice, vksm_id).len(), 1);
+		assert_eq!(BidderTokenOrdersInService::<Test>::get(alice, vksm_id).contains(&7), true);
 
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(21).len(), 3);
 		assert_eq!(OrderEndBlockNumMap::<Test>::get(31).len(), 1);
@@ -1198,30 +1043,32 @@ fn check_overall_proposal_matching_to_orders_should_work() {
 		));
 
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 3);
-		// the queue is ordered by ascending. So the last order should be alice's proposal of roi 90%
-		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[2].1, 3); 
+		// the queue is ordered by ascending. So the last order should be alice's proposal of roi
+		// 90%
+		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[2].1, 3);
 		// second from the last should be alice's proposal of roi 80%.
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[1].1, 1);
 		// second from the last should be bob's proposal of roi 70%.
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[0].1, 2);
 
 		run_to_block(12);
-		 // 2 orders left。Bob's order 2 of 150 votes with roi 70% 150 and  alice's order 1 of 88 votes with roi 80%.
+		// 2 orders left。Bob's order 2 of 150 votes with roi 70% 150 and  alice's order 1 of 88
+		// votes with roi 80%.
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id).len(), 2);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[1].1, 1);
 		assert_eq!(BiddingQueues::<Test>::get(vksm_id)[0].1, 2);
 		// order 8 is from alice's votes order, which has an roi of 90%
 		assert_eq!(TotalVotesInService::<Test>::get(vksm_id), 412);
 
-		assert_eq!(OrdersInService::<Test>::get(8).votes, 200); // 
-		assert_eq!(
-			OrdersInService::<Test>::get(8).annual_roi,
-			Permill::from_parts(90 * 10_000)
-		);
+		assert_eq!(OrdersInService::<Test>::get(8).votes, 200); //
+		assert_eq!(OrdersInService::<Test>::get(8).annual_roi, Permill::from_parts(90 * 10_000));
 		assert_eq!(OrdersInService::<Test>::get(9).votes, 1);
-		assert_eq!(
-			OrdersInService::<Test>::get(9).annual_roi,
-			Permill::from_parts(80 * 10_000)
-		); // order 9 is from alice's 1 vote order, which has an roi of 80%.
+		assert_eq!(OrdersInService::<Test>::get(9).annual_roi, Permill::from_parts(80 * 10_000)); // order 9
+		                                                                                  // is from
+		                                                                                  // alice's
+		                                                                                  // 1 vote order,
+		                                                                                  // which has
+		                                                                                  // an roi of
+		                                                                                  // 80%.
 	});
 }

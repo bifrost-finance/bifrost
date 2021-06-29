@@ -18,8 +18,6 @@
 
 //! Low-level types used throughout the Bifrost code.
 
-use crate::traits::{CurrencyIdExt, TokenInfo};
-use crate::{LeasePeriod, ParaId};
 use bstringify::bstringify;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
@@ -31,6 +29,11 @@ use sp_std::{
 	prelude::*,
 };
 use zenlink_protocol::{AssetId, LOCAL, NATIVE};
+
+use crate::{
+	traits::{CurrencyIdExt, TokenInfo},
+	LeasePeriod, ParaId,
+};
 
 macro_rules! create_currency_id {
     ($(#[$meta:meta])*
@@ -276,6 +279,7 @@ impl CurrencyIdExt for CurrencyId {
 
 impl Deref for CurrencyId {
 	type Target = TokenSymbol;
+
 	fn deref(&self) -> &Self::Target {
 		match *self {
 			Self::Native(ref symbol) => symbol,
@@ -323,11 +327,7 @@ impl TryFrom<CurrencyId> for AssetId {
 
 	fn try_from(id: CurrencyId) -> Result<Self, Self::Error> {
 		if id.is_native() {
-			Ok(Self {
-				chain_id: BIFROST_PARACHAIN_ID,
-				asset_type: NATIVE,
-				asset_index: 0u32,
-			})
+			Ok(Self { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: 0u32 })
 		} else {
 			match id {
 				CurrencyId::Stable(TokenSymbol::AUSD) => Ok(Self {

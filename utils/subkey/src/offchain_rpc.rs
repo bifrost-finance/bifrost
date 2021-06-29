@@ -19,39 +19,28 @@
 use futures::Future;
 use jsonrpc_core_client::transports::http;
 use sc_rpc::offchain::OffchainClient;
-use sp_core::{Bytes, offchain::StorageKind};
+use sp_core::{offchain::StorageKind, Bytes};
 
-pub fn get_offchain_storage(
-	url: &str,
-	prefix: StorageKind,
-	key: Bytes,
-) {
+pub fn get_offchain_storage(url: &str, prefix: StorageKind, key: Bytes) {
 	tokio::run(
 		http::connect(&url)
 			.and_then(move |client: OffchainClient| {
-				client.get_local_storage(prefix, key.clone()).map(move |ret| {
-					match ret {
-						Some(value) => println!(
-							"Value of key(0x{}) is 0x{}",
-							hex::encode(&*key),
-							hex::encode(&*value),
-						),
-						None => println!("Value of key(0x{}) not exists", hex::encode(&*key)),
-					}
+				client.get_local_storage(prefix, key.clone()).map(move |ret| match ret {
+					Some(value) => println!(
+						"Value of key(0x{}) is 0x{}",
+						hex::encode(&*key),
+						hex::encode(&*value),
+					),
+					None => println!("Value of key(0x{}) not exists", hex::encode(&*key)),
 				})
 			})
 			.map_err(|e| {
 				println!("Error getting local storage: {:?}", e);
-			})
+			}),
 	);
 }
 
-pub fn set_offchain_storage(
-	url: &str,
-	prefix: StorageKind,
-	key: Bytes,
-	value: Bytes,
-) {
+pub fn set_offchain_storage(url: &str, prefix: StorageKind, key: Bytes, value: Bytes) {
 	tokio::run(
 		http::connect(&url)
 			.and_then(move |client: OffchainClient| {
@@ -61,6 +50,6 @@ pub fn set_offchain_storage(
 			})
 			.map_err(|e| {
 				println!("Error setting local storage: {:?}", e);
-			})
+			}),
 	);
 }

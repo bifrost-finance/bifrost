@@ -20,7 +20,8 @@
 
 #![cfg(test)]
 
-use crate::mock::*;
+use std::convert::{TryFrom, TryInto};
+
 // use balances::Call as BalancesCall;
 use frame_support::{
 	assert_ok,
@@ -31,9 +32,9 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_runtime::testing::TestXt;
-use std::convert::{TryInto,TryFrom};
-use zenlink_protocol::{AssetId};
-use crate::BlockNumberFor;
+use zenlink_protocol::AssetId;
+
+use crate::{mock::*, BlockNumberFor};
 
 // some common variables
 pub const ALICE: u128 = 1;
@@ -88,9 +89,10 @@ fn basic_setup() {
 		Origin::signed(ALICE),
 		asset_0_currency_id,
 		asset_1_currency_id
-	)); 
-	
-	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() + <Test as frame_system::Config>::BlockNumber::from(100u32);
+	));
+
+	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
+		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -108,11 +110,14 @@ fn basic_setup() {
 		asset_2_currency_id
 	)); // asset 0 and 2
 
-	let pool_0_2_account =ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_2_currency_id)).unwrap().0;
+	let pool_0_2_account = ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_2_currency_id))
+		.unwrap()
+		.0;
 	println!("pool_0_2_account: {:?}", pool_0_2_account);
 
 	// pool 0 2
-	deadline= <frame_system::Pallet<Test>>::block_number() + <Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() +
+		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -129,33 +134,19 @@ fn basic_setup() {
 fn set_user_fee_charge_order_should_work() {
 	new_test_ext().execute_with(|| {
 		let origin_signed_alice = Origin::signed(ALICE);
-		let mut asset_order_list_vec: Vec<CurrencyId> = vec![
-			CURRENCY_ID_4,
-			CURRENCY_ID_3,
-			CURRENCY_ID_2,
-			CURRENCY_ID_1,
-			CURRENCY_ID_0,
-		];
+		let mut asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 		assert_ok!(ChargeTransactionFee::set_user_fee_charge_order(
 			origin_signed_alice.clone(),
 			Some(asset_order_list_vec.clone())
 		));
 
 		asset_order_list_vec.insert(0, CURRENCY_ID_0);
-		assert_eq!(
-			crate::UserFeeChargeOrderList::<Test>::get(ALICE),
-			asset_order_list_vec
-		);
+		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE), asset_order_list_vec);
 
-		assert_ok!(ChargeTransactionFee::set_user_fee_charge_order(
-			origin_signed_alice,
-			None
-		));
+		assert_ok!(ChargeTransactionFee::set_user_fee_charge_order(origin_signed_alice, None));
 
-		assert_eq!(
-			crate::UserFeeChargeOrderList::<Test>::get(ALICE).is_empty(),
-			true
-		);
+		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE).is_empty(), true);
 	});
 }
 
@@ -163,13 +154,8 @@ fn set_user_fee_charge_order_should_work() {
 fn inner_get_user_fee_charge_order_list_should_work() {
 	new_test_ext().execute_with(|| {
 		let origin_signed_alice = Origin::signed(ALICE);
-		let mut asset_order_list_vec: Vec<CurrencyId> = vec![
-			CURRENCY_ID_4,
-			CURRENCY_ID_3,
-			CURRENCY_ID_2,
-			CURRENCY_ID_1,
-			CURRENCY_ID_0,
-		];
+		let mut asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
 		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
@@ -198,7 +184,8 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 	});
 }
 
-// Three tests below are ignored due to some bugs of zenlink. Tests will be reopened after the bugs fixed.
+// Three tests below are ignored due to some bugs of zenlink. Tests will be reopened after the bugs
+// fixed.
 
 #[test]
 #[ignore]
@@ -206,13 +193,8 @@ fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
 		let origin_signed_bob = Origin::signed(BOB);
-		let asset_order_list_vec: Vec<CurrencyId> = vec![
-			CURRENCY_ID_4,
-			CURRENCY_ID_3,
-			CURRENCY_ID_2,
-			CURRENCY_ID_1,
-			CURRENCY_ID_0,
-		];
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
 
 		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
@@ -238,7 +220,7 @@ fn ensure_can_charge_fee_should_work() {
 
 		println!("pool_0_1_account: {:?}", pool_0_1_account);
 
-		let pool_0_1_price =ZenlinkProtocol::get_amount_in_by_path(100, &path);
+		let pool_0_1_price = ZenlinkProtocol::get_amount_in_by_path(100, &path);
 		let pool_0_1_account = ZenlinkProtocol::lp_metadata((native_asset_id, asset_id)).unwrap().0;
 
 		println!("pool_0_1_price: {:?}", pool_0_1_price);
@@ -257,8 +239,8 @@ fn ensure_can_charge_fee_should_work() {
 			WithdrawReasons::TRANSACTION_PAYMENT,
 		));
 
-		// Alice should be deducted 100 from Asset 1 since Asset 0 doesn't have enough balance. asset1 : 200-100=100
-		// asset0: 50+100 = 150
+		// Alice should be deducted 100 from Asset 1 since Asset 0 doesn't have enough balance.
+		// asset1 : 200-100=100 asset0: 50+100 = 150
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_0, &ALICE), 150);
 		assert_eq!(Currencies::total_balance(CURRENCY_ID_1, &ALICE), 88);
 
@@ -282,13 +264,8 @@ fn withdraw_fee_should_work() {
 		basic_setup();
 
 		// prepare call variable
-		let asset_order_list_vec: Vec<CurrencyId> = vec![
-			CURRENCY_ID_0,
-			CURRENCY_ID_1,
-			CURRENCY_ID_2,
-			CURRENCY_ID_3,
-			CURRENCY_ID_4,
-		];
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
 		let call = Call::ChargeTransactionFee(crate::Call::set_user_fee_charge_order(Some(
 			asset_order_list_vec,
 		)));
@@ -299,14 +276,9 @@ fn withdraw_fee_should_work() {
 		let info = xt.get_dispatch_info();
 
 		// 99 inclusion fee and a tip of 8
-		assert_ok!(ChargeTransactionFee::withdraw_fee(
-			&CHARLIE, &call, &info, 107, 8
-		));
+		assert_ok!(ChargeTransactionFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
 
-		assert_eq!(
-			<Test as crate::Config>::Currency::free_balance(&CHARLIE),
-			93
-		);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
 	});
 }
 
@@ -316,13 +288,8 @@ fn correct_and_deposit_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
 		// prepare call variable
-		let asset_order_list_vec: Vec<CurrencyId> = vec![
-			CURRENCY_ID_0,
-			CURRENCY_ID_1,
-			CURRENCY_ID_2,
-			CURRENCY_ID_3,
-			CURRENCY_ID_4,
-		];
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
 		let call = Call::ChargeTransactionFee(crate::Call::set_user_fee_charge_order(Some(
 			asset_order_list_vec,
 		)));
@@ -332,10 +299,7 @@ fn correct_and_deposit_fee_should_work() {
 		let info = xt.get_dispatch_info();
 
 		// prepare post info
-		let post_info = PostDispatchInfo {
-			actual_weight: Some(20),
-			pays_fee: Pays::Yes,
-		};
+		let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
 
 		let corrected_fee = 80;
 		let tip = 8;
@@ -343,10 +307,7 @@ fn correct_and_deposit_fee_should_work() {
 		let already_withdrawn =
 			ChargeTransactionFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
 
-		assert_eq!(
-			<Test as crate::Config>::Currency::free_balance(&CHARLIE),
-			93
-		);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
 
 		assert_ok!(ChargeTransactionFee::correct_and_deposit_fee(
 			&CHARLIE,
@@ -357,9 +318,6 @@ fn correct_and_deposit_fee_should_work() {
 			already_withdrawn
 		));
 
-		assert_eq!(
-			<Test as crate::Config>::Currency::free_balance(&CHARLIE),
-			120
-		);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 120);
 	});
 }
