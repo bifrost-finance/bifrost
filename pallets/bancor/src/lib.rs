@@ -23,7 +23,7 @@ use frame_system::pallet_prelude::*;
 use orml_traits::MultiCurrency;
 use sp_runtime::{SaturatedConversion, traits::{Zero, Saturating, CheckedSub, CheckedMul, CheckedAdd, CheckedDiv}};
 use node_primitives::{TokenSymbol, CurrencyId, traits::BancorHandler};
-use sp_arithmetic::per_things::Perbill;
+use sp_arithmetic::per_things::{Perbill, PerThing};
 use num_bigint::BigUint;
 
 mod mock;
@@ -263,7 +263,8 @@ impl<T: Config> Pallet<T> {
 		
 		// Since token_amount will be deducted from the total token_supply, token_amount should be less than or eqaul to token_supply.
 		ensure!(token_amount <= token_supply, Error::<T>::TokenSupplyNotEnought);
-		let square_item = Perbill::from_rational_approximation(token_supply - token_amount, token_supply).square();
+		let mid_item: Perbill = PerThing::from_rational(token_supply - token_amount, token_supply);
+		let square_item: Perbill = mid_item.square();
 
 		// Destruct the nominator from permill and divide the result by the denominator of a million.
 		let rhs = Perbill::one().saturating_sub(square_item);
