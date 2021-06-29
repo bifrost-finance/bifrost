@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 
+use crate as bancor;
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -26,7 +27,6 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	AccountId32,
 };
-use crate as bancor;
 
 pub type AccountId = AccountId32;
 pub const VSDOT_BASE_SUPPLY: Balance = 10_000;
@@ -161,11 +161,9 @@ impl ExtBuilder {
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
-		orml_tokens::GenesisConfig::<Test> {
-			balances: self.endowed_accounts,
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		orml_tokens::GenesisConfig::<Test> { balances: self.endowed_accounts }
+			.assimilate_storage(&mut t)
+			.unwrap();
 
 		crate::GenesisConfig::<Test> {
 			bancor_pools: vec![
