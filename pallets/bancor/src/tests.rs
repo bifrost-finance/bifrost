@@ -18,9 +18,9 @@
 
 #![cfg(test)]
 
+use crate::mock::*;
+use crate::*;
 use frame_support::{assert_noop, assert_ok};
-
-use crate::{mock::*, *};
 
 #[test]
 fn exchange_for_token_should_work() {
@@ -70,8 +70,7 @@ fn exchange_for_token_should_work() {
 		// add some DOTs to the pool
 		BancorPools::<Test>::insert(DOT, updated_pool);
 
-		// exchange rate is lower than the specified slippage(49 <50), which leads to exchange
-		// failure.
+		// exchange rate is lower than the specified slippage(49 <50), which leads to exchange failure.
 		assert_noop!(
 			Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 50, 50),
 			Error::<Test>::PriceNotQualified
@@ -158,8 +157,7 @@ fn exchange_for_vstoken_should_work() {
 			}
 		);
 
-		// exchange rate is lower than the specified slippage(49 <50), which leads to exchange
-		// failure.
+		// exchange rate is lower than the specified slippage(49 <50), which leads to exchange failure.
 		assert_noop!(
 			Bancor::exchange_for_vstoken(Origin::signed(ALICE), DOT, 49, 50),
 			Error::<Test>::PriceNotQualified
@@ -188,61 +186,55 @@ fn exchange_for_vstoken_should_work() {
 
 #[test]
 fn add_token_should_work() {
-	ExtBuilder::default()
-		.hundred_thousand_for_alice_n_bob()
-		.build()
-		.execute_with(|| {
-			// At the beginning, the price is 1:1, so all the released token should be put into
-			// ceiling.
-			assert_ok!(Bancor::add_token(DOT, 20000));
+	ExtBuilder::default().hundred_thousand_for_alice_n_bob().build().execute_with(|| {
+		// At the beginning, the price is 1:1, so all the released token should be put into ceiling.
+		assert_ok!(Bancor::add_token(DOT, 20000));
 
-			let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
-			assert_eq!(
-				dot_pool,
-				BancorPool {
-					currency_id: CurrencyId::Token(TokenSymbol::DOT),
-					token_pool: 0,
-					vstoken_pool: 0,
-					token_ceiling: 20000,
-					token_base_supply: 2 * VSDOT_BASE_SUPPLY,
-					vstoken_base_supply: VSDOT_BASE_SUPPLY
-				}
-			);
+		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
+		assert_eq!(
+			dot_pool,
+			BancorPool {
+				currency_id: CurrencyId::Token(TokenSymbol::DOT),
+				token_pool: 0,
+				vstoken_pool: 0,
+				token_ceiling: 20000,
+				token_base_supply: 2 * VSDOT_BASE_SUPPLY,
+				vstoken_base_supply: VSDOT_BASE_SUPPLY
+			}
+		);
 
-			// if someone buys a lot of tokens, the price of token will dramatically increase and
-			// the price of vstoken will decrease. Here 20_000 vsDOT can only exchange for 14_641
-			// DOT. So the price of vstoken is 73.205% of token. If currently some tokens are
-			// release, half of them will be put in the ceiling variable while the others will used
-			// to buy back vstokens.
-			let price = Bancor::calculate_price_for_token(DOT, 20000).unwrap();
-			assert_ok!(Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 20000, 1));
-			let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
-			assert_eq!(
-				dot_pool,
-				BancorPool {
-					currency_id: CurrencyId::Token(TokenSymbol::DOT),
-					token_pool: price,
-					vstoken_pool: 20000,
-					token_ceiling: 20000 - price,
-					token_base_supply: 2 * VSDOT_BASE_SUPPLY,
-					vstoken_base_supply: VSDOT_BASE_SUPPLY
-				}
-			);
+		// if someone buys a lot of tokens, the price of token will dramatically increase and the price of vstoken will decrease.
+		// Here 20_000 vsDOT can only exchange for 14_641 DOT. So the price of vstoken is 73.205% of token.
+		// If currently some tokens are release, half of them will be put in the ceiling variable while the others will used to buy back vstokens.
+		let price = Bancor::calculate_price_for_token(DOT, 20000).unwrap();
+		assert_ok!(Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 20000, 1));
+		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
+		assert_eq!(
+			dot_pool,
+			BancorPool {
+				currency_id: CurrencyId::Token(TokenSymbol::DOT),
+				token_pool: price,
+				vstoken_pool: 20000,
+				token_ceiling: 20000 - price,
+				token_base_supply: 2 * VSDOT_BASE_SUPPLY,
+				vstoken_base_supply: VSDOT_BASE_SUPPLY
+			}
+		);
 
-			// token_ceiling should be 5359 + 50 = 5409, token_pool should be 14641 - 50 = 14591
-			let price = Bancor::calculate_price_for_vstoken(DOT, 50).unwrap();
-			assert_ok!(Bancor::add_token(DOT, 100));
-			let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
-			assert_eq!(
-				dot_pool,
-				BancorPool {
-					currency_id: CurrencyId::Token(TokenSymbol::DOT),
-					token_pool: 14641 - 50,
-					vstoken_pool: 20000 - price,
-					token_ceiling: 5359 + 50,
-					token_base_supply: 2 * VSDOT_BASE_SUPPLY,
-					vstoken_base_supply: VSDOT_BASE_SUPPLY
-				}
-			);
-		});
+		// token_ceiling should be 5359 + 50 = 5409, token_pool should be 14641 - 50 = 14591
+		let price = Bancor::calculate_price_for_vstoken(DOT, 50).unwrap();
+		assert_ok!(Bancor::add_token(DOT, 100));
+		let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
+		assert_eq!(
+			dot_pool,
+			BancorPool {
+				currency_id: CurrencyId::Token(TokenSymbol::DOT),
+				token_pool: 14641 - 50,
+				vstoken_pool: 20000 - price,
+				token_ceiling: 5359 + 50,
+				token_base_supply: 2 * VSDOT_BASE_SUPPLY,
+				vstoken_base_supply: VSDOT_BASE_SUPPLY
+			}
+		);
+	});
 }
