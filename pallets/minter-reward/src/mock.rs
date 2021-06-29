@@ -1,5 +1,3 @@
-// This file is part of Bifrost.
-
 // Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
@@ -318,7 +316,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
-			endowed_accounts: self.endowed_accounts
+			balances: self.endowed_accounts
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

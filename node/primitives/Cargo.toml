@@ -14,6 +14,7 @@ sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
 
 [features]
 default = ["std"]
@@ -26,4 +27,5 @@ std = [
 	"sp-runtime/std",
 	"sp-std/std",
 	"zenlink-protocol/std",
+	"xcm/std",
 ]

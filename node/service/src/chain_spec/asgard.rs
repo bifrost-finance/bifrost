@@ -16,22 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use super::TELEMETRY_URL;
+use asgard_runtime::{
+	constants::{currency::DOLLARS, time::DAYS},
+	AccountId, AuraConfig, AuraId, Balance, BalancesConfig, BancorConfig, CouncilConfig,
+	DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, ParachainInfoConfig,
+	SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VoucherConfig,
+	VtokenMintConfig, WASM_BINARY,
+};
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use asgard_runtime::{
-	AccountId, AuraId,
-	constants::{currency::DOLLARS, time::DAYS},
-	AuraConfig, TokensConfig, BalancesConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, BancorConfig,
-	SudoConfig, SystemConfig, VoucherConfig, VtokenMintConfig, CouncilConfig, TechnicalCommitteeConfig,
-	DemocracyConfig, ParachainInfoConfig, WASM_BINARY,
-};
-use super::TELEMETRY_URL;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Permill;
 
-use crate::chain_spec::{RelayExtensions, get_account_id_from_seed, testnet_accounts, get_from_seed};
+use crate::chain_spec::{
+	get_account_id_from_seed, get_from_seed, testnet_accounts, RelayExtensions,
+};
 use node_primitives::{CurrencyId, TokenSymbol};
 
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
@@ -45,6 +47,7 @@ pub fn asgard_genesis(
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
+	vouchers: Vec<(AccountId, Balance)>,
 ) -> GenesisConfig {
 	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
 	let num_endowed_accounts = endowed_accounts.len();
@@ -59,19 +62,19 @@ pub fn asgard_genesis(
 			changes_trie_config: Default::default(),
 		},
 		pallet_balances: BalancesConfig {
-			balances: endowed_accounts.iter()
+			balances: endowed_accounts
+				.iter()
 				.chain(super::faucet_accounts().iter())
 				.cloned()
 				.map(|x| (x, ENDOWMENT))
-				.collect()
+				.collect(),
 		},
-		pallet_indices: IndicesConfig {
-			indices: vec![],
-		},
+		pallet_indices: IndicesConfig { indices: vec![] },
 		pallet_democracy: DemocracyConfig::default(),
 		pallet_collective_Instance1: CouncilConfig::default(),
 		pallet_collective_Instance2: TechnicalCommitteeConfig {
-			members: endowed_accounts.iter()
+			members: endowed_accounts
+				.iter()
 				.take((num_endowed_accounts + 1) / 2)
 				.cloned()
 				.collect(),
@@ -80,20 +83,18 @@ pub fn asgard_genesis(
 		pallet_sudo: SudoConfig {
 			key: root_key.clone(),
 		},
-		bifrost_voucher: {
-			if let Some(vouchers) = initialize_all_vouchers() {
-				VoucherConfig { voucher: vouchers }
-			} else {
-				Default::default()
-			}
-		},
+		bifrost_voucher: VoucherConfig { voucher: vouchers },
 		orml_tokens: TokensConfig {
-			endowed_accounts: endowed_accounts
+			balances: endowed_accounts
 				.iter()
 				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
+						(
+							x.clone(),
+							CurrencyId::Stable(TokenSymbol::AUSD),
+							ENDOWMENT * 10_000,
+						),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
@@ -129,17 +130,26 @@ pub fn asgard_genesis(
 			staking_lock_period: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
 				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
-				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS)
+				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS),
 			],
 			rate_of_interest_each_block: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
 				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127) // 10000.0 * 0.15/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127), // 10000.0 * 0.15/(365*24*600)
 			],
 			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)), // 8.2%
-				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)) // 15.0%
+				(
+					CurrencyId::Token(TokenSymbol::DOT),
+					Permill::from_perthousand(148),
+				), // 14.8%
+				(
+					CurrencyId::Token(TokenSymbol::ETH),
+					Permill::from_perthousand(82),
+				), // 8.2%
+				(
+					CurrencyId::Token(TokenSymbol::KSM),
+					Permill::from_perthousand(150),
+				), // 15.0%
 			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
@@ -151,8 +161,7 @@ pub fn asgard_genesis(
 }
 
 #[allow(dead_code)]
-fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>>
-{
+fn initialize_all_vouchers() -> Vec<(AccountId, Balance)> {
 	use std::collections::HashSet;
 
 	let exe_dir = {
@@ -184,7 +193,7 @@ fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_pri
 		final_vouchers.push((i.clone(), sum));
 	}
 
-	Some(final_vouchers)
+	final_vouchers
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
@@ -193,6 +202,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
+		vec![],
 	)
 }
 
@@ -222,6 +232,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
+		vec![],
 	)
 }
 
@@ -289,7 +300,8 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let root_key: AccountId = hex![
 		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
-	].into();
+	]
+	.into();
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
@@ -298,5 +310,6 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		root_key,
 		Some(endowed_accounts),
 		id,
+		initialize_all_vouchers(),
 	)
 }

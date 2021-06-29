@@ -6,24 +6,31 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.14", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
-serde = { version = "1.0.124", optional = true }
 sp-std = { version = "3.0.0", default-features = false }
-orml-traits = { version = "0.4.1-dev", default-features = false }
-orml-currencies = { version = "0.4.1-dev", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
+xcm-support = { path = "../../xcm-support", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
 
 [features]
 default = ["std"]
 std = [
 	"codec/std",
+	"log/std",
+	"node-primitives/std",
 	"frame-support/std",
 	"frame-system/std",
-	"serde",
 	"sp-std/std",
 	"sp-runtime/std",
+	"sp-arithmetic/std",
 	"orml-traits/std",
-	"orml-currencies/std",
+	"xcm/std",
+	"xcm-support/std",
+	"polkadot-parachain/std",
 ]
