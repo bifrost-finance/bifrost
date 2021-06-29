@@ -467,7 +467,7 @@ pub type Barrier = (
 );
 
 pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
-	Assets,
+	Tokens,
 	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert>,
 	AccountId,
 	LocationToAccountId,
@@ -555,7 +555,7 @@ parameter_types! {
 }
 impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type PalletId = StakingPalletId;
 	type MinterReward = MinterReward;
 	// type DEXOperations = ZenlinkProtocol;
@@ -612,7 +612,7 @@ parameter_types! {
 
 impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type TwoYear = TwoYear;
 	type SystemPalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
@@ -632,7 +632,7 @@ impl bifrost_salp::Config for Runtime {
 	type Event = Event;
 	type PalletId = BifrostCrowdloanId;
 	type Currency = Balances;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type SubmissionDeposit = SubmissionDeposit;
 	type MinContribution = MinContribution;
 	type RemoveKeysLimit = RemoveKeysLimit;
@@ -772,7 +772,7 @@ pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNum
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
 	type GetNativeCurrencyId = GetBifrostTokenId;
 	type WeightInfo = ();
@@ -831,7 +831,7 @@ construct_runtime! {
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink
