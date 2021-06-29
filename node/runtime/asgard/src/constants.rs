@@ -24,7 +24,7 @@ pub mod currency {
 
 	pub const BNCS: Balance = 1_000_000_000_000;
 	pub const DOLLARS: Balance = BNCS;
-	pub const CENTS: Balance = DOLLARS / 100;    // assume this is worth about a cent.
+	pub const CENTS: Balance = DOLLARS / 100; // assume this is worth about a cent.
 	pub const MILLICENTS: Balance = CENTS / 1_000;
 	pub const MILLIBNC: Balance = 1_000_000_000;
 	pub const MICROBNC: Balance = 1_000_000;
@@ -36,7 +36,7 @@ pub mod currency {
 
 /// Time.
 pub mod time {
-	use node_primitives::{Moment, BlockNumber};
+	use node_primitives::{BlockNumber, Moment};
 
 	/// Since BABE is probabilistic this is the average expected block time that
 	/// we are targetting. Blocks will be produced at a minimum duration defined

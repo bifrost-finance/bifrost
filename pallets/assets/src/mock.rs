@@ -19,14 +19,16 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use crate::{self as bifrost_assets};
-use frame_support::{parameter_types};
-use node_primitives::{CurrencyId, TokenSymbol, Balance};
+use frame_support::parameter_types;
+use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
+	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	testing::Header, AccountId32
+	AccountId32,
 };
+
+use crate::{self as bifrost_assets};
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
@@ -59,29 +61,29 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Runtime {
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type AccountId = AccountId;
 	type BaseCallFilter = ();
-	type BlockWeights = ();
+	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type Call = Call;
 	type BlockNumber = u64;
+	type BlockWeights = ();
+	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
+	type OnNewAccount = ();
 	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = ();
+	type SystemWeightInfo = ();
+	type Version = ();
 }
 
 parameter_types! {
@@ -89,11 +91,11 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Runtime {
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
@@ -104,15 +106,14 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
 	type Amount = i128;
+	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type MaxLocks = ();
-	type WeightInfo = ();
+	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
+	type MaxLocks = ();
 	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
-
+	type WeightInfo = ();
 }
 
 impl crate::Config for Runtime {
@@ -127,9 +128,7 @@ pub struct ExtBuilder {
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![],
-		}
+		Self { endowed_accounts: vec![] }
 	}
 }
 
@@ -151,9 +150,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self

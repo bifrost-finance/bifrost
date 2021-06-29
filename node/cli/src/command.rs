@@ -17,10 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use std::{io::Write, net::SocketAddr};
+
 use codec::Encode;
-use cumulus_primitives_core::ParaId;
 use cumulus_client_service::genesis::generate_genesis_block;
+use cumulus_primitives_core::ParaId;
 use log::info;
+use node_primitives::Block;
+use node_service::{self as service, IdentifyVariant};
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -28,9 +31,8 @@ use sc_cli::{
 };
 use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::{Block as BlockT};
-use node_primitives::Block;
-use node_service::{self as service, IdentifyVariant};
+use sp_runtime::traits::Block as BlockT;
+
 use crate::{Cli, RelayChainCli, Subcommand};
 
 fn get_exec_name() -> Option<String> {
@@ -46,11 +48,14 @@ fn load_spec(
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
-		["asgard", "bifrost"].iter()
+		["asgard", "bifrost"]
+			.iter()
 			.cloned()
 			.find(|&chain| n.starts_with(chain))
 			.unwrap_or("bifrost")
-	} else { id };
+	} else {
+		id
+	};
 	Ok(match id {
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard" => Box::new(service::chain_spec::asgard::ChainSpec::from_json_bytes(
@@ -76,12 +81,16 @@ fn load_spec(
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
 				#[cfg(feature = "with-asgard-runtime")]
-				{ Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?) }
+				{
+					Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?)
+				}
 				#[cfg(not(feature = "with-asgard-runtime"))]
 				return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 			} else {
 				#[cfg(feature = "with-bifrost-runtime")]
-				{ Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?) }
+				{
+					Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+				}
 				#[cfg(not(feature = "with-bifrost-runtime"))]
 				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 			}
@@ -126,11 +135,17 @@ impl SubstrateCli for Cli {
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if spec.is_asgard() {
-			#[cfg(feature = "with-asgard-runtime")] { &service::collator::asgard_runtime::VERSION }
+			#[cfg(feature = "with-asgard-runtime")]
+			{
+				&service::collator::asgard_runtime::VERSION
+			}
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.");
 		} else {
-			#[cfg(feature = "with-bifrost-runtime")] { &service::collator::bifrost_runtime::VERSION }
+			#[cfg(feature = "with-bifrost-runtime")]
+			{
+				&service::collator::bifrost_runtime::VERSION
+			}
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
 		}
@@ -225,7 +240,8 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
 				let para_id =
-					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
+						.map(|e| e.para_id);
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
@@ -251,14 +267,7 @@ pub fn run() -> Result<()> {
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Parachain genesis state: {}", genesis_state);
-				info!(
-					"Is collating: {}",
-					if config.role.is_authority() {
-						"yes"
-					} else {
-						"no"
-					}
-				);
+				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				service::collator::start_node(config, polkadot_config, id)
 					.await
@@ -270,17 +279,15 @@ pub fn run() -> Result<()> {
 
 			return runner.sync_run(|config| {
 				#[cfg(feature = "with-asgard-runtime")]
-				return cmd.run::<
-					service::asgard_runtime::Block,
-					service::asgard_runtime::RuntimeApi,
-					service::AsgardExecutor
-				>(config);
+				return cmd
+					.run::<service::asgard_runtime::Block, service::asgard_runtime::RuntimeApi, service::AsgardExecutor>(
+						config,
+					);
 				#[cfg(not(feature = "with-asgard-runtime"))]
-				return cmd.run::<
-					service::bifrost_runtime::Block,
-					service::bifrost_runtime::RuntimeApi,
-					service::BifrostExecutor
-				>(config);
+				return cmd
+					.run::<service::bifrost_runtime::Block, service::bifrost_runtime::RuntimeApi, service::BifrostExecutor>(
+						config,
+					);
 			});
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
@@ -289,19 +296,16 @@ pub fn run() -> Result<()> {
 
 				return runner.sync_run(|config| {
 					#[cfg(feature = "with-asgard-runtime")]
-						return cmd.run::<
-						service::asgard_runtime::Block,
-						service::AsgardExecutor
-					>(config);
+					return cmd
+						.run::<service::asgard_runtime::Block, service::AsgardExecutor>(config);
 					#[cfg(not(feature = "with-asgard-runtime"))]
-						return cmd.run::<
-						service::bifrost_runtime::Block,
-						service::BifrostExecutor
-					>(config);
+					return cmd
+						.run::<service::bifrost_runtime::Block, service::BifrostExecutor>(config);
 				});
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
-				You can enable it with `--features runtime-benchmarks`.".into())
+				You can enable it with `--features runtime-benchmarks`."
+					.into())
 			}
 		}
 		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
@@ -311,19 +315,27 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-		},
-		Some(Subcommand::CheckBlock(cmd)) => construct_async_run! (|components, cli, cmd, config| {
-			Ok(cmd.run(components.client, components.import_queue))
-		}),
-		Some(Subcommand::ExportBlocks(cmd)) => construct_async_run! (|components, cli, cmd, config| {
-			Ok(cmd.run(components.client, config.database))
-		}),
-		Some(Subcommand::ExportState(cmd)) => construct_async_run! (|components, cli, cmd, config| {
-			Ok(cmd.run(components.client, config.chain_spec))
-		}),
-		Some(Subcommand::ImportBlocks(cmd)) => construct_async_run! (|components, cli, cmd, config| {
-			Ok(cmd.run(components.client, components.import_queue))
-		}),
+		}
+		Some(Subcommand::CheckBlock(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.import_queue))
+			})
+		}
+		Some(Subcommand::ExportBlocks(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.database))
+			})
+		}
+		Some(Subcommand::ExportState(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.chain_spec))
+			})
+		}
+		Some(Subcommand::ImportBlocks(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.import_queue))
+			})
+		}
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -340,14 +352,16 @@ pub fn run() -> Result<()> {
 					&polkadot_cli,
 					config.task_executor.clone(),
 				)
-					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				cmd.run(config, polkadot_config)
 			})
 		}
-		Some(Subcommand::Revert(cmd)) => construct_async_run! (|components, cli, cmd, config| {
-			Ok(cmd.run(components.client, components.backend))
-		}),
+		Some(Subcommand::Revert(cmd)) => {
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.backend))
+			})
+		}
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -392,7 +406,7 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		},
+		}
 	}
 }
 
@@ -462,11 +476,7 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn chain_id(&self, is_dev: bool) -> Result<String> {
 		let chain_id = self.base.base.chain_id(is_dev)?;
 
-		Ok(if chain_id.is_empty() {
-			self.chain_id.clone().unwrap_or_default()
-		} else {
-			chain_id
-		})
+		Ok(if chain_id.is_empty() { self.chain_id.clone().unwrap_or_default() } else { chain_id })
 	}
 
 	fn role(&self, is_dev: bool) -> Result<sc_service::Role> {

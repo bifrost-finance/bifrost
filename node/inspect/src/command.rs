@@ -18,21 +18,25 @@
 
 //! Command ran by the CLI
 
-use crate::cli::{InspectCmd, InspectSubCmd};
-use crate::Inspector;
+use std::str::FromStr;
+
 use sc_cli::{CliConfiguration, ImportParams, Result, SharedParams};
 use sc_service::{new_full_client, Configuration, NativeExecutionDispatch};
 use sp_runtime::traits::Block;
-use std::str::FromStr;
+
+use crate::{
+	cli::{InspectCmd, InspectSubCmd},
+	Inspector,
+};
 
 impl InspectCmd {
 	/// Run the inspect command, passing the inspector.
 	pub fn run<B, RA, EX>(&self, config: Configuration) -> Result<()>
-		where
-			B: Block,
-			B::Hash: FromStr,
-			RA: Send + Sync + 'static,
-			EX: NativeExecutionDispatch + 'static,
+	where
+		B: Block,
+		B::Hash: FromStr,
+		RA: Send + Sync + 'static,
+		EX: NativeExecutionDispatch + 'static,
 	{
 		let client = new_full_client::<B, RA, EX>(&config, None)?;
 		let inspect = Inspector::<B>::new(client);

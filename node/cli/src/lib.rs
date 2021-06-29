@@ -32,5 +32,4 @@ mod command;
 pub use cli::*;
 #[cfg(feature = "cli")]
 pub use command::*;
-
 use node_service as service;

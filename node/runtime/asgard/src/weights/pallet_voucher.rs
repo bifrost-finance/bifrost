@@ -22,24 +22,27 @@ use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_voucher::WeightInfo for WeightInfo<T> {
-    fn issue_voucher() -> Weight {
-        (65949000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    fn intialize_all_voucher() -> Weight {
-        (46665000 as Weight)
-            // .saturating_add(T::DbWeight::get().reads(0 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    fn destroy_voucher() -> Weight {
-        (46665000 as Weight)
-            // .saturating_add(T::DbWeight::get().reads(0 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    fn export_all_vouchers() -> Weight {
-        (27086000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
+	fn issue_voucher() -> Weight {
+		(65949000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
+	fn intialize_all_voucher() -> Weight {
+		(46665000 as Weight)
+			// .saturating_add(T::DbWeight::get().reads(0 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
+	fn destroy_voucher() -> Weight {
+		(46665000 as Weight)
+			// .saturating_add(T::DbWeight::get().reads(0 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
+	fn export_all_vouchers() -> Weight {
+		(27086000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 }

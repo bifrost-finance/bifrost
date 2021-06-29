@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use structopt::StructOpt;
 use sc_cli::{
-	Error, VanityCmd, SignCmd, VerifyCmd, GenerateNodeKeyCmd, GenerateCmd, InspectKeyCmd,
-	InspectNodeKeyCmd
+	Error, GenerateCmd, GenerateNodeKeyCmd, InspectKeyCmd, InspectNodeKeyCmd, SignCmd, VanityCmd,
+	VerifyCmd,
 };
+use structopt::StructOpt;
 
 mod offchain_rpc;
 
@@ -28,7 +28,7 @@ mod offchain_rpc;
 #[structopt(
 	name = "subkey",
 	author = "Parity Team <admin@parity.io>",
-	about = "Utility for generating and restoring with Substrate keys",
+	about = "Utility for generating and restoring with Substrate keys"
 )]
 pub enum Subkey {
 	/// Generate a random node libp2p key, save it to file or print it to stdout
@@ -78,16 +78,14 @@ pub fn run() -> Result<(), Error> {
 }
 
 pub mod offchain_storage {
-	use crate::offchain_rpc;
-	use sp_core::{Bytes, offchain::StorageKind};
+	use sp_core::{offchain::StorageKind, Bytes};
 	use structopt::StructOpt;
+
+	use crate::offchain_rpc;
 
 	/// The `localstorage-get` command
 	#[derive(Debug, StructOpt)]
-	#[structopt(
-		name = "localstorage-get",
-		about = "Get local storage from current node itself."
-	)]
+	#[structopt(name = "localstorage-get", about = "Get local storage from current node itself.")]
 	pub struct GetLocalStorageCmd {
 		#[structopt(long)]
 		key: String,
@@ -107,10 +105,7 @@ pub mod offchain_storage {
 
 	/// The `localstorage-set` command
 	#[derive(Debug, StructOpt)]
-	#[structopt(
-		name = "localstorage-set",
-		about = "Set local storage for current node itself."
-	)]
+	#[structopt(name = "localstorage-set", about = "Set local storage for current node itself.")]
 	pub struct SetLocalStorageCmd {
 		#[structopt(long)]
 		key: String,

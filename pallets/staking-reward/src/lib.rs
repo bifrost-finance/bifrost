@@ -21,18 +21,19 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use frame_support::{Parameter, ensure, decl_module, decl_error, decl_storage};
-use node_primitives::{RewardTrait};
-use sp_runtime::traits::{AtLeast32Bit, Member, Saturating, MaybeSerializeDeserialize};
-use codec::{Encode, Decode};
+
+use codec::{Decode, Encode};
+use frame_support::{decl_error, decl_module, decl_storage, ensure, Parameter};
+use node_primitives::{CurrencyId, RewardTrait};
 use orml_traits::MultiCurrency;
-use node_primitives::CurrencyId;
+use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating};
 
 mod mock;
 mod tests;
 
-pub type CurrencyIdOf<T> =
-<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+pub type CurrencyIdOf<T> = <<T as Config>::CurrenciesHandler as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 pub trait Config: frame_system::Config {
 	/// The units in which we record balances.
@@ -84,11 +85,11 @@ decl_module! {
 
 impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Module<T> {
 	type Error = Error<T>;
-	
+
 	fn record_reward(
 		v_token_id: CurrencyIdOf<T>,
 		convert_amount: T::Balance,
-		referer: T::AccountId
+		referer: T::AccountId,
 	) -> Result<(), Self::Error> {
 		// Traverse (if map doesn't contains v_token_id, the system will be initial)
 		Reward::<T>::mutate(v_token_id, |vec| {
@@ -113,17 +114,17 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Modul
 			// Sort vec
 			vec.sort_by(|a, b| b.record_amount.cmp(&a.record_amount));
 		});
-		
+
 		Point::<T>::mutate((v_token_id, referer), |val| {
 			*val = val.saturating_add(convert_amount);
 		});
-		
+
 		Ok(())
 	}
-	
+
 	fn dispatch_reward(
 		v_token_id: CurrencyIdOf<T>,
-		staking_profit: T::Balance
+		staking_profit: T::Balance,
 	) -> Result<(), Self::Error> {
 		// Obtain vec
 		let record_vec = Self::vtoken_reward(v_token_id);
@@ -131,22 +132,25 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Modul
 		// The total statistics
 		let sum: T::Balance = {
 			if record_vec.len() >= LEN {
-				record_vec[..LEN].iter()
+				record_vec[.. LEN]
+					.iter()
 					.fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			} else {
-				record_vec.iter()
+				record_vec
+					.iter()
 					.fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			}
 		};
 		// Dispatch reward
 		let length = if record_vec.len() < LEN { record_vec.len() } else { LEN };
-		for referer in record_vec[0..length].iter() {
+		for referer in record_vec[0 .. length].iter() {
 			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
 			// Check dispatch reward
 			if reward.ne(&T::Balance::from(0u32)) {
 				<<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId,
-			>>::deposit(v_token_id, &referer.account_id, reward).map_err(|_| Error::<T>::DepositError)?;
+					<T as frame_system::Config>::AccountId,
+				>>::deposit(v_token_id, &referer.account_id, reward)
+				.map_err(|_| Error::<T>::DepositError)?;
 			}
 		}
 		// Clear vec and point
@@ -156,7 +160,7 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Modul
 			}
 			vec.clear();
 		});
-		
+
 		Ok(())
 	}
 }

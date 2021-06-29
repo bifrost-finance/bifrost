@@ -22,7 +22,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use core::convert::{Into, TryFrom};
+
 use frame_support::{
+	dispatch::DispatchResultWithPostInfo,
 	pallet_prelude::*,
 	traits::{
 		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
@@ -30,22 +32,21 @@ use frame_support::{
 	},
 	weights::Weight,
 };
-use sp_runtime::{
-	traits::{AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero, StaticLookup},
-	transaction_validity::TransactionValidityError,
-};
-
-use frame_support::dispatch::DispatchResultWithPostInfo;
-use frame_system::pallet_prelude::*;
-pub use pallet::*;
-use sp_arithmetic::traits::SaturatedConversion;
-use sp_std::{vec, vec::Vec};
-use frame_system::RawOrigin;
-
+use frame_system::{pallet_prelude::*, RawOrigin};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
+pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
-use zenlink_protocol::{AssetId, AssetBalance};
+use sp_arithmetic::traits::SaturatedConversion;
+use sp_runtime::{
+	traits::{
+		AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, StaticLookup,
+		Zero,
+	},
+	transaction_validity::TransactionValidityError,
+};
+use sp_std::{vec, vec::Vec};
+use zenlink_protocol::{AssetBalance, AssetId};
 
 mod default_weight;
 mod mock;
@@ -64,7 +65,9 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_transaction_payment::Config + zenlink_protocol::Config{
+	pub trait Config:
+		frame_system::Config + pallet_transaction_payment::Config + zenlink_protocol::Config
+	{
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The units in which we record balances.
@@ -176,8 +179,13 @@ impl<T: Config> Pallet<T> {
 		charge_order_list
 	}
 
-	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens rather than BNC.
-	fn ensure_can_charge_fee(who: &T::AccountId, fee: PalletBalanceOf<T>, reason: WithdrawReasons)-> Result<(), Error<T>> {
+	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens
+	/// rather than BNC.
+	fn ensure_can_charge_fee(
+		who: &T::AccountId,
+		fee: PalletBalanceOf<T>,
+		reason: WithdrawReasons,
+	) -> Result<(), Error<T>> {
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
 		let existential_deposit = <<T as Config>::Currency as Currency<
@@ -185,9 +193,11 @@ impl<T: Config> Pallet<T> {
 		>>::minimum_balance();
 
 		// charge the fee by the order of the above order list.
-		// first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
+		// first to check whether the user has the asset. If no, pass it. If yes, try to make
+		// transaction in the DEX in exchange for BNC
 		for currency_id in user_fee_charge_order_list {
-			let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get()).map_err(|_| Error::ConversionError)?;
+			let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
+				.map_err(|_| Error::ConversionError)?;
 			// If it is mainnet currency
 			if currency_id == T::NativeCurrencyId::get() {
 				// check native balance if is enough
@@ -223,16 +233,19 @@ impl<T: Config> Pallet<T> {
 				}
 
 				let asset_balance = T::CurrenciesHandler::free_balance(currency_id, who);
-				let asset_id: AssetId = AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
+				let asset_id: AssetId =
+					AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
 
 				let path = vec![asset_id, native_asset_id];
 				let amount_in_max: AssetBalance = asset_balance.saturated_into();
 
 				// query for amount in
-				let amounts = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)
-					.map_or(vec![0], |v| v);
+				let amounts =
+					zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)
+						.map_or(vec![0], |v| v);
 
-				let deadline: BlockNumberFor<T> = <frame_system::Pallet<T>>::block_number() + T::BlockNumber::from(100u32);
+				let deadline: BlockNumberFor<T> =
+					<frame_system::Pallet<T>>::block_number() + T::BlockNumber::from(100u32);
 				let org: OriginFor<T> = RawOrigin::from(Some(who.clone())).into();
 				if zenlink_protocol::Pallet::<T>::swap_assets_for_exact_assets(
 					org,
@@ -240,7 +253,7 @@ impl<T: Config> Pallet<T> {
 					amount_in_max,
 					path,
 					T::Lookup::unlookup((*who).clone()),
-					deadline
+					deadline,
 				)
 				.is_ok()
 				{
@@ -249,7 +262,6 @@ impl<T: Config> Pallet<T> {
 					break;
 				}
 			}
-			
 		}
 		Ok(())
 	}
@@ -265,10 +277,12 @@ impl<T: Config> Pallet<T> {
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
 		let amount_out: AssetBalance = fee.saturated_into();
-		let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get()).map_err(|_| DispatchError::Other("Conversion Error"))?;
+		let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
+			.map_err(|_| DispatchError::Other("Conversion Error"))?;
 
 		// charge the fee by the order of the above order list.
-		// first to check whether the user has the asset. If no, pass it. If yes, try to make transaction in the DEX in exchange for BNC
+		// first to check whether the user has the asset. If no, pass it. If yes, try to make
+		// transaction in the DEX in exchange for BNC
 		for currency_id in user_fee_charge_order_list {
 			// If it is mainnet currency
 			if currency_id == T::NativeCurrencyId::get() {
@@ -284,10 +298,12 @@ impl<T: Config> Pallet<T> {
 			} else {
 				// If it is other assets
 				let asset_balance = T::CurrenciesHandler::total_balance(currency_id, who);
-				let token_asset_id: AssetId = AssetId::try_from(currency_id).map_err(|_| DispatchError::Other("Conversion Error"))?;
+				let token_asset_id: AssetId = AssetId::try_from(currency_id)
+					.map_err(|_| DispatchError::Other("Conversion Error"))?;
 				let path = vec![native_asset_id.clone(), token_asset_id];
 
-				let amount_vec = zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)?;
+				let amount_vec =
+					zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)?;
 				let amount_in = amount_vec[0];
 				let amount_in_balance = amount_in.saturated_into();
 
@@ -311,8 +327,8 @@ where
 	PositiveImbalanceOf<T>: Imbalance<PalletBalanceOf<T>, Opposite = NegativeImbalanceOf<T>>,
 	NegativeImbalanceOf<T>: Imbalance<PalletBalanceOf<T>, Opposite = PositiveImbalanceOf<T>>,
 {
-	type LiquidityInfo = Option<NegativeImbalanceOf<T>>;
 	type Balance = PalletBalanceOf<T>;
+	type LiquidityInfo = Option<NegativeImbalanceOf<T>>;
 
 	/// Withdraw the predicted fee from the transaction origin.
 	///
@@ -333,8 +349,10 @@ where
 		} else {
 			WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
 		};
-		// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens rather than BNC.
-		Self::ensure_can_charge_fee(who, fee, withdraw_reason).map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+		// Make sure there are enough BNC to be deducted if the user has assets in other form of
+		// tokens rather than BNC.
+		Self::ensure_can_charge_fee(who, fee, withdraw_reason)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
 		match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
 			Ok(imbalance) => Ok(Some(imbalance)),

@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::TELEMETRY_URL;
 use asgard_runtime::{
 	constants::{currency::DOLLARS, time::DAYS},
 	AccountId, AuraConfig, AuraId, Balance, BalancesConfig, BancorConfig, CouncilConfig,
@@ -26,15 +25,16 @@ use asgard_runtime::{
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
+use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::Permill;
 
+use super::TELEMETRY_URL;
 use crate::chain_spec::{
 	get_account_id_from_seed, get_from_seed, testnet_accounts, RelayExtensions,
 };
-use node_primitives::{CurrencyId, TokenSymbol};
 
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
@@ -56,9 +56,7 @@ pub fn asgard_genesis(
 
 	GenesisConfig {
 		frame_system: SystemConfig {
-			code: WASM_BINARY
-				.expect("WASM binary was not build, please build it!")
-				.to_vec(),
+			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
 		pallet_balances: BalancesConfig {
@@ -80,9 +78,7 @@ pub fn asgard_genesis(
 				.collect(),
 			phantom: Default::default(),
 		},
-		pallet_sudo: SudoConfig {
-			key: root_key.clone(),
-		},
+		pallet_sudo: SudoConfig { key: root_key.clone() },
 		bifrost_voucher: VoucherConfig { voucher: vouchers },
 		orml_tokens: TokensConfig {
 			balances: endowed_accounts
@@ -90,11 +86,7 @@ pub fn asgard_genesis(
 				.chain(super::faucet_accounts().iter())
 				.flat_map(|x| {
 					vec![
-						(
-							x.clone(),
-							CurrencyId::Stable(TokenSymbol::AUSD),
-							ENDOWMENT * 10_000,
-						),
+						(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
 						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
@@ -138,24 +130,13 @@ pub fn asgard_genesis(
 				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127), // 10000.0 * 0.15/(365*24*600)
 			],
 			yield_rate: vec![
-				(
-					CurrencyId::Token(TokenSymbol::DOT),
-					Permill::from_perthousand(148),
-				), // 14.8%
-				(
-					CurrencyId::Token(TokenSymbol::ETH),
-					Permill::from_perthousand(82),
-				), // 8.2%
-				(
-					CurrencyId::Token(TokenSymbol::KSM),
-					Permill::from_perthousand(150),
-				), // 15.0%
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)),  // 8.2%
+				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)), // 15.0%
 			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		pallet_aura: AuraConfig {
-			authorities: initial_authorities,
-		},
+		pallet_aura: AuraConfig { authorities: initial_authorities },
 		cumulus_pallet_aura_ext: Default::default(),
 	}
 }
@@ -216,19 +197,13 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
-		RelayExtensions {
-			relay_chain: "westend-dev".into(),
-			para_id: id.into(),
-		},
+		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
 	))
 }
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	asgard_genesis(
-		vec![
-			get_from_seed::<AuraId>("Alice"),
-			get_from_seed::<AuraId>("Bob"),
-		],
+		vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
@@ -246,10 +221,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
-		RelayExtensions {
-			relay_chain: "westend-local".into(),
-			para_id: id.into(),
-		},
+		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
 	))
 }
 
