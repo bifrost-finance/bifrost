@@ -330,7 +330,6 @@ impl<T: Config> Pallet<T> {
 		Ok(())
 	}
 
-	// 这里需要做些调整。看看ceiling和池子里的总数加起来够不够购买。两边都要做交易
 	pub(crate) fn revise_bancor_pool_vstoken_buy_token(currency_id: CurrencyId, token_amount: BalanceOf<T>, vstoken_amount: BalanceOf<T>) -> Result<(), Error<T>> {
 		BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>>{
 			match pool {
