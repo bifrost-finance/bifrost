@@ -660,15 +660,10 @@ parameter_types! {
 	pub const InterventionPercentage: Balance = 75;
 }
 
-parameter_types! {
-	pub const InterventionPercentage: Balance = 75;
-}
-
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Currencies;
-	type InterventionPercentage = InterventionPercentage;
 }
 
 parameter_types! {
