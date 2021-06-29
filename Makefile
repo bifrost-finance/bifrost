@@ -75,4 +75,5 @@ copy-genesis-config-release:
 
 .PHONY: format
 format:
+	rustup component add rustfmt
 	cargo fmt --all -- --check
