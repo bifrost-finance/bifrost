@@ -643,6 +643,22 @@ impl bifrost_bancor::Config for Runtime {
 	type MultiCurrenciesHandler = Currencies;
 }
 
+parameter_types! {
+	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const MaximumOrderInTrade: u32 = 5;
+	pub const MinimumSupply: Balance = 0;
+}
+
+impl bifrost_vsbond_auction::Config for Runtime {
+	type Event = Event;
+
+	type InvoicingCurrency = InvoicingCurrency;
+	type MaximumOrderInTrade = MaximumOrderInTrade;
+	type MinimumSupply = MinimumSupply;
+
+	type MultiCurrency = Tokens;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -823,6 +839,7 @@ construct_runtime! {
 		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 66,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 67,
+		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 68,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,

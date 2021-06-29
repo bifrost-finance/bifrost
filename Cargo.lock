@@ -194,6 +194,7 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-salp",
  "bifrost-voucher",
+ "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -864,6 +865,22 @@ dependencies = [
  "parity-scale-codec",
  "serde_json",
  "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-vsbond-auction"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -4989,8 +5006,10 @@ dependencies = [
 [[package]]
 name = "node-inspect"
 version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "derive_more",
+ "log",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",
@@ -5004,10 +5023,8 @@ dependencies = [
 [[package]]
 name = "node-inspect"
 version = "0.8.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "derive_more",
- "log",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",
@@ -5098,8 +5115,8 @@ dependencies = [
  "sp-storage",
  "sp-timestamp",
  "sp-transaction-pool",
- "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "substrate-prometheus-endpoint 0.9.0 (git+https://github.com/paritytech/substrate?branch=master)",
+ "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -10412,21 +10429,6 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
-dependencies = [
- "async-std",
- "derive_more",
- "futures-util",
- "hyper 0.13.10",
- "log",
- "prometheus",
- "tokio 0.2.25",
-]
-
-[[package]]
-name = "substrate-prometheus-endpoint"
-version = "0.9.0"
 source = "git+https://github.com/paritytech/substrate?branch=master#9f621a936eb5c692ad8efea22a9bb9ecf3bd93d3"
 dependencies = [
  "async-std",
@@ -10442,6 +10444,21 @@ dependencies = [
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
+dependencies = [
+ "async-std",
+ "derive_more",
+ "futures-util",
+ "hyper 0.13.10",
+ "log",
+ "prometheus",
+ "tokio 0.2.25",
+]
+
+[[package]]
+name = "substrate-prometheus-endpoint"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
 dependencies = [
  "async-std",
  "derive_more",
@@ -11312,22 +11329,6 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
-
-[[package]]
-name = "vsbond-auction"
-version = "0.8.0"
-dependencies = [
- "bifrost-assets",
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-tokens",
- "orml-traits",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
 
 [[package]]
 name = "waker-fn"
