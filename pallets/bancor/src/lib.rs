@@ -265,8 +265,9 @@ impl<T: Config> Pallet<T> {
 		let nominator_rhs = token_supply_squre
 			.checked_mul(&vstoken_amount)
 			.ok_or(Error::<T>::CalculationOverflow)?;
-		let nominator =
-			nominator_lhs.checked_add(&nominator_rhs).ok_or(Error::<T>::CalculationOverflow)?;
+		let nominator = nominator_lhs
+			.checked_add(&nominator_rhs)
+			.ok_or(Error::<T>::CalculationOverflow)?;
 
 		let inside =
 			nominator.checked_div(&vstoken_supply).ok_or(Error::<T>::CalculationOverflow)?;
@@ -303,12 +304,14 @@ impl<T: Config> Pallet<T> {
 			pool_info.vstoken_base_supply + pool_info.vstoken_pool,
 		);
 
-		// Since token_amount will be deducted from the total token_supply, token_amount should be less than or eqaul to token_supply.
+		// Since token_amount will be deducted from the total token_supply, token_amount should be
+		// less than or eqaul to token_supply.
 		ensure!(token_amount <= token_supply, Error::<T>::TokenSupplyNotEnought);
 		let mid_item: Perbill = PerThing::from_rational(token_supply - token_amount, token_supply);
 		let square_item: Perbill = mid_item.square();
 
-		// Destruct the nominator from permill and divide the result by the denominator of a million.
+		// Destruct the nominator from permill and divide the result by the denominator of a
+		// million.
 		let rhs = Perbill::one().saturating_sub(square_item);
 		let rhs_nominator = BalanceOf::<T>::saturated_from(rhs.deconstruct());
 		let price =
@@ -419,17 +422,19 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T> {
-	//  check whether the price of vstoken (token/vstoken) is lower than 75%. if yes, then half of this newly released token should be used to buy vstoken,
-	//  so that the price of vstoken will increase. Meanwhile, the other half will be put on the ceiling variable to indicate exchange availability.
-	//	If not, all the newly release token should be put aside to the ceiling to not to impact the pool price.
+	//  check whether the price of vstoken (token/vstoken) is lower than 75%. if yes, then half of
+	// this newly released token should be used to buy vstoken,  so that the price of vstoken will
+	// increase. Meanwhile, the other half will be put on the ceiling variable to indicate exchange
+	// availability. 	If not, all the newly release token should be put aside to the ceiling to not
+	// to impact the pool price.
 	fn add_token(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> Result<(), DispatchError> {
 		// get the current price of vstoken
 		let (nominator, denominator) = Self::get_instant_vstoken_price(currency_id)?;
 
 		let amount_kept: BalanceOf<T>;
 		// if vstoken price is lower than 0.75 token
-		if BalanceOf::<T>::saturated_from(100u128).saturating_mul(nominator)
-			<= denominator.saturating_mul(T::InterventionPercentage::get())
+		if BalanceOf::<T>::saturated_from(100u128).saturating_mul(nominator) <=
+			denominator.saturating_mul(T::InterventionPercentage::get())
 		{
 			amount_kept = token_amount / BalanceOf::<T>::saturated_from(2u128);
 		} else {
