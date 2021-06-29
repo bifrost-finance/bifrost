@@ -649,7 +649,7 @@ parameter_types! {
 impl bifrost_salp::Config for Runtime {
 	type Event = Event;
 	type PalletId = BifrostCrowdloanId;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type SubmissionDeposit = SubmissionDeposit;
 	type MinContribution = MinContribution;
 	type RemoveKeysLimit = RemoveKeysLimit;

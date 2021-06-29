@@ -84,7 +84,7 @@ pub fn asgard_genesis(
 			key: root_key.clone(),
 		},
 		bifrost_voucher: VoucherConfig { voucher: vouchers },
-		orml_tokens: AssetsConfig {
+		orml_tokens: TokensConfig {
 			balances: endowed_accounts
 				.iter()
 				.chain(super::faucet_accounts().iter())
