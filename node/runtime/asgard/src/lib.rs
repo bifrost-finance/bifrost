@@ -482,7 +482,7 @@ pub type Barrier = (
 );
 
 pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
-	Assets,
+	Tokens,
 	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert>,
 	AccountId,
 	LocationToAccountId,
@@ -567,7 +567,7 @@ parameter_types! {
 }
 impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type PalletId = StakingPalletId;
 	type MinterReward = MinterReward;
 	// type DEXOperations = ZenlinkProtocol;
@@ -624,7 +624,7 @@ parameter_types! {
 
 impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type TwoYear = TwoYear;
 	type SystemPalletId = ShareWeightPalletId;
 	type RewardPeriod = RewardPeriod;
@@ -667,6 +667,22 @@ impl bifrost_salp::Config for Runtime {
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type MultiCurrenciesHandler = Currencies;
+}
+
+parameter_types! {
+	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const MaximumOrderInTrade: u32 = 5;
+	pub const MinimumSupply: Balance = 0;
+}
+
+impl bifrost_vsbond_auction::Config for Runtime {
+	type Event = Event;
+
+	type InvoicingCurrency = InvoicingCurrency;
+	type MaximumOrderInTrade = MaximumOrderInTrade;
+	type MinimumSupply = MinimumSupply;
+
+	type MultiCurrency = Tokens;
 }
 
 // bifrost runtime end
@@ -792,7 +808,7 @@ pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNum
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
 	type GetNativeCurrencyId = GetBifrostTokenId;
 	type WeightInfo = ();
@@ -848,10 +864,11 @@ construct_runtime! {
 		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 66,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 67,
+		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 68,
 
 		// ORML
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
 
 		// zenlink

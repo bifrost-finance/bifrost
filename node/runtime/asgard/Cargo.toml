@@ -73,6 +73,7 @@ bifrost-charge-transaction-fee = { path = "../../../pallets/charge-transaction-f
 bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../../pallets/charge-transaction-fee/rpc/runtime-api", default-features = false }
 bifrost-salp= {path = "../../../pallets/salp",default-features = false}
 bifrost-bancor= {path = "../../../pallets/bancor",default-features = false}
+bifrost-vsbond-auction  = { path = "../../../pallets/vsbond-auction", default-features = false }
 bifrost-bancor-runtime-api = { path = "../../../pallets/bancor/rpc/runtime-api", default-features = false }
 
 # orml
@@ -140,6 +141,7 @@ std = [
 	"bifrost-charge-transaction-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-bancor/std",
+	"bifrost-vsbond-auction/std",
 	"bifrost-bancor-runtime-api/std",
 	"orml-currencies/std",
 	"orml-traits/std",
