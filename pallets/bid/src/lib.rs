@@ -18,50 +18,52 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
-use alloc::vec::Vec;
-use alloc::vec;
+use alloc::{vec, vec::Vec};
 
 mod mock;
 mod tests;
 
 use codec::{Decode, Encode};
-use frame_support::traits::Get;
 use frame_support::{
 	decl_error, decl_event, decl_module, decl_storage, dispatch::DispatchResult, ensure,
-	weights::Weight, Parameter, StorageValue,
+	traits::Get, weights::Weight, Parameter, StorageValue,
 };
 use frame_system::{ensure_root, ensure_signed};
+use node_primitives::{CurrencyId, CurrencyIdExt};
 use num_traits::sign::Unsigned;
-use sp_runtime::traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, Saturating, Zero, One};
-use sp_runtime::{DispatchError, Permill};
 use orml_traits::{
-	currency::TransferAll, MultiCurrency,
-	MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
+	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	MultiReservableCurrency,
 };
-use node_primitives::{ CurrencyIdExt, CurrencyId};
+use sp_runtime::{
+	traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, One, Saturating, Zero},
+	DispatchError, Permill,
+};
 
-type CurrencyIdOf<T> =
-	<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+type CurrencyIdOf<T> = <<T as Config>::CurrenciesHandler as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 const PERMILL_INPUT_MAXIMUM_NUM: u32 = 10_000;
 
 pub trait Config: frame_system::Config {
 	/// Handler for both NativeCurrency and MultiCurrency
-	// type CurrenciesHandler: Currency<Self::AccountId> + MultiReservableCurrency<Self::AccountId> + MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+	// type CurrenciesHandler: Currency<Self::AccountId> + MultiReservableCurrency<Self::AccountId>
+	// + MultiCurrency<Self::AccountId, CurrencyId = CurrencyId>;
 	type CurrenciesHandler: TransferAll<Self::AccountId>
-			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
-			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
-			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>;
-	
+		+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
+		+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
+		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>;
+
 	/// The units in which we record balances.
 	type Balance: Member
-			+ Parameter
-			+ AtLeast32Bit
-			+ Default
-			+ Copy
-			+ Unsigned
-			+ MaybeSerializeDeserialize
-			+ From<Self::BlockNumber>;
+		+ Parameter
+		+ AtLeast32Bit
+		+ Default
+		+ Copy
+		+ Unsigned
+		+ MaybeSerializeDeserialize
+		+ From<Self::BlockNumber>;
 
 	/// Bidding order id.
 	type BiddingOrderId: Member
@@ -155,8 +157,9 @@ pub struct BiddingOrderUnit<AccountId, CurrencyId, BlockNumber, Balance> {
 	/// if it's a bidding proposal unit, then block_num means bidding block number.
 	/// If it's an order in service unit, then block_num means order end block number.
 	block_num: BlockNumber,
-	/// if it's a bidding proposal unit, then votes field means number of votes that the bidder wants to bid for
-	/// If it's an order in service unit, then votes field means the votes in service.
+	/// if it's a bidding proposal unit, then votes field means number of votes that the bidder
+	/// wants to bid for If it's an order in service unit, then votes field means the votes in
+	/// service.
 	votes: Balance,
 	/// the annual rate of return that the bidder provides to the vtoken holder
 	annual_roi: Permill,
@@ -199,7 +202,7 @@ decl_storage! {
 			hasher(blake2_128_concat) T::AccountId,
 			hasher(blake2_128_concat) CurrencyIdOf<T>
 			=> Vec<T::BiddingOrderId>;
-		/// maintain a list of order id for each token in the order of ROI increasing. Every Vec constrain 
+		/// maintain a list of order id for each token in the order of ROI increasing. Every Vec constrain
 		/// to a constant length. token => (annual roi, order id), order by annual roi ascending.
 		TokenOrderROIList get(fn token_order_roi_list): map hasher(blake2_128_concat) CurrencyIdOf<T>
 															 => Vec<(Permill, T::BiddingOrderId)>;
@@ -222,9 +225,9 @@ decl_storage! {
 		/// vtokens that have been registered for bidding marketplace
 		VtokensRegisteredForBidding get(fn vtoken_registered_for_bidding): Vec<CurrencyIdOf<T>>;
 		/// Orders have been unbonded because of user withdrawing within current era. If vtoken supply increase later
-		/// within current era, the deleted orders recorded in this storage can restore. 
+		/// within current era, the deleted orders recorded in this storage can restore.
 		/// vtoken => (deleted_order_id, original_end_block_number)
-		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat) 
+		ForciblyUnbondOrdersInCurrentEra get(fn forcibly_unbond_orders_in_current_era): map hasher(blake2_128_concat)
 		CurrencyIdOf<T> => Vec<(T::BiddingOrderId, BiddingOrderUnitOf<T>)>;
 
 		/// Slash amounts for orders in service. This storage should be updated by the Staking pallet whenever there is
@@ -557,9 +560,10 @@ decl_module! {
 
 #[allow(dead_code)]
 impl<T: Config> Module<T> {
-	/// Read BiddingQueues storage to see if there are unsatisfied proposals, and match them with available votes.
-	/// If the available votes are less than needed, an order in service will be created with the available votes.
-	/// Meanwhile a new bidding proposal will be issued with the remained unmet votes.
+	/// Read BiddingQueues storage to see if there are unsatisfied proposals, and match them with
+	/// available votes. If the available votes are less than needed, an order in service will be
+	/// created with the available votes. Meanwhile a new bidding proposal will be issued with the
+	/// remained unmet votes.
 	fn check_and_match_unsatisfied_bidding_proposal(
 		vtoken: CurrencyIdOf<T>,
 		current_block_num: T::BlockNumber,
@@ -575,10 +579,12 @@ impl<T: Config> Module<T> {
 		);
 		let (_, max_order_lasting_block_num) = MinMaxOrderLastingBlockNum::<T>::get(vtoken);
 
-		// if there are unmatched bidding proposals as well as available votes, match proposals to orders in service.
+		// if there are unmatched bidding proposals as well as available votes, match proposals to
+		// orders in service.
 		if available_flag {
-			// if we have more than enough votes. Then we should first look at those forcibly deleted orders and restore
-			// them first. If we have even more votes, we'll consider match new orders.
+			// if we have more than enough votes. Then we should first look at those forcibly
+			// deleted orders and restore them first. If we have even more votes, we'll consider
+			// match new orders.
 			if !ForciblyUnbondOrdersInCurrentEra::<T>::get(vtoken).is_empty() {
 				// TO-DO
 				ForciblyUnbondOrdersInCurrentEra::<T>::mutate(
@@ -593,7 +599,8 @@ impl<T: Config> Module<T> {
 							let mut votes_restore = deleted_order.votes;
 
 							if votes_restore <= votes_avail {
-								// restore the whole deleted order, no need to deal with slash deposits
+								// restore the whole deleted order, no need to deal with slash
+								// deposits
 								Self::create_order_actions(
 									&deleted_order,
 									deleted_order.block_num,
@@ -680,12 +687,7 @@ impl<T: Config> Module<T> {
 		proposal: &BiddingOrderUnitOf<T>,
 		votes_matched: T::Balance,
 	) -> DispatchResult {
-		let BiddingOrderUnit {
-			bidder_id: bidder,
-			token_id: vtoken,
-			annual_roi,
-			..
-		} = proposal;
+		let BiddingOrderUnit { bidder_id: bidder, token_id: vtoken, annual_roi, .. } = proposal;
 
 		// ensure the bidder has enough balance
 		let slash_deposit = Self::calculate_order_slash_deposit(*vtoken, votes_matched)?;
@@ -698,10 +700,7 @@ impl<T: Config> Module<T> {
 			<T as frame_system::Config>::AccountId,
 		>>::free_balance(token_id, &bidder);
 
-		ensure!(
-			user_token_balance >= should_deposit,
-			Error::<T>::NotEnoughBalance
-		); // ensure user has enough balance
+		ensure!(user_token_balance >= should_deposit, Error::<T>::NotEnoughBalance); // ensure user has enough balance
 
 		// reserve the slash deposit
 		T::CurrenciesHandler::reserve(token_id, &bidder, slash_deposit)?;
@@ -710,7 +709,8 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// Create an order in service. The votes_matched might be less than the needed votes in the proposal.
+	/// Create an order in service. The votes_matched might be less than the needed votes in the
+	/// proposal.
 	fn create_order_in_service(
 		proposal: &BiddingOrderUnitOf<T>,
 		order_end_block_num: T::BlockNumber,
@@ -731,20 +731,12 @@ impl<T: Config> Module<T> {
 	) -> Result<T::BiddingOrderId, DispatchError> {
 		// current block number
 		let current_block_num = frame_system::Pallet::<T>::block_number();
-		ensure!(
-			order_end_block_num >= current_block_num,
-			Error::<T>::BlockNumberNotValid
-		);
+		ensure!(order_end_block_num >= current_block_num, Error::<T>::BlockNumberNotValid);
 		ensure!(votes_matched > Zero::zero(), Error::<T>::AmountNotAboveZero);
 
 		// ? ..
-		let BiddingOrderUnit {
-			bidder_id: bidder,
-			token_id: vtoken,
-			annual_roi,
-			validator,
-			..
-		} = proposal;
+		let BiddingOrderUnit { bidder_id: bidder, token_id: vtoken, annual_roi, validator, .. } =
+			proposal;
 
 		let new_order = BiddingOrderUnit {
 			bidder_id: bidder.clone(),
@@ -822,10 +814,7 @@ impl<T: Config> Module<T> {
 		order_id: T::BiddingOrderId,
 		order1_votes: T::Balance,
 	) -> Result<(T::BiddingOrderId, T::BiddingOrderId), DispatchError> {
-		ensure!(
-			OrdersInService::<T>::contains_key(order_id),
-			Error::<T>::OrderNotExist
-		);
+		ensure!(OrdersInService::<T>::contains_key(order_id), Error::<T>::OrderNotExist);
 
 		let original_order = OrdersInService::<T>::get(order_id);
 		let order2_votes = original_order.votes.saturating_sub(order1_votes);
@@ -842,11 +831,12 @@ impl<T: Config> Module<T> {
 		// calculate order1 and order2 slash amount according to their proportion
 		if SlashForOrdersInService::<T>::contains_key(order_id) {
 			let slash_amount = SlashForOrdersInService::<T>::get(order_id);
-			let order1_slash_amount = order1_votes.saturating_mul(slash_amount)
-				/ (order1_votes.saturating_add(order2_votes));
+			let order1_slash_amount = order1_votes.saturating_mul(slash_amount) /
+				(order1_votes.saturating_add(order2_votes));
 			let order2_slash_amount = slash_amount.saturating_sub(order1_slash_amount);
 
-			// delete original order slash deposit record, create order1 and order2 slash deposit records.
+			// delete original order slash deposit record, create order1 and order2 slash deposit
+			// records.
 			SlashForOrdersInService::<T>::remove(order_id);
 			SlashForOrdersInService::<T>::insert(order1_id, order1_slash_amount);
 			SlashForOrdersInService::<T>::insert(order2_id, order2_slash_amount);
@@ -860,22 +850,12 @@ impl<T: Config> Module<T> {
 		order_id: T::BiddingOrderId,
 		end_block_num: T::BlockNumber,
 	) -> DispatchResult {
-		ensure!(
-			OrdersInService::<T>::contains_key(order_id),
-			Error::<T>::OrderNotExist
-		); //ensure the order exists
+		ensure!(OrdersInService::<T>::contains_key(order_id), Error::<T>::OrderNotExist); // ensure the order exists
 
-		let BiddingOrderUnit {
-			token_id: vtoken,
-			block_num: original_end_block_num,
-			votes,
-			..
-		} = OrdersInService::<T>::get(order_id);
+		let BiddingOrderUnit { token_id: vtoken, block_num: original_end_block_num, votes, .. } =
+			OrdersInService::<T>::get(order_id);
 		let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
-		ensure!(
-			end_block_num >= current_block_number,
-			Error::<T>::BlockNumberNotValid
-		);
+		ensure!(end_block_num >= current_block_number, Error::<T>::BlockNumberNotValid);
 
 		let block_num_per_era = BlockNumberPerEra::<T>::get(vtoken);
 		let era_id: T::EraId = (end_block_num / block_num_per_era).into();
@@ -936,9 +916,10 @@ impl<T: Config> Module<T> {
 		Ok(())
 	}
 
-	/// Calculate currently available votes. Returned Value(Boolean, T::Balance), if the first element of the tuple shows
-	/// true, the second element is the available votes. If the first element of the tuple shows false, the second element
-	/// is the votes needed to be release from bidder.
+	/// Calculate currently available votes. Returned Value(Boolean, T::Balance), if the first
+	/// element of the tuple shows true, the second element is the available votes. If the first
+	/// element of the tuple shows false, the second element is the votes needed to be release from
+	/// bidder.
 	fn calculate_available_votes(
 		vtoken: CurrencyIdOf<T>,
 		current_block_num: T::BlockNumber,
@@ -975,9 +956,12 @@ impl<T: Config> Module<T> {
 		Ok(result)
 	}
 
-	/// If total votes are less than votes in service(available votes is a negative number), we need to release some
-	///  votes from the bidder who provides the lowest roi rate.
-	fn release_votes_from_bidder(vtoken: CurrencyIdOf<T>, release_votes: T::Balance) -> DispatchResult {
+	/// If total votes are less than votes in service(available votes is a negative number), we need
+	/// to release some  votes from the bidder who provides the lowest roi rate.
+	fn release_votes_from_bidder(
+		vtoken: CurrencyIdOf<T>,
+		release_votes: T::Balance,
+	) -> DispatchResult {
 		let mut remained_to_release_vote = release_votes;
 
 		let balance_order_id_vec = TokenOrderROIList::<T>::get(vtoken);
@@ -985,7 +969,7 @@ impl<T: Config> Module<T> {
 			if remained_to_release_vote <= Zero::zero() {
 				break;
 			}
-			let BiddingOrderUnit { votes, ..} = OrdersInService::<T>::get(order_id);
+			let BiddingOrderUnit { votes, .. } = OrdersInService::<T>::get(order_id);
 			let mut to_delete_order = OrdersInService::<T>::get(order_id);
 
 			let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
@@ -1022,10 +1006,7 @@ impl<T: Config> Module<T> {
 		vtoken: CurrencyIdOf<T>,
 		votes_matched: T::Balance,
 	) -> Result<T::Balance, Error<T>> {
-		ensure!(
-			SlashMarginRates::<T>::contains_key(vtoken),
-			Error::<T>::SlashMarginRatesNotSet
-		);
+		ensure!(SlashMarginRates::<T>::contains_key(vtoken), Error::<T>::SlashMarginRatesNotSet);
 
 		let slash_rate = SlashMarginRates::<T>::get(vtoken);
 
@@ -1084,10 +1065,7 @@ impl<T: Config> Module<T> {
 
 	///  delete the other storages related to an order.
 	fn delete_an_order(order_id: T::BiddingOrderId) -> DispatchResult {
-		ensure!(
-			OrdersInService::<T>::contains_key(order_id),
-			Error::<T>::OrderNotExist
-		); //ensure the order exists
+		ensure!(OrdersInService::<T>::contains_key(order_id), Error::<T>::OrderNotExist); // ensure the order exists
 
 		let order_detail = OrdersInService::<T>::get(&order_id);
 		OrderEndBlockNumMap::<T>::mutate(order_detail.block_num, |block_num_order_vec| {
@@ -1130,9 +1108,7 @@ impl<T: Config> Module<T> {
 
 		OrdersInService::<T>::remove(&order_id);
 
-		Self::deposit_event(
-			RawEvent::DeleteOrderSuccess(order_detail.token_id, order_id)
-		);
+		Self::deposit_event(RawEvent::DeleteOrderSuccess(order_detail.token_id, order_id));
 
 		Ok(())
 	}
@@ -1155,8 +1131,9 @@ impl<T: Config> Module<T> {
 		}
 
 		let token_id = order_detail.token_id.to_token().map_err(|_| Error::<T>::TokenNotExist)?;
-		<<T as Config>::CurrenciesHandler as MultiReservableCurrency<<T as frame_system::Config>::AccountId,
-			>>::unreserve(token_id, &order_detail.bidder_id, original_slash_deposit);
+		<<T as Config>::CurrenciesHandler as MultiReservableCurrency<
+			<T as frame_system::Config>::AccountId,
+		>>::unreserve(token_id, &order_detail.bidder_id, original_slash_deposit);
 
 		// unlock the remaining slash deposit.
 		if slashed_amount > original_slash_deposit {
@@ -1177,7 +1154,8 @@ impl<T: Config> Module<T> {
 	// *********************************************************
 	// Below is info that needs to be used by or queried from other pallets.
 
-	/// set the slash amount for s specific order. Whenever a slash happens, outer pallet update this storage.
+	/// set the slash amount for s specific order. Whenever a slash happens, outer pallet update
+	/// this storage.
 	fn set_slash_amount_for_bidding_order(
 		order_id: T::BiddingOrderId,
 		slash_amount: T::Balance,
@@ -1196,8 +1174,8 @@ impl<T: Config> Module<T> {
 	/// get the current total votes from convert pool
 	fn get_total_votes(_vtoken: CurrencyIdOf<T>) -> T::Balance {
 		let current_block_number = frame_system::Pallet::<T>::block_number(); // get current block number
-		let mock_total_votes =
-			current_block_number * T::BlockNumber::from(201 as u32) % T::BlockNumber::from(1_000 as u32);
+		let mock_total_votes = current_block_number * T::BlockNumber::from(201 as u32) %
+			T::BlockNumber::from(1_000 as u32);
 		mock_total_votes.into()
 	}
 }

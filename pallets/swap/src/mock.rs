@@ -18,17 +18,19 @@
 
 #![cfg(test)]
 
-use super::*;
-use crate as pallet_swap;
 use frame_support::{
-	parameter_types, traits::{OnFinalize, OnInitialize},
+	parameter_types,
+	traits::{OnFinalize, OnInitialize},
 };
+use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use node_primitives::{CurrencyId, TokenSymbol};
+
+use super::*;
+use crate as pallet_swap;
 pub type BlockNumber = u64;
 pub type Amount = i128;
 pub type Balance = u64;
@@ -56,29 +58,29 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Test {
+	type AccountData = pallet_balances::AccountData<u64>;
+	type AccountId = u64;
 	type BaseCallFilter = ();
-	type BlockWeights = ();
+	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type Call = Call;
 	type BlockNumber = u64;
+	type BlockWeights = ();
+	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u64;
-	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<u64>;
-	type OnNewAccount = ();
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
+	type OnNewAccount = ();
 	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = ();
+	type SystemWeightInfo = ();
+	type Version = ();
 }
 
 parameter_types! {
@@ -90,9 +92,9 @@ pub type AdaptedBasicCurrency =
 
 impl orml_currencies::Config for Test {
 	type Event = Event;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Assets;
 	type NativeCurrency = AdaptedBasicCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }
 
@@ -101,11 +103,11 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type Balance = u64;
-	type Event = Event;
-	type DustRemoval = ();
-	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
+	type Balance = u64;
+	type DustRemoval = ();
+	type Event = Event;
+	type ExistentialDeposit = ExistentialDeposit;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
@@ -117,14 +119,14 @@ orml_traits::parameter_type_with_key! {
 }
 
 impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
 	type Amount = i128;
+	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
+	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = orml_tokens::TransferDust<Test, ()>;
 	type MaxLocks = ();
+	type OnDust = orml_tokens::TransferDust<Test, ()>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -143,27 +145,25 @@ parameter_types! {
 }
 
 impl crate::Config for Test {
-	type Event = Event;
-	type SwapFee = u64;
-	type PoolId = u32;
+	type BNCAssetId = BNCAssetId;
 	type Balance = u64;
+	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
 	type CurrenciesHandler = Currencies;
-	type PoolWeight = u64;
-	type PoolToken = u64;
+	type Event = Event;
+	type FeePrecision = FeePrecision;
+	type InitialPoolSupply = InitialPoolSupply;
+	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+	type MaximumSwapFee = MaximumSwapFee;
 	type MaximumSwapInRatio = MaximumSwapInRatio;
 	type MinimumPassedInPoolTokenShares = MinimumPassedInPoolTokenShares;
 	type MinimumSwapFee = MinimumSwapFee;
-	type MaximumSwapFee = MaximumSwapFee;
-	type FeePrecision = FeePrecision;
-	type WeightPrecision = WeightPrecision;
-	type BNCAssetId = BNCAssetId;
-	type InitialPoolSupply = InitialPoolSupply;
 	type NumberOfSupportedTokens = NumberOfSupportedTokens;
-	type BonusClaimAgeDenominator = BonusClaimAgeDenominator;
-	type MaximumPassedInPoolTokenShares = MaximumPassedInPoolTokenShares;
+	type PoolId = u32;
+	type PoolToken = u64;
+	type PoolWeight = u64;
+	type SwapFee = u64;
+	type WeightPrecision = WeightPrecision;
 }
-
-
 
 // simulate block production
 pub(crate) fn run_to_block(n: u64) {
@@ -178,8 +178,5 @@ pub(crate) fn run_to_block(n: u64) {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap()
-		.into()
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }

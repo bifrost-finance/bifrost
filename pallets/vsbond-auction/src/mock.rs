@@ -18,9 +18,6 @@
 
 #![cfg(test)]
 
-use crate as vsbond_auction;
-use vsbond_auction::*;
-
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -28,6 +25,9 @@ use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use vsbond_auction::*;
+
+use crate as vsbond_auction;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -53,29 +53,29 @@ parameter_types! {
 }
 
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
-	type BlockWeights = ();
-	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type BlockNumber = BlockNumber;
-	type Hash = H256;
-	type Call = Call;
-	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = ();
-	type OnNewAccount = ();
+	type AccountId = AccountId;
+	type BaseCallFilter = ();
+	type BlockHashCount = BlockHashCount;
+	type BlockLength = ();
+	type BlockNumber = BlockNumber;
+	type BlockWeights = ();
+	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
+	type Hash = H256;
+	type Hashing = BlakeTwo256;
+	type Header = generic::Header<BlockNumber, BlakeTwo256>;
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
+	type OnNewAccount = ();
 	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = ();
+	type SystemWeightInfo = ();
+	type Version = ();
 }
 
 orml_traits::parameter_type_with_key! {
@@ -89,14 +89,14 @@ parameter_types! {
 }
 
 impl orml_tokens::Config for Test {
-	type Event = Event;
-	type Balance = Balance;
 	type Amount = Amount;
+	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
+	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
 	type MaxLocks = MaxLocks;
+	type OnDust = ();
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -107,7 +107,6 @@ parameter_types! {
 
 impl vsbond_auction::Config for Test {
 	type Event = Event;
-
 	type InvoicingCurrency = InvoicingCurrency;
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumSupply = MinimumSupply;
@@ -116,9 +115,7 @@ impl vsbond_auction::Config for Test {
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let mut fs_gc = frame_system::GenesisConfig::default()
-		.build_storage::<Test>()
-		.unwrap();
+	let mut fs_gc = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![

@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
+
+use bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi as FeeRuntimeApi;
 use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
 };
@@ -25,24 +28,20 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-
+use node_primitives::AccountId;
 use sc_client_api::ExecutorProvider;
 use sc_executor::native_executor_instance;
+pub use sc_executor::NativeExecutor;
 use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
 use sp_keystore::SyncCryptoStorePtr;
-use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
-
-pub use sc_executor::NativeExecutor;
-use crate::{IdentifyVariant, RuntimeApiCollection};
-
-use node_primitives::AccountId;
-use bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi as FeeRuntimeApi;
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+
+use crate::{IdentifyVariant, RuntimeApiCollection};
 
 type BlockNumber = u32;
 type Header = sp_runtime::generic::Header<BlockNumber, sp_runtime::traits::BlakeTwo256>;
@@ -51,7 +50,6 @@ type Hash = sp_core::H256;
 
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
-
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
 
@@ -90,7 +88,9 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 where
 	RuntimeApi: Send + Sync + 'static,
 	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>,
-	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>>,
+	RuntimeApi::RuntimeApi: RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+	>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIQ: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -168,36 +168,38 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	build_import_queue: BIQ,
 	build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
-	where
-		RuntimeApi: Send + Sync + 'static,
-		RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>>,
-		Executor: sc_executor::NativeExecutionDispatch + 'static,
-		RB: Fn(
+where
+	RuntimeApi: Send + Sync + 'static,
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>,
+	RuntimeApi::RuntimeApi: RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+	>,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
+	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, Executor>>,
 		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 		+ Send
 		+ 'static,
-		BIQ: FnOnce(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-			&Configuration,
-			Option<TelemetryHandle>,
-			&TaskManager,
-		) -> Result<
-			sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
-			sc_service::Error,
-		>,
-		BIC: FnOnce(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-			Option<&Registry>,
-			Option<TelemetryHandle>,
-			&TaskManager,
-			&polkadot_service::NewFull<polkadot_service::Client>,
-			Arc<sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>>,
-			Arc<NetworkService<Block, Hash>>,
-			SyncCryptoStorePtr,
-			bool,
-		) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+	BIQ: FnOnce(
+		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		&Configuration,
+		Option<TelemetryHandle>,
+		&TaskManager,
+	) -> Result<
+		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_service::Error,
+	>,
+	BIC: FnOnce(
+		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		Option<&Registry>,
+		Option<TelemetryHandle>,
+		&TaskManager,
+		&polkadot_service::NewFull<polkadot_service::Client>,
+		Arc<sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>>,
+		Arc<NetworkService<Block, Hash>>,
+		SyncCryptoStorePtr,
+		bool,
+	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -208,14 +210,12 @@ async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue)?;
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
-	let relay_chain_full_node = cumulus_client_service::build_polkadot_full_node(
-		polkadot_config,
-		telemetry_worker_handle,
-	)
-	.map_err(|e| match e {
-		polkadot_service::Error::Sub(x) => x,
-		s => format!("{}", s).into(),
-	})?;
+	let relay_chain_full_node =
+		cumulus_client_service::build_polkadot_full_node(polkadot_config, telemetry_worker_handle)
+			.map_err(|e| match e {
+				polkadot_service::Error::Sub(x) => x,
+				s => format!("{}", s).into(),
+			})?;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -324,38 +324,40 @@ async fn PATCH_FOR_ASGARD_start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	build_import_queue: BIQ,
 	build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<TFullClient<Block, RuntimeApi, Executor>>)>
-	where
-		RuntimeApi: Send + Sync + 'static,
-		RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>,
-		RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>>,
-		RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
-		RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-		Executor: sc_executor::NativeExecutionDispatch + 'static,
-		RB: Fn(
+where
+	RuntimeApi: Send + Sync + 'static,
+	RuntimeApi: ConstructRuntimeApi<Block, TFullClient<Block, RuntimeApi, Executor>>,
+	RuntimeApi::RuntimeApi: RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
+	>,
+	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
+	RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
+	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, Executor>>,
 		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
 		+ Send
 		+ 'static,
-		BIQ: FnOnce(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-			&Configuration,
-			Option<TelemetryHandle>,
-			&TaskManager,
-		) -> Result<
-			sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
-			sc_service::Error,
-		>,
-		BIC: FnOnce(
-			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-			Option<&Registry>,
-			Option<TelemetryHandle>,
-			&TaskManager,
-			&polkadot_service::NewFull<polkadot_service::Client>,
-			Arc<sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>>,
-			Arc<NetworkService<Block, Hash>>,
-			SyncCryptoStorePtr,
-			bool,
-		) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
+	BIQ: FnOnce(
+		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		&Configuration,
+		Option<TelemetryHandle>,
+		&TaskManager,
+	) -> Result<
+		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_service::Error,
+	>,
+	BIC: FnOnce(
+		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		Option<&Registry>,
+		Option<TelemetryHandle>,
+		&TaskManager,
+		&polkadot_service::NewFull<polkadot_service::Client>,
+		Arc<sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>>,
+		Arc<NetworkService<Block, Hash>>,
+		SyncCryptoStorePtr,
+		bool,
+	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -366,14 +368,12 @@ async fn PATCH_FOR_ASGARD_start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
 	let params = new_partial::<RuntimeApi, Executor, BIQ>(&parachain_config, build_import_queue)?;
 	let (mut telemetry, telemetry_worker_handle) = params.other;
 
-	let relay_chain_full_node = cumulus_client_service::build_polkadot_full_node(
-		polkadot_config,
-		telemetry_worker_handle,
-	)
-		.map_err(|e| match e {
-			polkadot_service::Error::Sub(x) => x,
-			s => format!("{}", s).into(),
-		})?;
+	let relay_chain_full_node =
+		cumulus_client_service::build_polkadot_full_node(polkadot_config, telemetry_worker_handle)
+			.map_err(|e| match e {
+				polkadot_service::Error::Sub(x) => x,
+				s => format!("{}", s).into(),
+			})?;
 
 	let client = params.client.clone();
 	let backend = params.backend.clone();
@@ -524,7 +524,7 @@ pub fn asgard_parachain_build_import_queue(
 		spawner: &task_manager.spawn_essential_handle(),
 		telemetry,
 	})
-		.map_err(Into::into)
+	.map_err(Into::into)
 }
 
 /// Build the import queue for the bifrost runtime.
@@ -570,7 +570,7 @@ pub fn bifrost_parachain_build_import_queue(
 		spawner: &task_manager.spawn_essential_handle(),
 		telemetry,
 	})
-		.map_err(Into::into)
+	.map_err(Into::into)
 }
 
 #[allow(unused_variables)]
@@ -582,7 +582,13 @@ pub async fn start_node(
 ) -> sc_service::error::Result<TaskManager> {
 	if parachain_config.chain_spec.is_asgard() {
 		#[cfg(feature = "with-asgard-runtime")]
-		return PATCH_FOR_ASGARD_start_node_impl::<asgard_runtime::RuntimeApi, AsgardExecutor, _, _, _>(
+		return PATCH_FOR_ASGARD_start_node_impl::<
+			asgard_runtime::RuntimeApi,
+			AsgardExecutor,
+			_,
+			_,
+			_,
+		>(
 			parachain_config,
 			polkadot_config,
 			id,
@@ -597,7 +603,7 @@ pub async fn start_node(
 			 sync_oracle,
 			 keystore,
 			 force_authoring| {
-			 	let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
+				let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
 				let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
 					task_manager.spawn_handle(),
@@ -662,7 +668,9 @@ pub async fn start_node(
 					telemetry,
 				}))
 			},
-		).await.map(|full| full.0);
+		)
+		.await
+		.map(|full| full.0);
 		#[cfg(not(feature = "with-asgard-runtime"))]
 		return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
 	} else {
@@ -747,7 +755,9 @@ pub async fn start_node(
 					telemetry,
 				}))
 			},
-		).await.map(|full| full.0);
+		)
+		.await
+		.map(|full| full.0);
 		#[cfg(not(feature = "with-bifrost-runtime"))]
 		return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 	}

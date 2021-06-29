@@ -18,10 +18,10 @@
 
 #![cfg(test)]
 
-use crate::mock::*;
-use crate::*;
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use orml_traits::{MultiCurrency, MultiLockableCurrency};
+
+use crate::{mock::*, *};
 
 #[test]
 fn create_order_should_work() {
@@ -117,7 +117,7 @@ fn create_order_with_enough_currency_under_lock_should_fail() {
 #[test]
 fn create_order_should_increase_order_id() {
 	new_test_ext().execute_with(|| {
-		for i in 0..MaximumOrderInTrade::get() {
+		for i in 0 .. MaximumOrderInTrade::get() {
 			assert_ok!(VSBondAuction::create_order(
 				Origin::signed(ACCOUNT_ALICE),
 				PARA_ID,
@@ -135,7 +135,7 @@ fn create_order_should_increase_order_id() {
 #[test]
 fn create_order_exceed_maximum_order_in_trade_should_fail() {
 	let _ = new_test_ext().execute_with(|| -> DispatchResultWithPostInfo {
-		for _ in 0..MaximumOrderInTrade::get() {
+		for _ in 0 .. MaximumOrderInTrade::get() {
 			assert_ok!(VSBondAuction::create_order(
 				Origin::signed(ACCOUNT_ALICE),
 				PARA_ID,
@@ -193,10 +193,7 @@ fn revoke_order_should_work() {
 			UNIT_PRICE,
 		));
 
-		assert_ok!(VSBondAuction::revoke_order(
-			Origin::signed(ACCOUNT_ALICE),
-			0,
-		));
+		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,));
 
 		let in_trade_order_ids =
 			VSBondAuction::in_trade_order_ids(ACCOUNT_ALICE).ok_or(Error::<Test>::Unexpected)?;
@@ -231,18 +228,12 @@ fn revoke_order_by_origin_illegal_should_fail() {
 			UNIT_PRICE,
 		));
 
-		assert_noop!(
-			VSBondAuction::revoke_order(Origin::root(), 0),
-			DispatchError::BadOrigin,
-		);
+		assert_noop!(VSBondAuction::revoke_order(Origin::root(), 0), DispatchError::BadOrigin,);
 		assert_noop!(
 			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_BRUCE), 0),
 			Error::<Test>::ForbidRevokeOrderWithoutOwnership,
 		);
-		assert_noop!(
-			VSBondAuction::revoke_order(Origin::none(), 0),
-			DispatchError::BadOrigin,
-		);
+		assert_noop!(VSBondAuction::revoke_order(Origin::none(), 0), DispatchError::BadOrigin,);
 	});
 }
 
@@ -258,10 +249,7 @@ fn revoke_order_not_in_trade_should_fail() {
 			UNIT_PRICE,
 		));
 
-		assert_ok!(VSBondAuction::revoke_order(
-			Origin::signed(ACCOUNT_ALICE),
-			0
-		),);
+		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0),);
 		assert_noop!(
 			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0),
 			Error::<Test>::ForbidRevokeOrderNotInTrade,
@@ -276,10 +264,7 @@ fn revoke_order_not_in_trade_should_fail() {
 			UNIT_PRICE,
 		));
 
-		assert_ok!(VSBondAuction::clinch_order(
-			Origin::signed(ACCOUNT_BRUCE),
-			1,
-		));
+		assert_ok!(VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 1,));
 		assert_noop!(
 			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 1),
 			Error::<Test>::ForbidRevokeOrderNotInTrade,
@@ -298,16 +283,9 @@ fn revoke_order_should_unlock_vsbond() {
 			BALANCE_VSBOND,
 			UNIT_PRICE,
 		));
-		assert_ok!(VSBondAuction::revoke_order(
-			Origin::signed(ACCOUNT_ALICE),
-			0,
-		));
+		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,));
 
-		assert_ok!(OrmlAssets::ensure_can_withdraw(
-			VSBOND,
-			&ACCOUNT_ALICE,
-			BALANCE_VSBOND
-		),);
+		assert_ok!(OrmlAssets::ensure_can_withdraw(VSBOND, &ACCOUNT_ALICE, BALANCE_VSBOND),);
 	});
 }
 
@@ -334,10 +312,7 @@ fn clinch_order_should_work() {
 		assert_eq!(order_info.remain, BALANCE_VSBOND / 2);
 		assert_eq!(order_info.order_state, OrderState::InTrade);
 
-		assert_ok!(VSBondAuction::clinch_order(
-			Origin::signed(ACCOUNT_BRUCE),
-			0,
-		));
+		assert_ok!(VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 0,));
 
 		// Check balance
 		assert_eq!(
@@ -413,18 +388,12 @@ fn clinck_order_by_origin_illegal_should_fail() {
 			DispatchError::BadOrigin
 		);
 
-		assert_noop!(
-			VSBondAuction::clinch_order(Origin::root(), 0),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(VSBondAuction::clinch_order(Origin::root(), 0), DispatchError::BadOrigin);
 		assert_noop!(
 			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_ALICE), 0,),
 			Error::<Test>::ForbidClinchOrderWithinOwnership
 		);
-		assert_noop!(
-			VSBondAuction::clinch_order(Origin::none(), 0),
-			DispatchError::BadOrigin
-		);
+		assert_noop!(VSBondAuction::clinch_order(Origin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
@@ -439,10 +408,7 @@ fn clinch_order_not_in_trade_should_fail() {
 			BALANCE_VSBOND / 2,
 			UNIT_PRICE,
 		));
-		assert_ok!(VSBondAuction::revoke_order(
-			Origin::signed(ACCOUNT_ALICE),
-			0,
-		));
+		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,));
 		assert_noop!(
 			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 0),
 			Error::<Test>::ForbidClinchOrderNotInTrade
@@ -456,10 +422,7 @@ fn clinch_order_not_in_trade_should_fail() {
 			BALANCE_VSBOND / 2,
 			UNIT_PRICE,
 		));
-		assert_ok!(VSBondAuction::clinch_order(
-			Origin::signed(ACCOUNT_BRUCE),
-			1,
-		));
+		assert_ok!(VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 1,));
 		assert_noop!(
 			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 1),
 			Error::<Test>::ForbidClinchOrderNotInTrade

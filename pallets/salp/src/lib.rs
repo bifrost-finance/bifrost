@@ -81,8 +81,9 @@ pub mod pallet {
 		}
 	}
 
-	/// Information on a funding effort for a pre-existing parachain. We assume that the parachain ID
-	/// is known as it's used for the key of the storage item for which this is the value (`Funds`).
+	/// Information on a funding effort for a pre-existing parachain. We assume that the parachain
+	/// ID is known as it's used for the key of the storage item for which this is the value
+	/// (`Funds`).
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 	#[codec(dumb_trait_bound)]
 	pub struct FundInfo<AccountId, Balance, LeasePeriod> {
@@ -158,15 +159,16 @@ pub mod pallet {
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// ModuleID for the crowdloan module. An appropriate value could be ```ModuleId(*b"py/cfund")```
+		/// ModuleID for the crowdloan module. An appropriate value could be
+		/// ```ModuleId(*b"py/cfund")```
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
 		/// The amount to be held on deposit by the depositor of a crowdloan.
 		type SubmissionDeposit: Get<BalanceOf<Self>>;
 
-		/// The minimum amount that may be contributed into a crowdloan. Should almost certainly be at
-		/// least ExistentialDeposit.
+		/// The minimum amount that may be contributed into a crowdloan. Should almost certainly be
+		/// at least ExistentialDeposit.
 		#[pallet::constant]
 		type MinContribution: Get<BalanceOf<Self>>;
 
@@ -285,7 +287,8 @@ pub mod pallet {
 		NoContributions,
 		/// This crowdloan has an active parachain and cannot be dissolved.
 		HasActiveParachain,
-		/// The crowdloan is not ready to dissolve. Potentially still has a slot or in retirement period.
+		/// The crowdloan is not ready to dissolve. Potentially still has a slot or in retirement
+		/// period.
 		NotReadyToDissolve,
 		/// Invalid signature.
 		InvalidSignature,
@@ -335,10 +338,7 @@ pub mod pallet {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Ongoing,
-				Error::<T>::InvalidFundStatus
-			);
+			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
 			Funds::<T>::mutate(index, |fund| {
 				if let Some(fund) = fund {
 					fund.status = FundStatus::Success;
@@ -368,10 +368,7 @@ pub mod pallet {
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Ongoing,
-				Error::<T>::InvalidFundStatus
-			);
+			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
 			fund.status = FundStatus::Failed;
 			Funds::<T>::insert(index, Some(fund.clone()));
 
@@ -391,10 +388,7 @@ pub mod pallet {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Success,
-				Error::<T>::InvalidFundStatus
-			);
+			ensure!(fund.status == FundStatus::Success, Error::<T>::InvalidFundStatus);
 			Funds::<T>::mutate(index, |fund| {
 				if let Some(fund) = fund {
 					fund.status = FundStatus::Retired;
@@ -417,10 +411,7 @@ pub mod pallet {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Withdrew,
-				Error::<T>::InvalidFundStatus
-			);
+			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
 			fund.status = FundStatus::End;
 			Funds::<T>::insert(index, Some(fund.clone()));
 
@@ -442,10 +433,7 @@ pub mod pallet {
 			let last_slot_limit = first_slot
 				.checked_add(((T::SlotLength::get() as u32) - 1).into())
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
-			ensure!(
-				last_slot <= last_slot_limit,
-				Error::<T>::LastSlotTooFarInFuture
-			);
+			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
 
 			// There should not be an existing fund.
 			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundNotEnded);
@@ -487,27 +475,16 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 
-			ensure!(
-				value >= T::MinContribution::get(),
-				Error::<T>::ContributionTooSmall
-			);
+			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Ongoing,
-				Error::<T>::InvalidFundStatus
-			);
-			fund.raised
-				.checked_add(&value)
-				.ok_or(Error::<T>::Overflow)?;
+			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
 
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
-			ensure!(
-				status == ContributionStatus::Contributed,
-				Error::<T>::ContributionInvalid
-			);
+			ensure!(status == ContributionStatus::Contributed, Error::<T>::ContributionInvalid);
 
 			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
@@ -534,19 +511,14 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Ongoing,
-				Error::<T>::InvalidFundStatus
-			);
+			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
-			ensure!(
-				status == ContributionStatus::Contributing,
-				Error::<T>::ContributionInvalid
-			);
+			ensure!(status == ContributionStatus::Contributing, Error::<T>::ContributionInvalid);
 			Self::contribute_callback(who, index, value, is_success)
 		}
 
-		/// Withdraw full balance of the parachain. this function may need to be called multiple times
+		/// Withdraw full balance of the parachain. this function may need to be called multiple
+		/// times
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::weight(0)]
 		pub(super) fn withdraw(
@@ -598,10 +570,7 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Withdrew,
-				Error::<T>::FundNotWithdrew
-			);
+			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::FundNotWithdrew);
 
 			// TODO: Temp solution, move the check to `Assets` later.
 			let cur_block = <frame_system::Pallet<T>>::block_number();
@@ -611,9 +580,8 @@ pub mod pallet {
 				Error::<T>::VSBondExpired
 			);
 
-			let new_redeem_balance = Self::redeem_pool()
-				.checked_sub(&value)
-				.ok_or(Error::<T>::InsufficientBalance)?;
+			let new_redeem_balance =
+				Self::redeem_pool().checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?;
 
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
@@ -658,15 +626,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			Self::check_fund_owner(origin, index)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Withdrew,
-				Error::<T>::FundNotWithdrew
-			);
+			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::FundNotWithdrew);
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
-			ensure!(
-				status == ContributionStatus::Redeeming,
-				Error::<T>::ContributionInvalid
-			);
+			ensure!(status == ContributionStatus::Redeeming, Error::<T>::ContributionInvalid);
 			Self::redeem_callback(who, index, value, is_success)
 		}
 
@@ -707,7 +669,8 @@ pub mod pallet {
 			// Release x% KSM/DOT from 1:1 redeem-pool to bancor-pool per cycle.
 			if (n % T::ReleaseCycle::get()) == 0 {
 				if let Ok(redeem_pool_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
-					// Calculate the release amount by `(redeem_pool_balance * T::ReleaseRatio).main_part()`.
+					// Calculate the release amount by `(redeem_pool_balance *
+					// T::ReleaseRatio).main_part()`.
 					let release_amount = T::ReleaseRatio::get() * redeem_pool_balance;
 
 					// Must be ok.
@@ -742,8 +705,8 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// The account ID of the fund pot.
 		///
-		/// This actually does computation. If you need to keep using it, then make sure you cache the
-		/// value and only call this once.
+		/// This actually does computation. If you need to keep using it, then make sure you cache
+		/// the value and only call this once.
 		pub fn fund_account_id(index: ParaId) -> AccountIdOf<T> {
 			T::PalletId::get().into_sub_account(index)
 		}
@@ -807,9 +770,9 @@ pub mod pallet {
 				ContributionStatus::Contributing | ContributionStatus::Contributed => {
 					balance.checked_add(&value).ok_or(Error::<T>::Overflow)?
 				}
-				ContributionStatus::Redeeming | ContributionStatus::Redeemed => balance
-					.checked_sub(&value)
-					.ok_or(Error::<T>::InsufficientBalance)?,
+				ContributionStatus::Redeeming | ContributionStatus::Redeemed => {
+					balance.checked_sub(&value).ok_or(Error::<T>::InsufficientBalance)?
+				}
 			};
 
 			Self::contribution_put(fund.trie_index, &who, &new_balance, status);
@@ -825,11 +788,8 @@ pub mod pallet {
 			let origin_location: MultiLocation =
 				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
 
-			let contribution = Contribution {
-				index: para_id,
-				value: value.clone(),
-				signature: None,
-			};
+			let contribution =
+				Contribution { index: para_id, value: value.clone(), signature: None };
 
 			let call = CrowdloanContributeCall::CrowdloanContribute(ContributeCall::Contribute(
 				contribution,
@@ -855,10 +815,7 @@ pub mod pallet {
 
 			let who: AccountIdOf<T> = PolkadotParaId::from(para_id).into_account();
 
-			let withdraw = Withdraw {
-				who,
-				index: para_id,
-			};
+			let withdraw = Withdraw { who, index: para_id };
 			let call = CrowdloanWithdrawCall::CrowdloanWithdraw(WithdrawCall::Withdraw(withdraw))
 				.encode()
 				.into();
@@ -979,7 +936,7 @@ pub mod pallet {
 				T::MultiCurrency::withdraw(vstoken, &who, value)?;
 				T::MultiCurrency::withdraw(vsbond, &who, value)?;
 
-				//Update contribution trie
+				// Update contribution trie
 				let _balance = Self::update_contribution(
 					index,
 					who.clone(),

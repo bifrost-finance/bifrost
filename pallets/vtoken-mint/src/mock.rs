@@ -21,18 +21,21 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use crate::{self as vtoken_mint};
-use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
-use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::H256;
-use sp_runtime::{
-	testing::Header, AccountId32, Permill,DispatchError, DispatchResult,
-	traits::{BlakeTwo256, IdentityLookup, Zero, UniqueSaturatedInto}, SaturatedConversion
-};
-use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
-use orml_traits::MultiCurrency;
 use core::marker::PhantomData;
 use std::convert::TryInto;
+
+use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use node_primitives::{CurrencyId, TokenSymbol};
+use orml_traits::MultiCurrency;
+use sp_core::H256;
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto, Zero},
+	AccountId32, DispatchError, DispatchResult, Permill, SaturatedConversion,
+};
+use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
+
+use crate::{self as vtoken_mint};
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
@@ -76,29 +79,29 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Runtime {
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type AccountId = AccountId;
 	type BaseCallFilter = ();
-	type BlockWeights = ();
+	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type DbWeight = ();
-	type Origin = Origin;
-	type Index = u64;
-	type Call = Call;
 	type BlockNumber = u64;
+	type BlockWeights = ();
+	type Call = Call;
+	type DbWeight = ();
+	type Event = Event;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = AccountId;
-	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
-	type Event = Event;
-	type BlockHashCount = BlockHashCount;
-	type Version = ();
-	type PalletInfo = PalletInfo;
-	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
+	type Index = u64;
+	type Lookup = IdentityLookup<Self::AccountId>;
 	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = ();
+	type OnNewAccount = ();
 	type OnSetCode = ();
+	type Origin = Origin;
+	type PalletInfo = PalletInfo;
+	type SS58Prefix = ();
+	type SystemWeightInfo = ();
+	type Version = ();
 }
 
 parameter_types! {
@@ -110,9 +113,9 @@ pub type AdaptedBasicCurrency =
 
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
+	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type MultiCurrency = Assets;
 	type NativeCurrency = AdaptedBasicCurrency;
-	type GetNativeCurrencyId = GetNativeCurrencyId;
 	type WeightInfo = ();
 }
 
@@ -121,11 +124,11 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Runtime {
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Pallet<Runtime>;
 	type MaxLocks = ();
 	type WeightInfo = ();
 }
@@ -136,14 +139,14 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
 	type Amount = i128;
+	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
+	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
 	type MaxLocks = ();
+	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -155,12 +158,12 @@ parameter_types! {
 
 impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
-	type MultiCurrency = Assets;
-	type TwoYear = TwoYear;
-	type SystemPalletId = ShareWeightPalletId;
-	type RewardPeriod = RewardPeriod;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
+	type MultiCurrency = Assets;
+	type RewardPeriod = RewardPeriod;
 	type ShareWeight = Balance;
+	type SystemPalletId = ShareWeightPalletId;
+	type TwoYear = TwoYear;
 }
 
 parameter_types! {
@@ -179,9 +182,9 @@ orml_traits::parameter_type_with_key! {
 }
 impl crate::Config for Runtime {
 	type Event = Event;
+	type MinterReward = MinterReward;
 	type MultiCurrency = Assets;
 	type PalletId = StakingPalletId;
-	type MinterReward = MinterReward;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = ();
 }
@@ -189,31 +192,32 @@ impl crate::Config for Runtime {
 // zenlink runtime mock starts
 
 parameter_types! {
-    pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 	// pub const SelfParaId: ParaId = ParaId{0: 2001};
 }
 
 impl zenlink_protocol::Config for Runtime {
-    type Event = Event;
-    type GetExchangeFee = GetExchangeFee;
-    type MultiAssetsHandler = MultiAssets;
-    type PalletId = ZenlinkPalletId;
-    // type SelfParaId = SelfParaId; 
+	type Conversion = ();
+	type Event = Event;
+	type GetExchangeFee = GetExchangeFee;
+	type MultiAssetsHandler = MultiAssets;
+	type PalletId = ZenlinkPalletId;
+	// type SelfParaId = SelfParaId;
 	type SelfParaId = ();
-    type TargetChains = ();
-    type XcmExecutor = ();
-    type Conversion = ();
+	type TargetChains = ();
+	type XcmExecutor = ();
 }
 
-type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, PalletBalances, LocalAssetAdaptor<Currencies>>;
+type MultiAssets =
+	ZenlinkMultiAssets<ZenlinkProtocol, PalletBalances, LocalAssetAdaptor<Currencies>>;
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
 impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
 where
-	Local: MultiCurrency<AccountId, CurrencyId=CurrencyId>,
+	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
 	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
@@ -229,10 +233,9 @@ where
 		let rs: Result<CurrencyId, _> = asset_id.try_into();
 		match rs {
 			Ok(_) => true,
-			Err(_) => false
+			Err(_) => false,
 		}
 	}
-
 
 	fn local_transfer(
 		asset_id: AssetId,
@@ -241,12 +244,7 @@ where
 		amount: AssetBalance,
 	) -> DispatchResult {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
-		Local::transfer(
-			currency_id,
-			&origin,
-			&target,
-			amount.unique_saturated_into(),
-		)?;
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
 
 		Ok(())
 	}
@@ -258,7 +256,7 @@ where
 	) -> Result<AssetBalance, DispatchError> {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
 		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
-		return Ok(amount)
+		return Ok(amount);
 	}
 
 	fn local_withdraw(
@@ -273,16 +271,13 @@ where
 	}
 }
 
-
 pub struct ExtBuilder {
 	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self {
-			endowed_accounts: vec![],
-		}
+		Self { endowed_accounts: vec![] }
 	}
 }
 
@@ -315,9 +310,7 @@ impl ExtBuilder {
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
-		let mut t = frame_system::GenesisConfig::default()
-			.build_storage::<Runtime>()
-			.unwrap();
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 		pallet_balances::GenesisConfig::<Runtime> {
 			balances: self
@@ -331,26 +324,24 @@ impl ExtBuilder {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-		orml_tokens::GenesisConfig::<Runtime> {
-			balances: self.endowed_accounts
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
+		orml_tokens::GenesisConfig::<Runtime> { balances: self.endowed_accounts }
+			.assimilate_storage(&mut t)
+			.unwrap();
 
 		crate::GenesisConfig::<Runtime> {
 			pools: vec![],
 			staking_lock_period: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * 1),
-				(CurrencyId::Token(TokenSymbol::ETH), 14 * 1)
+				(CurrencyId::Token(TokenSymbol::ETH), 14 * 1),
 			],
 			rate_of_interest_each_block: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
 				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595) // 50000.0 * 0.082/(365*24*600)
 			],
 			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)),// 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)) // 8.2%
-			]
+				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
+				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)),  // 8.2%
+			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

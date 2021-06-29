@@ -33,13 +33,12 @@
 
 use std::sync::Arc;
 
+use bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi as FeeRuntimeApi;
 use node_primitives::{AccountId, Balance, Block};
 pub use sc_rpc_api::DenyUnsafe;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
 use sp_transaction_pool::TransactionPool;
-
-use bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi as FeeRuntimeApi;
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 /// Full client dependencies.
@@ -75,20 +74,14 @@ where
 
 	let mut io = RpcExtension::default();
 
-	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(
-		client.clone(),
-	)));
+	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
 
 	use bifrost_charge_transaction_fee_rpc::{ChargeTransactionFeeStruct, FeeRpcApi};
 	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 
-	io.extend_with(FeeRpcApi::to_delegate(ChargeTransactionFeeStruct::new(
-		client.clone(),
-	)));
+	io.extend_with(FeeRpcApi::to_delegate(ChargeTransactionFeeStruct::new(client.clone())));
 
-	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(
-		client.clone(),
-	)));
+	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
 	io
 }

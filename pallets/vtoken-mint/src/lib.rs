@@ -21,29 +21,36 @@ extern crate alloc;
 
 use alloc::{collections::btree_map::BTreeMap, vec::Vec};
 use core::marker::PhantomData;
+
 use frame_support::{
-	transactional, pallet_prelude::*, traits::{Get, Hooks, IsType, Randomness}, PalletId,
+	pallet_prelude::*,
+	traits::{Get, Hooks, IsType, Randomness},
+	transactional, PalletId,
 };
 use frame_system::{
-	ensure_root, ensure_signed, pallet_prelude::{OriginFor, BlockNumberFor}
+	ensure_root, ensure_signed,
+	pallet_prelude::{BlockNumberFor, OriginFor},
 };
-use node_primitives::{
-	CurrencyIdExt, CurrencyId, TokenSymbol, VtokenMintExt, MinterRewardExt
-};
+use node_primitives::{CurrencyId, CurrencyIdExt, MinterRewardExt, TokenSymbol, VtokenMintExt};
 use orml_traits::{
-	currency::TransferAll,
-	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency
+	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+	MultiReservableCurrency,
 };
-use sp_runtime::{Permill, traits::{Saturating, Zero}, DispatchResult};
-
 pub use pallet::*;
+use sp_runtime::{
+	traits::{Saturating, Zero},
+	DispatchResult, Permill,
+};
 
 mod mock;
 mod tests;
 
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::Balance;
-type CurrencyIdOf<T> =
-	<<T as Config>::MultiCurrency as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::Balance;
+type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -53,10 +60,15 @@ pub mod pallet {
 		fn to_vtoken<T: Config>() -> Weight;
 		fn to_token() -> Weight;
 	}
-	
+
 	impl WeightInfo for () {
-		fn to_vtoken<T: Config>() -> Weight { Default::default() }
-		fn to_token() -> Weight { Default::default() }
+		fn to_vtoken<T: Config>() -> Weight {
+			Default::default()
+		}
+
+		fn to_token() -> Weight {
+			Default::default()
+		}
 	}
 
 	#[pallet::config]
@@ -66,7 +78,7 @@ pub mod pallet {
 			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<Self::AccountId, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
-	
+
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -75,8 +87,13 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 
 		/// Record mint reward
-		type MinterReward: MinterRewardExt<Self::AccountId, BalanceOf<Self>, CurrencyIdOf<Self>, Self::BlockNumber>;
-	
+		type MinterReward: MinterRewardExt<
+			Self::AccountId,
+			BalanceOf<Self>,
+			CurrencyIdOf<Self>,
+			Self::BlockNumber,
+		>;
+
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
@@ -87,13 +104,8 @@ pub mod pallet {
 	/// Total mint pool
 	#[pallet::storage]
 	#[pallet::getter(fn mint_pool)]
-	pub(crate) type MintPool<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		BalanceOf<T>,
-		ValueQuery
-	>;
+	pub(crate) type MintPool<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// Collect referrer, minter => ([(referrer1, 1000), (referrer2, 2000), ...], total_point)
 	/// total_point = 1000 + 2000 + ...
@@ -106,18 +118,14 @@ pub mod pallet {
 		Blake2_128Concat,
 		T::AccountId,
 		(Vec<(T::AccountId, BalanceOf<T>)>, BalanceOf<T>),
-		ValueQuery
+		ValueQuery,
 	>;
 
 	/// Referer channels for all users.
 	#[pallet::storage]
 	#[pallet::getter(fn all_referer_channels)]
-	pub(crate) type AllReferrerChannels<T: Config> = StorageValue<
-		_,
-		(BTreeMap<T::AccountId, BalanceOf<T>>, BalanceOf<T>),
-		ValueQuery,
-		()
-	>;
+	pub(crate) type AllReferrerChannels<T: Config> =
+		StorageValue<_, (BTreeMap<T::AccountId, BalanceOf<T>>, BalanceOf<T>), ValueQuery, ()>;
 
 	/// Record when and how much balance user want to redeem.
 	#[pallet::storage]
@@ -129,19 +137,14 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
 		Vec<(T::BlockNumber, BalanceOf<T>)>,
-		ValueQuery
+		ValueQuery,
 	>;
 
 	/// List lock period while staking.
 	#[pallet::storage]
 	#[pallet::getter(fn staking_lock_period)]
-	pub(crate) type StakingLockPeriod<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		T::BlockNumber,
-		ValueQuery
-	>;
+	pub(crate) type StakingLockPeriod<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, T::BlockNumber, ValueQuery>;
 
 	/// List user staking revenue.
 	#[pallet::storage]
@@ -153,30 +156,20 @@ pub mod pallet {
 		Blake2_128Concat,
 		TokenSymbol,
 		BalanceOf<T>,
-		ValueQuery
+		ValueQuery,
 	>;
 
 	/// The ROI of each token by every block.
 	#[pallet::storage]
 	#[pallet::getter(fn rate_of_interest_each_block)]
-	pub(crate) type RateOfInterestEachBlock<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		BalanceOf<T>,
-		ValueQuery
-	>;
+	pub(crate) type RateOfInterestEachBlock<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	/// Yeild rate for each token
 	#[pallet::storage]
 	#[pallet::getter(fn yield_rate)]
-	pub(crate) type YieldRate<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		Permill,
-		ValueQuery
-	>;
+	pub(crate) type YieldRate<T: Config> =
+		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, Permill, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::metadata(BalanceOf<T> = "Balance", CurrencyIdOf<T> = "CurrencyId")]
@@ -220,7 +213,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			token_id: CurrencyIdOf<T>,
 			#[pallet::compact] new_token_pool: BalanceOf<T>,
-			#[pallet::compact] new_vtoken_pool: BalanceOf<T>
+			#[pallet::compact] new_vtoken_pool: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin.clone())?;
 
@@ -244,7 +237,7 @@ pub mod pallet {
 		pub fn mint(
 			origin: OriginFor<T>,
 			vtoken_id: CurrencyIdOf<T>,
-			#[pallet::compact] token_amount: BalanceOf<T>
+			#[pallet::compact] token_amount: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let minter = ensure_signed(origin)?;
 
@@ -260,10 +253,7 @@ pub mod pallet {
 			let token_pool = Self::get_mint_pool(token_id);
 			// Total amount of vtokens.
 			let vtoken_pool = Self::get_mint_pool(vtoken_id);
-			ensure!(
-				!token_pool.is_zero() && !vtoken_pool.is_zero(),
-				Error::<T>::EmptyVtokenPool
-			);
+			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyVtokenPool);
 
 			let vtokens_buy = token_amount.saturating_mul(vtoken_pool) / token_pool;
 
@@ -277,7 +267,12 @@ pub mod pallet {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 
 			// reward mint reward
-			let _r = T::MinterReward::reward_minted_vtoken(&minter, vtoken_id, vtokens_buy, current_block);
+			let _r = T::MinterReward::reward_minted_vtoken(
+				&minter,
+				vtoken_id,
+				vtokens_buy,
+				current_block,
+			);
 
 			Self::deposit_event(Event::Minted(minter, vtoken_id, vtokens_buy));
 
@@ -299,7 +294,7 @@ pub mod pallet {
 
 			ensure!(!vtoken_amount.is_zero(), Error::<T>::BalanceZero);
 			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
-			
+
 			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 
@@ -318,10 +313,7 @@ pub mod pallet {
 			let token_pool = Self::get_mint_pool(token_id);
 			// Total amount of vtokens.
 			let vtoken_pool = Self::get_mint_pool(vtoken_id);
-			ensure!(
-				!token_pool.is_zero() && !vtoken_pool.is_zero(),
-				Error::<T>::EmptyVtokenPool
-			);
+			ensure!(!token_pool.is_zero() && !vtoken_pool.is_zero(), Error::<T>::EmptyVtokenPool);
 
 			let tokens_redeem = vtoken_amount.saturating_mul(token_pool) / vtoken_pool;
 			ensure!(
@@ -338,7 +330,12 @@ pub mod pallet {
 			Self::reduce_mint_pool(vtoken_id, vtoken_amount)?;
 
 			let current_block = <frame_system::Pallet<T>>::block_number();
-			Self::deposit_event(Event::RedeemStarted(redeemer, vtoken_id, vtoken_amount, current_block));
+			Self::deposit_event(Event::RedeemStarted(
+				redeemer,
+				vtoken_id,
+				vtoken_amount,
+				current_block,
+			));
 
 			Ok(().into())
 		}
@@ -364,7 +361,7 @@ pub mod pallet {
 						continue;
 					}
 
-					let one_year_blocks = BalanceOf::<T>::from(365*24*600u32);
+					let one_year_blocks = BalanceOf::<T>::from(365 * 24 * 600u32);
 					if year_rate.deconstruct() % random_sum > random_sum / 2u32 {
 						// up to 17.8% or 11.2%
 						let rate = year_rate.saturating_add(fluctuation) * bonus / one_year_blocks;
@@ -388,15 +385,14 @@ pub mod pallet {
 
 	/// Mock yield change
 	impl<T: Config> Pallet<T> {
-		fn record_user_staking_revenue(
-			currency_id: CurrencyIdOf<T>,
-			revenue: BalanceOf<T>
-		) {
+		fn record_user_staking_revenue(currency_id: CurrencyIdOf<T>, revenue: BalanceOf<T>) {
 			// vtoken total issued
 			let toal_issued = T::MultiCurrency::total_issuance(currency_id);
 
 			// find out all holders having this vtoken.
-			for (who, token_symbol, _) in UserStakingRevenue::<T>::iter().filter(|(_, id, _)| *id == *currency_id) {
+			for (who, token_symbol, _) in
+				UserStakingRevenue::<T>::iter().filter(|(_, id, _)| *id == *currency_id)
+			{
 				let free_balance = T::MultiCurrency::free_balance(currency_id, &who);
 				let gain = free_balance.saturating_mul(revenue) / toal_issued;
 				UserStakingRevenue::<T>::mutate(&who, token_symbol, |balance| {
@@ -446,7 +442,7 @@ pub mod pallet {
 			// Use block number as seed
 			let current_block = <frame_system::Pallet<T>>::block_number();
 			let random_result = T::RandomnessSource::random(&current_block.encode());
-			let random_sum = random_result.0.0.iter().fold(0u32, |acc, x| acc + *x as u32);
+			let random_sum = random_result.0 .0.iter().fold(0u32, |acc, x| acc + *x as u32);
 
 			random_sum
 		}
@@ -495,8 +491,8 @@ pub mod pallet {
 }
 
 impl<T: Config> VtokenMintExt for Pallet<T> {
-	type CurrencyId = CurrencyIdOf<T>;
 	type Balance = BalanceOf<T>;
+	type CurrencyId = CurrencyIdOf<T>;
 
 	/// Get mint pool by currency id
 	fn get_mint_pool(currency_id: Self::CurrencyId) -> Self::Balance {
