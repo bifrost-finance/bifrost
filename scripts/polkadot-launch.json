@@ -1,7 +1,7 @@
 {
   "relaychain": {
     "bin": "../polkadot/target/release/polkadot",
-    "chain": "kusama-local",
+    "chain": "rococo-local",
     "nodes": [
       {
         "name": "alice",
@@ -35,7 +35,7 @@
       "bin": "../bifrost/target/release/bifrost",
       "id": "3000",
       "balance": "1000000000000000000000",
-      "chain": "bifrost-genesis",
+      "chain": "asgard-local",
       "nodes": [
         {
           "wsPort": 19948,
@@ -46,8 +46,8 @@
             "--rpc-external",
             "--rpc-cors=all",
             "--rpc-port=29948",
-            "--node-key=4bd2b2c1dad3dbe3fa37dc6ad5a4e32ddd8ad84b938179ac905b0622880e86e7",
             "--",
+            "--no-beefy",
             "--execution=wasm"
           ]
         }
