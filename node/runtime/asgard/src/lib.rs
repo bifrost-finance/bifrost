@@ -656,7 +656,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumSupply = MinimumSupply;
 
-	type MultiCurrency = Assets;
+	type MultiCurrency = Tokens;
 }
 
 // bifrost runtime end
