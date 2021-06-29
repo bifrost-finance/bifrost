@@ -664,9 +664,14 @@ impl bifrost_salp::Config for Runtime {
 	type SlotLength = SlotLength;
 }
 
+parameter_types! {
+	pub const InterventionPercentage: Balance = 75;
+}
+
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type MultiCurrenciesHandler = Currencies;
+	type InterventionPercentage = InterventionPercentage;
 }
 
 parameter_types! {
@@ -1042,6 +1047,30 @@ impl_runtime_apis! {
 			match rs {
 				Ok(val) => val,
 				_ => Zero::zero(),
+			}
+		}
+
+		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
+			let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
+		}
+
+		fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
+			let rs = Bancor::get_instant_vstoken_price(currency_id);
+			match rs {
+				Ok((nominator, denominator)) => (nominator, denominator),
+				_ => (Zero::zero(), Zero::zero()),
+			}
+		}
+
+		fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
+			let rs = Bancor::get_instant_token_price(currency_id);
+			match rs {
+				Ok((nominator, denominator)) => (nominator, denominator),
+				_ => (Zero::zero(), Zero::zero()),
 			}
 		}
 	}

@@ -28,10 +28,9 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 
-const TWELVE_TEN: Balance = 1_000_000_000_000;
 pub type AccountId = AccountId32;
-pub const VSDOT_BASE_SUPPLY: Balance = 10_000 * TWELVE_TEN;
-pub const VSKSM_BASE_SUPPLY: Balance = 1_000_000 * TWELVE_TEN;
+pub const VSDOT_BASE_SUPPLY: Balance = 10_000;
+pub const VSKSM_BASE_SUPPLY: Balance = 1_000_000;
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const VSDOT: CurrencyId = CurrencyId::VSToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -107,9 +106,14 @@ impl orml_tokens::Config for Test {
 	type MaxLocks = MaxLocks;
 }
 
+parameter_types! {
+	pub const InterventionPercentage: u128 = 75;
+}
+
 impl bancor::Config for Test {
 	type Event = Event;
 	type MultiCurrenciesHandler = Assets;
+	type InterventionPercentage = InterventionPercentage;
 }
 
 pub struct ExtBuilder {
@@ -140,6 +144,19 @@ impl ExtBuilder {
 			(BOB, DOT, 1_000),
 			(BOB, VSKSM, 1_000),
 			(BOB, VSDOT, 1_000),
+		])
+	}
+
+	pub fn hundred_thousand_for_alice_n_bob(self) -> Self {
+		self.balances(vec![
+			(ALICE, KSM, 100_000),
+			(ALICE, DOT, 100_000),
+			(ALICE, VSKSM, 100_000),
+			(ALICE, VSDOT, 100_000),
+			(BOB, KSM, 100_000),
+			(BOB, DOT, 100_000),
+			(BOB, VSKSM, 100_000),
+			(BOB, VSDOT, 100_000),
 		])
 	}
 
