@@ -4,24 +4,22 @@ members = [
 	"node/inspect",
 	"node/primitives",
 	"node/rpc",
-	"runtime/asgard",
-	"runtime/bifrost",
 	"node/service",
-	"utils/subkey",
 	"pallets/assets",
-	"pallets/vtoken-mint",
-	"pallets/vtoken-mint/rpc",
-	"pallets/minter-reward",
+	"pallets/bancor",
 	"pallets/bid",
-#	"pallets/bridge-eos",
-#	"pallets/bridge-iost",
-	"pallets/vesting",
+	"pallets/charge-transaction-fee",
+	"pallets/minter-reward",
 	"pallets/staking-reward",
 	"pallets/swap",
+	"pallets/vesting",
+	"pallets/vtoken-mint",
+	"pallets/vtoken-mint/rpc",
 	"pallets/voucher",
-	"pallets/charge-transaction-fee",
 	"pallets/vsbond-auction",
-	"pallets/bancor",
+	"runtime/asgard",
+	"runtime/bifrost",
+	"utils/subkey",
 	"xcm-support",
 ]
 
@@ -101,6 +99,7 @@ frame-metadata = { git = "https://github.com/paritytech/substrate", branch = "po
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
+max-encoded-len = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
