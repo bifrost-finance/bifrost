@@ -309,8 +309,8 @@ pub mod pallet {
 
 	/// Tracker for the next available trie index
 	#[pallet::storage]
-	#[pallet::getter(fn next_trie_index)]
-	pub(super) type NextTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
+	#[pallet::getter(fn current_trie_index)]
+	pub(super) type CurrentTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
 
 	/// Info on all of the funds.
 	#[pallet::storage]
@@ -433,31 +433,26 @@ pub mod pallet {
 			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundExisted);
 
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
+
+			// TODO: Look likes a bug!
 			let last_slot_limit = first_slot
 				.checked_add(((T::SlotLength::get() as u32) - 1).into())
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
 			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
 
-			let trie_index = Self::next_trie_index();
-			let new_trie_index = trie_index.checked_add(1).ok_or(Error::<T>::Overflow)?;
-
-			let deposit = T::SubmissionDeposit::get();
-
 			Funds::<T>::insert(
 				index,
 				Some(FundInfo {
 					depositor,
-					deposit,
+					deposit: T::SubmissionDeposit::get(),
 					raised: Zero::zero(),
 					cap,
 					first_slot,
 					last_slot,
-					trie_index,
+					trie_index: Self::next_trie_index()?,
 					status: FundStatus::Ongoing,
 				}),
 			);
-
-			NextTrieIndex::<T>::put(new_trie_index);
 
 			Self::deposit_event(Event::<T>::Created(index));
 
@@ -838,6 +833,13 @@ pub mod pallet {
 				amount,
 				false,
 			)
+		}
+
+		fn next_trie_index() -> Result<TrieIndex, Error<T>> {
+			CurrentTrieIndex::<T>::try_mutate(|ti| {
+				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
+				Ok(*ti - 1)
+			})
 		}
 
 		fn check_fund_owner(
