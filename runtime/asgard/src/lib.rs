@@ -31,12 +31,9 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{All, IsInVec, Randomness},
+	traits::{All, InstanceFilter, IsInVec, LockIdentifier, MaxEncodedLen, Randomness},
 	weights::{
-		constants::{
-			BlockExecutionWeight, ExtrinsicBaseWeight, InstanceFilter, LockIdentifier,
-			MaxEncodedLen, RocksDbWeight, WEIGHT_PER_SECOND,
-		},
+		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
 	},
 	PalletId, RuntimeDebug, StorageValue,
