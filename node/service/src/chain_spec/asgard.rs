@@ -157,6 +157,7 @@ pub fn asgard_genesis(
 		pallet_aura: Default::default(),
 		cumulus_pallet_aura_ext: Default::default(),
 		pallet_membership_Instance1: Default::default(),
+		pallet_membership_Instance2: Default::default(),
 		pallet_treasury: Default::default(),
 		pallet_elections_phragmen: Default::default(),
 		pallet_vesting: VestingConfig { vesting: vec![] },

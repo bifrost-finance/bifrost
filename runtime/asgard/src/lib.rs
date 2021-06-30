@@ -460,6 +460,19 @@ type MoreThanHalfCouncil = EnsureOneOf<
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type AddOrigin = MoreThanHalfCouncil;
 	type Event = Event;
+	type MaxMembers = CouncilMaxMembers;
+	type MembershipChanged = Council;
+	type MembershipInitialized = Council;
+	type PrimeOrigin = MoreThanHalfCouncil;
+	type RemoveOrigin = MoreThanHalfCouncil;
+	type ResetOrigin = MoreThanHalfCouncil;
+	type SwapOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
+	type AddOrigin = MoreThanHalfCouncil;
+	type Event = Event;
 	type MaxMembers = TechnicalMaxMembers;
 	type MembershipChanged = TechnicalCommittee;
 	type MembershipInitialized = TechnicalCommittee;
@@ -1139,10 +1152,11 @@ construct_runtime! {
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
 		PhragmenElection: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
-		TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 35,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 36,
-		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 37,
+		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
+		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 36,
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
