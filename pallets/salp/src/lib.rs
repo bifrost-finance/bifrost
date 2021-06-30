@@ -302,11 +302,6 @@ pub mod pallet {
 		ContributionInvalid,
 	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn validators)]
-	pub(super) type Validators<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, bool, ValueQuery>;
-
 	/// Tracker for the next available trie index
 	#[pallet::storage]
 	#[pallet::getter(fn next_trie_index)]
