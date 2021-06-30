@@ -20,6 +20,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod mock;
+mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
@@ -283,6 +284,8 @@ pub mod pallet {
 		FundNotWithdrew,
 		/// The crowdloan has not yet ended.
 		FundNotEnded,
+		/// The fund has been registered.
+		FundExisted,
 		/// Fund has been expired.
 		VSBondExpired,
 		/// There are no contributions stored in this crowdloan.
@@ -431,14 +434,14 @@ pub mod pallet {
 		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
+			// There should not be an existing fund.
+			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundExisted);
+
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
 			let last_slot_limit = first_slot
 				.checked_add(((T::SlotLength::get() as u32) - 1).into())
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
 			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
-
-			// There should not be an existing fund.
-			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundNotEnded);
 
 			let trie_index = Self::next_trie_index();
 			let new_trie_index = trie_index.checked_add(1).ok_or(Error::<T>::Overflow)?;
