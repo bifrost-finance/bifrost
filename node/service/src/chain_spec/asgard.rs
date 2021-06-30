@@ -16,9 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::collections::BTreeMap;
+
 use asgard_runtime::{
 	constants::{currency::DOLLARS, time::DAYS},
-	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, CollatorSelectionConfig,
+	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
 	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 	TokensConfig, VestingConfig, VoucherConfig, VtokenMintConfig, WASM_BINARY,
@@ -41,59 +43,60 @@ const DEFAULT_PROTOCOL_ID: &str = "asgard";
 /// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
+const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+
 /// Helper function to create asgard GenesisConfig for testing
 pub fn asgard_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	root_key: AccountId,
-	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
+	balances: Vec<(AccountId, Balance)>,
+	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	vouchers: Vec<(AccountId, Balance)>,
+	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 ) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = endowed_accounts.unwrap_or_else(testnet_accounts);
-	let num_endowed_accounts = endowed_accounts.len();
-
-	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
-
 	GenesisConfig {
 		frame_system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: BalancesConfig {
-			balances: endowed_accounts
-				.iter()
-				.chain(super::faucet_accounts().iter())
-				.cloned()
-				.map(|x| (x, ENDOWMENT))
-				.collect(),
-		},
+		pallet_balances: BalancesConfig { balances },
 		pallet_indices: IndicesConfig { indices: vec![] },
 		pallet_democracy: DemocracyConfig::default(),
-		pallet_collective_Instance1: CouncilConfig::default(),
+		pallet_collective_Instance1: CouncilConfig { members: vec![], phantom: Default::default() },
 		pallet_collective_Instance2: TechnicalCommitteeConfig {
-			members: endowed_accounts
-				.iter()
-				.take((num_endowed_accounts + 1) / 2)
-				.cloned()
-				.collect(),
+			members: vec![],
 			phantom: Default::default(),
 		},
+		pallet_membership_Instance1: Default::default(),
+		pallet_membership_Instance2: Default::default(),
+		pallet_treasury: Default::default(),
+		pallet_elections_phragmen: Default::default(),
 		pallet_sudo: SudoConfig { key: root_key.clone() },
-		bifrost_voucher: VoucherConfig { voucher: vouchers },
-		orml_tokens: TokensConfig {
-			balances: endowed_accounts
+		parachain_info: ParachainInfoConfig { parachain_id: id },
+		pallet_collator_selection: CollatorSelectionConfig {
+			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			candidacy_bond: Zero::zero(),
+			..Default::default()
+		},
+		pallet_session: SessionConfig {
+			keys: invulnerables
 				.iter()
-				.chain(super::faucet_accounts().iter())
-				.flat_map(|x| {
-					vec![
-						(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
-						(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
-						(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
-					]
+				.cloned()
+				.map(|(acc, aura)| {
+					(
+						acc.clone(),                          // account id
+						acc.clone(),                          // validator id
+						asgard_runtime::SessionKeys { aura }, // session keys
+					)
 				})
 				.collect(),
 		},
+		pallet_aura: Default::default(),
+		cumulus_pallet_aura_ext: Default::default(),
+		pallet_vesting: VestingConfig { vesting: vestings },
+		bifrost_voucher: VoucherConfig { voucher: vouchers },
+		orml_tokens: TokensConfig { balances: tokens },
 		bifrost_bancor: BancorConfig {
 			bancor_pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
@@ -135,32 +138,6 @@ pub fn asgard_genesis(
 				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)), // 15.0%
 			],
 		},
-		parachain_info: ParachainInfoConfig { parachain_id: id },
-		pallet_collator_selection: CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: Zero::zero(),
-			..Default::default()
-		},
-		pallet_session: SessionConfig {
-			keys: invulnerables
-				.iter()
-				.cloned()
-				.map(|(acc, aura)| {
-					(
-						acc.clone(),                          // account id
-						acc.clone(),                          // validator id
-						asgard_runtime::SessionKeys { aura }, // session keys
-					)
-				})
-				.collect(),
-		},
-		pallet_aura: Default::default(),
-		cumulus_pallet_aura_ext: Default::default(),
-		pallet_membership_Instance1: Default::default(),
-		pallet_membership_Instance2: Default::default(),
-		pallet_treasury: Default::default(),
-		pallet_elections_phragmen: Default::default(),
-		pallet_vesting: VestingConfig { vesting: vec![] },
 	}
 }
 
@@ -201,15 +178,43 @@ fn initialize_all_vouchers() -> Vec<(AccountId, Balance)> {
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
+	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let balances = endowed_accounts
+		.iter()
+		.chain(super::faucet_accounts().iter())
+		.cloned()
+		.map(|x| (x, ENDOWMENT))
+		.collect();
+	let vestings = endowed_accounts
+		.iter()
+		.cloned()
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.collect();
+	let vouchers = vec![];
+	let tokens = endowed_accounts
+		.iter()
+		.chain(super::faucet_accounts().iter())
+		.flat_map(|x| {
+			vec![
+				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+			]
+		})
+		.collect();
+
 	asgard_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
 		)],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
 		id,
-		vec![],
+		balances,
+		vestings,
+		vouchers,
+		tokens,
 	)
 }
 
@@ -228,6 +233,32 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 }
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
+	let endowed_accounts = testnet_accounts();
+	let balances = endowed_accounts
+		.iter()
+		.chain(super::faucet_accounts().iter())
+		.cloned()
+		.map(|x| (x, ENDOWMENT))
+		.collect();
+	let vestings = endowed_accounts
+		.iter()
+		.cloned()
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.collect();
+	let vouchers = vec![];
+	let tokens = endowed_accounts
+		.iter()
+		.chain(super::faucet_accounts().iter())
+		.flat_map(|x| {
+			vec![
+				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+			]
+		})
+		.collect();
+
 	asgard_genesis(
 		vec![
 			(
@@ -237,9 +268,11 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		None,
 		id,
-		vec![],
+		balances,
+		vestings,
+		vouchers,
+		tokens,
 	)
 }
 
@@ -326,7 +359,52 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	]
 	.into();
 
-	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
+	let exe_dir = {
+		let mut exe_dir = std::env::current_exe().unwrap();
+		exe_dir.pop();
 
-	asgard_genesis(invulnerables, root_key, Some(endowed_accounts), id, initialize_all_vouchers())
+		exe_dir
+	};
+
+	let balances_configs: Vec<BalancesConfig> =
+		super::config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
+
+	let mut total_issuance: Balance = Zero::zero();
+	let balances = balances_configs
+		.into_iter()
+		// .chain(super::faucet_accounts().iter())
+		.flat_map(|bc| bc.balances)
+		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
+			if let Some(balance) = acc.get_mut(&account_id) {
+				*balance = balance
+					.checked_add(amount)
+					.expect("balance cannot overflow when building genesis");
+			} else {
+				acc.insert(account_id.clone(), amount);
+			}
+
+			total_issuance = total_issuance
+				.checked_add(amount)
+				.expect("total insurance cannot overflow when building genesis");
+			acc
+		})
+		.into_iter()
+		.collect();
+
+	assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320 million");
+
+	let vesting_configs: Vec<VestingConfig> =
+		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
+	let vouchers = initialize_all_vouchers();
+	let tokens = vec![];
+
+	asgard_genesis(
+		invulnerables,
+		root_key,
+		id,
+		balances,
+		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
+		vouchers,
+		tokens,
+	)
 }
