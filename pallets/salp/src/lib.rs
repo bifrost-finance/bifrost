@@ -345,17 +345,6 @@ pub mod pallet {
 				}
 			});
 
-			// Unlock vsToken/vsBond
-			// TODO: unweightable iter.
-			for (who, _) in Self::contribution_iterator(fund.trie_index) {
-				T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
-				T::MultiCurrency::remove_lock(
-					vslock(index),
-					Self::vsbond(index, fund.first_slot, fund.last_slot),
-					&who,
-				)?;
-			}
-
 			Ok(())
 		}
 
@@ -911,6 +900,16 @@ pub mod pallet {
 			if is_success {
 				fund.status = FundStatus::Withdrew;
 				Funds::<T>::insert(index, Some(fund.clone()));
+
+				for (who, _) in Self::contribution_iterator(fund.trie_index) {
+					T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
+					T::MultiCurrency::remove_lock(
+						vslock(index),
+						Self::vsbond(index, fund.first_slot, fund.last_slot),
+						&who,
+					)?;
+				}
+
 				Self::deposit_event(Event::Withdrew(who, index, fund.raised));
 			} else {
 				Self::deposit_event(Event::WithdrawFailed(who, index, fund.raised));
