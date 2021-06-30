@@ -309,7 +309,7 @@ pub mod pallet {
 
 	/// Tracker for the next available trie index
 	#[pallet::storage]
-	#[pallet::getter(fn current_trie_index)]
+	#[pallet::getter(fn next_trie_index)]
 	pub(super) type NextTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
 
 	/// Info on all of the funds.
@@ -838,12 +838,6 @@ pub mod pallet {
 				amount,
 				false,
 			)
-		}
-
-		pub fn next_trie_index() -> TrieIndex {
-			let trie_index = Self::current_trie_index();
-			NextTrieIndex::<T>::mutate(|current| *current += 1);
-			trie_index
 		}
 
 		fn check_fund_owner(
