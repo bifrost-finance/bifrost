@@ -426,7 +426,7 @@ pub mod pallet {
 			#[pallet::compact] cap: BalanceOf<T>,
 			#[pallet::compact] first_slot: LeasePeriod,
 			#[pallet::compact] last_slot: LeasePeriod,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
@@ -461,7 +461,7 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::Created(index));
 
-			Ok(Pays::No.into())
+			Ok(())
 		}
 
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
