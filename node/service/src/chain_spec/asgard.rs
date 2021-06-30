@@ -21,7 +21,7 @@ use asgard_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
 	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
-	TokensConfig, VoucherConfig, VtokenMintConfig, WASM_BINARY,
+	TokensConfig, VestingConfig, VoucherConfig, VtokenMintConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
@@ -156,6 +156,10 @@ pub fn asgard_genesis(
 		},
 		pallet_aura: Default::default(),
 		cumulus_pallet_aura_ext: Default::default(),
+		pallet_membership_Instance1: Default::default(),
+		pallet_treasury: Default::default(),
+		pallet_elections_phragmen: Default::default(),
+		pallet_vesting: VestingConfig { vesting: vec![] },
 	}
 }
 

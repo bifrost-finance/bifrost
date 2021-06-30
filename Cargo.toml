@@ -99,6 +99,7 @@ frame-metadata = { git = "https://github.com/paritytech/substrate", branch = "po
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
+max-encoded-len = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 pallet-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }
 pallet-authority-discovery = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.4" }

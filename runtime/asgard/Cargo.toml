@@ -15,7 +15,7 @@ hex-literal = { version = "0.3.1", optional = true }
 
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
-sp-block-builder = { default-features = false, version = "3.0.0"}
+sp-block-builder = { version = "3.0.0", default-features = false}
 sp-inherents = { version = "3.0.0", default-features = false }
 sp-offchain = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
@@ -33,20 +33,29 @@ frame-executive = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
+max-encoded-len = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
+pallet-aura = { version = "3.0.0", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false }
+pallet-bounties = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
+pallet-elections-phragmen = { version = "4.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
+pallet-membership = { version = "3.0.0", default-features = false }
+pallet-multisig = { version = "3.0.0", default-features = false }
+pallet-proxy = { version = "3.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
+pallet-scheduler = { version = "3.0.0", default-features = false }
 pallet-session = { version = "3.0.0", default-features = false }
 pallet-sudo = { version = "3.0.0", default-features = false }
 pallet-timestamp = { version = "3.0.0", default-features = false }
+pallet-tips = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
+pallet-treasury = { version = "3.0.0", default-features = false }
 pallet-utility = { version = "3.0.0", default-features = false }
-pallet-scheduler = { version = "3.0.0", default-features = false }
-pallet-aura = { version = "3.0.0", default-features = false }
+pallet-vesting = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
@@ -69,7 +78,6 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features 
 # bifrost pallets
 bifrost-assets = { path = "../../pallets/assets", default-features = false }
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
-# bifrost-vtoken-mint-rpc-runtime-api = { path = "../../../../pallets/vtoken-mint/rpc/runtime-api", default-features = false }
 bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
 bifrost-voucher = { path = "../../pallets/voucher", default-features = false }
 bifrost-charge-transaction-fee = { path = "../../pallets/charge-transaction-fee", default-features = false }
@@ -83,7 +91,6 @@ bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", de
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-#orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", default-features = false, branch = "master" }
 xcm-support = { path = "../../xcm-support", default-features = false }
 
 zenlink-protocol = { version = "*", default-features = false }
@@ -102,18 +109,29 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"max-encoded-len/std",
 	"node-primitives/std",
+	"pallet-aura/std",
 	"pallet-balances/std",
+	"pallet-bounties/std",
 	"pallet-collator-selection/std",
 	"pallet-collective/std",
 	"pallet-democracy/std",
+	"pallet-elections-phragmen/std",
 	"pallet-indices/std",
+	"pallet-membership/std",
+	"pallet-multisig/std",
+	"pallet-proxy/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
+	"pallet-tips/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-treasury/std",
 	"pallet-session/std",
+	"pallet-vesting/std",
+	"pallet-utility/std",
 	"sp-block-builder/std",
 	"sp-inherents/std",
 	"sp-offchain/std",
@@ -135,11 +153,9 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
-	"pallet-aura/std",
 	"sp-consensus-aura/std",
 	"bifrost-assets/std",
 	"bifrost-vtoken-mint/std",
-	# "bifrost-vtoken-mint-rpc-runtime-api/std",
 	"bifrost-minter-reward/std",
 	'bifrost-voucher/std',
 	"bifrost-charge-transaction-fee/std",
@@ -151,7 +167,6 @@ std = [
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
-#	"orml-xtokens/std",
 	"xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",

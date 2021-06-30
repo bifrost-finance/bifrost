@@ -59,12 +59,12 @@ use sp_version::RuntimeVersion;
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
-use frame_support::sp_runtime::traits::ConvertInto;
 use frame_system::EnsureRoot;
 use node_primitives::{Moment, Nonce};
 use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
+use sp_runtime::traits::ConvertInto;
 use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
