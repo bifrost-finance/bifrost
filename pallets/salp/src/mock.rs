@@ -16,8 +16,6 @@ use xcm::{
 };
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
 
-use crate as salp;
-
 pub const BNCS: Balance = 1_000_000_000_000;
 pub const DOLLARS: Balance = BNCS;
 pub const MILLISECS_PER_BLOCK: Moment = 12000;
@@ -44,7 +42,7 @@ construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
-		Salp: salp::{Pallet, Call, Storage, Event<T>},
+		Salp: crate::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -132,7 +130,7 @@ parameter_types! {
 
 type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
 
-impl salp::Config for Test {
+impl crate::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
 	type Event = Event;
