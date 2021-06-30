@@ -539,9 +539,62 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
+parameter_types! {
+	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
+	pub const Period: u32 = 6 * HOURS;
+	pub const Offset: u32 = 0;
+}
+
+impl pallet_session::Config for Runtime {
+	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+	type Event = Event;
+	type Keys = SessionKeys;
+	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+	// Essentially just Aura, but lets be pedantic.
+	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
+	type SessionManager = CollatorSelection;
+	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	// we don't have stash and controller, thus we don't need the convert as well.
+	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const UncleGenerations: u32 = 0;
+}
+
+impl pallet_authorship::Config for Runtime {
+	type EventHandler = (CollatorSelection,);
+	type FilterUncle = ();
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+	type UncleGenerations = UncleGenerations;
+}
+
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
+
+parameter_types! {
+	pub const PotId: PalletId = PalletId(*b"PotStake");
+	pub const MaxCandidates: u32 = 1000;
+	pub const SessionLength: BlockNumber = 6 * HOURS;
+	pub const MaxInvulnerables: u32 = 100;
+}
+
+impl pallet_collator_selection::Config for Runtime {
+	type Currency = Balances;
+	type Event = Event;
+	// should be a multiple of session or things will get inconsistent
+	type KickThreshold = Period;
+	type MaxCandidates = MaxCandidates;
+	type MaxInvulnerables = MaxInvulnerables;
+	type PotId = PotId;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	// type WeightInfo = weights::pallet_collator_selection::WeightInfo<Runtime>;
+	type WeightInfo = ();
+}
+
 // culumus runtime end
 
 // bifrost runtime start
@@ -817,51 +870,50 @@ construct_runtime! {
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 5,
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 6,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
-		// Parachain modules
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 12,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
+		// Monetary stuff
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
-		Utility: pallet_utility::{Pallet, Call, Event} = 41,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 42,
+		// Collator support. the order of these 4 are important and shall not change.
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
+		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
 
-		Aura: pallet_aura::{Pallet, Config<T>},
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+		// Governance stuff
+		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
+		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 50,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 51,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 52,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 53,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 41,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 42,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
-		// parachain modules
-		// ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
-		// TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
-		// ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
-		// XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
+		// utilities
+		Utility: pallet_utility::{Pallet, Call, Event} = 50,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
 
-		// bifrost modules
-		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 10,
-		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
-		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
-		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 66,
-		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 67,
-		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 68,
+		// Third party modules
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 61,
+		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
+		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 
-		// ORML
-		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
-		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
-
-		// zenlink
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 19,
+		// Bifrost modules
+		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 100,
+		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
+		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
+		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 103,
+		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 104,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
+		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
 	}
 }
 

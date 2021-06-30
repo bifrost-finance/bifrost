@@ -18,10 +18,10 @@
 
 use asgard_runtime::{
 	constants::{currency::DOLLARS, time::DAYS},
-	AccountId, AuraConfig, AuraId, Balance, BalancesConfig, BancorConfig, CouncilConfig,
-	DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig, ParachainInfoConfig,
-	SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VoucherConfig,
-	VtokenMintConfig, WASM_BINARY,
+	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, CollatorSelectionConfig,
+	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
+	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+	TokensConfig, VoucherConfig, VtokenMintConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
@@ -29,7 +29,7 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::Permill;
+use sp_runtime::{traits::Zero, Permill};
 
 use super::TELEMETRY_URL;
 use crate::chain_spec::{
@@ -43,7 +43,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 /// Helper function to create asgard GenesisConfig for testing
 pub fn asgard_genesis(
-	initial_authorities: Vec<AuraId>,
+	invulnerables: Vec<(AccountId, AuraId)>,
 	root_key: AccountId,
 	endowed_accounts: Option<Vec<AccountId>>,
 	id: ParaId,
@@ -136,7 +136,25 @@ pub fn asgard_genesis(
 			],
 		},
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		pallet_aura: AuraConfig { authorities: initial_authorities },
+		pallet_collator_selection: CollatorSelectionConfig {
+			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			candidacy_bond: Zero::zero(),
+			..Default::default()
+		},
+		pallet_session: SessionConfig {
+			keys: invulnerables
+				.iter()
+				.cloned()
+				.map(|(acc, aura)| {
+					(
+						acc.clone(),                          // account id
+						acc.clone(),                          // validator id
+						asgard_runtime::SessionKeys { aura }, // session keys
+					)
+				})
+				.collect(),
+		},
+		pallet_aura: Default::default(),
 		cumulus_pallet_aura_ext: Default::default(),
 	}
 }
@@ -179,7 +197,10 @@ fn initialize_all_vouchers() -> Vec<(AccountId, Balance)> {
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	asgard_genesis(
-		vec![get_from_seed::<AuraId>("Alice")],
+		vec![(
+			get_account_id_from_seed::<sr25519::Public>("Alice"),
+			get_from_seed::<AuraId>("Alice"),
+		)],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
@@ -203,7 +224,13 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	asgard_genesis(
-		vec![get_from_seed::<AuraId>("Alice"), get_from_seed::<AuraId>("Bob")],
+		vec![
+			(
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
+				get_from_seed::<AuraId>("Alice"),
+			),
+			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		None,
 		id,
@@ -255,20 +282,39 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 }
 
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
-	let initial_authorities: Vec<AuraId> = vec![
-		// 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
-		hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].unchecked_into(),
-		// 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
-		hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].unchecked_into(),
-		// 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
-		hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].unchecked_into(),
-		// 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
-		hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].unchecked_into(),
-		// 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
-		hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].unchecked_into(),
+	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+		(
+			// 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
+			hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].into(),
+			hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"]
+				.unchecked_into(),
+		),
+		(
+			// 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
+			hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].into(),
+			hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"]
+				.unchecked_into(),
+		),
+		(
+			// 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
+			hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].into(),
+			hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"]
+				.unchecked_into(),
+		),
+		(
+			// 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
+			hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].into(),
+			hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"]
+				.unchecked_into(),
+		),
+		(
+			// 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
+			hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].into(),
+			hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"]
+				.unchecked_into(),
+		),
 	];
 
-	// generated with secret: subkey inspect "$secret"/fir
 	let root_key: AccountId = hex![
 		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
@@ -277,11 +323,5 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let endowed_accounts: Vec<AccountId> = vec![root_key.clone()];
 
-	asgard_genesis(
-		initial_authorities,
-		root_key,
-		Some(endowed_accounts),
-		id,
-		initialize_all_vouchers(),
-	)
+	asgard_genesis(invulnerables, root_key, Some(endowed_accounts), id, initialize_all_vouchers())
 }

@@ -33,11 +33,13 @@ frame-executive = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
+pallet-authorship = { version = "3.0.0", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
+pallet-session = { version = "3.0.0", default-features = false }
 pallet-sudo = { version = "3.0.0", default-features = false }
 pallet-timestamp = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
@@ -55,6 +57,7 @@ cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", defa
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
 parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
+pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.4" }
 
 # Polkadot dependencies
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
@@ -101,6 +104,7 @@ std = [
 	"frame-system/std",
 	"node-primitives/std",
 	"pallet-balances/std",
+	"pallet-collator-selection/std",
 	"pallet-collective/std",
 	"pallet-democracy/std",
 	"pallet-indices/std",
@@ -109,6 +113,7 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
+	"pallet-session/std",
 	"sp-block-builder/std",
 	"sp-inherents/std",
 	"sp-offchain/std",
