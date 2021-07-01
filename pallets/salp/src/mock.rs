@@ -192,30 +192,15 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	let fs_gc = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-	// orml_tokens::GenesisConfig::<Test> {
-	// 	balances: vec![
-	// 		(ACCOUNT_ALICE, TOKEN, BALANCE_TOKEN),
-	// 		(ACCOUNT_ALICE, VSBOND, BALANCE_VSBOND),
-	// 		(ACCOUNT_BRUCE, TOKEN, BALANCE_TOKEN),
-	// 		(ACCOUNT_BRUCE, VSBOND, BALANCE_VSBOND),
-	// 	],
-	// }
-	// 	.assimilate_storage(&mut fs_gc)
-	// 	.unwrap();
-
-	fs_gc.into()
+	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
 
-pub const BNCS: Balance = 1_000_000_000_000;
-pub const DOLLARS: Balance = BNCS;
-pub const MILLISECS_PER_BLOCK: Moment = 12000;
-pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+pub const DOLLARS: Balance = 1_000_000_000_000;
 // These time units are defined in number of blocks.
-pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+pub const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 pub const WEEKS: BlockNumber = DAYS * 7;
 
 pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
+pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
