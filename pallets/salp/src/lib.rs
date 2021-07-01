@@ -468,8 +468,8 @@ pub mod pallet {
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-			fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
-			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
+			let raised = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			ensure!(raised <= fund.cap, Error::<T>::CapExceeded);
 
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
