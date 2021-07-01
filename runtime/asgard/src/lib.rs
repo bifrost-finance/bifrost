@@ -31,21 +31,24 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{All, IsInVec, Randomness},
+	traits::{All, InstanceFilter, IsInVec, LockIdentifier, MaxEncodedLen, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
 	},
-	PalletId, StorageValue,
+	PalletId, RuntimeDebug, StorageValue,
 };
-use frame_system::limits::{BlockLength, BlockWeights};
+use frame_system::{
+	limits::{BlockLength, BlockWeights},
+	EnsureOneOf, EnsureRoot,
+};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
-	u32_trait::{_1, _2, _3, _4},
+	u32_trait::{_1, _2, _3, _4, _5},
 	OpaqueMetadata,
 };
 #[cfg(any(feature = "std", test))]
@@ -64,15 +67,16 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
-// XCM imports
-use frame_system::{EnsureOneOf, EnsureRoot};
 use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
+use sp_runtime::traits::ConvertInto;
+use static_assertions::const_assert;
 use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
@@ -108,7 +112,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("asgard"),
 	impl_name: create_runtime_str!("asgard"),
 	authoring_version: 1,
-	spec_version: 2,
+	spec_version: 1000,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -221,6 +225,122 @@ impl pallet_utility::Config for Runtime {
 }
 
 parameter_types! {
+	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+	pub const DepositBase: Balance = deposit(1, 88);
+	// Additional storage item size of 32 bytes.
+	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type Event = Event;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+	pub const MaxPending: u16 = 32;
+}
+
+/// The type used to represent the kinds of proxying allowed.
+#[derive(
+	Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, MaxEncodedLen,
+)]
+pub enum ProxyType {
+	Any = 0,
+	NonTransfer = 1,
+	Governance = 2,
+	CancelProxy = 3,
+}
+
+impl Default for ProxyType {
+	fn default() -> Self {
+		Self::Any
+	}
+}
+impl InstanceFilter<Call> for ProxyType {
+	fn filter(&self, c: &Call) -> bool {
+		match self {
+			ProxyType::Any => true,
+			ProxyType::NonTransfer => matches!(
+				c,
+				Call::System(..) |
+				Call::Scheduler(..) |
+				Call::Timestamp(..) |
+				Call::Indices(pallet_indices::Call::claim(..)) |
+				Call::Indices(pallet_indices::Call::free(..)) |
+				Call::Indices(pallet_indices::Call::freeze(..)) |
+				// Specifically omitting Indices `transfer`, `force_transfer`
+				// Specifically omitting the entire Balances pallet
+				Call::Authorship(..) |
+				Call::Session(..) |
+				Call::Democracy(..) |
+				Call::Council(..) |
+				Call::TechnicalCommittee(..) |
+				Call::PhragmenElection(..) |
+				Call::TechnicalMembership(..) |
+				Call::Treasury(..) |
+				Call::Bounties(..) |
+				Call::Tips(..) |
+				Call::Vesting(pallet_vesting::Call::vest(..)) |
+				Call::Vesting(pallet_vesting::Call::vest_other(..)) |
+				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
+				Call::Utility(..) |
+				Call::Proxy(..) |
+				Call::Multisig(..)
+			),
+			ProxyType::Governance => matches!(
+				c,
+				Call::Democracy(..) |
+					Call::Council(..) | Call::TechnicalCommittee(..) |
+					Call::PhragmenElection(..) |
+					Call::Treasury(..) | Call::Bounties(..) |
+					Call::Tips(..) | Call::Utility(..)
+			),
+			ProxyType::CancelProxy => {
+				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
+			}
+		}
+	}
+
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			(ProxyType::NonTransfer, _) => true,
+			_ => false,
+		}
+	}
+}
+
+impl pallet_proxy::Config for Runtime {
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+	type Call = Call;
+	type CallHasher = BlakeTwo256;
+	type Currency = Balances;
+	type Event = Event;
+	type MaxPending = MaxPending;
+	type MaxProxies = MaxProxies;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type ProxyType = ProxyType;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
@@ -262,7 +382,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
 }
@@ -280,7 +400,41 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const TechnicalMotionDuration: BlockNumber = 5 * DAYS;
+	pub const CandidacyBond: Balance = 100 * CENTS;
+	// 1 storage item created, key size is 32 bytes, value size is 16+16.
+	pub const VotingBondBase: Balance = deposit(1, 64);
+	// additional data per vote is 32 bytes (account id).
+	pub const VotingBondFactor: Balance = deposit(0, 32);
+	/// Daily council elections
+	pub const TermDuration: BlockNumber = 24 * HOURS;
+	pub const DesiredMembers: u32 = 19;
+	pub const DesiredRunnersUp: u32 = 19;
+	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+}
+
+// Make sure that there are no more than MaxMembers members elected via phragmen.
+const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
+
+impl pallet_elections_phragmen::Config for Runtime {
+	type CandidacyBond = CandidacyBond;
+	type ChangeMembers = Council;
+	type Currency = Balances;
+	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+	type DesiredMembers = DesiredMembers;
+	type DesiredRunnersUp = DesiredRunnersUp;
+	type Event = Event;
+	type InitializeMembers = Council;
+	type KickedMember = Treasury;
+	type LoserCandidate = Treasury;
+	type PalletId = PhragmenElectionPalletId;
+	type TermDuration = TermDuration;
+	type VotingBondBase = VotingBondBase;
+	type VotingBondFactor = VotingBondFactor;
+	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const TechnicalMotionDuration: BlockNumber = 3 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
 	pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -297,16 +451,48 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
 
+type MoreThanHalfCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
+>;
+
+impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
+	type AddOrigin = MoreThanHalfCouncil;
+	type Event = Event;
+	type MaxMembers = CouncilMaxMembers;
+	type MembershipChanged = Council;
+	type MembershipInitialized = Council;
+	type PrimeOrigin = MoreThanHalfCouncil;
+	type RemoveOrigin = MoreThanHalfCouncil;
+	type ResetOrigin = MoreThanHalfCouncil;
+	type SwapOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
+	type AddOrigin = MoreThanHalfCouncil;
+	type Event = Event;
+	type MaxMembers = TechnicalMaxMembers;
+	type MembershipChanged = TechnicalCommittee;
+	type MembershipInitialized = TechnicalCommittee;
+	type PrimeOrigin = MoreThanHalfCouncil;
+	type RemoveOrigin = MoreThanHalfCouncil;
+	type ResetOrigin = MoreThanHalfCouncil;
+	type SwapOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
-	pub const LaunchPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-	pub const VotingPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
-	pub const FastTrackVotingPeriod: BlockNumber = 3 * 24 * 60 * MINUTES;
-	pub const InstantAllowed: bool = true;
-	pub const MinimumDeposit: Balance = 100 * DOLLARS;
-	pub const EnactmentPeriod: BlockNumber = 30 * 24 * 60 * MINUTES;
-	pub const CooloffPeriod: BlockNumber = 28 * 24 * 60 * MINUTES;
+	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
+	pub const VotingPeriod: BlockNumber = 7 * DAYS;
+	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+	pub const MinimumDeposit: Balance = 50 * DOLLARS;
+	pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
+	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
 	// One cent: $10,000 / MB
-	pub const PreimageByteDeposit: Balance = 1 * CENTS;
+	pub const PreimageByteDeposit: Balance = 100 * MILLICENTS;
+	pub const InstantAllowed: bool = true;
 	pub const MaxVotes: u32 = 100;
 	pub const MaxProposals: u32 = 100;
 }
@@ -361,6 +547,72 @@ impl pallet_democracy::Config for Runtime {
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
 	type VotingPeriod = VotingPeriod;
 	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
+	pub const SpendPeriod: BlockNumber = 6 * DAYS;
+	pub const Burn: Permill = Permill::from_perthousand(2);
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+
+	pub const TipCountdown: BlockNumber = 1 * DAYS;
+	pub const TipFindersFee: Percent = Percent::from_percent(20);
+	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
+	pub const DataDepositPerByte: Balance = 10 * CENTS;
+	pub const BountyDepositBase: Balance = 1 * DOLLARS;
+	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
+	pub const MaximumReasonLength: u32 = 16384;
+	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
+	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+	pub const MaxApprovals: u32 = 100;
+}
+
+type ApproveOrigin = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>,
+>;
+
+impl pallet_treasury::Config for Runtime {
+	type ApproveOrigin = ApproveOrigin;
+	type Burn = Burn;
+	type BurnDestination = ();
+	type Currency = Balances;
+	type Event = Event;
+	type MaxApprovals = MaxApprovals;
+	type OnSlash = Treasury;
+	type PalletId = TreasuryPalletId;
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type RejectOrigin = MoreThanHalfCouncil;
+	type SpendFunds = Bounties;
+	type SpendPeriod = SpendPeriod;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_bounties::Config for Runtime {
+	type BountyCuratorDeposit = BountyCuratorDeposit;
+	type BountyDepositBase = BountyDepositBase;
+	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+	type BountyUpdatePeriod = BountyUpdatePeriod;
+	type BountyValueMinimum = BountyValueMinimum;
+	type DataDepositPerByte = DataDepositPerByte;
+	type Event = Event;
+	type MaximumReasonLength = MaximumReasonLength;
+	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_tips::Config for Runtime {
+	type DataDepositPerByte = DataDepositPerByte;
+	type Event = Event;
+	type MaximumReasonLength = MaximumReasonLength;
+	type TipCountdown = TipCountdown;
+	type TipFindersFee = TipFindersFee;
+	type TipReportDepositBase = TipReportDepositBase;
+	type Tippers = PhragmenElection;
+	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -539,9 +791,61 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
+parameter_types! {
+	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
+	pub const Period: u32 = 6 * HOURS;
+	pub const Offset: u32 = 0;
+}
+
+impl pallet_session::Config for Runtime {
+	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
+	type Event = Event;
+	type Keys = SessionKeys;
+	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
+	// Essentially just Aura, but lets be pedantic.
+	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
+	type SessionManager = CollatorSelection;
+	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	// we don't have stash and controller, thus we don't need the convert as well.
+	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const UncleGenerations: u32 = 0;
+}
+
+impl pallet_authorship::Config for Runtime {
+	type EventHandler = (CollatorSelection,);
+	type FilterUncle = ();
+	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
+	type UncleGenerations = UncleGenerations;
+}
+
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 }
+
+parameter_types! {
+	pub const PotId: PalletId = PalletId(*b"PotStake");
+	pub const MaxCandidates: u32 = 1000;
+	pub const SessionLength: BlockNumber = 6 * HOURS;
+	pub const MaxInvulnerables: u32 = 100;
+}
+
+impl pallet_collator_selection::Config for Runtime {
+	type Currency = Balances;
+	type Event = Event;
+	// should be a multiple of session or things will get inconsistent
+	type KickThreshold = Period;
+	type MaxCandidates = MaxCandidates;
+	type MaxInvulnerables = MaxInvulnerables;
+	type PotId = PotId;
+	type UpdateOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
+}
+
 // culumus runtime end
 
 // bifrost runtime start
@@ -786,6 +1090,18 @@ where
 	}
 }
 
+parameter_types! {
+	pub const MinVestedTransfer: Balance = 100 * CENTS;
+}
+
+impl pallet_vesting::Config for Runtime {
+	type BlockNumberToBalance = ConvertInto;
+	type Currency = Balances;
+	type Event = Event;
+	type MinVestedTransfer = MinVestedTransfer;
+	type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
+}
+
 // zenlink runtime end
 
 // orml runtime start
@@ -817,51 +1133,61 @@ construct_runtime! {
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
-		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 5,
-		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 6,
-		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 7,
-		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 8,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
+		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
-		// Parachain modules
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>, ValidateUnsigned} = 12,
-		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 21,
+		// Monetary stuff
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
-		Utility: pallet_utility::{Pallet, Call, Event} = 41,
-		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 42,
+		// Collator support. the order of these 4 are important and shall not change.
+		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
+		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
+		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
+		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
+		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
 
-		Aura: pallet_aura::{Pallet, Config<T>},
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+		// Governance stuff
+		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
+		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
+		PhragmenElection: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
+		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
+		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 36,
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
 		// XCM helpers.
-		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 50,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 51,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 52,
-		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 53,
+		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 41,
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 42,
+		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
-		// parachain modules
-		// ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event} = 6,
-		// TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 7,
-		// ParachainInfo: parachain_info::{Pallet, Storage, Config} = 8,
-		// XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Call, Event<T>, Origin} = 9,
+		// utilities
+		Utility: pallet_utility::{Pallet, Call, Event} = 50,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 52,
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
 
-		// bifrost modules
-		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 10,
-		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 11,
-		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 13,
-		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 14,
-		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 20,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 66,
-		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 67,
-		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 68,
+		// Vesting. Usable initially, but removed once all vesting is finished.
+		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 
-		// ORML
-		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 16,
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 17,
-		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 18,
+		// Third party modules
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 61,
+		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
+		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 
-		// zenlink
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 19,
+		// Bifrost modules
+		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 100,
+		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
+		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
+		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 103,
+		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 104,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
+		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
 	}
 }
 
