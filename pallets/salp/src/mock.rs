@@ -1,3 +1,23 @@
+// This file is part of Bifrost.
+
+// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+// Ensure we're `no_std` when compiling for Wasm.
+
 #![cfg(test)]
 
 use frame_support::{construct_runtime, parameter_types, PalletId};
@@ -140,11 +160,11 @@ impl salp::Config for Test {
 	type VSBondValidPeriod = VSBondValidPeriod;
 }
 
-// Mock XcmExecutor
-pub struct MockXcmExecutor;
-
 // To control the result returned by `MockXcmExecutor`
 pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
+
+// Mock XcmExecutor
+pub struct MockXcmExecutor;
 
 impl BifrostXcmExecutor for MockXcmExecutor {
 	fn ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>) -> XcmResult {
