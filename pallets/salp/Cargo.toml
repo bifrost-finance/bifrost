@@ -42,3 +42,5 @@ std = [
 	"xcm-support/std",
 	"polkadot-parachain/std",
 ]
+with-asgard-runtime = ["std"]
+with-bifrost-runtime = ["std"]

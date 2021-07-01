@@ -144,7 +144,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{
 		traits::{BancorHandler, BifrostXcmExecutor},
-		CurrencyId, LeasePeriod, ParaId,
+		CurrencyId, LeasePeriod, ParaId, TokenSymbol,
 	};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
@@ -363,13 +363,6 @@ pub mod pallet {
 			fund.status = FundStatus::Failed;
 			Funds::<T>::insert(index, Some(fund.clone()));
 
-			// TODO: Look likes a bug!
-			// 	The redeem-pool should be set after `confirm_withdraw`
-			// Recharge into the 1:1 redeem pool.
-			RedeemPool::<T>::mutate(|balance| {
-				*balance = balance.saturating_add(fund.raised);
-			});
-
 			Ok(())
 		}
 
@@ -386,13 +379,6 @@ pub mod pallet {
 				if let Some(fund) = fund {
 					fund.status = FundStatus::Retired;
 				}
-			});
-
-			// TODO: Look likes a bug!
-			// 	The redeem-pool should be set after `confirm_withdraw`
-			// Recharge into the 1:1 redeem pool.
-			RedeemPool::<T>::mutate(|balance| {
-				*balance = balance.saturating_add(fund.raised);
 			});
 
 			Ok(())
@@ -434,11 +420,15 @@ pub mod pallet {
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
 			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
 
+			let deposit = T::SubmissionDeposit::get();
+
+			T::MultiCurrency::reserve(Self::token(), &depositor, deposit)?;
+
 			Funds::<T>::insert(
 				index,
 				Some(FundInfo {
 					depositor,
-					deposit: T::SubmissionDeposit::get(),
+					deposit,
 					raised: Zero::zero(),
 					cap,
 					first_slot,
@@ -624,7 +614,7 @@ pub mod pallet {
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
 		#[pallet::weight(0)]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			Self::check_fund_owner(origin, index)?;
+			let owner = Self::check_fund_owner(origin, index)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::End, Error::<T>::FundNotEnded);
@@ -645,6 +635,7 @@ pub mod pallet {
 			}
 
 			if all_refunded == true {
+				T::MultiCurrency::unreserve(Self::token(), &owner, fund.deposit);
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
@@ -846,6 +837,13 @@ pub mod pallet {
 			Ok(owner)
 		}
 
+		fn token() -> CurrencyId {
+			#[cfg(feature = "with-asgard-runtime")]
+			return CurrencyId::Token(TokenSymbol::ASG);
+			#[cfg(not(feature = "with-asgard-runtime"))]
+			return CurrencyId::Token(TokenSymbol::BNC);
+		}
+
 		fn vstoken() -> CurrencyId {
 			CurrencyId::VSToken(*T::RelyChainToken::get())
 		}
@@ -903,6 +901,10 @@ pub mod pallet {
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			if is_success {
+				RedeemPool::<T>::mutate(|balance| {
+					*balance = balance.saturating_add(fund.raised);
+				});
+
 				fund.status = FundStatus::Withdrew;
 				Funds::<T>::insert(index, Some(fund.clone()));
 
