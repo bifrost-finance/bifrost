@@ -423,7 +423,6 @@ pub mod pallet {
 
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
 
-			// TODO: Look likes a bug!
 			let last_slot_limit = first_slot
 				.checked_add(((T::SlotLength::get() as u32) - 1).into())
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
@@ -824,7 +823,7 @@ pub mod pallet {
 			)
 		}
 
-		fn next_trie_index() -> Result<TrieIndex, Error<T>> {
+		pub(crate) fn next_trie_index() -> Result<TrieIndex, Error<T>> {
 			CurrentTrieIndex::<T>::try_mutate(|ti| {
 				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
 				Ok(*ti - 1)
