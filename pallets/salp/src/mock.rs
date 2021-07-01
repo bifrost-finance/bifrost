@@ -20,8 +20,10 @@
 
 #![cfg(test)]
 
-use frame_support::{construct_runtime, parameter_types, PalletId};
-use node_primitives::{traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, TokenSymbol};
+use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
+use node_primitives::{
+	traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, Moment, TokenSymbol,
+};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
@@ -122,7 +124,7 @@ impl bifrost_bancor::Config for Test {
 // TODO: Impl bifrost_xcm_executor::Config
 
 parameter_types! {
-	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
+	pub const SubmissionDeposit: u32 = 1;
 	pub const MinContribution: Balance = 1 * DOLLARS;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
@@ -190,7 +192,17 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	orml_tokens::GenesisConfig::<Test> {
+		balances: vec![
+			(ALICE, CurrencyId::Token(TokenSymbol::ASG), 20),
+			(ALICE, CurrencyId::Token(TokenSymbol::BNC), 20),
+		],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+	let mut t: sp_io::TestExternalities = t.into();
+	t
 }
 
 pub const DOLLARS: Balance = 1_000_000_000_000;
