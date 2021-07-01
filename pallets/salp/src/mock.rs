@@ -22,7 +22,7 @@
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{
-	traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, Moment, TokenSymbol,
+	traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, TokenSymbol,
 };
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -193,6 +193,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
 			(ALICE, CurrencyId::Token(TokenSymbol::ASG), 20),
@@ -201,8 +202,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
-	let mut t: sp_io::TestExternalities = t.into();
-	t
+
+	t.into()
 }
 
 pub const DOLLARS: Balance = 1_000_000_000_000;
