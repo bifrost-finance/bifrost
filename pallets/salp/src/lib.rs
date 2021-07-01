@@ -888,6 +888,14 @@ pub mod pallet {
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
+				// Reset the contribution status
+				let _ = Self::update_contribution(
+					index,
+					who.clone(),
+					Zero::zero(),
+					ContributionStatus::Contributed,
+				);
+
 				Self::deposit_event(Event::ContributeFailed(who, index, value));
 			}
 
