@@ -23,14 +23,10 @@ mod mock;
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-pub use pallet::*;
-
-use frame_support::{
-	pallet_prelude::*,
-	sp_runtime::MultiSignature,
-};
-use orml_traits::MultiCurrency;
+use frame_support::{pallet_prelude::*, sp_runtime::MultiSignature};
 use node_primitives::ParaId;
+use orml_traits::MultiCurrency;
+pub use pallet::*;
 
 type TrieIndex = u32;
 
@@ -85,10 +81,10 @@ pub struct FundInfo<AccountId, Balance, LeasePeriod> {
 	/// A hard-cap on the amount that may be contributed.
 	cap: Balance,
 	/// First slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
-    /// BlockNumber.
+	/// BlockNumber.
 	first_slot: LeasePeriod,
 	/// Last slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
-    /// BlockNumber.
+	/// BlockNumber.
 	last_slot: LeasePeriod,
 	/// Index used for the child trie of this fund
 	trie_index: TrieIndex,
@@ -141,9 +137,7 @@ pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
-		sp_runtime::{
-			traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
-		},
+		sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
@@ -163,6 +157,7 @@ pub mod pallet {
 		prelude::{XcmError, XcmResult},
 		Junction, MultiLocation,
 	};
+
 	use super::*;
 
 	#[pallet::config]

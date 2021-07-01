@@ -82,24 +82,16 @@ fn create_fund_first_slot_bigger_than_last_slot_should_fail() {
 }
 
 #[test]
-fn contribute_should_work() {
-
-}
+fn contribute_should_work() {}
 
 #[test]
-fn contribute_under_non_signed_should_fail() {
-
-}
+fn contribute_under_non_signed_should_fail() {}
 
 #[test]
-fn contribute_to_non_exist_parachain_should_fail() {
-
-}
+fn contribute_to_non_exist_parachain_should_fail() {}
 
 #[test]
-
 // Utilities Test
-
 #[test]
 fn check_next_trie_index() {
 	new_test_ext().execute_with(|| {
