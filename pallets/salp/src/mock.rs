@@ -21,9 +21,7 @@
 #![cfg(test)]
 
 use frame_support::{construct_runtime, parameter_types, PalletId};
-use node_primitives::{
-	traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, Moment, TokenSymbol,
-};
+use node_primitives::{traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, TokenSymbol};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
