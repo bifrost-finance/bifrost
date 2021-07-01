@@ -363,6 +363,8 @@ pub mod pallet {
 			fund.status = FundStatus::Failed;
 			Funds::<T>::insert(index, Some(fund.clone()));
 
+			// TODO: Look likes a bug!
+			// 	The redeem-pool should be set after `confirm_withdraw`
 			// Recharge into the 1:1 redeem pool.
 			RedeemPool::<T>::mutate(|balance| {
 				*balance = balance.saturating_add(fund.raised);
@@ -386,6 +388,8 @@ pub mod pallet {
 				}
 			});
 
+			// TODO: Look likes a bug!
+			// 	The redeem-pool should be set after `confirm_withdraw`
 			// Recharge into the 1:1 redeem pool.
 			RedeemPool::<T>::mutate(|balance| {
 				*balance = balance.saturating_add(fund.raised);
