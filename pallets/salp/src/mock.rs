@@ -15,22 +15,13 @@ use xcm::{
 	DoubleEncoded,
 };
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
-use crate as salp;
 
-pub const BNCS: Balance = 1_000_000_000_000;
-pub const DOLLARS: Balance = BNCS;
-pub const MILLISECS_PER_BLOCK: Moment = 12000;
-pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
-// These time units are defined in number of blocks.
-pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-pub const WEEKS: BlockNumber = DAYS * 7;
+use crate as salp;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-pub type Signature = sp_runtime::MultiSignature;
-pub type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
+type Signature = sp_runtime::MultiSignature;
+type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 type BlockNumber = u32;
 type Index = u32;
 
@@ -196,3 +187,15 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	fs_gc.into()
 }
+
+pub const BNCS: Balance = 1_000_000_000_000;
+pub const DOLLARS: Balance = BNCS;
+pub const MILLISECS_PER_BLOCK: Moment = 12000;
+pub const SECS_PER_BLOCK: Moment = MILLISECS_PER_BLOCK / 1000;
+// These time units are defined in number of blocks.
+pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
+pub const HOURS: BlockNumber = MINUTES * 60;
+pub const DAYS: BlockNumber = HOURS * 24;
+pub const WEEKS: BlockNumber = DAYS * 7;
+
+pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
