@@ -25,6 +25,117 @@ mod tests;
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
+use frame_support::{
+	pallet_prelude::*,
+	sp_runtime::MultiSignature,
+};
+use orml_traits::MultiCurrency;
+use node_primitives::ParaId;
+
+type TrieIndex = u32;
+
+#[allow(type_alias_bounds)]
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
+#[allow(type_alias_bounds)]
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub enum FundStatus {
+	Ongoing,
+	Retired,
+	Success,
+	Failed,
+	Withdrew,
+	End,
+}
+
+impl Default for FundStatus {
+	fn default() -> Self {
+		FundStatus::Ongoing
+	}
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
+pub enum ContributionStatus {
+	Contributing,
+	Contributed,
+	Redeeming,
+	Redeemed,
+}
+
+impl Default for ContributionStatus {
+	fn default() -> Self {
+		ContributionStatus::Contributed
+	}
+}
+
+/// Information on a funding effort for a pre-existing parachain. We assume that the parachain
+/// ID is known as it's used for the key of the storage item for which this is the value
+/// (`Funds`).
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[codec(dumb_trait_bound)]
+pub struct FundInfo<AccountId, Balance, LeasePeriod> {
+	/// The owning account who placed the deposit.
+	depositor: AccountId,
+	/// The amount of deposit placed.
+	deposit: Balance,
+	/// The total amount raised.
+	raised: Balance,
+	/// A hard-cap on the amount that may be contributed.
+	cap: Balance,
+	/// First slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
+    /// BlockNumber.
+	first_slot: LeasePeriod,
+	/// Last slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
+    /// BlockNumber.
+	last_slot: LeasePeriod,
+	/// Index used for the child trie of this fund
+	trie_index: TrieIndex,
+	/// Fund status
+	status: FundStatus,
+}
+
+#[derive(Encode, Decode)]
+pub enum CrowdloanContributeCall<BalanceOf> {
+	#[codec(index = 73)]
+	CrowdloanContribute(ContributeCall<BalanceOf>),
+}
+
+#[derive(Encode, Decode)]
+pub enum CrowdloanWithdrawCall<AccountIdOf> {
+	#[codec(index = 73)]
+	CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct Contribution<BalanceOf> {
+	#[codec(compact)]
+	index: ParaId,
+	#[codec(compact)]
+	value: BalanceOf,
+	signature: Option<MultiSignature>,
+}
+
+#[derive(Encode, Decode)]
+pub enum ContributeCall<BalanceOf> {
+	#[codec(index = 1)]
+	Contribute(Contribution<BalanceOf>),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct Withdraw<AccountIdOf> {
+	who: AccountIdOf,
+	#[codec(compact)]
+	index: ParaId,
+}
+
+#[derive(Encode, Decode)]
+pub enum WithdrawCall<AccountIdOf> {
+	#[codec(index = 2)]
+	Withdraw(Withdraw<AccountIdOf>),
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
@@ -32,7 +143,6 @@ pub mod pallet {
 		pallet_prelude::{storage::child, *},
 		sp_runtime::{
 			traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
-			MultiSignature,
 		},
 		storage::ChildTriePrefixIterator,
 		PalletId,
@@ -48,115 +158,12 @@ pub mod pallet {
 	};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
-	use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
+	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v0::{
 		prelude::{XcmError, XcmResult},
 		Junction, MultiLocation,
 	};
-
-	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-	pub enum FundStatus {
-		Ongoing,
-		Retired,
-		Success,
-		Failed,
-		Withdrew,
-		End,
-	}
-
-	impl Default for FundStatus {
-		fn default() -> Self {
-			FundStatus::Ongoing
-		}
-	}
-
-	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
-	pub enum ContributionStatus {
-		Contributing,
-		Contributed,
-		Redeeming,
-		Redeemed,
-	}
-
-	impl Default for ContributionStatus {
-		fn default() -> Self {
-			ContributionStatus::Contributed
-		}
-	}
-
-	/// Information on a funding effort for a pre-existing parachain. We assume that the parachain
-	/// ID is known as it's used for the key of the storage item for which this is the value
-	/// (`Funds`).
-	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-	#[codec(dumb_trait_bound)]
-	pub struct FundInfo<AccountId, Balance, LeasePeriod> {
-		/// The owning account who placed the deposit.
-		depositor: AccountId,
-		/// The amount of deposit placed.
-		deposit: Balance,
-		/// The total amount raised.
-		raised: Balance,
-		/// A hard-cap on the amount that may be contributed.
-		cap: Balance,
-		/// First slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
-		/// BlockNumber.
-		first_slot: LeasePeriod,
-		/// Last slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
-		/// BlockNumber.
-		last_slot: LeasePeriod,
-		/// Index used for the child trie of this fund
-		trie_index: TrieIndex,
-		/// Fund status
-		status: FundStatus,
-	}
-
-	#[allow(type_alias_bounds)]
-	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
-	#[allow(type_alias_bounds)]
-	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-	type TrieIndex = u32;
-
-	#[derive(Encode, Decode)]
-	pub enum CrowdloanContributeCall<BalanceOf> {
-		#[codec(index = 73)]
-		CrowdloanContribute(ContributeCall<BalanceOf>),
-	}
-
-	#[derive(Encode, Decode)]
-	pub enum CrowdloanWithdrawCall<AccountIdOf> {
-		#[codec(index = 73)]
-		CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
-	}
-
-	#[derive(Debug, PartialEq, Encode, Decode)]
-	pub struct Contribution<BalanceOf> {
-		#[codec(compact)]
-		index: ParaId,
-		#[codec(compact)]
-		value: BalanceOf,
-		signature: Option<MultiSignature>,
-	}
-
-	#[derive(Encode, Decode)]
-	pub enum ContributeCall<BalanceOf> {
-		#[codec(index = 1)]
-		Contribute(Contribution<BalanceOf>),
-	}
-
-	#[derive(Debug, PartialEq, Encode, Decode)]
-	pub struct Withdraw<AccountIdOf> {
-		who: AccountIdOf,
-		#[codec(compact)]
-		index: ParaId,
-	}
-
-	#[derive(Encode, Decode)]
-	pub enum WithdrawCall<AccountIdOf> {
-		#[codec(index = 2)]
-		Withdraw(Withdraw<AccountIdOf>),
-	}
+	use super::*;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
