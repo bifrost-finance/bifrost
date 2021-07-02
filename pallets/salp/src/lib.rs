@@ -19,25 +19,132 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+mod mock;
+mod tests;
+
 // Re-export pallet items so that they can be accessed from the crate namespace.
+use frame_support::{pallet_prelude::*, sp_runtime::MultiSignature};
+use node_primitives::ParaId;
+use orml_traits::MultiCurrency;
 pub use pallet::*;
+
+type TrieIndex = u32;
+
+#[allow(type_alias_bounds)]
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
+#[allow(type_alias_bounds)]
+type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub enum FundStatus {
+	Ongoing,
+	Retired,
+	Success,
+	Failed,
+	Withdrew,
+	End,
+}
+
+impl Default for FundStatus {
+	fn default() -> Self {
+		FundStatus::Ongoing
+	}
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
+pub enum ContributionStatus {
+	Contributing,
+	Contributed,
+	Redeeming,
+	Redeemed,
+}
+
+impl Default for ContributionStatus {
+	fn default() -> Self {
+		ContributionStatus::Contributed
+	}
+}
+
+/// Information on a funding effort for a pre-existing parachain. We assume that the parachain
+/// ID is known as it's used for the key of the storage item for which this is the value
+/// (`Funds`).
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[codec(dumb_trait_bound)]
+pub struct FundInfo<AccountId, Balance, LeasePeriod> {
+	/// The owning account who placed the deposit.
+	depositor: AccountId,
+	/// The amount of deposit placed.
+	deposit: Balance,
+	/// The total amount raised.
+	raised: Balance,
+	/// A hard-cap on the amount that may be contributed.
+	cap: Balance,
+	/// First slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
+	/// BlockNumber.
+	first_slot: LeasePeriod,
+	/// Last slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
+	/// BlockNumber.
+	last_slot: LeasePeriod,
+	/// Index used for the child trie of this fund
+	trie_index: TrieIndex,
+	/// Fund status
+	status: FundStatus,
+}
+
+#[derive(Encode, Decode)]
+pub enum CrowdloanContributeCall<BalanceOf> {
+	#[codec(index = 73)]
+	CrowdloanContribute(ContributeCall<BalanceOf>),
+}
+
+#[derive(Encode, Decode)]
+pub enum CrowdloanWithdrawCall<AccountIdOf> {
+	#[codec(index = 73)]
+	CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct Contribution<BalanceOf> {
+	#[codec(compact)]
+	index: ParaId,
+	#[codec(compact)]
+	value: BalanceOf,
+	signature: Option<MultiSignature>,
+}
+
+#[derive(Encode, Decode)]
+pub enum ContributeCall<BalanceOf> {
+	#[codec(index = 1)]
+	Contribute(Contribution<BalanceOf>),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct Withdraw<AccountIdOf> {
+	who: AccountIdOf,
+	#[codec(compact)]
+	index: ParaId,
+}
+
+#[derive(Encode, Decode)]
+pub enum WithdrawCall<AccountIdOf> {
+	#[codec(index = 2)]
+	Withdraw(Withdraw<AccountIdOf>),
+}
 
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
-		sp_runtime::{
-			traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
-			MultiSignature,
-		},
+		sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{
 		traits::{BancorHandler, BifrostXcmExecutor},
-		CurrencyId, LeasePeriod, ParaId,
+		CurrencyId, LeasePeriod, ParaId, TokenSymbol,
 	};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
@@ -45,115 +152,13 @@ pub mod pallet {
 	};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
-	use sp_std::{convert::TryInto, fmt::Debug, prelude::*};
+	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v0::{
 		prelude::{XcmError, XcmResult},
 		Junction, MultiLocation,
 	};
 
-	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-	pub enum FundStatus {
-		Ongoing,
-		Retired,
-		Success,
-		Failed,
-		Withdrew,
-		End,
-	}
-
-	impl Default for FundStatus {
-		fn default() -> Self {
-			FundStatus::Ongoing
-		}
-	}
-
-	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
-	pub enum ContributionStatus {
-		Contributing,
-		Contributed,
-		Redeeming,
-		Redeemed,
-	}
-
-	impl Default for ContributionStatus {
-		fn default() -> Self {
-			ContributionStatus::Contributed
-		}
-	}
-
-	/// Information on a funding effort for a pre-existing parachain. We assume that the parachain
-	/// ID is known as it's used for the key of the storage item for which this is the value
-	/// (`Funds`).
-	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-	#[codec(dumb_trait_bound)]
-	pub struct FundInfo<AccountId, Balance, LeasePeriod> {
-		/// The owning account who placed the deposit.
-		depositor: AccountId,
-		/// The amount of deposit placed.
-		deposit: Balance,
-		/// The total amount raised.
-		raised: Balance,
-		/// A hard-cap on the amount that may be contributed.
-		cap: Balance,
-		/// First slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
-		/// BlockNumber.
-		first_slot: LeasePeriod,
-		/// Last slot in range to bid on; it's actually a LeasePeriod, but that's the same type as
-		/// BlockNumber.
-		last_slot: LeasePeriod,
-		/// Index used for the child trie of this fund
-		trie_index: TrieIndex,
-		/// Fund status
-		status: FundStatus,
-	}
-
-	#[allow(type_alias_bounds)]
-	type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
-
-	#[allow(type_alias_bounds)]
-	type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-	type TrieIndex = u32;
-
-	#[derive(Encode, Decode)]
-	pub enum CrowdloanContributeCall<BalanceOf> {
-		#[codec(index = 73)]
-		CrowdloanContribute(ContributeCall<BalanceOf>),
-	}
-
-	#[derive(Encode, Decode)]
-	pub enum CrowdloanWithdrawCall<AccountIdOf> {
-		#[codec(index = 73)]
-		CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
-	}
-
-	#[derive(Debug, PartialEq, Encode, Decode)]
-	pub struct Contribution<BalanceOf> {
-		#[codec(compact)]
-		index: ParaId,
-		#[codec(compact)]
-		value: BalanceOf,
-		signature: Option<MultiSignature>,
-	}
-
-	#[derive(Encode, Decode)]
-	pub enum ContributeCall<BalanceOf> {
-		#[codec(index = 1)]
-		Contribute(Contribution<BalanceOf>),
-	}
-
-	#[derive(Debug, PartialEq, Encode, Decode)]
-	pub struct Withdraw<AccountIdOf> {
-		who: AccountIdOf,
-		#[codec(compact)]
-		index: ParaId,
-	}
-
-	#[derive(Encode, Decode)]
-	pub enum WithdrawCall<AccountIdOf> {
-		#[codec(index = 2)]
-		Withdraw(Withdraw<AccountIdOf>),
-	}
+	use super::*;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
@@ -281,6 +286,8 @@ pub mod pallet {
 		FundNotWithdrew,
 		/// The crowdloan has not yet ended.
 		FundNotEnded,
+		/// The fund has been registered.
+		FundExisted,
 		/// Fund has been expired.
 		VSBondExpired,
 		/// There are no contributions stored in this crowdloan.
@@ -302,15 +309,10 @@ pub mod pallet {
 		ContributionInvalid,
 	}
 
-	#[pallet::storage]
-	#[pallet::getter(fn validators)]
-	pub(super) type Validators<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdOf<T>, bool, ValueQuery>;
-
 	/// Tracker for the next available trie index
 	#[pallet::storage]
-	#[pallet::getter(fn next_trie_index)]
-	pub(super) type NextTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
+	#[pallet::getter(fn current_trie_index)]
+	pub(super) type CurrentTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
 
 	/// Info on all of the funds.
 	#[pallet::storage]
@@ -345,17 +347,6 @@ pub mod pallet {
 				}
 			});
 
-			// Unlock vsToken/vsBond
-			// TODO: unweightable iter.
-			for (who, _) in Self::contribution_iterator(fund.trie_index) {
-				T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
-				T::MultiCurrency::remove_lock(
-					vslock(index),
-					Self::vsbond(index, fund.first_slot, fund.last_slot),
-					&who,
-				)?;
-			}
-
 			Ok(())
 		}
 
@@ -371,11 +362,6 @@ pub mod pallet {
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
 			fund.status = FundStatus::Failed;
 			Funds::<T>::insert(index, Some(fund.clone()));
-
-			// Recharge into the 1:1 redeem pool.
-			RedeemPool::<T>::mutate(|balance| {
-				*balance = balance.saturating_add(fund.raised);
-			});
 
 			Ok(())
 		}
@@ -393,11 +379,6 @@ pub mod pallet {
 				if let Some(fund) = fund {
 					fund.status = FundStatus::Retired;
 				}
-			});
-
-			// Recharge into the 1:1 redeem pool.
-			RedeemPool::<T>::mutate(|balance| {
-				*balance = balance.saturating_add(fund.raised);
 			});
 
 			Ok(())
@@ -429,19 +410,19 @@ pub mod pallet {
 		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
+			// There should not be an existing fund.
+			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundExisted);
+
 			ensure!(first_slot <= last_slot, Error::<T>::LastSlotBeforeFirstSlot);
+
 			let last_slot_limit = first_slot
 				.checked_add(((T::SlotLength::get() as u32) - 1).into())
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
 			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
 
-			// There should not be an existing fund.
-			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundNotEnded);
-
-			let trie_index = Self::next_trie_index();
-			let new_trie_index = trie_index.checked_add(1).ok_or(Error::<T>::Overflow)?;
-
 			let deposit = T::SubmissionDeposit::get();
+
+			T::MultiCurrency::reserve(Self::token(), &depositor, deposit)?;
 
 			Funds::<T>::insert(
 				index,
@@ -452,12 +433,10 @@ pub mod pallet {
 					cap,
 					first_slot,
 					last_slot,
-					trie_index,
+					trie_index: Self::next_trie_index()?,
 					status: FundStatus::Ongoing,
 				}),
 			);
-
-			NextTrieIndex::<T>::put(new_trie_index);
 
 			Self::deposit_event(Event::<T>::Created(index));
 
@@ -479,8 +458,8 @@ pub mod pallet {
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-			fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
-			ensure!(fund.raised <= fund.cap, Error::<T>::CapExceeded);
+			let raised = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
+			ensure!(raised <= fund.cap, Error::<T>::CapExceeded);
 
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
@@ -592,8 +571,7 @@ pub mod pallet {
 
 			let vstoken = Self::vstoken();
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
-			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
+			Self::check_balance(index, &who, value)?;
 
 			// Lock the vsToken/vsBond.
 			T::MultiCurrency::extend_lock(REDEEM_LOCK, vstoken, &who, value)?;
@@ -635,7 +613,7 @@ pub mod pallet {
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
 		#[pallet::weight(0)]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			Self::check_fund_owner(origin, index)?;
+			let owner = Self::check_fund_owner(origin, index)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::End, Error::<T>::FundNotEnded);
@@ -656,6 +634,7 @@ pub mod pallet {
 			}
 
 			if all_refunded == true {
+				T::MultiCurrency::unreserve(Self::token(), &owner, fund.deposit);
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
@@ -840,6 +819,13 @@ pub mod pallet {
 			)
 		}
 
+		pub(crate) fn next_trie_index() -> Result<TrieIndex, Error<T>> {
+			CurrentTrieIndex::<T>::try_mutate(|ti| {
+				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
+				Ok(*ti - 1)
+			})
+		}
+
 		fn check_fund_owner(
 			origin: OriginFor<T>,
 			para_id: ParaId,
@@ -850,11 +836,39 @@ pub mod pallet {
 			Ok(owner)
 		}
 
-		fn vstoken() -> CurrencyId {
+		pub fn check_balance(
+			para_id: ParaId,
+			who: &AccountIdOf<T>,
+			value: BalanceOf<T>,
+		) -> Result<(), Error<T>> {
+			let fund = Self::funds(para_id).ok_or(Error::<T>::InvalidParaId)?;
+			T::MultiCurrency::ensure_can_withdraw(Self::vstoken(), who, value)
+				.map_err(|_e| Error::<T>::InsufficientBalance)?;
+			T::MultiCurrency::ensure_can_withdraw(
+				Self::vsbond(para_id, fund.first_slot, fund.last_slot),
+				&who,
+				value,
+			)
+			.map_err(|_e| Error::<T>::InsufficientBalance)?;
+			Ok(())
+		}
+
+		fn token() -> CurrencyId {
+			#[cfg(feature = "with-asgard-runtime")]
+			return CurrencyId::Token(TokenSymbol::ASG);
+			#[cfg(not(feature = "with-asgard-runtime"))]
+			return CurrencyId::Token(TokenSymbol::BNC);
+		}
+
+		pub fn vstoken() -> CurrencyId {
 			CurrencyId::VSToken(*T::RelyChainToken::get())
 		}
 
-		fn vsbond(index: ParaId, first_slot: LeasePeriod, last_slot: LeasePeriod) -> CurrencyId {
+		pub fn vsbond(
+			index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+		) -> CurrencyId {
 			CurrencyId::VSBond(*T::RelyChainToken::get(), index, first_slot, last_slot)
 		}
 
@@ -892,6 +906,14 @@ pub mod pallet {
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
+				// Reset the contribution status
+				let _ = Self::update_contribution(
+					index,
+					who.clone(),
+					Zero::zero(),
+					ContributionStatus::Contributed,
+				);
+
 				Self::deposit_event(Event::ContributeFailed(who, index, value));
 			}
 
@@ -907,8 +929,24 @@ pub mod pallet {
 				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 
 			if is_success {
+				RedeemPool::<T>::mutate(|balance| {
+					*balance = balance.saturating_add(fund.raised);
+				});
+
 				fund.status = FundStatus::Withdrew;
 				Funds::<T>::insert(index, Some(fund.clone()));
+
+				// TODO: Look likes too heavy!
+				// 	Require an new `Tokens` module to support special lock.
+				for (who, _) in Self::contribution_iterator(fund.trie_index) {
+					T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
+					T::MultiCurrency::remove_lock(
+						vslock(index),
+						Self::vsbond(index, fund.first_slot, fund.last_slot),
+						&who,
+					)?;
+				}
+
 				Self::deposit_event(Event::Withdrew(who, index, fund.raised));
 			} else {
 				Self::deposit_event(Event::WithdrawFailed(who, index, fund.raised));

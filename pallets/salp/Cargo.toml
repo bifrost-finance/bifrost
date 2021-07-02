@@ -18,6 +18,14 @@ xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
 
+[dev-dependencies]
+sp-io = "3.0.0"
+sp-core = "3.0.0"
+orml-tokens = "0.4.1-dev"
+bifrost-bancor = { path = "../../pallets/bancor" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
+
 [features]
 default = ["std"]
 std = [
@@ -34,3 +42,5 @@ std = [
 	"xcm-support/std",
 	"polkadot-parachain/std",
 ]
+with-asgard-runtime = ["std"]
+with-bifrost-runtime = ["std"]
