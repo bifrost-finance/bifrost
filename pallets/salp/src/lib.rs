@@ -916,6 +916,8 @@ pub mod pallet {
 				fund.status = FundStatus::Withdrew;
 				Funds::<T>::insert(index, Some(fund.clone()));
 
+				// TODO: Look likes too heavy!
+				// 	Require an new `Tokens` module to support special lock.
 				for (who, _) in Self::contribution_iterator(fund.trie_index) {
 					T::MultiCurrency::remove_lock(vslock(index), Self::vstoken(), &who)?;
 					T::MultiCurrency::remove_lock(
