@@ -527,29 +527,19 @@ fn double_withdraw_same_fund_should_fail() {
 }
 
 #[test]
-fn double_withdraw_same_fund_when_xcm_error_should_work() {
-	
-}
+fn double_withdraw_same_fund_when_xcm_error_should_work() {}
 
 #[test]
-fn double_withdraw_same_fund_when_one_of_xcm_error_should_work() {
-
-}
+fn double_withdraw_same_fund_when_one_of_xcm_error_should_work() {}
 
 #[test]
-fn withdraw_with_wrong_para_id_should_fail() {
-
-}
+fn withdraw_with_wrong_para_id_should_fail() {}
 
 #[test]
-fn withdraw_with_wrong_fund_status_should_fail() {
-
-}
+fn withdraw_with_wrong_fund_status_should_fail() {}
 
 #[test]
-fn withdraw_with_when_ump_wrong_should_fail() {
-
-}
+fn withdraw_with_when_ump_wrong_should_fail() {}
 
 // Utilities Test
 #[test]
