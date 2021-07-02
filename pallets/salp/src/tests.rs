@@ -599,6 +599,89 @@ fn withdraw_with_when_ump_wrong_should_fail() {
 	// TODO: Require an solution to settle with parallel test workflow
 }
 
+#[test]
+fn dissolve_should_work() {
+	new_test_ext().execute_with(|| {
+		let remove_times = 4;
+		let contribute_account_num = remove_times * RemoveKeysLimit::get();
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		for i in 0 .. contribute_account_num {
+			let racc = AccountId::new([(i as u8); 32]);
+			assert_ok!(Salp::contribute(Some(racc.clone()).into(), 3_000, 1 * DOLLARS));
+			assert_ok!(Salp::confirm_contribute(
+				Some(ALICE).into(),
+				racc,
+				3_000,
+				1 * DOLLARS,
+				true
+			));
+		}
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
+
+		for _ in 0 .. remove_times {
+			assert_ok!(Salp::dissolve(Some(ALICE).into(), 3_000));
+		}
+
+		// Check storage
+		assert!(Salp::funds(3_000).is_none());
+
+		for i in 0 .. contribute_account_num {
+			let racc = AccountId::new([(i as u8); 32]);
+			let (balance, status) = Salp::contribution_get(3_000, &racc);
+			assert_eq!(balance, 0 * DOLLARS);
+			assert_eq!(status, ContributionStatus::Contributed);
+		}
+	});
+}
+
+#[test]
+fn dissolve_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
+
+		assert_noop!(Salp::dissolve(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::dissolve(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::dissolve(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+	});
+}
+
+#[test]
+fn dissolve_with_wrong_para_id_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
+
+		assert_noop!(Salp::dissolve(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
+	});
+}
+
+#[test]
+fn dissolve_with_wrong_fund_status_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_noop!(Salp::dissolve(Some(ALICE).into(), 3_000), Error::<Test>::FundNotEnded);
+	});
+}
+
 // Utilities Test
 #[test]
 fn check_next_trie_index() {
