@@ -39,7 +39,7 @@ use crate as salp;
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
 type Signature = sp_runtime::MultiSignature;
-type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
+pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 type BlockNumber = u32;
 type Index = u32;
 
@@ -125,7 +125,7 @@ parameter_types! {
 	pub const SubmissionDeposit: u32 = 1;
 	pub const MinContribution: Balance = 1 * DOLLARS;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
-	pub const RemoveKeysLimit: u32 = 500;
+	pub const RemoveKeysLimit: u32 = 50;
 	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
