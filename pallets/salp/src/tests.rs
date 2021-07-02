@@ -34,7 +34,7 @@ fn create_fund_should_work() {
 }
 
 #[test]
-fn create_fund_under_non_signed_should_fail() {
+fn create_fund_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			Salp::create(Origin::root(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()),
@@ -294,7 +294,13 @@ fn contribute_should_work() {
 		let raised_delta = fund.raised.saturating_sub(fund_origin.raised);
 		assert_eq!(raised_delta, balance);
 
-		// TODO: Check the status of vsToken/vsBond issued
+		// Check the status of vsToken/vsBond issued
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 10 * DOLLARS);
 	});
 }
 
@@ -320,7 +326,13 @@ fn double_contribute_should_work() {
 		assert_eq!(balance, 20 * DOLLARS);
 		assert_eq!(status, ContributionStatus::Contributed);
 
-		// TODO: Check the status of vsToken/vsBond issued
+		// Check the status of vsToken/vsBond issued
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 20 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 20 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 20 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 20 * DOLLARS);
 	});
 }
 
@@ -338,7 +350,13 @@ fn contribute_when_xcm_error_should_work() {
 		assert_eq!(status, ContributionStatus::Contributed);
 		assert_eq!(fund.raised, 0 * DOLLARS);
 
-		// TODO: Check the status of vsToken/vsBond issued
+		// Check the status of vsToken/vsBond issued
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 0 * DOLLARS);
 	});
 }
 
@@ -359,7 +377,13 @@ fn double_contribute_when_one_of_xcm_error_should_work() {
 		assert_eq!(status, ContributionStatus::Contributed);
 		assert_eq!(fund.raised, balance);
 
-		// TODO: Check the status of vsToken/vsBond issued
+		// Check the status of vsToken/vsBond issued
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 10 * DOLLARS);
 	});
 }
 
@@ -600,6 +624,331 @@ fn withdraw_with_when_ump_wrong_should_fail() {
 }
 
 #[test]
+fn redeem_should_work() {
+	new_test_ext().execute_with(|| {
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+
+		assert_eq!(Salp::redeem_pool(), 0 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 1000 * DOLLARS, true));
+		assert_eq!(Salp::redeem_pool(), 0 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+	});
+}
+
+#[test]
+fn redeem_by_cathi_should_work() {
+	new_test_ext().execute_with(|| {
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		// Transfer vsToken/vsBond to CATHI
+		assert_ok!(Tokens::transfer_all(Some(BRUCE).into(), CATHI, vstoken));
+		assert_ok!(Tokens::transfer_all(Some(BRUCE).into(), CATHI, vsbond));
+
+		assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 1000 * DOLLARS));
+
+		assert_eq!(Salp::redeem_pool(), 0 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(CATHI, vstoken).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).reserved, 0 * DOLLARS);
+
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 1000 * DOLLARS, true));
+		assert_eq!(Salp::redeem_pool(), 0 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(CATHI, vstoken).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).reserved, 0 * DOLLARS);
+	});
+}
+
+#[test]
+fn double_redeem_should_work() {
+	new_test_ext().execute_with(|| {
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 500 * DOLLARS));
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 500 * DOLLARS));
+
+		assert_eq!(Salp::redeem_pool(), 0 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, true));
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, true));
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+	});
+}
+
+#[test]
+fn redeem_with_xcm_error_should_work() {
+	new_test_ext().execute_with(|| {
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 1000 * DOLLARS, false));
+
+		assert_eq!(Salp::redeem_pool(), 1000 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+	});
+}
+
+#[test]
+fn double_redeem_with_one_of_xcm_error_should_work() {
+	new_test_ext().execute_with(|| {
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 500 * DOLLARS));
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 500 * DOLLARS));
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, false));
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, true));
+
+		assert_eq!(Salp::redeem_pool(), 500 * DOLLARS);
+
+		// Check the status of vsToken/vsBond issued
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+	});
+}
+
+#[test]
+fn redeem_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_noop!(Salp::redeem(Origin::root(), 3_000, 1000 * DOLLARS), DispatchError::BadOrigin);
+		assert_noop!(Salp::redeem(Origin::none(), 3_000, 1000 * DOLLARS), DispatchError::BadOrigin);
+	});
+}
+
+#[test]
+fn redeem_with_wrong_fund_status_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+
+		assert_noop!(
+			Salp::redeem(Some(BRUCE).into(), 3_000, 1000 * DOLLARS),
+			Error::<Test>::FundNotWithdrew
+		);
+	});
+}
+
+#[test]
+fn redeem_with_expired_vsbond_should_fail() {
+	// TODO: How to change the current `BlockNumber` of chain?
+}
+
+#[test]
+fn redeem_without_enough_balance_in_redeem_pool_should_fail() {
+	// TODO: Need it?
+}
+
+#[test]
+fn redeem_without_enough_vstoken_should_fail() {
+	new_test_ext().execute_with(|| {
+		let vstoken = Salp::vstoken();
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_ok!(Tokens::transfer_all(Some(BRUCE).into(), ALICE, vstoken));
+		assert_noop!(
+			Salp::redeem(Some(BRUCE).into(), 3_000, 1 * DOLLARS),
+			Error::<Test>::InsufficientBalance
+		);
+	});
+}
+
+#[test]
+fn redeem_without_enough_vsbond_should_fail() {
+	new_test_ext().execute_with(|| {
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1000 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_ok!(Tokens::transfer_all(Some(BRUCE).into(), ALICE, vsbond));
+		assert_noop!(
+			Salp::redeem(Some(BRUCE).into(), 3_000, 1 * DOLLARS),
+			Error::<Test>::InsufficientBalance
+		);
+	});
+}
+
+#[test]
+fn redeem_with_ump_wrong_should_fail() {
+	// TODO: Require an solution to settle with parallel test workflow
+}
+
+#[test]
 fn dissolve_should_work() {
 	new_test_ext().execute_with(|| {
 		let remove_times = 4;
@@ -716,6 +1065,14 @@ fn fund_success_should_work() {
 		assert_eq!(status, ContributionStatus::Contributing);
 
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, 10 * DOLLARS, true));
+
+		// Check the status of vsToken/vsBond issued
+		let vstoken = Salp::vstoken();
+		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 10 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 10 * DOLLARS);
 
 		let fund = Salp::funds(3_000).unwrap();
 		let (balance, status) = Salp::contribution_get(fund.trie_index, &BRUCE);
