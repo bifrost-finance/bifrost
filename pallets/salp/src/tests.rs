@@ -609,3 +609,72 @@ fn check_next_trie_index() {
 		}
 	});
 }
+
+#[test]
+fn fund_success_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+
+		let fund_origin = Salp::funds(3_000).unwrap();
+		let (balance, status) = Salp::contribution_get(fund_origin.trie_index, &BRUCE);
+
+		// Check the init status
+		assert_eq!(balance, 0 * DOLLARS);
+		assert_eq!(status, ContributionStatus::Contributed);
+
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 10 * DOLLARS));
+
+		let fund_after = Salp::funds(3_000).unwrap();
+		let (balance, status) = Salp::contribution_get(fund_after.trie_index, &BRUCE);
+
+		// Ensure `Salp::contribute` not change the state(data in storage)
+		assert_eq!(fund_origin, fund_after);
+		assert_eq!(balance, 0 * DOLLARS);
+		assert_eq!(status, ContributionStatus::Contributing);
+
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, 10 * DOLLARS, true));
+
+		let fund = Salp::funds(3_000).unwrap();
+		let (balance, status) = Salp::contribution_get(fund.trie_index, &BRUCE);
+
+		// Check the contribution
+		assert_eq!(balance, 10 * DOLLARS);
+		assert_eq!(status, ContributionStatus::Contributed);
+
+		// Check the fund raised
+		let raised_delta = fund.raised.saturating_sub(fund_origin.raised);
+		assert_eq!(raised_delta, balance);
+
+		// Set fund status
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+
+		// Withdraw from relaychain
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		// Check fund status
+		let fund = Salp::funds(3_000).unwrap();
+		assert_eq!(fund.status, FundStatus::Withdrew);
+
+		// Check redeem pool
+		assert_eq!(Salp::redeem_pool(), 10 * DOLLARS);
+
+		// Check token balance
+		assert_ok!(Salp::check_balance(3_000, &BRUCE, 10 * DOLLARS));
+
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 10 * DOLLARS));
+		let (balance, status) = Salp::contribution_get(fund.trie_index, &BRUCE);
+
+		// Check the contribution
+		assert_eq!(balance, 10 * DOLLARS);
+		assert_eq!(status, ContributionStatus::Redeeming);
+
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 10 * DOLLARS, true));
+		let (balance, status) = Salp::contribution_get(fund.trie_index, &BRUCE);
+
+		// Check the contribution
+		assert_eq!(balance, 0);
+		assert_eq!(status, ContributionStatus::Redeemed);
+	});
+}

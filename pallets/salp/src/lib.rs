@@ -571,8 +571,7 @@ pub mod pallet {
 
 			let vstoken = Self::vstoken();
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
-			T::MultiCurrency::ensure_can_withdraw(vstoken, &who, value)?;
-			T::MultiCurrency::ensure_can_withdraw(vsbond, &who, value)?;
+			Self::check_balance(index, &who, value)?;
 
 			// Lock the vsToken/vsBond.
 			T::MultiCurrency::extend_lock(REDEEM_LOCK, vstoken, &who, value)?;
@@ -837,6 +836,23 @@ pub mod pallet {
 			Ok(owner)
 		}
 
+		pub fn check_balance(
+			para_id: ParaId,
+			who: &AccountIdOf<T>,
+			value: BalanceOf<T>,
+		) -> Result<(), Error<T>> {
+			let fund = Self::funds(para_id).ok_or(Error::<T>::InvalidParaId)?;
+			T::MultiCurrency::ensure_can_withdraw(Self::vstoken(), who, value)
+				.map_err(|_e| Error::<T>::InsufficientBalance)?;
+			T::MultiCurrency::ensure_can_withdraw(
+				Self::vsbond(para_id, fund.first_slot, fund.last_slot),
+				&who,
+				value,
+			)
+			.map_err(|_e| Error::<T>::InsufficientBalance)?;
+			Ok(())
+		}
+
 		fn token() -> CurrencyId {
 			#[cfg(feature = "with-asgard-runtime")]
 			return CurrencyId::Token(TokenSymbol::ASG);
@@ -844,11 +860,15 @@ pub mod pallet {
 			return CurrencyId::Token(TokenSymbol::BNC);
 		}
 
-		fn vstoken() -> CurrencyId {
+		pub fn vstoken() -> CurrencyId {
 			CurrencyId::VSToken(*T::RelyChainToken::get())
 		}
 
-		fn vsbond(index: ParaId, first_slot: LeasePeriod, last_slot: LeasePeriod) -> CurrencyId {
+		pub fn vsbond(
+			index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+		) -> CurrencyId {
 			CurrencyId::VSBond(*T::RelyChainToken::get(), index, first_slot, last_slot)
 		}
 
