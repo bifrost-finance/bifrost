@@ -527,19 +527,77 @@ fn double_withdraw_same_fund_should_fail() {
 }
 
 #[test]
-fn double_withdraw_same_fund_when_xcm_error_should_work() {}
+fn double_withdraw_same_fund_when_xcm_error_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, false));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, false));
+
+		// Check storage
+		let fund = Salp::funds(3_000).unwrap();
+		assert_eq!(fund.status, FundStatus::Retired);
+	});
+}
 
 #[test]
-fn double_withdraw_same_fund_when_one_of_xcm_error_should_work() {}
+fn double_withdraw_same_fund_when_one_of_xcm_error_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, false));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		// Check storage
+		let fund = Salp::funds(3_000).unwrap();
+		assert_eq!(fund.status, FundStatus::Withdrew);
+	});
+}
 
 #[test]
-fn withdraw_with_wrong_para_id_should_fail() {}
+fn withdraw_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+
+		assert_noop!(Salp::withdraw(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::withdraw(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::withdraw(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+	});
+}
 
 #[test]
-fn withdraw_with_wrong_fund_status_should_fail() {}
+fn withdraw_with_wrong_para_id_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 4_000), Error::<Test>::InvalidParaId);
+	});
+}
 
 #[test]
-fn withdraw_with_when_ump_wrong_should_fail() {}
+fn withdraw_with_wrong_fund_status_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+
+		assert_noop!(Salp::withdraw(Some(ALICE).into(), 3_000), Error::<Test>::InvalidFundStatus);
+	});
+}
+
+#[test]
+fn withdraw_with_when_ump_wrong_should_fail() {
+	// TODO: Require an solution to settle with parallel test workflow
+}
 
 // Utilities Test
 #[test]
