@@ -842,7 +842,7 @@ impl pallet_collator_selection::Config for Runtime {
 	type MaxCandidates = MaxCandidates;
 	type MaxInvulnerables = MaxInvulnerables;
 	type PotId = PotId;
-	type UpdateOrigin = EnsureRoot<AccountId>;
+	type UpdateOrigin = MoreThanHalfCouncil;
 	type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
