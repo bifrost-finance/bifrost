@@ -56,30 +56,30 @@ pub fn asgard_genesis(
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: SystemConfig {
+		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: BalancesConfig { balances },
-		pallet_indices: IndicesConfig { indices: vec![] },
-		pallet_democracy: DemocracyConfig::default(),
-		pallet_collective_Instance1: CouncilConfig { members: vec![], phantom: Default::default() },
-		pallet_collective_Instance2: TechnicalCommitteeConfig {
+		balances: BalancesConfig { balances },
+		indices: IndicesConfig { indices: vec![] },
+		democracy: DemocracyConfig::default(),
+		council: CouncilConfig { members: vec![], phantom: Default::default() },
+		technical_committee: TechnicalCommitteeConfig {
 			members: vec![],
 			phantom: Default::default(),
 		},
-		pallet_membership_Instance1: Default::default(),
-		pallet_membership_Instance2: Default::default(),
-		pallet_treasury: Default::default(),
-		pallet_elections_phragmen: Default::default(),
-		pallet_sudo: SudoConfig { key: root_key.clone() },
+		council_membership: Default::default(),
+		technical_membership: Default::default(),
+		treasury: Default::default(),
+		elections: Default::default(),
+		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		pallet_collator_selection: CollatorSelectionConfig {
+		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: Zero::zero(),
 			..Default::default()
 		},
-		pallet_session: SessionConfig {
+		session: SessionConfig {
 			keys: invulnerables
 				.iter()
 				.cloned()
@@ -92,18 +92,19 @@ pub fn asgard_genesis(
 				})
 				.collect(),
 		},
-		pallet_aura: Default::default(),
-		cumulus_pallet_aura_ext: Default::default(),
-		pallet_vesting: VestingConfig { vesting: vestings },
-		bifrost_voucher: VoucherConfig { voucher: vouchers },
-		orml_tokens: TokensConfig { balances: tokens },
-		bifrost_bancor: BancorConfig {
+		aura: Default::default(),
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
+		vesting: VestingConfig { vesting: vestings },
+		voucher: VoucherConfig { voucher: vouchers },
+		tokens: TokensConfig { balances: tokens },
+		bancor: BancorConfig {
 			bancor_pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
 				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
 			],
 		},
-		bifrost_minter_reward: MinterRewardConfig {
+		minter_reward: MinterRewardConfig {
 			wegiths: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
@@ -113,7 +114,7 @@ pub fn asgard_genesis(
 			round_index: 1,
 			storage_version: Default::default(),
 		},
-		bifrost_vtoken_mint: VtokenMintConfig {
+		vtoken_mint: VtokenMintConfig {
 			pools: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
 				(CurrencyId::VToken(TokenSymbol::DOT), 1000 * DOLLARS),

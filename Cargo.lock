@@ -193,6 +193,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
+ "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "frame-executive",
  "frame-support",
@@ -247,7 +248,7 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder 4.0.0",
- "xcm 0.9.7",
+ "xcm",
  "xcm-builder",
  "xcm-executor",
  "xcm-support",
@@ -746,6 +747,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
+ "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "frame-executive",
  "frame-support",
@@ -783,7 +785,7 @@ dependencies = [
  "sp-transaction-pool",
  "sp-version",
  "substrate-wasm-builder 4.0.0",
- "xcm 0.9.7",
+ "xcm",
  "xcm-builder",
  "xcm-executor",
 ]
@@ -806,7 +808,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-builder",
  "xcm-support",
 ]
@@ -1878,7 +1880,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-executor",
 ]
 
@@ -1907,7 +1909,7 @@ dependencies = [
  "sp-std",
  "sp-trie",
  "sp-version",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -1934,7 +1936,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -1951,7 +1953,7 @@ dependencies = [
  "rand_chacha 0.3.1",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-executor",
 ]
 
@@ -1970,7 +1972,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-trie",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -1994,6 +1996,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cumulus-primitives-timestamp"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.7#c5c3abf7eb9d4fdfb588d6560efaa8dca66a8dbc"
+dependencies = [
+ "cumulus-primitives-core",
+ "sp-inherents",
+ "sp-std",
+ "sp-timestamp",
+]
+
+[[package]]
 name = "cumulus-primitives-utility"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.7#c5c3abf7eb9d4fdfb588d6560efaa8dca66a8dbc"
@@ -2008,7 +2021,7 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "sp-trie",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -4882,7 +4895,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.4",
+ "xcm",
  "zenlink-protocol",
 ]
 
@@ -5162,7 +5175,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -5796,7 +5809,7 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-executor",
 ]
 
@@ -6966,7 +6979,7 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "static_assertions",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -7002,7 +7015,7 @@ dependencies = [
  "sp-session",
  "sp-staking",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-executor",
 ]
 
@@ -11678,16 +11691,6 @@ dependencies = [
 
 [[package]]
 name = "xcm"
-version = "0.9.4"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.4#2f28561a09aab0613b5f8a68fbabf723d5fc197e"
-dependencies = [
- "derivative",
- "impl-trait-for-tuples",
- "parity-scale-codec",
-]
-
-[[package]]
-name = "xcm"
 version = "0.9.7"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.7#5d35bac7408a4cb12a578764217d06f3920b36aa"
 dependencies = [
@@ -11711,7 +11714,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-executor",
 ]
 
@@ -11729,7 +11732,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
 ]
 
 [[package]]
@@ -11744,7 +11747,7 @@ dependencies = [
  "polkadot-parachain",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-builder",
  "xcm-executor",
 ]
@@ -11779,7 +11782,7 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xcm 0.9.7",
+ "xcm",
  "xcm-executor",
 ]
 

@@ -25,8 +25,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
-	use frame_support::pallet_prelude::*;
-	use frame_support::traits::ValidatorRegistration;
+	use frame_support::{pallet_prelude::*, traits::ValidatorRegistration};
 	use frame_system::pallet_prelude::*;
 	use pallet_session::SessionManager;
 	use sp_std::prelude::*;
@@ -56,7 +55,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn validators)]
-	pub(super) type Validators<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
+	pub(super) type Validators<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, bool, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -66,9 +66,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {
-				initial_validators: Default::default(),
-			}
+			Self { initial_validators: Default::default() }
 		}
 	}
 
@@ -87,9 +85,9 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(0)]
-		pub(super) fn add_validator(
+		pub fn add_validator(
 			origin: OriginFor<T>,
-			validator_id: T::AccountId
+			validator_id: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
@@ -105,16 +103,13 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub(super) fn remove_validator(
+		pub fn remove_validator(
 			origin: OriginFor<T>,
-			validator_id: T::AccountId
+			validator_id: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
 
-			ensure!(
-				<Validators<T>>::contains_key(&validator_id),
-				<Error<T>>::NotValidator
-			);
+			ensure!(<Validators<T>>::contains_key(&validator_id), <Error<T>>::NotValidator);
 			<Validators<T>>::remove(&validator_id);
 
 			Self::deposit_event(Event::ValidatorRemoved(validator_id));

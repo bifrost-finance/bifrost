@@ -61,6 +61,7 @@ pallet-vesting = { version = "3.0.0", default-features = false }
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
+cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
@@ -149,6 +150,7 @@ std = [
 	"cumulus-pallet-xcmp-queue/std",
 	"cumulus-pallet-xcm/std",
 	"cumulus-primitives-core/std",
+	"cumulus-primitives-timestamp/std",
 	"cumulus-primitives-utility/std",
 	"xcm/std",
 	"xcm-builder/std",

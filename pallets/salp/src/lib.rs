@@ -333,7 +333,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(0)]
-		pub(super) fn fund_success(
+		pub fn fund_success(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
@@ -351,10 +351,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub(super) fn fund_fail(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
+		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
@@ -367,7 +364,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub(super) fn fund_retire(
+		pub fn fund_retire(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
@@ -385,10 +382,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub(super) fn fund_end(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
+		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			Self::check_fund_owner(origin.clone(), index)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -401,7 +395,7 @@ pub mod pallet {
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
 		#[pallet::weight(0)]
-		pub(super) fn create(
+		pub fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] cap: BalanceOf<T>,
@@ -447,7 +441,7 @@ pub mod pallet {
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
 		#[pallet::weight(0)]
-		pub(super) fn contribute(
+		pub fn contribute(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] value: BalanceOf<T>,
@@ -481,7 +475,7 @@ pub mod pallet {
 
 		/// Confirm contribute
 		#[pallet::weight(0)]
-		pub(super) fn confirm_contribute(
+		pub fn confirm_contribute(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
 			index: ParaId,
@@ -500,10 +494,7 @@ pub mod pallet {
 		/// times
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::weight(0)]
-		pub(super) fn withdraw(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
+		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			let owner = Self::check_fund_owner(origin.clone(), index)?;
 
 			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
@@ -523,7 +514,7 @@ pub mod pallet {
 
 		/// Confirm withdraw by fund owner temporarily
 		#[pallet::weight(0)]
-		pub(super) fn confirm_withdraw(
+		pub fn confirm_withdraw(
 			origin: OriginFor<T>,
 			index: ParaId,
 			is_success: bool,
@@ -541,7 +532,7 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
-		pub(super) fn redeem(
+		pub fn redeem(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			value: BalanceOf<T>,
@@ -595,7 +586,7 @@ pub mod pallet {
 
 		/// Confirm redeem by fund owner temporarily
 		#[pallet::weight(0)]
-		pub(super) fn confirm_redeem(
+		pub fn confirm_redeem(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
 			index: ParaId,
