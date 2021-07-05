@@ -743,7 +743,7 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
-	// How to withdraw and deposit an asset.
+	// How to withdraw and deposit an asset.(upgrade to BifrostAssetTransactor later)
 	type AssetTransactor = LocalAssetTransactor;
 	type Barrier = Barrier;
 	type Call = Call;
@@ -996,7 +996,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 // zenlink runtime start
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
-	pub const SelfParaId: u32 = 2001;
+	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 
 	// xcm

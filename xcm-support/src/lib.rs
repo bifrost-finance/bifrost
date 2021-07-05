@@ -27,31 +27,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::FullCodec;
-use frame_support::{dispatch::Weight, traits::Contains};
-use node_primitives::{traits::BifrostXcmExecutor, AccountId};
-use polkadot_parachain::primitives::Sibling;
-use sp_runtime::traits::{
-	CheckedConversion, Convert, MaybeSerializeDeserialize, SaturatedConversion,
-};
+use node_primitives::traits::BifrostXcmExecutor;
+use sp_runtime::traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion};
 use sp_std::{
 	cmp::{Eq, PartialEq},
-	convert::TryFrom,
 	fmt::Debug,
 	marker::PhantomData,
 	prelude::*,
 };
 use xcm::{
 	v0::{
-		Error as XcmError, Junction, MultiAsset, MultiLocation,
-		MultiLocation::{Null, X1, X2},
-		NetworkId, OriginKind, Result as XcmResult, SendXcm, Xcm,
+		Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind, Result as XcmResult,
+		SendXcm, Xcm,
 	},
 	DoubleEncoded,
 };
-use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
-use xcm_executor::traits::{
-	Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
-};
+use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
 
 /// Asset transaction errors.
 enum Error {
