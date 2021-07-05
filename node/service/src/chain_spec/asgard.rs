@@ -353,7 +353,12 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let balances = balances_configs
 		.into_iter()
 		.flat_map(|bc| bc.balances)
-		.chain(super::faucet_accounts().iter().map(|x| (x, ENDOWMENT)))
+		.chain(
+			super::faucet_accounts()
+				.into_iter()
+				.map(|x| (x, ENDOWMENT))
+				.collect::<Vec<(AccountId, Balance)>>(),
+		)
 		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
 			if let Some(balance) = acc.get_mut(&account_id) {
 				*balance = balance
@@ -376,7 +381,20 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let vesting_configs: Vec<VestingConfig> =
 		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
 	let vouchers = initialize_all_vouchers();
-	let tokens = vec![];
+	// let tokens = vec![];
+	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let tokens = endowed_accounts
+		.iter()
+		.chain(super::faucet_accounts().iter())
+		.flat_map(|x| {
+			vec![
+				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+			]
+		})
+		.collect();
 
 	asgard_genesis(
 		invulnerables,
