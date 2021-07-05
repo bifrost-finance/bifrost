@@ -331,11 +331,6 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"]
 				.unchecked_into(),
 		),
-		(
-			hex!["7ca4b08a92ca4076d958a671115660ce3038ca88fd2422c3fe2e542be2655960"].into(),
-			hex!["7ca4b08a92ca4076d958a671115660ce3038ca88fd2422c3fe2e542be2655960"]
-				.unchecked_into(),
-		),
 	];
 
 	let root_key: AccountId = hex![
@@ -357,8 +352,8 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let mut total_issuance: Balance = Zero::zero();
 	let balances = balances_configs
 		.into_iter()
-		.chain(super::faucet_accounts().iter())
 		.flat_map(|bc| bc.balances)
+		.chain(super::faucet_accounts().iter().map(|x| (x, ENDOWMENT)))
 		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
 			if let Some(balance) = acc.get_mut(&account_id) {
 				*balance = balance
