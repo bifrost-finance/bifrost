@@ -238,6 +238,18 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Bifrost(client) => client.indexed_transaction(id),
 		}
 	}
+
+	fn block_indexed_body(
+		&self,
+		id: &BlockId<Block>,
+	) -> sp_blockchain::Result<Option<Vec<Vec<u8>>>> {
+		match self {
+			#[cfg(feature = "with-asgard-runtime")]
+			Self::Asgard(client) => client.block_indexed_body(id),
+			#[cfg(feature = "with-bifrost-runtime")]
+			Self::Bifrost(client) => client.block_indexed_body(id),
+		}
+	}
 }
 
 impl sc_client_api::StorageProvider<Block, FullBackend> for Client {

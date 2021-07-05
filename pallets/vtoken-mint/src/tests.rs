@@ -45,7 +45,7 @@ fn mint_vtoken_should_be_ok() {
 
 		// Check event
 		let mint_vtoken_event =
-			mock::Event::vtoken_mint(crate::Event::Minted(ALICE, vDOT, minted_vdot));
+			mock::Event::VtokenMint(crate::Event::Minted(ALICE, vDOT, minted_vdot));
 		assert!(System::events().iter().any(|record| record.event == mint_vtoken_event));
 
 		// check Alice DOTs and vDOTs.
@@ -103,7 +103,7 @@ fn redeem_token_should_be_ok() {
 
 		// Check event
 		let redeem_token_event =
-			mock::Event::vtoken_mint(crate::Event::RedeemStarted(ALICE, vDOT, to_sell_vdot, 1));
+			mock::Event::VtokenMint(crate::Event::RedeemStarted(ALICE, vDOT, to_sell_vdot, 1));
 		assert!(System::events().iter().any(|record| { record.event == redeem_token_event }));
 
 		// check Alice DOTs and vDOTs.

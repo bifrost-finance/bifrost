@@ -39,7 +39,7 @@ fn issue_and_burn_should_work_as_expected() {
 		assert_eq!(Assets::total_issuance(vKSM), to_issue);
 
 		// Check event
-		let issue_event = mock::Event::bifrost_assets(crate::Event::Issued(ALICE, vKSM, to_issue));
+		let issue_event = mock::Event::BifrostAssets(crate::Event::Issued(ALICE, vKSM, to_issue));
 		assert!(System::events().iter().any(|record| record.event == issue_event));
 
 		// Issue vKSM to bob
@@ -56,7 +56,7 @@ fn issue_and_burn_should_work_as_expected() {
 
 		// Check event
 		let burn_event =
-			mock::Event::bifrost_assets(crate::Event::Burned(ALICE, vKSM, destroy_alice));
+			mock::Event::BifrostAssets(crate::Event::Burned(ALICE, vKSM, destroy_alice));
 		assert!(System::events().iter().any(|record| record.event == burn_event));
 
 		assert_ok!(BifrostAssets::burn(RawOrigin::Root.into(), BOB, vKSM, destroy_bob));
