@@ -44,20 +44,20 @@ pub fn bifrost_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
-		frame_system: SystemConfig {
+		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		pallet_balances: BalancesConfig { balances },
-		pallet_indices: IndicesConfig { indices: vec![] },
-		pallet_sudo: SudoConfig { key: root_key.clone() },
+		balances: BalancesConfig { balances },
+		indices: IndicesConfig { indices: vec![] },
+		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		pallet_collator_selection: CollatorSelectionConfig {
+		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
 			candidacy_bond: Zero::zero(),
 			..Default::default()
 		},
-		pallet_session: SessionConfig {
+		session: SessionConfig {
 			keys: invulnerables
 				.iter()
 				.cloned()
@@ -70,10 +70,10 @@ pub fn bifrost_genesis(
 				})
 				.collect(),
 		},
-		pallet_aura: Default::default(),
-		cumulus_pallet_aura_ext: Default::default(),
-		cumulus_pallet_parachain_system: Default::default(),
-		pallet_vesting: VestingConfig { vesting: vestings },
+		aura: Default::default(),
+		aura_ext: Default::default(),
+		parachain_system: Default::default(),
+		vesting: VestingConfig { vesting: vestings },
 	}
 }
 

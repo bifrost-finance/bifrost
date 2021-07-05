@@ -13,18 +13,18 @@ frame-system = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.4" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
 
 [dev-dependencies]
 sp-io = "3.0.0"
 sp-core = "3.0.0"
 orml-tokens = "0.4.1-dev"
 bifrost-bancor = { path = "../../pallets/bancor" }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.4" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
 
 [features]
 default = ["std"]
