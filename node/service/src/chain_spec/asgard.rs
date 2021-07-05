@@ -300,23 +300,12 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		"Bifrost Asgard CC4",
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
-		move || {
-			asgard_config_genesis(id)
-		},
-		vec![
-			"/ip4/150.109.71.108/tcp/30333/p2p/12D3KooWC8djq1tWHepURWiiQ1FAcPE7L1AfJvSpDb8TQAi1izKv".parse().expect("failed to parse multiaddress."),
-			"/ip4/119.28.73.187/tcp/30333/p2p/12D3KooWGK87fM2pNQyLn23R1GkBvQCYqnSdKdMsrJGNRqT22wU8".parse().expect("failed to parse multiaddress."),
-			"/ip4/150.109.194.40/tcp/30333/p2p/12D3KooWLt3w5tadCR5Fc7ZvjciLy7iKJ2ZHq6qp4UVmUUHyCJuX".parse().expect("failed to parse multiaddress."),
-			"/ip4/124.156.223.229/tcp/30333/p2p/12D3KooWMduQkmRVzpwxJuN6MQT4ex1iP9YquzL4h5K9Ru8qMXtQ".parse().expect("failed to parse multiaddress."),
-			"/ip4/124.156.217.80/tcp/30333/p2p/12D3KooWLAHZyqMa9TQ1fR7aDRRKfWt857yFMT3k2ckK9mhYT9qR".parse().expect("failed to parse multiaddress.")
-		],
+		move || asgard_config_genesis(id),
+		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(properties),
-		RelayExtensions {
-			relay_chain: "westend".into(),
-			para_id: id.into(),
-		},
+		RelayExtensions { relay_chain: "westend".into(), para_id: id.into() },
 	)
 }
 
