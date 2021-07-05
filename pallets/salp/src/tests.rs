@@ -723,13 +723,21 @@ fn double_redeem_should_work() {
 		let vstoken = Salp::vstoken();
 		let vsbond = Salp::vsbond(3_000, 1, SlotLength::get());
 
-		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 2_000 * DOLLARS, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
 		assert_ok!(Salp::confirm_contribute(
 			Some(ALICE).into(),
 			BRUCE,
 			3_000,
-			1000 * DOLLARS,
+			500 * DOLLARS,
+			true
+		));
+		assert_ok!(Salp::contribute(Some(CATHI).into(), 3_000, 1000 * DOLLARS));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			CATHI,
+			3_000,
+			500 * DOLLARS,
 			true
 		));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
@@ -738,20 +746,26 @@ fn double_redeem_should_work() {
 		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 500 * DOLLARS));
-		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 500 * DOLLARS));
+		assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 500 * DOLLARS));
 
 		assert_eq!(Salp::redeem_pool(), 0 * DOLLARS);
 
 		// Check the status of vsToken/vsBond issued
-		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 1000 * DOLLARS);
-		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vstoken).frozen, 500 * DOLLARS);
 		assert_eq!(Tokens::accounts(BRUCE, vstoken).reserved, 0 * DOLLARS);
-		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 1000 * DOLLARS);
-		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 1000 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 500 * DOLLARS);
 		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).free, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).frozen, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).free, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).frozen, 500 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).reserved, 0 * DOLLARS);
 
 		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, true));
-		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, true));
+		assert_ok!(Salp::confirm_redeem(Some(ALICE).into(), CATHI, 3_000, 500 * DOLLARS, true));
 
 		// Check the status of vsToken/vsBond issued
 		assert_eq!(Tokens::accounts(BRUCE, vstoken).free, 0 * DOLLARS);
@@ -760,6 +774,12 @@ fn double_redeem_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, vsbond).free, 0 * DOLLARS);
 		assert_eq!(Tokens::accounts(BRUCE, vsbond).frozen, 0 * DOLLARS);
 		assert_eq!(Tokens::accounts(BRUCE, vsbond).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vstoken).reserved, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).free, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).frozen, 0 * DOLLARS);
+		assert_eq!(Tokens::accounts(CATHI, vsbond).reserved, 0 * DOLLARS);
 	});
 }
 

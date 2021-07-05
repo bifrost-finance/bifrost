@@ -578,6 +578,8 @@ pub mod pallet {
 			Self::check_balance(index, &who, value)?;
 
 			// TODO: Fix the bug
+			// 	It's no way to know the amount of vsToken/vsBond under a specific lock
+			// 	So the bug cannot be fixed by now
 			// Lock the vsToken/vsBond.
 			T::MultiCurrency::extend_lock(REDEEM_LOCK, vstoken, &who, value)?;
 			T::MultiCurrency::extend_lock(REDEEM_LOCK, vsbond, &who, value)?;
@@ -892,10 +894,6 @@ pub mod pallet {
 				T::MultiCurrency::deposit(vstoken, &who, value)?;
 				T::MultiCurrency::deposit(vsbond, &who, value)?;
 
-				// TODO: Fix the bug
-				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, value)?;
-				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, value)?;
-
 				// Recalculate fund raised.
 				Funds::<T>::mutate(index, |fund| {
 					if let Some(fund) = fund {
@@ -904,12 +902,17 @@ pub mod pallet {
 				});
 
 				// Recalculate the contribution of contributor to the fund.
-				let _balance = Self::update_contribution(
+				let _ = Self::update_contribution(
 					index,
 					who.clone(),
 					value,
 					ContributionStatus::Contributed,
 				)?;
+
+				let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+				let (balance, _) = Self::contribution_get(fund.trie_index, &who);
+				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, balance)?;
+				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, balance)?;
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
