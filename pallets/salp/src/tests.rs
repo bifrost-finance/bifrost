@@ -725,21 +725,9 @@ fn double_redeem_should_work() {
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 2_000 * DOLLARS, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 1000 * DOLLARS));
-		assert_ok!(Salp::confirm_contribute(
-			Some(ALICE).into(),
-			BRUCE,
-			3_000,
-			500 * DOLLARS,
-			true
-		));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, 500 * DOLLARS, true));
 		assert_ok!(Salp::contribute(Some(CATHI).into(), 3_000, 1000 * DOLLARS));
-		assert_ok!(Salp::confirm_contribute(
-			Some(ALICE).into(),
-			CATHI,
-			3_000,
-			500 * DOLLARS,
-			true
-		));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), CATHI, 3_000, 500 * DOLLARS, true));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
