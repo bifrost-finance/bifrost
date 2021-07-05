@@ -312,33 +312,28 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
-			// 5H6pFYqLatuQbnLLzKFUazX1VXjmqhnJQT6hVWVz67kaT94z
-			hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"].into(),
-			hex!["dec92f12684928aa042297f6d8927930b82d9ef28b1dfa1974e6a88c51c6ee75"]
+			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
+			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"]
 				.unchecked_into(),
 		),
 		(
-			// 5DPiyVYRVUghxtYz5qPcUMAci5GPnL9sBYawqmDFp2YH76hh
-			hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"].into(),
-			hex!["3abda893fc4ce0c3d465ea434cf513bed824f1c2b564cf38003a72c47fda7147"]
+			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
+			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"]
 				.unchecked_into(),
 		),
 		(
-			// 5HgpFg4DXfg2GZ5gKcRAtarF168y9SAi5zeAP7JRig2NW5Br
-			hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"].into(),
-			hex!["f8b788ebec50ba10e2676c6d59842dd1127b7701977d7daf3172016ac0d4632e"]
+			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"].into(),
+			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"]
 				.unchecked_into(),
 		),
 		(
-			// 5EtBGed7DkcURQSc3NAfQqVz6wcxgkj8wQBh6JsrjDSuvmQL
-			hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"].into(),
-			hex!["7cad48689d421015bb3b449a365fdbd2a2d3070df2d42f8077d8f714d88ad200"]
+			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
+			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"]
 				.unchecked_into(),
 		),
 		(
-			// 5DLHpKfdUCki9xYYYKCrWCVE6PfX2U1gLG7f6sGj9uHyS9MC
-			hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"].into(),
-			hex!["381f3b88a3bc9872c7137f8bfbd24ae039bfa5845cba51ffa2ad8e4d03d1af1a"]
+			hex!["7ca4b08a92ca4076d958a671115660ce3038ca88fd2422c3fe2e542be2655960"].into(),
+			hex!["7ca4b08a92ca4076d958a671115660ce3038ca88fd2422c3fe2e542be2655960"]
 				.unchecked_into(),
 		),
 	];
@@ -362,7 +357,7 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let mut total_issuance: Balance = Zero::zero();
 	let balances = balances_configs
 		.into_iter()
-		// .chain(super::faucet_accounts().iter())
+		.chain(super::faucet_accounts().iter())
 		.flat_map(|bc| bc.balances)
 		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
 			if let Some(balance) = acc.get_mut(&account_id) {
