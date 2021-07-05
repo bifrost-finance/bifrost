@@ -1,9 +1,8 @@
 [package]
-name = "asgard-runtime"
+name = "bifrost-runtime-common"
 version = "0.8.0"
-authors = ["Edwin Wang <lark930@gmail.com>"]
+authors = ["Ron yang<yrong1997@gmail.com>"]
 edition = "2018"
-build = "build.rs"
 
 [dependencies]
 # third-party dependencies
@@ -34,31 +33,8 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
 max-encoded-len = { version = "3.0.0", default-features = false }
-pallet-authorship = { version = "3.0.0", default-features = false }
-pallet-aura = { version = "3.0.0", default-features = false }
-pallet-balances = { version = "3.0.0", default-features = false }
-pallet-bounties = { version = "3.0.0", default-features = false }
-pallet-collective = { version = "3.0.0", default-features = false }
-pallet-democracy = { version = "3.0.0", default-features = false }
-pallet-elections-phragmen = { version = "4.0.0", default-features = false }
-pallet-indices = { version = "3.0.0", default-features = false }
-pallet-membership = { version = "3.0.0", default-features = false }
-pallet-multisig = { version = "3.0.0", default-features = false }
-pallet-proxy = { version = "3.0.0", default-features = false }
-pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
-pallet-scheduler = { version = "3.0.0", default-features = false }
-pallet-session = { version = "3.0.0", default-features = false }
-pallet-sudo = { version = "3.0.0", default-features = false }
-pallet-timestamp = { version = "3.0.0", default-features = false }
-pallet-tips = { version = "3.0.0", default-features = false }
-pallet-transaction-payment = { version = "3.0.0", default-features = false }
-pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
-pallet-treasury = { version = "3.0.0", default-features = false }
-pallet-utility = { version = "3.0.0", default-features = false }
-pallet-vesting = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.7" }
@@ -76,19 +52,6 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
 
-# bifrost pallets
-bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
-bifrost-assets = { path = "../../pallets/assets", default-features = false }
-bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
-bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
-bifrost-voucher = { path = "../../pallets/voucher", default-features = false }
-bifrost-charge-transaction-fee = { path = "../../pallets/charge-transaction-fee", default-features = false }
-bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../pallets/charge-transaction-fee/rpc/runtime-api", default-features = false }
-bifrost-salp= {path = "../../pallets/salp",default-features = false}
-bifrost-bancor= {path = "../../pallets/bancor",default-features = false}
-bifrost-vsbond-auction  = { path = "../../pallets/vsbond-auction", default-features = false }
-bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
-
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -98,12 +61,8 @@ xcm-support = { path = "../../xcm-support", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
-[build-dependencies]
-substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.7" }
-
 [features]
 default = ["std"]
-with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"codec/std",
 	"log/std",
@@ -113,27 +72,6 @@ std = [
 	"frame-system/std",
 	"max-encoded-len/std",
 	"node-primitives/std",
-	"pallet-aura/std",
-	"pallet-balances/std",
-	"pallet-bounties/std",
-	"pallet-collator-selection/std",
-	"pallet-collective/std",
-	"pallet-democracy/std",
-	"pallet-elections-phragmen/std",
-	"pallet-indices/std",
-	"pallet-membership/std",
-	"pallet-multisig/std",
-	"pallet-proxy/std",
-	"pallet-randomness-collective-flip/std",
-	"pallet-sudo/std",
-	"pallet-timestamp/std",
-	"pallet-tips/std",
-	"pallet-transaction-payment-rpc-runtime-api/std",
-	"pallet-transaction-payment/std",
-	"pallet-treasury/std",
-	"pallet-session/std",
-	"pallet-vesting/std",
-	"pallet-utility/std",
 	"sp-block-builder/std",
 	"sp-inherents/std",
 	"sp-offchain/std",
@@ -145,7 +83,6 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-arithmetic/std",
 	"parachain-info/std",
-	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcmp-queue/std",
@@ -157,21 +94,10 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"sp-consensus-aura/std",
-	"bifrost-assets/std",
-	"bifrost-vtoken-mint/std",
-	"bifrost-minter-reward/std",
-	'bifrost-voucher/std',
-	"bifrost-charge-transaction-fee/std",
-	"bifrost-charge-transaction-fee-rpc-runtime-api/std",
-	"bifrost-salp/std",
-	"bifrost-bancor/std",
-	"bifrost-vsbond-auction/std",
-	"bifrost-bancor-runtime-api/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
 	"xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
-	"bifrost-runtime-common/std",
 ]

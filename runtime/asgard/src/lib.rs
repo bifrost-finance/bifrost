@@ -67,8 +67,12 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use bifrost_runtime_common::xcm_impl::{
+	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
+};
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
+use cumulus_primitives_core::ParaId as CumulusParaId;
 use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -86,10 +90,7 @@ use xcm_builder::{
 	UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_support::{
-	BifrostAssetMatcher, BifrostCurrencyAdapter, BifrostCurrencyIdConvert, BifrostFilteredAssets,
-	BifrostXcmAdaptor, BifrostXcmTransactFilter,
-};
+use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor};
 // zenlink imports
 use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
@@ -656,6 +657,7 @@ impl pallet_randomness_collective_flip::Config for Runtime {}
 parameter_types! {
 	pub const RelayLocation: MultiLocation = X1(Parent);
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+	pub SelfParaChainId: CumulusParaId = ParachainInfo::parachain_id();
 	pub Ancestry: MultiLocation = X1(Parachain(ParachainInfo::parachain_id().into()));
 }
 
@@ -732,11 +734,11 @@ pub type Barrier = (
 
 pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 	Tokens,
-	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert>,
+	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert<SelfParaChainId>>,
 	AccountId,
 	LocationToAccountId,
 	CurrencyId,
-	BifrostCurrencyIdConvert,
+	BifrostCurrencyIdConvert<SelfParaChainId>,
 >;
 
 pub struct XcmConfig;

@@ -25,14 +25,14 @@
 //! modules.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::unused_unit)]
 
-#[allow(unused_must_use)]
 use codec::FullCodec;
 use frame_support::{dispatch::Weight, traits::Contains};
-use node_primitives::{traits::BifrostXcmExecutor, AccountId, CurrencyId, TokenSymbol};
+use node_primitives::{traits::BifrostXcmExecutor, AccountId};
 use polkadot_parachain::primitives::Sibling;
-use sp_runtime::traits::{CheckedConversion, Convert, MaybeSerializeDeserialize};
+use sp_runtime::traits::{
+	CheckedConversion, Convert, MaybeSerializeDeserialize, SaturatedConversion,
+};
 use sp_std::{
 	cmp::{Eq, PartialEq},
 	convert::TryFrom,
@@ -42,10 +42,9 @@ use sp_std::{
 };
 use xcm::{
 	v0::{
-		prelude::{XcmError, XcmResult},
-		Junction, MultiAsset, MultiLocation,
+		Error as XcmError, Junction, MultiAsset, MultiLocation,
 		MultiLocation::{Null, X1, X2},
-		NetworkId, OriginKind, SendXcm, Xcm,
+		NetworkId, OriginKind, Result as XcmResult, SendXcm, Xcm,
 	},
 	DoubleEncoded,
 };
@@ -54,103 +53,31 @@ use xcm_executor::traits::{
 	Convert as xcmConvert, FilterAssetLocation, MatchesFungible, ShouldExecute, TransactAsset,
 };
 
-/// Bifrost Asset Matcher
-pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
-	PhantomData<(CurrencyId, CurrencyIdConvert)>,
-);
-
-impl<CurrencyId, CurrencyIdConvert, Amount> MatchesFungible<Amount>
-	for BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>
-where
-	CurrencyIdConvert: Convert<MultiLocation, Option<CurrencyId>>,
-	Amount: TryFrom<u128>,
-{
-	fn matches_fungible(a: &MultiAsset) -> Option<Amount> {
-		if let MultiAsset::ConcreteFungible { id, amount } = a {
-			if CurrencyIdConvert::convert(id.clone()).is_some() {
-				return CheckedConversion::checked_from(*amount);
-			}
-		}
-		None
-	}
+/// Asset transaction errors.
+enum Error {
+	/// Failed to match fungible.
+	FailedToMatchFungible,
+	/// `MultiLocation` to `AccountId` Conversion failed.
+	AccountIdConversionFailed,
+	/// `CurrencyId` conversion failed.
+	CurrencyIdConversionFailed,
 }
 
-/// Bifrost Location Convert
-pub type BifrostLocationConvert = (
-	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsDefault<AccountId>,
-	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
-	SiblingParachainConvertsVia<Sibling, AccountId>,
-	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<NetworkId, AccountId>,
-);
-
-/// Bifrost Currency Convert
-pub struct BifrostCurrencyIdConvert;
-
-impl Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert {
-	fn convert(l: MultiLocation) -> Option<CurrencyId> {
-		#[allow(unused_variables)]
-		{
-			let para_id: u32;
-			match l {
-				X2(Junction::Parent, Junction::Parachain(para_id)) => {
-					Some(CurrencyId::Token(TokenSymbol::KSM))
-				}
-				_ => None,
+impl From<Error> for XcmError {
+	fn from(e: Error) -> Self {
+		match e {
+			Error::FailedToMatchFungible => {
+				XcmError::FailedToTransactAsset("FailedToMatchFungible")
+			}
+			Error::AccountIdConversionFailed => {
+				XcmError::FailedToTransactAsset("AccountIdConversionFailed")
+			}
+			Error::CurrencyIdConversionFailed => {
+				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed")
 			}
 		}
 	}
 }
-
-impl xcmConvert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert {
-	fn convert(a: MultiAsset) -> Result<Option<CurrencyId>, MultiAsset> {
-		if let MultiAsset::ConcreteFungible { id, amount: _ } = a {
-			return Ok(<Self as Convert<MultiLocation, Option<CurrencyId>>>::convert(id));
-		}
-		Err(MultiAsset::None)
-	}
-}
-
-/// Bifrost Xcm Transact Filter
-pub struct BifrostXcmTransactFilter<T>(PhantomData<T>);
-
-impl<T: Contains<MultiLocation>> ShouldExecute for BifrostXcmTransactFilter<T> {
-	fn should_execute<Call>(
-		_origin: &MultiLocation,
-		_top_level: bool,
-		message: &Xcm<Call>,
-		_shallow_weight: Weight,
-		_weight_credit: &mut Weight,
-	) -> Result<(), ()> {
-		match message {
-			Xcm::Transact { origin_type: _, require_weight_at_most: _, call: _ } => Ok(()),
-			_ => Err(()),
-		}
-	}
-}
-
-/// Bifrost Filtered Assets
-pub struct BifrostFilterAsset;
-
-impl FilterAssetLocation for BifrostFilterAsset {
-	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		match asset {
-			MultiAsset::ConcreteFungible { .. } => match origin {
-				Null | X1(Junction::Plurality { .. }) => true,
-				X1(Junction::AccountId32 { .. }) => true,
-				X1(Junction::Parent { .. }) => true,
-				X1(Junction::Parachain { .. }) => true,
-				X2(Junction::Parachain { .. }, _) => true,
-				X2(Junction::Parent { .. }, _) => true,
-				_ => false,
-			},
-			_ => false,
-		}
-	}
-}
-
-pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 /// The `TransactAsset` implementation, to handle `MultiAsset` deposit/withdraw.
 ///
@@ -180,7 +107,7 @@ impl<
 		AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
 		AccountIdConvert: xcmConvert<MultiLocation, AccountId>,
 		CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
-		CurrencyIdConvert: xcmConvert<MultiAsset, Option<CurrencyId>>,
+		CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
 	> TransactAsset
 	for BifrostCurrencyAdapter<
 		MultiCurrency,
@@ -193,13 +120,13 @@ impl<
 {
 	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
 		match (
-			AccountIdConvert::convert(location.clone()),
+			AccountIdConvert::convert_ref(location.clone()),
 			CurrencyIdConvert::convert(asset.clone()),
 			Matcher::matches_fungible(&asset),
 		) {
 			// known asset
-			(who, currency_id, Some(amount)) => {
-				MultiCurrency::deposit(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
+			(Ok(who), Some(currency_id), Some(amount)) => {
+				MultiCurrency::deposit(currency_id, &who, amount)
 					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
 			}
 			_ => Err(XcmError::AssetNotFound),
@@ -210,19 +137,16 @@ impl<
 		asset: &MultiAsset,
 		location: &MultiLocation,
 	) -> Result<xcm_executor::Assets, XcmError> {
-		match (
-			AccountIdConvert::convert(location.clone()),
-			CurrencyIdConvert::convert(asset.clone()),
-			Matcher::matches_fungible(&asset),
-		) {
-			// known asset
-			(who, currency_id, Some(amount)) => {
-				MultiCurrency::withdraw(currency_id.unwrap().unwrap(), &who.unwrap(), amount)
-					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
-				Ok(xcm_executor::Assets::new())
-			}
-			_ => Err(XcmError::AssetNotFound),
-		}
+		let who = AccountIdConvert::convert_ref(location)
+			.map_err(|_| XcmError::from(Error::AccountIdConversionFailed))?;
+		let currency_id = CurrencyIdConvert::convert(asset.clone())
+			.ok_or_else(|| XcmError::from(Error::CurrencyIdConversionFailed))?;
+		let amount: MultiCurrency::Balance = Matcher::matches_fungible(&asset)
+			.ok_or_else(|| XcmError::from(Error::FailedToMatchFungible))?
+			.saturated_into();
+		MultiCurrency::withdraw(currency_id, &who, amount)
+			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
+		Ok(asset.clone().into())
 	}
 }
 
