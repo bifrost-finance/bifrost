@@ -142,10 +142,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{
-		traits::{BancorHandler, BifrostXcmExecutor},
-		CurrencyId, LeasePeriod, ParaId, TokenSymbol,
-	};
+	use node_primitives::{traits::BancorHandler, CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
 		MultiLockableCurrency, MultiReservableCurrency,
@@ -157,6 +154,7 @@ pub mod pallet {
 		prelude::{XcmError, XcmResult},
 		Junction, MultiLocation,
 	};
+	use xcm_support::BifrostXcmExecutor;
 
 	use super::*;
 

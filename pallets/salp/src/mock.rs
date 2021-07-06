@@ -21,7 +21,7 @@
 #![cfg(test)]
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
-use node_primitives::{traits::BifrostXcmExecutor, Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
@@ -33,6 +33,7 @@ use xcm::{
 	DoubleEncoded,
 };
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
+use xcm_support::BifrostXcmExecutor;
 
 use crate as salp;
 
