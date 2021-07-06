@@ -376,7 +376,8 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		.into_iter()
 		.collect();
 
-	// assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320 million");
+	// assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320
+	// million");
 
 	let vesting_configs: Vec<VestingConfig> =
 		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
