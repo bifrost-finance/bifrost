@@ -26,8 +26,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod mock;
+
 use codec::FullCodec;
-use node_primitives::traits::BifrostXcmExecutor;
 use sp_runtime::traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion};
 use sp_std::{
 	cmp::{Eq, PartialEq},
@@ -43,6 +45,8 @@ use xcm::{
 	DoubleEncoded,
 };
 use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
+mod traits;
+pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
 
 /// Asset transaction errors.
 enum Error {

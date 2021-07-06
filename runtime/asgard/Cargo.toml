@@ -75,6 +75,7 @@ xcm = { git = "https://github.com/paritytech/polkadot", default-features = false
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
 
 # bifrost pallets
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
@@ -156,6 +157,7 @@ std = [
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
+	"polkadot-runtime-parachains/std",
 	"sp-consensus-aura/std",
 	"bifrost-assets/std",
 	"bifrost-vtoken-mint/std",

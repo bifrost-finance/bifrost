@@ -16,22 +16,39 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-use frame_support::sp_runtime::offchain::storage_lock::BlockNumberProvider;
-use node_primitives::BlockNumber;
+use cumulus_primitives_core::ParaId as CumulusParaId;
+use frame_support::weights::Weight;
+use sp_std::vec::Vec;
+use xcm::{
+	v0::{prelude::XcmResult, MultiLocation},
+	DoubleEncoded,
+};
 
-pub mod xcm_impl;
+pub trait HandleUmpMessage {
+	fn handle_ump_message(from: CumulusParaId, msg: &[u8], max_weight: Weight);
+}
 
-pub struct RelaychainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
+pub trait HandleDmpMessage {
+	fn handle_dmp_message(at_relay_block: u32, msg: Vec<u8>, max_weight: Weight);
+}
 
-impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
-	for RelaychainBlockNumberProvider<T>
-{
-	type BlockNumber = BlockNumber;
+pub trait HandleXcmpMessage {
+	fn handle_xcmp_message(
+		from: CumulusParaId,
+		at_relay_block: u32,
+		msg: &[u8],
+		max_weight: Weight,
+	);
+}
 
-	fn current_block_number() -> Self::BlockNumber {
-		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
-			.map(|d| d.relay_parent_number)
-			.unwrap_or_default()
-	}
+/// Bifrost Xcm Executor
+pub trait BifrostXcmExecutor {
+	fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>) -> XcmResult;
+
+	fn ump_transfer_asset(
+		origin: MultiLocation,
+		dest: MultiLocation,
+		amount: u128,
+		relay: bool,
+	) -> XcmResult;
 }

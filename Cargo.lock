@@ -234,6 +234,7 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-runtime-parachains",
  "serde",
  "sp-api",
  "sp-arithmetic",
@@ -4945,7 +4946,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xcm",
  "zenlink-protocol",
 ]
 
@@ -11789,12 +11789,17 @@ dependencies = [
 name = "xcm-support"
 version = "0.8.0"
 dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
  "frame-support",
  "frame-system",
  "node-primitives",
  "orml-traits",
  "parity-scale-codec",
+ "paste",
  "polkadot-parachain",
+ "polkadot-runtime-parachains",
  "sp-runtime",
  "sp-std",
  "xcm",
