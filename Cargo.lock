@@ -183,6 +183,7 @@ dependencies = [
  "bifrost-charge-transaction-fee",
  "bifrost-charge-transaction-fee-rpc-runtime-api",
  "bifrost-minter-reward",
+ "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-voucher",
  "bifrost-vsbond-auction",
@@ -233,6 +234,7 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-runtime-parachains",
  "serde",
  "sp-api",
  "sp-arithmetic",
@@ -788,6 +790,55 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+]
+
+[[package]]
+name = "bifrost-runtime-common"
+version = "0.8.0"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-timestamp",
+ "cumulus-primitives-utility",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-rpc-runtime-api",
+ "hex-literal 0.3.2",
+ "log",
+ "max-encoded-len",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-collator-selection",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "serde",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-inherents",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+ "xcm-support",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
@@ -4895,7 +4946,6 @@ dependencies = [
  "sp-core",
  "sp-runtime",
  "sp-std",
- "xcm",
  "zenlink-protocol",
 ]
 
@@ -11739,12 +11789,17 @@ dependencies = [
 name = "xcm-support"
 version = "0.8.0"
 dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
  "frame-support",
  "frame-system",
  "node-primitives",
  "orml-traits",
  "parity-scale-codec",
+ "paste",
  "polkadot-parachain",
+ "polkadot-runtime-parachains",
  "sp-runtime",
  "sp-std",
  "xcm",
