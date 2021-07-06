@@ -37,7 +37,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 
 RUN export PATH="$PATH:$HOME/.cargo/bin" && \
 	eval `ssh-agent` && ssh-add /root/.ssh/id_rsa && \
-	make build-bifrost-release
+	make build-all-release
 
 # ===== SECOND STAGE ======
 
