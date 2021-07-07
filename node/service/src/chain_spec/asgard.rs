@@ -110,7 +110,6 @@ pub fn asgard_genesis(
 			],
 			reward_by_one_block: 5 * DOLLARS / 100,
 			round_index: 1,
-			storage_version: Default::default(),
 		},
 		vtoken_mint: VtokenMintConfig {
 			pools: vec![

@@ -150,12 +150,6 @@ pub mod pallet {
 	pub(crate) type UserBNCReward<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, BalanceOf<T>, ValueQuery>;
 
-	/// Current storage version
-	#[pallet::storage]
-	#[pallet::getter(fn storage_version)]
-	pub(crate) type StorageVersion<T: Config> =
-		StorageValue<_, node_primitives::StorageVersion, ValueQuery>;
-
 	/// Record maximum vtoken value is minted and when minted
 	#[pallet::storage]
 	#[pallet::getter(fn current_round)]
@@ -267,7 +261,6 @@ pub mod pallet {
 		pub wegiths: Vec<(CurrencyIdOf<T>, T::ShareWeight)>,
 		pub reward_by_one_block: BalanceOf<T>,
 		pub round_index: u8,
-		pub storage_version: node_primitives::StorageVersion,
 	}
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
@@ -276,7 +269,6 @@ pub mod pallet {
 				wegiths: Default::default(),
 				reward_by_one_block: Default::default(),
 				round_index: Default::default(),
-				storage_version: Default::default(),
 			}
 		}
 	}
@@ -290,7 +282,6 @@ pub mod pallet {
 
 			CurrentRound::<T>::put(self.round_index);
 			BNCRewardByOneBlock::<T>::put(self.reward_by_one_block);
-			StorageVersion::<T>::put(self.storage_version);
 		}
 	}
 

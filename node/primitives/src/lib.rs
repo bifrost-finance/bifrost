@@ -20,27 +20,24 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::convert::TryFrom;
-
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic, RuntimeDebug, SaturatedConversion,
+	MultiSignature, OpaqueExtrinsic,
 };
 use sp_std::{convert::Into, prelude::*};
 
+mod bridge;
 mod currency;
 pub mod traits;
 
 pub use crate::{
+	bridge::*,
 	currency::{CurrencyId, TokenSymbol},
-	traits::{
-		AssetReward, BridgeAssetFrom, BridgeAssetTo, CurrencyIdExt, MinterRewardExt, RewardHandler,
-		RewardTrait, TokenInfo, VtokenMintExt,
-	},
+	traits::*,
 };
 
 /// An index to a block.
@@ -120,12 +117,6 @@ pub type EraId = u32;
 
 /// Signed version of Balance
 pub type Amount = i128;
-
-/// The balance of zenlink asset
-pub type TokenBalance = u128;
-
-/// The pair id of the zenlink dex.
-pub type PairId = u32;
 
 /// Parachain Id
 pub type ParaId = u32;
@@ -230,163 +221,10 @@ impl<Balance: Default + Copy> VtokenPool<Balance> {
 	}
 }
 
-/// Blockchain types
-#[derive(PartialEq, Debug, Clone, Encode, Decode)]
-pub enum BlockchainType {
-	BIFROST,
-	EOS,
-	IOST,
-}
-
-impl Default for BlockchainType {
-	fn default() -> Self {
-		BlockchainType::BIFROST
-	}
-}
-
-/// Symbol type of bridge asset
-#[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetSymbol<Precision> {
-	pub blockchain: BlockchainType,
-	pub symbol: Vec<u8>,
-	pub precision: Precision,
-}
-
-impl<Precision> BridgeAssetSymbol<Precision> {
-	pub fn new(blockchain: BlockchainType, symbol: Vec<u8>, precision: Precision) -> Self {
-		BridgeAssetSymbol { blockchain, symbol, precision }
-	}
-}
-
-/// Bridge asset type
-#[derive(Clone, Default, Encode, Decode)]
-pub struct BridgeAssetBalance<AccountId, AssetId, Precision, Balance> {
-	pub symbol: BridgeAssetSymbol<Precision>,
-	pub amount: Balance,
-	pub memo: Vec<u8>,
-	// store the account who send transaction to EOS
-	pub from: AccountId,
-	// which token type is sent to EOS
-	pub asset_id: AssetId,
-}
-
-/// Zenlink type
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
-pub struct Pair<AccountId, TokenBalance> {
-	pub token_0: ZenlinkAssetId,
-	pub token_1: ZenlinkAssetId,
-
-	pub account: AccountId,
-	pub total_liquidity: TokenBalance,
-}
-
-/// The id of Zenlink asset
-/// NativeCurrency is this parachain native currency.
-/// Other parachain's currency is represented by `ParaCurrency(u32)`, `u32` cast to the ParaId.
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "std", serde(rename_all = "camelCase"))]
-pub enum ZenlinkAssetId {
-	NativeCurrency,
-	ParaCurrency(u32),
-}
-
-impl ZenlinkAssetId {
-	pub fn is_para_currency(&self) -> bool {
-		matches!(self, ZenlinkAssetId::ParaCurrency(_))
-	}
-}
-
-impl From<u32> for ZenlinkAssetId {
-	fn from(id: u32) -> Self {
-		ZenlinkAssetId::ParaCurrency(id)
-	}
-}
-
-impl From<u128> for ZenlinkAssetId {
-	fn from(id: u128) -> Self {
-		ZenlinkAssetId::ParaCurrency(id as u32)
-	}
-}
-
-impl From<CurrencyId> for ZenlinkAssetId {
-	fn from(id: CurrencyId) -> Self {
-		if id.is_native() {
-			ZenlinkAssetId::NativeCurrency
-		} else {
-			match id {
-				CurrencyId::Token(some_id) => {
-					let u32_id = some_id as u32;
-					ZenlinkAssetId::ParaCurrency(u32_id)
-				}
-				_ => todo!("Not support now."),
-			}
-		}
-	}
-}
-
-impl Into<CurrencyId> for ZenlinkAssetId {
-	fn into(self) -> CurrencyId {
-		match self {
-			ZenlinkAssetId::NativeCurrency => CurrencyId::Native(TokenSymbol::ASG),
-			ZenlinkAssetId::ParaCurrency(some_id) => {
-				let id: u8 = some_id.saturated_into();
-				CurrencyId::Token(TokenSymbol::try_from(id).unwrap())
-			}
-		}
-	}
-}
-
-#[derive(Encode, Decode, Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-#[non_exhaustive]
-pub enum StorageVersion {
-	V0,
-	V1,
-	V2,
-	V3,
-}
-
-impl Default for StorageVersion {
-	fn default() -> Self {
-		Self::V0
-	}
-}
-
-/// App-specific crypto used for reporting equivocation/misbehavior in BABE and
-/// GRANDPA. Any rewards for misbehavior reporting will be paid out to this
-/// account.
-pub mod report {
-	use frame_system::offchain::AppCrypto;
-	use sp_core::crypto::{key_types, KeyTypeId};
-
-	use super::{Signature, Verify};
-
-	/// Key type for the reporting module. Used for reporting BABE and GRANDPA
-	/// equivocations.
-	pub const KEY_TYPE: KeyTypeId = key_types::REPORTING;
-
-	mod app {
-		use sp_application_crypto::{app_crypto, sr25519};
-		app_crypto!(sr25519, super::KEY_TYPE);
-	}
-
-	/// Identity of the equivocation/misbehavior reporter.
-	pub type ReporterId = app::Public;
-
-	/// An `AppCrypto` type to allow submitting signed transactions using the reporting
-	/// application key as signer.
-	pub struct ReporterAppCrypto;
-
-	impl AppCrypto<<Signature as Verify>::Signer, Signature> for ReporterAppCrypto {
-		type GenericPublic = sp_core::sr25519::Public;
-		type GenericSignature = sp_core::sr25519::Signature;
-		type RuntimeAppPublic = ReporterId;
-	}
-}
-
 #[cfg(test)]
 mod tests {
+	use core::convert::TryFrom;
+
 	use super::*;
 
 	#[test]
