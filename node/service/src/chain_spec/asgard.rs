@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::collections::BTreeMap;
-
 use asgard_runtime::{
 	constants::{currency::DOLLARS, time::DAYS},
 	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
@@ -34,9 +32,7 @@ use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::{traits::Zero, Permill};
 
 use super::TELEMETRY_URL;
-use crate::chain_spec::{
-	get_account_id_from_seed, get_from_seed, testnet_accounts, RelayExtensions,
-};
+use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
 
@@ -143,7 +139,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let balances = endowed_accounts
 		.iter()
-		.chain(super::faucet_accounts().iter())
+		.chain(faucet_accounts().iter())
 		.cloned()
 		.map(|x| (x, ENDOWMENT))
 		.collect();
@@ -154,7 +150,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.chain(super::faucet_accounts().iter())
+		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
@@ -193,10 +189,23 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 }
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
-	let endowed_accounts = testnet_accounts();
+	let endowed_accounts = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+		get_account_id_from_seed::<sr25519::Public>("Eve"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+	];
 	let balances = endowed_accounts
 		.iter()
-		.chain(super::faucet_accounts().iter())
+		.chain(faucet_accounts().iter())
 		.cloned()
 		.map(|x| (x, ENDOWMENT))
 		.collect();
@@ -207,7 +216,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.chain(super::faucet_accounts().iter())
+		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
@@ -296,52 +305,19 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	]
 	.into();
 
-	let exe_dir = {
-		let mut exe_dir = std::env::current_exe().unwrap();
-		exe_dir.pop();
-
-		exe_dir
-	};
-
-	let balances_configs: Vec<BalancesConfig> =
-		super::config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
-
-	let mut total_issuance: Balance = Zero::zero();
-	let balances = balances_configs
+	let balances = faucet_accounts()
 		.into_iter()
-		.flat_map(|bc| bc.balances)
-		.chain(
-			super::faucet_accounts()
-				.into_iter()
-				.map(|x| (x, ENDOWMENT))
-				.collect::<Vec<(AccountId, Balance)>>(),
-		)
-		.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
-			if let Some(balance) = acc.get_mut(&account_id) {
-				*balance = balance
-					.checked_add(amount)
-					.expect("balance cannot overflow when building genesis");
-			} else {
-				acc.insert(account_id.clone(), amount);
-			}
+		.map(|x| (x, ENDOWMENT))
+		.collect::<Vec<(AccountId, Balance)>>();
 
-			total_issuance = total_issuance
-				.checked_add(amount)
-				.expect("total insurance cannot overflow when building genesis");
-			acc
-		})
-		.into_iter()
-		.collect();
-
-	// assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320
-	// million");}
-
-	let vesting_configs: Vec<VestingConfig> =
-		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
-	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let vesting_configs: Vec<VestingConfig> = vec![];
+	let endowed_accounts = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		get_account_id_from_seed::<sr25519::Public>("Bob"),
+	];
 	let tokens = endowed_accounts
 		.iter()
-		.chain(super::faucet_accounts().iter())
+		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
@@ -360,4 +336,24 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		tokens,
 	)
+}
+
+pub fn faucet_accounts() -> Vec<AccountId> {
+	vec![
+		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(), /* asgard sudo account */
+		hex!["a2d57b8e781327bd2853b36e6f290bd8beeaa850971c9b0789ec4969f8beb01b"].into(), /* bifrost-faucet */
+		hex!["a272fa6e2282767b61a299e81023d44ef583c640fef99b0bafe216399775cd17"].into(),
+		hex!["56f6e7bb0826cd128672ad3a03016533834123c319adc635c6db595c6f72272e"].into(),
+		hex!["7e9005c247601a0d0e967f68b03f6e39e402a735ec65c20e4965c6d94a22e42f"].into(),
+		hex!["f2449dfbb431a5f9e8dc7468e5f3521baff4c0125edcda746f38df5295d5fb28"].into(),
+		hex!["aaa565b52ea12bf3c8d7abb79411976bccd8054c5581922acc0165ad88640f09"].into(),
+		hex!["8afadc065940f22f73b745aab694b1b20cafea3d4e52adad844f581614fbdd00"].into(),
+		hex!["0831325e2b4953f247db9df3f6452becbf23d8f7f806c0396ad853cb3c284d06"].into(),
+		hex!["7ea84934a575487fb02c44e01f4488c2f242cdbf48052630780dcd8ac567950c"].into(),
+		hex!["ee05492a82cb982392aad78f7e6f6fff56eaee4988fd9961ebb84e177dd6526d"].into(), /* bifrost-faucet */
+		hex!["7435653321694ee115e8cea8c8e117c0b6703b6fb91298b6df5adeef7679a46f"].into(), /* danny testing account */
+		hex!["263c78393f33b23cd23f3211726b2316e950910749d20c1552ea6972091a645e"].into(), /* jianbo testing account */
+		hex!["803feefeab8e5c81c3d268038b6c494d3018714fc8c5d08cf027111fd8114b06"].into(), /* tieqiao testing account */
+		hex!["8898ffd2cb04fb751655ede7bc0081b6b6ebe13cd0bdee5bbb9273e6dcc9b91c"].into(), /* tyrone testing account */
+	]
 }
