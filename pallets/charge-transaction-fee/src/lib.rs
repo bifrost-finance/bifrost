@@ -32,21 +32,18 @@ use frame_support::{
 	},
 	weights::Weight,
 };
-use frame_system::{pallet_prelude::*, RawOrigin};
+use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_runtime::{
-	traits::{
-		AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, StaticLookup,
-		Zero,
-	},
+	traits::{AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
 };
 use sp_std::{vec, vec::Vec};
-use zenlink_protocol::{AssetBalance, AssetId};
+use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
 mod default_weight;
 mod mock;
@@ -65,9 +62,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config:
-		frame_system::Config + pallet_transaction_payment::Config + zenlink_protocol::Config
-	{
+	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The units in which we record balances.
@@ -91,6 +86,7 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
+		type ZenlinkOperator: ExportZenlink<Self::AccountId>;
 
 		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
@@ -240,20 +236,15 @@ impl<T: Config> Pallet<T> {
 				let amount_in_max: AssetBalance = asset_balance.saturated_into();
 
 				// query for amount in
-				let amounts =
-					zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)
-						.map_or(vec![0], |v| v);
+				let amounts = T::ZenlinkOperator::get_amount_in_by_path(amount_out, &path)
+					.map_or(vec![0], |v| v);
 
-				let deadline: BlockNumberFor<T> =
-					<frame_system::Pallet<T>>::block_number() + T::BlockNumber::from(100u32);
-				let org: OriginFor<T> = RawOrigin::from(Some(who.clone())).into();
-				if zenlink_protocol::Pallet::<T>::swap_assets_for_exact_assets(
-					org,
+				if T::ZenlinkOperator::inner_swap_assets_for_exact_assets(
+					&who,
 					amount_out,
 					amount_in_max,
-					path,
-					T::Lookup::unlookup((*who).clone()),
-					deadline,
+					&path,
+					&who,
 				)
 				.is_ok()
 				{
@@ -302,8 +293,7 @@ impl<T: Config> Pallet<T> {
 					.map_err(|_| DispatchError::Other("Conversion Error"))?;
 				let path = vec![native_asset_id.clone(), token_asset_id];
 
-				let amount_vec =
-					zenlink_protocol::Pallet::<T>::get_amount_in_by_path(amount_out, &path)?;
+				let amount_vec = T::ZenlinkOperator::get_amount_in_by_path(amount_out, &path)?;
 				let amount_in = amount_vec[0];
 				let amount_in_balance = amount_in.saturated_into();
 

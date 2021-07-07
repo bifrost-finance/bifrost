@@ -166,6 +166,7 @@ impl bifrost_minter_reward::Config for Runtime {
 	type ShareWeight = Balance;
 	type SystemPalletId = ShareWeightPalletId;
 	type TwoYear = TwoYear;
+	type ZenlinkOperator = ZenlinkProtocol;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -340,7 +341,7 @@ impl ExtBuilder {
 			],
 			rate_of_interest_each_block: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595) // 50000.0 * 0.082/(365*24*600)
+				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
 			],
 			yield_rate: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
