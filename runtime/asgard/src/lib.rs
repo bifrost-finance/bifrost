@@ -303,11 +303,11 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..) |
-					Call::Council(..) | Call::TechnicalCommittee(..) |
-					Call::Elections(..) | Call::Treasury(..) |
-					Call::Bounties(..) | Call::Tips(..) |
-					Call::Utility(..)
+				Call::Democracy(..)
+					| Call::Council(..) | Call::TechnicalCommittee(..)
+					| Call::Elections(..)
+					| Call::Treasury(..) | Call::Bounties(..)
+					| Call::Tips(..) | Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
@@ -871,7 +871,6 @@ impl bifrost_vtoken_mint::Config for Runtime {
 	type MinterReward = MinterReward;
 	type MultiCurrency = Tokens;
 	type PalletId = StakingPalletId;
-	// type DEXOperations = ZenlinkProtocol;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
