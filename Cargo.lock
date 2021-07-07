@@ -185,7 +185,6 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
- "bifrost-voucher",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
  "cumulus-pallet-aura-ext",
@@ -865,25 +864,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-swap"
-version = "0.8.0"
-dependencies = [
- "float-cmp",
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "substrate-fixed",
-]
-
-[[package]]
 name = "bifrost-vesting"
 version = "0.8.0"
 dependencies = [
@@ -896,17 +876,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "bifrost-voucher"
-version = "0.8.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde_json",
- "sp-runtime",
 ]
 
 [[package]]
@@ -2546,15 +2515,6 @@ dependencies = [
  "libc",
  "libz-sys",
  "miniz_oxide",
-]
-
-[[package]]
-name = "float-cmp"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1267f4ac4f343772758f7b1bdcbe767c218bbab93bb432acbf5162bbf85a6c4"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -10246,15 +10206,6 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "platforms",
-]
-
-[[package]]
-name = "substrate-fixed"
-version = "0.5.6"
-source = "git+https://github.com/encointer/substrate-fixed#b33d186888c60f38adafcfc0ec3a21aab263aef1"
-dependencies = [
- "parity-scale-codec",
- "typenum",
 ]
 
 [[package]]

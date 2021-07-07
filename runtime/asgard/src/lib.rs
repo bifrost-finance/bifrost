@@ -113,7 +113,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("asgard"),
 	impl_name: create_runtime_str!("asgard"),
 	authoring_version: 1,
-	spec_version: 1000,
+	spec_version: 1001,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -857,12 +857,6 @@ impl pallet_collator_selection::Config for Runtime {
 
 // bifrost runtime start
 
-impl bifrost_voucher::Config for Runtime {
-	type Balance = Balance;
-	type Event = Event;
-	type WeightInfo = weights::pallet_voucher::WeightInfo<Runtime>;
-}
-
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
 	pub const VtokenMintDuration: BlockNumber = 3 * 60 * MINUTES;
@@ -1190,7 +1184,6 @@ construct_runtime! {
 		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 100,
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
 		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
-		Voucher: bifrost_voucher::{Pallet, Call, Storage, Event<T>, Config<T>} = 103,
 		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 104,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
