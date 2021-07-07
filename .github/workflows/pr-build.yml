@@ -34,8 +34,8 @@ jobs:
           default: true
       - name: Check All
         run: make check-all
-      - name: Test bifrost
-        run: make test-bifrost
+      - name: Test all
+        run: make test-all
       - name: Inform buddies online
         uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
