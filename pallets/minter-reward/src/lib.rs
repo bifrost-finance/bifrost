@@ -42,7 +42,7 @@ use sp_runtime::traits::{
 	AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating,
 	UniqueSaturatedFrom, Zero,
 };
-use zenlink_protocol::AssetId;
+use zenlink_protocol::{AssetId, ExportZenlink};
 
 mod mock;
 mod tests;
@@ -61,7 +61,7 @@ pub mod pallet {
 	>>::CurrencyId;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + zenlink_protocol::Config {
+	pub trait Config: frame_system::Config {
 		/// A handler to manipulate assets module.
 		type MultiCurrency: TransferAll<Self::AccountId>
 			+ MultiCurrencyExtended<Self::AccountId, CurrencyId = CurrencyId>
@@ -83,8 +83,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumExtendedPeriod: Get<BlockNumberFor<Self>>;
 
-		// /// Get price from swap module to compare maximumm vtoken minted
-		// type DEXOperations: DEXOperations<Self::AccountId>;
+		/// Get price from swap module to compare maximumm vtoken minted
+		type ZenlinkOperator: ExportZenlink<Self::AccountId>;
 
 		/// Identifier for adjusting weight
 		#[pallet::constant]
@@ -307,8 +307,8 @@ pub mod pallet {
 				MaximumVtokenMinted::<T>::get();
 			if ausd_amount > current_max_minted {
 				MaximumVtokenMinted::<T>::mutate(|max_minted| {
-					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get()) >=
-						T::RewardPeriod::get()
+					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get())
+						>= T::RewardPeriod::get()
 					{
 						if !is_extended {
 							max_minted.3 = true;
@@ -334,8 +334,8 @@ pub mod pallet {
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = Weights::<T>::get(&currency_id);
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
-				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
-					(total_weight * total_vtoken_mint);
+				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
+					/ (total_weight * total_vtoken_mint);
 				let _ = T::MultiCurrency::deposit(
 					CurrencyId::Native(TokenSymbol::ASG),
 					&minter,
@@ -358,7 +358,7 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 			currency_id: CurrencyId,
 		) -> Result<BalanceOf<T>, Error<T>> {
-			let ausd_amount = zenlink_protocol::Pallet::<T>::get_amount_out_by_path(
+			let ausd_amount = T::ZenlinkOperator::get_amount_out_by_path(
 				vtoken_amount.saturated_into(),
 				&[
 					AssetId {
