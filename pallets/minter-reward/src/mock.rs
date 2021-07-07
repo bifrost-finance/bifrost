@@ -247,6 +247,7 @@ impl crate::Config for Runtime {
 	type ShareWeight = Balance;
 	type SystemPalletId = ShareWeightPalletId;
 	type TwoYear = TwoYear;
+	type ZenlinkOperator = ZenlinkProtocol;
 }
 
 pub struct ExtBuilder {

@@ -873,7 +873,6 @@ impl bifrost_vtoken_mint::Config for Runtime {
 	type MinterReward = MinterReward;
 	type MultiCurrency = Tokens;
 	type PalletId = StakingPalletId;
-	// type DEXOperations = ZenlinkProtocol;
 	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
 }
@@ -916,6 +915,7 @@ impl bifrost_charge_transaction_fee::Config for Runtime {
 	type NativeCurrencyId = NativeCurrencyId;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
+	type ZenlinkOperator = ZenlinkProtocol;
 }
 
 parameter_types! {
@@ -930,10 +930,10 @@ impl bifrost_minter_reward::Config for Runtime {
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type MultiCurrency = Tokens;
 	type RewardPeriod = RewardPeriod;
-	// type DEXOperations = ZenlinkProtocol;
 	type ShareWeight = Balance;
 	type SystemPalletId = ShareWeightPalletId;
 	type TwoYear = TwoYear;
+	type ZenlinkOperator = ZenlinkProtocol;
 }
 
 parameter_types! {
