@@ -220,7 +220,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	};
 
 	let balances_configs: Vec<BalancesConfig> =
-		super::config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
+		config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
 
 	let mut total_issuance: Balance = Zero::zero();
 	let balances = balances_configs
@@ -246,7 +246,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320 million");
 
 	let vesting_configs: Vec<VestingConfig> =
-		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
+		config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
 
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
