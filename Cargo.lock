@@ -2441,9 +2441,9 @@ dependencies = [
 
 [[package]]
 name = "finality-grandpa"
-version = "0.14.2"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c29b0f7ece4ac0afa32edd8ab1c1c8fec9f0ea1d8c92107e829150ae156854e"
+checksum = "74a1bfdcc776e63e49f741c7ce6116fa1b887e8ac2e3ccb14dd4aa113e54feb9"
 dependencies = [
  "either",
  "futures 0.3.15",
@@ -3362,7 +3362,7 @@ dependencies = [
  "httpdate 1.0.1",
  "itoa",
  "pin-project-lite 0.2.7",
- "tokio 1.8.0",
+ "tokio 1.8.1",
  "tower-service",
  "tracing",
  "want 0.3.0",
@@ -7180,9 +7180,9 @@ checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
 
 [[package]]
 name = "primitive-types"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2415937401cb030a2a0a4d922483f945fa068f52a7dbb22ce0fe5f2b6f6adace"
+checksum = "06345ee39fbccfb06ab45f3a1a5798d9dafa04cb8921a76d227040003a234b0e"
 dependencies = [
  "fixed-hash",
  "impl-codec",
@@ -10119,9 +10119,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "structopt"
-version = "0.3.21"
+version = "0.3.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5277acd7ee46e63e5168a80734c9f6ee81b1367a7d8772a2d765df2a3705d28c"
+checksum = "69b041cdcb67226aca307e6e7be44c8806423d83e018bd662360a93dabce4d71"
 dependencies = [
  "clap",
  "lazy_static",
@@ -10130,9 +10130,9 @@ dependencies = [
 
 [[package]]
 name = "structopt-derive"
-version = "0.4.14"
+version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ba9cdfda491b814720b6b06e0cac513d922fc407582032e8706e9f137976f90"
+checksum = "7813934aecf5f51a54775e00068c237de98489463968231a51746bbbc03f9c10"
 dependencies = [
  "heck",
  "proc-macro-error",
@@ -10248,7 +10248,7 @@ dependencies = [
 [[package]]
 name = "substrate-prometheus-endpoint"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=master#cf4e320398cf3b8ef8a2c240d7495c25b3b73b08"
+source = "git+https://github.com/paritytech/substrate?branch=master#6944c0c9004b020d7f5d1d143afeceb753dfe3d7"
 dependencies = [
  "async-std",
  "derive_more",
@@ -10542,9 +10542,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.8.0"
+version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "570c2eb13b3ab38208130eccd41be92520388791207fde783bda7c1e8ace28d4"
+checksum = "98c8b05dc14c75ea83d63dd391100353789f5f24b8b3866542a5e85c8be8e985"
 dependencies = [
  "autocfg",
  "pin-project-lite 0.2.7",
@@ -11769,7 +11769,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.7#84ada5647d55b8288f3de3b3cc96e76e6caf4265"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.7#d17223fbdadd7c5b41b38494b0b2395e12661ba5"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -11789,7 +11789,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.7#84ada5647d55b8288f3de3b3cc96e76e6caf4265"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.7#d17223fbdadd7c5b41b38494b0b2395e12661ba5"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -11806,7 +11806,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.7#84ada5647d55b8288f3de3b3cc96e76e6caf4265"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.7#d17223fbdadd7c5b41b38494b0b2395e12661ba5"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

@@ -175,6 +175,7 @@ impl crate::Config for Test {
 	type Event = Event;
 	type NativeCurrencyId = NativeCurrencyId;
 	type OnUnbalanced = ();
+	type ZenlinkOperator = ZenlinkProtocol;
 	type WeightInfo = ();
 }
 
