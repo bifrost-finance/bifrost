@@ -36,10 +36,10 @@ use crate::{
 };
 
 macro_rules! create_currency_id {
-    ($(#[$meta:meta])*
+	($(#[$meta:meta])*
 	$vis:vis enum TokenSymbol {
-        $($(#[$vmeta:meta])* $symbol:ident($name:expr, $deci:literal) = $val:literal,)*
-    }) => {
+		$($(#[$vmeta:meta])* $symbol:ident($name:expr, $deci:literal) = $val:literal,)*
+	}) => {
 		$(#[$meta])*
 		$vis enum TokenSymbol {
 			$($(#[$vmeta])* $symbol = $val,)*
@@ -68,12 +68,12 @@ macro_rules! create_currency_id {
 
 		impl TokenInfo for CurrencyId {
 			// DATA LAYOUT
-    		//
-    		// Currency Discriminant:       1byte
-    		// TokenSymbol Discriminant:    1byte
-    		// ParaId:                      2byte
-    		// LeasePeriod:                 2byte
-    		// LeasePeriod:                 2byte
+			//
+			// Currency Discriminant:       1byte
+			// TokenSymbol Discriminant:    1byte
+			// ParaId:                      2byte
+			// LeasePeriod:                 2byte
+			// LeasePeriod:                 2byte
 			fn currency_id(&self) -> u64 {
 				let c_discr = self.discriminant() as u64;
 
@@ -86,7 +86,7 @@ macro_rules! create_currency_id {
 					| Self::VSBond(ts, ..) => ts as u8,
 				} as u64;
 
-        		let discr = (c_discr << 8) + t_discr;
+		 		let discr = (c_discr << 8) + t_discr;
 
 				match *self {
 					Self::Token(..)
@@ -112,7 +112,7 @@ macro_rules! create_currency_id {
 
 						(discr << 48) + (pid << 32) + (lp1 << 16) + lp2
 					}
-        		}
+				}
 			}
 
 			fn name(&self) -> &str {
