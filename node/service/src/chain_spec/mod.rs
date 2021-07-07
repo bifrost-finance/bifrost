@@ -101,50 +101,6 @@ fn testnet_accounts() -> Vec<AccountId> {
 	]
 }
 
-#[allow(dead_code)]
-fn initialize_all_vouchers() -> Option<Vec<(node_primitives::AccountId, node_primitives::Balance)>>
-{
-	use std::collections::HashSet;
-
-	let path = std::path::Path::join(&std::env::current_dir().ok()?, "bnc_vouchers.json");
-
-	if !path.exists() {
-		return None;
-	}
-	let file = std::fs::File::open(path).ok()?;
-	let reader = std::io::BufReader::new(file);
-
-	let vouchers_str: Vec<(String, String)> = json::from_reader(reader).ok()?;
-	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = vouchers_str
-		.iter()
-		.map(|v| (parse_address(&v.0), v.1.parse().expect("Balance is invalid.")))
-		.collect();
-
-	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
-	let mut final_vouchers = Vec::new();
-	for i in set.iter() {
-		let mut sum = 0;
-		for j in vouchers.iter() {
-			if *i == j.0 {
-				sum += j.1;
-			}
-		}
-		final_vouchers.push((i.clone(), sum));
-	}
-
-	Some(final_vouchers)
-}
-
-#[allow(dead_code)]
-fn parse_address(address: impl AsRef<str>) -> AccountId {
-	let decoded_ss58 =
-		bs58::decode(address.as_ref()).into_vec().expect("decode account id failure");
-	let mut data = [0u8; 32];
-	data.copy_from_slice(&decoded_ss58[1 .. 33]);
-
-	node_primitives::AccountId::from(data)
-}
-
 pub fn faucet_accounts() -> Vec<AccountId> {
 	vec![
 		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(), /* asgard sudo account */

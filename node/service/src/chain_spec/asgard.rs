@@ -23,7 +23,7 @@ use asgard_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
 	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
-	TokensConfig, VestingConfig, VoucherConfig, VtokenMintConfig, WASM_BINARY,
+	TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
@@ -52,7 +52,6 @@ pub fn asgard_genesis(
 	id: ParaId,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
-	vouchers: Vec<(AccountId, Balance)>,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 ) -> GenesisConfig {
 	GenesisConfig {
@@ -96,7 +95,6 @@ pub fn asgard_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
-		voucher: VoucherConfig { voucher: vouchers },
 		tokens: TokensConfig { balances: tokens },
 		bancor: BancorConfig {
 			bancor_pools: vec![
@@ -142,42 +140,6 @@ pub fn asgard_genesis(
 	}
 }
 
-#[allow(dead_code)]
-fn initialize_all_vouchers() -> Vec<(AccountId, Balance)> {
-	use std::collections::HashSet;
-
-	let exe_dir = {
-		let mut exe_dir = std::env::current_exe().unwrap();
-		exe_dir.pop();
-
-		exe_dir
-	};
-
-	let balances_configs: Vec<BalancesConfig> =
-		super::config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
-
-	let vouchers: Vec<(node_primitives::AccountId, node_primitives::Balance)> = balances_configs
-		.into_iter()
-		.flat_map(|bc| bc.balances)
-		.map(|v| (v.0.clone(), v.1))
-		.into_iter()
-		.collect();
-
-	let set = vouchers.iter().map(|v| v.0.clone()).collect::<HashSet<_>>();
-	let mut final_vouchers = Vec::new();
-	for i in set.iter() {
-		let mut sum = 0;
-		for j in vouchers.iter() {
-			if *i == j.0 {
-				sum += j.1;
-			}
-		}
-		final_vouchers.push((i.clone(), sum));
-	}
-
-	final_vouchers
-}
-
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let balances = endowed_accounts
@@ -191,7 +153,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.cloned()
 		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
 		.collect();
-	let vouchers = vec![];
 	let tokens = endowed_accounts
 		.iter()
 		.chain(super::faucet_accounts().iter())
@@ -214,7 +175,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		id,
 		balances,
 		vestings,
-		vouchers,
 		tokens,
 	)
 }
@@ -246,7 +206,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.cloned()
 		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
 		.collect();
-	let vouchers = vec![];
 	let tokens = endowed_accounts
 		.iter()
 		.chain(super::faucet_accounts().iter())
@@ -272,7 +231,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		id,
 		balances,
 		vestings,
-		vouchers,
 		tokens,
 	)
 }
@@ -377,12 +335,10 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 
 	// assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320
-	// million");
+	// million");}
 
 	let vesting_configs: Vec<VestingConfig> =
 		super::config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
-	let vouchers = initialize_all_vouchers();
-	// let tokens = vec![];
 	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let tokens = endowed_accounts
 		.iter()
@@ -403,7 +359,6 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		id,
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
-		vouchers,
 		tokens,
 	)
 }
