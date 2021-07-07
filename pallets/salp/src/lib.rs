@@ -538,6 +538,8 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			// TODO: Look like the following code be needless
 			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::FundNotWithdrew);
 
 			// TODO: Temp solution, move the check to `Assets` later.
@@ -553,6 +555,8 @@ pub mod pallet {
 
 			let (_, status) = Self::contribution_get(fund.trie_index, &who);
 
+			// TODO: The people who do `redeem` dont have to be contributors
+			// 	Remove it
 			ensure!(
 				status == ContributionStatus::Contributed || status == ContributionStatus::Redeemed,
 				Error::<T>::ContributionInvalid
@@ -562,6 +566,9 @@ pub mod pallet {
 			let vsbond = Self::vsbond(index, fund.first_slot, fund.last_slot);
 			Self::check_balance(index, &who, value)?;
 
+			// TODO: Fix the bug
+			// 	It's no way to know the amount of vsToken/vsBond under a specific lock
+			// 	So the bug cannot be fixed by now
 			// Lock the vsToken/vsBond.
 			T::MultiCurrency::extend_lock(REDEEM_LOCK, vstoken, &who, value)?;
 			T::MultiCurrency::extend_lock(REDEEM_LOCK, vsbond, &who, value)?;
@@ -875,8 +882,6 @@ pub mod pallet {
 				// Issue lock vsToken/vsBond to contributor.
 				T::MultiCurrency::deposit(vstoken, &who, value)?;
 				T::MultiCurrency::deposit(vsbond, &who, value)?;
-				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, value)?;
-				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, value)?;
 
 				// Recalculate fund raised.
 				Funds::<T>::mutate(index, |fund| {
@@ -886,12 +891,17 @@ pub mod pallet {
 				});
 
 				// Recalculate the contribution of contributor to the fund.
-				let _balance = Self::update_contribution(
+				let _ = Self::update_contribution(
 					index,
 					who.clone(),
 					value,
 					ContributionStatus::Contributed,
 				)?;
+
+				let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+				let (balance, _) = Self::contribution_get(fund.trie_index, &who);
+				T::MultiCurrency::extend_lock(vslock(index), vstoken, &who, balance)?;
+				T::MultiCurrency::extend_lock(vslock(index), vsbond, &who, balance)?;
 
 				Self::deposit_event(Event::Contributed(who, index, value));
 			} else {
@@ -984,7 +994,7 @@ pub mod pallet {
 		}
 	}
 
-	const fn vslock(index: ParaId) -> LockIdentifier {
+	pub const fn vslock(index: ParaId) -> LockIdentifier {
 		(index as u64).to_be_bytes()
 	}
 
