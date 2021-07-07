@@ -56,6 +56,8 @@ RUN rm -rf /usr/share/* && \
 	chown -R bifrost:bifrost /bifrost/.local
 
 COPY --from=builder /src/target/$PROFILE/bifrost /usr/local/bin
+COPY ./node/service/res/asgard.json /bifrost
+COPY ./node/service/res/bifrost.json /bifrost
 
 # checks
 RUN ldd /usr/local/bin/bifrost && \
