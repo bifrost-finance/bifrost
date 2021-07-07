@@ -307,8 +307,8 @@ pub mod pallet {
 				MaximumVtokenMinted::<T>::get();
 			if ausd_amount > current_max_minted {
 				MaximumVtokenMinted::<T>::mutate(|max_minted| {
-					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get())
-						>= T::RewardPeriod::get()
+					if block_num.saturating_sub(CurrentRoundStartAt::<T>::get()) >=
+						T::RewardPeriod::get()
 					{
 						if !is_extended {
 							max_minted.3 = true;
@@ -334,8 +334,8 @@ pub mod pallet {
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = Weights::<T>::get(&currency_id);
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
-				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
-					/ (total_weight * total_vtoken_mint);
+				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
+					(total_weight * total_vtoken_mint);
 				let _ = T::MultiCurrency::deposit(
 					CurrencyId::Native(TokenSymbol::ASG),
 					&minter,
