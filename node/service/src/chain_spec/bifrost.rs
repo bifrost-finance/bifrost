@@ -16,6 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::{
+	fs::{read_dir, File},
+	path::PathBuf,
+};
+
 use bifrost_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, SessionConfig,
@@ -23,8 +28,11 @@ use bifrost_runtime::{
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
+use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json as json;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::Zero;
 
@@ -248,4 +256,28 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 	)
+}
+
+fn config_from_json_file<T: DeserializeOwned>(path: PathBuf) -> Result<T, String> {
+	let file = File::open(&path).map_err(|e| format!("Error opening genesis config: {}", e))?;
+
+	let config =
+		json::from_reader(file).map_err(|e| format!("Error parsing config file: {}", e))?;
+
+	Ok(config)
+}
+
+fn config_from_json_files<T: DeserializeOwned>(dir: PathBuf) -> Result<Vec<T>, String> {
+	let mut configs = vec![];
+
+	let iter = read_dir(&dir).map_err(|e| format!("Error opening directory: {}", e))?;
+	for entry in iter {
+		let path = entry.map_err(|e| format!("{}", e))?.path();
+
+		if !path.is_dir() {
+			configs.push(config_from_json_file(path)?);
+		}
+	}
+
+	Ok(configs)
 }
