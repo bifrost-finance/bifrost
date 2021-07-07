@@ -20,15 +20,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
 	MultiSignature, OpaqueExtrinsic,
 };
-use sp_std::{convert::Into, prelude::*};
 
 mod bridge;
 mod currency;
@@ -124,100 +120,3 @@ pub type ParaId = u32;
 
 /// The measurement type for counting lease periods (generally the same as `BlockNumber`).
 pub type LeasePeriod = BlockNumber;
-
-#[derive(Encode, Decode, Clone, Copy, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "std", derive(Deserialize, Serialize))]
-pub enum TokenType {
-	/// Native token, only used by BNC
-	Native,
-	/// Stable token
-	Stable,
-	/// Origin token from bridge
-	Token,
-	// v-token of origin token
-	VToken,
-}
-
-impl Default for TokenType {
-	fn default() -> Self {
-		Self::Native
-	}
-}
-
-impl TokenType {
-	pub fn is_base_token(&self) -> bool {
-		*self == TokenType::Native
-	}
-
-	pub fn is_stable(&self) -> bool {
-		*self == TokenType::Stable
-	}
-
-	pub fn is_token(&self) -> bool {
-		*self == TokenType::Token
-	}
-
-	pub fn is_v_token(&self) -> bool {
-		*self == TokenType::VToken
-	}
-}
-
-/// Token struct
-#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub struct Token<AssetId, Balance> {
-	pub symbol: Vec<u8>,
-	pub precision: u16,
-	pub total_supply: Balance,
-	pub token_type: TokenType,
-	pub pair: Option<AssetId>,
-}
-
-impl<AssetId, Balance: Copy> Token<AssetId, Balance> {
-	pub fn new(
-		symbol: Vec<u8>,
-		precision: u16,
-		total_supply: Balance,
-		token_type: TokenType,
-	) -> Self {
-		Self { symbol, precision, total_supply, token_type, pair: None }
-	}
-
-	pub fn add_pair(&mut self, asset_id: AssetId) {
-		self.pair = Some(asset_id);
-	}
-}
-
-#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub struct AccountAsset<Balance> {
-	pub balance: Balance,
-	pub locked: Balance,
-	pub available: Balance,
-	pub cost: Balance,
-	pub income: Balance,
-}
-
-#[derive(Encode, Decode, Default, Clone, Eq, PartialEq, Debug)]
-#[cfg_attr(feature = "std", derive(serde::Deserialize, serde::Serialize))]
-pub struct VtokenPool<Balance> {
-	/// A pool that hold the total amount of token minted to vtoken
-	pub token_pool: Balance,
-	/// A pool that hold the total amount of vtoken minted from token
-	pub vtoken_pool: Balance,
-	/// Total reward for current mint duration
-	pub current_reward: Balance,
-	/// Total reward for next mint duration
-	pub pending_reward: Balance,
-}
-
-impl<Balance: Default + Copy> VtokenPool<Balance> {
-	pub fn new(token_amount: Balance, vtoken_amount: Balance) -> Self {
-		Self { token_pool: token_amount, vtoken_pool: vtoken_amount, ..Default::default() }
-	}
-
-	pub fn new_round(&mut self) {
-		self.current_reward = self.pending_reward;
-		self.pending_reward = Default::default();
-	}
-}
