@@ -27,7 +27,7 @@ use std::{
 };
 
 use hex_literal::hex;
-pub use node_primitives::{AccountAsset, AccountId, Balance, Signature, VtokenPool};
+pub use node_primitives::{AccountId, Block, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json as json;

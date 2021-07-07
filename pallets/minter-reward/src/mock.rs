@@ -326,7 +326,6 @@ impl ExtBuilder {
 			],
 			reward_by_one_block: 300,
 			round_index: 1,
-			storage_version: Default::default(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

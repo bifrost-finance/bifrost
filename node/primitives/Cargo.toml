@@ -9,7 +9,6 @@ bstringify = "0.1.2"
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0.124", optional = true }
 frame-system = { version = "3.0.0", default-features = false }
-sp-application-crypto = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
@@ -21,7 +20,6 @@ std = [
 	"codec/std",
 	"frame-system/std",
 	"serde",
-	"sp-application-crypto/std",
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",

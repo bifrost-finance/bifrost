@@ -4902,7 +4902,6 @@ dependencies = [
  "frame-system",
  "parity-scale-codec",
  "serde",
- "sp-application-crypto",
  "sp-core",
  "sp-runtime",
  "sp-std",

@@ -27,7 +27,7 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-use crate::{AccountAsset, BridgeAssetBalance, Token};
+use crate::BridgeAssetBalance;
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
@@ -46,55 +46,6 @@ pub trait CurrencyIdExt {
 	fn is_native(&self) -> bool;
 	fn is_stable(&self) -> bool;
 	fn into(symbol: Self::TokenSymbol) -> Self;
-}
-
-/// A handler to manipulate assets module
-pub trait AssetTrait<CurrencyId, AccountId, Balance>
-where
-	CurrencyId: CurrencyIdExt,
-{
-	type Error;
-	fn asset_issue(asset_id: CurrencyId, target: &AccountId, amount: Balance);
-
-	fn asset_destroy(asset_id: CurrencyId, target: &AccountId, amount: Balance);
-
-	fn asset_id_exists(who: &AccountId, symbol: &[u8], precision: u16) -> Option<CurrencyId>;
-
-	fn token_exists(asset_id: CurrencyId) -> bool;
-
-	fn get_account_asset(asset_id: CurrencyId, target: &AccountId) -> AccountAsset<Balance>;
-
-	fn get_token(asset_id: CurrencyId) -> Token<CurrencyId, Balance>;
-}
-
-/// Default impls
-impl<CurrencyId, AccountId, Balance> AssetTrait<CurrencyId, AccountId, Balance> for ()
-where
-	CurrencyId: Default + CurrencyIdExt,
-	AccountId: Default,
-	Balance: Default,
-{
-	type Error = core::convert::Infallible;
-
-	fn asset_issue(_: CurrencyId, _: &AccountId, _: Balance) {}
-
-	fn asset_destroy(_: CurrencyId, _: &AccountId, _: Balance) {}
-
-	fn asset_id_exists(_: &AccountId, _: &[u8], _: u16) -> Option<CurrencyId> {
-		Default::default()
-	}
-
-	fn token_exists(_: CurrencyId) -> bool {
-		Default::default()
-	}
-
-	fn get_account_asset(_: CurrencyId, _: &AccountId) -> AccountAsset<Balance> {
-		Default::default()
-	}
-
-	fn get_token(_: CurrencyId) -> Token<CurrencyId, Balance> {
-		Default::default()
-	}
 }
 
 pub trait TokenPriceHandler<CurrencyId, Price> {
