@@ -104,6 +104,7 @@ pub mod module {
 		NotFindOrderInfo,
 		NotEnoughBalanceToUnreserve,
 		NotEnoughBalanceToReserve,
+		CantPayThePrice,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
@@ -339,6 +340,10 @@ pub mod module {
 			let total_price = quantity_clinchd
 				.checked_mul(&order_info.unit_price)
 				.ok_or(Error::<T>::Overflow)?;
+
+			// Check the balance of buyer
+			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, total_price)
+				.map_err(|_| Error::<T>::CantPayThePrice)?;
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {

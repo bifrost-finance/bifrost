@@ -356,3 +356,12 @@ fn clinch_order_not_in_trade_should_fail() {
 		);
 	});
 }
+
+#[test]
+fn clinch_order_without_enough_token_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 2));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50));
+		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 0), Error::<Test>::CantPayThePrice);
+	});
+}
