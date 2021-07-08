@@ -181,7 +181,10 @@ pub mod module {
 				CurrencyId::VSBond(*T::InvoicingCurrency::get(), index, first_slot, last_slot);
 
 			// Check the balance of vsbond
-			ensure!(T::MultiCurrency::can_reserve(vsbond, &owner, supply), Error::<T>::NotEnoughBalanceToReserve);
+			ensure!(
+				T::MultiCurrency::can_reserve(vsbond, &owner, supply),
+				Error::<T>::NotEnoughBalanceToReserve
+			);
 
 			let order_in_trade_amount = {
 				if let Some(sets) = Self::in_trade_order_ids(&owner) {
