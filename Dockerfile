@@ -30,7 +30,7 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
 	rustup default nightly && \
 	rustup target add wasm32-unknown-unknown --toolchain nightly
 
-WORKDIR app	
+WORKDIR /app
 COPY . /app
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
