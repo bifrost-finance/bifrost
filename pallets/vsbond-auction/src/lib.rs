@@ -102,6 +102,9 @@ pub mod module {
 	pub enum Error<T> {
 		NotEnoughSupply,
 		NotFindOrderInfo,
+		NotEnoughBalanceToUnreserve,
+		NotEnoughBalanceToReserve,
+		CantPayThePrice,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
@@ -179,7 +182,10 @@ pub mod module {
 				CurrencyId::VSBond(*T::InvoicingCurrency::get(), index, first_slot, last_slot);
 
 			// Check the balance of vsbond
-			T::MultiCurrency::ensure_can_withdraw(vsbond, &owner, supply)?;
+			ensure!(
+				T::MultiCurrency::can_reserve(vsbond, &owner, supply),
+				Error::<T>::NotEnoughBalanceToReserve
+			);
 
 			let order_in_trade_amount = {
 				if let Some(sets) = Self::in_trade_order_ids(&owner) {
@@ -205,9 +211,8 @@ pub mod module {
 				order_state: OrderState::InTrade,
 			};
 
-			// Lock the balance of vsbond_type
-			let lock_iden = order_id.to_be_bytes();
-			T::MultiCurrency::set_lock(lock_iden, vsbond, &owner, supply)?;
+			// Reserve the balance of vsbond_type
+			T::MultiCurrency::reserve(vsbond, &owner, supply)?;
 
 			// Insert OrderInfo to Storage
 			TotalOrderInfos::<T>::insert(order_id, order_info.clone());
@@ -249,9 +254,11 @@ pub mod module {
 			// Check OrderOwner
 			ensure!(order_info.owner == from, Error::<T>::ForbidRevokeOrderWithoutOwnership);
 
-			// Unlock the vsbond
-			let lock_iden = order_info.order_id.to_be_bytes();
-			T::MultiCurrency::remove_lock(lock_iden, order_info.vsbond, &from)?;
+			// Unreserve the vsbond
+			let reserved_balance =
+				T::MultiCurrency::reserved_balance(order_info.vsbond, &order_info.owner);
+			ensure!(reserved_balance >= order_info.remain, Error::<T>::NotEnoughBalanceToUnreserve);
+			T::MultiCurrency::unreserve(order_info.vsbond, &order_info.owner, order_info.remain);
 
 			// Revoke order
 			TotalOrderInfos::<T>::insert(
@@ -334,6 +341,10 @@ pub mod module {
 				.checked_mul(&order_info.unit_price)
 				.ok_or(Error::<T>::Overflow)?;
 
+			// Check the balance of buyer
+			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, total_price)
+				.map_err(|_| Error::<T>::CantPayThePrice)?;
+
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
 				OrderInfo { remain: Zero::zero(), order_state: OrderState::Clinchd, ..order_info }
@@ -344,17 +355,16 @@ pub mod module {
 				}
 			};
 
-			// Decrease the locked amount of vsbond
-			let lock_iden = order_id.to_be_bytes();
-			T::MultiCurrency::remove_lock(lock_iden, new_order_info.vsbond, &new_order_info.owner)?;
-			T::MultiCurrency::set_lock(
-				lock_iden,
+			// Unreserve the balance of vsbond to transfer
+			let reserved_balance =
+				T::MultiCurrency::reserved_balance(new_order_info.vsbond, &new_order_info.owner);
+			ensure!(reserved_balance >= quantity_clinchd, Error::<T>::NotEnoughBalanceToUnreserve);
+			T::MultiCurrency::unreserve(
 				new_order_info.vsbond,
 				&new_order_info.owner,
-				new_order_info.remain,
-			)?;
+				quantity_clinchd,
+			);
 
-			// TODO: Maybe fail if double lock?
 			// Exchange: Transfer vsbond from owner to buyer
 			T::MultiCurrency::transfer(
 				new_order_info.vsbond,
