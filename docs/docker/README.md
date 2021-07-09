@@ -1,4 +1,4 @@
-## All related repotories
+## All related repositories
 - [bifrost](https://github.com/bifrost-finance/bifrost) (branch: master)
 - [bifrost-eos-relay](https://github.com/bifrost-finance/bifrost-eos-relay) (branch: bridge-plugin)
 - [bifrost-eos-contracts](https://github.com/bifrost-finance/bifrost-eos-contracts) (branch: master)
@@ -133,7 +133,7 @@ $ mkdir build && cd build
 $ cmake ..
 $ make -j4
 ```
-The abi and wasm file will generated under folder **build/contracts/bifrost.bridge**, 
+The abi and wasm file will be generated under folder **build/contracts/bifrost.bridge**, 
 files like **bifrost.bridge.abi**, **bifrost.bridge.wasm**.
 
 #### Deployment
