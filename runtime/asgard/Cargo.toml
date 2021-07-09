@@ -79,7 +79,6 @@ polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", 
 
 # bifrost pallets
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
-bifrost-assets = { path = "../../pallets/assets", default-features = false }
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
 bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
 bifrost-charge-transaction-fee = { path = "../../pallets/charge-transaction-fee", default-features = false }
@@ -158,7 +157,6 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"polkadot-runtime-parachains/std",
-	"bifrost-assets/std",
 	"bifrost-bancor/std",
 	"bifrost-bancor-runtime-api/std",
 	"bifrost-charge-transaction-fee/std",
