@@ -18,30 +18,53 @@
 
 #![cfg(test)]
 
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
-use orml_traits::{MultiCurrency, MultiLockableCurrency};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus};
+use orml_traits::{LockIdentifier, MultiLockableCurrency};
 
 use crate::{mock::*, *};
 
 #[test]
 fn create_order_should_work() {
-	let _ = new_test_ext().execute_with(|| -> DispatchResultWithPostInfo {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
 
-		// Check storage
-		let in_trade_order_ids =
-			VSBondAuction::in_trade_order_ids(ACCOUNT_ALICE).ok_or(Error::<Test>::Unexpected)?;
+		assert_eq!(Auction::order_id(), 1);
+
+		let in_trade_order_ids = Auction::in_trade_order_ids(ALICE).unwrap();
 		assert!(in_trade_order_ids.contains(&0));
-		assert_eq!(in_trade_order_ids.len(), 1);
 
-		Ok(().into())
+		assert!(Auction::revoked_order_ids(ALICE).is_none());
+		assert!(Auction::clinchd_order_ids(ALICE).is_none());
+
+		assert!(Auction::order_info(&0).is_some());
+
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 100);
+	});
+}
+
+#[test]
+fn double_create_order_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
+
+		assert_eq!(Auction::order_id(), 2);
+
+		let in_trade_order_ids = Auction::in_trade_order_ids(ALICE).unwrap();
+		assert!(in_trade_order_ids.contains(&0));
+		assert!(in_trade_order_ids.contains(&1));
+
+		assert!(Auction::revoked_order_ids(ALICE).is_none());
+		assert!(Auction::clinchd_order_ids(ALICE).is_none());
+
+		assert!(Auction::order_info(&0).is_some());
+		assert!(Auction::order_info(&1).is_some());
+
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 100);
 	});
 }
 
@@ -49,169 +72,134 @@ fn create_order_should_work() {
 fn create_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			VSBondAuction::create_order(
-				Origin::root(),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				BALANCE_VSBOND,
-				UNIT_PRICE,
-			),
-			DispatchError::BadOrigin,
+			Auction::create_order(Origin::root(), 3000, 13, 20, 100, 1),
+			DispatchError::BadOrigin
 		);
 		assert_noop!(
-			VSBondAuction::create_order(
-				Origin::none(),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				BALANCE_VSBOND,
-				UNIT_PRICE,
-			),
-			DispatchError::BadOrigin,
+			Auction::create_order(Origin::none(), 3000, 13, 20, 100, 1),
+			DispatchError::BadOrigin
 		);
 	});
 }
 
 #[test]
-fn create_order_without_enough_currency_should_fail() {
+fn create_order_under_minimum_supply_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			VSBondAuction::create_order(
-				Origin::signed(ACCOUNT_ALICE),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				BALANCE_VSBOND + 1,
-				UNIT_PRICE,
-			),
-			orml_tokens::Error::<Test>::BalanceTooLow,
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 0, 1),
+			Error::<Test>::NotEnoughSupply
 		);
 	});
 }
 
 #[test]
-fn create_order_with_enough_currency_under_lock_should_fail() {
+fn create_order_without_enough_vsbond_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(OrmlAssets::extend_lock(
-			1u64.to_be_bytes(),
-			VSBOND,
-			&ACCOUNT_ALICE,
-			BALANCE_VSBOND
-		));
-
 		assert_noop!(
-			VSBondAuction::create_order(
-				Origin::signed(ACCOUNT_ALICE),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				BALANCE_VSBOND,
-				UNIT_PRICE,
-			),
-			orml_tokens::Error::<Test>::LiquidityRestrictions,
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1000, 1),
+			Error::<Test>::NotEnoughBalanceToReserve,
 		);
-	});
-}
 
-#[test]
-fn create_order_should_increase_order_id() {
-	new_test_ext().execute_with(|| {
-		for i in 0 .. MaximumOrderInTrade::get() {
-			assert_ok!(VSBondAuction::create_order(
-				Origin::signed(ACCOUNT_ALICE),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				1,
-				UNIT_PRICE,
-			));
-
-			assert_eq!(VSBondAuction::order_id(), i as u64 + 1);
-		}
+		const LOCK_ID: LockIdentifier = 0u64.to_be_bytes();
+		assert_ok!(Tokens::set_lock(LOCK_ID, VSBOND, &ALICE, 50));
+		assert_noop!(
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 51, 1),
+			Error::<Test>::NotEnoughBalanceToReserve,
+		);
 	});
 }
 
 #[test]
 fn create_order_exceed_maximum_order_in_trade_should_fail() {
-	let _ = new_test_ext().execute_with(|| -> DispatchResultWithPostInfo {
+	new_test_ext().execute_with(|| {
 		for _ in 0 .. MaximumOrderInTrade::get() {
-			assert_ok!(VSBondAuction::create_order(
-				Origin::signed(ACCOUNT_ALICE),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				1,
-				UNIT_PRICE,
-			));
+			assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1));
 		}
 
 		assert_noop!(
-			VSBondAuction::create_order(
-				Origin::signed(ACCOUNT_ALICE),
-				PARA_ID,
-				FIRST_SLOT,
-				LAST_SLOT,
-				1,
-				UNIT_PRICE,
-			),
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1),
 			Error::<Test>::ExceedMaximumOrderInTrade,
-		);
-
-		Ok(().into())
-	});
-}
-
-#[test]
-fn create_order_should_lock_vsbond() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
-
-		assert_noop!(
-			OrmlAssets::ensure_can_withdraw(VSBOND, &ACCOUNT_ALICE, BALANCE_VSBOND),
-			orml_tokens::Error::<Test>::LiquidityRestrictions
 		);
 	});
 }
 
 #[test]
 fn revoke_order_should_work() {
-	let _ = new_test_ext().execute_with(|| -> DispatchResultWithPostInfo {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
+		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 
-		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,));
+		assert_eq!(Auction::order_id(), 1);
 
-		let in_trade_order_ids =
-			VSBondAuction::in_trade_order_ids(ACCOUNT_ALICE).ok_or(Error::<Test>::Unexpected)?;
-		assert!(in_trade_order_ids.len() == 0);
-		let revoked_order_ids =
-			VSBondAuction::revoked_order_ids(ACCOUNT_ALICE).ok_or(Error::<Test>::Unexpected)?;
-		assert!(revoked_order_ids.len() == 1 && revoked_order_ids.contains(&0));
+		let in_trade_order_ids = Auction::in_trade_order_ids(ALICE).unwrap();
+		assert!(in_trade_order_ids.is_empty());
 
-		Ok(().into())
+		let revoked_order_ids = Auction::revoked_order_ids(ALICE).unwrap();
+		assert!(revoked_order_ids.contains(&0));
+
+		assert!(Auction::clinchd_order_ids(ALICE).is_none());
+
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.order_state, OrderState::Revoked);
+
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 100);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 0);
+	});
+}
+
+#[test]
+fn revoke_order_which_be_partial_clinchd_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 25));
+		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
+
+		assert_eq!(Auction::order_id(), 1);
+
+		let in_trade_order_ids = Auction::in_trade_order_ids(ALICE).unwrap();
+		assert!(in_trade_order_ids.is_empty());
+
+		let revoked_order_ids = Auction::revoked_order_ids(ALICE).unwrap();
+		assert!(revoked_order_ids.contains(&0));
+
+		assert!(Auction::clinchd_order_ids(ALICE).is_none());
+
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.order_state, OrderState::Revoked);
+		assert_eq!(order_info.remain, 25);
+
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 75);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 0);
 	});
 }
 
 #[test]
 fn revoke_order_not_exist_should_fail() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
 		assert_noop!(
-			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,),
-			Error::<Test>::NotFindOrderInfo,
+			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 25),
+			Error::<Test>::NotFindOrderInfo
+		);
+	});
+}
+
+#[test]
+fn revoke_order_without_enough_reserved_vsbond_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
+		assert_ok!(Tokens::repatriate_reserved(
+			VSBOND,
+			&ALICE,
+			&BRUCE,
+			25,
+			BalanceStatus::Reserved
+		));
+		assert_noop!(
+			Auction::revoke_order(Some(ALICE).into(), 0),
+			Error::<Test>::NotEnoughBalanceToUnreserve
 		);
 	});
 }
@@ -219,233 +207,161 @@ fn revoke_order_not_exist_should_fail() {
 #[test]
 fn revoke_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
-
-		assert_noop!(VSBondAuction::revoke_order(Origin::root(), 0), DispatchError::BadOrigin,);
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
 		assert_noop!(
-			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_BRUCE), 0),
-			Error::<Test>::ForbidRevokeOrderWithoutOwnership,
+			Auction::revoke_order(Some(BRUCE).into(), 0),
+			Error::<Test>::ForbidRevokeOrderWithoutOwnership
 		);
-		assert_noop!(VSBondAuction::revoke_order(Origin::none(), 0), DispatchError::BadOrigin,);
+		assert_noop!(Auction::revoke_order(Origin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(Auction::revoke_order(Origin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
 #[test]
 fn revoke_order_not_in_trade_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND / 2,
-			UNIT_PRICE,
-		));
-
-		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0),);
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
+		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 		assert_noop!(
-			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0),
-			Error::<Test>::ForbidRevokeOrderNotInTrade,
+			Auction::revoke_order(Some(ALICE).into(), 0),
+			Error::<Test>::ForbidRevokeOrderNotInTrade
 		);
 
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND / 2,
-			UNIT_PRICE,
-		));
-
-		assert_ok!(VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 1,));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1));
+		assert_ok!(Auction::clinch_order(Some(BRUCE).into(), 1));
 		assert_noop!(
-			VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 1),
-			Error::<Test>::ForbidRevokeOrderNotInTrade,
+			Auction::revoke_order(Some(ALICE).into(), 1),
+			Error::<Test>::ForbidRevokeOrderNotInTrade
 		);
 	});
 }
 
 #[test]
-fn revoke_order_should_unlock_vsbond() {
+fn partial_clinch_order_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
-		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 25));
 
-		assert_ok!(OrmlAssets::ensure_can_withdraw(VSBOND, &ACCOUNT_ALICE, BALANCE_VSBOND),);
-	});
-}
+		assert_eq!(Auction::order_id(), 1);
 
-#[test]
-fn clinch_order_should_work() {
-	let _ = new_test_ext().execute_with(|| -> DispatchResultWithPostInfo {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
+		let in_trade_order_ids = Auction::in_trade_order_ids(ALICE).unwrap();
+		assert!(in_trade_order_ids.contains(&0));
 
-		assert_ok!(VSBondAuction::partial_clinch_order(
-			Origin::signed(ACCOUNT_BRUCE),
-			0,
-			BALANCE_VSBOND / 2,
-		));
+		assert!(Auction::revoked_order_ids(ALICE).is_none());
+		assert!(Auction::clinchd_order_ids(ALICE).is_none());
 
-		// Check remain
-		let order_info = VSBondAuction::order_info(0).ok_or(Error::<Test>::Unexpected)?;
-		assert_eq!(order_info.remain, BALANCE_VSBOND / 2);
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.remain, 75);
 		assert_eq!(order_info.order_state, OrderState::InTrade);
 
-		assert_ok!(VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 0,));
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 75);
 
-		// Check balance
-		assert_eq!(
-			OrmlAssets::free_balance(TOKEN, &ACCOUNT_ALICE),
-			BALANCE_TOKEN.saturating_mul(2)
-		);
-		assert_eq!(
-			OrmlAssets::free_balance(VSBOND, &ACCOUNT_BRUCE),
-			BALANCE_VSBOND.saturating_mul(2)
-		);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 125);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
 
-		// Check storage
-		let order_info = VSBondAuction::order_info(0).ok_or(Error::<Test>::Unexpected)?;
-		assert_eq!(order_info.order_state, OrderState::Clinchd);
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).free, 125);
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).reserved, 0);
 
-		let in_trade_order_ids =
-			VSBondAuction::in_trade_order_ids(ACCOUNT_ALICE).ok_or(Error::<Test>::Unexpected)?;
-		assert_eq!(in_trade_order_ids.len(), 0);
-		let clinchd_order_ids =
-			VSBondAuction::clinchd_order_ids(ACCOUNT_ALICE).ok_or(Error::<Test>::Unexpected)?;
-		assert_eq!(clinchd_order_ids.len(), 1);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 75);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
+
+		let in_trade_order_ids = Auction::in_trade_order_ids(ALICE).unwrap();
+		assert!(in_trade_order_ids.is_empty());
+
+		assert!(Auction::revoked_order_ids(ALICE).is_none());
+
+		let clinchd_order_ids = Auction::clinchd_order_ids(ALICE).unwrap();
 		assert!(clinchd_order_ids.contains(&0));
 
-		Ok(().into())
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.remain, 0);
+		assert_eq!(order_info.order_state, OrderState::Clinchd);
+
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 200);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).free, 200);
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
 	});
 }
 
 #[test]
-fn clinch_order_not_exist_should_fail() {
+fn partial_clinch_order_not_exist_should_fail() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
+		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 1), Error::<Test>::NotFindOrderInfo);
 		assert_noop!(
-			VSBondAuction::partial_clinch_order(
-				Origin::signed(ACCOUNT_BRUCE),
-				0,
-				BALANCE_VSBOND / 2,
-			),
-			Error::<Test>::NotFindOrderInfo,
-		);
-
-		assert_noop!(
-			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 0,),
-			Error::<Test>::NotFindOrderInfo,
+			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
+			Error::<Test>::NotFindOrderInfo
 		);
 	});
 }
 
 #[test]
-fn clinck_order_by_origin_illegal_should_fail() {
+fn clinch_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND,
-			UNIT_PRICE,
-		));
-
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
 		assert_noop!(
-			VSBondAuction::partial_clinch_order(Origin::root(), 0, BALANCE_VSBOND / 2),
-			DispatchError::BadOrigin
-		);
-		assert_noop!(
-			VSBondAuction::partial_clinch_order(
-				Origin::signed(ACCOUNT_ALICE),
-				0,
-				BALANCE_VSBOND / 2
-			),
+			Auction::clinch_order(Some(ALICE).into(), 0),
 			Error::<Test>::ForbidClinchOrderWithinOwnership
 		);
 		assert_noop!(
-			VSBondAuction::partial_clinch_order(Origin::none(), 0, BALANCE_VSBOND / 2),
-			DispatchError::BadOrigin
-		);
-
-		assert_noop!(VSBondAuction::clinch_order(Origin::root(), 0), DispatchError::BadOrigin);
-		assert_noop!(
-			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_ALICE), 0,),
+			Auction::partial_clinch_order(Some(ALICE).into(), 0, 50),
 			Error::<Test>::ForbidClinchOrderWithinOwnership
 		);
-		assert_noop!(VSBondAuction::clinch_order(Origin::none(), 0), DispatchError::BadOrigin);
+
+		assert_noop!(
+			Auction::partial_clinch_order(Origin::root(), 0, 50),
+			DispatchError::BadOrigin,
+		);
+		assert_noop!(
+			Auction::partial_clinch_order(Origin::none(), 0, 50),
+			DispatchError::BadOrigin,
+		);
 	});
 }
 
 #[test]
 fn clinch_order_not_in_trade_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND / 2,
-			UNIT_PRICE,
-		));
-		assert_ok!(VSBondAuction::revoke_order(Origin::signed(ACCOUNT_ALICE), 0,));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
+		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 		assert_noop!(
-			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 0),
+			Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50),
 			Error::<Test>::ForbidClinchOrderNotInTrade
 		);
 
-		assert_ok!(VSBondAuction::create_order(
-			Origin::signed(ACCOUNT_ALICE),
-			PARA_ID,
-			FIRST_SLOT,
-			LAST_SLOT,
-			BALANCE_VSBOND / 2,
-			UNIT_PRICE,
-		));
-		assert_ok!(VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 1,));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1));
+		assert_ok!(Auction::clinch_order(Some(BRUCE).into(), 1));
 		assert_noop!(
-			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 1),
+			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
 			Error::<Test>::ForbidClinchOrderNotInTrade
 		);
 	});
 }
 
-// TODO: Weird Err??
-// #[test]
-// fn clinch_order_without_enough_currency_expected_should_fail() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(VSBondAuction::create_order(
-// 			Origin::signed(ACCOUNT_ALICE),
-// 			PARA_ID,
-// 			FIRST_SLOT,
-// 			LAST_SLOT,
-// 			BALANCE_VSBOND,
-// 			UNIT_PRICE + 1,
-// 		));
-//
-// 		assert_noop!(
-// 			VSBondAuction::clinch_order(Origin::signed(ACCOUNT_BRUCE), 0),
-// 			orml_tokens::Error::<Test>::BalanceTooLow,
-// 		);
-// 	});
-// }
+#[test]
+fn clinch_order_without_enough_token_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 2));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50));
+		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 0), Error::<Test>::CantPayThePrice);
+	});
+}

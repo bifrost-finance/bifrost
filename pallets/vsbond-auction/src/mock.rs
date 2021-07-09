@@ -25,7 +25,6 @@ use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use vsbond_auction::*;
 
 use crate as vsbond_auction;
 
@@ -41,8 +40,8 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		OrmlAssets: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		VSBondAuction: vsbond_auction::{Pallet, Call, Storage, Event<T>},
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
+		Auction: vsbond_auction::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -119,10 +118,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
-			(ACCOUNT_ALICE, TOKEN, BALANCE_TOKEN),
-			(ACCOUNT_ALICE, VSBOND, BALANCE_VSBOND),
-			(ACCOUNT_BRUCE, TOKEN, BALANCE_TOKEN),
-			(ACCOUNT_BRUCE, VSBOND, BALANCE_VSBOND),
+			(ALICE, TOKEN, 100),
+			(ALICE, VSBOND, 100),
+			(BRUCE, TOKEN, 100),
+			(BRUCE, VSBOND, 100),
 		],
 	}
 	.assimilate_storage(&mut fs_gc)
@@ -131,14 +130,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	fs_gc.into()
 }
 
+pub(crate) const ALICE: AccountId = 1;
+pub(crate) const BRUCE: AccountId = 2;
 pub(crate) const TOKEN: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub(crate) const PARA_ID: ParaId = 3000;
-pub(crate) const FIRST_SLOT: LeasePeriod = 0;
-pub(crate) const LAST_SLOT: LeasePeriod = 100;
-pub(crate) const VSBOND: CurrencyId =
-	CurrencyId::VSBond(TokenSymbol::KSM, PARA_ID, FIRST_SLOT, LAST_SLOT);
-pub(crate) const ACCOUNT_ALICE: AccountId = 1;
-pub(crate) const ACCOUNT_BRUCE: AccountId = 2;
-pub(crate) const BALANCE_VSBOND: Balance = 1_000;
-pub(crate) const BALANCE_TOKEN: Balance = 1_000;
-pub(crate) const UNIT_PRICE: Balance = 1;
+pub(crate) const VSBOND: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20);
