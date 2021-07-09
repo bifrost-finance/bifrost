@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'docker image tag'
+        description: 'bifrost image tag'
         required: true
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - run: |
@@ -23,7 +23,8 @@ jobs:
         if: ${{ github.event.release.tag_name }}
         run: |
           echo "TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v2
+      - name: Check to latest commit
+        uses: actions/checkout@v2
         with:
           submodules: recursive
       - name: Set up Docker Buildx
@@ -35,6 +36,10 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.5.2
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
@@ -64,4 +69,4 @@ jobs:
       - name: Move cache
         run: |
           rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache 
