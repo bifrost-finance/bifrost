@@ -880,12 +880,6 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
-impl bifrost_assets::Config for Runtime {
-	type Event = Event;
-	type MultiCurrency = Currencies;
-	type WeightInfo = ();
-}
-
 impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
@@ -1181,7 +1175,6 @@ construct_runtime! {
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 
 		// Bifrost modules
-		BifrostAssets: bifrost_assets::{Pallet, Call, Event<T>} = 100,
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
 		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
 		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 104,
