@@ -1,15 +1,15 @@
-<a href="https://bifrost.finance"><img align="center" src="./docs/bifrost-banner.svg" alt="Bifrost Banner"/></a>
+<a href="https://bifrost.finance"><img align="center" src="./docs/res/readme/bifrost-banner.svg" alt="Bifrost Banner"/></a>
 
-<a href="https://bifrost.finance"><img align="right" width="100" src="./docs/bifrost-black-logo.svg" alt="Bifrost Logo"/></a>
+<a href="https://bifrost.finance"><img align="right" width="100" src="./docs/res/readme/bifrost-black-logo.svg" alt="Bifrost Logo"/></a>
 
 <h1 align="left"><a href="https://bifrost.finance">Homepage</a></h1>
 
 <h4>🐣 Supported by</h4>
 
 <p align="left">
-  <a href="https://web3.foundation/grants"><img src="./docs/web3-foundation-grant.svg" width="200" alt="Web3 Foundation Grants"></a>
-  <a href="https://www.substrate.io/builders-program"><img src="./docs/substrate-builder.svg" width="200" alt="Substrate Builders Program"></a>
-  <a href="https://bootcamp.web3.foundation/"><img src="./docs/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
+  <a href="https://web3.foundation/grants"><img src="docs/res/readme/web3-foundation-grant.svg" width="200" alt="Web3 Foundation Grants"></a>
+  <a href="https://www.substrate.io/builders-program"><img src="docs/res/readme/substrate-builder.svg" width="200" alt="Substrate Builders Program"></a>
+  <a href="https://bootcamp.web3.foundation/"><img src="docs/res/readme/web3-bootcamp.svg" width="200" alt="Web3 Bootcamp"></a>
 </p>
 
 [![master-build](https://img.shields.io/github/workflow/status/bifrost-finance/bifrost/master-build/master)](https://github.com/bifrost-finance/bifrost/actions)
