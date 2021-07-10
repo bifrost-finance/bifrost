@@ -19,6 +19,8 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// TODO: Refactor the info returned by `Event`
+
 mod mock;
 mod tests;
 
@@ -255,7 +257,7 @@ pub mod pallet {
 		/// The contribution period has already ended.
 		ContributionPeriodOver,
 		/// The origin of this call is invalid.
-		InvalidOrigin,
+		UnauthorizedAccount,
 		/// This crowdloan does not correspond to a parachain.
 		NotParachain,
 		/// This parachain lease is still active and retirement cannot yet begin.
@@ -310,6 +312,11 @@ pub mod pallet {
 		Option<FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod>>,
 		ValueQuery,
 	>;
+
+	/// TODO: docs
+	#[pallet::storage]
+	#[pallet::getter(fn refund_pool)]
+	pub(super) type RefundPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	/// The balance of the token(rely-chain) can be redeemed.
 	#[pallet::storage]
@@ -379,6 +386,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// TODO: Refactor the docs.
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
 		#[pallet::weight(0)]
 		pub fn create(
@@ -422,6 +430,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// TODO: Refactor the docs.
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
@@ -461,10 +470,12 @@ pub mod pallet {
 			#[pallet::compact] value: BalanceOf<T>,
 			#[pallet::compact] is_success: bool,
 		) -> DispatchResult {
-			Self::check_fund_owner(origin.clone(), index)?;
+			let depositor = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let (contributed, contributing) = Self::contribution_get(fund.trie_index, &who);
 			ensure!(contributing == value, Error::<T>::ValueMismatched);
@@ -481,7 +492,7 @@ pub mod pallet {
 
 				// Update the raised of fund
 				let fund_new = FundInfo { raised: fund.raised.saturating_add(value), ..fund };
-				Funds::<T>::insert(index, fund_new);
+				Funds::<T>::insert(index, Some(fund_new));
 
 				// Update the contribution of who
 				let contributed_new = contributed.saturating_add(contributing);
@@ -499,45 +510,76 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// TODO: Refactor the docs.
 		/// Withdraw full balance of the parachain. this function may need to be called multiple
 		/// times
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::weight(0)]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let owner = Self::check_fund_owner(origin.clone(), index)?;
+			let depositor = ensure_signed(origin)?;
 
-			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
-				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
+			ensure!(can, Error::<T>::InvalidFundStatus);
 
-			ensure!(
-				fund.status == FundStatus::Failed || fund.status == FundStatus::Retired,
-				Error::<T>::InvalidFundStatus
-			);
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
-			Self::xcm_ump_withdraw(origin, index).map_err(|_e| Error::<T>::XcmFailed)?;
+			Self::xcm_ump_withdraw(origin, index).map_err(|_| Error::<T>::XcmFailed)?;
 
 			Self::deposit_event(Event::Withdrawing(owner, index, fund.raised));
 
 			Ok(())
 		}
 
+		/// TODO: Refactor the docs.
 		/// Confirm withdraw by fund owner temporarily
 		#[pallet::weight(0)]
 		pub fn confirm_withdraw(
 			origin: OriginFor<T>,
-			index: ParaId,
-			is_success: bool,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] is_success: bool,
 		) -> DispatchResult {
-			let owner = Self::check_fund_owner(origin, index)?;
+			let depositor = ensure_signed(origin)?;
 
-			let fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
-				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
+			ensure!(can, Error::<T>::InvalidFundStatus);
 
-			ensure!(
-				fund.status == FundStatus::Failed || fund.status == FundStatus::Retired,
-				Error::<T>::InvalidFundStatus
-			);
-			Self::withdraw_callback(owner, index, is_success)
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
+
+			let amount_withdrew = fund.raised;
+
+			if is_success {
+				if fund.status == FundStatus::Retired {
+					// TODO: Remove Redeem-Pool from SALP
+					RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
+				} else if fund.status == FundStatus::Failed {
+					RefundPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
+				}
+
+				let fund_new = FundInfo { status: FundStatus::Withdrew, ..fund };
+				Funds::<T>::insert(index, Some(fund_new));
+
+				Self::deposit_event(Event::Withdrew(who, index, amount_withdrew));
+			} else {
+				Self::deposit_event(Event::WithdrawFailed(who, index, amount_withdrew));
+			}
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn refund(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
+			todo!()
+		}
+
+		#[pallet::weight(0)]
+		pub fn confirm_refund(
+			origin: OriginFor<T>,
+			#[pallet::compact] who: AccountIdOf<T>,
+			#[pallet::compact] index: ParaId,
+		) -> DispatchResult {
+			todo!()
 		}
 
 		#[pallet::weight(0)]
@@ -811,16 +853,6 @@ pub mod pallet {
 			})
 		}
 
-		fn check_fund_owner(
-			origin: OriginFor<T>,
-			para_id: ParaId,
-		) -> Result<AccountIdOf<T>, Error<T>> {
-			let owner = ensure_signed(origin).map_err(|_e| Error::<T>::InvalidOrigin)?;
-			let fund = Self::funds(para_id).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(owner == fund.depositor, Error::<T>::InvalidOrigin);
-			Ok(owner)
-		}
-
 		pub fn check_balance(
 			para_id: ParaId,
 			who: &AccountIdOf<T>,
@@ -846,52 +878,17 @@ pub mod pallet {
 		}
 
 		#[allow(non_snake_case)]
-		pub fn vsToken() -> CurrencyId {
+		pub(crate) fn vsToken() -> CurrencyId {
 			CurrencyId::VSToken(*T::RelyChainToken::get())
 		}
 
 		#[allow(non_snake_case)]
-		pub fn vsBond(
+		pub(crate) fn vsBond(
 			index: ParaId,
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 		) -> CurrencyId {
 			CurrencyId::VSBond(*T::RelyChainToken::get(), index, first_slot, last_slot)
-		}
-
-		fn withdraw_callback(
-			who: AccountIdOf<T>,
-			index: ParaId,
-			is_success: bool,
-		) -> DispatchResult {
-			let mut fund: FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod> =
-				Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-
-			if is_success {
-				RedeemPool::<T>::mutate(|balance| {
-					*balance = balance.saturating_add(fund.raised);
-				});
-
-				fund.status = FundStatus::Withdrew;
-				Funds::<T>::insert(index, Some(fund.clone()));
-
-				// TODO: Look likes too heavy!
-				// 	Require an new `Tokens` module to support special lock.
-				for (who, _) in Self::contribution_iterator(fund.trie_index) {
-					T::MultiCurrency::remove_lock(vslock(index), Self::vsToken(), &who)?;
-					T::MultiCurrency::remove_lock(
-						vslock(index),
-						Self::vsbond(index, fund.first_slot, fund.last_slot),
-						&who,
-					)?;
-				}
-
-				Self::deposit_event(Event::Withdrew(who, index, fund.raised));
-			} else {
-				Self::deposit_event(Event::WithdrawFailed(who, index, fund.raised));
-			}
-
-			Ok(())
 		}
 
 		fn redeem_callback(

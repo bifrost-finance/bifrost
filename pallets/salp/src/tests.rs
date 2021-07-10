@@ -96,9 +96,12 @@ fn set_fund_success_should_work() {
 fn set_fund_success_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
-		assert_noop!(Salp::fund_success(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_success(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_success(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::fund_success(Origin::root(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::fund_success(Origin::none(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(
+			Salp::fund_success(Some(BRUCE).into(), 3_000),
+			Error::<Test>::UnauthorizedAccount
+		);
 	})
 }
 
@@ -138,9 +141,12 @@ fn set_fund_fail_should_work() {
 fn set_fund_fail_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
-		assert_noop!(Salp::fund_fail(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_fail(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_fail(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::fund_fail(Origin::root(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::fund_fail(Origin::none(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(
+			Salp::fund_fail(Some(BRUCE).into(), 3_000),
+			Error::<Test>::UnauthorizedAccount
+		);
 	});
 }
 
@@ -179,9 +185,12 @@ fn set_fund_retire_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_noop!(Salp::fund_retire(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_retire(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_retire(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::fund_retire(Origin::root(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::fund_retire(Origin::none(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(
+			Salp::fund_retire(Some(BRUCE).into(), 3_000),
+			Error::<Test>::UnauthorizedAccount
+		);
 	});
 }
 
@@ -230,9 +239,9 @@ fn set_fund_end_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
 
-		assert_noop!(Salp::fund_end(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_end(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::fund_end(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::fund_end(Origin::root(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::fund_end(Origin::none(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::fund_end(Some(BRUCE).into(), 3_000), Error::<Test>::UnauthorizedAccount);
 	});
 }
 
@@ -591,9 +600,9 @@ fn withdraw_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::withdraw(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::withdraw(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::withdraw(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::withdraw(Origin::root(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::withdraw(Origin::none(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::withdraw(Some(BRUCE).into(), 3_000), Error::<Test>::UnauthorizedAccount);
 	});
 }
 
@@ -1008,9 +1017,9 @@ fn dissolve_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::dissolve(Origin::root(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::dissolve(Origin::none(), 3_000), Error::<Test>::InvalidOrigin);
-		assert_noop!(Salp::dissolve(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidOrigin);
+		assert_noop!(Salp::dissolve(Origin::root(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::dissolve(Origin::none(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::dissolve(Some(BRUCE).into(), 3_000), Error::<Test>::UnauthorizedAccount);
 	});
 }
 
