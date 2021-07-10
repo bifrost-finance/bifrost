@@ -133,8 +133,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 	use orml_traits::{
-		currency::TransferAll, MultiCurrency, MultiCurrencyExtended,
-		MultiLockableCurrency, MultiReservableCurrency,
+		currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
+		MultiReservableCurrency,
 	};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_std::{convert::TryInto, prelude::*};
@@ -279,28 +279,31 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			Self::check_fund_owner(origin.clone(), index)?;
+			let depositor = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-			Funds::<T>::mutate(index, |fund| {
-				if let Some(fund) = fund {
-					fund.status = FundStatus::Success;
-				}
-			});
+
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
+
+			let fund_new = FundInfo { status: FundStatus::Success, ..fund };
+			Funds::<T>::insert(index, Some(fund_new));
 
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
 		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			Self::check_fund_owner(origin.clone(), index)?;
+			let depositor = ensure_signed(origin)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-			fund.status = FundStatus::Failed;
-			Funds::<T>::insert(index, Some(fund.clone()));
+
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
+
+			let fund_new = FundInfo { status: FundStatus::Failed, ..fund };
+			Funds::<T>::insert(index, Some(fund_new));
 
 			Ok(())
 		}
@@ -310,27 +313,30 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			Self::check_fund_owner(origin.clone(), index)?;
+			let depositor = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Success, Error::<T>::InvalidFundStatus);
-			Funds::<T>::mutate(index, |fund| {
-				if let Some(fund) = fund {
-					fund.status = FundStatus::Retired;
-				}
-			});
+
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
+
+			let fund_new = FundInfo { status: FundStatus::Retired, ..fund };
+			Funds::<T>::insert(index, Some(fund_new));
 
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
 		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			Self::check_fund_owner(origin.clone(), index)?;
+			let depositor = ensure_signed(origin)?;
 
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
-			fund.status = FundStatus::End;
-			Funds::<T>::insert(index, Some(fund.clone()));
+
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
+
+			let fund_new = FundInfo { status: FundStatus::End, ..fund };
+			Funds::<T>::insert(index, Some(fund_new));
 
 			Ok(())
 		}
@@ -400,7 +406,7 @@ pub mod pallet {
 			ensure!(raised <= fund.cap, Error::<T>::CapExceeded);
 
 			let (contributed, contributing) = Self::contribution_get(fund.trie_index, &who);
-			ensure!(contributing == 0, Error::<T>::Contributing);
+			ensure!(contributing == Zero::zero(), Error::<T>::Contributing);
 			Self::contribution_put(fund.trie_index, &who, contributed, value);
 
 			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
@@ -414,9 +420,9 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn confirm_contribute(
 			origin: OriginFor<T>,
-			#[pallet::compact] who: AccountIdOf<T>,
+			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
-			#[pallet::compact] is_success: bool,
+			is_success: bool,
 		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
@@ -468,7 +474,7 @@ pub mod pallet {
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
 		#[pallet::weight(0)]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let depositor = ensure_signed(origin)?;
+			let depositor = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
@@ -489,7 +495,7 @@ pub mod pallet {
 		pub fn confirm_withdraw(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
-			#[pallet::compact] is_success: bool,
+			is_success: bool,
 		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
@@ -505,7 +511,7 @@ pub mod pallet {
 				if fund.status == FundStatus::Retired {
 					// TODO: Charge to Redeem Pool
 				} else if fund.status == FundStatus::Failed {
-					RefundPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
+					RefundPool::<T>::set(Self::refund_pool().saturating_add(amount_withdrew));
 				}
 
 				let fund_new = FundInfo { status: FundStatus::Withdrew, ..fund };
@@ -538,9 +544,9 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn confirm_refund(
 			origin: OriginFor<T>,
-			#[pallet::compact] who: AccountIdOf<T>,
+			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
-			#[pallet::compact] is_success: bool,
+			is_success: bool,
 		) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
@@ -578,10 +584,12 @@ pub mod pallet {
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
 		#[pallet::weight(0)]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let owner = Self::check_fund_owner(origin, index)?;
+			let depositor = ensure_signed(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::End, Error::<T>::InvalidFundStatus);
+
+			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let mut refund_count = 0u32;
 			// Try killing the crowdloan child trie and Assume everyone will be refunded.
@@ -599,17 +607,18 @@ pub mod pallet {
 			}
 
 			if all_refunded == true {
-				T::MultiCurrency::unreserve(token_deposited(), &owner, fund.deposit);
+				T::MultiCurrency::unreserve(token_deposited(), &depositor, fund.deposit);
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
+
 			Ok(())
 		}
 	}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(n: BlockNumberFor<T>) {
+		fn on_finalize(_n: BlockNumberFor<T>) {
 			// TODO
 		}
 
@@ -620,14 +629,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		/// The account ID of the fund pot.
-		///
-		/// This actually does computation. If you need to keep using it, then make sure you cache
-		/// the value and only call this once.
-		pub(crate) fn fund_account_id(index: ParaId) -> AccountIdOf<T> {
-			T::PalletId::get().into_sub_account(index)
-		}
-
 		pub(crate) fn id_from_index(index: TrieIndex) -> child::ChildInfo {
 			let mut buf = Vec::new();
 			buf.extend_from_slice(&(T::PalletId::get().0));
@@ -685,10 +686,6 @@ pub mod pallet {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
 
-		fn crowdloan_kill(index: TrieIndex) -> child::KillChildStorageResult {
-			child::kill_storage(&Self::id_from_index(index), Some(T::RemoveKeysLimit::get()))
-		}
-
 		fn xcm_ump_contribute(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -744,20 +741,6 @@ pub mod pallet {
 			)
 		}
 
-		fn xcm_ump_redeem(origin: OriginFor<T>, index: ParaId, value: BalanceOf<T>) -> XcmResult {
-			let origin_location: MultiLocation =
-				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
-
-			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
-
-			T::BifrostXcmExecutor::ump_transfer_asset(
-				MultiLocation::X1(Junction::Parachain(index)),
-				origin_location,
-				amount,
-				false,
-			)
-		}
-
 		fn next_trie_index() -> Result<TrieIndex, Error<T>> {
 			CurrentTrieIndex::<T>::try_mutate(|ti| {
 				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
@@ -768,8 +751,8 @@ pub mod pallet {
 
 	const fn token_deposited() -> CurrencyId {
 		#[cfg(feature = "with-asgard-runtime")]
-			return CurrencyId::Token(TokenSymbol::ASG);
+		return CurrencyId::Token(TokenSymbol::ASG);
 		#[cfg(not(feature = "with-asgard-runtime"))]
-			return CurrencyId::Token(TokenSymbol::BNC);
+		return CurrencyId::Token(TokenSymbol::BNC);
 	}
 }
