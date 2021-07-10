@@ -24,14 +24,18 @@
 use core::marker::PhantomData;
 use std::convert::TryInto;
 
-use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{
+	parameter_types,
+	traits::{GenesisBuild, Hooks},
+	PalletId,
+};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto, Zero},
-	AccountId32, DispatchError, DispatchResult, Permill, SaturatedConversion,
+	AccountId32, DispatchError, DispatchResult, SaturatedConversion,
 };
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
 
@@ -189,8 +193,6 @@ impl crate::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
 	type MultiCurrency = Assets;
-	type PalletId = StakingPalletId;
-	type RandomnessSource = RandomnessCollectiveFlip;
 	type WeightInfo = ();
 }
 
@@ -339,18 +341,21 @@ impl ExtBuilder {
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 14 * 1),
 			],
-			rate_of_interest_each_block: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-			],
-			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)),  // 8.2%
-			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
 		t.into()
+	}
+}
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		VtokenMint::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		VtokenMint::on_initialize(System::block_number());
 	}
 }

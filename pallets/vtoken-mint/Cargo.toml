@@ -10,6 +10,7 @@ node-primitives = { path = "../../node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
@@ -22,6 +23,7 @@ pallet-balances = "3.0.0"
 pallet-randomness-collective-flip = "3.0.0"
 sp-core = "3.0.0"
 sp-io = "3.0.0"
+sp-std = "3.0.0"
 
 [features]
 default = ["std"]
@@ -31,6 +33,7 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"sp-core/std",
+	"sp-std/std",
 	"sp-runtime/std",
 	"orml-traits/std",
 	"zenlink-protocol/std",

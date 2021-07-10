@@ -121,16 +121,6 @@ pub fn asgard_genesis(
 				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
 				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS),
 			],
-			rate_of_interest_each_block: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127), // 10000.0 * 0.15/(365*24*600)
-			],
-			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)),  // 8.2%
-				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)), // 15.0%
-			],
 		},
 	}
 }
