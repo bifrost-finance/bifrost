@@ -28,10 +28,9 @@ use bifrost_runtime::{
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use serde_json as json;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::Zero;
