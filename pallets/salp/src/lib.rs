@@ -121,30 +121,22 @@ pub enum WithdrawCall<AccountIdOf> {
 	Withdraw(Withdraw<AccountIdOf>),
 }
 
-const fn token_deposited() -> CurrencyId {
-	#[cfg(feature = "with-asgard-runtime")]
-	return CurrencyId::Token(TokenSymbol::ASG);
-	#[cfg(not(feature = "with-asgard-runtime"))]
-	return CurrencyId::Token(TokenSymbol::BNC);
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
-		sp_runtime::traits::{AccountIdConversion, CheckedAdd, CheckedSub, Hash, Saturating, Zero},
+		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{traits::BancorHandler, CurrencyId, LeasePeriod, ParaId, TokenSymbol};
+	use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 	use orml_traits::{
-		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
+		currency::TransferAll, MultiCurrency, MultiCurrencyExtended,
 		MultiLockableCurrency, MultiReservableCurrency,
 	};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
-	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v0::{
 		prelude::{XcmError, XcmResult},
@@ -179,19 +171,6 @@ pub mod pallet {
 		type LeasePeriod: Get<BlockNumberFor<Self>>;
 
 		#[pallet::constant]
-		type VSBondValidPeriod: Get<BlockNumberFor<Self>>;
-
-		/// The time interval from 1:1 redeem-pool to bancor-pool to release.
-		#[pallet::constant]
-		type ReleaseCycle: Get<LeasePeriod>;
-
-		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
-		///
-		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
-		#[pallet::constant]
-		type ReleaseRatio: Get<Percent>;
-
-		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
 		type MultiCurrency: TransferAll<AccountIdOf<Self>>
@@ -199,8 +178,6 @@ pub mod pallet {
 			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-
-		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
 		type ExecuteXcmOrigin: EnsureOrigin<
 			<Self as frame_system::Config>::Origin,
@@ -501,7 +478,7 @@ pub mod pallet {
 
 			Self::xcm_ump_withdraw(origin, index).map_err(|_| Error::<T>::XcmFailed)?;
 
-			Self::deposit_event(Event::Withdrawing(owner, index, fund.raised));
+			Self::deposit_event(Event::Withdrawing(depositor, index, fund.raised));
 
 			Ok(())
 		}
@@ -526,8 +503,7 @@ pub mod pallet {
 
 			if is_success {
 				if fund.status == FundStatus::Retired {
-					// TODO: Remove Redeem-Pool from SALP
-					RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
+					// TODO: Charge to Redeem Pool
 				} else if fund.status == FundStatus::Failed {
 					RefundPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
 				}
@@ -535,9 +511,9 @@ pub mod pallet {
 				let fund_new = FundInfo { status: FundStatus::Withdrew, ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
 
-				Self::deposit_event(Event::Withdrew(who, index, amount_withdrew));
+				Self::deposit_event(Event::Withdrew(depositor, index, amount_withdrew));
 			} else {
-				Self::deposit_event(Event::WithdrawFailed(who, index, amount_withdrew));
+				Self::deposit_event(Event::WithdrawFailed(depositor, index, amount_withdrew));
 			}
 
 			Ok(())
@@ -634,34 +610,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(n: BlockNumberFor<T>) {
-			// Release x% KSM/DOT from 1:1 redeem-pool to bancor-pool per cycle.
-			if (n % T::ReleaseCycle::get()) == 0 {
-				if let Ok(redeem_pool_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
-					// Calculate the release amount by `(redeem_pool_balance *
-					// T::ReleaseRatio).main_part()`.
-					let release_amount = T::ReleaseRatio::get() * redeem_pool_balance;
-
-					// Must be ok.
-					if let Ok(release_amount) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
-						// Decrease the balance of redeem-pool by release amount.
-						RedeemPool::<T>::mutate(|b| {
-							*b = b.saturating_sub(release_amount);
-						});
-
-						// Increase the balance of bancor-pool by release amount.
-						if let Err(err) = T::BancorPool::add_token(
-							T::RelyChainToken::get().into(),
-							release_amount,
-						) {
-							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
-						}
-					}
-				} else {
-					log::warn!("Overflow: The balance of redeem-pool exceeds u128.");
-				}
-			}
-
-			// TODO: check & lock if vsBond if expired ???
+			// TODO
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
@@ -815,5 +764,12 @@ pub mod pallet {
 				Ok(*ti - 1)
 			})
 		}
+	}
+
+	const fn token_deposited() -> CurrencyId {
+		#[cfg(feature = "with-asgard-runtime")]
+			return CurrencyId::Token(TokenSymbol::ASG);
+		#[cfg(not(feature = "with-asgard-runtime"))]
+			return CurrencyId::Token(TokenSymbol::BNC);
 	}
 }
