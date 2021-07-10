@@ -55,7 +55,7 @@ fn create_fund_existed_should_fail() {
 
 		assert_noop!(
 			Salp::create(Some(ALICE).into(), 3_000, 1_000 * DOLLARS, 1, SlotLength::get(),),
-			Error::<Test>::FundExisted,
+			Error::<Test>::FundAlreadyCreated,
 		);
 	});
 }
