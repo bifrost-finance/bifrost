@@ -28,6 +28,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
 	fn set_vtoken_pool() -> Weight;
+	fn set_token_staking_lock_period() -> Weight;
 	fn mint() -> Weight;
 	fn redeem() -> Weight;
 }
@@ -36,6 +37,10 @@ pub trait WeightInfo {
 pub struct BifrostWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 	fn set_vtoken_pool() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_token_staking_lock_period() -> Weight {
 		(50_000_000 as Weight)
 	}
 
@@ -51,6 +56,10 @@ impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn set_vtoken_pool() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_token_staking_lock_period() -> Weight {
 		(50_000_000 as Weight)
 	}
 

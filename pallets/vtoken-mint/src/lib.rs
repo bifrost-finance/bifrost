@@ -140,6 +140,30 @@ pub mod pallet {
 		///
 		/// The dispatch origin for this call must be `Root` by the
 		/// transactor.
+		#[pallet::weight(T::WeightInfo::set_token_staking_lock_period())]
+		#[transactional]
+		pub fn set_token_staking_lock_period(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			locking_blocks: T::BlockNumber,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(token_id.is_token(), Error::<T>::NotSupportTokenType);
+
+			if StakingLockPeriod::<T>::contains_key(token_id) {
+				StakingLockPeriod::<T>::mutate(token_id, |locking_period| {
+					*locking_period = locking_blocks;
+				})
+			} else {
+				StakingLockPeriod::<T>::insert(token_id, locking_blocks);
+			}
+
+			Self::deposit_event(Event::UpdateVtokenPoolSuccess);
+
+			Ok(())
+		}
+
+		/// Set staking lock period for a token
 		#[pallet::weight(T::WeightInfo::set_vtoken_pool())]
 		#[transactional]
 		pub fn set_vtoken_pool(

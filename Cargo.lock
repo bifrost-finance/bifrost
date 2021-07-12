@@ -722,6 +722,7 @@ dependencies = [
 name = "bifrost-minter-reward"
 version = "0.8.0"
 dependencies = [
+ "bifrost-vtoken-mint",
  "fixed",
  "frame-support",
  "frame-system",
@@ -906,7 +907,6 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
- "pallet-randomness-collective-flip",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -923,6 +923,7 @@ dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
+ "log",
  "parity-scale-codec",
  "sp-api",
  "sp-blockchain",

@@ -70,10 +70,8 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		VtokenMint: vtoken_mint::{Pallet, Call, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
-		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>},
+		MinterReward: bifrost_minter_reward::{Pallet, Storage, Call,Event<T>, Config<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
-
 	}
 );
 
@@ -156,39 +154,21 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TwoYear: u32 = 1 * 365 * 2;
-	pub const RewardPeriod: u32 = 50;
+	pub const HalvingCycle: u32 = 1 * 365 * 2;
+	pub const RewardWindow: u32 = 50;
 	pub const MaximumExtendedPeriod: u32 = 500;
-	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
 }
 
 impl bifrost_minter_reward::Config for Runtime {
 	type Event = Event;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
-	type MultiCurrency = Assets;
-	type RewardPeriod = RewardPeriod;
+	type MultiCurrency = Currencies;
+	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type SystemPalletId = ShareWeightPalletId;
-	type TwoYear = TwoYear;
-	type ZenlinkOperator = ZenlinkProtocol;
+	type HalvingCycle = HalvingCycle;
+	type DexOperator = ZenlinkProtocol;
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
-
-parameter_types! {
-	// 3 hours(1800 blocks) as an era
-	pub const VtokenMintDuration: u32 = 3 * 60 * 1;
-	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
-}
-orml_traits::parameter_type_with_key! {
-	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 1 * CENTS,
-			&CurrencyId::Token(TokenSymbol::ETH) => 7 * CENTS,
-			_ => Zero::zero(),
-		}
-	};
-}
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
@@ -210,7 +190,6 @@ impl zenlink_protocol::Config for Runtime {
 	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
-	// type SelfParaId = SelfParaId;
 	type SelfParaId = ();
 	type TargetChains = ();
 	type XcmExecutor = ();
@@ -334,6 +313,18 @@ impl ExtBuilder {
 		orml_tokens::GenesisConfig::<Runtime> { balances: self.endowed_accounts }
 			.assimilate_storage(&mut t)
 			.unwrap();
+
+		bifrost_minter_reward::GenesisConfig::<Runtime> {
+			currency_weights: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
+			],
+			reward_per_block: 300,
+			cycle_index: 1,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		crate::GenesisConfig::<Runtime> {
 			pools: vec![],

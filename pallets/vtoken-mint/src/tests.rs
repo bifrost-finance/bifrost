@@ -38,10 +38,12 @@ fn mint_vtoken_should_be_ok() {
 		let to_sell_dot = 20;
 		let minted_vdot = to_sell_dot * dot_price;
 
-		System::set_block_number(1);
+		run_to_block(1);
 
 		// Alice sell 20 DOTs to mint vDOT.
 		assert_ok!(VtokenMint::mint(Origin::signed(ALICE), vDOT, to_sell_dot));
+		run_to_block(2);
+		println!("MInter: {:?}", MinterReward::current_round_start_at());
 
 		// Check event
 		let mint_vtoken_event =
