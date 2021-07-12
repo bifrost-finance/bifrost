@@ -194,6 +194,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -749,6 +750,7 @@ dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
+ "frame-benchmarking",
  "frame-executive",
  "frame-support",
  "frame-system",
@@ -844,12 +846,14 @@ name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
  "bifrost-bancor",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
  "node-primitives",
  "orml-tokens",
  "orml-traits",
+ "pallet-xcm",
  "parity-scale-codec",
  "polkadot-parachain",
  "sp-arithmetic",
@@ -4940,6 +4944,7 @@ dependencies = [
  "cumulus-client-service",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
+ "frame-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal 0.2.1",
  "jsonrpc-core",
@@ -5343,6 +5348,7 @@ name = "pallet-collective"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8#1b758b2a8d151d97d2242260c465b6df9cb8a7a4"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

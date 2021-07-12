@@ -77,3 +77,11 @@ copy-genesis-config-release:
 format:
 	rustup component add rustfmt
 	cargo +nightly fmt --all -- --check
+
+.PHONY: test-benchmarking
+test-benchmarking:
+	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
+
+.PHONY: run-benchmarking
+run-benchmarking:
+	./scripts/run_all_benches.sh
