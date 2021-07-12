@@ -116,6 +116,7 @@ parameter_types! {
 	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const UnlockNumberPerBlock: u32 = 100u32;
 }
 
 parameter_types! {
@@ -136,6 +137,7 @@ impl salp::Config for Test {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
+	type UnlockNumberPerBlock = UnlockNumberPerBlock;
 }
 
 // To control the result returned by `MockXcmExecutor`
@@ -192,4 +194,3 @@ pub const WEEKS: BlockNumber = DAYS * 7;
 
 pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
-pub(crate) const CATHI: AccountId = AccountId::new([2u8; 32]);

@@ -19,8 +19,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// TODO: Refactor the info returned by `Event`
-
 mod mock;
 mod tests;
 
@@ -132,10 +130,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
-	use orml_traits::{
-		currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-		MultiReservableCurrency,
-	};
+	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_std::{convert::TryInto, prelude::*};
 	use xcm::v0::{
@@ -173,10 +168,12 @@ pub mod pallet {
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
+		/// The number of users who in the successful fund to unlock per block
+		#[pallet::constant]
+		type UnlockNumberPerBlock: Get<u32>;
+
 		type MultiCurrency: TransferAll<AccountIdOf<Self>>
 			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		type ExecuteXcmOrigin: EnsureOrigin<
@@ -233,8 +230,10 @@ pub mod pallet {
 		Overflow,
 		/// The contribution was below the minimum, `MinContribution`.
 		ContributionTooSmall,
-		/// TODO: docs
+		/// The account are contributing now.
 		Contributing,
+		/// The account doesn't have any contribution to the fund.
+		ZeroContribution,
 		/// Invalid fund index.
 		InvalidParaId,
 		/// Invalid fund status.
@@ -533,6 +532,20 @@ pub mod pallet {
 			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
 
 			let (contributed, _) = Self::contribution_get(fund.trie_index, &who);
+			ensure!(contributed > Zero::zero(), Error::<T>::ZeroContribution);
+
+			// TODO: Ensure only one refund in same time
+
+			#[allow(non_snake_case)]
+			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+			ensure!(
+				T::MultiCurrency::reserved_balance(vsToken, &who) >= contributed,
+				Error::<T>::NotEnoughCurrencyToSlash
+			);
+			ensure!(
+				T::MultiCurrency::reserved_balance(vsBond, &who) >= contributed,
+				Error::<T>::NotEnoughCurrencyToSlash
+			);
 
 			Self::xcm_ump_refund(origin, index, contributed).map_err(|_| Error::<T>::XcmFailed)?;
 
@@ -555,6 +568,8 @@ pub mod pallet {
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
+			// TODO: Ensure only one refund in same time
+
 			let (contributed, contributing) = Self::contribution_get(fund.trie_index, &who);
 			if contributed == Zero::zero() {
 				return Ok(());
@@ -566,11 +581,12 @@ pub mod pallet {
 			if is_success {
 				// Slash the reserved vsToken/vsBond
 				let balance = T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
-				ensure!(balance != Zero::zero(), Error::<T>::NotEnoughCurrencyToSlash);
+				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughCurrencyToSlash);
 				let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
-				ensure!(balance != Zero::zero(), Error::<T>::NotEnoughCurrencyToSlash);
+				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughCurrencyToSlash);
 
 				// Update the contribution of who
+				// TODO: Try to kill contribution of the contributor?
 				Self::contribution_put(fund.trie_index, &who, Zero::zero(), contributing);
 
 				Self::deposit_event(Event::Refunded(who, index, contributed));
@@ -620,6 +636,10 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_n: BlockNumberFor<T>) {
 			// TODO: Unreserve vsToken/vsBond after successful fund
+			// Query the funds successed
+			// Iterate the contributor of the first success fund
+			// Unreserve the vsToken/vsBond of contributor (Limit the Number)
+			// Kill the contribution
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
