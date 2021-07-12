@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
 
 use crate::{mock::*, Error, FundStatus};
 
@@ -614,7 +614,187 @@ fn withdraw_with_when_ump_wrong_should_fail() {
 	// TODO: Require an solution to settle with parallel test workflow
 }
 
-// TODO: Add the unit-tests of `refund`
+#[test]
+fn refund_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
+		assert_ok!(Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, true));
+
+		let fund = Salp::funds(3_000).unwrap();
+		let (contributed, contributing) = Salp::contribution_get(fund.trie_index, &BRUCE);
+		assert_eq!(contributed, 0);
+		assert_eq!(contributing, 0);
+
+		#[allow(non_snake_case)]
+		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
+	});
+}
+
+#[test]
+fn refund_when_xcm_error_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
+		assert_ok!(Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, false));
+
+		let fund = Salp::funds(3_000).unwrap();
+		let (contributed, contributing) = Salp::contribution_get(fund.trie_index, &BRUCE);
+		assert_eq!(contributed, 100);
+		assert_eq!(contributing, 0);
+
+		#[allow(non_snake_case)]
+		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 100);
+	});
+}
+
+#[test]
+fn refund_without_enough_reserved_should_fail() {
+	new_test_ext().execute_with(|| {
+		use orml_traits::MultiReservableCurrency;
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		#[allow(non_snake_case)]
+		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
+		assert_ok!(Tokens::repatriate_reserved(vsToken, &BRUCE, &ALICE, 50, BS::Reserved));
+		assert_ok!(Tokens::repatriate_reserved(vsBond, &BRUCE, &ALICE, 50, BS::Reserved));
+
+		assert_noop!(
+			Salp::refund(Some(BRUCE).into(), 3_000),
+			Error::<Test>::NotEnoughCurrencyToSlash
+		);
+	});
+}
+
+#[test]
+fn confirm_refund_without_enough_reserved_should_fail() {
+	new_test_ext().execute_with(|| {
+		use orml_traits::MultiReservableCurrency;
+
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
+
+		#[allow(non_snake_case)]
+		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
+		assert_ok!(Tokens::repatriate_reserved(vsToken, &BRUCE, &ALICE, 50, BS::Reserved));
+		assert_ok!(Tokens::repatriate_reserved(vsBond, &BRUCE, &ALICE, 50, BS::Reserved));
+
+		// TODO: assert_noop! raises an wired bug, look relevant to if-else branch
+		// assert_noop!(
+		// 	Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, true),
+		// 	Error::<Test>::NotEnoughCurrencyToSlash,
+		// );
+	});
+}
+
+#[test]
+fn refund_when_refunding_should_fail() {
+	// TODO
+}
+
+#[test]
+fn refund_with_zero_contribution_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_noop!(Salp::refund(Some(BRUCE).into(), 3_000), Error::<Test>::ZeroContribution);
+	});
+}
+
+#[test]
+fn refund_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_noop!(Salp::refund(Origin::root(), 3_000), DispatchError::BadOrigin);
+		assert_noop!(Salp::refund(Origin::none(), 3_000), DispatchError::BadOrigin);
+
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
+		assert_noop!(
+			Salp::confirm_refund(Origin::root(), BRUCE, 3_000, true),
+			DispatchError::BadOrigin
+		);
+		assert_noop!(
+			Salp::confirm_refund(Origin::none(), BRUCE, 3_000, true),
+			DispatchError::BadOrigin
+		);
+		assert_noop!(
+			Salp::confirm_refund(Some(BRUCE).into(), BRUCE, 3_000, true),
+			Error::<Test>::UnauthorizedAccount
+		);
+	});
+}
+
+#[test]
+fn refund_with_wrong_para_id_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		assert_noop!(Salp::refund(Some(BRUCE).into(), 4_000), Error::<Test>::InvalidParaId);
+	});
+}
+
+#[test]
+fn refund_with_wrong_fund_status_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
+
+		assert_noop!(Salp::refund(Some(BRUCE).into(), 3_000), Error::<Test>::InvalidFundStatus);
+	});
+}
+
+#[test]
+fn refund_with_when_ump_wrong_should_fail() {
+	// TODO: Require an solution to settle with parallel test workflow
+}
 
 #[test]
 fn dissolve_should_work() {
