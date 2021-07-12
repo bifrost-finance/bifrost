@@ -62,9 +62,7 @@ cli = [
 	"structopt",
 	"substrate-build-script-utils",
 ]
-runtime-benchmarks = [
-	"frame-benchmarking-cli",
-]
+runtime-benchmarks = [ "node-service/runtime-benchmarks" ]
 with-asgard-runtime = [
 	"node-service/with-asgard-runtime",
 ]

@@ -15,6 +15,7 @@ sc-telemetry = { version = "3.0.0" }
 sc-transaction-pool = { version = "3.0.0" }
 sc-tracing = { version = "3.0.0" }
 sc-service = { version = "0.9.0", default-features = false }
+frame-benchmarking = {  version = "3.0.0", default-features = false }
 
 # Substrate Primitives
 sp-consensus-aura = { version = "0.9.0" }
@@ -76,6 +77,10 @@ bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../pallets/charge-
 [features]
 default = [ "std" ]
 std = []
+runtime-benchmarks = [
+	"asgard-runtime/runtime-benchmarks",
+	"bifrost-runtime/runtime-benchmarks",
+]
 with-asgard-runtime = [
 	"asgard-runtime",
 ]

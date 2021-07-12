@@ -11,7 +11,7 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
-hex-literal = { version = "0.3.1", optional = true }
+hex-literal = { version = "0.3.1"}
 
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
@@ -29,6 +29,7 @@ sp-consensus-aura = { version = "0.9.0",  default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
 
 # frame dependencies
+frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
 frame-executive = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
@@ -106,6 +107,7 @@ with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"codec/std",
 	"log/std",
+	"frame-benchmarking/std",
 	"frame-executive/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
@@ -172,4 +174,15 @@ std = [
 	"xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"bifrost-salp/runtime-benchmarks",
 ]
