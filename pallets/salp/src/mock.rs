@@ -22,7 +22,6 @@
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
 	generic,
@@ -37,12 +36,12 @@ use xcm_support::BifrostXcmExecutor;
 
 use crate as salp;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
-type Signature = sp_runtime::MultiSignature;
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
+type Block = frame_system::mocking::MockBlock<Test>;
 type BlockNumber = u32;
 type Index = u32;
+type Signature = sp_runtime::MultiSignature;
+type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
 	pub enum Test where
@@ -52,7 +51,6 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -111,27 +109,12 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const InterventionPercentage: Balance = 75;
-}
-
-impl bifrost_bancor::Config for Test {
-	type Event = Event;
-	type InterventionPercentage = InterventionPercentage;
-	type MultiCurrenciesHandler = Tokens;
-}
-
-// TODO: Impl bifrost_xcm_executor::Config
-
-parameter_types! {
 	pub const SubmissionDeposit: u32 = 1;
-	pub const MinContribution: Balance = 1 * DOLLARS;
+	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
-	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
-	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 }
 
@@ -142,7 +125,6 @@ parameter_types! {
 type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
 
 impl salp::Config for Test {
-	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
@@ -150,13 +132,10 @@ impl salp::Config for Test {
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;
 	type PalletId = BifrostCrowdloanId;
-	type ReleaseCycle = ReleaseCycle;
-	type ReleaseRatio = ReleaseRatio;
 	type RelyChainToken = TokenType;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
-	type VSBondValidPeriod = VSBondValidPeriod;
 }
 
 // To control the result returned by `MockXcmExecutor`
@@ -205,7 +184,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	t.into()
 }
 
-pub const DOLLARS: Balance = 1_000_000_000_000;
 // These time units are defined in number of blocks.
 pub const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;

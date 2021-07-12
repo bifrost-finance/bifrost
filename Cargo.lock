@@ -843,7 +843,6 @@ dependencies = [
 name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
- "bifrost-bancor",
  "frame-support",
  "frame-system",
  "log",
@@ -852,7 +851,6 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "polkadot-parachain",
- "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",

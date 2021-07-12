@@ -211,11 +211,11 @@ pub mod pallet {
 		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
 		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
-		/// TODO
+		/// TODO: docs
 		Refunding(AccountIdOf<T>, ParaId, BalanceOf<T>),
-		/// TODO
+		/// TODO: docs
 		Refunded(AccountIdOf<T>, ParaId, BalanceOf<T>),
-		/// TODO
+		/// TODO: docs
 		RefundFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Fund is dissolved. [fund_index]
 		Dissolved(ParaId),
@@ -233,7 +233,7 @@ pub mod pallet {
 		Overflow,
 		/// The contribution was below the minimum, `MinContribution`.
 		ContributionTooSmall,
-		/// TODO
+		/// TODO: docs
 		Contributing,
 		/// Invalid fund index.
 		InvalidParaId,
@@ -247,7 +247,7 @@ pub mod pallet {
 		FundAlreadyCreated,
 		/// Crosschain xcm failed
 		XcmFailed,
-		/// TODO
+		/// TODO: docs
 		NotEnoughCurrencyToSlash,
 	}
 
@@ -619,7 +619,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_n: BlockNumberFor<T>) {
-			// TODO
+			// TODO: Unreserve vsToken/vsBond after successful fund
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
@@ -655,6 +655,13 @@ pub mod pallet {
 				&Self::id_from_index(index),
 				&[],
 			)
+		}
+
+		pub(crate) fn next_trie_index() -> Result<TrieIndex, Error<T>> {
+			CurrentTrieIndex::<T>::try_mutate(|ti| {
+				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
+				Ok(*ti - 1)
+			})
 		}
 
 		#[allow(non_snake_case)]
@@ -739,13 +746,6 @@ pub mod pallet {
 				amount,
 				false,
 			)
-		}
-
-		fn next_trie_index() -> Result<TrieIndex, Error<T>> {
-			CurrentTrieIndex::<T>::try_mutate(|ti| {
-				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
-				Ok(*ti - 1)
-			})
 		}
 	}
 
