@@ -38,7 +38,7 @@ use orml_traits::{
 };
 pub use pallet::*;
 use sp_runtime::traits::{
-	AtLeast32Bit, MaybeSerializeDeserialize, Member, One, SaturatedConversion, Saturating,
+	AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating,
 	UniqueSaturatedFrom, Zero,
 };
 use std::convert::TryFrom;
@@ -82,6 +82,10 @@ pub mod pallet {
 		/// Allow maximum blocks can be extended.
 		#[pallet::constant]
 		type MaximumExtendedPeriod: Get<BlockNumberFor<Self>>;
+
+		/// stable currency id currently used in the chain
+		#[pallet::constant]
+		type StableCurrencyId: Get<CurrencyId>;
 
 		/// Get price from swap module to compare maximum vtoken minted
 		type DexOperator: ExportZenlink<Self::AccountId>;
@@ -168,6 +172,8 @@ pub mod pallet {
 		FailToGetSwapPrice,
 		// AssetId conversion error.
 		ConversionError,
+		// Calculation overflow.
+		CalculationOverflow,
 	}
 
 	#[pallet::hooks]
@@ -190,14 +196,18 @@ pub mod pallet {
 			let (last_max_minted_block, _current_max_minted, _last_currency_id) =
 				MaximumVtokenMinted::<T>::get();
 
-			if (n - last_max_minted_block >= T::RewardWindow::get()
-				&& started_block_num > Zero::zero())
-				|| (n - last_max_minted_block < T::RewardWindow::get()
-					&& n - started_block_num >= max_extended_period
+			let last_block_diff = n.saturating_sub(last_max_minted_block);
+
+			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero())
+				|| (last_block_diff < T::RewardWindow::get()
+					&& last_block_diff >= max_extended_period
 					&& started_block_num > Zero::zero())
 			{
-				let period = BalanceOf::<T>::from((n - started_block_num).saturated_into::<u32>());
-				let total_reward = period * RewardPerBlock::<T>::get();
+				let start_block_diff = n.saturating_sub(started_block_num);
+				let period = BalanceOf::<T>::from(start_block_diff.saturated_into::<u32>());
+
+				let total_reward = period.saturating_mul(RewardPerBlock::<T>::get());
+
 				Self::issue_bnc_reward(total_reward);
 				// after issued reward, need to clean this round data
 				let _ = MaximumVtokenMinted::<T>::kill();
@@ -270,7 +280,7 @@ pub mod pallet {
 				let weight = CurrencyWeights::<T>::get(&currency_id);
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
 				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
-					/ (total_weight * total_vtoken_mint);
+					/ (total_weight.saturating_mul(total_vtoken_mint));
 				let _ = T::MultiCurrency::deposit(
 					CurrencyId::Native(TokenSymbol::ASG),
 					&minter,
@@ -294,13 +304,12 @@ pub mod pallet {
 		) -> Result<BalanceOf<T>, Error<T>> {
 			let currency_asset_id =
 				AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
+			let stable_asset_id = AssetId::try_from(T::StableCurrencyId::get())
+				.map_err(|_| Error::<T>::ConversionError)?;
 
 			let ausd_amount = T::DexOperator::get_amount_out_by_path(
 				vtoken_amount.saturated_into(),
-				&[
-					currency_asset_id,
-					AssetId { chain_id: 2001 as u32, asset_type: 2, asset_index: 2 as u32 },
-				],
+				&[currency_asset_id, stable_asset_id],
 			)
 			.map_err(|_| Error::<T>::FailToGetSwapPrice)?
 			.last()

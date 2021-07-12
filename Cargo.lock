@@ -923,7 +923,6 @@ dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
- "log",
  "parity-scale-codec",
  "sp-api",
  "sp-blockchain",

@@ -157,6 +157,7 @@ parameter_types! {
 	pub const HalvingCycle: u32 = 1 * 365 * 2;
 	pub const RewardWindow: u32 = 50;
 	pub const MaximumExtendedPeriod: u32 = 500;
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 }
 
 impl bifrost_minter_reward::Config for Runtime {
@@ -167,6 +168,7 @@ impl bifrost_minter_reward::Config for Runtime {
 	type ShareWeight = Balance;
 	type HalvingCycle = HalvingCycle;
 	type DexOperator = ZenlinkProtocol;
+	type StableCurrencyId = StableCurrencyId;
 }
 
 impl crate::Config for Runtime {
