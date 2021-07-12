@@ -53,6 +53,8 @@ use sp_core::{
 };
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeString;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
@@ -940,11 +942,13 @@ parameter_types! {
 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
+	type DepositToken = DepositTokenType;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
@@ -958,6 +962,7 @@ impl bifrost_salp::Config for Runtime {
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type WeightInfo = weights::pallet_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
 }
 
 parameter_types! {
@@ -1450,6 +1455,40 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	// benchmarks for asgard modules
+	#[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn dispatch_benchmark(
+			config: frame_benchmarking::BenchmarkConfig
+		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+
+			let whitelist: Vec<TrackedStorageKey> = vec![
+				// Block Number
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
+				// Total Issuance
+				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
+				// Execution Phase
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
+				// Event Count
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
+				// System Events
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
+				// Caller 0 Account
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
+				// Treasury Account
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
+			];
+
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&config, &whitelist);
+			add_benchmark!(params, batches, bifrost_salp, Salp);
+
+			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+			Ok(batches)
 		}
 	}
 }

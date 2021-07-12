@@ -18,8 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-#![cfg(test)]
-
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_arithmetic::Percent;
@@ -133,6 +131,7 @@ parameter_types! {
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 parameter_types! {
@@ -144,6 +143,7 @@ type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
+	type DepositToken = DepositTokenType;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
@@ -157,6 +157,7 @@ impl salp::Config for Test {
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type WeightInfo = salp::TestWeightInfo;
 }
 
 // To control the result returned by `MockXcmExecutor`
