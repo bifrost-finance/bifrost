@@ -26,17 +26,18 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-mod mock;
-
 use codec::FullCodec;
+pub use cumulus_primitives_core::{self, ParaId};
+pub use frame_support::{traits::Get, weights::Weight};
+pub use paste;
 use sp_runtime::traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion};
+pub use sp_std::{cell::RefCell, marker::PhantomData};
 use sp_std::{
 	cmp::{Eq, PartialEq},
 	fmt::Debug,
-	marker::PhantomData,
 	prelude::*,
 };
+pub use xcm::{v0::prelude::*, VersionedXcm};
 use xcm::{
 	v0::{
 		Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind, Result as XcmResult,
@@ -45,8 +46,15 @@ use xcm::{
 	DoubleEncoded,
 };
 use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
+pub use xcm_executor::XcmExecutor;
 mod traits;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
+
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
 
 /// Asset transaction errors.
 enum Error {

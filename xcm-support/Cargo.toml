@@ -12,16 +12,25 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8", default-features = false }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8", default-features = false }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8", default-features = false }
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 node-primitives = { default-features = false, path = "../node/primitives" }
+
+[dev-dependencies]
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8"}
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8"}
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8"}
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8"}
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 
 [features]
 default = ["std"]
@@ -31,14 +40,10 @@ std = [
 	"sp-runtime/std",
 	"frame-system/std",
 	"frame-support/std",
-	"polkadot-parachain/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"orml-traits/std",
 	"node-primitives/std",
 	"cumulus-primitives-core/std",
-	"cumulus-pallet-xcmp-queue/std",
-	"cumulus-pallet-dmp-queue/std",
-	"polkadot-runtime-parachains/std",
 ]
