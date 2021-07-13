@@ -75,11 +75,8 @@ macro_rules! decl_test_relay_chain {
 		impl $crate::HandleUmpMessage for $name {
 			fn handle_ump_message(from: $crate::ParaId, msg: &[u8], max_weight: $crate::Weight) {
 				use ump::UmpSink;
-
 				Self::execute_with(|| {
-					let _ = ump::XcmSink::<$crate::XcmExecutor<$xcm_config>, $runtime>::process_upward_message(
-																												from, msg, max_weight,
-																											);
+					let _ = ump::XcmSink::<$crate::XcmExecutor<$xcm_config>, $runtime>::process_upward_message(from, msg, max_weight);
 				});
 			}
 		}
