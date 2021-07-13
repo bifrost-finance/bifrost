@@ -22,7 +22,7 @@
 
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
 
-use crate::{mock::*, Error, FundStatus};
+use crate::{mock::*, ContributionStatus, Error, FundStatus};
 
 #[test]
 fn create_fund_should_work() {
@@ -276,10 +276,10 @@ fn contribute_should_work() {
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
 
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 100);
 		assert_eq!(contributed, 100);
-		assert_eq!(contributing, 0);
+		assert_eq!(status, ContributionStatus::Idle);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -303,10 +303,10 @@ fn double_contribute_should_work() {
 
 		// Check the contribution
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 200);
 		assert_eq!(contributed, 200);
-		assert_eq!(contributing, 0);
+		assert_eq!(status, ContributionStatus::Idle);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -327,10 +327,10 @@ fn contribute_when_xcm_error_should_work() {
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, false));
 
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 0);
 		assert_eq!(contributed, 0);
-		assert_eq!(contributing, 0);
+		assert_eq!(status, ContributionStatus::Idle);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -352,10 +352,10 @@ fn confirm_contribute_later_should_work() {
 		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
 
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(fund.raised, 100);
 		assert_eq!(contributed, 100);
-		assert_eq!(contributing, 0);
+		assert_eq!(status, ContributionStatus::Idle);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -441,7 +441,7 @@ fn contribute_when_contributing_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
 			Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true),
-			Error::<Test>::NotInContributing
+			Error::<Test>::InvalidContributionStatus
 		);
 	});
 }
@@ -451,7 +451,11 @@ fn confirm_contribute_when_not_in_contributing_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
-		assert_noop!(Salp::contribute(Some(BRUCE).into(), 3_000, 100), Error::<Test>::Contributing,);
+
+		assert_noop!(
+			Salp::contribute(Some(BRUCE).into(), 3_000, 100),
+			Error::<Test>::InvalidContributionStatus
+		);
 	});
 }
 
@@ -638,9 +642,9 @@ fn refund_should_work() {
 		assert_ok!(Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, true));
 
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
-		assert_eq!(contributed, 0);
-		assert_eq!(contributing, 0);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
+		assert_eq!(contributed, 100);
+		assert_eq!(status, ContributionStatus::Refunded);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -666,9 +670,9 @@ fn refund_when_xcm_error_should_work() {
 		assert_ok!(Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, false));
 
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(contributed, 100);
-		assert_eq!(contributing, 0);
+		assert_eq!(status, ContributionStatus::Idle);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -720,9 +724,9 @@ fn double_refund_when_one_of_xcm_error_should_work() {
 		assert_ok!(Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, true));
 
 		let fund = Salp::funds(3_000).unwrap();
-		let (contributed, contributing) = Salp::contribution(fund.trie_index, &BRUCE);
-		assert_eq!(contributed, 0);
-		assert_eq!(contributing, 0);
+		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
+		assert_eq!(contributed, 100);
+		assert_eq!(status, ContributionStatus::Refunded);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
@@ -777,7 +781,10 @@ fn refund_when_refunding_should_fail() {
 		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
 
-		assert_noop!(Salp::refund(Some(BRUCE).into(), 3_000), Error::<Test>::Refunding);
+		assert_noop!(
+			Salp::refund(Some(BRUCE).into(), 3_000),
+			Error::<Test>::InvalidContributionStatus
+		);
 	});
 }
 
@@ -793,7 +800,7 @@ fn confirm_refund_when_not_in_refunding_should_fail() {
 
 		assert_noop!(
 			Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, true),
-			Error::<Test>::NotInRefunding
+			Error::<Test>::InvalidContributionStatus,
 		);
 	});
 }
@@ -894,13 +901,7 @@ fn dissolve_should_work() {
 		}
 
 		assert!(Salp::funds(3_000).is_none());
-
-		for i in 0 .. contribute_account_num {
-			let ract = AccountId::new([(i as u8); 32]);
-			let (contributed, contributing) = Salp::contribution(3_000, &ract);
-			assert_eq!(contributed, 0);
-			assert_eq!(contributing, 0);
-		}
+		assert!(Salp::contribution_iterator(0).next().is_none());
 	});
 }
 

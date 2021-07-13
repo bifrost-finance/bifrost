@@ -119,6 +119,40 @@ pub enum WithdrawCall<AccountIdOf> {
 	Withdraw(Withdraw<AccountIdOf>),
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
+pub enum ContributionStatus<BalanceOf> {
+	Idle,
+	Refunded,
+	Unlocked,
+	Refunding,
+	Contributing(BalanceOf),
+}
+
+impl<BalanceOf> ContributionStatus<BalanceOf>
+where
+	BalanceOf: frame_support::sp_runtime::traits::Zero + Clone + Copy,
+{
+	pub fn is_contributing(&self) -> bool {
+		match self {
+			ContributionStatus::Contributing(_) => true,
+			_ => false,
+		}
+	}
+
+	pub fn contributing(&self) -> BalanceOf {
+		match self {
+			ContributionStatus::Contributing(contributing) => *contributing,
+			_ => frame_support::sp_runtime::traits::Zero::zero(),
+		}
+	}
+}
+
+impl<BalanceOf> Default for ContributionStatus<BalanceOf> {
+	fn default() -> Self {
+		ContributionStatus::Idle
+	}
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
@@ -230,20 +264,14 @@ pub mod pallet {
 		Overflow,
 		/// The contribution was below the minimum, `MinContribution`.
 		ContributionTooSmall,
-		/// The account are contributing now.
-		Contributing,
-		/// The account are not contributing now.
-		NotInContributing,
 		/// The account doesn't have any contribution to the fund.
 		ZeroContribution,
-		/// The account are funding now.
-		Refunding,
-		/// The account are not funding now.
-		NotInRefunding,
 		/// Invalid fund index.
 		InvalidParaId,
 		/// Invalid fund status.
 		InvalidFundStatus,
+		/// Invalid contribution status.
+		InvalidContributionStatus,
 		/// Contributions exceed maximum amount.
 		CapExceeded,
 		/// The origin of this call is invalid.
@@ -410,9 +438,14 @@ pub mod pallet {
 			let raised = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 			ensure!(raised <= fund.cap, Error::<T>::CapExceeded);
 
-			let (contributed, contributing) = Self::contribution(fund.trie_index, &who);
-			ensure!(contributing == Zero::zero(), Error::<T>::Contributing);
-			Self::put_contribution(fund.trie_index, &who, contributed, value);
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
+			Self::put_contribution(
+				fund.trie_index,
+				&who,
+				contributed,
+				ContributionStatus::Contributing(value),
+			);
 
 			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
@@ -437,8 +470,9 @@ pub mod pallet {
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
-			let (contributed, contributing) = Self::contribution(fund.trie_index, &who);
-			ensure!(contributing != Zero::zero(), Error::<T>::NotInContributing);
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			ensure!(status.is_contributing(), Error::<T>::InvalidContributionStatus);
+			let contributing = status.contributing();
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
@@ -457,13 +491,22 @@ pub mod pallet {
 
 				// Update the contribution of who
 				let contributed_new = contributed.saturating_add(contributing);
-				let contributing_new = Zero::zero();
-				Self::put_contribution(fund.trie_index, &who, contributed_new, contributing_new);
+				Self::put_contribution(
+					fund.trie_index,
+					&who,
+					contributed_new,
+					ContributionStatus::Idle,
+				);
 
 				Self::deposit_event(Event::Contributed(who, index, contributing));
 			} else {
 				// Update the contribution of who
-				Self::put_contribution(fund.trie_index, &who, contributed, Zero::zero());
+				Self::put_contribution(
+					fund.trie_index,
+					&who,
+					contributed,
+					ContributionStatus::Idle,
+				);
 
 				Self::deposit_event(Event::ContributeFailed(who, index, contributing));
 			}
@@ -536,10 +579,9 @@ pub mod pallet {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
 
-			ensure!(!Self::is_refunding(fund.trie_index, &who), Error::<T>::Refunding);
-
-			let (contributed, _) = Self::contribution(fund.trie_index, &who);
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(contributed > Zero::zero(), Error::<T>::ZeroContribution);
+			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
@@ -554,7 +596,12 @@ pub mod pallet {
 
 			Self::xcm_ump_refund(origin, index, contributed).map_err(|_| Error::<T>::XcmFailed)?;
 
-			Self::set_is_refunding(fund.trie_index, &who, true);
+			Self::put_contribution(
+				fund.trie_index,
+				&who,
+				contributed,
+				ContributionStatus::Refunding,
+			);
 
 			Self::deposit_event(Event::Refunding(who, index, contributed));
 
@@ -576,9 +623,8 @@ pub mod pallet {
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
-			ensure!(Self::is_refunding(fund.trie_index, &who), Error::<T>::NotInRefunding);
-
-			let (contributed, _contributing) = Self::contribution(fund.trie_index, &who);
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			ensure!(status == ContributionStatus::Refunding, Error::<T>::InvalidContributionStatus);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
@@ -590,12 +636,21 @@ pub mod pallet {
 				let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
 				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughCurrencyToSlash);
 
-				// Kill contribution of the contributor?
-				Self::kill_contribution(fund.trie_index, &who);
+				Self::put_contribution(
+					fund.trie_index,
+					&who,
+					contributed,
+					ContributionStatus::Refunded,
+				);
 
 				Self::deposit_event(Event::Refunded(who, index, contributed));
 			} else {
-				Self::set_is_refunding(fund.trie_index, &who, false);
+				Self::put_contribution(
+					fund.trie_index,
+					&who,
+					contributed,
+					ContributionStatus::Idle,
+				);
 
 				Self::deposit_event(Event::RefundFailed(who, index, contributed));
 			}
@@ -613,6 +668,7 @@ pub mod pallet {
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
+			// TODO: Delete element when iter? Fix it?
 			let mut refund_count = 0u32;
 			// Try killing the crowdloan child trie and Assume everyone will be refunded.
 			let contributions = Self::contribution_iterator(fund.trie_index);
@@ -641,11 +697,26 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(_n: BlockNumberFor<T>) {
-			// TODO: Unreserve vsToken/vsBond after successful fund
-			// Query the funds successed
+			// TODO: Waiting..
+
+			// if let Some(fund) = Funds::<T>::iter_values()
+			// 	.filter_map(|fund_opt| fund_opt.filter(|fund| fund.status == FundStatus::Success))
+			// 	.next()
+			// {
+			// #[allow(non_snake_case)]
+			// let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+			//
+			// for (i, (who, (contributed, _, _))) in
+			// 	Self::contribution_iterator(fund.trie_index).enumerate()
+			// {
+			// 	if i <= T::UnlockNumberPerBlock::get() {
+			// 		T::MultiCurrency::unreserve(vsToken, &who, contributed);
+			// 		T::MultiCurrency::unreserve(vsBond, &who, contributed);
+			// 	}
+			// }
+			// }
 			// Iterate the contributor of the first success fund
 			// Unreserve the vsToken/vsBond of contributor (Limit the Number)
-			// Kill the contribution
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
@@ -665,31 +736,21 @@ pub mod pallet {
 		pub(crate) fn contribution(
 			index: TrieIndex,
 			who: &AccountIdOf<T>,
-		) -> (BalanceOf<T>, BalanceOf<T>) {
-			let (contributed, contributing, _is_refunding) = who.using_encoded(|b| {
-				child::get_or_default::<(BalanceOf<T>, BalanceOf<T>, bool)>(
+		) -> (BalanceOf<T>, ContributionStatus<BalanceOf<T>>) {
+			who.using_encoded(|b| {
+				child::get_or_default::<(BalanceOf<T>, ContributionStatus<BalanceOf<T>>)>(
 					&Self::id_from_index(index),
 					b,
 				)
-			});
-
-			(contributed, contributing)
-		}
-
-		pub(crate) fn is_refunding(index: TrieIndex, who: &AccountIdOf<T>) -> bool {
-			let (_contributed, _contributing, is_refunding) = who.using_encoded(|b| {
-				child::get_or_default::<(BalanceOf<T>, BalanceOf<T>, bool)>(
-					&Self::id_from_index(index),
-					b,
-				)
-			});
-
-			is_refunding
+			})
 		}
 
 		pub(crate) fn contribution_iterator(
 			index: TrieIndex,
-		) -> ChildTriePrefixIterator<(AccountIdOf<T>, (BalanceOf<T>, BalanceOf<T>))> {
+		) -> ChildTriePrefixIterator<(
+			AccountIdOf<T>,
+			(BalanceOf<T>, ContributionStatus<BalanceOf<T>>),
+		)> {
 			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(
 				&Self::id_from_index(index),
 				&[],
@@ -721,26 +782,15 @@ pub mod pallet {
 			index: TrieIndex,
 			who: &AccountIdOf<T>,
 			contributed: BalanceOf<T>,
-			contributing: BalanceOf<T>,
+			status: ContributionStatus<BalanceOf<T>>,
 		) {
 			who.using_encoded(|b| {
-				child::put(&Self::id_from_index(index), b, &(contributed, contributing, false))
+				child::put(&Self::id_from_index(index), b, &(contributed, status))
 			});
 		}
 
 		fn kill_contribution(index: TrieIndex, who: &AccountIdOf<T>) {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
-		}
-
-		fn set_is_refunding(index: TrieIndex, who: &AccountIdOf<T>, is_refunding: bool) {
-			let (contributed, contributing) = Self::contribution(index, who);
-			who.using_encoded(|b| {
-				child::put(
-					&Self::id_from_index(index),
-					b,
-					&(contributed, contributing, is_refunding),
-				)
-			});
 		}
 
 		fn xcm_ump_contribute(
