@@ -29,7 +29,7 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::{traits::Zero, Permill};
+use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};

@@ -211,8 +211,8 @@ pub mod pallet {
 				// after issued reward, need to clean this round data
 				let _ = MaximumVtokenMinted::<T>::kill();
 				CurrentRoundStartAt::<T>::put(BlockNumberFor::<T>::from(0u32));
-				let _ = Minter::<T>::remove_all();
-				let _ = TotalVtokenMinted::<T>::remove_all();
+				let _ = Minter::<T>::remove_all(None);
+				let _ = TotalVtokenMinted::<T>::remove_all(None);
 			}
 		}
 	}
