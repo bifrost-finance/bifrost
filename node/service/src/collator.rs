@@ -58,6 +58,7 @@ native_executor_instance!(
 	pub AsgardExecutor,
 	asgard_runtime::api::dispatch,
 	asgard_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
 );
 
 #[cfg(feature = "with-bifrost-runtime")]
@@ -65,6 +66,7 @@ native_executor_instance!(
 	pub BifrostExecutor,
 	bifrost_runtime::api::dispatch,
 	bifrost_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
 );
 
 /// Starts a `ServiceBuilder` for a full service.
@@ -665,6 +667,8 @@ pub async fn start_node(
 					slot_duration,
 					// We got around 500ms for proposing
 					block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+					// And a maximum of 750ms if slots are skipped
+					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
 					telemetry,
 				}))
 			},
@@ -752,6 +756,8 @@ pub async fn start_node(
 					slot_duration,
 					// We got around 500ms for proposing
 					block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+					// And a maximum of 750ms if slots are skipped
+					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
 					telemetry,
 				}))
 			},

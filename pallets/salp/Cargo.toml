@@ -10,21 +10,22 @@ log = { version = "0.4.14", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
+frame-benchmarking = {  version = "3.0.0", default-features = false, optional = true }
 sp-std = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8",default-features = false  }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8",default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.7" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 
 [dev-dependencies]
 sp-io = "3.0.0"
 sp-core = "3.0.0"
 orml-tokens = "0.4.1-dev"
 bifrost-bancor = { path = "../../pallets/bancor" }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
 
 [features]
 default = ["std"]
@@ -39,8 +40,15 @@ std = [
 	"sp-arithmetic/std",
 	"orml-traits/std",
 	"xcm/std",
+	"xcm-builder/std",
 	"xcm-support/std",
 	"polkadot-parachain/std",
 ]
-with-asgard-runtime = ["std"]
-with-bifrost-runtime = ["std"]
+
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"sp-runtime/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+]

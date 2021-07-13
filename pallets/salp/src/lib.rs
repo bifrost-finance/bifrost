@@ -19,7 +19,11 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "runtime-benchmarks")]
+pub mod benchmarking;
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
@@ -30,11 +34,35 @@ pub use pallet::*;
 
 type TrieIndex = u32;
 
-#[allow(type_alias_bounds)]
-type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+pub trait WeightInfo {
+	fn create() -> Weight;
+	fn contribute() -> Weight;
+	fn on_finalize(n: u32) -> Weight;
+}
+
+pub struct TestWeightInfo;
+impl WeightInfo for TestWeightInfo {
+	fn create() -> Weight {
+		0
+	}
+
+	fn contribute() -> Weight {
+		0
+	}
+
+	fn on_finalize(_n: u32) -> Weight {
+		0
+	}
+}
 
 #[allow(type_alias_bounds)]
-type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
+#[allow(type_alias_bounds)]
+pub type CurrencyOf<T> = <T as Config>::MultiCurrency;
+
+#[allow(type_alias_bounds)]
+pub type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 pub enum FundStatus {
@@ -142,7 +170,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{traits::BancorHandler, CurrencyId, LeasePeriod, ParaId, TokenSymbol};
+	use node_primitives::{traits::BancorHandler, CurrencyId, LeasePeriod, ParaId};
 	use orml_traits::{
 		currency::TransferAll, LockIdentifier, MultiCurrency, MultiCurrencyExtended,
 		MultiLockableCurrency, MultiReservableCurrency,
@@ -177,6 +205,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RelyChainToken: Get<CurrencyId>;
+
+		#[pallet::constant]
+		type DepositToken: Get<CurrencyId>;
 
 		/// The number of blocks over which a single period lasts.
 		#[pallet::constant]
@@ -215,6 +246,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type SlotLength: Get<LeasePeriod>;
+
+		/// Weight information for the extrinsics in this module.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::pallet]
@@ -392,7 +426,7 @@ pub mod pallet {
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -438,7 +472,7 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight(0)]
+		#[pallet::weight(T::WeightInfo::contribute())]
 		pub fn contribute(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -718,7 +752,7 @@ pub mod pallet {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
 
-		pub fn crowdloan_kill(index: TrieIndex) -> child::KillChildStorageResult {
+		pub fn crowdloan_kill(index: TrieIndex) -> child::KillStorageResult {
 			child::kill_storage(&Self::id_from_index(index), Some(T::RemoveKeysLimit::get()))
 		}
 
@@ -849,11 +883,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn token() -> CurrencyId {
-			#[cfg(feature = "with-asgard-runtime")]
-			return CurrencyId::Token(TokenSymbol::ASG);
-			#[cfg(not(feature = "with-asgard-runtime"))]
-			return CurrencyId::Token(TokenSymbol::BNC);
+		pub fn token() -> CurrencyId {
+			T::DepositToken::get()
 		}
 
 		pub fn vstoken() -> CurrencyId {
