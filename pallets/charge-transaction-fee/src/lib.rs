@@ -49,7 +49,7 @@ mod default_weight;
 mod mock;
 mod tests;
 
-type CurrencyIdOf<T> = <<T as Config>::CurrenciesHandler as MultiCurrency<
+type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
 
@@ -77,7 +77,7 @@ pub mod pallet {
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
-		type CurrenciesHandler: MultiCurrency<
+		type MultiCurrency: MultiCurrency<
 			Self::AccountId,
 			CurrencyId = CurrencyId,
 			Balance = Self::Balance,
@@ -86,7 +86,7 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
-		type ZenlinkOperator: ExportZenlink<Self::AccountId>;
+		type DexOperator: ExportZenlink<Self::AccountId>;
 
 		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
@@ -217,7 +217,7 @@ impl<T: Config> Pallet<T> {
 			} else {
 				// If it is other assets
 				let native_balance =
-					T::CurrenciesHandler::free_balance(T::NativeCurrencyId::get(), who);
+					T::MultiCurrency::free_balance(T::NativeCurrencyId::get(), who);
 
 				// If native token balance is below existential deposit requirement,
 				// go exchange fee + existential deposit. Else to exchange fee amount.
@@ -228,7 +228,7 @@ impl<T: Config> Pallet<T> {
 					amount_out = (fee + existential_deposit).saturated_into();
 				}
 
-				let asset_balance = T::CurrenciesHandler::free_balance(currency_id, who);
+				let asset_balance = T::MultiCurrency::free_balance(currency_id, who);
 				let asset_id: AssetId =
 					AssetId::try_from(currency_id).map_err(|_| Error::<T>::ConversionError)?;
 
@@ -236,10 +236,10 @@ impl<T: Config> Pallet<T> {
 				let amount_in_max: AssetBalance = asset_balance.saturated_into();
 
 				// query for amount in
-				let amounts = T::ZenlinkOperator::get_amount_in_by_path(amount_out, &path)
-					.map_or(vec![0], |v| v);
+				let amounts =
+					T::DexOperator::get_amount_in_by_path(amount_out, &path).map_or(vec![0], |v| v);
 
-				if T::ZenlinkOperator::inner_swap_assets_for_exact_assets(
+				if T::DexOperator::inner_swap_assets_for_exact_assets(
 					&who,
 					amount_out,
 					amount_in_max,
@@ -288,12 +288,12 @@ impl<T: Config> Pallet<T> {
 				}
 			} else {
 				// If it is other assets
-				let asset_balance = T::CurrenciesHandler::total_balance(currency_id, who);
+				let asset_balance = T::MultiCurrency::total_balance(currency_id, who);
 				let token_asset_id: AssetId = AssetId::try_from(currency_id)
 					.map_err(|_| DispatchError::Other("Conversion Error"))?;
 				let path = vec![native_asset_id.clone(), token_asset_id];
 
-				let amount_vec = T::ZenlinkOperator::get_amount_in_by_path(amount_out, &path)?;
+				let amount_vec = T::DexOperator::get_amount_in_by_path(amount_out, &path)?;
 				let amount_in = amount_vec[0];
 				let amount_in_balance = amount_in.saturated_into();
 

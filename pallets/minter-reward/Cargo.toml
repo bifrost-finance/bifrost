@@ -20,6 +20,7 @@ orml-currencies = { version = "0.4.1-dev" }
 pallet-balances = { version = "3.0.0" }
 sp-io = { version = "3.0.0" }
 sp-core = { version = "3.0.0" }
+bifrost-vtoken-mint = { path = "../vtoken-mint", default-features = false }
 
 [features]
 default = ["std"]
@@ -31,5 +32,5 @@ std = [
 	"frame-system/std",
 	"orml-traits/std",
 	"sp-runtime/std",
-	"zenlink-protocol/std",
+	"zenlink-protocol/std"
 ]

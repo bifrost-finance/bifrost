@@ -67,6 +67,7 @@ frame_support::construct_runtime!(
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		MinterReward: bifrost_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
+		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -149,18 +150,18 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const TwoYear: u32 = 40;
-	pub const RewardPeriod: u32 = 10;
-	pub const MaximumExtendedPeriod: u32 = 20;
-	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+impl bifrost_vtoken_mint::Config for Runtime {
+	type Event = Event;
+	type MinterReward = MinterReward;
+	type MultiCurrency = Currencies;
+	type WeightInfo = ();
 }
 
 // Zenlink runtime implementation
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
-	// pub const SelfParaId: ParaId = ParaId{0: 2001};
+	pub const SelfParaId: u32 = 2001;
 }
 
 impl zenlink_protocol::Config for Runtime {
@@ -170,7 +171,7 @@ impl zenlink_protocol::Config for Runtime {
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	// type SelfParaId = SelfParaId;
-	type SelfParaId = ();
+	type SelfParaId = SelfParaId;
 	type TargetChains = ();
 	type XcmExecutor = ();
 }
@@ -239,15 +240,22 @@ where
 
 // zenlink runtime ends
 
+parameter_types! {
+	pub const HalvingCycle: u32 = 60;
+	pub const RewardWindow: u32 = 10;
+	pub const MaximumExtendedPeriod: u32 = 20;
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+}
+
 impl crate::Config for Runtime {
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type HalvingCycle = HalvingCycle;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type MultiCurrency = Currencies;
-	type RewardPeriod = RewardPeriod;
+	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type SystemPalletId = ShareWeightPalletId;
-	type TwoYear = TwoYear;
-	type ZenlinkOperator = ZenlinkProtocol;
+	type StableCurrencyId = StableCurrencyId;
 }
 
 pub struct ExtBuilder {
@@ -266,7 +274,7 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn ten_thousand_for_alice(self) -> Self {
+	pub fn ten_thousand_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
 			(ALICE, BNC, 100000),
 			(ALICE, AUSD, 10000),
@@ -274,6 +282,12 @@ impl ExtBuilder {
 			(ALICE, vKSM, 10000),
 			(ALICE, DOT, 10000),
 			(ALICE, KSM, 10000),
+			(BOB, BNC, 100000),
+			(BOB, AUSD, 10000),
+			(BOB, vDOT, 10000),
+			(BOB, vKSM, 10000),
+			(BOB, DOT, 10000),
+			(BOB, KSM, 10000),
 		])
 	}
 
@@ -319,13 +333,13 @@ impl ExtBuilder {
 			.unwrap();
 
 		crate::GenesisConfig::<Runtime> {
-			wegiths: vec![
+			currency_weights: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
 			],
-			reward_by_one_block: 300,
-			round_index: 1,
+			reward_per_block: 300,
+			cycle_index: 1,
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

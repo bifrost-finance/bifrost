@@ -22,4 +22,3 @@
 
 pub mod pallet_salp;
 pub mod pallet_vesting;
-pub mod pallet_vtoken_mint;

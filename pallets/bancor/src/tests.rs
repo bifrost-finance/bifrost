@@ -55,7 +55,7 @@ fn exchange_for_token_should_work() {
 		// the pool has no real DOT
 		assert_noop!(
 			Bancor::exchange_for_token(Origin::signed(ALICE), DOT, 50, 48),
-			Error::<Test>::TokenSupplyNotEnought
+			Error::<Test>::TokenSupplyNotEnough
 		);
 
 		let updated_pool = BancorPool {
@@ -131,7 +131,7 @@ fn exchange_for_vstoken_should_work() {
 		// the pool has no real VSDOT
 		assert_noop!(
 			Bancor::exchange_for_vstoken(Origin::signed(ALICE), DOT, 50, 48),
-			Error::<Test>::VSTokenSupplyNotEnought
+			Error::<Test>::VSTokenSupplyNotEnough
 		);
 
 		let updated_pool = BancorPool {
