@@ -170,13 +170,13 @@ parameter_types! {
 
 impl crate::Config for Test {
 	type Balance = u64;
-	type CurrenciesHandler = Currencies;
+	type MultiCurrency = Currencies;
 	type Currency = Balances;
 	type Event = Event;
 	type NativeCurrencyId = NativeCurrencyId;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type ZenlinkOperator = ZenlinkProtocol;
+	type DexOperator = ZenlinkProtocol;
 }
 
 parameter_types! {

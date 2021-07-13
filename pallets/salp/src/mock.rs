@@ -111,13 +111,14 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const InterventionPercentage: Balance = 75;
+	pub const InterventionPercentage: Percent = Percent::from_percent(75);
 }
 
 impl bifrost_bancor::Config for Test {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Tokens;
+	type WeightInfo = ();
 }
 
 // TODO: Impl bifrost_xcm_executor::Config

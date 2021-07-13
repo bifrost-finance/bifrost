@@ -99,13 +99,13 @@ pub fn asgard_genesis(
 			],
 		},
 		minter_reward: MinterRewardConfig {
-			wegiths: vec![
+			currency_weights: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
 			],
-			reward_by_one_block: 5 * DOLLARS / 100,
-			round_index: 1,
+			reward_per_block: 5 * DOLLARS / 100,
+			cycle_index: 1,
 		},
 		vtoken_mint: VtokenMintConfig {
 			pools: vec![

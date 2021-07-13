@@ -20,17 +20,19 @@
 
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
-use node_primitives::{traits::BancorHandler, CurrencyId, TokenSymbol};
+use node_primitives::{traits::BancorHandler, CurrencyId};
 use num_bigint::BigUint;
 use orml_traits::MultiCurrency;
-use sp_arithmetic::per_things::{PerThing, Perbill};
+use sp_arithmetic::per_things::{PerThing, Perbill, Percent};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero},
 	SaturatedConversion,
 };
+use weights::WeightInfo;
 
 mod mock;
 mod tests;
+pub mod weights;
 
 pub use pallet::*;
 
@@ -38,17 +40,16 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> =
 	<<T as Config>::MultiCurrenciesHandler as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-const TWELVE_TEN: u128 = 1_000_000_000_000;
 const BILLION: u128 = 1_000_000_000;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct BancorPool<Balance> {
-	pub(crate) currency_id: CurrencyId,      // ksm, dot, etc.
-	pub(crate) token_pool: Balance,          // token supply of the pool
-	pub(crate) vstoken_pool: Balance,        // vstoken balance of the pool
-	pub(crate) token_ceiling: Balance,       // token available for sale
-	pub(crate) token_base_supply: Balance,   // initial virtual supply of token for the pool
-	pub(crate) vstoken_base_supply: Balance, // initial virtual balance of vstoken for the pool
+	currency_id: CurrencyId,      // ksm, dot, etc.
+	token_pool: Balance,          // token supply of the pool
+	vstoken_pool: Balance,        // vstoken balance of the pool
+	token_ceiling: Balance,       // token available for sale
+	token_base_supply: Balance,   // initial virtual supply of token for the pool
+	vstoken_base_supply: Balance, // initial virtual balance of vstoken for the pool
 }
 
 #[frame_support::pallet]
@@ -60,10 +61,11 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type MultiCurrenciesHandler: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		// This constant is a percentage number but in an integer presentation. When used, should be
-		// divided by 100.
 		#[pallet::constant]
-		type InterventionPercentage: Get<BalanceOf<Self>>;
+		type InterventionPercentage: Get<Percent>;
+
+		/// Set default weight.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -73,8 +75,8 @@ pub mod pallet {
 		AmountNotGreaterThanZero,
 		BancorPoolNotExist,
 		ConversionError,
-		TokenSupplyNotEnought,
-		VSTokenSupplyNotEnought,
+		TokenSupplyNotEnough,
+		VSTokenSupplyNotEnough,
 		PriceNotQualified,
 		CalculationOverflow,
 	}
@@ -93,8 +95,7 @@ pub mod pallet {
 	// key is token, value is BancorPool struct.
 	#[pallet::storage]
 	#[pallet::getter(fn get_bancor_pool)]
-	pub type BancorPools<T> =
-		StorageMap<Hasher = Blake2_128Concat, Key = CurrencyId, Value = BancorPool<BalanceOf<T>>>;
+	pub type BancorPools<T> = StorageMap<_, Blake2_128Concat, CurrencyId, BancorPool<BalanceOf<T>>>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -104,18 +105,7 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self {
-				bancor_pools: vec![
-					(
-						CurrencyId::Token(TokenSymbol::DOT),
-						BalanceOf::<T>::saturated_from(10_000 * TWELVE_TEN as u128),
-					),
-					(
-						CurrencyId::Token(TokenSymbol::KSM),
-						BalanceOf::<T>::saturated_from(1_000_000 * TWELVE_TEN as u128),
-					),
-				],
-			}
+			Self { bancor_pools: vec![] }
 		}
 	}
 
@@ -146,13 +136,13 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		// exchange vstoken for token
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::exchange_for_token())]
 		pub fn exchange_for_token(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			vstoken_amount: BalanceOf<T>,
 			token_out_min: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 			let vstoken_id = currency_id.to_vstoken().map_err(|_| Error::<T>::ConversionError)?;
@@ -183,13 +173,13 @@ pub mod pallet {
 		}
 
 		// exchange token for vstoken
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::exchange_for_vstoken())]
 		pub fn exchange_for_vstoken(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			token_amount: BalanceOf<T>,
 			vstoken_out_min: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
 			let vstoken_id = currency_id.to_vstoken().map_err(|_| Error::<T>::ConversionError)?;
@@ -235,11 +225,11 @@ impl<T: Config> Pallet<T> {
 
 		let pool_info = Self::get_bancor_pool(token_id).ok_or(Error::<T>::BancorPoolNotExist)?;
 		// Only if token_ceiling is not zero, then exchangers can exchange vstokens for tokens.
-		ensure!(pool_info.token_ceiling > Zero::zero(), Error::<T>::TokenSupplyNotEnought);
+		ensure!(pool_info.token_ceiling > Zero::zero(), Error::<T>::TokenSupplyNotEnough);
 
 		let (token_supply, vstoken_supply) = (
-			pool_info.token_base_supply + pool_info.token_pool,
-			pool_info.vstoken_base_supply + pool_info.vstoken_pool,
+			pool_info.token_base_supply.saturating_add(pool_info.token_pool),
+			pool_info.vstoken_base_supply.saturating_add(pool_info.vstoken_pool),
 		);
 		ensure!(vstoken_supply > Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
 
@@ -256,31 +246,30 @@ impl<T: Config> Pallet<T> {
 			let temp: u128 = token_supply.saturated_into();
 			BigUint::from(temp)
 		};
-		let token_supply_squre =
+		let token_supply_square =
 			token_supply.checked_mul(&token_supply).ok_or(Error::<T>::CalculationOverflow)?;
 
-		let nominator_lhs = token_supply_squre
+		let nominator_lhs = token_supply_square
 			.checked_mul(&vstoken_supply)
 			.ok_or(Error::<T>::CalculationOverflow)?;
-		let nominator_rhs = token_supply_squre
+		let nominator_rhs = token_supply_square
 			.checked_mul(&vstoken_amount)
 			.ok_or(Error::<T>::CalculationOverflow)?;
-		let nominator = nominator_lhs
-			.checked_add(&nominator_rhs)
-			.ok_or(Error::<T>::CalculationOverflow)?;
+		let nominator =
+			nominator_lhs.checked_add(&nominator_rhs).ok_or(Error::<T>::CalculationOverflow)?;
 
 		let inside =
 			nominator.checked_div(&vstoken_supply).ok_or(Error::<T>::CalculationOverflow)?;
-		let squre_root = inside.nth_root(2);
+		let square_root = inside.nth_root(2);
 		let result =
-			squre_root.checked_sub(&token_supply).ok_or(Error::<T>::CalculationOverflow)?;
+			square_root.checked_sub(&token_supply).ok_or(Error::<T>::CalculationOverflow)?;
 		let result_convert: u128 = u128::from_str_radix(&result.to_str_radix(10), 10)
 			.map_err(|_| Error::<T>::ConversionError)?;
 
 		let price = BalanceOf::<T>::saturated_from(result_convert);
 
-		// We can not exchage for more than that the the pool has
-		ensure!(price <= pool_info.token_ceiling, Error::<T>::TokenSupplyNotEnought);
+		// We can not exchange for more than that the the pool has
+		ensure!(price <= pool_info.token_ceiling, Error::<T>::TokenSupplyNotEnough);
 
 		Ok(price)
 	}
@@ -297,17 +286,18 @@ impl<T: Config> Pallet<T> {
 		ensure!(token_amount > Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
 
 		let pool_info = Self::get_bancor_pool(token_id).ok_or(Error::<T>::BancorPoolNotExist)?;
-		ensure!(pool_info.vstoken_pool > Zero::zero(), Error::<T>::VSTokenSupplyNotEnought);
+		ensure!(pool_info.vstoken_pool > Zero::zero(), Error::<T>::VSTokenSupplyNotEnough);
 
 		let (token_supply, vstoken_supply) = (
-			pool_info.token_base_supply + pool_info.token_pool,
-			pool_info.vstoken_base_supply + pool_info.vstoken_pool,
+			pool_info.token_base_supply.saturating_add(pool_info.token_pool),
+			pool_info.vstoken_base_supply.saturating_add(pool_info.vstoken_pool),
 		);
 
 		// Since token_amount will be deducted from the total token_supply, token_amount should be
-		// less than or eqaul to token_supply.
-		ensure!(token_amount <= token_supply, Error::<T>::TokenSupplyNotEnought);
-		let mid_item: Perbill = PerThing::from_rational(token_supply - token_amount, token_supply);
+		// less than or equal to token_supply.
+		ensure!(token_amount <= token_supply, Error::<T>::TokenSupplyNotEnough);
+		let mid_item: Perbill =
+			PerThing::from_rational(token_supply.saturating_sub(token_amount), token_supply);
 		let square_item: Perbill = mid_item.square();
 
 		// Destruct the nominator from permill and divide the result by the denominator of a
@@ -317,8 +307,8 @@ impl<T: Config> Pallet<T> {
 		let price =
 			rhs_nominator.saturating_mul(vstoken_supply) / BalanceOf::<T>::saturated_from(BILLION);
 
-		// We can not exchage for more than that the the pool has
-		ensure!(price <= pool_info.vstoken_pool, Error::<T>::VSTokenSupplyNotEnought);
+		// We can not exchange for more than that the the pool has
+		ensure!(price <= pool_info.vstoken_pool, Error::<T>::VSTokenSupplyNotEnough);
 
 		Ok(price)
 	}
@@ -331,8 +321,8 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(BalanceOf<T>, BalanceOf<T>), Error<T>> {
 		let pool_info = Self::get_bancor_pool(currency_id).ok_or(Error::<T>::BancorPoolNotExist)?;
 		let (token_supply, vstoken_supply) = (
-			pool_info.token_base_supply + pool_info.token_pool,
-			pool_info.vstoken_base_supply + pool_info.vstoken_pool,
+			pool_info.token_base_supply.saturating_add(pool_info.token_pool),
+			pool_info.vstoken_base_supply.saturating_add(pool_info.vstoken_pool),
 		);
 
 		Ok((token_supply, BalanceOf::<T>::saturated_from(2u128).saturating_mul(vstoken_supply)))
@@ -344,8 +334,8 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(BalanceOf<T>, BalanceOf<T>), Error<T>> {
 		let pool_info = Self::get_bancor_pool(currency_id).ok_or(Error::<T>::BancorPoolNotExist)?;
 		let (token_supply, vstoken_supply) = (
-			pool_info.token_base_supply + pool_info.token_pool,
-			pool_info.vstoken_base_supply + pool_info.vstoken_pool,
+			pool_info.token_base_supply.saturating_add(pool_info.token_pool),
+			pool_info.vstoken_base_supply.saturating_add(pool_info.vstoken_pool),
 		);
 
 		Ok((BalanceOf::<T>::saturated_from(2u128).saturating_mul(vstoken_supply), token_supply))
@@ -377,13 +367,10 @@ impl<T: Config> Pallet<T> {
 		BancorPools::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
 			match pool {
 				Some(pool_info) => {
-					ensure!(
-						pool_info.token_pool >= token_amount,
-						Error::<T>::TokenSupplyNotEnought
-					);
+					ensure!(pool_info.token_pool >= token_amount, Error::<T>::TokenSupplyNotEnough);
 					ensure!(
 						pool_info.vstoken_pool >= vstoken_amount,
-						Error::<T>::VSTokenSupplyNotEnought
+						Error::<T>::VSTokenSupplyNotEnough
 					);
 					pool_info.token_pool = pool_info.token_pool.saturating_sub(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_sub(vstoken_amount);
@@ -406,7 +393,7 @@ impl<T: Config> Pallet<T> {
 				Some(pool_info) => {
 					ensure!(
 						pool_info.token_ceiling >= token_amount,
-						Error::<T>::TokenSupplyNotEnought
+						Error::<T>::TokenSupplyNotEnough
 					);
 					pool_info.token_ceiling = pool_info.token_ceiling.saturating_sub(token_amount);
 					pool_info.token_pool = pool_info.token_pool.saturating_add(token_amount);
@@ -433,15 +420,15 @@ impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T> {
 
 		let amount_kept: BalanceOf<T>;
 		// if vstoken price is lower than 0.75 token
-		if BalanceOf::<T>::saturated_from(100u128).saturating_mul(nominator) <=
-			denominator.saturating_mul(T::InterventionPercentage::get())
+		if T::InterventionPercentage::get().saturating_reciprocal_mul_floor(nominator)
+			<= denominator
 		{
 			amount_kept = token_amount / BalanceOf::<T>::saturated_from(2u128);
 		} else {
 			amount_kept = token_amount;
 		}
 
-		let sell_amount = token_amount - amount_kept;
+		let sell_amount = token_amount.saturating_sub(amount_kept);
 
 		// deal with ceiling variable
 		if amount_kept != Zero::zero() {

@@ -41,11 +41,11 @@ use sp_runtime::{
 	traits::{CheckedSub, Saturating, Zero},
 	DispatchResult,
 };
-pub use weights::WeightInfo;
+use weights::WeightInfo;
 
 mod mock;
 mod tests;
-mod weights;
+pub mod weights;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,

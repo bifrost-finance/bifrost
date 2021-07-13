@@ -18,7 +18,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use core::marker::PhantomData;
+use core::{convert::TryFrom, marker::PhantomData};
 
 use fixed::{types::extra::U0, FixedU128};
 #[cfg(feature = "std")]
@@ -41,7 +41,6 @@ use sp_runtime::traits::{
 	AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating,
 	UniqueSaturatedFrom, Zero,
 };
-use std::convert::TryFrom;
 use zenlink_protocol::{AssetId, ExportZenlink};
 
 mod mock;

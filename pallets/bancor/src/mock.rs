@@ -19,12 +19,12 @@
 #![cfg(test)]
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
-use node_primitives::{Balance, CurrencyId, TokenSymbol};
+pub use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
-	AccountId32,
+	AccountId32, Percent,
 };
 
 use crate as bancor;
@@ -108,13 +108,14 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const InterventionPercentage: u128 = 75;
+	pub const InterventionPercentage: Percent = Percent::from_percent(75);
 }
 
 impl bancor::Config for Test {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Assets;
+	type WeightInfo = ();
 }
 
 pub struct ExtBuilder {

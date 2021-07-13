@@ -34,7 +34,7 @@ use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto, Zero},
+	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, DispatchError, DispatchResult, SaturatedConversion,
 };
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
@@ -50,7 +50,6 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
-pub const CENTS: Balance = 1_000_000_000_000 / 100;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -174,7 +173,7 @@ impl bifrost_minter_reward::Config for Runtime {
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
-	type MultiCurrency = Assets;
+	type MultiCurrency = Currencies;
 	type WeightInfo = ();
 }
 
