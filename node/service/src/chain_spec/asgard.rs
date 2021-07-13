@@ -29,7 +29,7 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::{traits::Zero, Permill};
+use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
@@ -99,13 +99,13 @@ pub fn asgard_genesis(
 			],
 		},
 		minter_reward: MinterRewardConfig {
-			wegiths: vec![
+			currency_weights: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
 			],
-			reward_by_one_block: 5 * DOLLARS / 100,
-			round_index: 1,
+			reward_per_block: 5 * DOLLARS / 100,
+			cycle_index: 1,
 		},
 		vtoken_mint: VtokenMintConfig {
 			pools: vec![
@@ -120,16 +120,6 @@ pub fn asgard_genesis(
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
 				(CurrencyId::Token(TokenSymbol::ETH), 14 * DAYS),
 				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS),
-			],
-			rate_of_interest_each_block: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::KSM), 000_285_388_127), // 10000.0 * 0.15/(365*24*600)
-			],
-			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)),  // 8.2%
-				(CurrencyId::Token(TokenSymbol::KSM), Permill::from_perthousand(150)), // 15.0%
 			],
 		},
 	}

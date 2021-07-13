@@ -872,10 +872,8 @@ parameter_types! {
 impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
-	type MultiCurrency = Tokens;
-	type PalletId = StakingPalletId;
-	type RandomnessSource = RandomnessCollectiveFlip;
-	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
+	type MultiCurrency = Currencies;
+	type WeightInfo = bifrost_vtoken_mint::weights::BifrostWeight<Runtime>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -904,31 +902,31 @@ parameter_types! {
 
 impl bifrost_charge_transaction_fee::Config for Runtime {
 	type Balance = Balance;
-	type CurrenciesHandler = Currencies;
 	type Currency = Balances;
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type ZenlinkOperator = ZenlinkProtocol;
 }
 
 parameter_types! {
-	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
-	pub const RewardPeriod: BlockNumber = 50;
-	pub const MaximumExtendedPeriod: BlockNumber = 100;
-	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+	pub const HalvingCycle: u32 = 60;
+	pub const RewardWindow: u32 = 10;
+	pub const MaximumExtendedPeriod: u32 = 20;
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 }
 
 impl bifrost_minter_reward::Config for Runtime {
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type HalvingCycle = HalvingCycle;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type MultiCurrency = Tokens;
-	type RewardPeriod = RewardPeriod;
+	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type SystemPalletId = ShareWeightPalletId;
-	type TwoYear = TwoYear;
-	type ZenlinkOperator = ZenlinkProtocol;
+	type StableCurrencyId = StableCurrencyId;
 }
 
 parameter_types! {
@@ -966,13 +964,14 @@ impl bifrost_salp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const InterventionPercentage: Balance = 75;
+	pub const InterventionPercentage: Percent = Percent::from_percent(75);
 }
 
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Currencies;
+	type WeightInfo = bifrost_bancor::weights::BifrostWeight<Runtime>;
 }
 
 parameter_types! {

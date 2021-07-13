@@ -38,10 +38,12 @@ fn mint_vtoken_should_be_ok() {
 		let to_sell_dot = 20;
 		let minted_vdot = to_sell_dot * dot_price;
 
-		System::set_block_number(1);
+		run_to_block(1);
 
 		// Alice sell 20 DOTs to mint vDOT.
 		assert_ok!(VtokenMint::mint(Origin::signed(ALICE), vDOT, to_sell_dot));
+		run_to_block(2);
+		println!("MInter: {:?}", MinterReward::current_round_start_at());
 
 		// Check event
 		let mint_vtoken_event =
@@ -95,9 +97,7 @@ fn redeem_token_should_be_ok() {
 		let to_sell_vdot = 20;
 		let minted_dot = to_sell_vdot * dot_pool / vdot_pool;
 
-		System::set_block_number(1);
-		System::on_initialize(1);
-
+		run_to_block(1);
 		// Alice sell 20 vDOTs to mint DOT.
 		assert_ok!(VtokenMint::redeem(Origin::signed(ALICE), DOT, to_sell_vdot));
 
@@ -138,9 +138,14 @@ fn redeem_token_should_be_ok() {
 			Error::<Runtime>::BalanceLow
 		);
 
-		System::set_block_number(40);
-		System::on_initialize(40);
-		System::on_finalize(40);
+		run_to_block(20);
+
+		// Alice should have not received the minted dots, since dot redeem period is 28 blocks
+		// which is set in the mock
+		assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot);
+
+		// After 30 blocks, Alice should received the minted dots
+		run_to_block(30);
 		assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot + minted_dot);
 	});
 }

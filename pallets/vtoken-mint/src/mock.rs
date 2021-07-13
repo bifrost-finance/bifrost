@@ -24,14 +24,18 @@
 use core::marker::PhantomData;
 use std::convert::TryInto;
 
-use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{
+	parameter_types,
+	traits::{GenesisBuild, Hooks},
+	PalletId,
+};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto, Zero},
-	AccountId32, DispatchError, DispatchResult, Permill, SaturatedConversion,
+	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
+	AccountId32, DispatchError, DispatchResult, SaturatedConversion,
 };
 use zenlink_protocol::{AssetBalance, AssetId, LocalAssetHandler, ZenlinkMultiAssets};
 
@@ -46,7 +50,6 @@ pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
-pub const CENTS: Balance = 1_000_000_000_000 / 100;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -66,8 +69,7 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		VtokenMint: vtoken_mint::{Pallet, Call, Storage, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
-		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>},
+		MinterReward: bifrost_minter_reward::{Pallet, Storage, Call,Event<T>, Config<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -151,45 +153,27 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const TwoYear: u32 = 1 * 365 * 2;
-	pub const RewardPeriod: u32 = 50;
+	pub const HalvingCycle: u32 = 1 * 365 * 2;
+	pub const RewardWindow: u32 = 50;
 	pub const MaximumExtendedPeriod: u32 = 500;
-	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 }
 
 impl bifrost_minter_reward::Config for Runtime {
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type HalvingCycle = HalvingCycle;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
-	type MultiCurrency = Assets;
-	type RewardPeriod = RewardPeriod;
+	type MultiCurrency = Currencies;
+	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type SystemPalletId = ShareWeightPalletId;
-	type TwoYear = TwoYear;
-	type ZenlinkOperator = ZenlinkProtocol;
+	type StableCurrencyId = StableCurrencyId;
 }
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
-
-parameter_types! {
-	// 3 hours(1800 blocks) as an era
-	pub const VtokenMintDuration: u32 = 3 * 60 * 1;
-	pub const StakingPalletId: PalletId = PalletId(*b"staking ");
-}
-orml_traits::parameter_type_with_key! {
-	pub RateOfInterestEachBlock: |currency_id: CurrencyId| -> Balance {
-		match currency_id {
-			&CurrencyId::Token(TokenSymbol::DOT) => 1 * CENTS,
-			&CurrencyId::Token(TokenSymbol::ETH) => 7 * CENTS,
-			_ => Zero::zero(),
-		}
-	};
-}
 impl crate::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
-	type MultiCurrency = Assets;
-	type PalletId = StakingPalletId;
-	type RandomnessSource = RandomnessCollectiveFlip;
+	type MultiCurrency = Currencies;
 	type WeightInfo = ();
 }
 
@@ -207,7 +191,6 @@ impl zenlink_protocol::Config for Runtime {
 	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
-	// type SelfParaId = SelfParaId;
 	type SelfParaId = ();
 	type TargetChains = ();
 	type XcmExecutor = ();
@@ -332,24 +315,39 @@ impl ExtBuilder {
 			.assimilate_storage(&mut t)
 			.unwrap();
 
+		bifrost_minter_reward::GenesisConfig::<Runtime> {
+			currency_weights: vec![
+				(CurrencyId::Token(TokenSymbol::DOT), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
+				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
+			],
+			reward_per_block: 300,
+			cycle_index: 1,
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 		crate::GenesisConfig::<Runtime> {
 			pools: vec![],
 			staking_lock_period: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * 1),
 				(CurrencyId::Token(TokenSymbol::ETH), 14 * 1),
 			],
-			rate_of_interest_each_block: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 019_025_875_190), // 100000.0 * 0.148/(365*24*600)
-				(CurrencyId::Token(TokenSymbol::ETH), 009_512_937_595), // 50000.0 * 0.082/(365*24*600)
-			],
-			yield_rate: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), Permill::from_perthousand(148)), // 14.8%
-				(CurrencyId::Token(TokenSymbol::ETH), Permill::from_perthousand(82)),  // 8.2%
-			],
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();
 
 		t.into()
+	}
+}
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		VtokenMint::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		VtokenMint::on_initialize(System::block_number());
 	}
 }
