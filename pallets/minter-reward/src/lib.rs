@@ -197,10 +197,10 @@ pub mod pallet {
 
 			let last_block_diff = n.saturating_sub(last_max_minted_block);
 
-			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero())
-				|| (last_block_diff < T::RewardWindow::get()
-					&& last_block_diff >= max_extended_period
-					&& started_block_num > Zero::zero())
+			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero()) ||
+				(last_block_diff < T::RewardWindow::get() &&
+					last_block_diff >= max_extended_period &&
+					started_block_num > Zero::zero())
 			{
 				let start_block_diff = n.saturating_sub(started_block_num);
 				let period = BalanceOf::<T>::from(start_block_diff.saturated_into::<u32>());
@@ -278,8 +278,8 @@ pub mod pallet {
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = CurrencyWeights::<T>::get(&currency_id);
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
-				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
-					/ (total_weight.saturating_mul(total_vtoken_mint));
+				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
+					(total_weight.saturating_mul(total_vtoken_mint));
 				let _ = T::MultiCurrency::deposit(
 					CurrencyId::Native(TokenSymbol::ASG),
 					&minter,

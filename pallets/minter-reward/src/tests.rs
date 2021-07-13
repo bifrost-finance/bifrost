@@ -79,8 +79,8 @@ fn minter_reward_should_work() {
 			vksm_asset_id
 		));
 
-		let deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number()
-			+ <Runtime as frame_system::Config>::BlockNumber::from(100u32);
+		let deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() +
+			<Runtime as frame_system::Config>::BlockNumber::from(100u32);
 		assert_ok!(ZenlinkProtocol::add_liquidity(
 			Origin::signed(ALICE),
 			ausd_asset_id,

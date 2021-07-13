@@ -140,7 +140,8 @@ fn redeem_token_should_be_ok() {
 
 		run_to_block(20);
 
-		// Alice should have not received the minted dots, since dot redeem period is 28 blocks which is set in the mock
+		// Alice should have not received the minted dots, since dot redeem period is 28 blocks
+		// which is set in the mock
 		assert_eq!(Assets::free_balance(DOT, &ALICE), alice_dot);
 
 		// After 30 blocks, Alice should received the minted dots

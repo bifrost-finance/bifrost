@@ -255,8 +255,9 @@ impl<T: Config> Pallet<T> {
 		let nominator_rhs = token_supply_square
 			.checked_mul(&vstoken_amount)
 			.ok_or(Error::<T>::CalculationOverflow)?;
-		let nominator =
-			nominator_lhs.checked_add(&nominator_rhs).ok_or(Error::<T>::CalculationOverflow)?;
+		let nominator = nominator_lhs
+			.checked_add(&nominator_rhs)
+			.ok_or(Error::<T>::CalculationOverflow)?;
 
 		let inside =
 			nominator.checked_div(&vstoken_supply).ok_or(Error::<T>::CalculationOverflow)?;
@@ -420,8 +421,8 @@ impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T> {
 
 		let amount_kept: BalanceOf<T>;
 		// if vstoken price is lower than 0.75 token
-		if T::InterventionPercentage::get().saturating_reciprocal_mul_floor(nominator)
-			<= denominator
+		if T::InterventionPercentage::get().saturating_reciprocal_mul_floor(nominator) <=
+			denominator
 		{
 			amount_kept = token_amount / BalanceOf::<T>::saturated_from(2u128);
 		} else {

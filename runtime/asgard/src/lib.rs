@@ -306,11 +306,11 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..)
-					| Call::Council(..) | Call::TechnicalCommittee(..)
-					| Call::Elections(..)
-					| Call::Treasury(..) | Call::Bounties(..)
-					| Call::Tips(..) | Call::Utility(..)
+				Call::Democracy(..) |
+					Call::Council(..) | Call::TechnicalCommittee(..) |
+					Call::Elections(..) | Call::Treasury(..) |
+					Call::Bounties(..) | Call::Tips(..) |
+					Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
@@ -902,13 +902,13 @@ parameter_types! {
 
 impl bifrost_charge_transaction_fee::Config for Runtime {
 	type Balance = Balance;
-	type MultiCurrency = Currencies;
 	type Currency = Balances;
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type DexOperator = ZenlinkProtocol;
 }
 
 parameter_types! {
@@ -919,13 +919,13 @@ parameter_types! {
 }
 
 impl bifrost_minter_reward::Config for Runtime {
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type HalvingCycle = HalvingCycle;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type MultiCurrency = Tokens;
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type HalvingCycle = HalvingCycle;
-	type DexOperator = ZenlinkProtocol;
 	type StableCurrencyId = StableCurrencyId;
 }
 

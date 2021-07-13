@@ -248,13 +248,13 @@ parameter_types! {
 }
 
 impl crate::Config for Runtime {
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type HalvingCycle = HalvingCycle;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type MultiCurrency = Currencies;
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type HalvingCycle = HalvingCycle;
-	type DexOperator = ZenlinkProtocol;
 	type StableCurrencyId = StableCurrencyId;
 }
 
