@@ -851,6 +851,7 @@ dependencies = [
  "orml-traits",
  "parity-scale-codec",
  "polkadot-parachain",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",

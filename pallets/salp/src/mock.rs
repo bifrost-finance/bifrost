@@ -27,6 +27,7 @@ use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use sp_arithmetic::Percent;
 use xcm::{
 	v0::{prelude::XcmResult, MultiLocation, NetworkId},
 	DoubleEncoded,
@@ -114,9 +115,13 @@ parameter_types! {
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const UnlockNumberPerBlock: u32 = 100u32;
+
+	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
+	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
+	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 }
 
 parameter_types! {
@@ -133,11 +138,14 @@ impl salp::Config for Test {
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;
 	type PalletId = BifrostCrowdloanId;
+	type ReleaseCycle = ReleaseCycle;
+	type ReleaseRatio = ReleaseRatio;
 	type RelyChainToken = TokenType;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
 	type UnlockNumberPerBlock = UnlockNumberPerBlock;
+	type VSBondValidPeriod = VSBondValidPeriod;
 }
 
 // To control the result returned by `MockXcmExecutor`

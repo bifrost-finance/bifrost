@@ -12,6 +12,7 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
@@ -34,6 +35,7 @@ std = [
 	"frame-system/std",
 	"sp-std/std",
 	"sp-runtime/std",
+	"sp-arithmetic/std",
 	"orml-traits/std",
 	"xcm/std",
 	"xcm-support/std",

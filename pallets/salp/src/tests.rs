@@ -704,7 +704,7 @@ fn refund_without_enough_reserved_should_fail() {
 
 		assert_noop!(
 			Salp::refund(Some(BRUCE).into(), 3_000),
-			Error::<Test>::NotEnoughCurrencyToSlash
+			Error::<Test>::NotEnoughBalanceToRefund
 		);
 	});
 }
@@ -766,7 +766,7 @@ fn confirm_refund_without_enough_reserved_should_fail() {
 		// );
 		// ```
 		let result = Salp::confirm_refund(Some(ALICE).into(), BRUCE, 3_000, true);
-		assert_noop!(result, Error::<Test>::NotEnoughCurrencyToSlash);
+		assert_noop!(result, Error::<Test>::NotEnoughBalanceToRefund);
 	});
 }
 
