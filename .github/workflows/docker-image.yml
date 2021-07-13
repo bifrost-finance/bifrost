@@ -11,7 +11,7 @@ on:
         required: true
 
 jobs:
-  build:
+  buildx:
 
     runs-on: self-hosted
 
@@ -29,13 +29,15 @@ jobs:
           submodules: recursive
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
+        with:
+          install: true
       - name: Cache Docker layers
         uses: actions/cache@v2
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-
+            ${{ runner.os }}-buildx
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.5.2
         with:
@@ -57,8 +59,9 @@ jobs:
             BUILD_DATE=${{ github.event.release.published_at }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
+          ssh: default
       - uses: 8398a7/action-slack@v3
-        if: always()
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
           status: ${{ job.status }}
           fields: repo,author,eventName,workflow,ref,commit
