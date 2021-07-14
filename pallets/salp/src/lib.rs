@@ -335,6 +335,8 @@ pub mod pallet {
 		RedeemFailed(AccountIdOf<T>, ParaId, LeasePeriod, LeasePeriod, BalanceOf<T>),
 		/// Fund is dissolved. [fund_index]
 		Dissolved(ParaId),
+		/// The vsToken/vsBond was be unlocked. [who, fund_index, value]
+		Unlocked(AccountIdOf<T>, ParaId, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -369,6 +371,8 @@ pub mod pallet {
 		NotEnoughReservedAssetsToRefund,
 		/// Don't have enough token to refund by users
 		NotEnoughBalanceInRefundPool,
+		/// Don't have enough vsToken/vsBond to unlock
+		NotEnoughBalanceToUnlock,
 		/// The vsBond is expired now
 		VSBondExpired,
 		/// The vsBond cannot be redeemed by now
@@ -492,6 +496,40 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Unlock the reserved vsToken/vsBond after fund success
+		#[pallet::weight(0)]
+		pub fn unlock(
+			_origin: OriginFor<T>,
+			who: AccountIdOf<T>,
+			#[pallet::compact] index: ParaId,
+		) -> DispatchResult {
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(
+				fund.status == FundStatus::Success ||
+					fund.status == FundStatus::Retired ||
+					fund.status == FundStatus::RedeemWithdrew ||
+					fund.status == FundStatus::End,
+				Error::<T>::InvalidFundStatus
+			);
+
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
+
+			#[allow(non_snake_case)]
+			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+
+			let balance = T::MultiCurrency::unreserve(vsToken, &who, contributed);
+			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
+			let balance = T::MultiCurrency::unreserve(vsBond, &who, contributed);
+			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
+
+			Self::put_contribution(fund.trie_index, &who, contributed, ContributionStatus::Unlocked);
+
+			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
+
+			Ok(())
+		}
+
 		/// TODO: Refactor the docs.
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
 		#[pallet::weight(T::WeightInfo::create())]
@@ -558,14 +596,15 @@ pub mod pallet {
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
+
+			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
+
 			Self::put_contribution(
 				fund.trie_index,
 				&who,
 				contributed,
 				ContributionStatus::Contributing(value),
 			);
-
-			Self::xcm_ump_contribute(origin, index, value).map_err(|_e| Error::<T>::XcmFailed)?;
 
 			Self::deposit_event(Event::Contributing(who, index, value));
 
