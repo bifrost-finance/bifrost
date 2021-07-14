@@ -8,7 +8,7 @@ members = [
 	"pallets/assets",
 	"pallets/bancor",
 	"pallets/bid",
-	"pallets/charge-transaction-fee",
+	"pallets/flexible-fee",
 	"pallets/minter-reward",
 	"pallets/vesting",
 	"pallets/vsbond-auction",

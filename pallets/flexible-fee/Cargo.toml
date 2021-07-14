@@ -1,5 +1,5 @@
 [package]
-name = "bifrost-charge-transaction-fee"
+name = "bifrost-flexible-fee"
 version = "0.8.0"
 authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2018"

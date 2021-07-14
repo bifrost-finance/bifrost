@@ -179,8 +179,8 @@ version = "0.8.0"
 dependencies = [
  "bifrost-bancor",
  "bifrost-bancor-runtime-api",
- "bifrost-charge-transaction-fee",
- "bifrost-charge-transaction-fee-rpc-runtime-api",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -670,7 +670,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-charge-transaction-fee"
+name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
  "cumulus-primitives-core",
@@ -693,10 +693,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-charge-transaction-fee-rpc"
+name = "bifrost-flexible-fee-rpc"
 version = "0.8.0"
 dependencies = [
- "bifrost-charge-transaction-fee-rpc-runtime-api",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -711,7 +711,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "bifrost-charge-transaction-fee-rpc-runtime-api"
+name = "bifrost-flexible-fee-rpc-runtime-api"
 version = "0.8.0"
 dependencies = [
  "node-primitives",
@@ -4918,8 +4918,8 @@ dependencies = [
 name = "node-rpc"
 version = "0.8.0"
 dependencies = [
- "bifrost-charge-transaction-fee-rpc",
- "bifrost-charge-transaction-fee-rpc-runtime-api",
+ "bifrost-flexible-fee-rpc",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "jsonrpc-core",
  "node-primitives",
  "pallet-transaction-payment-rpc",
@@ -4937,7 +4937,7 @@ name = "node-service"
 version = "0.8.0"
 dependencies = [
  "asgard-runtime",
- "bifrost-charge-transaction-fee-rpc-runtime-api",
+ "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime",
  "bs58 0.3.1",
  "cumulus-client-consensus-aura",

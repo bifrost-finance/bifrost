@@ -41,7 +41,7 @@ use sp_std::cell::RefCell;
 use zenlink_protocol::{LocalAssetHandler, ZenlinkMultiAssets};
 
 use super::*;
-use crate as charge_transaction_fee;
+use crate as flexible_fee;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -61,7 +61,7 @@ frame_support::construct_runtime!(
 		Assets: orml_tokens::{Pallet, Storage, Event<T>},
 		Balances: balances::{Pallet, Call, Storage, Event<T>},
 		// TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		ChargeTransactionFee: charge_transaction_fee::{Pallet, Call, Storage,Event<T>},
+		FlexibleFee: flexible_fee::{Pallet, Call, Storage,Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
 	}
@@ -122,7 +122,7 @@ parameter_types! {
 
 impl pallet_transaction_payment::Config for Test {
 	type FeeMultiplierUpdate = ();
-	type OnChargeTransaction = ChargeTransactionFee;
+	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 }

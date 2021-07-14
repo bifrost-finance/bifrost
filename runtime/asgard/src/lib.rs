@@ -900,7 +900,7 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 }
 
-impl bifrost_charge_transaction_fee::Config for Runtime {
+impl bifrost_flexible_fee::Config for Runtime {
 	type Balance = Balance;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
@@ -1186,7 +1186,7 @@ construct_runtime! {
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
 		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
-		ChargeTransactionFee: bifrost_charge_transaction_fee::{Pallet, Call, Storage, Event<T>} = 104,
+		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 104,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
@@ -1344,9 +1344,9 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi<Block, AccountId> for Runtime {
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
 		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-			let rs = ChargeTransactionFee::cal_fee_token_and_amount(&who, fee);
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),

@@ -18,7 +18,7 @@
 
 use std::{marker::PhantomData, sync::Arc};
 
-pub use bifrost_charge_transaction_fee_rpc_runtime_api::ChargeTransactionFeeRuntimeApi as FeeRuntimeApi;
+pub use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
@@ -35,12 +35,12 @@ use sp_runtime::{
 };
 
 #[derive(Clone, Debug)]
-pub struct ChargeTransactionFeeStruct<C, Block> {
+pub struct FlexibleFeeStruct<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> ChargeTransactionFeeStruct<C, Block> {
+impl<C, Block> FlexibleFeeStruct<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
@@ -49,8 +49,8 @@ impl<C, Block> ChargeTransactionFeeStruct<C, Block> {
 #[rpc]
 pub trait FeeRpcApi<BlockHash, AccountId> {
 	/// rpc method get balances by account id
-	/// useage: curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0","id":1,"method":"chargeTransactionFee_getFeeTokenAndAmount","params": ["0x0e0626477621754200486f323e3858cd5f28fcbe52c69b2581aecb622e384764", "0xa0040400008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48cef70500"]}’
-	#[rpc(name = "chargeTransactionFee_getFeeTokenAndAmount")]
+	/// useage: curl http://localhost:9933 -H "Content-Type:application/json;charset=utf-8" -d '{"jsonrpc":"2.0","id":1,"method":"flexibleFeeFee_getFeeTokenAndAmount","params": ["0x0e0626477621754200486f323e3858cd5f28fcbe52c69b2581aecb622e384764", "0xa0040400008eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48cef70500"]}’
+	#[rpc(name = "flexibleFee_getFeeTokenAndAmount")]
 	fn get_fee_token_and_amount(
 		&self,
 		who: AccountId,
@@ -77,7 +77,7 @@ impl From<Error> for i64 {
 }
 
 impl<C, Block, AccountId> FeeRpcApi<<Block as BlockT>::Hash, AccountId>
-	for ChargeTransactionFeeStruct<C, Block>
+	for FlexibleFeeStruct<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
