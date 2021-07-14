@@ -276,10 +276,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type RemoveKeysLimit: Get<u32>;
 
-		/// The number of users who in the successful fund to unlock per block
-		#[pallet::constant]
-		type UnlockNumberPerBlock: Get<u32>;
-
 		#[pallet::constant]
 		type SlotLength: Get<LeasePeriod>;
 
