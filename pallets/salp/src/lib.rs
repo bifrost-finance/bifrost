@@ -219,7 +219,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{CurrencyId, LeasePeriod, ParaId, BancorHandler};
+	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, ParaId};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
@@ -891,7 +891,9 @@ pub mod pallet {
 						RedeemPool::<T>::set(Self::redeem_pool().saturating_add(release_amount));
 
 						// Increase the balance of bancor-pool by release-amount
-						if let Err(err) = T::BancorPool::add_token(T::RelyChainToken::get(), release_amount) {
+						if let Err(err) =
+							T::BancorPool::add_token(T::RelyChainToken::get(), release_amount)
+						{
 							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
 						}
 					} else {

@@ -20,12 +20,12 @@
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use sp_arithmetic::Percent;
 use xcm::{
 	v0::{prelude::XcmResult, MultiLocation, NetworkId},
 	DoubleEncoded,
