@@ -876,6 +876,8 @@ fn refund_with_when_ump_wrong_should_fail() {
 	// TODO: Require an solution to settle with parallel test workflow
 }
 
+// TODO: Unit-Tests of Redeem
+
 #[test]
 fn dissolve_should_work() {
 	new_test_ext().execute_with(|| {

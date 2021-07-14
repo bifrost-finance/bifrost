@@ -52,6 +52,7 @@ construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
+		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -110,6 +111,16 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
+	pub const InterventionPercentage: Balance = 75;
+}
+
+impl bifrost_bancor::Config for Test {
+	type Event = Event;
+	type InterventionPercentage = InterventionPercentage;
+	type MultiCurrenciesHandler = Tokens;
+}
+
+parameter_types! {
 	pub const SubmissionDeposit: u32 = 1;
 	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
@@ -131,6 +142,7 @@ parameter_types! {
 type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
 
 impl salp::Config for Test {
+	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;

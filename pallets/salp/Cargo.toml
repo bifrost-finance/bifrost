@@ -24,6 +24,7 @@ sp-core = "3.0.0"
 orml-tokens = "0.4.1-dev"
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
+bifrost-bancor = { path = "../../pallets/bancor" }
 
 [features]
 default = ["std"]

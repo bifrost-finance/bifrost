@@ -194,7 +194,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
+	use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol, BancorHandler};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
@@ -257,6 +257,8 @@ pub mod pallet {
 		type MultiCurrency: TransferAll<AccountIdOf<Self>>
 			+ MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+
+		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
 		type ExecuteXcmOrigin: EnsureOrigin<
 			<Self as frame_system::Config>::Origin,
@@ -629,7 +631,7 @@ pub mod pallet {
 
 			if is_success {
 				if fund.status == FundStatus::Retired {
-					// TODO: Charge to Redeem Pool
+					RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
 				} else if fund.status == FundStatus::Failed {
 					RefundPool::<T>::set(Self::refund_pool().saturating_add(amount_withdrew));
 				}
@@ -846,10 +848,28 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(_n: BlockNumberFor<T>) {
-			// TODO: Auto unlock vsToken/vsBond
+		fn on_finalize(n: BlockNumberFor<T>) {
+			// Release x% KSM/DOT from redeem-pool to bancor-pool per cycle
+			if (n % T::ReleaseCycle::get()) == 0 {
+				if let Ok(rp_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
+					// Calculate the release amount
+					let release_amount = T::ReleaseRatio::get() * rp_balance;
 
-			// TODO: Redeem-Pool will release relychain-token to Bancor-Pool
+					// Must be ok
+					if let Ok(release_amount) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
+						RedeemPool::<T>::set(Self::redeem_pool().saturating_add(release_amount));
+
+						// Increase the balance of bancor-pool by release-amount
+						if let Err(err) = T::BancorPool::add_token(T::RelyChainToken::get(), release_amount) {
+							log::warn!("Bancor: {:?} on bifrost-bancor.", err);
+						}
+					} else {
+						log::warn!("Overflow: The balance of redeem-pool exceeds u128.");
+					}
+				}
+			}
+
+			// TODO: Auto unlock vsToken/vsBond?
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
