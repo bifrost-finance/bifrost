@@ -523,7 +523,12 @@ pub mod pallet {
 			let balance = T::MultiCurrency::unreserve(vsBond, &who, contributed);
 			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
 
-			Self::put_contribution(fund.trie_index, &who, contributed, ContributionStatus::Unlocked);
+			Self::put_contribution(
+				fund.trie_index,
+				&who,
+				contributed,
+				ContributionStatus::Unlocked,
+			);
 
 			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
 
