@@ -379,6 +379,8 @@ pub mod pallet {
 		UnRedeemableNow,
 		/// Dont have enough vsToken/vsBond to redeem
 		NotEnoughFreeAssetsToRedeem,
+		/// Dont have enough vsToken/vsBond to unlock when redeem failed
+		NotEnoughReservedAssetsToUnlockWhenRedeemFailed,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
 		/// Invalid redeem status
@@ -838,6 +840,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 
+			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
+
 			let cur_block = <frame_system::Pallet<T>>::block_number();
 			ensure!(!Self::is_expired(cur_block, last_slot), Error::<T>::VSBondExpired);
 			ensure!(Self::can_redeem(cur_block, last_slot), Error::<T>::UnRedeemableNow);
@@ -855,6 +859,8 @@ pub mod pallet {
 
 			Self::xcm_ump_transfer(origin.clone(), index, value)
 				.map_err(|_| Error::<T>::XcmFailed)?;
+
+			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
 			RedeemExtras::<T>::insert(
 				who.clone(),
@@ -878,7 +884,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			use RedeemStatus as RS;
 
-			ensure_root(origin)?;
+			ensure_root(origin).map_err(|_| Error::<T>::UnauthorizedAccount)?;
 
 			let status = Self::redeem_status(who.clone(), (index, first_slot, last_slot));
 			ensure!(status.is_redeeming(), Error::<T>::InvalidRedeemStatus);
@@ -893,12 +899,23 @@ pub mod pallet {
 				let balance = T::MultiCurrency::slash_reserved(vsBond, &who, value);
 				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
 
-				RedeemPool::<T>::put(Self::redeem_pool().saturating_sub(value));
-
 				RedeemExtras::<T>::insert(who.clone(), (index, first_slot, last_slot), RS::Idle);
 
 				Self::deposit_event(Event::Redeemed(who, index, first_slot, last_slot, value));
 			} else {
+				let balance = T::MultiCurrency::unreserve(vsToken, &who, value);
+				ensure!(
+					balance == Zero::zero(),
+					Error::<T>::NotEnoughReservedAssetsToUnlockWhenRedeemFailed
+				);
+				let balance = T::MultiCurrency::unreserve(vsBond, &who, value);
+				ensure!(
+					balance == Zero::zero(),
+					Error::<T>::NotEnoughReservedAssetsToUnlockWhenRedeemFailed
+				);
+
+				RedeemPool::<T>::set(Self::redeem_pool().saturating_add(value));
+
 				RedeemExtras::<T>::insert(who.clone(), (index, first_slot, last_slot), RS::Idle);
 
 				Self::deposit_event(Event::RedeemFailed(who, index, first_slot, last_slot, value));
@@ -1032,18 +1049,27 @@ pub mod pallet {
 
 		/// Check if the vsBond is `past` the redeemable date
 		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
-			let block_begin_redeem = (last_slot + 1) * T::LeasePeriod::get();
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem + T::VSBondValidPeriod::get();
 
-			block > block_end_redeem
+			block >= block_end_redeem
 		}
 
 		/// Check if the vsBond is `in` the redeemable date
 		pub(crate) fn can_redeem(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
-			let block_begin_redeem = (last_slot + 1) * T::LeasePeriod::get();
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem + T::VSBondValidPeriod::get();
 
-			block > block_begin_redeem && block <= block_end_redeem
+			block >= block_begin_redeem && block < block_end_redeem
+		}
+
+		#[allow(unused)]
+		pub(crate) fn block_start_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
+			slot * T::LeasePeriod::get()
+		}
+
+		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
+			(slot + 1) * T::LeasePeriod::get()
 		}
 
 		fn put_contribution(
