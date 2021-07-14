@@ -1,5 +1,5 @@
 [package]
-name = "bifrost-charge-transaction-fee-rpc"
+name = "bifrost-flexible-fee-rpc"
 version = "0.8.0"
 authors = ["Herry Ho <herry.heyi@gmail.com>"]
 edition = "2018"
@@ -15,7 +15,7 @@ sp-blockchain = "3.0.0"
 sp-core = "3.0.0"
 sp-rpc = "3.0.0"
 pallet-transaction-payment-rpc-runtime-api = "3.0.0"
-bifrost-charge-transaction-fee-rpc-runtime-api = { path = "./runtime-api" }
+bifrost-flexible-fee-rpc-runtime-api = { path = "./runtime-api" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
 
 [features]
@@ -26,6 +26,6 @@ std = [
     "sp-runtime/std",
     "sp-core/std",
     "pallet-transaction-payment-rpc-runtime-api/std",
-    "bifrost-charge-transaction-fee-rpc-runtime-api/std",
+    "bifrost-flexible-fee-rpc-runtime-api/std",
     "node-primitives/std",
 ]

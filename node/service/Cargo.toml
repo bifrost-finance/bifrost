@@ -72,7 +72,7 @@ jsonrpc-core = "15.1.0"
 zenlink-protocol-runtime-api = "*"
 
 # Bifrost rpc
-bifrost-charge-transaction-fee-rpc-runtime-api = { path = "../../pallets/charge-transaction-fee/rpc/runtime-api" }
+bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
 
 [features]
 default = [ "std" ]

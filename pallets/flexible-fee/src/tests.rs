@@ -91,8 +91,8 @@ fn basic_setup() {
 		asset_1_currency_id
 	));
 
-	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number()
+		+ <Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -110,14 +110,13 @@ fn basic_setup() {
 		asset_2_currency_id
 	)); // asset 0 and 2
 
-	let pool_0_2_account = ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_2_currency_id))
-		.unwrap()
-		.0;
+	let pool_0_2_account =
+		ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_2_currency_id)).unwrap().0;
 	println!("pool_0_2_account: {:?}", pool_0_2_account);
 
 	// pool 0 2
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number()
+		+ <Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -136,7 +135,7 @@ fn set_user_fee_charge_order_should_work() {
 		let origin_signed_alice = Origin::signed(ALICE);
 		let mut asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_4, CURRENCY_ID_3, CURRENCY_ID_2, CURRENCY_ID_1, CURRENCY_ID_0];
-		assert_ok!(ChargeTransactionFee::set_user_fee_charge_order(
+		assert_ok!(FlexibleFee::set_user_fee_charge_order(
 			origin_signed_alice.clone(),
 			Some(asset_order_list_vec.clone())
 		));
@@ -144,7 +143,7 @@ fn set_user_fee_charge_order_should_work() {
 		asset_order_list_vec.insert(0, CURRENCY_ID_0);
 		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE), asset_order_list_vec);
 
-		assert_ok!(ChargeTransactionFee::set_user_fee_charge_order(origin_signed_alice, None));
+		assert_ok!(FlexibleFee::set_user_fee_charge_order(origin_signed_alice, None));
 
 		assert_eq!(crate::UserFeeChargeOrderList::<Test>::get(ALICE).is_empty(), true);
 	});
@@ -165,22 +164,16 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
 
-		assert_eq!(
-			ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
-			default_order_list
-		);
+		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), default_order_list);
 
-		let _ = ChargeTransactionFee::set_user_fee_charge_order(
+		let _ = FlexibleFee::set_user_fee_charge_order(
 			origin_signed_alice.clone(),
 			Some(asset_order_list_vec.clone()),
 		);
 
 		asset_order_list_vec.insert(0, CURRENCY_ID_0);
 
-		assert_eq!(
-			ChargeTransactionFee::inner_get_user_fee_charge_order_list(&ALICE),
-			asset_order_list_vec
-		);
+		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), asset_order_list_vec);
 	});
 }
 
@@ -207,7 +200,7 @@ fn ensure_can_charge_fee_should_work() {
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
 
 		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
-		let _ = ChargeTransactionFee::set_user_fee_charge_order(
+		let _ = FlexibleFee::set_user_fee_charge_order(
 			origin_signed_bob.clone(),
 			Some(asset_order_list_vec.clone()),
 		);
@@ -233,7 +226,7 @@ fn ensure_can_charge_fee_should_work() {
 			Currencies::total_balance(CURRENCY_ID_1, &pool_0_1_account)
 		);
 
-		assert_ok!(ChargeTransactionFee::ensure_can_charge_fee(
+		assert_ok!(FlexibleFee::ensure_can_charge_fee(
 			&ALICE,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
@@ -247,7 +240,7 @@ fn ensure_can_charge_fee_should_work() {
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&ALICE), 150);
 
 		// Bob
-		assert_ok!(ChargeTransactionFee::ensure_can_charge_fee(
+		assert_ok!(FlexibleFee::ensure_can_charge_fee(
 			&BOB,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
@@ -266,9 +259,8 @@ fn withdraw_fee_should_work() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::ChargeTransactionFee(crate::Call::set_user_fee_charge_order(Some(
-			asset_order_list_vec,
-		)));
+		let call =
+			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
 
 		// prepare info variable
 		let extra = ();
@@ -276,7 +268,7 @@ fn withdraw_fee_should_work() {
 		let info = xt.get_dispatch_info();
 
 		// 99 inclusion fee and a tip of 8
-		assert_ok!(ChargeTransactionFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
 	});
@@ -290,9 +282,8 @@ fn correct_and_deposit_fee_should_work() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call = Call::ChargeTransactionFee(crate::Call::set_user_fee_charge_order(Some(
-			asset_order_list_vec,
-		)));
+		let call =
+			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
 		// prepare info variable
 		let extra = ();
 		let xt = TestXt::new(call.clone(), Some((CHARLIE.try_into().unwrap(), extra)));
@@ -304,12 +295,11 @@ fn correct_and_deposit_fee_should_work() {
 		let corrected_fee = 80;
 		let tip = 8;
 
-		let already_withdrawn =
-			ChargeTransactionFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
+		let already_withdrawn = FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
 
-		assert_ok!(ChargeTransactionFee::correct_and_deposit_fee(
+		assert_ok!(FlexibleFee::correct_and_deposit_fee(
 			&CHARLIE,
 			&info,
 			&post_info,
