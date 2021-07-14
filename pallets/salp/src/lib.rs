@@ -68,7 +68,8 @@ pub enum FundStatus {
 	Retired,
 	Success,
 	Failed,
-	Withdrew,
+	RefundWithdrew,
+	RedeemWithdrew,
 	End,
 }
 
@@ -365,13 +366,17 @@ pub mod pallet {
 		/// Crosschain xcm failed
 		XcmFailed,
 		/// Don't have enough vsToken/vsBond to refund
-		NotEnoughBalanceToRefund,
+		NotEnoughReservedAssetsToRefund,
+		/// Don't have enough token to refund by users
+		NotEnoughBalanceInRefundPool,
 		/// The vsBond is expired now
 		VSBondExpired,
 		/// The vsBond cannot be redeemed by now
 		UnRedeemableNow,
 		/// Dont have enough vsToken/vsBond to redeem
-		NotEnoughBalanceToRedeem,
+		NotEnoughFreeAssetsToRedeem,
+		/// Don't have enough token to redeem by users
+		NotEnoughBalanceInRedeemPool,
 		/// Invalid redeem status
 		InvalidRedeemStatus,
 	}
@@ -473,7 +478,11 @@ pub mod pallet {
 			let depositor = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::RefundWithdrew ||
+					fund.status == FundStatus::RedeemWithdrew,
+				Error::<T>::InvalidFundStatus
+			);
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
@@ -574,8 +583,10 @@ pub mod pallet {
 			let depositor = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			// TODO: Need it?
-			// ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			let can_confirm = fund.status == FundStatus::Ongoing ||
+				fund.status == FundStatus::Failed ||
+				fund.status == FundStatus::Success;
+			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
@@ -663,12 +674,15 @@ pub mod pallet {
 			if is_success {
 				if fund.status == FundStatus::Retired {
 					RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
+
+					let fund_new = FundInfo { status: FundStatus::RedeemWithdrew, ..fund };
+					Funds::<T>::insert(index, Some(fund_new));
 				} else if fund.status == FundStatus::Failed {
 					RefundPool::<T>::set(Self::refund_pool().saturating_add(amount_withdrew));
-				}
 
-				let fund_new = FundInfo { status: FundStatus::Withdrew, ..fund };
-				Funds::<T>::insert(index, Some(fund_new));
+					let fund_new = FundInfo { status: FundStatus::RefundWithdrew, ..fund };
+					Funds::<T>::insert(index, Some(fund_new));
+				}
 
 				Self::deposit_event(Event::Withdrew(depositor, index, amount_withdrew));
 			} else {
@@ -683,25 +697,29 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
+			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(contributed > Zero::zero(), Error::<T>::ZeroContribution);
 			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
 
+			ensure!(Self::refund_pool() >= contributed, Error::<T>::NotEnoughBalanceInRefundPool);
+
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 			ensure!(
 				T::MultiCurrency::reserved_balance(vsToken, &who) >= contributed,
-				Error::<T>::NotEnoughBalanceToRefund
+				Error::<T>::NotEnoughReservedAssetsToRefund
 			);
 			ensure!(
 				T::MultiCurrency::reserved_balance(vsBond, &who) >= contributed,
-				Error::<T>::NotEnoughBalanceToRefund
+				Error::<T>::NotEnoughReservedAssetsToRefund
 			);
 
 			Self::xcm_ump_transfer(origin, index, contributed)
 				.map_err(|_| Error::<T>::XcmFailed)?;
+
+			RefundPool::<T>::set(Self::refund_pool().saturating_sub(contributed));
 
 			Self::put_contribution(
 				fund.trie_index,
@@ -725,7 +743,7 @@ pub mod pallet {
 			let depositor = ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Withdrew, Error::<T>::InvalidFundStatus);
+			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
 
 			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
@@ -738,9 +756,9 @@ pub mod pallet {
 			if is_success {
 				// Slash the reserved vsToken/vsBond
 				let balance = T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
-				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToRefund);
+				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
 				let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
-				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToRefund);
+				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
 
 				Self::put_contribution(
 					fund.trie_index,
@@ -751,6 +769,8 @@ pub mod pallet {
 
 				Self::deposit_event(Event::Refunded(who, index, contributed));
 			} else {
+				RefundPool::<T>::set(Self::refund_pool().saturating_add(contributed));
+
 				Self::put_contribution(
 					fund.trie_index,
 					&who,
@@ -782,9 +802,9 @@ pub mod pallet {
 			let (vsToken, vsBond) = Self::vsAssets(index, first_slot, last_slot);
 
 			T::MultiCurrency::reserve(vsToken, &who, value)
-				.map_err(|_| Error::<T>::NotEnoughBalanceToRedeem)?;
+				.map_err(|_| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 			T::MultiCurrency::reserve(vsBond, &who, value)
-				.map_err(|_| Error::<T>::NotEnoughBalanceToRedeem)?;
+				.map_err(|_| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 
 			let status = Self::redeem_status(who.clone(), (index, first_slot, last_slot));
 			ensure!(status == RedeemStatus::Idle, Error::<T>::InvalidRedeemStatus);
@@ -825,9 +845,11 @@ pub mod pallet {
 
 			if is_success {
 				let balance = T::MultiCurrency::slash_reserved(vsToken, &who, value);
-				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToRedeem);
+				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
 				let balance = T::MultiCurrency::slash_reserved(vsBond, &who, value);
-				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToRedeem);
+				ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
+
+				RedeemPool::<T>::put(Self::redeem_pool().saturating_sub(value));
 
 				RedeemExtras::<T>::insert(who.clone(), (index, first_slot, last_slot), RS::Idle);
 
