@@ -964,7 +964,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(n: BlockNumberFor<T>) {
 			// Release x% KSM/DOT from redeem-pool to bancor-pool per cycle
-			if n!= 0 && (n % T::ReleaseCycle::get()) == 0 {
+			if n != 0 && (n % T::ReleaseCycle::get()) == 0 {
 				if let Ok(rp_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
 					// Calculate the release amount
 					let release_amount = T::ReleaseRatio::get() * rp_balance;
