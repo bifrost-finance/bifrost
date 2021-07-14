@@ -33,14 +33,13 @@ sp-session = { version = "3.0.0" }
 sp-storage = { version = "3.0.0" }
 sp-timestamp = { version = "3.0.0" }
 sp-transaction-pool = { version = "3.0.0" }
-substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "master" }
 
 # Substrate Pallets
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0" }
 
 # Substrate Other
 frame-system-rpc-runtime-api = { version = "3.0.0" }
-prometheus-endpoint = { package = "substrate-prometheus-endpoint", version = "0.9.0" }
+substrate-prometheus-endpoint = { version = "0.9.0" }
 
 # Cumulus dependencies
 cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
