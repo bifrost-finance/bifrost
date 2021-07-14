@@ -36,11 +36,11 @@ use xcm_support::BifrostXcmExecutor;
 use crate as salp;
 
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
-type Block = frame_system::mocking::MockBlock<Test>;
-type BlockNumber = u32;
-type Index = u32;
-type Signature = sp_runtime::MultiSignature;
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
+pub(crate) type BlockNumber = u32;
+pub(crate) type Index = u32;
+pub(crate) type Signature = sp_runtime::MultiSignature;
+pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
 	pub enum Test where

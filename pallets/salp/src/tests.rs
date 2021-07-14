@@ -1360,9 +1360,38 @@ fn redeem_with_when_ump_wrong_should_fail() {
 	// TODO: Require an solution to settle with parallel test workflow
 }
 
-// TODO: Hook Test
 #[test]
-fn release_from_redeem_to_bancor_should_work() {}
+fn release_from_redeem_to_bancor_should_work() {
+	fn run_to_block(n: BlockNumber) {
+		use frame_support::traits::Hooks;
+		while System::block_number() <= n {
+			Salp::on_finalize(System::block_number());
+			System::on_finalize(System::block_number());
+			System::set_block_number(System::block_number() + 1);
+			System::on_initialize(System::block_number());
+			Salp::on_initialize(System::block_number());
+		}
+	}
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+
+		run_to_block(ReleaseCycle::get());
+
+		let release_amount = ReleaseRatio::get() * 100u128;
+		let redeem_pool_left = 100 - release_amount;
+		assert_eq!(Salp::redeem_pool(), redeem_pool_left);
+
+		// TODO: Check the balance of bancor(Waiting Bancor to Support..)
+	});
+}
 
 // Utilities Test
 #[test]
