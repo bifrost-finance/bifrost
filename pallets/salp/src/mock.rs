@@ -126,7 +126,6 @@ parameter_types! {
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-	pub const UnlockNumberPerBlock: u32 = 100u32;
 
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
@@ -157,7 +156,6 @@ impl salp::Config for Test {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
-	type UnlockNumberPerBlock = UnlockNumberPerBlock;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type WeightInfo = salp::TestWeightInfo;
 }
