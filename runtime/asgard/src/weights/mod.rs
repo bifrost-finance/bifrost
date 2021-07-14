@@ -20,5 +20,5 @@
 
 //! A list of the different weight modules for our runtime.
 
+pub mod pallet_salp;
 pub mod pallet_vesting;
-pub mod pallet_vtoken_mint;

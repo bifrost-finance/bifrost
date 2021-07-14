@@ -18,8 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-#![cfg(test)]
-
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
 
 use crate::{mock::*, ContributionStatus, Error, FundStatus};

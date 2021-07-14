@@ -53,6 +53,8 @@ use sp_core::{
 };
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
+#[cfg(feature = "runtime-benchmarks")]
+use sp_runtime::RuntimeString;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
@@ -837,6 +839,7 @@ impl pallet_aura::Config for Runtime {
 parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const MaxCandidates: u32 = 1000;
+	pub const MinCandidates: u32 = 5;
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const MaxInvulnerables: u32 = 100;
 }
@@ -848,8 +851,12 @@ impl pallet_collator_selection::Config for Runtime {
 	type KickThreshold = Period;
 	type MaxCandidates = MaxCandidates;
 	type MaxInvulnerables = MaxInvulnerables;
+	type MinCandidates = MinCandidates;
 	type PotId = PotId;
 	type UpdateOrigin = MoreThanHalfCouncil;
+	type ValidatorId = <Self as frame_system::Config>::AccountId;
+	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+	type ValidatorRegistration = Session;
 	type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
@@ -865,10 +872,8 @@ parameter_types! {
 impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
-	type MultiCurrency = Tokens;
-	type PalletId = StakingPalletId;
-	type RandomnessSource = RandomnessCollectiveFlip;
-	type WeightInfo = weights::pallet_vtoken_mint::WeightInfo<Runtime>;
+	type MultiCurrency = Currencies;
+	type WeightInfo = bifrost_vtoken_mint::weights::BifrostWeight<Runtime>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -897,31 +902,31 @@ parameter_types! {
 
 impl bifrost_charge_transaction_fee::Config for Runtime {
 	type Balance = Balance;
-	type CurrenciesHandler = Currencies;
 	type Currency = Balances;
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
-	type ZenlinkOperator = ZenlinkProtocol;
 }
 
 parameter_types! {
-	pub const TwoYear: BlockNumber = DAYS * 365 * 2;
-	pub const RewardPeriod: BlockNumber = 50;
-	pub const MaximumExtendedPeriod: BlockNumber = 100;
-	pub const ShareWeightPalletId: PalletId = PalletId(*b"weight  ");
+	pub const HalvingCycle: u32 = 60;
+	pub const RewardWindow: u32 = 10;
+	pub const MaximumExtendedPeriod: u32 = 20;
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 }
 
 impl bifrost_minter_reward::Config for Runtime {
+	type DexOperator = ZenlinkProtocol;
 	type Event = Event;
+	type HalvingCycle = HalvingCycle;
 	type MaximumExtendedPeriod = MaximumExtendedPeriod;
 	type MultiCurrency = Tokens;
-	type RewardPeriod = RewardPeriod;
+	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
-	type SystemPalletId = ShareWeightPalletId;
-	type TwoYear = TwoYear;
-	type ZenlinkOperator = ZenlinkProtocol;
+	type StableCurrencyId = StableCurrencyId;
 }
 
 parameter_types! {
@@ -935,11 +940,13 @@ parameter_types! {
 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
+	type DepositToken = DepositTokenType;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
@@ -953,16 +960,18 @@ impl bifrost_salp::Config for Runtime {
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type WeightInfo = weights::pallet_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
 }
 
 parameter_types! {
-	pub const InterventionPercentage: Balance = 75;
+	pub const InterventionPercentage: Percent = Percent::from_percent(75);
 }
 
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Currencies;
+	type WeightInfo = bifrost_bancor::weights::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1127,8 +1136,8 @@ construct_runtime! {
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage} = 4,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
 		// Monetary stuff
@@ -1236,8 +1245,9 @@ impl_runtime_apis! {
 		fn validate_transaction(
 			source: TransactionSource,
 			tx: <Block as BlockT>::Extrinsic,
+			block_hash: <Block as BlockT>::Hash,
 		) -> TransactionValidity {
-			Executive::validate_transaction(source, tx)
+			Executive::validate_transaction(source, tx, block_hash)
 		}
 	}
 
@@ -1444,6 +1454,40 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	// benchmarks for asgard modules
+	#[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn dispatch_benchmark(
+			config: frame_benchmarking::BenchmarkConfig
+		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+
+			let whitelist: Vec<TrackedStorageKey> = vec![
+				// Block Number
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef702a5c1b19ab7a04f536c519aca4983ac").to_vec().into(),
+				// Total Issuance
+				hex_literal::hex!("c2261276cc9d1f8598ea4b6a74b15c2f57c875e4cff74148e4628f264b974c80").to_vec().into(),
+				// Execution Phase
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7ff553b5a9862a516939d82b3d3d8661a").to_vec().into(),
+				// Event Count
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef70a98fdbe9ce6c55837576c60c7af3850").to_vec().into(),
+				// System Events
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef780d41e5e16056765bc8461851072c9d7").to_vec().into(),
+				// Caller 0 Account
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da946c154ffd9992e395af90b5b13cc6f295c77033fce8a9045824a6690bbf99c6db269502f0a8d1d2a008542d5690a0749").to_vec().into(),
+				// Treasury Account
+				hex_literal::hex!("26aa394eea5630e07c48ae0c9558cef7b99d880ec681799c0cf30e8886371da95ecffd7b6c0f78751baa9d281e0bfa3a6d6f646c70792f74727372790000000000000000000000000000000000000000").to_vec().into(),
+			];
+
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&config, &whitelist);
+			add_benchmark!(params, batches, bifrost_salp, Salp);
+
+			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+			Ok(batches)
 		}
 	}
 }

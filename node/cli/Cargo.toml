@@ -39,14 +39,14 @@ frame-benchmarking-cli = { version = "3.0.0", optional = true }
 node-inspect = { version = "0.8.0", optional = true }
 
 # Cumulus dependencies
-cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.7" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.7" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.7" }
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 
 [build-dependencies]
 substrate-build-script-utils = { version = "3.0.0", optional = true }
@@ -62,9 +62,7 @@ cli = [
 	"structopt",
 	"substrate-build-script-utils",
 ]
-runtime-benchmarks = [
-	"frame-benchmarking-cli",
-]
+runtime-benchmarks = [ "node-service/runtime-benchmarks" ]
 with-asgard-runtime = [
 	"node-service/with-asgard-runtime",
 ]

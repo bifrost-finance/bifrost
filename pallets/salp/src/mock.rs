@@ -18,8 +18,6 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-#![cfg(test)]
-
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -111,13 +109,14 @@ impl orml_tokens::Config for Test {
 }
 
 parameter_types! {
-	pub const InterventionPercentage: Balance = 75;
+	pub const InterventionPercentage: Percent = Percent::from_percent(75);
 }
 
 impl bifrost_bancor::Config for Test {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
 	type MultiCurrenciesHandler = Tokens;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -133,6 +132,7 @@ parameter_types! {
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
 parameter_types! {
@@ -144,6 +144,7 @@ type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
+	type DepositToken = DepositTokenType;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
@@ -158,6 +159,7 @@ impl salp::Config for Test {
 	type SubmissionDeposit = SubmissionDeposit;
 	type UnlockNumberPerBlock = UnlockNumberPerBlock;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type WeightInfo = salp::TestWeightInfo;
 }
 
 // To control the result returned by `MockXcmExecutor`

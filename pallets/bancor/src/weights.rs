@@ -16,21 +16,40 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+#![allow(unused_parens)]
+#![allow(unused_imports)]
 
-use frame_support::{traits::Get, weights::Weight};
+use frame_support::{
+	traits::Get,
+	weights::{constants::RocksDbWeight, Weight},
+};
 use sp_std::marker::PhantomData;
-pub struct WeightInfo<T>(PhantomData<T>);
-impl<T: frame_system::Config> bifrost_vtoken_mint::WeightInfo for WeightInfo<T> {
-	fn to_vtoken<U: bifrost_vtoken_mint::Config>() -> Weight {
-		let referer_weight = 1000;
-		let db = T::DbWeight::get();
-		db.reads_writes(1, 1).saturating_add(referer_weight) // memo length
+
+/// Weight functions needed for the pallet.
+pub trait WeightInfo {
+	fn exchange_for_token() -> Weight;
+	fn exchange_for_vstoken() -> Weight;
+}
+
+/// Weights for the pallet using the Bifrost node and recommended hardware.
+pub struct BifrostWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
+	fn exchange_for_token() -> Weight {
+		(50_000_000 as Weight)
 	}
 
-	fn to_token() -> Weight {
-		(39_603_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	fn exchange_for_vstoken() -> Weight {
+		(50_000_000 as Weight)
+	}
+}
+
+// For backwards compatibility and tests
+impl WeightInfo for () {
+	fn exchange_for_token() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn exchange_for_vstoken() -> Weight {
+		(50_000_000 as Weight)
 	}
 }
