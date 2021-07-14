@@ -20,7 +20,7 @@
 
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
-use node_primitives::{traits::BancorHandler, CurrencyId};
+use node_primitives::{traits::BancorHandler, CurrencyId, CurrencyIdExt};
 use num_bigint::BigUint;
 use orml_traits::MultiCurrency;
 use sp_arithmetic::per_things::{PerThing, Perbill, Percent};
@@ -79,6 +79,7 @@ pub mod pallet {
 		VSTokenSupplyNotEnough,
 		PriceNotQualified,
 		CalculationOverflow,
+		NotSupportTokenType,
 	}
 
 	#[pallet::event]
@@ -135,6 +136,20 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::add_token_to_pool())]
+		pub fn add_token_to_pool(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			token_amount: BalanceOf<T>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
+
+			Self::add_token(currency_id, token_amount)?;
+
+			Ok(())
+		}
+
 		// exchange vstoken for token
 		#[pallet::weight(T::WeightInfo::exchange_for_token())]
 		pub fn exchange_for_token(
@@ -145,6 +160,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
+			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
 			let vstoken_id = currency_id.to_vstoken().map_err(|_| Error::<T>::ConversionError)?;
 
 			// Get exchanger's vstoken balance
@@ -182,6 +198,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
+			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
 			let vstoken_id = currency_id.to_vstoken().map_err(|_| Error::<T>::ConversionError)?;
 
 			// Get exchanger's token balance

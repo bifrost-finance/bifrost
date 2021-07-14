@@ -23,7 +23,7 @@ use node_primitives::{Balance, CurrencyId};
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
-	pub trait ChargeTransactionFeeRuntimeApi<AccountId> where
+	pub trait FlexibleFeeRuntimeApi<AccountId> where
 		AccountId: Codec,
 	{
 		/// get flexible fee token and amount to be deducted
