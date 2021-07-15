@@ -28,6 +28,7 @@ use node_primitives::{CurrencyId, LeasePeriod};
 use orml_traits::{
 	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
 };
+pub use pallet::*;
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
 
 #[cfg(test)]

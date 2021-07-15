@@ -19,7 +19,7 @@
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus};
 use orml_traits::{LockIdentifier, MultiLockableCurrency};
 
-use crate::{mock::*, pallet::*, *};
+use crate::{mock::*, *};
 
 #[test]
 fn create_order_should_work() {
