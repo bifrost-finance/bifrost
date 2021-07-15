@@ -35,12 +35,12 @@ use xcm_support::BifrostXcmExecutor;
 
 use crate as salp;
 
-type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-type Block = frame_system::mocking::MockBlock<Test>;
-type Signature = sp_runtime::MultiSignature;
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
-type BlockNumber = u32;
-type Index = u32;
+pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
+pub(crate) type BlockNumber = u32;
+pub(crate) type Index = u32;
+pub(crate) type Signature = sp_runtime::MultiSignature;
+pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
 	pub enum Test where
@@ -119,19 +119,18 @@ impl bifrost_bancor::Config for Test {
 	type WeightInfo = ();
 }
 
-// TODO: Impl bifrost_xcm_executor::Config
-
 parameter_types! {
 	pub const SubmissionDeposit: u32 = 1;
-	pub const MinContribution: Balance = 1 * DOLLARS;
+	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const TokenType: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+
+	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
-	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 }
 
@@ -207,7 +206,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	t.into()
 }
 
-pub const DOLLARS: Balance = 1_000_000_000_000;
 // These time units are defined in number of blocks.
 pub const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
