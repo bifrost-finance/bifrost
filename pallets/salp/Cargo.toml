@@ -16,12 +16,12 @@ sp-runtime = { version = "3.0.0", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8",default-features = false  }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8",default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 
 [dev-dependencies]
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8"  }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 sp-io = "3.0.0"
 sp-core = "3.0.0"
 orml-tokens = "0.4.1-dev"
@@ -40,7 +40,6 @@ std = [
 	"sp-arithmetic/std",
 	"orml-traits/std",
 	"xcm/std",
-	"xcm-builder/std",
 	"xcm-support/std",
 	"polkadot-parachain/std",
 ]

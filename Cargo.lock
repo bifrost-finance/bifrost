@@ -4981,7 +4981,6 @@ dependencies = [
  "sp-timestamp",
  "sp-transaction-pool",
  "substrate-prometheus-endpoint 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "substrate-prometheus-endpoint 0.9.0 (git+https://github.com/paritytech/substrate?branch=master)",
  "zenlink-protocol-runtime-api",
 ]
 
@@ -10243,20 +10242,6 @@ name = "substrate-prometheus-endpoint"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2eb561c19a121e1c89daa79dbfa67a55080f813caa47fd231833a0669696d508"
-dependencies = [
- "async-std",
- "derive_more",
- "futures-util",
- "hyper 0.13.10",
- "log",
- "prometheus",
- "tokio 0.2.25",
-]
-
-[[package]]
-name = "substrate-prometheus-endpoint"
-version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=master#deac6324a16fc4128b94a7b4c3826eebcb86917f"
 dependencies = [
  "async-std",
  "derive_more",
