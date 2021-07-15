@@ -30,6 +30,7 @@ use orml_traits::{
 };
 pub use pallet::*;
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
+use sp_arithmetic::Percent;
 
 #[cfg(test)]
 mod mock;
