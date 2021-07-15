@@ -30,11 +30,13 @@ use orml_traits::{
 };
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
 
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
-pub struct OrderInfo<T: Config> {
+pub struct OrderInfo<T: pallet::Config> {
 	/// The owner of the order
 	owner: AccountIdOf<T>,
 	/// The vsbond type of the order to sell
@@ -48,7 +50,7 @@ pub struct OrderInfo<T: Config> {
 	order_state: OrderState,
 }
 
-impl<T: Config> core::fmt::Debug for OrderInfo<T> {
+impl<T: pallet::Config> core::fmt::Debug for OrderInfo<T> {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		f.debug_tuple("")
 			.field(&self.owner)
@@ -62,18 +64,27 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
-pub enum OrderState {
+enum OrderState {
 	InTrade,
 	Revoked,
 	Clinchd,
 }
 
-pub type OrderId = u64;
+type OrderId = u64;
+type ParaId = u32;
 
-pub use module::*;
+#[allow(type_alias_bounds)]
+type AccountIdOf<T: pallet::Config> = <T as frame_system::Config>::AccountId;
+
+#[allow(type_alias_bounds)]
+type BalanceOf<T: pallet::Config> =
+	<<T as pallet::Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+#[allow(type_alias_bounds)]
+type LeasePeriodOf<T: pallet::Config> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
-pub mod module {
+pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
@@ -133,32 +144,29 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_id)]
-	pub type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
+	pub(crate) type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn in_trade_order_ids)]
-	pub type InTradeOrderIds<T: Config> =
+	pub(crate) type InTradeOrderIds<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn revoked_order_ids)]
-	pub type RevokedOrderIds<T: Config> =
+	pub(crate) type RevokedOrderIds<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn clinchd_order_ids)]
-	pub type ClinchdOrderIds<T: Config> =
+	pub(crate) type ClinchdOrderIds<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_info)]
-	pub type TotalOrderInfos<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderInfo<T>>;
+	pub(crate) type TotalOrderInfos<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderInfo<T>>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
-
-	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -422,23 +430,14 @@ pub mod module {
 			Ok(().into())
 		}
 	}
-}
 
-impl<T: Config> Pallet<T> {
-	pub(crate) fn next_order_id() -> OrderId {
-		let next_order_id = Self::order_id();
-		NextOrderId::<T>::mutate(|current| *current += 1);
-		next_order_id
+	impl<T: Config> Pallet<T> {
+		pub(crate) fn next_order_id() -> OrderId {
+			let next_order_id = Self::order_id();
+			NextOrderId::<T>::mutate(|current| *current += 1);
+			next_order_id
+		}
 	}
 }
 
 // TODO: Maybe impl Auction trait for vsbond-auction
-
-#[allow(type_alias_bounds)]
-type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-#[allow(type_alias_bounds)]
-type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
-type ParaId = u32;
