@@ -115,7 +115,7 @@ parameter_types! {
 impl bifrost_bancor::Config for Test {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
-	type MultiCurrenciesHandler = Tokens;
+	type MultiCurrency = Tokens;
 	type WeightInfo = ();
 }
 
