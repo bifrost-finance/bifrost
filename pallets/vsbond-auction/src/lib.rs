@@ -28,7 +28,7 @@ use node_primitives::{CurrencyId, LeasePeriod};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
-use substrate_fixed::{types::U64F64, traits::{FromFixed}};
+use substrate_fixed::{traits::FromFixed, types::U64F64};
 
 #[cfg(test)]
 mod mock;
