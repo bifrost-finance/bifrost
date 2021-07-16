@@ -21,16 +21,14 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{CheckedMul, Saturating, Zero},
+	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod};
-use orml_traits::{
-	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
-};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
-use sp_arithmetic::Percent;
+use substrate_fixed::{types::U64F64, traits::{FromFixed}};
 
 #[cfg(test)]
 mod mock;
@@ -38,7 +36,7 @@ mod mock;
 mod tests;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
-pub struct OrderInfo<T: pallet::Config> {
+pub struct OrderInfo<T: Config> {
 	/// The owner of the order
 	owner: AccountIdOf<T>,
 	/// The vsbond type of the order to sell
@@ -47,12 +45,12 @@ pub struct OrderInfo<T: pallet::Config> {
 	supply: BalanceOf<T>,
 	/// The quantity of vsbond has not be sold
 	remain: BalanceOf<T>,
-	unit_price: BalanceOf<T>,
+	unit_price: U64F64,
 	order_id: OrderId,
 	order_state: OrderState,
 }
 
-impl<T: pallet::Config> core::fmt::Debug for OrderInfo<T> {
+impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		f.debug_tuple("")
 			.field(&self.owner)
@@ -76,14 +74,14 @@ type OrderId = u64;
 type ParaId = u32;
 
 #[allow(type_alias_bounds)]
-type AccountIdOf<T: pallet::Config> = <T as frame_system::Config>::AccountId;
+type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 
 #[allow(type_alias_bounds)]
-type BalanceOf<T: pallet::Config> =
-	<<T as pallet::Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T: Config> =
+	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[allow(type_alias_bounds)]
-type LeasePeriodOf<T: pallet::Config> = <T as frame_system::Config>::BlockNumber;
+type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -106,8 +104,6 @@ pub mod pallet {
 		type MinimumSupply: Get<BalanceOf<Self>>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 	}
 
@@ -179,7 +175,7 @@ pub mod pallet {
 			#[pallet::compact] first_slot: LeasePeriodOf<T>,
 			#[pallet::compact] last_slot: LeasePeriodOf<T>,
 			#[pallet::compact] supply: BalanceOf<T>,
-			#[pallet::compact] unit_price: BalanceOf<T>,
+			unit_price: U64F64,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
@@ -347,9 +343,7 @@ pub mod pallet {
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
-			let total_price = quantity_clinchd
-				.checked_mul(&order_info.unit_price)
-				.ok_or(Error::<T>::Overflow)?;
+			let total_price = Self::total_price(quantity_clinchd, order_info.unit_price);
 
 			// Check the balance of buyer
 			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, total_price)
@@ -438,6 +432,13 @@ pub mod pallet {
 			let next_order_id = Self::order_id();
 			NextOrderId::<T>::mutate(|current| *current += 1);
 			next_order_id
+		}
+
+		pub(crate) fn total_price(quantity: BalanceOf<T>, unit_price: U64F64) -> BalanceOf<T> {
+			let quantity: u128 = quantity.saturated_into();
+			let total_price = u128::from_fixed((unit_price * quantity).ceil());
+
+			BalanceOf::<T>::saturated_from(total_price)
 		}
 	}
 }
