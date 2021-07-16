@@ -952,9 +952,9 @@ impl bifrost_salp::Config for Runtime {
 	type MinContribution = MinContribution;
 	type MultiCurrency = Currencies;
 	type PalletId = BifrostCrowdloanId;
+	type RelayChainToken = RelayCurrencyId;
 	type ReleaseCycle = ReleaseCycle;
 	type ReleaseRatio = ReleaseRatio;
-	type RelyChainToken = RelayCurrencyId;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
