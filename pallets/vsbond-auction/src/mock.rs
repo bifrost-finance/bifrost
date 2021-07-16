@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;

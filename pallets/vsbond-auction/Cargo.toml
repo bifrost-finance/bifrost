@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
 sp-std = { version = "3.0.0", default-features = false }
+substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
@@ -25,6 +26,7 @@ default = ["std"]
 std = [
     "codec/std",
     "sp-std/std",
+    "substrate-fixed/std",
     "frame-system/std",
     "frame-support/std",
     "node-primitives/std",

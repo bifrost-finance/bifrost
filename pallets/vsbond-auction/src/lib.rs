@@ -21,16 +21,18 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{CheckedMul, Saturating, Zero},
+	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod};
-use orml_traits::{
-	MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency, MultiReservableCurrency,
-};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
+pub use pallet::*;
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
+use substrate_fixed::{traits::FromFixed, types::U64F64};
 
+#[cfg(test)]
 mod mock;
+#[cfg(test)]
 mod tests;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
@@ -43,7 +45,7 @@ pub struct OrderInfo<T: Config> {
 	supply: BalanceOf<T>,
 	/// The quantity of vsbond has not be sold
 	remain: BalanceOf<T>,
-	unit_price: BalanceOf<T>,
+	unit_price: U64F64,
 	order_id: OrderId,
 	order_state: OrderState,
 }
@@ -62,18 +64,27 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
-pub enum OrderState {
+enum OrderState {
 	InTrade,
 	Revoked,
 	Clinchd,
 }
 
-pub type OrderId = u64;
+type OrderId = u64;
+type ParaId = u32;
 
-pub use module::*;
+#[allow(type_alias_bounds)]
+type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
+
+#[allow(type_alias_bounds)]
+type BalanceOf<T: Config> =
+	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+#[allow(type_alias_bounds)]
+type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
 
 #[frame_support::pallet]
-pub mod module {
+pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
@@ -93,8 +104,6 @@ pub mod module {
 		type MinimumSupply: Get<BalanceOf<Self>>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ MultiCurrencyExtended<AccountIdOf<Self>, CurrencyId = CurrencyId>
-			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 	}
 
@@ -133,32 +142,29 @@ pub mod module {
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_id)]
-	pub type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
+	pub(crate) type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn in_trade_order_ids)]
-	pub type InTradeOrderIds<T: Config> =
+	pub(crate) type InTradeOrderIds<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn revoked_order_ids)]
-	pub type RevokedOrderIds<T: Config> =
+	pub(crate) type RevokedOrderIds<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn clinchd_order_ids)]
-	pub type ClinchdOrderIds<T: Config> =
+	pub(crate) type ClinchdOrderIds<T: Config> =
 		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_info)]
-	pub type TotalOrderInfos<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderInfo<T>>;
+	pub(crate) type TotalOrderInfos<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderInfo<T>>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
-
-	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -169,7 +175,7 @@ pub mod module {
 			#[pallet::compact] first_slot: LeasePeriodOf<T>,
 			#[pallet::compact] last_slot: LeasePeriodOf<T>,
 			#[pallet::compact] supply: BalanceOf<T>,
-			#[pallet::compact] unit_price: BalanceOf<T>,
+			unit_price: U64F64,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
@@ -337,9 +343,7 @@ pub mod module {
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
-			let total_price = quantity_clinchd
-				.checked_mul(&order_info.unit_price)
-				.ok_or(Error::<T>::Overflow)?;
+			let total_price = Self::total_price(quantity_clinchd, order_info.unit_price);
 
 			// Check the balance of buyer
 			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, total_price)
@@ -422,23 +426,21 @@ pub mod module {
 			Ok(().into())
 		}
 	}
-}
 
-impl<T: Config> Pallet<T> {
-	pub(crate) fn next_order_id() -> OrderId {
-		let next_order_id = Self::order_id();
-		NextOrderId::<T>::mutate(|current| *current += 1);
-		next_order_id
+	impl<T: Config> Pallet<T> {
+		pub(crate) fn next_order_id() -> OrderId {
+			let next_order_id = Self::order_id();
+			NextOrderId::<T>::mutate(|current| *current += 1);
+			next_order_id
+		}
+
+		pub(crate) fn total_price(quantity: BalanceOf<T>, unit_price: U64F64) -> BalanceOf<T> {
+			let quantity: u128 = quantity.saturated_into();
+			let total_price = u128::from_fixed((unit_price * quantity).ceil());
+
+			BalanceOf::<T>::saturated_from(total_price)
+		}
 	}
 }
 
 // TODO: Maybe impl Auction trait for vsbond-auction
-
-#[allow(type_alias_bounds)]
-type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
-#[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-#[allow(type_alias_bounds)]
-type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
-type ParaId = u32;
