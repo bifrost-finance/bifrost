@@ -47,13 +47,13 @@ impl InspectCmd {
 				let res = inspect.block(input).map_err(|e| format!("{}", e))?;
 				println!("{}", res);
 				Ok(())
-			}
+			},
 			InspectSubCmd::Extrinsic { input } => {
 				let input = input.parse()?;
 				let res = inspect.extrinsic(input).map_err(|e| format!("{}", e))?;
 				println!("{}", res);
 				Ok(())
-			}
+			},
 		}
 	}
 }

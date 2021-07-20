@@ -117,9 +117,8 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 		use CurrencyId::Token;
 		match id {
 			Token(TokenSymbol::KSM) | Token(TokenSymbol::DOT) => Some(X1(Parent)),
-			Token(TokenSymbol::ASG) | Token(TokenSymbol::BNC) => {
-				Some(native_currency_location(id, T::get()))
-			}
+			Token(TokenSymbol::ASG) | Token(TokenSymbol::BNC) =>
+				Some(native_currency_location(id, T::get())),
 			_ => None,
 		}
 	}

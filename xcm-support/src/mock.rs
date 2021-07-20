@@ -55,7 +55,7 @@ pub fn encode_xcm(message: Xcm<()>, message_kind: MessageKind) -> Vec<u8> {
 			let encoded = VersionedXcm::<()>::from(message).encode();
 			outbound.extend_from_slice(&encoded[..]);
 			outbound
-		}
+		},
 	}
 }
 

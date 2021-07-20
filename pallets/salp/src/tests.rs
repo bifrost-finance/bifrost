@@ -992,7 +992,7 @@ fn dissolve_should_work() {
 		let contribute_account_num = remove_times * RemoveKeysLimit::get();
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 10_000, 1, SlotLength::get()));
-		for i in 0 .. contribute_account_num {
+		for i in 0..contribute_account_num {
 			let ract = AccountId::new([(i as u8); 32]);
 			assert_ok!(Salp::contribute(Some(ract.clone()).into(), 3_000, 10));
 			assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), ract, 3_000, true));
@@ -1005,7 +1005,7 @@ fn dissolve_should_work() {
 
 		assert_eq!(Salp::redeem_pool(), (10 * contribute_account_num) as u128);
 
-		for _ in 0 .. remove_times {
+		for _ in 0..remove_times {
 			assert_ok!(Salp::dissolve(Some(ALICE).into(), 3_000));
 		}
 
@@ -1397,7 +1397,7 @@ fn release_from_redeem_to_bancor_should_work() {
 #[test]
 fn check_next_trie_index() {
 	new_test_ext().execute_with(|| {
-		for i in 0 .. 100 {
+		for i in 0..100 {
 			assert_eq!(Salp::current_trie_index(), i);
 			assert_ok!(Salp::next_trie_index());
 		}

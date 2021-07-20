@@ -33,7 +33,7 @@ type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 fn add_locks<T: Config>(who: &T::AccountId, n: u8) {
-	for id in 0 .. n {
+	for id in 0..n {
 		let lock_id = [id; 8];
 		let locked = 100u32;
 		let reasons = WithdrawReasons::TRANSFER | WithdrawReasons::RESERVE;
