@@ -75,11 +75,11 @@ macro_rules! create_currency_id {
 			type Error = ();
 			fn try_from(id: CurrencyId) -> Result<AssetId, ()> {
 				let _index = match id {
-					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((CurrencyId::Native as u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::Stable(TokenSymbol::$symbol) => Ok((CurrencyId::Stable as u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::Token(TokenSymbol::$symbol) => Ok((CurrencyId::Token as u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::VToken(TokenSymbol::$symbol) => Ok((CurrencyId::VToken as u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((CurrencyId::VSToken as u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::Token(TokenSymbol::$symbol) => Ok((0_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::VToken(TokenSymbol::$symbol) => Ok((1_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((2_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::Stable(TokenSymbol::$symbol) => Ok((3_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((4_u32, TokenSymbol::$symbol as u32)),)*
 					_ => Err(()),
 				};
 				let asset_index: u32 = (_index?.0 << 24) + (_index?.1 & 0x00ff_ffff);
@@ -110,10 +110,10 @@ macro_rules! create_currency_id {
 					_ => Err(()),
 				};
 				match c_discr {
-					0 => Ok(CurrencyId::Native(token_symbol?)),
-					1 => Ok(CurrencyId::Stable(token_symbol?)),
-					2 => Ok(CurrencyId::Token(token_symbol?)),
-					3 => Ok(CurrencyId::VToken(token_symbol?)),
+					0 => Ok(CurrencyId::Token(token_symbol?)),
+					1 => Ok(CurrencyId::VToken(token_symbol?)),
+					2 => Ok(CurrencyId::Native(token_symbol?)),
+					3 => Ok(CurrencyId::Stable(token_symbol?)),
 					4 => Ok(CurrencyId::VSToken(token_symbol?)),
 					_ => Err(()),
 				}
