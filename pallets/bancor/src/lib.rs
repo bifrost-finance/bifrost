@@ -368,7 +368,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_ceiling =
 						pool_info.token_ceiling.saturating_add(increase_amount);
 					Ok(())
-				}
+				},
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -392,7 +392,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_pool = pool_info.token_pool.saturating_sub(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_sub(vstoken_amount);
 					Ok(())
-				}
+				},
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -416,7 +416,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_pool = pool_info.token_pool.saturating_add(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_add(vstoken_amount);
 					Ok(())
-				}
+				},
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;

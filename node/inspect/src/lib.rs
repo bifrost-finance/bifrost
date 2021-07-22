@@ -156,7 +156,7 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
 				let header =
 					self.chain.header(id)?.ok_or_else(|| Error::NotFound(not_found.clone()))?;
 				TBlock::new(header, body)
-			}
+			},
 			BlockAddress::Hash(hash) => {
 				let id = BlockId::hash(hash);
 				let not_found = format!("Could not find block {:?}", id);
@@ -167,7 +167,7 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
 				let header =
 					self.chain.header(id)?.ok_or_else(|| Error::NotFound(not_found.clone()))?;
 				TBlock::new(header, body)
-			}
+			},
 		})
 	}
 
@@ -192,7 +192,7 @@ impl<TBlock: Block, TPrinter: PrettyPrinter<TBlock>> Inspector<TBlock, TPrinter>
 						index, block
 					))
 				})?
-			}
+			},
 			ExtrinsicAddress::Bytes(bytes) => TBlock::Extrinsic::decode(&mut &*bytes)?,
 		};
 

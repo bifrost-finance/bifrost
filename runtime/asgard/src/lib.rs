@@ -320,7 +320,7 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
-			}
+			},
 		}
 	}
 

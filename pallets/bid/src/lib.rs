@@ -777,11 +777,10 @@ impl<T: Config> Module<T> {
 				balance_order_vec.binary_search_by_key(&annual_roi, |(roi, _odr_id)| roi);
 
 			match index_wrapped {
-				Ok(index) | Err(index) => {
+				Ok(index) | Err(index) =>
 					if index < (T::TokenOrderROIListLength::get() as usize) {
 						balance_order_vec.insert(index, (*annual_roi, new_order_id));
-					}
-				}
+					},
 			}
 
 			if balance_order_vec.len() > (T::TokenOrderROIListLength::get() as usize) {

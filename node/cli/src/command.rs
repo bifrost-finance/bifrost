@@ -94,7 +94,7 @@ fn load_spec(
 				#[cfg(not(feature = "with-bifrost-runtime"))]
 				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
 			}
-		}
+		},
 	})
 }
 
@@ -273,7 +273,7 @@ pub fn run() -> Result<()> {
 					.await
 					.map_err(Into::into)
 			})
-		}
+		},
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -289,8 +289,8 @@ pub fn run() -> Result<()> {
 						config,
 					);
 			});
-		}
-		Some(Subcommand::Benchmark(cmd)) => {
+		},
+		Some(Subcommand::Benchmark(cmd)) =>
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 
@@ -306,8 +306,7 @@ pub fn run() -> Result<()> {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
 					.into())
-			}
-		}
+			},
 		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
 		Some(Subcommand::Sign(cmd)) => cmd.run(),
 		Some(Subcommand::Verify(cmd)) => cmd.run(),
@@ -315,27 +314,27 @@ pub fn run() -> Result<()> {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
-		}
+		},
 		Some(Subcommand::CheckBlock(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, components.import_queue))
 			})
-		}
+		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, config.database))
 			})
-		}
+		},
 		Some(Subcommand::ExportState(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, config.chain_spec))
 			})
-		}
+		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, components.import_queue))
 			})
-		}
+		},
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
 
@@ -356,12 +355,12 @@ pub fn run() -> Result<()> {
 
 				cmd.run(config, polkadot_config)
 			})
-		}
+		},
 		Some(Subcommand::Revert(cmd)) => {
 			construct_async_run!(|components, cli, cmd, config| {
 				Ok(cmd.run(components.client, components.backend))
 			})
-		}
+		},
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -385,7 +384,7 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		}
+		},
 		Some(Subcommand::ExportGenesisWasm(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -406,7 +405,7 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
-		}
+		},
 	}
 }
 
