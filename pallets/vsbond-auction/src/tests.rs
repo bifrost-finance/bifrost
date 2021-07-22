@@ -111,7 +111,7 @@ fn create_order_without_enough_vsbond_should_fail() {
 #[test]
 fn create_order_exceed_maximum_order_in_trade_should_fail() {
 	new_test_ext().execute_with(|| {
-		for _ in 0 .. MaximumOrderInTrade::get() {
+		for _ in 0..MaximumOrderInTrade::get() {
 			assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1.to_fixed()));
 		}
 

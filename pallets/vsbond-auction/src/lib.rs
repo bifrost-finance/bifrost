@@ -231,7 +231,7 @@ pub mod pallet {
 				Some(list) => {
 					list.insert(order_id);
 					Ok(())
-				}
+				},
 				None => Err(Error::<T>::Unexpected),
 			})?;
 
@@ -277,7 +277,7 @@ pub mod pallet {
 				Some(list) => {
 					list.remove(&order_id);
 					Ok(())
-				}
+				},
 				None => Err(Error::<T>::Unexpected),
 			})?;
 			if !RevokedOrderIds::<T>::contains_key(&from) {
@@ -287,7 +287,7 @@ pub mod pallet {
 				Some(list) => {
 					list.insert(order_id);
 					Ok(())
-				}
+				},
 				None => Err(Error::<T>::Unexpected),
 			})?;
 
@@ -392,7 +392,7 @@ pub mod pallet {
 						Some(list) => {
 							list.remove(&order_id);
 							Ok(())
-						}
+						},
 						None => Err(Error::<T>::Unexpected),
 					},
 				)?;
@@ -408,7 +408,7 @@ pub mod pallet {
 						Some(list) => {
 							list.insert(order_id);
 							Ok(())
-						}
+						},
 						None => Err(Error::<T>::Unexpected),
 					},
 				)?;

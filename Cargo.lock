@@ -4858,8 +4858,10 @@ dependencies = [
 [[package]]
 name = "node-inspect"
 version = "0.8.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8#1b758b2a8d151d97d2242260c465b6df9cb8a7a4"
 dependencies = [
  "derive_more",
+ "log",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",
@@ -4873,10 +4875,8 @@ dependencies = [
 [[package]]
 name = "node-inspect"
 version = "0.8.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8#1b758b2a8d151d97d2242260c465b6df9cb8a7a4"
 dependencies = [
  "derive_more",
- "log",
  "parity-scale-codec",
  "sc-cli",
  "sc-client-api",

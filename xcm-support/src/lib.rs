@@ -69,15 +69,12 @@ enum Error {
 impl From<Error> for XcmError {
 	fn from(e: Error) -> Self {
 		match e {
-			Error::FailedToMatchFungible => {
-				XcmError::FailedToTransactAsset("FailedToMatchFungible")
-			}
-			Error::AccountIdConversionFailed => {
-				XcmError::FailedToTransactAsset("AccountIdConversionFailed")
-			}
-			Error::CurrencyIdConversionFailed => {
-				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed")
-			}
+			Error::FailedToMatchFungible =>
+				XcmError::FailedToTransactAsset("FailedToMatchFungible"),
+			Error::AccountIdConversionFailed =>
+				XcmError::FailedToTransactAsset("AccountIdConversionFailed"),
+			Error::CurrencyIdConversionFailed =>
+				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed"),
 		}
 	}
 }
@@ -128,10 +125,9 @@ impl<
 			Matcher::matches_fungible(&asset),
 		) {
 			// known asset
-			(Ok(who), Some(currency_id), Some(amount)) => {
+			(Ok(who), Some(currency_id), Some(amount)) =>
 				MultiCurrency::deposit(currency_id, &who, amount)
-					.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
-			}
+					.map_err(|e| XcmError::FailedToTransactAsset(e.into())),
 			_ => Err(XcmError::AssetNotFound),
 		}
 	}
