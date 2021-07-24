@@ -147,11 +147,13 @@ impl orml_currencies::Config for Test {
 
 parameter_types! {
 	pub const InterventionPercentage: Percent = Percent::from_percent(75);
+	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
 }
 
 impl bifrost_bancor::Config for Test {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
+	type DailyReleasePercentage = DailyReleasePercentage;
 	type MultiCurrency = Tokens;
 	type WeightInfo = ();
 }
