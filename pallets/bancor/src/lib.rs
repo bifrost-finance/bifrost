@@ -143,16 +143,16 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		//  check whether the price of vstoken (token/vstoken) is lower than 75%. if yes, then half of
-		// this newly released token should be used to buy vstoken,  so that the price of vstoken will
-		// increase. Meanwhile, the other half will be put on the ceiling variable to indicate exchange
-		// availability. 	If not, all the newly release token should be put aside to the ceiling to not
-		// to impact the pool price.
+		//  check whether the price of vstoken (token/vstoken) is lower than 75%. if yes, then half
+		// of this newly released token should be used to buy vstoken,  so that the price of vstoken
+		// will increase. Meanwhile, the other half will be put on the ceiling variable to indicate
+		// exchange availability. 	If not, all the newly release token should be put aside to the
+		// ceiling to not to impact the pool price.
 		fn on_initialize(_: T::BlockNumber) -> Weight {
 			// for each bancor pool currency_id, release 5% of reserve tokens to the pool
 			for (currency_id, reserve_amount) in BancorReserve::<T>::iter() {
-				let token_amount = reserve_amount
-					/ T::DailyReleasePercentage::get()
+				let token_amount = reserve_amount /
+					T::DailyReleasePercentage::get()
 						.saturating_reciprocal_mul_floor(BalanceOf::<T>::from(BLOCKS_PER_DAY));
 
 				if token_amount > Zero::zero() {
@@ -164,8 +164,8 @@ pub mod pallet {
 						let amount_kept: BalanceOf<T>;
 						// if vstoken price is lower than 0.75 token
 						if T::InterventionPercentage::get()
-							.saturating_reciprocal_mul_floor(nominator)
-							<= denominator
+							.saturating_reciprocal_mul_floor(nominator) <=
+							denominator
 						{
 							amount_kept = token_amount / BalanceOf::<T>::saturated_from(2u128);
 						} else {
@@ -192,7 +192,8 @@ pub mod pallet {
 									sell_amount,
 									vstoken_amount,
 								);
-								// if somehow not able to sell token, then add the amount to ceiling.
+								// if somehow not able to sell token, then add the amount to
+								// ceiling.
 								if let Err(err_msg) = sell_result {
 									match err_msg {
 										Error::<T>::BancorPoolNotExist => (),
@@ -203,7 +204,7 @@ pub mod pallet {
 											) {
 												continue;
 											}
-										}
+										},
 									};
 								}
 							}
@@ -214,7 +215,7 @@ pub mod pallet {
 							match reserve_option {
 								Some(reserve) => {
 									*reserve = reserve.saturating_sub(token_amount);
-								}
+								},
 								_ => (),
 							}
 						});
@@ -466,7 +467,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_ceiling =
 						pool_info.token_ceiling.saturating_add(increase_amount);
 					Ok(())
-				}
+				},
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -490,7 +491,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_pool = pool_info.token_pool.saturating_sub(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_sub(vstoken_amount);
 					Ok(())
-				}
+				},
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -514,7 +515,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_pool = pool_info.token_pool.saturating_add(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_add(vstoken_amount);
 					Ok(())
-				}
+				},
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -533,7 +534,7 @@ impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T> {
 					Some(reserve) => {
 						*reserve = reserve.saturating_add(token_amount);
 						Ok(())
-					}
+					},
 					_ => Err(Error::<T>::BancorPoolNotExist),
 				}
 			})?;
