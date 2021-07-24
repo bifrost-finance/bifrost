@@ -18,7 +18,10 @@
 
 #![cfg(test)]
 
-use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
+use frame_support::{
+	construct_runtime, parameter_types,
+	traits::{GenesisBuild, OnFinalize, OnInitialize},
+};
 pub use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
@@ -109,11 +112,13 @@ impl orml_tokens::Config for Test {
 
 parameter_types! {
 	pub const InterventionPercentage: Percent = Percent::from_percent(75);
+	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
 }
 
 impl bancor::Config for Test {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
+	type DailyReleasePercentage = DailyReleasePercentage;
 	type MultiCurrency = Tokens;
 	type WeightInfo = ();
 }
@@ -147,16 +152,16 @@ impl ExtBuilder {
 		])
 	}
 
-	pub fn hundred_thousand_for_alice_n_bob(self) -> Self {
+	pub fn thousand_thousand_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
-			(ALICE, KSM, 100_000),
-			(ALICE, DOT, 100_000),
-			(ALICE, VSKSM, 100_000),
-			(ALICE, VSDOT, 100_000),
-			(BOB, KSM, 100_000),
-			(BOB, DOT, 100_000),
-			(BOB, VSKSM, 100_000),
-			(BOB, VSDOT, 100_000),
+			(ALICE, KSM, 1_000_000),
+			(ALICE, DOT, 1_000_000),
+			(ALICE, VSKSM, 1_000_000),
+			(ALICE, VSDOT, 1_000_000),
+			(BOB, KSM, 1_000_000),
+			(BOB, DOT, 1_000_000),
+			(BOB, VSKSM, 1_000_000),
+			(BOB, VSDOT, 1_000_000),
 		])
 	}
 
@@ -177,5 +182,16 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
+	}
+}
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		Bancor::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Bancor::on_initialize(System::block_number());
 	}
 }
