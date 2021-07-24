@@ -225,7 +225,8 @@ fn add_token_should_work() {
 			);
 
 			run_to_block(11);
-			// price is not lower than 75%, so the released DOT will be put into the ceiling variable
+			// price is not lower than 75%, so the released DOT will be put into the ceiling
+			// variable
 			dot_reserve = Bancor::get_bancor_reserve(DOT).unwrap();
 			assert_eq!(dot_reserve, 19999861112);
 
@@ -257,7 +258,8 @@ fn add_token_should_work() {
 			BancorReserve::<Test>::insert(DOT, 14400000);
 
 			run_to_block(12);
-			// half of the released 100 DOT will be put into ceiling, while the other half will be sold within the bancor pool.
+			// half of the released 100 DOT will be put into ceiling, while the other half will be
+			// sold within the bancor pool.
 			let price = Bancor::calculate_price_for_vstoken(DOT, 50).unwrap();
 			let dot_pool = Bancor::get_bancor_pool(DOT).unwrap();
 			assert_eq!(

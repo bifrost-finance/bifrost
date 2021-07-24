@@ -20,8 +20,7 @@
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::GenesisBuild,
-	traits::{OnFinalize, OnInitialize},
+	traits::{GenesisBuild, OnFinalize, OnInitialize},
 };
 pub use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
