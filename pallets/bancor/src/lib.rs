@@ -40,6 +40,8 @@ type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 const BILLION: u128 = 1_000_000_000;
+// These time units are defined in number of blocks.
+const BLOCKS_PER_DAY: u32 = 60 / 12 * 60 * 24;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
 pub struct BancorPool<Balance> {
@@ -62,6 +64,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type InterventionPercentage: Get<Percent>;
+
+		#[pallet::constant]
+		type DailyReleasePercentage: Get<Percent>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -97,6 +102,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_bancor_pool)]
 	pub type BancorPools<T> = StorageMap<_, Blake2_128Concat, CurrencyId, BancorPool<BalanceOf<T>>>;
 
+	/// Reserve for releasing Tokens to the bancor pool
+	#[pallet::storage]
+	#[pallet::getter(fn get_bancor_reserve)]
+	pub type BancorReserve<T> = StorageMap<_, Blake2_128Concat, CurrencyId, BalanceOf<T>>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub bancor_pools: Vec<(CurrencyId, BalanceOf<T>)>,
@@ -122,7 +132,8 @@ pub mod pallet {
 					vstoken_base_supply: *base_balance,
 				};
 
-				BancorPools::<T>::insert(currency_id, pool);
+				BancorPools::<T>::insert(currency_id.clone(), pool);
+				BancorReserve::<T>::insert(currency_id.clone(), BalanceOf::<T>::from(0u32));
 			}
 		}
 	}
@@ -131,7 +142,90 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {}
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		//  check whether the price of vstoken (token/vstoken) is lower than 75%. if yes, then half of
+		// this newly released token should be used to buy vstoken,  so that the price of vstoken will
+		// increase. Meanwhile, the other half will be put on the ceiling variable to indicate exchange
+		// availability. 	If not, all the newly release token should be put aside to the ceiling to not
+		// to impact the pool price.
+		fn on_initialize(_: T::BlockNumber) -> Weight {
+			// for each bancor pool currency_id, release 5% of reserve tokens to the pool
+			for (currency_id, reserve_amount) in BancorReserve::<T>::iter() {
+				let token_amount = reserve_amount
+					/ T::DailyReleasePercentage::get()
+						.saturating_reciprocal_mul_floor(BalanceOf::<T>::from(BLOCKS_PER_DAY));
+
+				if token_amount > Zero::zero() {
+					// get the current price of vstoken
+					// let (nominator, denominator) = Self::get_instant_vstoken_price(currency_id);
+					if let Ok((nominator, denominator)) =
+						Self::get_instant_vstoken_price(currency_id)
+					{
+						let amount_kept: BalanceOf<T>;
+						// if vstoken price is lower than 0.75 token
+						if T::InterventionPercentage::get()
+							.saturating_reciprocal_mul_floor(nominator)
+							<= denominator
+						{
+							amount_kept = token_amount / BalanceOf::<T>::saturated_from(2u128);
+						} else {
+							amount_kept = token_amount;
+						}
+
+						let sell_amount = token_amount.saturating_sub(amount_kept);
+						// deal with ceiling variable
+						if amount_kept != Zero::zero() {
+							if let Err(_) =
+								Self::increase_bancor_pool_ceiling(currency_id, amount_kept)
+							{
+								continue;
+							}
+						}
+						// deal with exchange transaction
+						if sell_amount != Zero::zero() {
+							// make changes in the bancor pool
+							if let Ok(vstoken_amount) =
+								Self::calculate_price_for_vstoken(currency_id, sell_amount)
+							{
+								let sell_result = Self::revise_bancor_pool_token_buy_vstoken(
+									currency_id,
+									sell_amount,
+									vstoken_amount,
+								);
+								// if somehow not able to sell token, then add the amount to ceiling.
+								if let Err(err_msg) = sell_result {
+									match err_msg {
+										Error::<T>::BancorPoolNotExist => (),
+										_ => {
+											if let Err(_) = Self::increase_bancor_pool_ceiling(
+												currency_id,
+												sell_amount,
+											) {
+												continue;
+											}
+										}
+									};
+								}
+							}
+						}
+
+						// deduct token_amount from BancorReserve
+						BancorReserve::<T>::mutate(currency_id, |reserve_option| {
+							match reserve_option {
+								Some(reserve) => {
+									*reserve = reserve.saturating_sub(token_amount);
+								}
+								_ => (),
+							}
+						});
+					}
+				}
+			}
+
+			// TODO: Estimate weight for this function
+			1_000
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -141,9 +235,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			token_amount: BalanceOf<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			let adder = ensure_signed(origin)?;
 			ensure!(currency_id.is_token(), Error::<T>::NotSupportTokenType);
 
+			let token_balance = T::MultiCurrency::free_balance(currency_id, &adder);
+			ensure!(token_balance >= token_amount, Error::<T>::NotEnoughBalance);
+
+			T::MultiCurrency::withdraw(currency_id, &adder, token_amount)?;
 			Self::add_token(currency_id, token_amount)?;
 
 			Ok(())
@@ -368,7 +466,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_ceiling =
 						pool_info.token_ceiling.saturating_add(increase_amount);
 					Ok(())
-				},
+				}
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -392,7 +490,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_pool = pool_info.token_pool.saturating_sub(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_sub(vstoken_amount);
 					Ok(())
-				},
+				}
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -416,7 +514,7 @@ impl<T: Config> Pallet<T> {
 					pool_info.token_pool = pool_info.token_pool.saturating_add(token_amount);
 					pool_info.vstoken_pool = pool_info.vstoken_pool.saturating_add(vstoken_amount);
 					Ok(())
-				},
+				}
 				_ => Err(Error::<T>::BancorPoolNotExist),
 			}
 		})?;
@@ -426,49 +524,19 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config> BancorHandler<BalanceOf<T>> for Pallet<T> {
-	//  check whether the price of vstoken (token/vstoken) is lower than 75%. if yes, then half of
-	// this newly released token should be used to buy vstoken,  so that the price of vstoken will
-	// increase. Meanwhile, the other half will be put on the ceiling variable to indicate exchange
-	// availability. 	If not, all the newly release token should be put aside to the ceiling to not
-	// to impact the pool price.
 	fn add_token(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> Result<(), DispatchError> {
-		// get the current price of vstoken
-		let (nominator, denominator) = Self::get_instant_vstoken_price(currency_id)?;
+		ensure!(token_amount >= Zero::zero(), Error::<T>::AmountNotGreaterThanZero);
 
-		let amount_kept: BalanceOf<T>;
-		// if vstoken price is lower than 0.75 token
-		if T::InterventionPercentage::get().saturating_reciprocal_mul_floor(nominator) <=
-			denominator
-		{
-			amount_kept = token_amount / BalanceOf::<T>::saturated_from(2u128);
-		} else {
-			amount_kept = token_amount;
-		}
-
-		let sell_amount = token_amount.saturating_sub(amount_kept);
-
-		// deal with ceiling variable
-		if amount_kept != Zero::zero() {
-			Self::increase_bancor_pool_ceiling(currency_id, amount_kept)?;
-		}
-
-		// deal with exchange transaction
-		if sell_amount != Zero::zero() {
-			// make changes in the bancor pool
-			let vstoken_amount = Self::calculate_price_for_vstoken(currency_id, sell_amount)?;
-			let sell_result = Self::revise_bancor_pool_token_buy_vstoken(
-				currency_id,
-				sell_amount,
-				vstoken_amount,
-			);
-
-			// if somehow not able to sell token, then add the amount to ceiling.
-			if let Err(err_msg) = sell_result {
-				match err_msg {
-					Error::<T>::BancorPoolNotExist => Err(Error::<T>::BancorPoolNotExist),
-					_ => Self::increase_bancor_pool_ceiling(currency_id, sell_amount),
-				}?;
-			}
+		if token_amount != Zero::zero() {
+			BancorReserve::<T>::mutate(currency_id, |reserve_option| -> Result<(), Error<T>> {
+				match reserve_option {
+					Some(reserve) => {
+						*reserve = reserve.saturating_add(token_amount);
+						Ok(())
+					}
+					_ => Err(Error::<T>::BancorPoolNotExist),
+				}
+			})?;
 		}
 
 		Ok(())

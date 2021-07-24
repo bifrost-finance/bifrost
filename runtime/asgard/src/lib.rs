@@ -312,15 +312,15 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..) |
-					Call::Council(..) | Call::TechnicalCommittee(..) |
-					Call::Elections(..) | Call::Treasury(..) |
-					Call::Bounties(..) | Call::Tips(..) |
-					Call::Utility(..)
+				Call::Democracy(..)
+					| Call::Council(..) | Call::TechnicalCommittee(..)
+					| Call::Elections(..)
+					| Call::Treasury(..) | Call::Bounties(..)
+					| Call::Tips(..) | Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
-			},
+			}
 		}
 	}
 
@@ -964,11 +964,13 @@ impl bifrost_salp::Config for Runtime {
 
 parameter_types! {
 	pub const InterventionPercentage: Percent = Percent::from_percent(75);
+	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
 }
 
 impl bifrost_bancor::Config for Runtime {
 	type Event = Event;
 	type InterventionPercentage = InterventionPercentage;
+	type DailyReleasePercentage = DailyReleasePercentage;
 	type MultiCurrency = Currencies;
 	type WeightInfo = bifrost_bancor::weights::BifrostWeight<Runtime>;
 }
