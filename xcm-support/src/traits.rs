@@ -43,7 +43,7 @@ pub trait HandleXcmpMessage {
 
 /// Bifrost Xcm Executor
 pub trait BifrostXcmExecutor {
-	fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>) -> XcmResult;
+	fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>, relay: bool) -> XcmResult;
 
 	fn ump_transfer_asset(
 		origin: MultiLocation,
