@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol, TransferOriginType};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
@@ -170,6 +170,7 @@ parameter_types! {
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromSelf;
 }
 
 parameter_types! {
@@ -195,6 +196,7 @@ impl salp::Config for Test {
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = salp::TestWeightInfo;
 }
 
@@ -205,7 +207,7 @@ pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 pub struct MockXcmExecutor;
 
 impl BifrostXcmExecutor for MockXcmExecutor {
-	fn ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>) -> XcmResult {
+	fn ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>, _relayer: bool) -> XcmResult {
 		let result = unsafe { MOCK_XCM_RESULT.0 };
 
 		match result {
@@ -231,12 +233,16 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let initial_balance = 100000 as u128;
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
-			(ALICE, NativeCurrencyId::get(), 100),
-			(BRUCE, NativeCurrencyId::get(), 100),
-			(CATHI, NativeCurrencyId::get(), 100),
+			(ALICE, NativeCurrencyId::get(), initial_balance),
+			(ALICE, RelayCurrencyId::get(), initial_balance),
+			(BRUCE, NativeCurrencyId::get(), initial_balance),
+			(BRUCE, RelayCurrencyId::get(), initial_balance),
+			(CATHI, NativeCurrencyId::get(), initial_balance),
+			(CATHI, RelayCurrencyId::get(), initial_balance),
 		],
 	}
 	.assimilate_storage(&mut t)

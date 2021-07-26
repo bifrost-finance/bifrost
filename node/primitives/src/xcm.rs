@@ -16,39 +16,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::weights::Weight;
-use sp_std::vec::Vec;
-use xcm::{
-	v0::{prelude::XcmResult, MultiLocation},
-	DoubleEncoded,
-};
+use codec::{Decode, Encode};
+use sp_std::prelude::*;
 
-pub trait HandleUmpMessage {
-	fn handle_ump_message(from: CumulusParaId, msg: &[u8], max_weight: Weight);
+/// The type used to represent the xcmp transfer direction
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
+pub enum TransferOriginType {
+	FromSelf = 0,
+	FromRelayChain = 1,
+	FromSiblingParaChain = 2,
 }
 
-pub trait HandleDmpMessage {
-	fn handle_dmp_message(at_relay_block: u32, msg: Vec<u8>, max_weight: Weight);
+pub struct XcmBaseWeight(u64);
+
+impl From<u64> for XcmBaseWeight {
+	fn from(u: u64) -> Self {
+		XcmBaseWeight(u)
+	}
 }
 
-pub trait HandleXcmpMessage {
-	fn handle_xcmp_message(
-		from: CumulusParaId,
-		at_relay_block: u32,
-		msg: &[u8],
-		max_weight: Weight,
-	);
-}
-
-/// Bifrost Xcm Executor
-pub trait BifrostXcmExecutor {
-	fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>, relay: bool) -> XcmResult;
-
-	fn ump_transfer_asset(
-		origin: MultiLocation,
-		dest: MultiLocation,
-		amount: u128,
-		relay: bool,
-	) -> XcmResult;
+impl From<XcmBaseWeight> for u64 {
+	fn from(x: XcmBaseWeight) -> Self {
+		x.0.into()
+	}
 }

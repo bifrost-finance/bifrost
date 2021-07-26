@@ -48,6 +48,7 @@ use xcm::{
 use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
 pub use xcm_executor::XcmExecutor;
 mod traits;
+pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
 
 #[cfg(test)]
@@ -149,15 +150,21 @@ impl<
 	}
 }
 
-pub struct BifrostXcmAdaptor<XcmSender>(PhantomData<XcmSender>);
+pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight>(PhantomData<(XcmSender, BaseXcmWeight)>);
 
-impl<XcmSender: SendXcm> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender> {
-	fn ump_transact(_origin: MultiLocation, call: DoubleEncoded<()>) -> XcmResult {
-		let message = Xcm::Transact {
+impl<XcmSender: SendXcm, BaseXcmWeight: Get<u64>> BifrostXcmExecutor
+	for BifrostXcmAdaptor<XcmSender, BaseXcmWeight>
+{
+	fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>, relay: bool) -> XcmResult {
+		let mut message = Xcm::Transact {
 			origin_type: OriginKind::SovereignAccount,
 			require_weight_at_most: u64::MAX,
 			call,
 		};
+
+		if relay {
+			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message) };
+		}
 
 		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
 	}
@@ -168,9 +175,18 @@ impl<XcmSender: SendXcm> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender> {
 		amount: u128,
 		relay: bool,
 	) -> XcmResult {
-		let mut message = Xcm::TransferAsset {
+		let mut message = Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible { id: MultiLocation::Null, amount }],
-			dest,
+			effects: vec![
+				Order::BuyExecution {
+					fees: MultiAsset::All,
+					weight: 0,
+					debt: 3 * BaseXcmWeight::get(),
+					halt_on_error: false,
+					xcm: vec![],
+				},
+				DepositAsset { assets: vec![All], dest },
+			],
 		};
 
 		if relay {
