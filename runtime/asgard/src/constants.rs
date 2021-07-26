@@ -28,6 +28,7 @@ pub mod currency {
 	pub const MILLICENTS: Balance = CENTS / 1_000;
 	pub const MILLIBNC: Balance = 1_000_000_000;
 	pub const MICROBNC: Balance = 1_000_000;
+	pub const XCM_WEIGHT: u64 = 1_000_000_000;
 
 	pub const fn deposit(items: u32, bytes: u32) -> Balance {
 		items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS

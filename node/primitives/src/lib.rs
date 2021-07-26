@@ -30,11 +30,13 @@ mod bridge;
 mod currency;
 mod tests;
 pub mod traits;
+mod xcm;
 
 pub use crate::{
 	bridge::*,
 	currency::{CurrencyId, TokenSymbol},
 	traits::*,
+	xcm::*,
 };
 
 /// An index to a block.

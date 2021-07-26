@@ -75,7 +75,9 @@ use bifrost_runtime_common::xcm_impl::{
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
+use node_primitives::{
+	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
+};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
@@ -751,8 +753,7 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
-	// How to withdraw and deposit an asset.(upgrade to BifrostAssetTransactor later)
-	type AssetTransactor = LocalAssetTransactor;
+	type AssetTransactor = BifrostAssetTransactor;
 	type Barrier = Barrier;
 	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
@@ -940,11 +941,13 @@ parameter_types! {
 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
+	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight>;
 	type DepositToken = NativeCurrencyId;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
@@ -959,6 +962,7 @@ impl bifrost_salp::Config for Runtime {
 	type SlotLength = SlotLength;
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
+	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = weights::pallet_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
 }
 
