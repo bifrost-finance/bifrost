@@ -18,6 +18,8 @@ orml-tokens = { version = "0.4.1-dev", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 num-bigint = { version = "0.4", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false, optional = true }
+
 
 [dev-dependencies]
 sp-core = "3.0.0"
@@ -38,4 +40,10 @@ std = [
     "node-primitives/std",
     "num-bigint/std",
     "sp-std/std",
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
 ]
