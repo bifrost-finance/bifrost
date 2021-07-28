@@ -42,7 +42,11 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 
 	let caller = account("fund_creator", id, 0);
 
-	assert_ok!(CurrencyOf::<T>::deposit(Salp::<T>::token(), &caller, T::SubmissionDeposit::get()));
+	assert_ok!(<T as Config>::MultiCurrency::deposit(
+		<T as Config>::DepositToken::get(),
+		&caller,
+		T::SubmissionDeposit::get()
+	));
 
 	assert_ok!(Salp::<T>::create(
 		RawOrigin::Signed(caller).into(),
@@ -71,8 +75,8 @@ benchmarks! {
 
 		let caller: T::AccountId = whitelisted_caller();
 
-		CurrencyOf::<T>::deposit(
-			Salp::<T>::token(),
+		<T as Config>::MultiCurrency::deposit(
+			<T as Config>::DepositToken::get(),
 			&caller,
 			T::SubmissionDeposit::get(),
 		)?;
