@@ -907,6 +907,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type Balance = Balance;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;

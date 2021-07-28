@@ -88,8 +88,8 @@ fn basic_setup() {
 		asset_1_currency_id
 	));
 
-	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number()
-		+ <Test as frame_system::Config>::BlockNumber::from(100u32);
+	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
+		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -113,8 +113,8 @@ fn basic_setup() {
 	println!("pool_0_2_account: {:?}", pool_0_2_account);
 
 	// pool 0 2
-	deadline = <frame_system::Pallet<Test>>::block_number()
-		+ <Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number() +
+		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
