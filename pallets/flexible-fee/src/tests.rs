@@ -20,7 +20,7 @@
 
 #![cfg(test)]
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 // use balances::Call as BalancesCall;
 use frame_support::{
@@ -31,16 +31,16 @@ use frame_support::{
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use sp_runtime::testing::TestXt;
+use sp_runtime::{testing::TestXt, AccountId32};
 use zenlink_protocol::AssetId;
 
-use crate::{mock::*, BlockNumberFor};
+use crate::{mock::*, BlockNumberFor, FeeDealer};
 
 // some common variables
-pub const ALICE: u128 = 1;
-pub const BOB: u128 = 2;
-pub const CHARLIE: u128 = 3;
-pub const DICK: u128 = 4;
+pub const CHARLIE: AccountId32 = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
+pub const ALICE: AccountId32 = AccountId32::new([2u8; 32]);
+pub const DICK: AccountId32 = AccountId32::new([3u8; 32]);
 pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
@@ -82,17 +82,14 @@ fn basic_setup() {
 	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
 	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
 
-	println!("asset_0_currency_id: {:?}", asset_0_currency_id);
-	println!("asset_1_currency_id: {:?}", asset_1_currency_id);
-
 	assert_ok!(ZenlinkProtocol::create_pair(
 		Origin::signed(ALICE),
 		asset_0_currency_id,
 		asset_1_currency_id
 	));
 
-	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number()
+		+ <Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -116,8 +113,8 @@ fn basic_setup() {
 	println!("pool_0_2_account: {:?}", pool_0_2_account);
 
 	// pool 0 2
-	deadline = <frame_system::Pallet<Test>>::block_number() +
-		<Test as frame_system::Config>::BlockNumber::from(100u32);
+	deadline = <frame_system::Pallet<Test>>::block_number()
+		+ <Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
 		Origin::signed(DICK),
 		asset_0_currency_id,
@@ -162,8 +159,8 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
-		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
-		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
 
 		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), default_order_list);
 
@@ -182,7 +179,6 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 // fixed.
 
 #[test]
-#[ignore]
 fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -195,10 +191,10 @@ fn ensure_can_charge_fee_should_work() {
 		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
-		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
-		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
 
 		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
 		let _ = FlexibleFee::set_user_fee_charge_order(
@@ -227,7 +223,7 @@ fn ensure_can_charge_fee_should_work() {
 			Currencies::total_balance(CURRENCY_ID_1, &pool_0_1_account)
 		);
 
-		assert_ok!(FlexibleFee::ensure_can_charge_fee(
+		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
 			&ALICE,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
@@ -241,7 +237,7 @@ fn ensure_can_charge_fee_should_work() {
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&ALICE), 150);
 
 		// Bob
-		assert_ok!(FlexibleFee::ensure_can_charge_fee(
+		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
 			&BOB,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
@@ -252,7 +248,6 @@ fn ensure_can_charge_fee_should_work() {
 }
 
 #[test]
-#[ignore]
 fn withdraw_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -265,7 +260,7 @@ fn withdraw_fee_should_work() {
 
 		// prepare info variable
 		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((CHARLIE.try_into().unwrap(), extra)));
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
 		let info = xt.get_dispatch_info();
 
 		// 99 inclusion fee and a tip of 8
@@ -276,7 +271,6 @@ fn withdraw_fee_should_work() {
 }
 
 #[test]
-#[ignore]
 fn correct_and_deposit_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -287,7 +281,7 @@ fn correct_and_deposit_fee_should_work() {
 			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
 		// prepare info variable
 		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((CHARLIE.try_into().unwrap(), extra)));
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
 		let info = xt.get_dispatch_info();
 
 		// prepare post info

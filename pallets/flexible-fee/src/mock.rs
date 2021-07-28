@@ -35,7 +35,7 @@ use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
-	Perbill,
+	AccountId32, Perbill,
 };
 use sp_std::cell::RefCell;
 use zenlink_protocol::{LocalAssetHandler, ZenlinkMultiAssets};
@@ -73,7 +73,7 @@ parameter_types! {
 
 impl system::Config for Test {
 	type AccountData = balances::AccountData<u64>;
-	type AccountId = u128;
+	type AccountId = AccountId32;
 	type BaseCallFilter = ();
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
@@ -172,6 +172,7 @@ impl crate::Config for Test {
 	type Balance = u64;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
+	type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;
@@ -197,7 +198,7 @@ impl orml_currencies::Config for Test {
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
-	// pub const SelfParaId: ParaId = ParaId{0: 2001};
+	pub const SelfParaId: u32 = 2001;
 }
 
 impl zenlink_protocol::Config for Test {
@@ -206,8 +207,7 @@ impl zenlink_protocol::Config for Test {
 	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
-	// type SelfParaId = SelfParaId;
-	type SelfParaId = ();
+	type SelfParaId = SelfParaId;
 	type TargetChains = ();
 	type XcmExecutor = ();
 }
