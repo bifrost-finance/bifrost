@@ -355,8 +355,12 @@ pub mod pallet {
 			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price());
 
 			// Check the balance of buyer
-			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, price_to_pay)
-				.map_err(|_| Error::<T>::CantPayThePrice)?;
+			T::MultiCurrency::ensure_can_withdraw(
+				T::InvoicingCurrency::get(),
+				&buyer,
+				price_to_pay,
+			)
+			.map_err(|_| Error::<T>::CantPayThePrice)?;
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
