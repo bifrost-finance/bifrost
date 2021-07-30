@@ -18,6 +18,7 @@
 
 #![cfg(test)]
 
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{GenesisBuild, OnFinalize, OnInitialize},
@@ -162,6 +163,17 @@ impl ExtBuilder {
 			(BOB, DOT, 1_000_000),
 			(BOB, VSKSM, 1_000_000),
 			(BOB, VSDOT, 1_000_000),
+		])
+	}
+
+	pub fn one_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		let whitelist_caller: AccountId = whitelisted_caller();
+
+		self.balances(vec![
+			(whitelist_caller.clone(), KSM, 2_000_000_000_000),
+			(whitelist_caller.clone(), DOT, 2_000_000_000_000),
+			(whitelist_caller.clone(), VSKSM, 2_000_000_000_000),
+			(whitelist_caller.clone(), VSDOT, 2_000_000_000_000),
 		])
 	}
 

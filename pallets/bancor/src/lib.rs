@@ -34,6 +34,9 @@ mod mock;
 mod tests;
 pub mod weights;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
+
 pub use pallet::*;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
