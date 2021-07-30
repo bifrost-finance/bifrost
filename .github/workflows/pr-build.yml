@@ -36,7 +36,9 @@ jobs:
       - name: Check All
         run: make check-all
       - name: Test All
-        run: make test-all
+        run: |
+          make test-all
+          make test-benchmarking
       - name: Inform buddies online
         uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
