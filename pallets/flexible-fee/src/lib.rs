@@ -44,7 +44,10 @@ use sp_runtime::{
 use sp_std::{vec, vec::Vec};
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
+use crate::fee_dealer::FeeDealer;
+
 mod default_weight;
+pub mod fee_dealer;
 mod mock;
 mod tests;
 
@@ -54,14 +57,6 @@ type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 
 pub trait WeightInfo {
 	fn set_user_fee_charge_order() -> Weight;
-}
-
-pub trait FeeDealer<AccountId, Balance> {
-	fn ensure_can_charge_fee(
-		who: &AccountId,
-		fee: Balance,
-		reason: WithdrawReasons,
-	) -> DispatchResult;
 }
 
 #[frame_support::pallet]
@@ -98,6 +93,13 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
+
+		#[pallet::constant]
+		type AlternativeFeeCurrencyId: Get<CurrencyId>;
+
+		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
+		#[pallet::constant]
+		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
 	}
 
 	pub type PalletBalanceOf<T> =
@@ -116,6 +118,7 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		FlexibleFeeExchanged(CurrencyId, u128), // token and amount
+		FixedRateFeeExchanged(CurrencyId, PalletBalanceOf<T>),
 	}
 
 	#[pallet::type_value]
@@ -146,7 +149,9 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		NotEnoughBalance,
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -263,12 +268,13 @@ where
 		} else {
 			WithdrawReasons::TRANSACTION_PAYMENT | WithdrawReasons::TIP
 		};
+
 		// Make sure there are enough BNC to be deducted if the user has assets in other form of
 		// tokens rather than BNC.
 		T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-		match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::KeepAlive) {
+		match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::AllowDeath) {
 			Ok(imbalance) => Ok(Some(imbalance)),
 			Err(_msg) => Err(InvalidTransaction::Payment.into()),
 		}
@@ -290,6 +296,10 @@ where
 		if let Some(paid) = already_withdrawn {
 			// Calculate how much refund we should return
 			let refund_amount = paid.peek().saturating_sub(corrected_fee);
+
+			#[cfg(feature = "std")]
+			println!("refund_amount: {:?}", refund_amount);
+
 			// refund to the the account that paid the fees. If this fails, the
 			// account might have dropped below the existential balance. In
 			// that case we don't refund anything.

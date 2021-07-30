@@ -24,7 +24,7 @@ use std::convert::TryFrom;
 
 // use balances::Call as BalancesCall;
 use frame_support::{
-	assert_ok,
+	assert_noop, assert_ok,
 	traits::WithdrawReasons,
 	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
 };
@@ -179,6 +179,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 // fixed.
 
 #[test]
+#[ignore]
 fn ensure_can_charge_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -248,6 +249,7 @@ fn ensure_can_charge_fee_should_work() {
 }
 
 #[test]
+#[ignore]
 fn withdraw_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -271,6 +273,7 @@ fn withdraw_fee_should_work() {
 }
 
 #[test]
+#[ignore]
 fn correct_and_deposit_fee_should_work() {
 	new_test_ext().execute_with(|| {
 		basic_setup();
@@ -304,5 +307,129 @@ fn correct_and_deposit_fee_should_work() {
 		));
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 120);
+	});
+}
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn ensure_can_charge_fee_v2_should_work() {
+	new_test_ext().execute_with(|| {
+		// Deposit 500 DOT and none of native token to Alice's account
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::DOT), &ALICE, 500));
+
+		assert_noop!(
+			<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+				&ALICE,
+				100,
+				WithdrawReasons::TRANSACTION_PAYMENT,
+			),
+			crate::Error::<Test>::NotEnoughBalance
+		);
+
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 1));
+
+		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+			&ALICE,
+			100,
+			WithdrawReasons::TRANSACTION_PAYMENT,
+		));
+
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Token(TokenSymbol::KSM),
+				&ALICE
+			),
+			0
+		);
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Native(TokenSymbol::ASG),
+				&ALICE
+			),
+			100
+		);
+	});
+}
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn withdraw_fee_should_work_v2() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &CHARLIE, 2));
+
+		// prepare call variable
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
+		let call =
+			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+
+		// prepare info variable
+		let extra = ();
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+		let info = xt.get_dispatch_info();
+
+		// println!("info: {:?}", info);
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 0);
+
+		// 99 inclusion fee and a tip of 8
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 0);
+	});
+}
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn correct_and_deposit_fee_should_work_v2() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &CHARLIE, 2));
+		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::ASG), &CHARLIE, 30));
+		// prepare call variable
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
+		let call =
+			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+		// prepare info variable
+		let extra = ();
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+		let info = xt.get_dispatch_info();
+
+		// prepare post info
+		let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
+
+		let corrected_fee = 80;
+		let tip = 8;
+
+		let already_withdrawn = FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 30);
+
+		// Since the fee withdrawl mode if allowdeath, if the account is destroyed
+		// due to balance less than the existential deposit, no refund will be returned.
+		assert_ok!(FlexibleFee::correct_and_deposit_fee(
+			&CHARLIE,
+			&info,
+			&post_info,
+			corrected_fee,
+			tip,
+			already_withdrawn
+		));
+
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Native(TokenSymbol::ASG),
+				&CHARLIE
+			),
+			57
+		);
+
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Token(TokenSymbol::KSM),
+				&CHARLIE
+			),
+			1
+		);
 	});
 }

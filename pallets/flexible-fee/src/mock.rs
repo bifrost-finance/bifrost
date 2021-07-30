@@ -22,7 +22,6 @@ use std::convert::TryInto;
 
 // pub use polkadot_parachain::primitives::Id;
 pub use cumulus_primitives_core::ParaId;
-// use node_primitives::Balance;
 use frame_support::{
 	parameter_types,
 	weights::{IdentityFee, WeightToFeeCoefficients, WeightToFeePolynomial},
@@ -42,6 +41,8 @@ use zenlink_protocol::{LocalAssetHandler, ZenlinkMultiAssets};
 
 use super::*;
 use crate as flexible_fee;
+// use node_primitives::Balance;
+use crate::fee_dealer::FixedCurrencyFeeRate;
 
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -166,16 +167,21 @@ impl orml_tokens::Config for Test {
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 }
 
 impl crate::Config for Test {
 	type Balance = u64;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
-	type FeeDealer = FlexibleFee;
+	type FeeDealer = FixedCurrencyFeeRate<Test>;
+	// type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;
+	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
 }
