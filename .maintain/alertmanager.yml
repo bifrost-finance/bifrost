@@ -1,0 +1,24 @@
+route:
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  receiver: 'slack'
+receivers:
+- name: 'web.hook'
+  webhook_configs:
+  - url: 'http://127.0.0.1:5001/'
+- name: 'slack'
+  slack_configs:
+    - api_url: "https://hooks.slack.com/services/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"
+      channel: "#alert"
+      text: "{{ range .Alerts }} {{ .Annotations.description}}\n {{end}} {{ .CommonAnnotations.username}} <{{.CommonAnnotations.link}}| click here>"
+      title: "{{.CommonAnnotations.summary}}"
+      title_link: "{{.CommonAnnotations.link}}"
+      color: "{{.CommonAnnotations.color}}"  
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
