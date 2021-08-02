@@ -24,10 +24,14 @@
 
 pub use client::*;
 pub use collator::*;
+#[cfg(feature = "with-dev-runtime")]
+pub use dev::*;
 
 pub mod chain_spec;
 mod client;
 pub mod collator;
+#[cfg(feature = "with-dev-runtime")]
+pub mod dev;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {
@@ -36,6 +40,9 @@ pub trait IdentifyVariant {
 
 	/// Returns if this is a configuration for the `Bifrost` network.
 	fn is_bifrost(&self) -> bool;
+
+	/// Returns if this is a configuration for the `Dev` network.
+	fn is_asgard_dev(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
@@ -45,5 +52,9 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 
 	fn is_bifrost(&self) -> bool {
 		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
+	}
+
+	fn is_asgard_dev(&self) -> bool {
+		self.id().starts_with("asgard-dev") || self.id().starts_with("dev")
 	}
 }
