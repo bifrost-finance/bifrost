@@ -75,9 +75,9 @@ macro_rules! create_currency_id {
 			type Error = ();
 			fn try_from(id: CurrencyId) -> Result<AssetId, ()> {
 				let _index = match id {
-					$(CurrencyId::Token(TokenSymbol::$symbol) => Ok((0_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((0_u32, TokenSymbol::$symbol as u32)),)*
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => Ok((1_u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((2_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::Token(TokenSymbol::$symbol) => Ok((2_u32, TokenSymbol::$symbol as u32)),)*
 					$(CurrencyId::Stable(TokenSymbol::$symbol) => Ok((3_u32, TokenSymbol::$symbol as u32)),)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((4_u32, TokenSymbol::$symbol as u32)),)*
 					_ => Err(()),
@@ -110,9 +110,9 @@ macro_rules! create_currency_id {
 					_ => Err(()),
 				};
 				match c_discr {
-					0 => Ok(CurrencyId::Token(token_symbol?)),
+					0 => Ok(CurrencyId::Native(token_symbol?)),
 					1 => Ok(CurrencyId::VToken(token_symbol?)),
-					2 => Ok(CurrencyId::Native(token_symbol?)),
+					2 => Ok(CurrencyId::Token(token_symbol?)),
 					3 => Ok(CurrencyId::Stable(token_symbol?)),
 					4 => Ok(CurrencyId::VSToken(token_symbol?)),
 					_ => Err(()),
@@ -245,9 +245,9 @@ impl Default for TokenSymbol {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum CurrencyId {
-	Token(TokenSymbol),
-	VToken(TokenSymbol),
 	Native(TokenSymbol),
+	VToken(TokenSymbol),
+	Token(TokenSymbol),
 	Stable(TokenSymbol),
 	VSToken(TokenSymbol),
 	VSBond(TokenSymbol, ParaId, LeasePeriod, LeasePeriod),
@@ -289,9 +289,9 @@ impl CurrencyId {
 
 	pub fn discriminant(&self) -> u8 {
 		match *self {
-			Self::Token(..) => 0,
+			Self::Native(..) => 0,
 			Self::VToken(..) => 1,
-			Self::Native(..) => 2,
+			Self::Token(..) => 2,
 			Self::Stable(..) => 3,
 			Self::VSToken(..) => 4,
 			Self::VSBond(..) => 5,
@@ -361,9 +361,9 @@ impl TryFrom<u64> for CurrencyId {
 		let token_symbol = TokenSymbol::try_from(t_discr)?;
 
 		match c_discr {
-			0 => Ok(Self::Token(token_symbol)),
+			0 => Ok(Self::Native(token_symbol)),
 			1 => Ok(Self::VToken(token_symbol)),
-			2 => Ok(Self::Native(token_symbol)),
+			2 => Ok(Self::Token(token_symbol)),
 			3 => Ok(Self::Stable(token_symbol)),
 			4 => Ok(Self::VSToken(token_symbol)),
 			5 => Ok(Self::VSBond(token_symbol, pid, lp1, lp2)),

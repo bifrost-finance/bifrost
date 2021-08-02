@@ -20,27 +20,27 @@
 
 #![cfg(test)]
 
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 
 // use balances::Call as BalancesCall;
 use frame_support::{
-	assert_ok,
+	assert_noop, assert_ok,
 	traits::WithdrawReasons,
 	weights::{GetDispatchInfo, Pays, PostDispatchInfo},
 };
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use pallet_transaction_payment::OnChargeTransaction;
-use sp_runtime::testing::TestXt;
+use sp_runtime::{testing::TestXt, AccountId32};
 use zenlink_protocol::AssetId;
 
-use crate::{mock::*, BlockNumberFor};
+use crate::{mock::*, BlockNumberFor, FeeDealer};
 
 // some common variables
-pub const ALICE: u128 = 1;
-pub const BOB: u128 = 2;
-pub const CHARLIE: u128 = 3;
-pub const DICK: u128 = 4;
+pub const CHARLIE: AccountId32 = AccountId32::new([0u8; 32]);
+pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
+pub const ALICE: AccountId32 = AccountId32::new([2u8; 32]);
+pub const DICK: AccountId32 = AccountId32::new([3u8; 32]);
 pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
@@ -81,9 +81,6 @@ fn basic_setup() {
 	let asset_0_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
 	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
 	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
-
-	println!("asset_0_currency_id: {:?}", asset_0_currency_id);
-	println!("asset_1_currency_id: {:?}", asset_1_currency_id);
 
 	assert_ok!(ZenlinkProtocol::create_pair(
 		Origin::signed(ALICE),
@@ -162,8 +159,8 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
-		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
-		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
 
 		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), default_order_list);
 
@@ -195,10 +192,10 @@ fn ensure_can_charge_fee_should_work() {
 		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
-		default_order_list.push(CurrencyId::Token(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
-		default_order_list.push(CurrencyId::VToken(TokenSymbol::ETH));
+		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
 
 		// Set bob order as [4,3,2,1]. Alice and Charlie will use the default order of [0..11]]
 		let _ = FlexibleFee::set_user_fee_charge_order(
@@ -227,7 +224,7 @@ fn ensure_can_charge_fee_should_work() {
 			Currencies::total_balance(CURRENCY_ID_1, &pool_0_1_account)
 		);
 
-		assert_ok!(FlexibleFee::ensure_can_charge_fee(
+		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
 			&ALICE,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
@@ -241,7 +238,7 @@ fn ensure_can_charge_fee_should_work() {
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&ALICE), 150);
 
 		// Bob
-		assert_ok!(FlexibleFee::ensure_can_charge_fee(
+		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
 			&BOB,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
@@ -265,7 +262,7 @@ fn withdraw_fee_should_work() {
 
 		// prepare info variable
 		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((CHARLIE.try_into().unwrap(), extra)));
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
 		let info = xt.get_dispatch_info();
 
 		// 99 inclusion fee and a tip of 8
@@ -287,7 +284,7 @@ fn correct_and_deposit_fee_should_work() {
 			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
 		// prepare info variable
 		let extra = ();
-		let xt = TestXt::new(call.clone(), Some((CHARLIE.try_into().unwrap(), extra)));
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
 		let info = xt.get_dispatch_info();
 
 		// prepare post info
@@ -310,5 +307,129 @@ fn correct_and_deposit_fee_should_work() {
 		));
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 120);
+	});
+}
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn ensure_can_charge_fee_v2_should_work() {
+	new_test_ext().execute_with(|| {
+		// Deposit 500 DOT and none of native token to Alice's account
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::DOT), &ALICE, 500));
+
+		assert_noop!(
+			<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+				&ALICE,
+				100,
+				WithdrawReasons::TRANSACTION_PAYMENT,
+			),
+			crate::Error::<Test>::NotEnoughBalance
+		);
+
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 1));
+
+		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+			&ALICE,
+			100,
+			WithdrawReasons::TRANSACTION_PAYMENT,
+		));
+
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Token(TokenSymbol::KSM),
+				&ALICE
+			),
+			0
+		);
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Native(TokenSymbol::ASG),
+				&ALICE
+			),
+			100
+		);
+	});
+}
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn withdraw_fee_should_work_v2() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &CHARLIE, 2));
+
+		// prepare call variable
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
+		let call =
+			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+
+		// prepare info variable
+		let extra = ();
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+		let info = xt.get_dispatch_info();
+
+		// println!("info: {:?}", info);
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 0);
+
+		// 99 inclusion fee and a tip of 8
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 0);
+	});
+}
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn correct_and_deposit_fee_should_work_v2() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &CHARLIE, 2));
+		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::ASG), &CHARLIE, 30));
+		// prepare call variable
+		let asset_order_list_vec: Vec<CurrencyId> =
+			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
+		let call =
+			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+		// prepare info variable
+		let extra = ();
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+		let info = xt.get_dispatch_info();
+
+		// prepare post info
+		let post_info = PostDispatchInfo { actual_weight: Some(20), pays_fee: Pays::Yes };
+
+		let corrected_fee = 80;
+		let tip = 8;
+
+		let already_withdrawn = FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 30);
+
+		// Since the fee withdrawl mode if allowdeath, if the account is destroyed
+		// due to balance less than the existential deposit, no refund will be returned.
+		assert_ok!(FlexibleFee::correct_and_deposit_fee(
+			&CHARLIE,
+			&info,
+			&post_info,
+			corrected_fee,
+			tip,
+			already_withdrawn
+		));
+
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Native(TokenSymbol::ASG),
+				&CHARLIE
+			),
+			57
+		);
+
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Token(TokenSymbol::KSM),
+				&CHARLIE
+			),
+			1
+		);
 	});
 }
