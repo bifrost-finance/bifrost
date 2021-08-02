@@ -21,108 +21,57 @@
 [![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_finance)
 [![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-finance)
 
-# Building
-
-Install Rust:
+## Install Rust and required tools
 
 ```bash
 curl https://sh.rustup.rs -sSf | sh
+make init
 ```
 
-Install required tools:
+## Testing
 
 ```bash
-./scripts/init.sh
+make test-all
 ```
 
-Build all native code:
+## Generate runtime weights
+
+if runtime logic change we may do the benchmarking to regenerate WeightInfo for dispatch calls
 
 ```bash
-cargo build
+make run-benchmarking
 ```
 
-# Run
-
-### Normal way
-You can start a development chain with:
+## Build binary
 
 ```bash
-cargo run -- --dev
+make build-all-release
 ```
 
-Detailed logs may be shown by running the node with the following environment variables set: `RUST_LOG=debug RUST_BACKTRACE=1 cargo run -- --dev`.
+## Run local testnet polkadot-launch
 
-If you want to see the multi-node consensus algorithm in action locally, then you can create a local testnet with two validator nodes for Alice and Bob, who are the initial authorities of the genesis chain that have been endowed with testnet units. Give each node a name and expose them so they are listed on the Polkadot [telemetry site](https://telemetry.polkadot.io/#/Local%20Testnet). You'll need two terminal windows open.
-
-We'll start Alice's bifrost node first on default TCP port 30333 with her chain database stored locally at `/tmp/alice`. The bootnode ID of her node is `12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp`, which is generated from the `--node-key` value that we specify below:
+Install `polkadot-launch`:
 
 ```bash
-cargo run -- \
---base-path /tmp/alice \
---chain=dev \
---alice \
---port 30333 \
---node-key 0000000000000000000000000000000000000000000000000000000000000001 \
---telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
---validator
+yarn global add polkadot-launch
+cd -
 ```
 
-In the second terminal, we'll start Bob's bifrost node on a different TCP port of 30334, and with his chain database stored locally at `/tmp/bob`. We'll specify a value for the `--bootnodes` option that will connect his node to Alice's bootnode ID on TCP port 30333:
+Build polkadot:
 
 ```bash
-cargo run -- \
---base-path /tmp/bob \
---bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp \
---chain=dev \
---bob \
---port 30334 \
---telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
---validator
+git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
+cd /tmp/polkadot
+git checkout release-v0.9.8
+cargo build --release
+cd -
 ```
 
-Additional CLI usage options are available and may be shown by running `cargo run -- --help`.
+Launch Polkadot and the parachain:
 
-### Quick way
-You can use docker to run Bifrost chain, and you don't need to install rust.
-
-If docker isn't installed on your machine, just check here to install it: [Docker Installation](https://docs.docker.com/install/).
-
-After installation, pull the docker image by the following command:
 ```bash
-docker pull bifrostnetwork/bifrost:v0.4.0
+cd -
+polkadot-launch ./scripts/bifrost-launch.json
 ```
 
-#### Start a single chain
-Run the chain in quick way:
-```bash
-docker run -p 9944:9944 bifrostnetwork/bifrost:v0.4.0 --unsafe-ws-external --ws-port 9944 --dev
-```
-
-#### Start multi-nodes
-
-Start alice node.
-```bash
-docker run -p 9944:9944 --name=alice bifrostnetwork/bifrost:v0.4.0 --base-path /tmp/alice \
---unsafe-ws-external \
---ws-port 9944 \
---chain=dev \
---alice \
---node-key 0000000000000000000000000000000000000000000000000000000000000001 \
---telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
---validator
-```
-
-Start bob node.
-```bash
-docker run -p 9933:9933 --name=bob bifrostnetwork/bifrost:v0.4.0 --base-path /tmp/bob \
---bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp \
---chain=dev \
---unsafe-ws-external \
---ws-port 9933 \
---bob \
---port 30334 \
---telemetry-url 'wss://telemetry.polkadot.io/submit/ 0' \
---validator
-```
-
-Ensure both nodes are synchronizing each other.
+It will take about 1-2 minutes for the parachain to start producing blocks.
