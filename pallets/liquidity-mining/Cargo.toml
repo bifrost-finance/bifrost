@@ -12,6 +12,7 @@ sp-std = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [features]
 default = ["std"]
@@ -21,4 +22,5 @@ std = [
     "frame-system/std",
     "frame-support/std",
     "node-primitives/std",
+    "orml-traits/std",
 ]
