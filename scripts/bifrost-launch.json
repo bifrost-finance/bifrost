@@ -1,0 +1,80 @@
+{
+	"relaychain": {
+		"bin": "/tmp/polkadot/target/release/polkadot",
+		"chain": "kusama-local",
+		"nodes": [
+			{
+				"name": "alice",
+				"wsPort": 18844,
+				"port": 38844,
+				"flags": [
+					"--unsafe-ws-external",
+					"--unsafe-rpc-external",
+					"--rpc-cors=all",
+					"--rpc-methods=Unsafe"
+				]
+			},
+			{
+				"name": "bob",
+				"wsPort": 18845,
+				"port": 38845
+			},
+			{
+				"name": "charlie",
+				"wsPort": 18846,
+				"port": 38846
+			},
+			{
+				"name": "dave",
+				"wsPort": 18847,
+				"port": 38847
+			}
+		],
+		"runtime_genesis_config": {
+			"parachainsConfiguration": {
+				"config": {
+					"validation_upgrade_frequency": 1,
+					"validation_upgrade_delay": 1
+				}
+			}
+		}
+	},
+	"parachains": [
+		{
+			"bin": "./target/release/bifrost",
+			"id": "3000",
+			"balance": "1000000000000000000000",
+			"chain": "asgard-local",
+			"nodes": [
+				{
+					"wsPort": 18848,
+					"port": 38848,
+					"name": "alice",
+					"flags": [
+						"--unsafe-ws-external",
+						"--unsafe-rpc-external",
+						"--rpc-cors=all",
+						"--rpc-methods=Unsafe",
+						"--",
+						"--no-beefy",
+						"--execution=wasm"
+					]
+				},
+				{
+					"wsPort": 18849,
+					"port": 38849,
+					"name": "bob",
+					"flags": [
+						"--",
+						"--no-beefy",
+						"--execution=wasm"
+					]
+				}
+			]
+		}
+	],
+	"hrmpChannels": [
+	],
+	"types": {},
+	"finalization": false
+}
