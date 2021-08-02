@@ -69,6 +69,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use bifrost_flexible_fee::fee_dealer::FixedCurrencyFeeRate;
 use bifrost_runtime_common::xcm_impl::{
 	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
 };
@@ -903,13 +904,22 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+}
+
 impl bifrost_flexible_fee::Config for Runtime {
 	type Balance = Balance;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
+	// type FeeDealer = FlexibleFee;
+	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type NativeCurrencyId = NativeCurrencyId;
+	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
 }
