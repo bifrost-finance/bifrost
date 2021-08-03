@@ -30,12 +30,12 @@ fn currency_id_from_string_should_work() {
 
 #[test]
 fn currency_id_to_u64_should_work() {
-	let e00 = CurrencyId::Token(TokenSymbol::ASG);
-	let e01 = CurrencyId::Token(TokenSymbol::BNC);
-	let e02 = CurrencyId::Token(TokenSymbol::AUSD);
-	let e03 = CurrencyId::Token(TokenSymbol::DOT);
-	let e04 = CurrencyId::Token(TokenSymbol::KSM);
-	let e05 = CurrencyId::Token(TokenSymbol::ETH);
+	let e00 = CurrencyId::Native(TokenSymbol::ASG);
+	let e01 = CurrencyId::Native(TokenSymbol::BNC);
+	let e02 = CurrencyId::Native(TokenSymbol::AUSD);
+	let e03 = CurrencyId::Native(TokenSymbol::DOT);
+	let e04 = CurrencyId::Native(TokenSymbol::KSM);
+	let e05 = CurrencyId::Native(TokenSymbol::ETH);
 
 	assert_eq!(0x0000_0000_0000_0000, e00.currency_id());
 	assert_eq!(0x0001_0000_0000_0000, e01.currency_id());
@@ -58,12 +58,12 @@ fn currency_id_to_u64_should_work() {
 	assert_eq!(0x0104_0000_0000_0000, e14.currency_id());
 	assert_eq!(0x0105_0000_0000_0000, e15.currency_id());
 
-	let e20 = CurrencyId::Native(TokenSymbol::ASG);
-	let e21 = CurrencyId::Native(TokenSymbol::BNC);
-	let e22 = CurrencyId::Native(TokenSymbol::AUSD);
-	let e23 = CurrencyId::Native(TokenSymbol::DOT);
-	let e24 = CurrencyId::Native(TokenSymbol::KSM);
-	let e25 = CurrencyId::Native(TokenSymbol::ETH);
+	let e20 = CurrencyId::Token(TokenSymbol::ASG);
+	let e21 = CurrencyId::Token(TokenSymbol::BNC);
+	let e22 = CurrencyId::Token(TokenSymbol::AUSD);
+	let e23 = CurrencyId::Token(TokenSymbol::DOT);
+	let e24 = CurrencyId::Token(TokenSymbol::KSM);
+	let e25 = CurrencyId::Token(TokenSymbol::ETH);
 
 	assert_eq!(0x0200_0000_0000_0000, e20.currency_id());
 	assert_eq!(0x0201_0000_0000_0000, e21.currency_id());
@@ -117,12 +117,12 @@ fn currency_id_to_u64_should_work() {
 
 #[test]
 fn u64_to_currency_id_should_work() {
-	let e00 = CurrencyId::Token(TokenSymbol::ASG);
-	let e01 = CurrencyId::Token(TokenSymbol::BNC);
-	let e02 = CurrencyId::Token(TokenSymbol::AUSD);
-	let e03 = CurrencyId::Token(TokenSymbol::DOT);
-	let e04 = CurrencyId::Token(TokenSymbol::KSM);
-	let e05 = CurrencyId::Token(TokenSymbol::ETH);
+	let e00 = CurrencyId::Native(TokenSymbol::ASG);
+	let e01 = CurrencyId::Native(TokenSymbol::BNC);
+	let e02 = CurrencyId::Native(TokenSymbol::AUSD);
+	let e03 = CurrencyId::Native(TokenSymbol::DOT);
+	let e04 = CurrencyId::Native(TokenSymbol::KSM);
+	let e05 = CurrencyId::Native(TokenSymbol::ETH);
 
 	assert_eq!(e00, CurrencyId::try_from(0x0000_0000_0000_0000).unwrap());
 	assert_eq!(e01, CurrencyId::try_from(0x0001_0000_0000_0000).unwrap());
@@ -145,12 +145,12 @@ fn u64_to_currency_id_should_work() {
 	assert_eq!(e14, CurrencyId::try_from(0x0104_0000_0000_0000).unwrap());
 	assert_eq!(e15, CurrencyId::try_from(0x0105_0000_0000_0000).unwrap());
 
-	let e20 = CurrencyId::Native(TokenSymbol::ASG);
-	let e21 = CurrencyId::Native(TokenSymbol::BNC);
-	let e22 = CurrencyId::Native(TokenSymbol::AUSD);
-	let e23 = CurrencyId::Native(TokenSymbol::DOT);
-	let e24 = CurrencyId::Native(TokenSymbol::KSM);
-	let e25 = CurrencyId::Native(TokenSymbol::ETH);
+	let e20 = CurrencyId::Token(TokenSymbol::ASG);
+	let e21 = CurrencyId::Token(TokenSymbol::BNC);
+	let e22 = CurrencyId::Token(TokenSymbol::AUSD);
+	let e23 = CurrencyId::Token(TokenSymbol::DOT);
+	let e24 = CurrencyId::Token(TokenSymbol::KSM);
+	let e25 = CurrencyId::Token(TokenSymbol::ETH);
 
 	assert_eq!(e20, CurrencyId::try_from(0x0200_0000_0000_0000).unwrap());
 	assert_eq!(e21, CurrencyId::try_from(0x0201_0000_0000_0000).unwrap());

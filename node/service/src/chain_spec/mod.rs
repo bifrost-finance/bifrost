@@ -20,6 +20,8 @@
 pub mod asgard;
 #[cfg(feature = "with-bifrost-runtime")]
 pub mod bifrost;
+#[cfg(feature = "with-dev-runtime")]
+pub mod dev;
 
 pub use node_primitives::{AccountId, Block, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};

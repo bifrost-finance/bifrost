@@ -1,0 +1,38 @@
+# my global config
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ['localhost:9093']
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "rule_node.yml"
+  - "rule_para.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is for prometheus itself added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+
+  # The job is for `node_exporter` https://github.com/prometheus/node_exporter with the prefix 'node_'
+  - job_name: 'node'
+    static_configs:
+    - targets: ['localhost:9100']  
+
+  # The job is for `polka_substrate_node` with the prefix 'polkadot_'
+  - job_name: 'polka_node'
+    # Override the global default and scrape targets from this job every 5 seconds.
+    # ** NOTE: you want to have this *LESS THAN* the block time in order to ensure
+    # ** that you have a data point for every block!
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['localhost:9615']  

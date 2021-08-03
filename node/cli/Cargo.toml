@@ -69,6 +69,9 @@ with-asgard-runtime = [
 with-bifrost-runtime = [
 	"node-service/with-bifrost-runtime",
 ]
+with-dev-runtime = [
+	"node-service/with-dev-runtime"
+]
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",

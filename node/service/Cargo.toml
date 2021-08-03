@@ -15,22 +15,31 @@ sc-telemetry = { version = "3.0.0" }
 sc-transaction-pool = { version = "3.0.0" }
 sc-tracing = { version = "3.0.0" }
 sc-service = { version = "0.9.0", default-features = false }
+sc-consensus = { version = "0.9.0" }
+sc-consensus-manual-seal = { version = "0.9.0" }
+sc-consensus-aura = { version = "0.9.0" }
+sc-finality-grandpa = { version = "0.9.0" }
+sc-consensus-slots = { version = "0.9.0"}
+sc-rpc-api = { version = "0.9.0"}
+sc-rpc = { version = "3.0.0" }
+sc-keystore = { version = "3.0.0" }
 frame-benchmarking = {  version = "3.0.0", default-features = false }
 
 # Substrate Primitives
 sp-consensus-aura = { version = "0.9.0" }
 sp-consensus = { version = "0.9.0" }
-grandpa_primitives = { package = "sp-finality-grandpa", version = "3.0.0" }
+sp-finality-grandpa = { version = "3.0.0" }
+sp-inherents = { version = "3.0.0" }
 sp-api = { version = "3.0.0" }
 sp-block-builder = { version = "3.0.0" }
 sp-blockchain = { version = "3.0.0" }
 sp-core = { version = "3.0.0" }
 sp-keystore = { version = "0.9.0" }
 sp-offchain = { package = "sp-offchain", version = "3.0.0" }
-sc-rpc = { version = "3.0.0" }
 sp-runtime = { version = "3.0.0" }
 sp-session = { version = "3.0.0" }
 sp-storage = { version = "3.0.0" }
+sp-trie = { version = "3.0.0" }
 sp-timestamp = { version = "3.0.0" }
 sp-transaction-pool = { version = "3.0.0" }
 
@@ -40,6 +49,7 @@ pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0" }
 # Substrate Other
 frame-system-rpc-runtime-api = { version = "3.0.0" }
 substrate-prometheus-endpoint = { version = "0.9.0" }
+substrate-frame-rpc-system = { version = "3.0.0" }
 
 # Cumulus dependencies
 cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
@@ -61,6 +71,7 @@ serde_json = "1.0.60"
 # Runtimes
 asgard-runtime = { path = "../../runtime/asgard", optional = true }
 bifrost-runtime = { path = "../../runtime/bifrost", optional = true }
+dev-runtime = { path = "../../runtime/dev", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
@@ -85,6 +96,9 @@ with-asgard-runtime = [
 ]
 with-bifrost-runtime = [
 	"bifrost-runtime",
+]
+with-dev-runtime = [
+	"dev-runtime",
 ]
 with-all-runtime = [
 	"with-asgard-runtime",

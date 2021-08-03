@@ -16,6 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Tests for the module.
+use substrate_wasm_builder::WasmBuilder;
 
-#![cfg(test)]
+fn main() {
+	WasmBuilder::new()
+		.with_current_project()
+		.export_heap_base()
+		.import_memory()
+		.append_to_rust_flags("-C opt-level=z") // shrink the size of wasm binary
+		.append_to_rust_flags("-C linker-plugin-lto")
+		.build()
+}

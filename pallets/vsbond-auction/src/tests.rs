@@ -25,7 +25,7 @@ use crate::{mock::*, *};
 #[test]
 fn create_order_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
 
 		assert_eq!(Auction::order_id(), 1);
 
@@ -46,8 +46,8 @@ fn create_order_should_work() {
 #[test]
 fn double_create_order_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
 
 		assert_eq!(Auction::order_id(), 2);
 
@@ -71,11 +71,11 @@ fn double_create_order_should_work() {
 fn create_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Auction::create_order(Origin::root(), 3000, 13, 20, 100, 1.to_fixed()),
+			Auction::create_order(Origin::root(), 3000, 13, 20, 100, 100),
 			DispatchError::BadOrigin
 		);
 		assert_noop!(
-			Auction::create_order(Origin::none(), 3000, 13, 20, 100, 1.to_fixed()),
+			Auction::create_order(Origin::none(), 3000, 13, 20, 100, 100),
 			DispatchError::BadOrigin
 		);
 	});
@@ -85,7 +85,7 @@ fn create_order_by_origin_illegal_should_fail() {
 fn create_order_under_minimum_supply_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 0, 1.to_fixed()),
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 0, 0),
 			Error::<Test>::NotEnoughSupply
 		);
 	});
@@ -95,14 +95,14 @@ fn create_order_under_minimum_supply_should_fail() {
 fn create_order_without_enough_vsbond_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1000, 1.to_fixed()),
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1000, 1000),
 			Error::<Test>::NotEnoughBalanceToReserve,
 		);
 
 		const LOCK_ID: LockIdentifier = 0u64.to_be_bytes();
 		assert_ok!(Tokens::set_lock(LOCK_ID, VSBOND, &ALICE, 50));
 		assert_noop!(
-			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 51, 1.to_fixed()),
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 51, 51),
 			Error::<Test>::NotEnoughBalanceToReserve,
 		);
 	});
@@ -112,11 +112,11 @@ fn create_order_without_enough_vsbond_should_fail() {
 fn create_order_exceed_maximum_order_in_trade_should_fail() {
 	new_test_ext().execute_with(|| {
 		for _ in 0..MaximumOrderInTrade::get() {
-			assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1.to_fixed()));
+			assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1));
 		}
 
 		assert_noop!(
-			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1.to_fixed()),
+			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 1, 1),
 			Error::<Test>::ExceedMaximumOrderInTrade,
 		);
 	});
@@ -125,7 +125,7 @@ fn create_order_exceed_maximum_order_in_trade_should_fail() {
 #[test]
 fn revoke_order_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 
 		assert_eq!(Auction::order_id(), 1);
@@ -150,7 +150,7 @@ fn revoke_order_should_work() {
 #[test]
 fn revoke_order_which_be_partial_clinchd_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 25));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 
@@ -177,18 +177,14 @@ fn revoke_order_which_be_partial_clinchd_should_work() {
 #[test]
 fn revoke_order_not_exist_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
-		assert_noop!(
-			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 25),
-			Error::<Test>::NotFindOrderInfo
-		);
+		assert_noop!(Auction::revoke_order(Some(ALICE).into(), 0), Error::<Test>::NotFindOrderInfo);
 	});
 }
 
 #[test]
 fn revoke_order_without_enough_reserved_vsbond_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
 		assert_ok!(Tokens::repatriate_reserved(
 			VSBOND,
 			&ALICE,
@@ -206,7 +202,7 @@ fn revoke_order_without_enough_reserved_vsbond_should_fail() {
 #[test]
 fn revoke_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
 		assert_noop!(
 			Auction::revoke_order(Some(BRUCE).into(), 0),
 			Error::<Test>::ForbidRevokeOrderWithoutOwnership
@@ -219,14 +215,14 @@ fn revoke_order_by_origin_illegal_should_fail() {
 #[test]
 fn revoke_order_not_in_trade_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 		assert_noop!(
 			Auction::revoke_order(Some(ALICE).into(), 0),
 			Error::<Test>::ForbidRevokeOrderNotInTrade
 		);
 
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 50, 50));
 		assert_ok!(Auction::clinch_order(Some(BRUCE).into(), 1));
 		assert_noop!(
 			Auction::revoke_order(Some(ALICE).into(), 1),
@@ -238,7 +234,7 @@ fn revoke_order_not_in_trade_should_fail() {
 #[test]
 fn partial_clinch_order_should_work() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 0.33.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 33));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
 
 		assert_eq!(Auction::order_id(), 1);
@@ -304,7 +300,7 @@ fn partial_clinch_order_should_work() {
 #[test]
 fn partial_clinch_order_not_exist_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
 		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 1), Error::<Test>::NotFindOrderInfo);
 		assert_noop!(
 			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
@@ -316,7 +312,7 @@ fn partial_clinch_order_not_exist_should_fail() {
 #[test]
 fn clinch_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
 		assert_noop!(
 			Auction::clinch_order(Some(ALICE).into(), 0),
 			Error::<Test>::ForbidClinchOrderWithinOwnership
@@ -340,14 +336,14 @@ fn clinch_order_by_origin_illegal_should_fail() {
 #[test]
 fn clinch_order_not_in_trade_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
 		assert_noop!(
 			Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50),
 			Error::<Test>::ForbidClinchOrderNotInTrade
 		);
 
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 1.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
 		assert_ok!(Auction::clinch_order(Some(BRUCE).into(), 1));
 		assert_noop!(
 			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
@@ -359,7 +355,7 @@ fn clinch_order_not_in_trade_should_fail() {
 #[test]
 fn clinch_order_without_enough_token_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 2.to_fixed()));
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 200));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50));
 		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 0), Error::<Test>::CantPayThePrice);
 	});
@@ -367,12 +363,12 @@ fn clinch_order_without_enough_token_should_fail() {
 
 // Test Utilities
 #[test]
-fn check_total_price() {
+fn check_price_to_pay() {
 	let unit_price: U64F64 = 0.333f64.to_fixed();
 	let quantities: [BalanceOf<Test>; 4] = [3, 33, 333, 3333];
-	let total_prices: [BalanceOf<Test>; 4] = [1, 11, 111, 1110];
+	let price_to_pays: [BalanceOf<Test>; 4] = [1, 11, 111, 1110];
 
-	for (quantity, total_price) in quantities.iter().zip(total_prices.iter()) {
-		assert_eq!(Auction::total_price(*quantity, unit_price), *total_price);
+	for (quantity, price_to_pay) in quantities.iter().zip(price_to_pays.iter()) {
+		assert_eq!(Auction::price_to_pay(*quantity, unit_price), *price_to_pay);
 	}
 }

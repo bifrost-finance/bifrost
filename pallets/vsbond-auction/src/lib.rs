@@ -45,9 +45,18 @@ pub struct OrderInfo<T: Config> {
 	supply: BalanceOf<T>,
 	/// The quantity of vsbond has not be sold
 	remain: BalanceOf<T>,
-	unit_price: U64F64,
+	total_price: BalanceOf<T>,
 	order_id: OrderId,
 	order_state: OrderState,
+}
+
+impl<T: Config> OrderInfo<T> {
+	pub fn unit_price(&self) -> U64F64 {
+		let supply: u128 = self.supply.saturated_into();
+		let total_price: u128 = self.total_price.saturated_into();
+
+		U64F64::from_num(total_price) / supply
+	}
 }
 
 impl<T: Config> core::fmt::Debug for OrderInfo<T> {
@@ -56,7 +65,7 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 			.field(&self.owner)
 			.field(&self.vsbond)
 			.field(&self.supply)
-			.field(&self.unit_price)
+			.field(&self.unit_price())
 			.field(&self.order_id)
 			.field(&self.order_state)
 			.finish()
@@ -175,7 +184,7 @@ pub mod pallet {
 			#[pallet::compact] first_slot: LeasePeriodOf<T>,
 			#[pallet::compact] last_slot: LeasePeriodOf<T>,
 			#[pallet::compact] supply: BalanceOf<T>,
-			unit_price: U64F64,
+			#[pallet::compact] total_price: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
@@ -212,7 +221,7 @@ pub mod pallet {
 				vsbond,
 				supply,
 				remain: supply,
-				unit_price,
+				total_price,
 				order_id,
 				order_state: OrderState::InTrade,
 			};
@@ -343,11 +352,15 @@ pub mod pallet {
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
-			let total_price = Self::total_price(quantity_clinchd, order_info.unit_price);
+			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price());
 
 			// Check the balance of buyer
-			T::MultiCurrency::ensure_can_withdraw(T::InvoicingCurrency::get(), &buyer, total_price)
-				.map_err(|_| Error::<T>::CantPayThePrice)?;
+			T::MultiCurrency::ensure_can_withdraw(
+				T::InvoicingCurrency::get(),
+				&buyer,
+				price_to_pay,
+			)
+			.map_err(|_| Error::<T>::CantPayThePrice)?;
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
@@ -381,7 +394,7 @@ pub mod pallet {
 				T::InvoicingCurrency::get(),
 				&buyer,
 				&new_order_info.owner,
-				total_price,
+				price_to_pay,
 			)?;
 
 			// Move order_id from InTrade to Clinchd if meets condition
@@ -434,7 +447,8 @@ pub mod pallet {
 			next_order_id
 		}
 
-		pub(crate) fn total_price(quantity: BalanceOf<T>, unit_price: U64F64) -> BalanceOf<T> {
+		/// Get the price(round up) needed to pay.
+		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: U64F64) -> BalanceOf<T> {
 			let quantity: u128 = quantity.saturated_into();
 			let total_price = u128::from_fixed((unit_price * quantity).ceil());
 

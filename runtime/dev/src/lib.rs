@@ -43,6 +43,9 @@ use frame_system::{
 	EnsureOneOf, EnsureRoot,
 };
 pub use pallet_balances::Call as BalancesCall;
+use pallet_grandpa::{
+	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
+};
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
 use sp_arithmetic::Percent;
@@ -57,7 +60,7 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::RuntimeString;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
+	traits::{BlakeTwo256, Block as BlockT, NumberFor, UniqueSaturatedInto, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
 };
@@ -76,6 +79,7 @@ use bifrost_runtime_common::xcm_impl::{
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
+use frame_support::{sp_runtime::KeyTypeId, traits::KeyOwnerProofSystem};
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
@@ -109,14 +113,15 @@ pub type SessionHandlers = ();
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub aura: Aura,
+		pub grandpa: Grandpa,
 	}
 }
 
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("asgard"),
-	impl_name: create_runtime_str!("asgard"),
+	spec_name: create_runtime_str!("asgard-dev"),
+	impl_name: create_runtime_str!("asgard-dev"),
 	authoring_version: 1,
 	spec_version: 1001,
 	impl_version: 0,
@@ -294,10 +299,6 @@ impl InstanceFilter<Call> for ProxyType {
 				Call::Indices(pallet_indices::Call::claim(..)) |
 				Call::Indices(pallet_indices::Call::free(..)) |
 				Call::Indices(pallet_indices::Call::freeze(..)) |
-				// Specifically omitting Indices `transfer`, `force_transfer`
-				// Specifically omitting the entire Balances pallet
-				Call::Authorship(..) |
-				Call::Session(..) |
 				Call::Democracy(..) |
 				Call::Council(..) |
 				Call::TechnicalCommittee(..) |
@@ -808,40 +809,27 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
-parameter_types! {
-	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
-	pub const Period: u32 = 6 * HOURS;
-	pub const Offset: u32 = 0;
-}
-
-impl pallet_session::Config for Runtime {
-	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
-	type Event = Event;
-	type Keys = SessionKeys;
-	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
-	// Essentially just Aura, but lets be pedantic.
-	type SessionHandler = <SessionKeys as sp_runtime::traits::OpaqueKeys>::KeyTypeIdProviders;
-	type SessionManager = CollatorSelection;
-	type ShouldEndSession = pallet_session::PeriodicSessions<Period, Offset>;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	// we don't have stash and controller, thus we don't need the convert as well.
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type WeightInfo = pallet_session::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const UncleGenerations: u32 = 0;
-}
-
-impl pallet_authorship::Config for Runtime {
-	type EventHandler = (CollatorSelection,);
-	type FilterUncle = ();
-	type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
-	type UncleGenerations = UncleGenerations;
-}
-
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
+}
+
+impl pallet_grandpa::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+
+	type KeyOwnerProofSystem = ();
+
+	type KeyOwnerProof =
+		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+
+	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
+		KeyTypeId,
+		GrandpaId,
+	)>>::IdentificationTuple;
+
+	type HandleEquivocation = ();
+
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -850,22 +838,6 @@ parameter_types! {
 	pub const MinCandidates: u32 = 5;
 	pub const SessionLength: BlockNumber = 6 * HOURS;
 	pub const MaxInvulnerables: u32 = 100;
-}
-
-impl pallet_collator_selection::Config for Runtime {
-	type Currency = Balances;
-	type Event = Event;
-	// should be a multiple of session or things will get inconsistent
-	type KickThreshold = Period;
-	type MaxCandidates = MaxCandidates;
-	type MaxInvulnerables = MaxInvulnerables;
-	type MinCandidates = MinCandidates;
-	type PotId = PotId;
-	type UpdateOrigin = MoreThanHalfCouncil;
-	type ValidatorId = <Self as frame_system::Config>::AccountId;
-	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
-	type ValidatorRegistration = Session;
-	type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
 // culumus runtime end
@@ -973,7 +945,7 @@ impl bifrost_salp::Config for Runtime {
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
+	type WeightInfo = weights::pallet_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
 }
 
 parameter_types! {
@@ -986,7 +958,7 @@ impl bifrost_bancor::Config for Runtime {
 	type InterventionPercentage = InterventionPercentage;
 	type DailyReleasePercentage = DailyReleasePercentage;
 	type MultiCurrency = Currencies;
-	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
+	type WeightInfo = bifrost_bancor::weights::BifrostWeight<Runtime>;
 }
 
 parameter_types! {
@@ -1155,12 +1127,8 @@ construct_runtime! {
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 10,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 11,
 
-		// Collator support. the order of these 4 are important and shall not change.
-		Authorship: pallet_authorship::{Pallet, Call, Storage} = 20,
-		CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 21,
-		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
-		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
+		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event} = 25,
 
 		// Governance stuff
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
@@ -1339,6 +1307,32 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl fg_primitives::GrandpaApi<Block> for Runtime {
+		fn grandpa_authorities() -> GrandpaAuthorityList {
+			Grandpa::grandpa_authorities()
+		}
+
+		fn submit_report_equivocation_unsigned_extrinsic(
+			_equivocation_proof: fg_primitives::EquivocationProof<
+				<Block as BlockT>::Hash,
+				NumberFor<Block>,
+			>,
+			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
+		) -> Option<()> {
+			None
+		}
+
+		fn generate_key_ownership_proof(
+			_set_id: fg_primitives::SetId,
+			_authority_id: GrandpaId,
+		) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
+			// NOTE: this is the only implementation possible since we've
+			// defined our key owner proof type as a bottom type (i.e. a type
+			// with no values).
+			None
+		}
+	}
+
 	impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
 		fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
 			ParachainSystem::collect_collation_info()
@@ -1496,7 +1490,6 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
-			add_benchmark!(params, batches, bifrost_bancor, Bancor);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

@@ -2114,6 +2114,91 @@ dependencies = [
 ]
 
 [[package]]
+name = "dev-runtime"
+version = "0.8.0"
+dependencies = [
+ "bifrost-bancor",
+ "bifrost-bancor-runtime-api",
+ "bifrost-flexible-fee",
+ "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-minter-reward",
+ "bifrost-runtime-common",
+ "bifrost-salp",
+ "bifrost-vsbond-auction",
+ "bifrost-vtoken-mint",
+ "cumulus-pallet-aura-ext",
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-timestamp",
+ "cumulus-primitives-utility",
+ "frame-benchmarking",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-rpc-runtime-api",
+ "hex-literal 0.3.2",
+ "log",
+ "max-encoded-len",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-aura",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-bounties",
+ "pallet-collator-selection",
+ "pallet-collective",
+ "pallet-democracy",
+ "pallet-elections-phragmen",
+ "pallet-grandpa",
+ "pallet-indices",
+ "pallet-membership",
+ "pallet-multisig",
+ "pallet-proxy",
+ "pallet-randomness-collective-flip",
+ "pallet-scheduler",
+ "pallet-session",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-tips",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-treasury",
+ "pallet-utility",
+ "pallet-vesting",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "polkadot-parachain",
+ "polkadot-runtime-parachains",
+ "serde",
+ "sp-api",
+ "sp-arithmetic",
+ "sp-block-builder",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-inherents",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
+ "xcm-support",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
+]
+
+[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4934,6 +5019,7 @@ dependencies = [
  "cumulus-client-service",
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
+ "dev-runtime",
  "frame-benchmarking",
  "frame-system-rpc-runtime-api",
  "hex-literal 0.2.1",
@@ -4945,9 +5031,16 @@ dependencies = [
  "sc-basic-authorship",
  "sc-chain-spec",
  "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-aura",
+ "sc-consensus-manual-seal",
+ "sc-consensus-slots",
  "sc-executor",
+ "sc-finality-grandpa",
+ "sc-keystore",
  "sc-network",
  "sc-rpc",
+ "sc-rpc-api",
  "sc-service",
  "sc-telemetry",
  "sc-tracing",
@@ -4961,6 +5054,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-finality-grandpa",
+ "sp-inherents",
  "sp-keystore",
  "sp-offchain",
  "sp-runtime",
@@ -4968,6 +5062,8 @@ dependencies = [
  "sp-storage",
  "sp-timestamp",
  "sp-transaction-pool",
+ "sp-trie",
+ "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
  "zenlink-protocol-runtime-api",
 ]
@@ -5136,7 +5232,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5152,7 +5248,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5167,7 +5263,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5184,7 +5280,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -8244,6 +8340,41 @@ dependencies = [
  "sc-consensus",
  "sp-blockchain",
  "sp-runtime",
+]
+
+[[package]]
+name = "sc-consensus-manual-seal"
+version = "0.9.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8#1b758b2a8d151d97d2242260c465b6df9cb8a7a4"
+dependencies = [
+ "assert_matches",
+ "async-trait",
+ "derive_more",
+ "futures 0.3.15",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "log",
+ "parity-scale-codec",
+ "parking_lot 0.11.1",
+ "sc-client-api",
+ "sc-consensus-babe",
+ "sc-consensus-epochs",
+ "sc-transaction-pool",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-consensus-babe",
+ "sp-consensus-slots",
+ "sp-core",
+ "sp-inherents",
+ "sp-keyring",
+ "sp-keystore",
+ "sp-runtime",
+ "sp-timestamp",
+ "sp-transaction-pool",
+ "substrate-prometheus-endpoint",
 ]
 
 [[package]]
@@ -11741,7 +11872,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -11761,7 +11892,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -11778,7 +11909,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
