@@ -37,41 +37,63 @@ pub trait FeeDealer<AccountId, Balance> {
 pub struct FixedCurrencyFeeRate<T: Config>(PhantomData<T>);
 
 impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for FixedCurrencyFeeRate<T> {
-	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens
+	/// Make sure there is enough BNC to be deducted if the user has assets in other form of tokens
 	/// rather than BNC.
 	fn ensure_can_charge_fee(
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
-		_reason: WithdrawReasons,
+		reason: WithdrawReasons,
 	) -> DispatchResult {
-		let fee_currency_id: CurrencyId = T::AlternativeFeeCurrencyId::get();
-		let (fee_currency_base, native_currency_base): (u32, u32) =
-			T::AltFeeCurrencyExchangeRate::get();
+		// First, check if the user has enough BNC balance to be deducted.assert_eq!
+		let existential_deposit = <<T as Config>::Currency as Currency<
+			<T as frame_system::Config>::AccountId,
+		>>::minimum_balance();
+		// check native balance if is enough
+		let native_is_enough = <<T as Config>::Currency as Currency<
+			<T as frame_system::Config>::AccountId,
+		>>::free_balance(who)
+		.checked_sub(&(fee + existential_deposit.into()))
+		.map_or(false, |new_free_balance| {
+			<<T as Config>::Currency as Currency<
+										<T as frame_system::Config>::AccountId,
+									>>::ensure_can_withdraw(
+										who, fee, reason, new_free_balance
+									)
+									.is_ok()
+		});
 
-		let fee_currency_balance = T::MultiCurrency::free_balance(fee_currency_id, who);
+		if !native_is_enough {
+			// If the user doesn't has enough BNC, then we will use KSM as the fee currency.
+			let fee_currency_id: CurrencyId = T::AlternativeFeeCurrencyId::get();
+			let (fee_currency_base, native_currency_base): (u32, u32) =
+				T::AltFeeCurrencyExchangeRate::get();
 
-		let consume_fee_currency_amount =
-			fee.saturating_mul(fee_currency_base.into()) / native_currency_base.into();
-		ensure!(
-			consume_fee_currency_amount <=
-				PalletBalanceOf::<T>::unique_saturated_from(fee_currency_balance.into()),
-			Error::<T>::NotEnoughBalance
-		);
+			let fee_currency_balance = T::MultiCurrency::free_balance(fee_currency_id, who);
 
-		// deduct fee currency and increase native currency amount
-		// This withdraw operation allows death. So it will succeed given the remaining amount less
-		// than the existential deposit.
-		T::MultiCurrency::withdraw(
-			fee_currency_id,
-			who,
-			T::Balance::from(consume_fee_currency_amount),
-		)?;
-		T::MultiCurrency::deposit(T::NativeCurrencyId::get(), who, T::Balance::from(fee))?;
+			let consume_fee_currency_amount =
+				fee.saturating_mul(fee_currency_base.into()) / native_currency_base.into();
+			ensure!(
+				consume_fee_currency_amount <=
+					PalletBalanceOf::<T>::unique_saturated_from(fee_currency_balance.into()),
+				Error::<T>::NotEnoughBalance
+			);
 
-		crate::Pallet::<T>::deposit_event(Event::FixedRateFeeExchanged(
-			fee_currency_id,
-			consume_fee_currency_amount,
-		));
+			// deduct fee currency and increase native currency amount
+			// This withdraw operation allows death. So it will succeed given the remaining amount
+			// less than the existential deposit.
+			T::MultiCurrency::withdraw(
+				fee_currency_id,
+				who,
+				T::Balance::from(consume_fee_currency_amount),
+			)?;
+			T::MultiCurrency::deposit(T::NativeCurrencyId::get(), who, T::Balance::from(fee))?;
+
+			crate::Pallet::<T>::deposit_event(Event::FixedRateFeeExchanged(
+				fee_currency_id,
+				consume_fee_currency_amount,
+			));
+		}
+
 		Ok(())
 	}
 }
