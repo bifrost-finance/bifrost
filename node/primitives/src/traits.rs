@@ -52,25 +52,6 @@ pub trait TokenPriceHandler<CurrencyId, Price> {
 	fn set_token_price(asset_id: CurrencyId, price: Price);
 }
 
-/// Asset redeem handler
-pub trait AssetRedeem<CurrencyId, AccountId, Balance> {
-	/// Asset redeem
-	fn asset_redeem(
-		asset_id: CurrencyId,
-		target: AccountId,
-		amount: Balance,
-		to_name: Option<Vec<u8>>,
-	);
-}
-
-/// Bridge asset from other blockchain to Bifrost
-pub trait BridgeAssetFrom<AccountId, CurrencyId, Precision, Balance> {
-	fn bridge_asset_from(
-		target: AccountId,
-		bridge_asset: BridgeAssetBalance<AccountId, CurrencyId, Precision, Balance>,
-	);
-}
-
 /// Bridge asset from Bifrost to other blockchain
 pub trait BridgeAssetTo<AccountId, CurrencyId, Precision, Balance> {
 	type Error;

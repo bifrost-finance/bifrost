@@ -5231,7 +5231,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5247,7 +5247,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5262,7 +5262,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5279,7 +5279,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library.git?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -11871,7 +11871,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -11891,7 +11891,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -11908,7 +11908,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.2"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module.git?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
+source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
