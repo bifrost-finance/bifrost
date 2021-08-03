@@ -28,11 +28,14 @@ use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero},
 	SaturatedConversion,
 };
-use weights::WeightInfo;
+pub use weights::WeightInfo;
 
 mod mock;
 mod tests;
 pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 pub use pallet::*;
 
@@ -223,8 +226,7 @@ pub mod pallet {
 				}
 			}
 
-			// TODO: Estimate weight for this function
-			1_000
+			T::WeightInfo::on_initialize()
 		}
 	}
 

@@ -973,7 +973,7 @@ impl bifrost_salp::Config for Runtime {
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = weights::pallet_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
+	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
 }
 
 parameter_types! {
@@ -986,7 +986,7 @@ impl bifrost_bancor::Config for Runtime {
 	type InterventionPercentage = InterventionPercentage;
 	type DailyReleasePercentage = DailyReleasePercentage;
 	type MultiCurrency = Currencies;
-	type WeightInfo = bifrost_bancor::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1496,6 +1496,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
+			add_benchmark!(params, batches, bifrost_bancor, Bancor);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
