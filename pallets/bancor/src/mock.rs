@@ -167,6 +167,7 @@ impl ExtBuilder {
 		])
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
 	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
 		let whitelist_caller: AccountId = whitelisted_caller();
 

@@ -20,5 +20,6 @@
 
 //! A list of the different weight modules for our runtime.
 
-pub mod pallet_salp;
+pub mod bifrost_bancor;
+pub mod bifrost_salp;
 pub mod pallet_vesting;
