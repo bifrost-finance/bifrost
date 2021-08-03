@@ -30,22 +30,7 @@ pub trait WeightInfo {
 	fn add_token_to_pool() -> Weight;
 	fn exchange_for_token() -> Weight;
 	fn exchange_for_vstoken() -> Weight;
-}
-
-/// Weights for the pallet using the Bifrost node and recommended hardware.
-pub struct BifrostWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
-	fn add_token_to_pool() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn exchange_for_token() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn exchange_for_vstoken() -> Weight {
-		(50_000_000 as Weight)
-	}
+	fn on_initialize() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -59,6 +44,10 @@ impl WeightInfo for () {
 	}
 
 	fn exchange_for_vstoken() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn on_initialize() -> Weight {
 		(50_000_000 as Weight)
 	}
 }
