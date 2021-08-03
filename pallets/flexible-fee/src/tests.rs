@@ -355,6 +355,7 @@ fn ensure_can_charge_fee_v2_should_work() {
 // #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
 fn withdraw_fee_should_work_v2() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::ASG), &CHARLIE, 108));
 		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &CHARLIE, 2));
 
 		// prepare call variable
@@ -368,14 +369,15 @@ fn withdraw_fee_should_work_v2() {
 		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
 		let info = xt.get_dispatch_info();
 
-		// println!("info: {:?}", info);
+		// In the first time, we can charge transaction fee by native token.
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 1);
 
-		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 0);
-
-		// 99 inclusion fee and a tip of 8
+		// In the second time, we charge transaction fee by KSM.
+		// 99 inclusion fee + a tip of 8
 		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
 
-		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 0);
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 1);
 	});
 }
 
