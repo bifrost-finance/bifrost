@@ -24,6 +24,7 @@ use asgard_runtime::{
 	TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
+use frame_benchmarking::whitelisted_caller;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
@@ -126,7 +127,10 @@ pub fn asgard_genesis(
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
-	let endowed_accounts = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let endowed_accounts = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		whitelisted_caller(), // Benchmarking whitelist_account
+	];
 	let balances = endowed_accounts
 		.iter()
 		.chain(faucet_accounts().iter())
@@ -144,7 +148,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 			]
