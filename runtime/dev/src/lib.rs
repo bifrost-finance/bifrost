@@ -633,7 +633,7 @@ impl pallet_tips::Config for Runtime {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type FeeMultiplierUpdate = ();
-	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 }
