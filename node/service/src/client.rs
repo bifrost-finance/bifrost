@@ -151,6 +151,8 @@ pub enum Client {
 	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, crate::AsgardExecutor>>),
 	#[cfg(feature = "with-bifrost-runtime")]
 	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
+	#[cfg(feature = "with-dev-runtime")]
+	AsgardDev(Arc<FullClient<dev_runtime::RuntimeApi, crate::DevExecutor>>),
 }
 
 impl ClientHandle for Client {
@@ -160,6 +162,8 @@ impl ClientHandle for Client {
 			Self::Asgard(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
 		}
 	}
 }
@@ -171,6 +175,8 @@ impl sc_client_api::UsageProvider<Block> for Client {
 			Self::Asgard(client) => client.usage_info(),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.usage_info(),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.usage_info(),
 		}
 	}
 }
@@ -185,6 +191,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.block_body(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_body(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.block_body(id),
 		}
 	}
 
@@ -194,6 +202,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.block(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.block(id),
 		}
 	}
 
@@ -203,6 +213,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.block_status(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_status(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.block_status(id),
 		}
 	}
 
@@ -212,6 +224,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.justifications(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.justifications(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.justifications(id),
 		}
 	}
 
@@ -224,6 +238,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.block_hash(number),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_hash(number),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.block_hash(number),
 		}
 	}
 
@@ -236,6 +252,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.indexed_transaction(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.indexed_transaction(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.indexed_transaction(id),
 		}
 	}
 
@@ -248,6 +266,8 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Asgard(client) => client.block_indexed_body(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.block_indexed_body(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.block_indexed_body(id),
 		}
 	}
 }
@@ -263,6 +283,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.storage(id, key),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage(id, key),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.storage(id, key),
 		}
 	}
 
@@ -276,6 +298,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.storage_keys(id, key_prefix),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_keys(id, key_prefix),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.storage_keys(id, key_prefix),
 		}
 	}
 
@@ -289,6 +313,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.storage_hash(id, key),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_hash(id, key),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.storage_hash(id, key),
 		}
 	}
 
@@ -302,6 +328,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.storage_pairs(id, key_prefix),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_pairs(id, key_prefix),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.storage_pairs(id, key_prefix),
 		}
 	}
 
@@ -318,6 +346,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.storage_keys_iter(id, prefix, start_key),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.storage_keys_iter(id, prefix, start_key),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.storage_keys_iter(id, prefix, start_key),
 		}
 	}
 
@@ -332,6 +362,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.child_storage(id, child_info, key),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.child_storage(id, child_info, key),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.child_storage(id, child_info, key),
 		}
 	}
 
@@ -346,6 +378,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.child_storage_keys(id, child_info, key_prefix),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.child_storage_keys(id, child_info, key_prefix),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.child_storage_keys(id, child_info, key_prefix),
 		}
 	}
 
@@ -360,6 +394,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.child_storage_hash(id, child_info, key),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.child_storage_hash(id, child_info, key),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.child_storage_hash(id, child_info, key),
 		}
 	}
 
@@ -373,6 +409,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.max_key_changes_range(first, last),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.max_key_changes_range(first, last),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.max_key_changes_range(first, last),
 		}
 	}
 
@@ -388,6 +426,8 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Asgard(client) => client.key_changes(first, last, storage_key, key),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.key_changes(first, last, storage_key, key),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.key_changes(first, last, storage_key, key),
 		}
 	}
 }
@@ -399,6 +439,8 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 			Self::Asgard(client) => client.header(&id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.header(&id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.header(&id),
 		}
 	}
 
@@ -408,6 +450,8 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 			Self::Asgard(client) => client.info(),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.info(),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.info(),
 		}
 	}
 
@@ -417,6 +461,8 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 			Self::Asgard(client) => client.status(id),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.status(id),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.status(id),
 		}
 	}
 
@@ -426,6 +472,8 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 			Self::Asgard(client) => client.number(hash),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.number(hash),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.number(hash),
 		}
 	}
 
@@ -435,6 +483,8 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 			Self::Asgard(client) => client.hash(number),
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost(client) => client.hash(number),
+			#[cfg(feature = "with-dev-runtime")]
+			Self::AsgardDev(client) => client.hash(number),
 		}
 	}
 }

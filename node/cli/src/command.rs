@@ -64,8 +64,6 @@ fn load_spec(
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
 		#[cfg(feature = "with-asgard-runtime")]
-		"asgard-dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
-		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost" => Box::new(service::chain_spec::bifrost::ChainSpec::from_json_bytes(
@@ -74,9 +72,9 @@ fn load_spec(
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
 		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-dev" => Box::new(service::chain_spec::bifrost::development_config(para_id)?),
-		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
+		#[cfg(feature = "with-dev-runtime")]
+		"dev" => Box::new(service::chain_spec::dev::development_config(para_id)?),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
@@ -86,13 +84,22 @@ fn load_spec(
 				}
 				#[cfg(not(feature = "with-asgard-runtime"))]
 				return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
-			} else {
+			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
 				#[cfg(feature = "with-bifrost-runtime")]
 				{
 					Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
 				}
 				#[cfg(not(feature = "with-bifrost-runtime"))]
 				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
+			} else if path.to_str().map(|s| s.contains("dev")) == Some(true) {
+				#[cfg(feature = "with-dev-runtime")]
+				{
+					Box::new(service::chain_spec::dev::ChainSpec::from_json_file(path)?)
+				}
+				#[cfg(not(feature = "with-dev-runtime"))] 
+					return Err("Dev runtime is not available. Please compile the node with `--features with-dev-runtime` to enable it.".into());
+			} else {
+				return Err("Unknown runtime is not available.".into());
 			}
 		},
 	})
@@ -141,13 +148,20 @@ impl SubstrateCli for Cli {
 			}
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.");
-		} else {
+		} else if spec.is_bifrost() {
 			#[cfg(feature = "with-bifrost-runtime")]
 			{
 				&service::collator::bifrost_runtime::VERSION
 			}
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
+		} else {
+			#[cfg(feature = "with-dev-runtime")]
+			{
+				&service::dev::dev_runtime::VERSION
+			}
+			#[cfg(not(feature = "with-dev-runtime"))]
+			panic!("Asgard dev runtime is not available. Please compile the node with `--features with-dev-runtime` to enable it.");
 		}
 	}
 }
@@ -227,6 +241,14 @@ macro_rules! construct_async_run {
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
 			});
+			#[cfg(feature = "with-dev-runtime")]
+			return runner.async_run(|$config| {
+				let $components = crate::service::dev::new_partial(
+					&$config,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			});
 	}}
 }
 
@@ -239,6 +261,11 @@ pub fn run() -> Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
+				if config.chain_spec.is_asgard_dev() {
+					#[cfg(feature = "with-dev-runtime")]
+					return service::dev::new_full(config).map_err(Into::into);
+				}
+
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id);
@@ -283,9 +310,14 @@ pub fn run() -> Result<()> {
 					.run::<service::asgard_runtime::Block, service::asgard_runtime::RuntimeApi, service::AsgardExecutor>(
 						config,
 					);
-				#[cfg(not(feature = "with-asgard-runtime"))]
+				#[cfg(feature = "with-bifrost-runtime")]
 				return cmd
 					.run::<service::bifrost_runtime::Block, service::bifrost_runtime::RuntimeApi, service::BifrostExecutor>(
+						config,
+					);
+				#[cfg(feature = "with-dev-runtime")]
+					return cmd
+					.run::<service::dev_runtime::Block, service::dev_runtime::RuntimeApi, service::DevExecutor>(
 						config,
 					);
 			});
@@ -298,9 +330,11 @@ pub fn run() -> Result<()> {
 					#[cfg(feature = "with-asgard-runtime")]
 					return cmd
 						.run::<service::asgard_runtime::Block, service::AsgardExecutor>(config);
-					#[cfg(not(feature = "with-asgard-runtime"))]
+					#[cfg(feature = "with-bifrost-runtime")]
 					return cmd
 						.run::<service::bifrost_runtime::Block, service::BifrostExecutor>(config);
+					#[cfg(feature = "with-dev-runtime")]
+					return cmd.run::<service::dev_runtime::Block, service::DevExecutor>(config);
 				});
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
