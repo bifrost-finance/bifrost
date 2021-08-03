@@ -48,7 +48,13 @@ make run-benchmarking
 make build-all-release
 ```
 
-## Run local testnet polkadot-launch
+## Run development chain
+
+```bash
+RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev 
+```
+
+## Run local testnet with polkadot-launch
 
 Install `polkadot-launch`:
 
