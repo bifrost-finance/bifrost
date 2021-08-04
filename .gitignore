@@ -11,3 +11,4 @@ polkadot.*
 .gitignore
 node_modules
 yarn.lock
+output

@@ -56,14 +56,14 @@ RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- -
 
 ## Run local testnet with polkadot-launch
 
-Install `polkadot-launch`:
+### Install `polkadot-launch`:
 
 ```bash
 yarn global add polkadot-launch
 cd -
 ```
 
-Build polkadot:
+### Build polkadot
 
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
@@ -73,7 +73,7 @@ cargo build --release
 cd -
 ```
 
-Launch Polkadot and the parachain:
+### Launch Polkadot and the parachain
 
 ```bash
 cd -
@@ -81,3 +81,28 @@ polkadot-launch ./scripts/bifrost-launch.json
 ```
 
 It will take about 1-2 minutes for the parachain to start producing blocks.
+
+## Run local testnet with parachain-launch
+
+### Install `parachain-launch`
+
+```sh
+yarn global add @open-web3/parachain-launch
+```
+
+### Generate docker files
+
+```sh
+parachain-launch generate --config=scripts/bifrost-docker-launch.yml --yes
+```
+
+It will pull images and generate required docker files in a folder called `output` in your current working directory
+
+### Start relaychain and parachain
+
+To start the nodes, navigate to the output folder that the generated docker scripts in and start containers:
+
+```sh
+cd ./output
+docker-compose up -d --build
+```

@@ -34,20 +34,20 @@ WORKDIR /app
 COPY . /app
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-
 RUN --mount=type=ssh export PATH="$PATH:$HOME/.cargo/bin" && \
 	make build-all-release
-
 
 # ===== SECOND STAGE ======
 
 FROM ubuntu:20.04
 WORKDIR /bifrost
 
-RUN apt-get update && \
-	apt-get dist-upgrade -y && \
-	apt install -y openssl libssl-dev
-RUN useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost
+RUN rm -rf /usr/share/*  && \
+  rm -rf /usr/lib/python* && \
+  useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost && \
+  mkdir -p /bifrost/.local/data && \
+  chown -R bifrost:bifrost /bifrost && \
+  ln -s /bifrost/.local/data /data
 
 COPY --from=builder /app/target/release/bifrost /usr/local/bin
 COPY ./node/service/res/asgard.json /bifrost
@@ -55,15 +55,12 @@ COPY ./node/service/res/bifrost.json /bifrost
 
 # checks
 RUN ldd /usr/local/bin/bifrost && \
-	/usr/local/bin/bifrost --version
+  /usr/local/bin/bifrost --version
 
-# Shrinking
-RUN rm -rf /usr/lib/python* && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man
 
 USER bifrost
 EXPOSE 30333 9933 9944
 
-VOLUME ["/bifrost"]
+VOLUME ["/data"]
 
-ENTRYPOINT ["/usr/local/bin/bifrost"]	
+ENTRYPOINT ["/usr/local/bin/bifrost"]
