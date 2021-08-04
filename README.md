@@ -56,7 +56,7 @@ RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- -
 
 ## Run local testnet with polkadot-launch
 
-### Install `polkadot-launch`:
+### Install `polkadot-launch`
 
 ```bash
 yarn global add polkadot-launch

@@ -42,7 +42,7 @@ RUN --mount=type=ssh export PATH="$PATH:$HOME/.cargo/bin" && \
 FROM ubuntu:20.04
 WORKDIR /bifrost
 
-RUN rm -rf /usr/share/*  && \
+RUN rm -rf /usr/share  && \
   rm -rf /usr/lib/python* && \
   useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost && \
   mkdir -p /bifrost/.local/data && \
