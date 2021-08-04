@@ -85,3 +85,12 @@ test-benchmarking:
 .PHONY: run-benchmarking
 run-benchmarking:
 	./scripts/run_all_benches.sh
+
+# Deploy
+.PHONY: deploy-asgard-local
+deploy-asgard-local:
+	pm2 start scripts/asgard-local-ecosystem.config.js
+
+.PHONY: deploy-bifrost-live
+deploy-bifrost-live:
+	pm2 deploy scripts/bifrost-ecosystem.config.js production
