@@ -40,14 +40,14 @@ native_executor_instance!(
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
-type Block = dev_runtime::Block;
-type Executor = crate::DevExecutor;
-type RuntimeApi = dev_runtime::RuntimeApi;
-type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
-type FullBackend = sc_service::TFullBackend<Block>;
-type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
+pub type Block = dev_runtime::Block;
+pub type Executor = crate::DevExecutor;
+pub type RuntimeApi = dev_runtime::RuntimeApi;
+pub type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+pub type FullBackend = sc_service::TFullBackend<Block>;
+pub type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
-fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInherentDataProvider {
+pub fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInherentDataProvider {
 	MockValidationDataInherentDataProvider {
 		current_para_block: 0,
 		relay_offset: 1000,

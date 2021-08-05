@@ -5010,6 +5010,8 @@ name = "node-service"
 version = "0.8.0"
 dependencies = [
  "asgard-runtime",
+ "async-io",
+ "async-trait",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime",
  "bs58 0.3.1",
@@ -5022,8 +5024,10 @@ dependencies = [
  "dev-runtime",
  "frame-benchmarking",
  "frame-system-rpc-runtime-api",
+ "futures 0.3.15",
  "hex-literal 0.2.1",
  "jsonrpc-core",
+ "log",
  "node-primitives",
  "node-rpc",
  "pallet-transaction-payment-rpc-runtime-api",

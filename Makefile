@@ -85,3 +85,11 @@ test-benchmarking:
 .PHONY: run-benchmarking
 run-benchmarking:
 	./scripts/run_all_benches.sh
+
+.PHONY: run-dev
+run-dev:
+	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev
+
+.PHONY: run-dev-manual-seal
+run-dev-manual-seal:
+	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev --sealing instant
