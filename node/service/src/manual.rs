@@ -179,7 +179,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
 
-		Box::new(move |deny_unsafe, _| -> node_rpc::RpcExtension {
+		Box::new(move |_deny_unsafe, _| -> node_rpc::RpcExtension {
 			return RpcExtension::default();
 		})
 	};
