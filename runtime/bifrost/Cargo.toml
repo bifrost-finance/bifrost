@@ -66,6 +66,12 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features 
 # Bifrost
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 
+# orml
+orml-currencies = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+xcm-support = { path = "../../xcm-support", default-features = false }
+
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 
@@ -114,6 +120,9 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-vesting/std",
+	"orml-currencies/std",
+	"orml-traits/std",
+	"orml-tokens/std",
 ]
 
 runtime-benchmarks = [
