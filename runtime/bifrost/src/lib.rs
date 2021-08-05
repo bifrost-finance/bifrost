@@ -46,7 +46,7 @@ use sp_core::OpaqueMetadata;
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT},
+	traits::{BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -61,7 +61,9 @@ pub mod constants;
 use constants::{currency::*, time::*};
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_system::EnsureRoot;
-use node_primitives::{Moment, Nonce};
+use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
+// orml imports
+use orml_currencies::BasicCurrencyAdapter;
 use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -149,6 +151,12 @@ impl Filter<Call> for CallFilter {
 			_ => true,
 		}
 	}
+}
+
+parameter_types! {
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
 }
 
 impl frame_system::Config for Runtime {
@@ -500,6 +508,38 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 }
 
+// orml runtime start
+
+pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+
+impl orml_currencies::Config for Runtime {
+	type Event = Event;
+	type GetNativeCurrencyId = NativeCurrencyId;
+	type MultiCurrency = Tokens;
+	type NativeCurrency = BifrostToken;
+	type WeightInfo = ();
+}
+
+orml_traits::parameter_type_with_key! {
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			&CurrencyId::Native(TokenSymbol::ASG) => 1 * CENTS,
+			_ => Zero::zero(),
+		}
+	};
+}
+
+impl orml_tokens::Config for Runtime {
+	type Amount = Amount;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type Event = Event;
+	type ExistentialDeposits = ExistentialDeposits;
+	type MaxLocks = MaxLocks;
+	type OnDust = ();
+	type WeightInfo = ();
+}
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -543,6 +583,10 @@ construct_runtime! {
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
+
+		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
+		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 	}
 }
 
