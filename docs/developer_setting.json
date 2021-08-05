@@ -1,4 +1,11 @@
 {
+	"TransferOriginType": {
+		"_enum": {
+			"FromSelf": 0,
+			"FromRelayChain": 1,
+			"FromSiblingParaChain": 2
+		}
+	},
 	"TokenSymbol": {
 		"_enum": {
 			"ASG": 0,
@@ -10,9 +17,9 @@
 	},
 	"CurrencyId": {
 		"_enum": {
-			"Token": "TokenSymbol",
-			"VToken": "TokenSymbol",
 			"Native": "TokenSymbol",
+			"VToken": "TokenSymbol",
+			"Token": "TokenSymbol",
 			"Stable": "TokenSymbol",
 			"VSToken": "TokenSymbol",
 			"VSBond": "(TokenSymbol, ParaId, LeasePeriod, LeasePeriod)"
