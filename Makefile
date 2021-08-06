@@ -94,3 +94,26 @@ deploy-asgard-local:
 .PHONY: deploy-bifrost-live
 deploy-bifrost-live:
 	pm2 deploy scripts/bifrost-ecosystem.config.js production
+
+# Run dev chain
+.PHONY: run-dev
+run-dev:
+	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev
+
+.PHONY: run-dev-manual-seal
+run-dev-manual-seal:
+	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev --sealing instant
+
+# Build docker image
+.PHONY: build-docker-image
+build-docker-image:
+	.maintain/build-image.sh
+
+# Build wasm
+.PHONY: build-bifrost-wasm
+build-bifrost-wasm:
+	.maintain/build-wasm.sh bifrost
+
+.PHONY: build-asgard-wasm
+build-asgard-wasm:
+	.maintain/build-wasm.sh asgard
