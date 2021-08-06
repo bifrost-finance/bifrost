@@ -86,6 +86,16 @@ test-benchmarking:
 run-benchmarking:
 	./scripts/run_all_benches.sh
 
+# Deploy
+.PHONY: deploy-asgard-local
+deploy-asgard-local:
+	pm2 start scripts/asgard-local-ecosystem.config.js
+
+.PHONY: deploy-bifrost-live
+deploy-bifrost-live:
+	pm2 deploy scripts/bifrost-ecosystem.config.js production
+
+# Run dev chain
 .PHONY: run-dev
 run-dev:
 	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev
@@ -94,10 +104,12 @@ run-dev:
 run-dev-manual-seal:
 	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev --sealing instant
 
+# Build docker image
 .PHONY: build-docker-image
 build-docker-image:
 	.maintain/build-image.sh
 
+# Build wasm
 .PHONY: build-bifrost-wasm
 build-bifrost-wasm:
 	.maintain/build-wasm.sh bifrost
