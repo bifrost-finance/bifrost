@@ -93,3 +93,15 @@ run-dev:
 .PHONY: run-dev-manual-seal
 run-dev-manual-seal:
 	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev --sealing instant
+
+.PHONY: build-docker-image
+build-docker-image:
+	.maintain/build-image.sh
+
+.PHONY: build-bifrost-wasm
+build-bifrost-wasm:
+	.maintain/build-wasm.sh bifrost
+
+.PHONY: build-asgard-wasm
+build-asgard-wasm:
+	.maintain/build-wasm.sh asgard

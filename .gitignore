@@ -13,3 +13,4 @@ node_modules
 yarn.lock
 *.log
 output
+deploy
