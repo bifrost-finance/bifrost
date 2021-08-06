@@ -1,0 +1,63 @@
+# Relaychain Configuration
+relaychain:
+  image: parity/polkadot:v0.9.8 # the docker image to use
+  chain: rococo-local # for test purpose we use rococo
+  runtimeGenesisConfig: # additonal genesis override
+    parachainsConfiguration:
+      config:
+        validation_upgrade_frequency: 1
+        validation_upgrade_delay: 1
+  env: # environment variables for all relaychain nodes
+    RUST_LOG: parachain::candidate-backing=trace
+  flags: # additional CLI flags for all relaychain nodes
+    - --rpc-methods=unsafe
+    - --no-beefy
+  nodes: # nodes config
+    - name: alice # the node name and session key, this imply `--alice`
+      wsPort: 9944 # default ws port number is `9944 + global_node_index`
+      rpcPort: 9933 # default rpc port number is `9933 + global_node_index`
+      port: 30333 # default libp2p port number is `30333 + global_node_index`
+      flags: # additional CLI flags for this node
+        - --force-authoring
+      env:
+        RUST_LOG: debug # environment varitables for this node
+    - name: bob
+    - name: charlie
+
+# Parachain Configuration
+parachains:
+  # Config for first parachain
+  - image: ronyang/bifrost:0.8.1-fix_data
+    chain: # this could be a string like `dev` or a config object
+      base: bifrost-local # the chain to use
+      collators: # override collators
+        - alice # this imply //Alice
+        - rXMrmePtNnyZ61hvpjfEEZ1zmKzueUnTqijDncTzE8Wa2sJ # or could be a session key public address
+        - charlie
+      sudo: alice # override sudo key to //Alice
+    id: 3000 # override parachain id
+    parachain: true # this is parachain, not parathread
+    flags: # CLI flags for this parachain nodes
+      - --rpc-methods=unsafe
+      - --force-authoring
+      - --execution=wasm
+    relaychainFlags: # CLI flags for the relaychain port
+      - --execution=wasm
+      - --no-beefy
+    env: # environment variables for this parachain nodes
+      RUST_LOG: sc_basic_authorship=trace
+    nodes: # nodes config
+      - wsPort: 9947
+        rpcPort: 9936
+        port: 30336
+        flags: # additional CLI flags for this node
+          - --alice
+        relaychainFlags: # additional CLI flags for relaychian part
+          - --name=relaychain-alice
+        env:
+          RUST_LOG: debug # environment varitables for this node
+      - flags:
+          - --bob
+      - flags:
+          - --charlie
+

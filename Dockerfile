@@ -15,39 +15,30 @@
 # along with Bifrost.  If not, see <http:#www.gnu.org/licenses/>.
 
 # syntax=docker/dockerfile:1
-FROM ubuntu:20.04 as builder
+FROM rust:buster as builder
 
-ENV DEBIAN_FRONTEND noninteractive
-
-ENV PATH=$PATH:$HOME/.cargo/bin
-
-RUN apt-get update && \
-	apt-get dist-upgrade -y && \
-	apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev curl apt-utils openssh-client
-
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-	export PATH="$PATH:$HOME/.cargo/bin" && \
-	rustup default nightly && \
-	rustup target add wasm32-unknown-unknown --toolchain nightly
+RUN apt-get update && apt-get install time clang libclang-dev llvm -y
+RUN rustup toolchain install nightly
+RUN rustup target add wasm32-unknown-unknown --toolchain nightly
 
 WORKDIR /app
 COPY . /app
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-
 RUN --mount=type=ssh export PATH="$PATH:$HOME/.cargo/bin" && \
 	make build-all-release
-
 
 # ===== SECOND STAGE ======
 
 FROM ubuntu:20.04
 WORKDIR /bifrost
 
-RUN apt-get update && \
-	apt-get dist-upgrade -y && \
-	apt install -y openssl libssl-dev
-RUN useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost
+RUN rm -rf /usr/share  && \
+  rm -rf /usr/lib/python* && \
+  useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost && \
+  mkdir -p /bifrost/.local/data && \
+  chown -R bifrost:bifrost /bifrost && \
+  ln -s /bifrost/.local/data /data
 
 COPY --from=builder /app/target/release/bifrost /usr/local/bin
 COPY ./node/service/res/asgard.json /bifrost
@@ -55,15 +46,12 @@ COPY ./node/service/res/bifrost.json /bifrost
 
 # checks
 RUN ldd /usr/local/bin/bifrost && \
-	/usr/local/bin/bifrost --version
+  /usr/local/bin/bifrost --version
 
-# Shrinking
-RUN rm -rf /usr/lib/python* && \
-	rm -rf /usr/bin /usr/sbin /usr/share/man
 
 USER bifrost
 EXPOSE 30333 9933 9944
 
-VOLUME ["/bifrost"]
+VOLUME ["/data"]
 
-ENTRYPOINT ["/usr/local/bin/bifrost"]	
+ENTRYPOINT ["/usr/local/bin/bifrost"]
