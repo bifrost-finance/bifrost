@@ -70,8 +70,9 @@ macro_rules! create_currency_id {
 		impl TryFrom<CurrencyId> for AssetId {
 			// DATA LAYOUT
 			//
+			// Empty:					 2bytes
 			// Currency Discriminant:    1byte
-			// TokenSymbol Index:        3byte
+			// TokenSymbol Index:        1byte
 			type Error = ();
 			fn try_from(id: CurrencyId) -> Result<AssetId, ()> {
 				let _index = match id {
@@ -82,7 +83,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((4_u32, TokenSymbol::$symbol as u32)),)*
 					_ => Err(()),
 				};
-				let asset_index: u32 = (_index?.0 << 24) + (_index?.1 & 0x00ff_ffff);
+				let asset_index: u32 = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
 				if id.is_native() {
 					Ok(AssetId { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: asset_index })
 				} else {
@@ -98,13 +99,14 @@ macro_rules! create_currency_id {
 		impl TryInto<CurrencyId> for AssetId {
 			// DATA LAYOUT
 			//
-			// Currency Discriminant:    1byte
-			// TokenSymbol Index:        3byte
+			// Empty:					2bytes
+			// Currency Discriminant:   1byte
+			// TokenSymbol Index:       1byte
 			type Error = ();
 			fn try_into(self) -> Result<CurrencyId, Self::Error> {
 				let id: u32 = self.asset_index.saturated_into();
-				let c_discr = (id >> 24) as u32;
-				let _index = (0x00ff_ffff & id) as u32;
+				let c_discr = (id >> 8) as u32;
+				let _index = (0x0000_00ff & id) as u32;
 				let token_symbol = match _index {
 					$(x if x == TokenSymbol::$symbol as u32 => Ok(TokenSymbol::$symbol),)*
 					_ => Err(()),
@@ -120,14 +122,25 @@ macro_rules! create_currency_id {
 			}
 		}
 
+
 		impl TokenInfo for CurrencyId {
 			// DATA LAYOUT
 			//
-			// Currency Discriminant:       1byte
-			// TokenSymbol Discriminant:    1byte
 			// ParaId:                      2byte
 			// LeasePeriod:                 2byte
 			// LeasePeriod:                 2byte
+			// Currency Discriminant:       1byte
+			// TokenSymbol Discriminant:    1byte
+			//
+			// If it is LPToken:
+			// Empty:						2byte
+			// Currency 2 Discriminant:     1byte
+			// TokenSymbol 2 Discriminant:  1byte
+			// Currency 1 Discriminant:     1byte
+			// TokenSymbol 2 Discriminant:  1byte
+			// Currency Discriminant:       1byte
+			// TokenSymbol Discriminant:    1byte
+
 			fn currency_id(&self) -> u64 {
 				let c_discr = self.discriminant() as u64;
 
@@ -138,16 +151,17 @@ macro_rules! create_currency_id {
 					| Self::Stable(ts)
 					| Self::VSToken(ts)
 					| Self::VSBond(ts, ..) => ts as u8,
+					Self::LPToken(..) => 0u8
 				} as u64;
 
 		 		let discr = (c_discr << 8) + t_discr;
 
-				match *self {
+				match &*self {
 					Self::Token(..)
 					| Self::VToken(..)
 					| Self::Native(..)
 					| Self::Stable(..)
-					| Self::VSToken(..) => discr << 48,
+					| Self::VSToken(..) => (0x0000_ffff & discr) as u64,
 					Self::VSBond(_, pid, lp1, lp2) => {
 						// NOTE: ParaId representation
 						//
@@ -164,7 +178,13 @@ macro_rules! create_currency_id {
 						let lp1 = (0x0000_ffff & lp1) as u64;
 						let lp2 = (0x0000_ffff & lp2) as u64;
 
-						(discr << 48) + (pid << 32) + (lp1 << 16) + lp2
+						(pid << 48) + (lp1 << 32) + (lp2 << 16) + discr
+					},
+					Self::LPToken(ts1, ts2) => {
+						let lp_index_1 = (*ts1).currency_id();
+						let lp_index_2 = (*ts2).currency_id();
+
+						((lp_index_1 << 16) & 0x0000_0000_ffff_0000) + ((lp_index_2 << 32) & 0x0000_ffff_0000_0000) + discr
 					}
 				}
 			}
@@ -177,6 +197,9 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $name,)*
+					CurrencyId::LPToken(_ts1, _ts2) => {
+						stringify!([*_ts1.name(), *_ts2.name()].join(','))
+					}
 				}
 			}
 
@@ -188,6 +211,9 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
+					CurrencyId::LPToken(_ts1, _ts2) => {
+						stringify!([*_ts1.symbol(), *_ts2.symbol()].join(','))
+					}
 				}
 			}
 
@@ -199,6 +225,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $deci,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $deci,)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $deci,)*
+					CurrencyId::LPToken(..) => 1u8
 				}
 			}
 		}
@@ -241,7 +268,7 @@ impl Default for TokenSymbol {
 }
 
 /// Currency ID, it might be extended with more variants in the future.
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum CurrencyId {
@@ -251,6 +278,7 @@ pub enum CurrencyId {
 	Stable(TokenSymbol),
 	VSToken(TokenSymbol),
 	VSBond(TokenSymbol, ParaId, LeasePeriod, LeasePeriod),
+	LPToken(Box<CurrencyId>, Box<CurrencyId>),
 }
 
 impl Default for CurrencyId {
@@ -295,6 +323,7 @@ impl CurrencyId {
 			Self::Stable(..) => 3,
 			Self::VSToken(..) => 4,
 			Self::VSBond(..) => 5,
+			Self::LPToken(..) => 6,
 		}
 	}
 }
@@ -326,6 +355,10 @@ impl CurrencyIdExt for CurrencyId {
 		matches!(self, CurrencyId::Stable(_))
 	}
 
+	fn is_lptoken(&self) -> bool {
+		matches!(self, CurrencyId::LPToken(..))
+	}
+
 	fn into(symbol: Self::TokenSymbol) -> Self {
 		CurrencyId::Token(symbol)
 	}
@@ -342,21 +375,22 @@ impl Deref for CurrencyId {
 			Self::VToken(ref symbol) => symbol,
 			Self::VSToken(ref symbol) => symbol,
 			Self::VSBond(ref symbol, ..) => symbol,
+			Self::LPToken(ref symbol, ..) => symbol, // need to discuss?
 		}
 	}
 }
 
-/// Temporay Solution: CurrencyId from a number
 impl TryFrom<u64> for CurrencyId {
 	type Error = ();
 
 	fn try_from(id: u64) -> Result<Self, Self::Error> {
-		let c_discr = ((id & 0xff00_0000_0000_0000) >> 56) as u8;
-		let t_discr = ((id & 0x00ff_0000_0000_0000) >> 48) as u8;
+		let c_discr = ((id & 0x0000_0000_0000_ff00) >> 8) as u8;
 
-		let pid = ((id & 0x0000_ffff_0000_0000) >> 32) as u32;
-		let lp1 = ((id & 0x0000_0000_ffff_0000) >> 16) as u32;
-		let lp2 = ((id & 0x0000_0000_0000_ffff) >> 00) as u32;
+		let t_discr = ((id & 0x0000_0000_0000_00ff) >> 00) as u8;
+
+		let pid = ((id & 0xffff_0000_0000_0000) >> 48) as u32;
+		let lp1 = ((id & 0x0000_ffff_0000_0000) >> 32) as u32;
+		let lp2 = ((id & 0x0000_0000_ffff_0000) >> 16) as u32;
 
 		let token_symbol = TokenSymbol::try_from(t_discr)?;
 
@@ -367,6 +401,13 @@ impl TryFrom<u64> for CurrencyId {
 			3 => Ok(Self::Stable(token_symbol)),
 			4 => Ok(Self::VSToken(token_symbol)),
 			5 => Ok(Self::VSBond(token_symbol, pid, lp1, lp2)),
+			6 => {
+				let currency_id_1 = ((id & 0x0000_0000_ffff_0000) >> 16) as u64;
+				let currency_id_2 = ((id & 0x0000_ffff_0000_0000) >> 32) as u64;
+				let currency1 = CurrencyId::try_from(currency_id_1)?;
+				let currency2 = CurrencyId::try_from(currency_id_2)?;
+				Ok(Self::LPToken(Box::new(currency1), Box::new(currency2)))
+			},
 			_ => Err(()),
 		}
 	}
