@@ -15,20 +15,11 @@
 # along with Bifrost.  If not, see <http:#www.gnu.org/licenses/>.
 
 # syntax=docker/dockerfile:1
-FROM ubuntu:20.04 as builder
+FROM rust:buster as builder
 
-ENV DEBIAN_FRONTEND noninteractive
-
-ENV PATH=$PATH:$HOME/.cargo/bin
-
-RUN apt-get update && \
-	apt-get dist-upgrade -y && \
-	apt-get install -y cmake pkg-config libssl-dev git clang libclang-dev curl apt-utils openssh-client
-
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y && \
-	export PATH="$PATH:$HOME/.cargo/bin" && \
-	rustup default nightly && \
-	rustup target add wasm32-unknown-unknown --toolchain nightly
+RUN apt-get update && apt-get install time clang libclang-dev llvm -y
+RUN rustup toolchain install nightly
+RUN rustup target add wasm32-unknown-unknown --toolchain nightly
 
 WORKDIR /app
 COPY . /app
