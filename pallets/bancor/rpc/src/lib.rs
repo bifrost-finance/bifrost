@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::{marker::PhantomData, sync::Arc};
+
 use codec::{Codec, Decode};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
@@ -29,8 +31,6 @@ use sp_runtime::{
 	traits::{Block as BlockT, Zero},
 	SaturatedConversion,
 };
-use std::marker::PhantomData;
-use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct BancorStruct<C, Block> {
