@@ -8,7 +8,7 @@ if [[ -z "$1" ]] ; then
 fi
 
 eval $(ssh-agent)
-ssh-add ~/.ssh/bifrost_id_rsa
+ssh-add ~/.ssh/github_actions
 DOCKER_BUILDKIT=1 docker build --ssh default -t "$NODE_NAME:$VERSION" .
 docker push "$NODE_NAME:$VERSION"
 docker push $NODE_NAME:latest

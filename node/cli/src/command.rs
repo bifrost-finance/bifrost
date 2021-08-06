@@ -263,7 +263,13 @@ pub fn run() -> Result<()> {
 			runner.run_node_until_exit(|config| async move {
 				if config.chain_spec.is_asgard_dev() {
 					#[cfg(feature = "with-dev-runtime")]
-					return service::dev::new_full(config).map_err(Into::into);
+					{
+						return if cli.sealing.is_some() {
+							service::manual::new_full(config).map_err(Into::into)
+						} else {
+							service::dev::new_full(config).map_err(Into::into)
+						};
+					}
 				}
 
 				let para_id =
@@ -400,7 +406,7 @@ pub fn run() -> Result<()> {
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let block: crate::service::Block = generate_genesis_block(&load_spec(
+			let block: crate::service::collator::Block = generate_genesis_block(&load_spec(
 				&params.chain.clone().unwrap_or_default(),
 				params.parachain_id.unwrap_or(2001).into(),
 			)?)?;

@@ -197,6 +197,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+		whitelisted_caller(), // Benchmarking whitelist_account
 	];
 	let balances = endowed_accounts
 		.iter()
@@ -215,7 +216,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 			]

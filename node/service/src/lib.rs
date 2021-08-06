@@ -24,14 +24,17 @@
 
 pub use client::*;
 pub use collator::*;
-#[cfg(feature = "with-dev-runtime")]
-pub use dev::*;
-
 pub mod chain_spec;
 mod client;
 pub mod collator;
 #[cfg(feature = "with-dev-runtime")]
 pub mod dev;
+#[cfg(feature = "with-dev-runtime")]
+pub mod manual;
+#[cfg(feature = "with-dev-runtime")]
+pub use dev::*;
+#[cfg(feature = "with-dev-runtime")]
+pub use manual::*;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {
