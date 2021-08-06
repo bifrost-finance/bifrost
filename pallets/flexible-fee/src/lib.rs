@@ -274,10 +274,19 @@ where
 		T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-		match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::AllowDeath) {
+		let payment = match T::Currency::withdraw(
+			who,
+			fee,
+			withdraw_reason,
+			ExistenceRequirement::AllowDeath,
+		) {
 			Ok(imbalance) => Ok(Some(imbalance)),
 			Err(_msg) => Err(InvalidTransaction::Payment.into()),
-		}
+		};
+
+		// distribute fee
+		T::OnUnbalanced::on_unbalanced(payment);
+		payment
 	}
 
 	/// Hand the fee and the tip over to the `[OnUnbalanced]` implementation.

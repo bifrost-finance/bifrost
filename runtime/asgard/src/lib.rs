@@ -920,7 +920,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
-	type OnUnbalanced = ();
+	type OnUnbalanced = Treasury;
 	type WeightInfo = ();
 }
 
