@@ -210,15 +210,15 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_runtime_upgrade() -> frame_support::weights::Weight {
-			if !VestingStartAt::<T>::exists() {
-				let now = <frame_system::Pallet<T>>::block_number();
-				VestingStartAt::<T>::put(now);
-				T::DbWeight::get().reads_writes(1, 1)
-			} else {
-				0
-			}
-		}
+		// fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		// 	if !VestingStartAt::<T>::exists() {
+		// 		let now = <frame_system::Pallet<T>>::block_number();
+		// 		VestingStartAt::<T>::put(now);
+		// 		T::DbWeight::get().reads_writes(1, 1)
+		// 	} else {
+		// 		0
+		// 	}
+		// }
 	}
 
 	#[pallet::call]
