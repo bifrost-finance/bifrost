@@ -284,8 +284,6 @@ where
 			Err(_msg) => Err(InvalidTransaction::Payment.into()),
 		};
 
-		// distribute fee
-		T::OnUnbalanced::on_unbalanced(payment);
 		payment
 	}
 

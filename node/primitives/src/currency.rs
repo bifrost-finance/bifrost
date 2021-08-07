@@ -180,11 +180,9 @@ macro_rules! create_currency_id {
 
 						(pid << 48) + (lp1 << 32) + (lp2 << 16) + discr
 					},
-					Self::LPToken(ts1, ts2) => {
-						let lp_index_1 = (*ts1).currency_id();
-						let lp_index_2 = (*ts2).currency_id();
-
-						((lp_index_1 << 16) & 0x0000_0000_ffff_0000) + ((lp_index_2 << 32) & 0x0000_ffff_0000_0000) + discr
+					Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2) => {
+						(((*token_symbol_1 as u64) << 16) & 0x0000_0000_00ff_0000) + (((*token_type_1 as u64) << 24) & 0x0000_0000_ff00_0000) +
+						(((*token_symbol_2 as u64) << 32) & 0x0000_00ff_0000_0000) + (((*token_type_2 as u64) << 40) & 0x0000_ff00_0000_0000) + discr
 					}
 				}
 			}
@@ -197,9 +195,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $name,)*
-					CurrencyId::LPToken(_ts1, _ts2) => {
-						stringify!([*_ts1.name(), *_ts2.name()].join(','))
-					}
+					$(CurrencyId::LPToken(TokenSymbol::$symbol, ..) => $name,)*
 				}
 			}
 
@@ -211,9 +207,7 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
-					CurrencyId::LPToken(_ts1, _ts2) => {
-						stringify!([*_ts1.symbol(), *_ts2.symbol()].join(','))
-					}
+					$(CurrencyId::LPToken(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
 				}
 			}
 
@@ -268,7 +262,7 @@ impl Default for TokenSymbol {
 }
 
 /// Currency ID, it might be extended with more variants in the future.
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum CurrencyId {
@@ -278,7 +272,8 @@ pub enum CurrencyId {
 	Stable(TokenSymbol),
 	VSToken(TokenSymbol),
 	VSBond(TokenSymbol, ParaId, LeasePeriod, LeasePeriod),
-	LPToken(Box<CurrencyId>, Box<CurrencyId>),
+	// [currency1 Tokensymbol, currency1 TokenType, currency2 TokenSymbol, currency2 TokenType]
+	LPToken(TokenSymbol, u8, TokenSymbol, u8),
 }
 
 impl Default for CurrencyId {
@@ -375,7 +370,7 @@ impl Deref for CurrencyId {
 			Self::VToken(ref symbol) => symbol,
 			Self::VSToken(ref symbol) => symbol,
 			Self::VSBond(ref symbol, ..) => symbol,
-			Self::LPToken(ref symbol, ..) => symbol, // need to discuss?
+			Self::LPToken(ref symbol, ..) => symbol,
 		}
 	}
 }
@@ -402,11 +397,15 @@ impl TryFrom<u64> for CurrencyId {
 			4 => Ok(Self::VSToken(token_symbol)),
 			5 => Ok(Self::VSBond(token_symbol, pid, lp1, lp2)),
 			6 => {
-				let currency_id_1 = ((id & 0x0000_0000_ffff_0000) >> 16) as u64;
-				let currency_id_2 = ((id & 0x0000_ffff_0000_0000) >> 32) as u64;
-				let currency1 = CurrencyId::try_from(currency_id_1)?;
-				let currency2 = CurrencyId::try_from(currency_id_2)?;
-				Ok(Self::LPToken(Box::new(currency1), Box::new(currency2)))
+				let token_symbol_num_1 = ((id & 0x0000_0000_00ff_0000) >> 16) as u8;
+				let token_type_1 = ((id & 0x0000_0000_ff00_0000) >> 24) as u8;
+				let token_symbol_num_2 = ((id & 0x0000_00ff_0000_0000) >> 32) as u8;
+				let token_type_2 = ((id & 0x0000_ff00_0000_0000) >> 40) as u8;
+
+				let token_symbol_1 = TokenSymbol::try_from(token_symbol_num_1).unwrap_or_default();
+				let token_symbol_2 = TokenSymbol::try_from(token_symbol_num_2).unwrap_or_default();
+
+				Ok(Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2))
 			},
 			_ => Err(()),
 		}
