@@ -114,10 +114,7 @@ fn currency_id_to_u64_should_work() {
 	assert_eq!(0x07d4_003f_004f_0504, e54.currency_id());
 	assert_eq!(0x07d5_004f_005f_0505, e55.currency_id());
 
-	let e56 = CurrencyId::LPToken(
-		Box::new(CurrencyId::Native(TokenSymbol::ASG)),
-		Box::new(CurrencyId::Native(TokenSymbol::BNC)),
-	);
+	let e56 = CurrencyId::LPToken(TokenSymbol::ASG, 0u8, TokenSymbol::BNC, 0u8);
 
 	assert_eq!(0x0000_0001_0000_0600, e56.currency_id());
 }
@@ -209,10 +206,7 @@ fn u64_to_currency_id_should_work() {
 	assert_eq!(e54, CurrencyId::try_from(0x07d4_003f_004f_0504).unwrap());
 	assert_eq!(e55, CurrencyId::try_from(0x07d5_004f_005f_0505).unwrap());
 
-	let e56 = CurrencyId::LPToken(
-		Box::new(CurrencyId::Native(TokenSymbol::ASG)),
-		Box::new(CurrencyId::Native(TokenSymbol::BNC)),
-	);
+	let e56 = CurrencyId::LPToken(TokenSymbol::ASG, 0u8, TokenSymbol::BNC, 0u8);
 
 	assert_eq!(e56, CurrencyId::try_from(0x0000_0001_0000_0600).unwrap());
 }
