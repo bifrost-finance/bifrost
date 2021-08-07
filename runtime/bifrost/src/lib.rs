@@ -146,8 +146,17 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(c: &Call) -> bool {
 		match *c {
-			Call::Balances(..) => false,
-			Call::Vesting(..) => false,
+			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
+			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
+			Call::Vesting(pallet_vesting::Call::<Runtime>::vest(..)) => false,
+			Call::Vesting(pallet_vesting::Call::<Runtime>::vest_other(..)) => false,
+			Call::Vesting(pallet_vesting::Call::<Runtime>::vested_transfer(..)) => false,
+			Call::Tokens(orml_tokens::Call::<Runtime>::transfer(..)) => false,
+			Call::Tokens(orml_tokens::Call::<Runtime>::transfer_all(..)) => false,
+			Call::Currencies(orml_currencies::Call::<Runtime>::transfer(..)) => false,
+			Call::Currencies(orml_currencies::Call::<Runtime>::transfer_native_currency(..)) => {
+				false
+			}
 			_ => true,
 		}
 	}
