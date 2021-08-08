@@ -12,4 +12,3 @@ ssh-add ~/.ssh/github_actions
 DOCKER_BUILDKIT=1 docker build --ssh default -t "$NODE_NAME:$VERSION" .
 docker push "$NODE_NAME:$VERSION"
 docker push $NODE_NAME:latest
- .

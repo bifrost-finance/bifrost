@@ -4,6 +4,13 @@
 
 <h1 align="left"><a href="https://bifrost.finance">Homepage</a></h1>
 
+Welcome,
+
+Bifrost is a DeFi protocol to provide derivative for pledged assets.
+
+👉 *Discover the Bifrost project at [bifrost.finance](https://bifrost.finance/).*  
+👉 *Learn to use the Bifrost network with our [technical docs](https://wiki.bifrost.finance/devops).*  
+
 <h4>🐣 Supported by</h4>
 
 <p align="left">
