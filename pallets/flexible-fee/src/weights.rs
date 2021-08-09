@@ -16,11 +16,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+#![allow(unused_parens)]
+#![allow(unused_imports)]
+#![allow(clippy::unnecessary_cast)]
 
-//! A list of the different weight modules for our runtime.
+use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
-pub mod bifrost_bancor;
-pub mod bifrost_flexible_fee;
-pub mod bifrost_salp;
-pub mod pallet_vesting;
+pub trait WeightInfo {
+	fn set_user_fee_charge_order() -> Weight;
+}
+
+impl crate::WeightInfo for () {
+	fn set_user_fee_charge_order() -> Weight {
+		50_000_000 as Weight
+	}
+}

@@ -22,6 +22,8 @@ use std::convert::TryInto;
 
 // pub use polkadot_parachain::primitives::Id;
 pub use cumulus_primitives_core::ParaId;
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,
 	weights::{IdentityFee, WeightToFeeCoefficients, WeightToFeePolynomial},
@@ -276,6 +278,55 @@ where
 		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
 
 		Ok(amount)
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self { endowed_accounts: vec![] }
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId32, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		let whitelist_caller: AccountId32 = whitelisted_caller();
+		let c0 = CurrencyId::Token(TokenSymbol::try_from(0u8).unwrap_or_default());
+		let c1 = CurrencyId::Token(TokenSymbol::try_from(1u8).unwrap_or_default());
+		let c2 = CurrencyId::Token(TokenSymbol::try_from(2u8).unwrap_or_default());
+		let c3 = CurrencyId::Token(TokenSymbol::try_from(3u8).unwrap_or_default());
+		let c4 = CurrencyId::Token(TokenSymbol::try_from(4u8).unwrap_or_default());
+		let c5 = CurrencyId::Token(TokenSymbol::try_from(5u8).unwrap_or_default());
+
+		self.balances(vec![
+			(whitelist_caller.clone(), c0, 100_000_000_000_000),
+			(whitelist_caller.clone(), c1, 100_000_000_000_000),
+			(whitelist_caller.clone(), c2, 100_000_000_000_000),
+			(whitelist_caller.clone(), c3, 100_000_000_000_000),
+			(whitelist_caller.clone(), c4, 100_000_000_000_000),
+			(whitelist_caller.clone(), c5, 100_000_000_000_000),
+		])
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+
+		orml_tokens::GenesisConfig::<Test> { balances: self.endowed_accounts }
+			.assimilate_storage(&mut t)
+			.unwrap();
+
+		t.into()
 	}
 }
 

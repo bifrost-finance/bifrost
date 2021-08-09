@@ -188,4 +188,5 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-bancor/runtime-benchmarks",
+	"bifrost-flexible-fee/runtime-benchmarks",
 ]
