@@ -495,7 +495,7 @@ impl pallet_collator_selection::Config for Runtime {
 // culumus runtime end
 
 parameter_types! {
-	pub const MinVestedTransfer: Balance = 100 * CENTS;
+	pub const MinVestedTransfer: Balance = ExistentialDeposit;
 }
 
 impl pallet_vesting::Config for Runtime {
