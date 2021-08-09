@@ -494,15 +494,11 @@ impl pallet_collator_selection::Config for Runtime {
 
 // culumus runtime end
 
-parameter_types! {
-	pub const MinVestedTransfer: Balance = ExistentialDeposit;
-}
-
 impl pallet_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
 	type Currency = Balances;
 	type Event = Event;
-	type MinVestedTransfer = MinVestedTransfer;
+	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 }
 
