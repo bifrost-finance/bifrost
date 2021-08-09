@@ -659,6 +659,7 @@ name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
  "cumulus-primitives-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",

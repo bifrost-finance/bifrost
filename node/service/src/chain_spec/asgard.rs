@@ -216,10 +216,13 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::AUSD), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT * 4_000_000),
 			]
 		})
 		.collect();

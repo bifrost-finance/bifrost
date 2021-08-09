@@ -315,15 +315,15 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..) |
-					Call::Council(..) | Call::TechnicalCommittee(..) |
-					Call::Elections(..) | Call::Treasury(..) |
-					Call::Bounties(..) | Call::Tips(..) |
-					Call::Utility(..)
+				Call::Democracy(..)
+					| Call::Council(..) | Call::TechnicalCommittee(..)
+					| Call::Elections(..)
+					| Call::Treasury(..) | Call::Bounties(..)
+					| Call::Tips(..) | Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
-			},
+			}
 		}
 	}
 
@@ -920,8 +920,8 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
-	type OnUnbalanced = ();
-	type WeightInfo = ();
+	type OnUnbalanced = Treasury;
+	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1497,6 +1497,7 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
 			add_benchmark!(params, batches, bifrost_bancor, Bancor);
+			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
