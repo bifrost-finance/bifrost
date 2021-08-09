@@ -22,36 +22,47 @@
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
+	sp_std::collections::btree_map::BTreeMap,
 	traits::EnsureOrigin,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, ParaId};
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
+use substrate_fixed::{traits::FromFixed, types::U64F64};
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
 
-// TODO: 讨论
-// - Pool创建方式(Anyone or Council?) & 奖励注入方式
-// - 函数的参数配置
-// - 奖励如何释放
-//  - 释放周期
-//  - 释放比例
-
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct PoolInfo<T: Config> {
+	/// The creator of the liquidity-pool
 	creator: AccountIdOf<T>,
-	liquidity_pair: (CurrencyId, CurrencyId),
-	total_release_time: u32,
-	min_staked_amount_to_start: BalanceOf<T>,
-	after_block_to_start: BlockNumberFor<T>,
+	/// The trading-pair supported by the liquidity-pool
+	trading_pair: (CurrencyId, CurrencyId),
+	/// The length of time the liquidity-pool releases rewards
+	duration: BlockNumberFor<T>,
+	/// The liquidity-pool type
 	r#type: PoolType,
 
-	already_released_time: u32,
-	rewards: Vec<RewardData<T>>,
+	/// The First Condition
+	///
+	/// When starts the liquidity-pool, the amount deposited in the liquidity-pool
+	/// should be greater than the value.
+	min_deposited_amount_to_start: BalanceOf<T>,
+	/// The Second Condition
+	///
+	/// When starts the liquidity-pool, the current block should be greater than the value.
+	after_block_to_start: BlockNumberFor<T>,
+
+	/// The total amount deposited in the liquidity-pool
+	deposited: BalanceOf<T>,
+
+	/// The reward infos about the liquidity-pool
+	rewards: BTreeMap<CurrencyId, RewardData<T>>,
+	/// The liquidity-pool state
 	state: PoolState<T>,
 }
 
@@ -66,27 +77,56 @@ pub enum PoolState<T: Config> {
 	Idle,
 	Activated,
 	Ongoing(BlockNumberFor<T>),
+	Retired,
 	Dead,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
-pub struct StakeData<T: Config> {
+pub struct DepositData<T: Config> {
+	/// The id of liquidity-pool
 	pid: PoolId,
-	amount_staked: BalanceOf<T>,
-	// TODO: The rewarded
+
+	/// The amount of trading-pair deposited in the liquidity-pool
+	deposited: BalanceOf<T>,
+	/// Important data used to calculate rewards,
+	/// updated when the `DepositData`'s owner redeems or claims from the liquidity-pool.
+	///
+	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
+	/// - Arg1: The update block number
+	gain_avgs: BTreeMap<CurrencyId, (U64F64, BlockNumberFor<T>)>,
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct RewardData<T: Config> {
-	token: CurrencyId,
+	/// The total amount of token to reward
 	total: BalanceOf<T>,
-	released: BalanceOf<T>,
+	/// The amount of token to reward per block
+	per_block: BalanceOf<T>,
+
+	/// The amount of token was already rewarded
 	claimed: BalanceOf<T>,
+	/// Important data used to calculate rewards,
+	/// updated when anyone deposits to / redeems from / claims from the liquidity-pool.
+	///
+	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
+	/// - Arg1: The update block number
+	gain_avg: (U64F64, BlockNumberFor<T>),
+}
+
+impl<T: Config> Reward<T> {
+	fn from_tuple((token, total): (CurrencyId, BalanceOf<T>)) -> Option<Self> {
+		todo!()
+	}
 }
 
 impl<T: Config> core::fmt::Debug for RewardData<T> {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		f.debug_tuple("").field(&self.token).field(&self.total).finish()
+		f.debug_tuple("")
+			.field(&self.total)
+			.field(&self.per_block)
+			.field(&self.claimed)
+			.field(&self.gain_avg)
+			.finish()
 	}
 }
 
@@ -114,19 +154,29 @@ pub mod pallet {
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
+		/// The amount deposited into a liquidity-pool should be greater than the value
 		#[pallet::constant]
-		type RelayChainToken: Get<CurrencyId>;
+		type MinimumDeposit: Get<BalanceOf<Self>>;
 
+		/// The amount deposited into a liquidity-pool should be less than the value
 		#[pallet::constant]
-		type ReleaseCycle: Get<BlockNumberFor<Self>>;
+		type MaximumDeposit: Get<BalanceOf<Self>>;
 
+		/// The duration of a liquidity-pool should be greater than the value
 		#[pallet::constant]
-		type MinDeposit: Get<BalanceOf<T>>;
+		type MinimumDuration: Get<BlockNumberFor<Self>>;
+
+		/// The number of liquidity-pool activated should be less than the value
+		#[pallet::constant]
+		type MaximumActivated: Get<u32>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		// TODO
+		InvalidTradingPair,
+		InvalidDuration,
+		InvalidRewardSupply,
+		DuplicateRewards,
 	}
 
 	#[pallet::event]
@@ -148,22 +198,21 @@ pub mod pallet {
 		#[pallet::weight(1_000)]
 		pub fn create_mining_pool(
 			origin: OriginFor<T>,
-			liquidity_pair: (CurrencyId, CurrencyId),
+			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: [(CurrencyId, BalanceOf<T>); 4],
-			#[pallet::compact] total_release_time: u32,
-			#[pallet::compact] min_staked_amount_to_start: BalanceOf<T>,
+			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			#[pallet::compact] duration: BlockNumberFor<T>,
+			#[pallet::compact] min_deposited_amount_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
 			let creator = ensure_signed(origin)?;
 
-			// TODO: Check the stakeds
+			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
 
 			// TODO: Check the rewards
+			let rewards = BTreeMap::new();
 
-			// TODO: Check the duration
-
-			// TODO: Check the start-up condition
+			ensure!(duration >= T::MinimumDuration::get(), Error::<T>::InvalidDuration);
 
 			// TODO: Construct the PoolInfo
 
@@ -178,7 +227,7 @@ pub mod pallet {
 			last_slot: LeasePeriod,
 			main_reward: (CurrencyId, BalanceOf<T>),
 			option_reward: [(CurrencyId, BalanceOf<T>); 4],
-			#[pallet::compact] total_release_time: u32,
+			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_staked_amount_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
