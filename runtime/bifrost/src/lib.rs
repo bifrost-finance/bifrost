@@ -205,10 +205,10 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 10 * MILLIBNC;
-	pub const TransferFee: u128 = 1 * MILLIBNC;
-	pub const CreationFee: u128 = 1 * MILLIBNC;
-	pub const TransactionByteFee: u128 = 1 * MICROBNC;
+	pub const ExistentialDeposit: Balance = 10 * MILLIBNC;
+	pub const TransferFee: Balance = 1 * MILLIBNC;
+	pub const CreationFee: Balance = 1 * MILLIBNC;
+	pub const TransactionByteFee: Balance = 1 * MICROBNC;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
