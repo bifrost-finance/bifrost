@@ -41,11 +41,14 @@ use sp_runtime::{
 	traits::{CheckedSub, Saturating, Zero},
 	DispatchResult,
 };
-use weights::WeightInfo;
+pub use weights::WeightInfo;
 
 mod mock;
 mod tests;
 pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
@@ -294,9 +297,11 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(_block_number: T::BlockNumber) {
+		fn on_finalize(block_number: T::BlockNumber) -> Weight {
 			// Check redeem
-			let _ = Self::check_redeem_period(_block_number);
+			let _ = Self::check_redeem_period(block_number);
+
+			(471_000 as Weight)
 		}
 	}
 

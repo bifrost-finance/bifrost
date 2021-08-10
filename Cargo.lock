@@ -893,6 +893,7 @@ name = "bifrost-vtoken-mint"
 version = "0.8.0"
 dependencies = [
  "bifrost-minter-reward",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",
