@@ -541,7 +541,7 @@ construct_runtime! {
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
-		BifrostVesting: bifrost_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
+		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 	}
 }
 
