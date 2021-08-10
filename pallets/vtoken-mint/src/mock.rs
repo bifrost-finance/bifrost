@@ -22,8 +22,6 @@
 #![allow(non_upper_case_globals)]
 
 use core::marker::PhantomData;
-#[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::whitelisted_caller;
 use std::convert::TryInto;
 
 #[cfg(feature = "runtime-benchmarks")]
