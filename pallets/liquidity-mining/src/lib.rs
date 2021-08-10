@@ -74,7 +74,7 @@ pub enum PoolType {
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum PoolState<T: Config> {
-	Idle,
+	Init,
 	Activated,
 	Ongoing(BlockNumberFor<T>),
 	Retired,
@@ -177,6 +177,10 @@ pub mod pallet {
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiLockableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
+		/// The value used to construct vsbond when creating a farming-liquidity-pool
+		#[pallet::constant]
+		type RelayChainToken: Get<CurrencyId>;
+
 		/// The amount deposited into a liquidity-pool should be greater than the value
 		#[pallet::constant]
 		type MinimumDeposit: Get<BalanceOf<Self>>;
@@ -210,14 +214,45 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// The mining-liquidity-pool has been created
+		/// The liquidity-pool has been created
 		///
-		/// [pool_id, creator]
-		MiningPoolCreated(PoolId, AccountIdOf<T>),
-		/// The farming-liquidity-pool has been created
+		/// [pool_id, pool_type, trading_pair, creator]
+		PoolCreated(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
+		/// The liquidity-pool has been activated
 		///
-		/// [pool_id, creator]
-		FarmingPoolCreated(PoolId, AccountIdOf<T>),
+		/// [pool_id, pool_type, trading_pair]
+		PoolActivated(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		/// The liquidity-pool has been started up
+		///
+		/// [pool_id, pool_type, trading_pair]
+		PoolStarted(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		/// The liquidity-pool has been killed
+		///
+		/// [pool_id, pool_type, trading_pair]
+		PoolKilled(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		/// The liquidity-pool has been retired
+		///
+		/// [pool_id, pool_type, trading_pair]
+		PoolRetired(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		/// User has deposited some trading-pair to a liquidity-pool
+		///
+		/// [pool_id, pool_type, trading_pair, amount_deposited, user]
+		UserDeposited(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T>, AccountIdOf<T>),
+		/// User has been redeemed some trading-pair from a liquidity-pool
+		///
+		/// [pool_id, pool_type, trading_pair, amount_redeemed, user]
+		UserRedeemed(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T>, AccountIdOf<T>),
+		/// User has been claimed the rewards from a liquidity-pool
+		///
+		/// [pool_id, pool_type, trading_pair, token_rewarded, amount_claimed, user]
+		UserClaimed(
+			PoolId,
+			PoolType,
+			(CurrencyId, CurrencyId),
+			CurrencyId,
+			BalanceOf<T>,
+			AccountIdOf<T>,
+		),
 	}
 
 	#[pallet::storage]
@@ -225,8 +260,8 @@ pub mod pallet {
 	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn idle_pids)]
-	pub(crate) type IdlePoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+	#[pallet::getter(fn init_pids)]
+	pub(crate) type InitPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn activated_pids)]
@@ -263,60 +298,16 @@ pub mod pallet {
 			#[pallet::compact] min_deposited_amount_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
-			let creator = ensure_signed(origin)?;
-
-			// Check the trading-pair
-			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
-
-			// Check the duration
-			ensure!(duration >= T::MinimumDuration::get(), Error::<T>::InvalidDuration);
-
-			// Check the condition
-			ensure!(
-				min_deposited_amount_to_start >= T::MinimumDeposit::get(),
-				Error::<T>::InvalidCondition
-			);
-			ensure!(
-				min_deposited_amount_to_start <= T::MaximumDeposit::get(),
-				Error::<T>::InvalidCondition
-			);
-
-			// Check & Construct the rewards
-			let raw_rewards: Vec<(CurrencyId, BalanceOf<T>)> =
-				option_rewards.into_iter().chain(Some(main_reward).into_iter()).collect();
-			let mut rewards: BTreeMap<CurrencyId, RewardData<T>> = BTreeMap::new();
-			for (token, total) in raw_rewards.into_iter() {
-				ensure!(!rewards.contains_key(&token), Error::<T>::DuplicateReward);
-
-				let reward = RewardData::new(total, duration, T::MinimumRewardPerBlock::get())?;
-
-				// Reserve the reward
-				T::MultiCurrency::reserve(token, &creator, reward.total)?;
-
-				rewards.insert(token, reward);
-			}
-
-			// Construct the PoolInfo
-			let pool_id = Self::next_pool_id();
-			let mining_pool = PoolInfo {
-				creator: creator.clone(),
+			Self::create_pool(
+				origin,
 				trading_pair,
+				main_reward,
+				option_rewards,
+				PoolType::Mining,
 				duration,
-				r#type: PoolType::Mining,
-
 				min_deposited_amount_to_start,
 				after_block_to_start,
-
-				deposited: Zero::zero(),
-
-				rewards,
-				state: PoolState::Idle,
-			};
-
-			TotalPoolInfos::<T>::insert(pool_id, mining_pool);
-			IdlePoolIds::<T>::mutate(|pids| pids.insert(pool_id));
-
-			Self::deposit_event(Event::MiningPoolCreated(pool_id, creator));
+			)?;
 
 			Ok(().into())
 		}
@@ -328,14 +319,26 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_reward: [(CurrencyId, BalanceOf<T>); 4],
+			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
-			#[pallet::compact] min_staked_amount_to_start: BalanceOf<T>,
+			#[pallet::compact] min_deposited_amount_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
-			let creator = ensure_signed(origin)?;
+			#[allow(non_snake_case)]
+			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
 
-			todo!()
+			Self::create_pool(
+				origin,
+				trading_pair,
+				main_reward,
+				option_rewards,
+				PoolType::Farming,
+				duration,
+				min_deposited_amount_to_start,
+				after_block_to_start,
+			)?;
+
+			Ok(().into())
 		}
 
 		#[pallet::weight(1_000)]
@@ -383,10 +386,92 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		pub(crate) fn create_pool(
+			origin: OriginFor<T>,
+			trading_pair: (CurrencyId, CurrencyId),
+			main_reward: (CurrencyId, BalanceOf<T>),
+			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			r#type: PoolType,
+			duration: BlockNumberFor<T>,
+			min_deposited_amount_to_start: BalanceOf<T>,
+			after_block_to_start: BlockNumberFor<T>,
+		) -> DispatchResult {
+			let creator = ensure_signed(origin)?;
+
+			// Check the trading-pair
+			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
+
+			// Check the duration
+			ensure!(duration >= T::MinimumDuration::get(), Error::<T>::InvalidDuration);
+
+			// Check the condition
+			ensure!(
+				min_deposited_amount_to_start >= T::MinimumDeposit::get(),
+				Error::<T>::InvalidCondition
+			);
+			ensure!(
+				min_deposited_amount_to_start <= T::MaximumDeposit::get(),
+				Error::<T>::InvalidCondition
+			);
+
+			// Check & Construct the rewards
+			let raw_rewards: Vec<(CurrencyId, BalanceOf<T>)> =
+				option_rewards.into_iter().chain(Some(main_reward).into_iter()).collect();
+			let mut rewards: BTreeMap<CurrencyId, RewardData<T>> = BTreeMap::new();
+			for (token, total) in raw_rewards.into_iter() {
+				ensure!(!rewards.contains_key(&token), Error::<T>::DuplicateReward);
+
+				let reward = RewardData::new(total, duration, T::MinimumRewardPerBlock::get())?;
+
+				// Reserve the reward
+				T::MultiCurrency::reserve(token, &creator, reward.total)?;
+
+				rewards.insert(token, reward);
+			}
+
+			// Construct the PoolInfo
+			let pool_id = Self::next_pool_id();
+			let mining_pool = PoolInfo {
+				creator: creator.clone(),
+				trading_pair,
+				duration,
+				r#type,
+
+				min_deposited_amount_to_start,
+				after_block_to_start,
+
+				deposited: Zero::zero(),
+
+				rewards,
+				state: PoolState::Init,
+			};
+
+			TotalPoolInfos::<T>::insert(pool_id, mining_pool);
+			InitPoolIds::<T>::mutate(|pids| pids.insert(pool_id));
+
+			Self::deposit_event(Event::PoolCreated(pool_id, r#type, creator));
+
+			Ok(().into())
+		}
+
 		pub(crate) fn next_pool_id() -> PoolId {
 			let next_pool_id = Self::pool_id();
 			NextOrderId::<T>::mutate(|current| *current += 1);
 			next_pool_id
+		}
+
+		#[allow(non_snake_case)]
+		pub(crate) fn vsAssets(
+			index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+		) -> (CurrencyId, CurrencyId) {
+			let token_symbol = *T::RelayChainToken::get();
+
+			let vsToken = CurrencyId::VSToken(token_symbol);
+			let vsBond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);
+
+			(vsToken, vsBond)
 		}
 	}
 
