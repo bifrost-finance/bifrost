@@ -196,13 +196,13 @@ pub mod pallet {
 				MaximumVtokenMinted::<T>::get();
 
 			let last_block_diff = n.saturating_sub(last_max_minted_block);
+			let start_block_diff = n.saturating_sub(started_block_num);
 
 			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero()) ||
 				(last_block_diff < T::RewardWindow::get() &&
-					last_block_diff >= max_extended_period &&
+					start_block_diff >= max_extended_period &&
 					started_block_num > Zero::zero())
 			{
-				let start_block_diff = n.saturating_sub(started_block_num);
 				let period = BalanceOf::<T>::from(start_block_diff.saturated_into::<u32>());
 
 				let total_reward = period.saturating_mul(RewardPerBlock::<T>::get());
