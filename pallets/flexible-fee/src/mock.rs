@@ -46,7 +46,6 @@ use crate as flexible_fee;
 // use node_primitives::Balance;
 use crate::fee_dealer::FixedCurrencyFeeRate;
 
-pub type AccountId = AccountId32;
 pub type BlockNumber = u64;
 pub type Amount = i128;
 
