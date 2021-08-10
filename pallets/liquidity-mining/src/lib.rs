@@ -81,10 +81,26 @@ pub enum PoolState<T: Config> {
 	Dead,
 }
 
+impl<T: Config> PoolState<T> {
+	pub fn is_ongoing(&self) -> bool {
+		match self {
+			Self::Ongoing(..) => true,
+			_ => false,
+		}
+	}
+
+	pub fn block_started(&self) -> BlockNumberFor<T> {
+		match self {
+			Self::Ongoing(block_number) => *block_number,
+			_ => Zero::zero(),
+		}
+	}
+}
+
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct DepositData<T: Config> {
 	/// The id of liquidity-pool
-	id: PoolId,
+	pid: PoolId,
 
 	/// The amount of trading-pair deposited in the liquidity-pool
 	deposited: BalanceOf<T>,
@@ -208,7 +224,11 @@ pub mod pallet {
 		InvalidDuration,
 		InvalidRewardPerBlock,
 		InvalidCondition,
+		InvalidPoolId,
+		InvalidPoolState,
+		InvalidPoolOwner,
 		DuplicateReward,
+		NotReachDurationEnd,
 	}
 
 	#[pallet::event]
@@ -260,27 +280,11 @@ pub mod pallet {
 	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn init_pids)]
-	pub(crate) type InitPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn activated_pids)]
 	pub(crate) type ActivatedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn ongoing_pids)]
-	pub(crate) type OngoingPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn dead_pids)]
-	pub(crate) type DeadPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn retired_pids)]
-	pub(crate) type RetiredPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn pool_info)]
+	#[pallet::getter(fn pool)]
 	pub(crate) type TotalPoolInfos<T: Config> = StorageMap<_, Twox64Concat, PoolId, PoolInfo<T>>;
 
 	#[pallet::pallet]
@@ -342,31 +346,58 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn activate_pool(origin: OriginFor<T>, id: PoolId) -> DispatchResultWithPostInfo {
+		pub fn activate_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
-			// TODO: Query the `PoolInfo` by id
+			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
-			// TODO: Check the state of `PoolInfo`
+			ensure!(pool.state == PoolState::Init, Error::<T>::InvalidPoolState);
 
-			// TODO: Check the balance of rewards
+			ActivatedPoolIds::<T>::mutate(|pids| pids.insert(pid));
 
-			// TODO: Change the state of `PoolInfo`
+			let pool_activated = PoolInfo { state: PoolState::Activated, ..pool.clone() };
+			TotalPoolInfos::<T>::insert(pid, pool_activated);
 
-			todo!()
+			Self::deposit_event(Event::PoolActivated(pid, pool.r#type, pool.trading_pair));
+
+			Ok(().into())
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn kill_pool(origin: OriginFor<T>, id: PoolId) -> DispatchResultWithPostInfo {
-			let _ = T::ControlOrigin::ensure_origin(origin)?;
+		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+			let signed = ensure_signed(origin)?;
 
-			// TODO: Query the `PoolInfo` by id
+			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
-			// TODO: Check the state of `PoolInfo`
+			ensure!(signed == pool.creator, Error::<T>::InvalidPoolOwner);
 
-			// TODO: Change the state of `PoolInfo`
+			ensure!(pool.state == PoolState::Init, Error::<T>::InvalidPoolState);
 
-			todo!()
+			let pool_killed = PoolInfo { state: PoolState::Dead, ..pool.clone() };
+			TotalPoolInfos::<T>::insert(pid, pool_killed);
+
+			Self::deposit_event(Event::PoolKilled(pid, pool.r#type, pool.trading_pair));
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(1_000)]
+		pub fn retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+			let _ = ensure_signed(origin)?;
+
+			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
+
+			ensure!(pool.state.is_ongoing(), Error::<T>::InvalidPoolState);
+
+			let block_past = <frame_system::Pallet<T>>::block_number() - pool.state.block_started();
+			ensure!(block_past >= pool.duration, Error::<T>::NotReachDurationEnd);
+
+			let pool_retired = PoolInfo { state: PoolState::Retired, ..pool.clone() };
+			TotalPoolInfos::<T>::insert(pid, pool_retired);
+
+			Self::deposit_event(Event::PoolRetired(pid, pool.r#type, pool.trading_pair));
+
+			Ok(().into())
 		}
 
 		#[pallet::weight(1_000)]
@@ -447,9 +478,8 @@ pub mod pallet {
 			};
 
 			TotalPoolInfos::<T>::insert(pool_id, mining_pool);
-			InitPoolIds::<T>::mutate(|pids| pids.insert(pool_id));
 
-			Self::deposit_event(Event::PoolCreated(pool_id, r#type, creator));
+			Self::deposit_event(Event::PoolCreated(pool_id, r#type, trading_pair, creator));
 
 			Ok(().into())
 		}
@@ -478,11 +508,21 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(n: BlockNumberFor<T>) {
-			// TODO: Check whether pool-activated is meet the startup condition
+			// Check whether pool-activated is meet the startup condition
+			for pid in Self::activated_pids() {
+				if let Some(pool) = Self::pool(pid) {
+					if n >= pool.after_block_to_start &&
+						pool.deposited >= pool.min_deposited_amount_to_start
+					{
+						let block_started = n + BlockNumberFor::<T>::from(1 as u32);
+						let pool_started =
+							PoolInfo { state: PoolState::Ongoing(block_started), ..pool.clone() };
 
-			// TODO: Check whether pool-ongoing reach the release reward time
-
-			// TODO: Check whether pool-ongoing reach the end time
+						ActivatedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
+						TotalPoolInfos::<T>::insert(pid, pool_started);
+					}
+				}
+			}
 		}
 
 		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
