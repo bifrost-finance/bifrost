@@ -316,15 +316,15 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..)
-					| Call::Council(..) | Call::TechnicalCommittee(..)
-					| Call::Elections(..)
-					| Call::Treasury(..) | Call::Bounties(..)
-					| Call::Tips(..) | Call::Utility(..)
+				Call::Democracy(..) |
+					Call::Council(..) | Call::TechnicalCommittee(..) |
+					Call::Elections(..) | Call::Treasury(..) |
+					Call::Bounties(..) | Call::Tips(..) |
+					Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
-			}
+			},
 		}
 	}
 
@@ -911,6 +911,7 @@ impl bifrost_minter_reward::Config for Runtime {
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
 	type StableCurrencyId = StableCurrencyId;
+	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -1164,7 +1165,7 @@ construct_runtime! {
 
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
-		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
+		MinterReward: bifrost_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>} = 102,
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 104,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,

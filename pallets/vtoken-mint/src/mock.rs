@@ -22,10 +22,10 @@
 #![allow(non_upper_case_globals)]
 
 use core::marker::PhantomData;
-#[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::whitelisted_caller;
 use std::convert::TryInto;
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Hooks},
@@ -167,6 +167,7 @@ impl bifrost_minter_reward::Config for Runtime {
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
 	type StableCurrencyId = StableCurrencyId;
+	type WeightInfo = ();
 }
 
 impl crate::Config for Runtime {

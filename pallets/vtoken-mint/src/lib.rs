@@ -297,11 +297,9 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(block_number: T::BlockNumber) -> Weight {
+		fn on_finalize(block_number: T::BlockNumber) {
 			// Check redeem
 			let _ = Self::check_redeem_period(block_number);
-
-			(471_000 as Weight)
 		}
 	}
 

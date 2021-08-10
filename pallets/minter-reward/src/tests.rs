@@ -37,8 +37,23 @@ pub(crate) fn run_to_block(n: u64) {
 	}
 }
 
-// The following test is ignored due to some bugs on zenlink. It can be reopened after the bug is
-// fixed.frame_system The functionality has already been tested.
+#[test]
+fn claim_reward_should_work() {
+	ExtBuilder::default().ten_thousand_for_alice_n_bob().build().execute_with(|| {
+		crate::UserReward::<Runtime>::insert(&ALICE, 1000);
+		assert_eq!(MinterReward::user_reward(&ALICE), 1000);
+		// Alice original has 100000 native token.
+		assert_eq!(Currencies::free_balance(CurrencyId::Native(TokenSymbol::ASG), &ALICE), 100000);
+
+		assert_ok!(MinterReward::claim_reward(Origin::signed(ALICE)));
+		assert_eq!(MinterReward::user_reward(&ALICE), 0);
+		assert_eq!(
+			Currencies::free_balance(CurrencyId::Native(TokenSymbol::ASG), &ALICE),
+			100000 + 1000
+		)
+	});
+}
+
 #[test]
 fn minter_reward_should_work() {
 	ExtBuilder::default().ten_thousand_for_alice_n_bob().build().execute_with(|| {

@@ -25,12 +25,16 @@ use fixed::{types::extra::U0, FixedU128};
 pub use frame_support::traits::GenesisBuild;
 use frame_support::{
 	pallet_prelude::{
-		Blake2_128Concat, IsType, StorageDoubleMap, StorageMap, StorageValue, ValueQuery,
+		Blake2_128Concat, DispatchResult, IsType, StorageDoubleMap, StorageMap, StorageValue,
+		ValueQuery,
 	},
 	traits::{Get, Hooks},
 	Parameter,
 };
-use frame_system::pallet_prelude::BlockNumberFor;
+use frame_system::{
+	ensure_signed,
+	pallet_prelude::{BlockNumberFor, OriginFor},
+};
 use node_primitives::{CurrencyId, MinterRewardExt, TokenSymbol};
 use orml_traits::{
 	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
@@ -41,10 +45,12 @@ use sp_runtime::traits::{
 	AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating,
 	UniqueSaturatedFrom, Zero,
 };
+pub use weights::WeightInfo;
 use zenlink_protocol::{AssetId, ExportZenlink};
 
 mod mock;
 mod tests;
+pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -97,6 +103,9 @@ pub mod pallet {
 			+ MaybeSerializeDeserialize
 			+ Into<BalanceOf<Self>>
 			+ From<BalanceOf<Self>>;
+
+		/// Set default weight.
+		type WeightInfo: WeightInfo;
 	}
 
 	/// How much BNC will be issued to minters each block after.
@@ -161,9 +170,6 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
-	/// No call in this pallet.
-	#[pallet::call]
-	impl<T: Config> Pallet<T> {}
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -246,6 +252,25 @@ pub mod pallet {
 		}
 	}
 
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		#[pallet::weight(T::WeightInfo::claim_reward())]
+		pub fn claim_reward(origin: OriginFor<T>) -> DispatchResult {
+			let claimer = ensure_signed(origin)?;
+
+			// get reward amount and deposit it to the claimer's account
+			let amount = Self::user_reward(&claimer);
+			if amount > Zero::zero() {
+				T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::ASG), &claimer, amount)?;
+
+				// delete the record in the storage
+				crate::UserReward::<T>::take(&claimer);
+			}
+
+			Ok(())
+		}
+	}
+
 	impl<T: Config> Pallet<T> {
 		pub fn compare_max_vtoken_minted(
 			currency_id: CurrencyId,
@@ -280,11 +305,6 @@ pub mod pallet {
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
 				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
 					(total_weight.saturating_mul(total_vtoken_mint));
-				let _ = T::MultiCurrency::deposit(
-					CurrencyId::Native(TokenSymbol::ASG),
-					&minter,
-					reward,
-				);
 
 				// Record all BNC rewards the user receives.
 				if UserReward::<T>::contains_key(&minter) {

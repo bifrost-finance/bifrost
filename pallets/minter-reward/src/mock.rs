@@ -253,6 +253,7 @@ impl crate::Config for Runtime {
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
 	type StableCurrencyId = StableCurrencyId;
+	type WeightInfo = ();
 }
 
 pub struct ExtBuilder {
