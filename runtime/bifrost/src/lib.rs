@@ -143,11 +143,8 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(c: &Call) -> bool {
 		match *c {
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest_other(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vested_transfer(..)) => false,
+			Call::Balances(..) => false,
+			Call::Vesting(..) => false,
 			_ => true,
 		}
 	}
@@ -544,7 +541,7 @@ construct_runtime! {
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
-		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
+		BifrostVesting: bifrost_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 	}
 }
 

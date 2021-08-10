@@ -60,7 +60,9 @@ use frame_support::{
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 pub use pallet::*;
 use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, StaticLookup, Zero},
+	traits::{
+		AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Saturating, StaticLookup, Zero,
+	},
 	RuntimeDebug,
 };
 use sp_std::{fmt::Debug, prelude::*};
@@ -94,10 +96,9 @@ impl<Balance: AtLeast32BitUnsigned + Copy, BlockNumber: AtLeast32BitUnsigned + C
 		start_at: Option<BlockNumber>,
 	) -> Balance {
 		// Number of blocks that count toward vesting
-		// Saturating to 0 when n < starting_block or n < start_at
 		let vested_block_count = match start_at {
-			Some(st) if st < n => n.saturating_sub(st.max(self.starting_block)),
-			_ => Zero::zero(),
+			Some(st) if st < n => n.saturating_sub(st),
+			_ => return self.locked,
 		};
 		let vested_block_count = BlockNumberToBalance::convert(vested_block_count);
 		// Return amount that is still locked in vesting
@@ -386,10 +387,7 @@ impl<T: Config> Pallet<T> {
 		let vesting = Self::vesting(&who).ok_or(Error::<T>::NotVesting)?;
 		let now = <frame_system::Pallet<T>>::block_number();
 
-		let start_at = match Self::vesting_start_at() {
-			Some(value) => Some(value.max(vesting.starting_block)),
-			None => Some(vesting.starting_block),
-		};
+		let start_at = Self::vesting_start_at().map(|st| st.saturating_add(vesting.starting_block));
 
 		let locked_now = vesting.locked_at::<T::BlockNumberToBalance>(now, start_at);
 
@@ -417,10 +415,8 @@ where
 	fn vesting_balance(who: &T::AccountId) -> Option<BalanceOf<T>> {
 		if let Some(v) = Self::vesting(who) {
 			let now = <frame_system::Pallet<T>>::block_number();
-			let start_at = match Self::vesting_start_at() {
-				Some(value) => Some(value.max(v.starting_block)),
-				None => Some(v.starting_block),
-			};
+			let start_at = Self::vesting_start_at().map(|st| st.saturating_add(v.starting_block));
+
 			let locked_now = v.locked_at::<T::BlockNumberToBalance>(now, start_at);
 
 			Some(T::Currency::free_balance(who).min(locked_now))
@@ -624,7 +620,7 @@ mod tests {
 			assert_eq!(Vesting::vesting(&12), Some(user12_vesting_schedule)); // Account 12 has a vesting schedule
 
 			// Account 1 has only 128 units vested from their illiquid 256 * 5 units at block 1
-			assert_eq!(Vesting::vesting_balance(&1), Some(128 * 9));
+			assert_eq!(Vesting::vesting_balance(&1), Some(256 * 5));
 			// Account 2 has their full balance locked
 			assert_eq!(Vesting::vesting_balance(&2), Some(user2_free_balance));
 			// Account 12 has only their illiquid funds locked
@@ -632,6 +628,8 @@ mod tests {
 
 			System::set_block_number(10);
 			assert_eq!(System::block_number(), 10);
+
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 0));
 
 			// Account 1 has fully vested by block 10
 			assert_eq!(Vesting::vesting_balance(&1), Some(0));
@@ -654,7 +652,9 @@ mod tests {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-									 // Account 1 has only 5 units vested at block 1 (plus 50 unvested)
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			System::set_block_number(11);
+			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
 			assert_noop!(
 				Balances::transfer(Some(1).into(), 2, 56),
@@ -668,12 +668,11 @@ mod tests {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-									 // Account 1 has only 5 units vested at block 1 (plus 50 unvested)
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			System::set_block_number(11);
+			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
 			assert_ok!(Vesting::vest(Some(1).into()));
-
-			println!("Account1 usable Balance: {:?}", Balances::usable_balance(&1));
-
 			assert_ok!(Balances::transfer(Some(1).into(), 2, 55));
 		});
 	}
@@ -683,7 +682,9 @@ mod tests {
 		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
 			let user1_free_balance = Balances::free_balance(&1);
 			assert_eq!(user1_free_balance, 100); // Account 1 has free balance
-									 // Account 1 has only 5 units vested at block 1 (plus 50 unvested)
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			System::set_block_number(11);
+			// Account 1 has only 5 units vested at block 1 (plus 50 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
 			assert_ok!(Vesting::vest_other(Some(2).into(), 1));
 			assert_ok!(Balances::transfer(Some(1).into(), 2, 55));
@@ -701,6 +702,9 @@ mod tests {
 
 			let user2_free_balance = Balances::free_balance(&2);
 			assert_eq!(user2_free_balance, 300); // Account 2 has 100 more free balance than normal
+
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+			System::set_block_number(11);
 
 			// Account 1 has only 5 units vested at block 1 (plus 150 unvested)
 			assert_eq!(Vesting::vesting_balance(&1), Some(45));
@@ -761,6 +765,8 @@ mod tests {
 			assert_eq!(user4_free_balance_updated, 256 * 45);
 			// Account 4 has 5 * 256 locked.
 			assert_eq!(Vesting::vesting_balance(&4), Some(256 * 5));
+
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 0));
 
 			System::set_block_number(20);
 			assert_eq!(System::block_number(), 20);
@@ -854,14 +860,15 @@ mod tests {
 			System::set_block_number(20);
 			assert_eq!(System::block_number(), 20);
 
-			// Account 4 has 5 * 64 units vested by block 20.
-			assert_eq!(Vesting::vesting_balance(&4), Some(10 * 64));
+			// Account 4 has 5 * 256 locked.
+			assert_eq!(Vesting::vesting_balance(&4), Some(256 * 5));
 
 			System::set_block_number(30);
 			assert_eq!(System::block_number(), 30);
 
-			// Account 4 has fully vested.
-			assert_eq!(Vesting::vesting_balance(&4), Some(0));
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+
+			assert_eq!(Vesting::vesting_balance(&4), Some(64 * 10));
 		});
 	}
 
