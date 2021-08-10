@@ -16,19 +16,19 @@ sc-transaction-pool = { version = "3.0.0" }
 sc-tracing = { version = "3.0.0" }
 sc-service = { version = "0.9.0", default-features = false }
 sc-consensus = { version = "0.9.0" }
-sc-consensus-manual-seal = { version = "0.9.0" }
-sc-consensus-aura = { version = "0.9.0" }
-sc-finality-grandpa = { version = "0.9.0" }
-sc-consensus-slots = { version = "0.9.0"}
+sc-consensus-manual-seal = { version = "0.9.0",default-features = false }
+sc-consensus-aura = { version = "0.9.0",default-features = false }
+sc-finality-grandpa = { version = "0.9.0",default-features = false }
+sc-consensus-slots = { version = "0.9.0",default-features = false}
 sc-rpc-api = { version = "0.9.0"}
 sc-rpc = { version = "3.0.0" }
 sc-keystore = { version = "3.0.0" }
 frame-benchmarking = {  version = "3.0.0", default-features = false }
 
 # Substrate Primitives
-sp-consensus-aura = { version = "0.9.0" }
-sp-consensus = { version = "0.9.0" }
-sp-finality-grandpa = { version = "3.0.0" }
+sp-consensus-aura = { version = "0.9.0",default-features = false }
+sp-consensus = { version = "0.9.0",default-features = false }
+sp-finality-grandpa = { version = "3.0.0",default-features = false }
 sp-inherents = { version = "3.0.0" }
 sp-api = { version = "3.0.0" }
 sp-block-builder = { version = "3.0.0" }
