@@ -22,7 +22,7 @@
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
-	sp_std::collections::btree_map::BTreeMap,
+	sp_std::collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 	traits::EnsureOrigin,
 };
 use frame_system::pallet_prelude::*;
@@ -84,7 +84,7 @@ pub enum PoolState<T: Config> {
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct DepositData<T: Config> {
 	/// The id of liquidity-pool
-	pid: PoolId,
+	id: PoolId,
 
 	/// The amount of trading-pair deposited in the liquidity-pool
 	deposited: BalanceOf<T>,
@@ -113,9 +113,32 @@ pub struct RewardData<T: Config> {
 	gain_avg: (U64F64, BlockNumberFor<T>),
 }
 
-impl<T: Config> Reward<T> {
-	fn from_tuple((token, total): (CurrencyId, BalanceOf<T>)) -> Option<Self> {
-		todo!()
+impl<T: Config> RewardData<T> {
+	fn new(
+		total: BalanceOf<T>,
+		duration: BlockNumberFor<T>,
+		min_per_block: BalanceOf<T>,
+	) -> Result<Self, Error<T>> {
+		let total: u128 = total.saturated_into();
+		let (per_block, total) = {
+			let duration: u128 = duration.saturated_into();
+
+			let per_block = u128::from_fixed((U64F64::from_num(total) / duration).floor());
+			let total = per_block * duration;
+
+			(BalanceOf::<T>::saturated_from(per_block), BalanceOf::<T>::saturated_from(total))
+		};
+
+		ensure!(per_block > min_per_block, Error::<T>::InvalidRewardPerBlock);
+
+		Ok(RewardData {
+			total,
+			per_block,
+
+			claimed: Zero::zero(),
+
+			gain_avg: (U64F64::from_num(0), Zero::zero()),
+		})
 	}
 }
 
@@ -162,6 +185,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumDeposit: Get<BalanceOf<Self>>;
 
+		/// The amount of token to reward per block should be greater than the value
+		#[pallet::constant]
+		type MinimumRewardPerBlock: Get<BalanceOf<Self>>;
+
 		/// The duration of a liquidity-pool should be greater than the value
 		#[pallet::constant]
 		type MinimumDuration: Get<BlockNumberFor<Self>>;
@@ -175,20 +202,51 @@ pub mod pallet {
 	pub enum Error<T> {
 		InvalidTradingPair,
 		InvalidDuration,
-		InvalidRewardSupply,
-		DuplicateRewards,
+		InvalidRewardPerBlock,
+		InvalidCondition,
+		DuplicateReward,
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		// TODO: PoolCreated
-	// TODO: PoolActivated
-	// TODO: PoolKilled
-	// TODO: UserStaked
-	// TODO: UserRedeemed
-	// TODO: UserClaimed
+		/// The mining-liquidity-pool has been created
+		///
+		/// [pool_id, creator]
+		MiningPoolCreated(PoolId, AccountIdOf<T>),
+		/// The farming-liquidity-pool has been created
+		///
+		/// [pool_id, creator]
+		FarmingPoolCreated(PoolId, AccountIdOf<T>),
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn pool_id)]
+	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn idle_pids)]
+	pub(crate) type IdlePoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn activated_pids)]
+	pub(crate) type ActivatedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn ongoing_pids)]
+	pub(crate) type OngoingPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn dead_pids)]
+	pub(crate) type DeadPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn retired_pids)]
+	pub(crate) type RetiredPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn pool_info)]
+	pub(crate) type TotalPoolInfos<T: Config> = StorageMap<_, Twox64Concat, PoolId, PoolInfo<T>>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -207,16 +265,60 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let creator = ensure_signed(origin)?;
 
+			// Check the trading-pair
 			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
 
-			// TODO: Check the rewards
-			let rewards = BTreeMap::new();
-
+			// Check the duration
 			ensure!(duration >= T::MinimumDuration::get(), Error::<T>::InvalidDuration);
 
-			// TODO: Construct the PoolInfo
+			// Check the condition
+			ensure!(
+				min_deposited_amount_to_start >= T::MinimumDeposit::get(),
+				Error::<T>::InvalidCondition
+			);
+			ensure!(
+				min_deposited_amount_to_start <= T::MaximumDeposit::get(),
+				Error::<T>::InvalidCondition
+			);
 
-			todo!()
+			// Check & Construct the rewards
+			let raw_rewards: Vec<(CurrencyId, BalanceOf<T>)> =
+				option_rewards.into_iter().chain(Some(main_reward).into_iter()).collect();
+			let mut rewards: BTreeMap<CurrencyId, RewardData<T>> = BTreeMap::new();
+			for (token, total) in raw_rewards.into_iter() {
+				ensure!(!rewards.contains_key(&token), Error::<T>::DuplicateReward);
+
+				let reward = RewardData::new(total, duration, T::MinimumRewardPerBlock::get())?;
+
+				// Reserve the reward
+				T::MultiCurrency::reserve(token, &creator, reward.total)?;
+
+				rewards.insert(token, reward);
+			}
+
+			// Construct the PoolInfo
+			let pool_id = Self::next_pool_id();
+			let mining_pool = PoolInfo {
+				creator: creator.clone(),
+				trading_pair,
+				duration,
+				r#type: PoolType::Mining,
+
+				min_deposited_amount_to_start,
+				after_block_to_start,
+
+				deposited: Zero::zero(),
+
+				rewards,
+				state: PoolState::Idle,
+			};
+
+			TotalPoolInfos::<T>::insert(pool_id, mining_pool);
+			IdlePoolIds::<T>::mutate(|pids| pids.insert(pool_id));
+
+			Self::deposit_event(Event::MiningPoolCreated(pool_id, creator));
+
+			Ok(().into())
 		}
 
 		#[pallet::weight(1_000)]
@@ -237,10 +339,10 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn activate_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+		pub fn activate_pool(origin: OriginFor<T>, id: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
-			// TODO: Query the `PoolInfo` by pid
+			// TODO: Query the `PoolInfo` by id
 
 			// TODO: Check the state of `PoolInfo`
 
@@ -252,10 +354,10 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+		pub fn kill_pool(origin: OriginFor<T>, id: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
-			// TODO: Query the `PoolInfo` by pid
+			// TODO: Query the `PoolInfo` by id
 
 			// TODO: Check the state of `PoolInfo`
 
@@ -277,6 +379,14 @@ pub mod pallet {
 		#[pallet::weight(1_000)]
 		pub fn claim(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			todo!()
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		pub(crate) fn next_pool_id() -> PoolId {
+			let next_pool_id = Self::pool_id();
+			NextOrderId::<T>::mutate(|current| *current += 1);
+			next_pool_id
 		}
 	}
 
