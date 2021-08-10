@@ -23,4 +23,5 @@
 pub mod bifrost_bancor;
 pub mod bifrost_flexible_fee;
 pub mod bifrost_salp;
+pub mod bifrost_vtoken_mint;
 pub mod pallet_vesting;

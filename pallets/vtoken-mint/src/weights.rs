@@ -31,26 +31,7 @@ pub trait WeightInfo {
 	fn set_token_staking_lock_period() -> Weight;
 	fn mint() -> Weight;
 	fn redeem() -> Weight;
-}
-
-/// Weights for the pallet using the Bifrost node and recommended hardware.
-pub struct BifrostWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for BifrostWeight<T> {
-	fn set_vtoken_pool() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn set_token_staking_lock_period() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn mint() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn redeem() -> Weight {
-		(50_000_000 as Weight)
-	}
+	fn on_finalize() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -68,6 +49,10 @@ impl WeightInfo for () {
 	}
 
 	fn redeem() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn on_finalize() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

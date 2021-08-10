@@ -187,4 +187,5 @@ runtime-benchmarks = [
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-bancor/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
+	"bifrost-vtoken-mint/runtime-benchmarks",
 ]
