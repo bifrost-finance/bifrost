@@ -1494,6 +1494,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_bancor, Bancor);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
+			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

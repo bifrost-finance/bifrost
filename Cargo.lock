@@ -711,6 +711,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-vtoken-mint",
  "fixed",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",

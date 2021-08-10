@@ -48,6 +48,8 @@ use sp_runtime::traits::{
 pub use weights::WeightInfo;
 use zenlink_protocol::{AssetId, ExportZenlink};
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 mod mock;
 mod tests;
 pub mod weights;
@@ -204,10 +206,10 @@ pub mod pallet {
 			let last_block_diff = n.saturating_sub(last_max_minted_block);
 			let start_block_diff = n.saturating_sub(started_block_num);
 
-			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero()) ||
-				(last_block_diff < T::RewardWindow::get() &&
-					start_block_diff >= max_extended_period &&
-					started_block_num > Zero::zero())
+			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero())
+				|| (last_block_diff < T::RewardWindow::get()
+					&& start_block_diff >= max_extended_period
+					&& started_block_num > Zero::zero())
 			{
 				let period = BalanceOf::<T>::from(start_block_diff.saturated_into::<u32>());
 
@@ -303,8 +305,8 @@ pub mod pallet {
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = CurrencyWeights::<T>::get(&currency_id);
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
-				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
-					(total_weight.saturating_mul(total_vtoken_mint));
+				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
+					/ (total_weight.saturating_mul(total_vtoken_mint));
 
 				// Record all BNC rewards the user receives.
 				if UserReward::<T>::contains_key(&minter) {
