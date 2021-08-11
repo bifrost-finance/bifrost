@@ -23,7 +23,7 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
 	sp_std::{
-		cmp::max,
+		cmp::{max, min},
 		collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 	},
 	traits::{BalanceStatus, EnsureOrigin},
@@ -65,9 +65,6 @@ pub struct PoolInfo<T: Config> {
 	/// The total amount deposited in the liquidity-pool
 	deposited: BalanceOf<T>,
 
-	/// The number of accounts deposited token into the liquidity-pool
-	accounts_num: u64,
-
 	/// The reward infos about the liquidity-pool
 	rewards: BTreeMap<CurrencyId, RewardData<T>>,
 	/// The liquidity-pool state
@@ -77,14 +74,60 @@ pub struct PoolInfo<T: Config> {
 }
 
 impl<T: Config> PoolInfo<T> {
-	/// When the state is PoolState::Ongoing:
-	///
-	/// - 1. Trying to retire the `PoolInfo`;
-	/// - 2. Update the gain_avg in the rewards;
-	fn update(mut self) -> Self {
-		// TODO: Trying to deposit event when the liquidity-pool retired!
+	/// Trying to update the rewards
+	pub(crate) fn try_update(mut self) -> Self {
+		// When pool in `PoolState::Ongoing` or `PoolState::Retired`
+		if let Some(block_startup) = self.block_startup {
+			let block_end = self.duration + block_startup;
+			let n = min(frame_system::Pallet::<T>::block_number(), block_end);
 
-		todo!()
+			for (_, reward) in self.rewards.iter_mut() {
+				reward.update(self.deposited, block_startup, n);
+			}
+		}
+
+		self
+	}
+
+	/// Trying to change the state from `PoolState::Activated` to `PoolState::Ongoing`
+	pub(crate) fn try_startup(mut self, pid: PoolId) -> Self {
+		if self.state == PoolState::Activated {
+			let n = frame_system::Pallet::<T>::block_number();
+
+			if n >= self.after_block_to_start &&
+				self.deposited >= self.min_deposited_amount_to_start
+			{
+				self.block_startup = Some(n);
+				self.state = PoolState::Ongoing;
+
+				Pallet::<T>::deposit_event(Event::PoolStarted(pid, self.r#type, self.trading_pair));
+			}
+		}
+
+		self
+	}
+
+	/// Trying to change the state from `PoolState::Ongoing` to `PoolState::Retired`
+	///
+	/// __NOTE__: Only called in the `Hook`
+	pub(crate) fn try_retire(mut self, pid: PoolId) -> Self {
+		if self.state == PoolState::Ongoing {
+			let n = frame_system::Pallet::<T>::block_number();
+
+			if let Some(block_startup) = self.block_startup {
+				if n >= block_startup + self.duration {
+					self.state = PoolState::Retired;
+
+					Pallet::<T>::deposit_event(Event::PoolRetired(
+						pid,
+						self.r#type,
+						self.trading_pair,
+					));
+				}
+			}
+		}
+
+		self
 	}
 }
 
@@ -121,12 +164,6 @@ impl<T: Config> Default for DepositData<T> {
 	}
 }
 
-impl<T: Config> DepositData<T> {
-	fn update(&mut self, pool: &PoolInfo<T>) {
-		todo!()
-	}
-}
-
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct RewardData<T: Config> {
 	/// The total amount of token to reward
@@ -149,7 +186,7 @@ impl<T: Config> RewardData<T> {
 		total: BalanceOf<T>,
 		duration: BlockNumberFor<T>,
 		min_per_block: BalanceOf<T>,
-	) -> Result<Self, Error<T>> {
+	) -> Result<Self, DispatchError> {
 		let total: u128 = total.saturated_into();
 		let (per_block, total) = {
 			let duration: u128 = duration.saturated_into();
@@ -172,9 +209,28 @@ impl<T: Config> RewardData<T> {
 		})
 	}
 
+	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf<T>) -> U64F64 {
+		let per_block: u128 = self.per_block.saturated_into();
+		let deposited: u128 = deposited.saturated_into();
+
+		U64F64::from_num(per_block) / deposited
+	}
+
 	/// Trying to update the gain_avg
-	fn update(&mut self, deposited: BalanceOf<T>, n: BlockNumberFor<T>) {
-		todo!()
+	pub(crate) fn update(
+		&mut self,
+		deposited: BalanceOf<T>,
+		block_startup: BlockNumberFor<T>,
+		n: BlockNumberFor<T>,
+	) {
+		let pbpd = self.per_block_per_deposited(deposited);
+
+		let b_prev = max(self.gain_avg.1, block_startup);
+		let b_past: u128 = (n - b_prev).saturated_into();
+
+		let gain_avg_new = self.gain_avg.0 + pbpd * b_past;
+
+		self.gain_avg = (gain_avg_new, n);
 	}
 }
 
@@ -257,9 +313,11 @@ pub mod pallet {
 		FailOnUnReserve,
 		/// Not enough deposited by the user in the liquidity-pool to claim the rewards
 		NotEnoughDepositedToClaim,
+		/// Too low balance to deposit
+		TooLowToDeposit,
 		/// IMPOSSIBLE TO HAPPEN
 		Unexpected,
-		/// Temp: NotImpl
+		/// __TEMP__: NotImpl
 		NotImpl,
 	}
 
@@ -461,39 +519,24 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let mut pool = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
+			let mut pool =
+				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
 
-			// TODO: 若状态为Activated
-			// 	- 锁定质押金额
-			// 	- 更新PoolInfo.deposited
-			// 	- 若为第一次质押, 更新PoolInfo.accounts_num
-			// 	- 更新DepositData.deposited
-
-			// TODO: 若状态为Ongoing
-			// 	- 检查当前是否可以Retired
-			// 		- 能: 更新PoolInfo的状态, 更新PoolInfo的平均单位收益, 返回PoolRetired事件
-			// 		- 否: 更新PoolInfo的平均单位收益
-			// 	- 根据DepositData和PoolInfo中的平均单位收益差值, 结算当前奖励
-			// 	- 更新Rewards信息与DepositData中的Rewards快照
-			// 	- 更新PoolInfo.deposited
-			// 	- 若为第一次质押, 更新PoolInfo.accounts_num
-			// 	- 更新DepositData.deposited
-
-			let mut user_deposit_data = Self::user_deposit_data(&user, &pid);
-			user_deposit_data.deposited = user_deposit_data.deposited.saturating_add(value);
-
-			pool.deposited = pool.deposited.saturating_add(value);
 			ensure!(
-				pool.deposited <= T::MaximumDepositedInPool::get(),
-				Error::<T>::ExceedMaximumDeposited
+				pool.state == PoolState::Activated || pool.state == PoolState::Ongoing,
+				Error::<T>::InvalidPoolState
 			);
 
-			let (token_a, token_b) = pool.trading_pair;
+			ensure!(value >= T::MinimumDeposit::get(), Error::<T>::TooLowToDeposit);
 
+			let mut deposit_data = Self::user_deposit_data(&user, &pid);
+
+			// To lock the deposited
 			if pool.r#type == PoolType::Mining {
-				// TODO: Check the balance of LpToken
-				// TODO: Lock the balance of LpToken
+				return Err(Error::<T>::NotImpl.into());
 			} else {
+				let (token_a, token_b) = pool.trading_pair;
+
 				ensure!(
 					T::MultiCurrency::free_balance(token_a, &user) >= value,
 					Error::<T>::NotEnoughBalanceToLock
@@ -507,6 +550,31 @@ pub mod pallet {
 				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, value)?;
 			}
 
+			// TODO: 若状态为Activated
+			// 	- 更新PoolInfo.deposited
+			// 	- 更新DepositData.deposited
+
+			// TODO: 若状态为Ongoing
+			// 	- 根据DepositData和PoolInfo中的平均单位收益差值, 结算当前奖励
+			// 	- 更新Rewards信息与DepositData中的Rewards快照
+			// 	- 更新PoolInfo.deposited
+			// 	- 更新DepositData.deposited
+
+			deposit_data.deposited = deposit_data.deposited.saturating_add(value);
+			pool.deposited = pool.deposited.saturating_add(value);
+			ensure!(
+				pool.deposited <= T::MaximumDepositedInPool::get(),
+				Error::<T>::ExceedMaximumDeposited
+			);
+
+			let r#type = pool.r#type;
+			let trading_pair = pool.trading_pair;
+
+			TotalPoolInfos::<T>::insert(pid, pool);
+			TotalDepositData::<T>::insert(user.clone(), pid, deposit_data);
+
+			Self::deposit_event(Event::UserDeposited(pid, r#type, trading_pair, value, user));
+
 			Ok(().into())
 		}
 
@@ -519,14 +587,18 @@ pub mod pallet {
 			todo!()
 		}
 
-		// TODO: 1. 只能在Ongoing或Retire的情况下进行Claim
-		// TODO: 2. 每次Claim都会更新对应奖励的平均单位收益
-		// TODO: 3. 用户质押数大于0才能进行Claim
+		/// User claims the reward from a liquidity-pool.
+		///
+		/// The conditions to claim:
+		/// 	- User should have enough deposited in the liquidity-pool;
+		/// 	- The liquidity-pool should in special states: `PoolState::Ongoing`,
+		///    `PoolState::Retired`;
 		#[pallet::weight(1_000)]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let mut pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.update();
+			let mut pool: PoolInfo<T> =
+				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
 
 			ensure!(
 				pool.state == PoolState::Ongoing || pool.state == PoolState::Retired,
@@ -540,35 +612,23 @@ pub mod pallet {
 				Error::<T>::NotEnoughDepositedToClaim
 			);
 
-			let to_rewards = Self::accounting_rewards(&mut pool, &mut deposit_data)?;
-
-			for (rtoken, amount) in to_rewards.iter() {
-				T::MultiCurrency::repatriate_reserved(
-					*rtoken,
-					&pool.creator,
-					&user,
-					*amount,
-					BalanceStatus::Free,
-				)?;
-			}
-
-			let r#type = pool.r#type;
-			let trading_pair = pool.trading_pair;
+			Self::accounting_rewards(&mut pool, &mut deposit_data, pid, user.clone())?;
 
 			TotalPoolInfos::<T>::insert(pid, pool);
-			TotalDepositData::<T>::insert(user.clone(), pid, deposit_data);
-
-			Self::deposit_event(Event::UserClaimed(pid, r#type, trading_pair, to_rewards, user));
+			TotalDepositData::<T>::insert(user, pid, deposit_data);
 
 			Ok(().into())
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Account & Transfer the rewards to user
 		pub(crate) fn accounting_rewards(
 			pool: &mut PoolInfo<T>,
 			deposit_data: &mut DepositData<T>,
-		) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, Error<T>> {
+			pid: PoolId,
+			user: AccountIdOf<T>,
+		) -> Result<(), DispatchError> {
 			let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
 			let bs = pool.block_startup.ok_or(Error::<T>::Unexpected)?;
@@ -582,14 +642,33 @@ pub mod pallet {
 					((vn - vo) * block_past).floor(),
 				));
 
-				// Update the data
+				// Update the claimed of the reward
 				reward.claimed = reward.claimed.saturating_add(amount);
+				// Sync the gain_avg between `DepositData` and `RewardData`
 				deposit_data.gain_avgs.insert(*rtoken, (vn, un));
 
 				to_rewards.push((*rtoken, amount));
 			}
 
-			Ok(to_rewards)
+			for (rtoken, amount) in to_rewards.iter() {
+				T::MultiCurrency::repatriate_reserved(
+					*rtoken,
+					&pool.creator,
+					&user,
+					*amount,
+					BalanceStatus::Free,
+				)?;
+			}
+
+			Self::deposit_event(Event::UserClaimed(
+				pid,
+				pool.r#type,
+				pool.trading_pair,
+				to_rewards,
+				user,
+			));
+
+			Ok(().into())
 		}
 
 		pub(crate) fn create_pool(
@@ -647,7 +726,6 @@ pub mod pallet {
 				after_block_to_start,
 
 				deposited: Zero::zero(),
-				accounts_num: Zero::zero(),
 
 				rewards,
 				state: PoolState::Init,
@@ -684,23 +762,15 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		// TODO: 这里需要仔细的测试与检查
 		fn on_finalize(n: BlockNumberFor<T>) {
 			// Check whether pool-activated is meet the startup condition
 			for pid in Self::activated_pids() {
-				if let Some(pool) = Self::pool(pid) {
-					if n >= pool.after_block_to_start &&
-						pool.deposited >= pool.min_deposited_amount_to_start
-					{
-						let block_started = n + BlockNumberFor::<T>::from(1 as u32);
-						let pool_started = PoolInfo {
-							state: PoolState::Ongoing,
-							block_startup: Some(block_started),
-							..pool.clone()
-						};
+				if let Some(mut pool) = Self::pool(pid) {
+					pool = pool.try_startup(pid);
 
+					if pool.state == PoolState::Ongoing {
 						ActivatedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
-						TotalPoolInfos::<T>::insert(pid, pool_started);
+						TotalPoolInfos::<T>::insert(pid, pool);
 					}
 				}
 			}
