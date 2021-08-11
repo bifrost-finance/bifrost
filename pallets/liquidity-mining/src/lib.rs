@@ -90,10 +90,10 @@ impl<T: Config> PoolInfo<T> {
 	}
 
 	/// Trying to change the state from `PoolState::Activated` to `PoolState::Ongoing`
-	pub(crate) fn try_startup(mut self, pid: PoolId) -> Self {
+	///
+	/// __NOTE__: Only called in the `Hook`
+	pub(crate) fn try_startup(mut self, pid: PoolId, n: BlockNumberFor<T>) -> Self {
 		if self.state == PoolState::Activated {
-			let n = frame_system::Pallet::<T>::block_number();
-
 			if n >= self.after_block_to_start &&
 				self.deposited >= self.min_deposited_amount_to_start
 			{
@@ -108,8 +108,6 @@ impl<T: Config> PoolInfo<T> {
 	}
 
 	/// Trying to change the state from `PoolState::Ongoing` to `PoolState::Retired`
-	///
-	/// __NOTE__: Only called in the `Hook`
 	pub(crate) fn try_retire(mut self, pid: PoolId) -> Self {
 		if self.state == PoolState::Ongoing {
 			let n = frame_system::Pallet::<T>::block_number();
@@ -128,6 +126,59 @@ impl<T: Config> PoolInfo<T> {
 		}
 
 		self
+	}
+
+	/// Trying account & transfer the rewards to user
+	pub(crate) fn try_settle_and_transfer(
+		&mut self,
+		deposit_data: &mut DepositData<T>,
+		pid: PoolId,
+		user: AccountIdOf<T>,
+	) -> Result<(), DispatchError> {
+		let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T>)>::new();
+
+		// When pool in `PoolState::Ongoing` or `PoolState::Retired`
+		if let Some(block_startup) = self.block_startup {
+			for (rtoken, reward) in self.rewards.iter_mut() {
+				let (vn, un) = reward.gain_avg;
+				if let Some(gain_avg) = deposit_data.gain_avgs.get(rtoken) {
+					let (vo, uo) = *gain_avg;
+					let uo = max(uo, block_startup);
+
+					let block_past: u128 = (un - uo).saturated_into();
+					let amount = BalanceOf::<T>::saturated_from(u128::from_fixed(
+						((vn - vo) * block_past).floor(),
+					));
+
+					// Update the claimed of the reward
+					reward.claimed = reward.claimed.saturating_add(amount);
+					// Sync the gain_avg between `DepositData` and `RewardData`
+					deposit_data.gain_avgs.insert(*rtoken, (vn, un));
+
+					to_rewards.push((*rtoken, amount));
+				}
+			}
+		}
+
+		for (rtoken, amount) in to_rewards.iter() {
+			T::MultiCurrency::repatriate_reserved(
+				*rtoken,
+				&self.creator,
+				&user,
+				*amount,
+				BalanceStatus::Free,
+			)?;
+		}
+
+		Pallet::<T>::deposit_event(Event::UserClaimed(
+			pid,
+			self.r#type,
+			self.trading_pair,
+			to_rewards,
+			user,
+		));
+
+		Ok(().into())
 	}
 }
 
@@ -154,13 +205,19 @@ pub struct DepositData<T: Config> {
 	/// updated when the `DepositData`'s owner redeems or claims from the liquidity-pool.
 	///
 	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
-	/// - Arg1: The update block number
+	/// - Arg1: The block number updated lastest
 	gain_avgs: BTreeMap<CurrencyId, (U64F64, BlockNumberFor<T>)>,
 }
 
-impl<T: Config> Default for DepositData<T> {
-	fn default() -> Self {
-		Self { deposited: Zero::zero(), gain_avgs: BTreeMap::new() }
+impl<T: Config> DepositData<T> {
+	pub(crate) fn from_pool(pool: &PoolInfo<T>) -> Self {
+		let mut gain_avgs = BTreeMap::<CurrencyId, (U64F64, BlockNumberFor<T>)>::new();
+
+		for (rtoken, reward) in pool.rewards.iter() {
+			gain_avgs.insert(*rtoken, reward.gain_avg);
+		}
+
+		Self { deposited: Zero::zero(), gain_avgs }
 	}
 }
 
@@ -177,7 +234,7 @@ pub struct RewardData<T: Config> {
 	/// updated when anyone deposits to / redeems from / claims from the liquidity-pool.
 	///
 	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
-	/// - Arg1: The update block number
+	/// - Arg1: The block number updated latest
 	gain_avg: (U64F64, BlockNumberFor<T>),
 }
 
@@ -315,8 +372,6 @@ pub mod pallet {
 		NotEnoughDepositedToClaim,
 		/// Too low balance to deposit
 		TooLowToDeposit,
-		/// IMPOSSIBLE TO HAPPEN
-		Unexpected,
 		/// __TEMP__: NotImpl
 		NotImpl,
 	}
@@ -385,7 +440,6 @@ pub mod pallet {
 		Blake2_128Concat,
 		PoolId,
 		DepositData<T>,
-		ValueQuery,
 	>;
 
 	#[pallet::pallet]
@@ -504,13 +558,15 @@ pub mod pallet {
 			todo!()
 		}
 
-		// TODO: 0. 若为Ongoing, 检查是否能Retired, 能, Retire掉Pool
-		// TODO: 1. 只有当Activated或Ongoing时才能进行Deposit
-		// TODO: 2. 全新的Deposit会增加池中的质押人数
-		// TODO: 3. 二次质押时, 会先进行Claim结算
-		// TODO: 4. 在Activated时, 单位平均收益恒为0
-		// TODO: 5. 质押金额必须大于最小质押金额
-		// TODO: 6. 质押后在下一个区块起息, 不一定!
+		/// User deposits some token to a liquidity-pool.
+		///
+		/// The extrinsic will:
+		/// - Try to retire the liquidity-pool which has reached the end of life.
+		/// - Try to settle the rewards when the liquidity-pool in `Ongoing`.
+		///
+		/// The conditions to deposit:
+		/// - User should deposit enough(greater than `T::MinimumDeposit`) token to liquidity-pool;
+		/// - The liquidity-pool should be in special state: `Activated`, `Ongoing`;
 		#[pallet::weight(1_000)]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -519,7 +575,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let mut pool =
+			let mut pool: PoolInfo<T> =
 				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
 
 			ensure!(
@@ -529,7 +585,17 @@ pub mod pallet {
 
 			ensure!(value >= T::MinimumDeposit::get(), Error::<T>::TooLowToDeposit);
 
-			let mut deposit_data = Self::user_deposit_data(&user, &pid);
+			let mut deposit_data: DepositData<T> = {
+				if let Some(deposit_data) = Self::user_deposit_data(&user, &pid) {
+					deposit_data
+				} else {
+					DepositData::<T>::from_pool(&pool)
+				}
+			};
+
+			if pool.state == PoolState::Ongoing {
+				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+			}
 
 			// To lock the deposited
 			if pool.r#type == PoolType::Mining {
@@ -550,16 +616,6 @@ pub mod pallet {
 				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, value)?;
 			}
 
-			// TODO: 若状态为Activated
-			// 	- 更新PoolInfo.deposited
-			// 	- 更新DepositData.deposited
-
-			// TODO: 若状态为Ongoing
-			// 	- 根据DepositData和PoolInfo中的平均单位收益差值, 结算当前奖励
-			// 	- 更新Rewards信息与DepositData中的Rewards快照
-			// 	- 更新PoolInfo.deposited
-			// 	- 更新DepositData.deposited
-
 			deposit_data.deposited = deposit_data.deposited.saturating_add(value);
 			pool.deposited = pool.deposited.saturating_add(value);
 			ensure!(
@@ -578,21 +634,43 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// TODO: 0. 若为Ongoing, 检查是否能Retired, 能, Retire掉Pool
-		// TODO: 1. 只能在Ongoing或Retired的情况下进行Redeem
-		// TODO: 2. Redeem之前会先进性Claim结算
-		// TODO: 3. 当处于Ongoing状态时, Pool中质押的Token不能完全抽干, 为了防止空放攻击
+		/// User redeems all deposited from a liquidity-pool.
+		/// The deposit in the liquidity-pool should be greater than `T::MinimumDeposit` when the
+		/// liquidity-pool is on `Ongoing` state; So user may not be able to redeem completely
+		/// until the liquidity-pool is on `Retire` state.
+		///
+		/// The extrinsic will:
+		/// - Try to retire the liquidity-pool which has reached the end of life.
+		/// - Try to settle the rewards when the liquidity-pool in `Ongoing`.
+		/// - Try to unreserve the remaining rewards to the pool creator when the deposit in the
+		///   liquidity-pool is clear.
+		///
+		/// The condition to redeem:
+		/// - User should have some deposit in the liquidity-pool;
+		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
 		#[pallet::weight(1_000)]
 		pub fn redeem(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
-			todo!()
+			let user = ensure_signed(origin)?;
+
+			let mut pool: PoolInfo<T> =
+				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
+
+			ensure!(
+				pool.state == PoolState::Ongoing || pool.state == PoolState::Retired,
+				Error::<T>::InvalidPoolState
+			);
+
+			Ok(().into())
 		}
 
-		/// User claims the reward from a liquidity-pool.
+		/// User claims the rewards from a liquidity-pool.
+		///
+		/// The extrinsic will:
+		/// - Try to retire the liquidity-pool which has reached the end of life.
 		///
 		/// The conditions to claim:
-		/// 	- User should have enough deposited in the liquidity-pool;
-		/// 	- The liquidity-pool should in special states: `PoolState::Ongoing`,
-		///    `PoolState::Retired`;
+		/// - User should have enough token deposited in the liquidity-pool;
+		/// - The liquidity-pool should be in special states: `Ongoing`, `Retired`;
 		#[pallet::weight(1_000)]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
@@ -605,14 +683,15 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			let mut deposit_data: DepositData<T> = Self::user_deposit_data(&user, &pid);
+			let mut deposit_data: DepositData<T> = Self::user_deposit_data(&user, &pid)
+				.ok_or(Error::<T>::NotEnoughDepositedToClaim)?;
 
 			ensure!(
 				deposit_data.deposited >= T::MinimumDeposit::get(),
 				Error::<T>::NotEnoughDepositedToClaim
 			);
 
-			Self::accounting_rewards(&mut pool, &mut deposit_data, pid, user.clone())?;
+			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 
 			TotalPoolInfos::<T>::insert(pid, pool);
 			TotalDepositData::<T>::insert(user, pid, deposit_data);
@@ -622,55 +701,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		/// Account & Transfer the rewards to user
-		pub(crate) fn accounting_rewards(
-			pool: &mut PoolInfo<T>,
-			deposit_data: &mut DepositData<T>,
-			pid: PoolId,
-			user: AccountIdOf<T>,
-		) -> Result<(), DispatchError> {
-			let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T>)>::new();
-
-			let bs = pool.block_startup.ok_or(Error::<T>::Unexpected)?;
-			for (rtoken, reward) in pool.rewards.iter_mut() {
-				let (vn, un) = reward.gain_avg;
-				let (vo, uo) = *deposit_data.gain_avgs.get(rtoken).ok_or(Error::<T>::Unexpected)?;
-				let uo = max(uo, bs);
-
-				let block_past: u128 = (un - uo).saturated_into();
-				let amount = BalanceOf::<T>::saturated_from(u128::from_fixed(
-					((vn - vo) * block_past).floor(),
-				));
-
-				// Update the claimed of the reward
-				reward.claimed = reward.claimed.saturating_add(amount);
-				// Sync the gain_avg between `DepositData` and `RewardData`
-				deposit_data.gain_avgs.insert(*rtoken, (vn, un));
-
-				to_rewards.push((*rtoken, amount));
-			}
-
-			for (rtoken, amount) in to_rewards.iter() {
-				T::MultiCurrency::repatriate_reserved(
-					*rtoken,
-					&pool.creator,
-					&user,
-					*amount,
-					BalanceStatus::Free,
-				)?;
-			}
-
-			Self::deposit_event(Event::UserClaimed(
-				pid,
-				pool.r#type,
-				pool.trading_pair,
-				to_rewards,
-				user,
-			));
-
-			Ok(().into())
-		}
-
 		pub(crate) fn create_pool(
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
@@ -766,7 +796,7 @@ pub mod pallet {
 			// Check whether pool-activated is meet the startup condition
 			for pid in Self::activated_pids() {
 				if let Some(mut pool) = Self::pool(pid) {
-					pool = pool.try_startup(pid);
+					pool = pool.try_startup(pid, n);
 
 					if pool.state == PoolState::Ongoing {
 						ActivatedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
