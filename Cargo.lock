@@ -191,7 +191,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "frame-benchmarking",
@@ -658,7 +658,7 @@ dependencies = [
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -734,7 +734,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "frame-benchmarking",
@@ -787,7 +787,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "frame-executive",
@@ -1687,7 +1687,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-cli"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "sc-cli",
  "sc-service",
@@ -1697,11 +1697,11 @@ dependencies = [
 [[package]]
 name = "cumulus-client-collator"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "cumulus-client-consensus-common",
  "cumulus-client-network",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "futures 0.3.15",
  "parity-scale-codec",
  "parking_lot 0.10.2",
@@ -1721,11 +1721,11 @@ dependencies = [
 [[package]]
 name = "cumulus-client-consensus-aura"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "async-trait",
  "cumulus-client-consensus-common",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "futures 0.3.15",
  "parity-scale-codec",
  "parking_lot 0.10.2",
@@ -1751,7 +1751,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-consensus-common"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "async-trait",
  "dyn-clone",
@@ -1775,7 +1775,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-network"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "derive_more",
  "futures 0.3.15",
@@ -1799,9 +1799,9 @@ dependencies = [
 [[package]]
 name = "cumulus-client-pov-recovery"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "futures 0.3.15",
  "futures-timer 3.0.2",
  "parity-scale-codec",
@@ -1822,12 +1822,12 @@ dependencies = [
 [[package]]
 name = "cumulus-client-service"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "cumulus-client-collator",
  "cumulus-client-consensus-common",
  "cumulus-client-pov-recovery",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "parity-scale-codec",
  "parking_lot 0.10.2",
  "polkadot-overseer",
@@ -1850,7 +1850,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-aura-ext"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "frame-executive",
  "frame-support",
@@ -1867,9 +1867,9 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-dmp-queue"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "frame-system",
  "log",
@@ -1886,10 +1886,10 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "cumulus-pallet-parachain-system-proc-macro",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-primitives-parachain-inherent",
  "environmental",
  "frame-support",
@@ -1914,7 +1914,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system-proc-macro"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "proc-macro-crate 1.0.0",
  "proc-macro2",
@@ -1925,9 +1925,9 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcm"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -1941,9 +1941,9 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcmp-queue"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "frame-system",
  "log",
@@ -1975,12 +1975,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "cumulus-primitives-core"
+version = "0.1.0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+ "sp-trie",
+ "xcm",
+]
+
+[[package]]
 name = "cumulus-primitives-parachain-inherent"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "async-trait",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-test-relay-sproof-builder",
  "parity-scale-codec",
  "polkadot-client",
@@ -1998,9 +2016,9 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-timestamp"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "sp-inherents",
  "sp-std",
  "sp-timestamp",
@@ -2009,9 +2027,9 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-utility"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -2027,9 +2045,9 @@ dependencies = [
 [[package]]
 name = "cumulus-test-relay-sproof-builder"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "parity-scale-codec",
  "polkadot-primitives",
  "sp-runtime",
@@ -2131,7 +2149,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-primitives-timestamp",
  "cumulus-primitives-utility",
  "frame-benchmarking",
@@ -4922,7 +4940,7 @@ version = "0.8.0"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-benchmarking-cli",
  "log",
  "node-inspect 0.8.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
@@ -5019,7 +5037,7 @@ dependencies = [
  "cumulus-client-consensus-common",
  "cumulus-client-network",
  "cumulus-client-service",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "cumulus-primitives-parachain-inherent",
  "dev-runtime",
  "frame-benchmarking",
@@ -5417,7 +5435,7 @@ dependencies = [
 [[package]]
 name = "pallet-collator-selection"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5921,9 +5939,9 @@ dependencies = [
 [[package]]
 name = "parachain-info"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8#ed6ba5dfb2c112c29505e856e8971da3420ce6d0"
+source = "git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof#fda39cbea91553bc860d62bd2196f5c58993c93b"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
@@ -11838,7 +11856,7 @@ dependencies = [
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/yrong/cumulus?branch=polkadot-v0.9.8-without-compact-proof)",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -11878,7 +11896,7 @@ name = "zenlink-protocol"
 version = "0.4.2"
 source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.8#8e9e87081b579e950a544f33cd380b38772370a1"
 dependencies = [
- "cumulus-primitives-core",
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.8)",
  "frame-support",
  "frame-system",
  "log",

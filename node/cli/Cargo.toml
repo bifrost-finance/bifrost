@@ -39,9 +39,9 @@ frame-benchmarking-cli = { version = "3.0.0", optional = true }
 node-inspect = { version = "0.8.0", optional = true }
 
 # Cumulus dependencies
-cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+cumulus-client-cli = { git = "https://github.com/yrong/cumulus", branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-client-service = { git = "https://github.com/yrong/cumulus", branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-primitives-core = { git = "https://github.com/yrong/cumulus", branch = "polkadot-v0.9.8-without-compact-proof" }
 
 # Polkadot dependencies
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
