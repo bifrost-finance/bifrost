@@ -113,3 +113,38 @@ To start the nodes, navigate to the output folder that the generated docker scri
 cd ./output
 docker-compose up -d --build
 ```
+
+## Run full node with docker
+
+### Create `bifrost-fullnode` directory, generate `node-key` and get `bifrost.json`
+
+```sh
+mkdir -p ~/bifrost-fullnode/network
+subkey generate-node-key --file ~/bifrost-fullnode/network/node-key
+wget -O ~/bifrost-fullnode/bifrost.json https://github.com/bifrost-finance/bifrost/releases/download/bifrost-v0.8.0/bifrost.json
+```
+
+### Start the node with docker
+
+Replace your-fullnode-name
+```sh
+docker pull bifrostnetwork/bifrost:v0.8.1-fix_crash
+docker run -d \
+-v ~/bifrost-fullnode:/bifrost \
+-p 9944:9944 \
+-p 9933:9933 \
+-p 30333:30333 \
+-p 9615:9615 \
+bifrostnetwork/bifrost:v0.8.1-fix_crash \
+  --name your-fullnode-name \
+  --base-path "/bifrost" \
+  --node-key-file "/bifrost/network/node-key" \
+  --chain "/bifrost/bifrost.json" \
+  --parachain-id 2001 \
+  --pruning=archive \
+  --prometheus-external \
+  --rpc-external \
+  --ws-external \
+  --rpc-cors all \
+  --execution wasm
+```
