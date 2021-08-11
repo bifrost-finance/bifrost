@@ -37,8 +37,23 @@ pub(crate) fn run_to_block(n: u64) {
 	}
 }
 
-// The following test is ignored due to some bugs on zenlink. It can be reopened after the bug is
-// fixed.frame_system The functionality has already been tested.
+#[test]
+fn claim_reward_should_work() {
+	ExtBuilder::default().ten_thousand_for_alice_n_bob().build().execute_with(|| {
+		crate::UserReward::<Runtime>::insert(&ALICE, 1000);
+		assert_eq!(MinterReward::user_reward(&ALICE), 1000);
+		// Alice original has 100000 native token.
+		assert_eq!(Currencies::free_balance(CurrencyId::Native(TokenSymbol::ASG), &ALICE), 100000);
+
+		assert_ok!(MinterReward::claim_reward(Origin::signed(ALICE)));
+		assert_eq!(MinterReward::user_reward(&ALICE), 0);
+		assert_eq!(
+			Currencies::free_balance(CurrencyId::Native(TokenSymbol::ASG), &ALICE),
+			100000 + 1000
+		)
+	});
+}
+
 #[test]
 fn minter_reward_should_work() {
 	ExtBuilder::default().ten_thousand_for_alice_n_bob().build().execute_with(|| {
@@ -150,9 +165,9 @@ fn minter_reward_should_work() {
 			(12, 56, CurrencyId::VToken(TokenSymbol::DOT))
 		);
 
-		// start block is 2, max extended block is 20, block 22 should still be the last block of
+		// start block is 2, max extended block is 20, block 21 should still be the last block of
 		// maximum_vtoken(12, 56, CurrencyId::VToken(TokenSymbol::DOT))
-		run_to_block(22);
+		run_to_block(21);
 		assert_eq!(
 			MinterReward::maximum_vtoken_minted(),
 			(12, 56, CurrencyId::VToken(TokenSymbol::DOT))

@@ -29,7 +29,6 @@ use frame_support::{
 		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
 		WithdrawReasons,
 	},
-	weights::Weight,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
@@ -42,22 +41,21 @@ use sp_runtime::{
 	transaction_validity::TransactionValidityError,
 };
 use sp_std::{vec, vec::Vec};
+pub use weights::WeightInfo;
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
 use crate::fee_dealer::FeeDealer;
 
-mod default_weight;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 pub mod fee_dealer;
 mod mock;
 mod tests;
+mod weights;
 
 type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::CurrencyId;
-
-pub trait WeightInfo {
-	fn set_user_fee_charge_order() -> Weight;
-}
 
 #[frame_support::pallet]
 pub mod pallet {

@@ -24,6 +24,8 @@
 use core::marker::PhantomData;
 use std::convert::TryInto;
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
@@ -253,6 +255,7 @@ impl crate::Config for Runtime {
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
 	type StableCurrencyId = StableCurrencyId;
+	type WeightInfo = ();
 }
 
 pub struct ExtBuilder {
@@ -309,6 +312,18 @@ impl ExtBuilder {
 	// 		(BOB, KSM, 100),
 	// 	])
 	// }
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		let whitelist_caller: AccountId = whitelisted_caller();
+
+		self.balances(vec![
+			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), DOT, 100_000_000_000_000),
+			(whitelist_caller.clone(), vKSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), vDOT, 100_000_000_000_000),
+		])
+	}
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();

@@ -23,36 +23,20 @@ use frame_support::{
 	traits::Get,
 	weights::{constants::RocksDbWeight, Weight},
 };
-use sp_std::marker::PhantomData;
 
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
-	fn set_vtoken_pool() -> Weight;
-	fn set_token_staking_lock_period() -> Weight;
-	fn mint() -> Weight;
-	fn redeem() -> Weight;
-	fn on_finalize() -> Weight;
+	fn claim_reward() -> Weight;
+	fn on_initialize() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn set_vtoken_pool() -> Weight {
+	fn claim_reward() -> Weight {
 		(50_000_000 as Weight)
 	}
 
-	fn set_token_staking_lock_period() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn mint() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn redeem() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn on_finalize() -> Weight {
+	fn on_initialize() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

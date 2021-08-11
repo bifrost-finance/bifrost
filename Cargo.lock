@@ -659,6 +659,7 @@ name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
  "cumulus-primitives-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -710,6 +711,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-vtoken-mint",
  "fixed",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",
@@ -892,6 +894,7 @@ name = "bifrost-vtoken-mint"
 version = "0.8.0"
 dependencies = [
  "bifrost-minter-reward",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",

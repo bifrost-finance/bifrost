@@ -24,6 +24,8 @@
 use core::marker::PhantomData;
 use std::convert::TryInto;
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Hooks},
@@ -165,6 +167,7 @@ impl bifrost_minter_reward::Config for Runtime {
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
 	type StableCurrencyId = StableCurrencyId;
+	type WeightInfo = ();
 }
 
 impl crate::Config for Runtime {
@@ -290,6 +293,18 @@ impl ExtBuilder {
 			(ALICE, vDOT, 100),
 			(BOB, DOT, 0),
 			(BOB, KSM, 100),
+		])
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		let whitelist_caller: AccountId = whitelisted_caller();
+
+		self.balances(vec![
+			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), DOT, 100_000_000_000_000),
+			(whitelist_caller.clone(), vKSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), vDOT, 100_000_000_000_000),
 		])
 	}
 
