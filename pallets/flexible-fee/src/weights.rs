@@ -18,41 +18,16 @@
 
 #![allow(unused_parens)]
 #![allow(unused_imports)]
+#![allow(clippy::unnecessary_cast)]
 
-use frame_support::{
-	traits::Get,
-	weights::{constants::RocksDbWeight, Weight},
-};
-use sp_std::marker::PhantomData;
+use frame_support::weights::{constants::RocksDbWeight as DbWeight, Weight};
 
-/// Weight functions needed for the pallet.
 pub trait WeightInfo {
-	fn set_vtoken_pool() -> Weight;
-	fn set_token_staking_lock_period() -> Weight;
-	fn mint() -> Weight;
-	fn redeem() -> Weight;
-	fn on_finalize() -> Weight;
+	fn set_user_fee_charge_order() -> Weight;
 }
 
-// For backwards compatibility and tests
-impl WeightInfo for () {
-	fn set_vtoken_pool() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn set_token_staking_lock_period() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn mint() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn redeem() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn on_finalize() -> Weight {
-		(50_000_000 as Weight)
+impl crate::WeightInfo for () {
+	fn set_user_fee_charge_order() -> Weight {
+		50_000_000 as Weight
 	}
 }
