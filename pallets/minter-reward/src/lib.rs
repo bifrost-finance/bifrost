@@ -26,7 +26,7 @@ pub use frame_support::traits::GenesisBuild;
 use frame_support::{
 	pallet_prelude::{
 		Blake2_128Concat, DispatchResult, IsType, StorageDoubleMap, StorageMap, StorageValue,
-		ValueQuery,
+		ValueQuery, Weight,
 	},
 	traits::{Get, Hooks},
 	Parameter,
@@ -185,7 +185,7 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(n: BlockNumberFor<T>) {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// reach two year
 			if n % T::HalvingCycle::get() == Zero::zero() && n > Zero::zero() {
 				// Change round index
@@ -206,10 +206,10 @@ pub mod pallet {
 			let last_block_diff = n.saturating_sub(last_max_minted_block);
 			let start_block_diff = n.saturating_sub(started_block_num);
 
-			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero())
-				|| (last_block_diff < T::RewardWindow::get()
-					&& start_block_diff >= max_extended_period
-					&& started_block_num > Zero::zero())
+			if (last_block_diff >= T::RewardWindow::get() && started_block_num > Zero::zero()) ||
+				(last_block_diff < T::RewardWindow::get() &&
+					start_block_diff >= max_extended_period &&
+					started_block_num > Zero::zero())
 			{
 				let period = BalanceOf::<T>::from(start_block_diff.saturated_into::<u32>());
 
@@ -222,6 +222,8 @@ pub mod pallet {
 				let _ = Minter::<T>::remove_all(None);
 				let _ = TotalVtokenMinted::<T>::remove_all(None);
 			}
+
+			70_943_000 as Weight
 		}
 	}
 
@@ -305,8 +307,8 @@ pub mod pallet {
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = CurrencyWeights::<T>::get(&currency_id);
 				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
-				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount))
-					/ (total_weight.saturating_mul(total_vtoken_mint));
+				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
+					(total_weight.saturating_mul(total_vtoken_mint));
 
 				// Record all BNC rewards the user receives.
 				if UserReward::<T>::contains_key(&minter) {

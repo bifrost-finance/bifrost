@@ -165,9 +165,9 @@ fn minter_reward_should_work() {
 			(12, 56, CurrencyId::VToken(TokenSymbol::DOT))
 		);
 
-		// start block is 2, max extended block is 20, block 22 should still be the last block of
+		// start block is 2, max extended block is 20, block 21 should still be the last block of
 		// maximum_vtoken(12, 56, CurrencyId::VToken(TokenSymbol::DOT))
-		run_to_block(22);
+		run_to_block(21);
 		assert_eq!(
 			MinterReward::maximum_vtoken_minted(),
 			(12, 56, CurrencyId::VToken(TokenSymbol::DOT))

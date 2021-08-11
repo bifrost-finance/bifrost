@@ -30,7 +30,7 @@ use crate::Pallet as MinterReward;
 benchmarks! {
 	claim_reward {
 		let caller: T::AccountId = whitelisted_caller();
-		UserReward::<T>::insert(caller.clone(), BalanceOf::<T>::unique_saturated_from(100 as u128));
+		UserReward::<T>::insert(caller.clone(), BalanceOf::<T>::unique_saturated_from(10 as u128));
 	}: _(RawOrigin::Signed(caller))
 
 	on_initialize {
