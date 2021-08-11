@@ -26,11 +26,7 @@ pub use frame_support::traits::GenesisBuild;
 use frame_support::{
 	pallet_prelude::{
 		Blake2_128Concat, DispatchResult, IsType, StorageDoubleMap, StorageMap, StorageValue,
-<<<<<<< HEAD
 		ValueQuery, Weight,
-=======
-		ValueQuery,
->>>>>>> Minter-reward moudle: change auto depositing reward to user claiming reward
 	},
 	traits::{Get, Hooks},
 	Parameter,
