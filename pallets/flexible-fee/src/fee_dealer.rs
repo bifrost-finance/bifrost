@@ -19,8 +19,6 @@
 // The swap pool algorithm implements Balancer protocol
 // For more details, refer to https://balancer.finance/whitepaper/
 
-// #![cfg_attr(not(feature = "std"), no_std)]
-
 use sp_runtime::traits::UniqueSaturatedFrom;
 
 use super::*;

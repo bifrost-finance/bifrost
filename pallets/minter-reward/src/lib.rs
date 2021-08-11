@@ -268,7 +268,7 @@ pub mod pallet {
 				T::MultiCurrency::deposit(CurrencyId::Native(TokenSymbol::ASG), &claimer, amount)?;
 
 				// delete the record in the storage
-				crate::UserReward::<T>::take(&claimer);
+				crate::UserReward::<T>::remove(&claimer);
 			}
 
 			Ok(())
