@@ -46,6 +46,8 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_flexible_fee::WeightInfo for WeightInfo<T> {
 	fn set_user_fee_charge_order() -> Weight {
-		(6_081_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+		(6_081_000 as Weight)
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 }

@@ -57,7 +57,7 @@ benchmarks! {
 		let vtoken_amount = BalanceOf::<T>::unique_saturated_from(10u32 as u128);
 	}: _(RawOrigin::Signed(caller), token_id, vtoken_amount)
 
-	on_finalize {
+	on_initialize {
 		let block_num = T::BlockNumber::from(100u32);
 	}:{VtokenMint::<T>::on_initialize(block_num);}
 }
