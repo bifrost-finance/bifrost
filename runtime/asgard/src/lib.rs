@@ -881,7 +881,7 @@ impl bifrost_vtoken_mint::Config for Runtime {
 	type Event = Event;
 	type MinterReward = MinterReward;
 	type MultiCurrency = Currencies;
-	type WeightInfo = bifrost_vtoken_mint::weights::BifrostWeight<Runtime>;
+	type WeightInfo = weights::bifrost_vtoken_mint::WeightInfo<Runtime>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -920,8 +920,8 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
-	type OnUnbalanced = ();
-	type WeightInfo = ();
+	type OnUnbalanced = Treasury;
+	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -939,6 +939,7 @@ impl bifrost_minter_reward::Config for Runtime {
 	type RewardWindow = RewardWindow;
 	type ShareWeight = Balance;
 	type StableCurrencyId = StableCurrencyId;
+	type WeightInfo = weights::bifrost_minter_reward::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1196,7 +1197,7 @@ construct_runtime! {
 
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
-		MinterReward: bifrost_minter_reward::{Pallet, Storage, Event<T>, Config<T>} = 102,
+		MinterReward: bifrost_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>} = 102,
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 104,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
@@ -1497,6 +1498,9 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
 			add_benchmark!(params, batches, bifrost_bancor, Bancor);
+			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
+			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
+			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
