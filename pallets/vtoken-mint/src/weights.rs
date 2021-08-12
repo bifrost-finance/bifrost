@@ -31,7 +31,7 @@ pub trait WeightInfo {
 	fn set_token_staking_lock_period() -> Weight;
 	fn mint() -> Weight;
 	fn redeem() -> Weight;
-	fn on_finalize() -> Weight;
+	fn on_initialize() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -52,7 +52,7 @@ impl WeightInfo for () {
 		(50_000_000 as Weight)
 	}
 
-	fn on_finalize() -> Weight {
+	fn on_initialize() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

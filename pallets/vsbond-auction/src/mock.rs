@@ -116,7 +116,9 @@ impl vsbond_auction::Config for Test {
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut fs_gc = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	#[cfg(feature = "runtime-benchmarks")]
 	let whitelist_caller: AccountId = whitelisted_caller();
+	#[cfg(feature = "runtime-benchmarks")]
 	let benchmarking_account_1: AccountId = account("bechmarking_account_1", 0, 0);
 
 	orml_tokens::GenesisConfig::<Test> {
@@ -125,9 +127,13 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, VSBOND, 100),
 			(BRUCE, TOKEN, 100),
 			(BRUCE, VSBOND, 100),
+			#[cfg(feature = "runtime-benchmarks")]
 			(whitelist_caller.clone(), TOKEN, 100_000_000_000_000),
+			#[cfg(feature = "runtime-benchmarks")]
 			(whitelist_caller.clone(), VSBOND, 100_000_000_000_000),
+			#[cfg(feature = "runtime-benchmarks")]
 			(benchmarking_account_1.clone(), TOKEN, 100_000_000_000_000),
+			#[cfg(feature = "runtime-benchmarks")]
 			(benchmarking_account_1.clone(), VSBOND, 100_000_000_000_000),
 		],
 	}
