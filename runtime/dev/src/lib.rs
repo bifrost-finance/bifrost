@@ -973,6 +973,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumSupply = MinimumSupply;
 	type MultiCurrency = Currencies;
+	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }
 
 // bifrost runtime end
