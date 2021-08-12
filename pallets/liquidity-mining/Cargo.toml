@@ -14,6 +14,13 @@ frame-support = { version = "3.0.0", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 
+[dev-dependencies]
+sp-core = "3.0.0"
+pallet-balances = "3.0.0"
+pallet-collective = "3.0.0"
+orml-tokens = "0.4.1-dev"
+orml-currencies = "0.4.1-dev"
+
 [features]
 default = ["std"]
 std = [

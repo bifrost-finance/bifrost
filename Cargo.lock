@@ -4505,8 +4505,13 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
  "orml-traits",
+ "pallet-balances",
+ "pallet-collective",
  "parity-scale-codec",
+ "sp-core",
  "substrate-fixed",
 ]
 
