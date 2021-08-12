@@ -45,16 +45,16 @@ pallet-scheduler = { version = "3.0.0", default-features = false }
 pallet-aura = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
+cumulus-pallet-aura-ext = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-pallet-parachain-system = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-primitives-core = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-primitives-timestamp = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-primitives-utility = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+cumulus-pallet-xcm = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+parachain-info = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
+pallet-collator-selection = { git = "https://github.com/yrong/cumulus", default-features = false, branch = "polkadot-v0.9.8-without-compact-proof" }
 
 # Polkadot dependencies
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }

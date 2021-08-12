@@ -1425,3 +1425,32 @@ fn check_can_redeem() {
 		assert!(Salp::can_redeem(block_redeemable, slot));
 	});
 }
+
+#[test]
+fn concurrent_fund_contribute() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 4_000, 100));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 3_000, true));
+		assert_ok!(Salp::confirm_contribute(Some(ALICE).into(), BRUCE, 4_000, true));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 4_000));
+		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
+		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 4_000));
+
+		// Mock the BlockNumber
+		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
+		System::set_block_number(block_begin_redeem);
+
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 4_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
+		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 4_000, true));
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50));
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 4_000, 1, SlotLength::get(), 50));
+	});
+}
