@@ -39,6 +39,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+// TODO: Purge `TotalPoolInfos` & `TotalDepositData` when the liquidity-pool is on `Dead`.
+
 const DEPOSIT_ID: LockIdentifier = *b"deposit ";
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
@@ -56,14 +58,14 @@ pub struct PoolInfo<T: Config> {
 	///
 	/// When starts the liquidity-pool, the amount deposited in the liquidity-pool
 	/// should be greater than the value.
-	min_deposited_amount_to_start: BalanceOf<T>,
+	min_deposit_to_start: BalanceOf<T>,
 	/// The Second Condition
 	///
 	/// When starts the liquidity-pool, the current block should be greater than the value.
 	after_block_to_start: BlockNumberFor<T>,
 
 	/// The total amount deposited in the liquidity-pool
-	deposited: BalanceOf<T>,
+	deposit: BalanceOf<T>,
 
 	/// The reward infos about the liquidity-pool
 	rewards: BTreeMap<CurrencyId, RewardData<T>>,
@@ -82,7 +84,7 @@ impl<T: Config> PoolInfo<T> {
 			let n = min(frame_system::Pallet::<T>::block_number(), block_end);
 
 			for (_, reward) in self.rewards.iter_mut() {
-				reward.update(self.deposited, block_startup, n);
+				reward.update(self.deposit, block_startup, n);
 			}
 		}
 
@@ -94,9 +96,7 @@ impl<T: Config> PoolInfo<T> {
 	/// __NOTE__: Only called in the `Hook`
 	pub(crate) fn try_startup(mut self, pid: PoolId, n: BlockNumberFor<T>) -> Self {
 		if self.state == PoolState::Activated {
-			if n >= self.after_block_to_start &&
-				self.deposited >= self.min_deposited_amount_to_start
-			{
+			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
 				self.block_startup = Some(n);
 				self.state = PoolState::Ongoing;
 
@@ -200,7 +200,7 @@ pub enum PoolState {
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct DepositData<T: Config> {
 	/// The amount of trading-pair deposited in the liquidity-pool
-	deposited: BalanceOf<T>,
+	deposit: BalanceOf<T>,
 	/// Important data used to calculate rewards,
 	/// updated when the `DepositData`'s owner redeems or claims from the liquidity-pool.
 	///
@@ -217,7 +217,7 @@ impl<T: Config> DepositData<T> {
 			gain_avgs.insert(*rtoken, reward.gain_avg);
 		}
 
-		Self { deposited: Zero::zero(), gain_avgs }
+		Self { deposit: Zero::zero(), gain_avgs }
 	}
 }
 
@@ -332,7 +332,7 @@ pub mod pallet {
 
 		/// The amount deposited into a liquidity-pool should be less than the value
 		#[pallet::constant]
-		type MaximumDepositedInPool: Get<BalanceOf<Self>>;
+		type MaximumDepositInPool: Get<BalanceOf<Self>>;
 
 		/// The amount deposited by a user to a liquidity-pool should be greater than the value
 		#[pallet::constant]
@@ -363,15 +363,17 @@ pub mod pallet {
 		/// Find duplicate reward when creating the liquidity-pool
 		DuplicateReward,
 		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
-		ExceedMaximumDeposited,
-		///
-		NotEnoughBalanceToLock,
+		ExceedMaximumDeposit,
+		/// Not enough balance to deposit
+		NotEnoughToDeposit,
 		/// Not enough balance of reward to unreserve
 		FailOnUnReserve,
-		/// Not enough deposited by the user in the liquidity-pool to claim the rewards
-		NotEnoughDepositedToClaim,
+		/// Not enough deposit of the user in the liquidity-pool
+		NotEnoughDepositOfUser,
 		/// Too low balance to deposit
 		TooLowToDeposit,
+		/// __NOTE__: ERROR HAPPEN
+		Unexpected,
 		/// __TEMP__: NotImpl
 		NotImpl,
 	}
@@ -454,7 +456,7 @@ pub mod pallet {
 			main_reward: (CurrencyId, BalanceOf<T>),
 			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
-			#[pallet::compact] min_deposited_amount_to_start: BalanceOf<T>,
+			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
 			Self::create_pool(
@@ -464,7 +466,7 @@ pub mod pallet {
 				option_rewards,
 				PoolType::Mining,
 				duration,
-				min_deposited_amount_to_start,
+				min_deposit_to_start,
 				after_block_to_start,
 			)?;
 
@@ -480,7 +482,7 @@ pub mod pallet {
 			main_reward: (CurrencyId, BalanceOf<T>),
 			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
-			#[pallet::compact] min_deposited_amount_to_start: BalanceOf<T>,
+			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
 			#[allow(non_snake_case)]
@@ -493,7 +495,7 @@ pub mod pallet {
 				option_rewards,
 				PoolType::Farming,
 				duration,
-				min_deposited_amount_to_start,
+				min_deposit_to_start,
 				after_block_to_start,
 			)?;
 
@@ -548,16 +550,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// TODO: 当最后一个参与者redeem离开, 调用该功能
-		// TODO: 删除该函数, 将功能触发放到最后一个redeem时候
-		#[pallet::weight(1_000)]
-		pub fn refund_remain_rewards(
-			origin: OriginFor<T>,
-			pid: PoolId,
-		) -> DispatchResultWithPostInfo {
-			todo!()
-		}
-
 		/// User deposits some token to a liquidity-pool.
 		///
 		/// The extrinsic will:
@@ -585,42 +577,33 @@ pub mod pallet {
 
 			ensure!(value >= T::MinimumDeposit::get(), Error::<T>::TooLowToDeposit);
 
-			let mut deposit_data: DepositData<T> = {
-				if let Some(deposit_data) = Self::user_deposit_data(&user, &pid) {
-					deposit_data
-				} else {
-					DepositData::<T>::from_pool(&pool)
-				}
-			};
+			let mut deposit_data: DepositData<T> =
+				Self::user_deposit_data(&user, &pid).unwrap_or(DepositData::<T>::from_pool(&pool));
 
 			if pool.state == PoolState::Ongoing {
 				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 			}
 
-			// To lock the deposited
+			// To lock the deposit
 			if pool.r#type == PoolType::Mining {
 				return Err(Error::<T>::NotImpl.into());
 			} else {
 				let (token_a, token_b) = pool.trading_pair;
 
-				ensure!(
-					T::MultiCurrency::free_balance(token_a, &user) >= value,
-					Error::<T>::NotEnoughBalanceToLock
-				);
-				ensure!(
-					T::MultiCurrency::free_balance(token_b, &user) >= value,
-					Error::<T>::NotEnoughBalanceToLock
-				);
+				T::MultiCurrency::ensure_can_withdraw(token_a, &user, value)
+					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
+				T::MultiCurrency::ensure_can_withdraw(token_b, &user, value)
+					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
 
 				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, value)?;
 				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, value)?;
 			}
 
-			deposit_data.deposited = deposit_data.deposited.saturating_add(value);
-			pool.deposited = pool.deposited.saturating_add(value);
+			deposit_data.deposit = deposit_data.deposit.saturating_add(value);
+			pool.deposit = pool.deposit.saturating_add(value);
 			ensure!(
-				pool.deposited <= T::MaximumDepositedInPool::get(),
-				Error::<T>::ExceedMaximumDeposited
+				pool.deposit <= T::MaximumDepositInPool::get(),
+				Error::<T>::ExceedMaximumDeposit
 			);
 
 			let r#type = pool.r#type;
@@ -634,7 +617,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// User redeems all deposited from a liquidity-pool.
+		/// User redeems all deposit from a liquidity-pool.
 		/// The deposit in the liquidity-pool should be greater than `T::MinimumDeposit` when the
 		/// liquidity-pool is on `Ongoing` state; So user may not be able to redeem completely
 		/// until the liquidity-pool is on `Retire` state.
@@ -660,6 +643,58 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
+			let mut deposit_data: DepositData<T> =
+				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NotEnoughDepositOfUser)?;
+
+			ensure!(
+				deposit_data.deposit >= T::MinimumDeposit::get(),
+				Error::<T>::NotEnoughDepositOfUser
+			);
+
+			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+
+			let redeemed = {
+				match pool.state {
+					PoolState::Ongoing => deposit_data.deposit - T::MinimumDeposit::get(),
+					PoolState::Retired => deposit_data.deposit,
+					_ => return Err(Error::<T>::InvalidPoolState.into()),
+				}
+			};
+
+			// To unlock the deposit
+			let left = deposit_data.deposit - redeemed;
+			let (token_a, token_b) = pool.trading_pair;
+			match pool.r#type {
+				PoolType::Mining => return Err(Error::<T>::NotImpl.into()),
+				PoolType::Farming => {
+					T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, left)?;
+					T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, left)?;
+				},
+			};
+
+			deposit_data.deposit = deposit_data.deposit.saturating_sub(redeemed);
+			pool.deposit = pool.deposit.saturating_sub(redeemed);
+
+			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
+				for (rtoken, reward) in pool.rewards.iter() {
+					let remain = reward.total - reward.claimed;
+					ensure!(
+						T::MultiCurrency::unreserve(*rtoken, &pool.creator, remain) == Zero::zero(),
+						Error::<T>::Unexpected
+					);
+				}
+
+				pool.state = PoolState::Dead;
+			}
+
+			let r#type = pool.r#type;
+			let trading_pair = pool.trading_pair;
+
+			TotalPoolInfos::<T>::insert(pid, pool);
+			TotalDepositData::<T>::insert(user.clone(), pid, deposit_data);
+
+			Self::deposit_event(Event::UserRedeemed(pid, r#type, trading_pair, redeemed, user));
+
 			Ok(().into())
 		}
 
@@ -683,12 +718,12 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			let mut deposit_data: DepositData<T> = Self::user_deposit_data(&user, &pid)
-				.ok_or(Error::<T>::NotEnoughDepositedToClaim)?;
+			let mut deposit_data: DepositData<T> =
+				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NotEnoughDepositOfUser)?;
 
 			ensure!(
-				deposit_data.deposited >= T::MinimumDeposit::get(),
-				Error::<T>::NotEnoughDepositedToClaim
+				deposit_data.deposit >= T::MinimumDeposit::get(),
+				Error::<T>::NotEnoughDepositOfUser
 			);
 
 			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
@@ -708,7 +743,7 @@ pub mod pallet {
 			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
 			r#type: PoolType,
 			duration: BlockNumberFor<T>,
-			min_deposited_amount_to_start: BalanceOf<T>,
+			min_deposit_to_start: BalanceOf<T>,
 			after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResult {
 			let creator = ensure_signed(origin)?;
@@ -721,11 +756,11 @@ pub mod pallet {
 
 			// Check the condition
 			ensure!(
-				min_deposited_amount_to_start >= T::MinimumDeposit::get(),
+				min_deposit_to_start >= T::MinimumDeposit::get(),
 				Error::<T>::InvalidDepositLimit
 			);
 			ensure!(
-				min_deposited_amount_to_start <= T::MaximumDepositedInPool::get(),
+				min_deposit_to_start <= T::MaximumDepositInPool::get(),
 				Error::<T>::InvalidDepositLimit
 			);
 
@@ -752,10 +787,10 @@ pub mod pallet {
 				duration,
 				r#type,
 
-				min_deposited_amount_to_start,
+				min_deposit_to_start,
 				after_block_to_start,
 
-				deposited: Zero::zero(),
+				deposit: Zero::zero(),
 
 				rewards,
 				state: PoolState::Init,
