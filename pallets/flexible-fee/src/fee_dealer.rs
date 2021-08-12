@@ -71,8 +71,8 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for FixedCurrencyFee
 			let consume_fee_currency_amount =
 				fee.saturating_mul(fee_currency_base.into()) / native_currency_base.into();
 			ensure!(
-				consume_fee_currency_amount
-					<= PalletBalanceOf::<T>::unique_saturated_from(fee_currency_balance.into()),
+				consume_fee_currency_amount <=
+					PalletBalanceOf::<T>::unique_saturated_from(fee_currency_balance.into()),
 				Error::<T>::NotEnoughBalance
 			);
 
