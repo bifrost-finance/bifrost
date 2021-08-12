@@ -29,11 +29,16 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use sp_std::{cmp::min, collections::btree_set::BTreeSet};
 use substrate_fixed::{traits::FromFixed, types::U64F64};
+pub use weights::WeightInfo;
 
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct OrderInfo<T: Config> {
@@ -114,6 +119,9 @@ pub mod pallet {
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
+
+		/// Set default weight.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]

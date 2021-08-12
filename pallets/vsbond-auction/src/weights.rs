@@ -16,14 +16,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+#![allow(unused_parens)]
+#![allow(unused_imports)]
 
-//! A list of the different weight modules for our runtime.
+use frame_support::{
+	traits::Get,
+	weights::{constants::RocksDbWeight, Weight},
+};
+use sp_std::marker::PhantomData;
 
-pub mod bifrost_bancor;
-pub mod bifrost_flexible_fee;
-pub mod bifrost_minter_reward;
-pub mod bifrost_salp;
-pub mod bifrost_vsbond_auction;
-pub mod bifrost_vtoken_mint;
-pub mod pallet_vesting;
+/// Weight functions needed for the pallet.
+pub trait WeightInfo {
+	fn create_order() -> Weight;
+	fn revoke_order() -> Weight;
+	fn clinch_order() -> Weight;
+	fn partial_clinch_order() -> Weight;
+}
+
+// For backwards compatibility and tests
+impl WeightInfo for () {
+	fn create_order() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn revoke_order() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn clinch_order() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn partial_clinch_order() -> Weight {
+		(50_000_000 as Weight)
+	}
+}

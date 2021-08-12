@@ -189,4 +189,5 @@ runtime-benchmarks = [
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-vtoken-mint/runtime-benchmarks",
 	"bifrost-minter-reward/runtime-benchmarks",
+	"bifrost-vsbond-auction/runtime-benchmarks",
 ]

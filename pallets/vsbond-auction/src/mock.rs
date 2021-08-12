@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -108,11 +110,14 @@ impl vsbond_auction::Config for Test {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumSupply = MinimumSupply;
 	type MultiCurrency = orml_tokens::Pallet<Self>;
+	type WeightInfo = ();
 }
 
 // mockup runtime
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut fs_gc = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	let whitelist_caller: AccountId = whitelisted_caller();
+	let benchmarking_account_1: AccountId = account("bechmarking_account_1", 0, 0);
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
@@ -120,6 +125,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, VSBOND, 100),
 			(BRUCE, TOKEN, 100),
 			(BRUCE, VSBOND, 100),
+			(whitelist_caller.clone(), TOKEN, 100_000_000_000_000),
+			(whitelist_caller.clone(), VSBOND, 100_000_000_000_000),
+			(benchmarking_account_1.clone(), TOKEN, 100_000_000_000_000),
+			(benchmarking_account_1.clone(), VSBOND, 100_000_000_000_000),
 		],
 	}
 	.assimilate_storage(&mut fs_gc)

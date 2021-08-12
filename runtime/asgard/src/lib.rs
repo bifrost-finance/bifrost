@@ -1001,6 +1001,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumSupply = MinimumSupply;
 	type MultiCurrency = Currencies;
+	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }
 
 // bifrost runtime end
@@ -1501,6 +1502,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
 			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
+			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
+
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
