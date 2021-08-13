@@ -45,6 +45,8 @@ const DEPOSIT_ID: LockIdentifier = *b"deposit ";
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct PoolInfo<T: Config> {
+	/// Id of the liquidity-pool
+	pool_id: PoolId,
 	/// The creator of the liquidity-pool
 	creator: AccountIdOf<T>,
 	/// The trading-pair supported by the liquidity-pool
@@ -188,7 +190,7 @@ pub enum PoolType {
 	Farming,
 }
 
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum PoolState {
 	UnderAudit,
 	Approved,
@@ -778,6 +780,7 @@ pub mod pallet {
 			// Construct the PoolInfo
 			let pool_id = Self::next_pool_id();
 			let mining_pool = PoolInfo {
+				pool_id,
 				creator: creator.clone(),
 				trading_pair,
 				duration,

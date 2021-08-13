@@ -22,9 +22,8 @@ use frame_support::{
 	sp_runtime::{
 		generic,
 		traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
-		MultiSignature,
+		BuildStorage, MultiSignature,
 	},
-	traits::GenesisBuild,
 };
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -44,10 +43,10 @@ construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		System: frame_system::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		TechnicalCommittee: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		LM: lm::{Pallet, Call, Storage, Event<T>},
 	}
@@ -161,9 +160,9 @@ impl pallet_collective::Config<TechnicalCollective> for T {
 
 parameter_types! {
 	pub const MaximumDepositInPool: Balance = 1_000_000 * UNIT;
-	pub const MinimumDeposit: Balance = 0;
-	pub const MinimumRewardPerBlock: Balance = 0;
-	pub const MinimumDuration: BlockNumber = 0;
+	pub const MinimumDeposit: Balance = UNIT;
+	pub const MinimumRewardPerBlock: Balance = 1_000;
+	pub const MinimumDuration: BlockNumber = MINUTES;
 	pub const MaximumApproved: u32 = 4;
 }
 
@@ -180,22 +179,29 @@ impl lm::Config for T {
 }
 
 pub(crate) fn new_test_ext() -> TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<T>().unwrap();
-
-	orml_tokens::GenesisConfig::<T> {
-		balances: vec![
-			(CREATOR, REWARD_1, REWARD_AMOUNT),
-			(CREATOR, REWARD_2, REWARD_AMOUNT),
-			(USER_1, FARMING_DEPOSIT_1, UNIT),
-			(USER_1, FARMING_DEPOSIT_2, UNIT),
-			(USER_2, FARMING_DEPOSIT_1, UNIT),
-			(USER_2, FARMING_DEPOSIT_2, UNIT),
-		],
+	GenesisConfig {
+		tokens: orml_tokens::GenesisConfig::<T> {
+			balances: vec![
+				(CREATOR, REWARD_1, REWARD_AMOUNT),
+				(CREATOR, REWARD_2, REWARD_AMOUNT),
+				(USER_1, FARMING_DEPOSIT_1, UNIT),
+				(USER_1, FARMING_DEPOSIT_2, UNIT),
+				(USER_2, FARMING_DEPOSIT_1, UNIT),
+				(USER_2, FARMING_DEPOSIT_2, UNIT),
+				(USER_1, MINING_DEPOSIT_1, UNIT),
+				(USER_1, MINING_DEPOSIT_2, UNIT),
+				(USER_2, MINING_DEPOSIT_1, UNIT),
+				(USER_2, MINING_DEPOSIT_2, UNIT),
+			],
+		},
+		technical_committee: pallet_collective::GenesisConfig {
+			members: vec![TC_MEMBER_1, TC_MEMBER_2, TC_MEMBER_3],
+			phantom: Default::default(),
+		},
 	}
-	.assimilate_storage(&mut t)
-	.unwrap();
-
-	t.into()
+	.build_storage()
+	.unwrap()
+	.into()
 }
 
 pub(crate) const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
@@ -204,6 +210,8 @@ pub(crate) const DAYS: BlockNumber = HOURS * 24;
 
 pub(crate) const UNIT: Balance = 1_000_000_000_000;
 
+pub(crate) const MINING_DEPOSIT_1: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub(crate) const MINING_DEPOSIT_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub(crate) const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
 pub(crate) const REWARD_1: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
@@ -213,3 +221,6 @@ pub(crate) const REWARD_AMOUNT: Balance = UNIT;
 pub(crate) const CREATOR: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const USER_1: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const USER_2: AccountId = AccountId::new([2u8; 32]);
+pub(crate) const TC_MEMBER_1: AccountId = AccountId::new([3u8; 32]);
+pub(crate) const TC_MEMBER_2: AccountId = AccountId::new([4u8; 32]);
+pub(crate) const TC_MEMBER_3: AccountId = AccountId::new([5u8; 32]);
