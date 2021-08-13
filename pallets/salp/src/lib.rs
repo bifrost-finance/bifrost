@@ -33,12 +33,11 @@ mod mock;
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use std::convert::TryFrom;
-
 use frame_support::{pallet_prelude::*, sp_runtime::MultiSignature};
 use node_primitives::{ParaId, TokenInfo, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use sp_std::convert::TryFrom;
 
 type TrieIndex = u32;
 

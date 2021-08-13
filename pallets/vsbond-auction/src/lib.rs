@@ -19,8 +19,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use std::convert::TryFrom;
-
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
@@ -29,7 +27,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
-use sp_std::{cmp::min, collections::btree_set::BTreeSet};
+use sp_std::{cmp::min, collections::btree_set::BTreeSet, convert::TryFrom};
 use substrate_fixed::{traits::FromFixed, types::U64F64};
 
 #[cfg(test)]
