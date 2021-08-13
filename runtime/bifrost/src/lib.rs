@@ -93,7 +93,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 1,
+	spec_version: 801,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -144,11 +144,8 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(c: &Call) -> bool {
 		match *c {
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest_other(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vested_transfer(..)) => false,
+			Call::Balances(..) => false,
+			Call::Vesting(..) => false,
 			_ => true,
 		}
 	}
@@ -206,10 +203,10 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 10 * MILLIBNC;
-	pub const TransferFee: u128 = 1 * MILLIBNC;
-	pub const CreationFee: u128 = 1 * MILLIBNC;
-	pub const TransactionByteFee: u128 = 1 * MICROBNC;
+	pub const ExistentialDeposit: Balance = 10 * MILLIBNC;
+	pub const TransferFee: Balance = 1 * MILLIBNC;
+	pub const CreationFee: Balance = 1 * MILLIBNC;
+	pub const TransactionByteFee: Balance = 1 * MICROBNC;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
 }
@@ -495,15 +492,11 @@ impl pallet_collator_selection::Config for Runtime {
 
 // culumus runtime end
 
-parameter_types! {
-	pub const MinVestedTransfer: Balance = 100 * CENTS;
-}
-
 impl pallet_vesting::Config for Runtime {
 	type BlockNumberToBalance = ConvertInto;
 	type Currency = Balances;
 	type Event = Event;
-	type MinVestedTransfer = MinVestedTransfer;
+	type MinVestedTransfer = ExistentialDeposit;
 	type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 }
 
@@ -586,7 +579,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	// pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
