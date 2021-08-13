@@ -59,6 +59,7 @@ use sp_version::RuntimeVersion;
 /// Constant values used within the runtime.
 pub mod constants;
 use constants::{currency::*, time::*};
+use frame_support::traits::OnRuntimeUpgrade;
 use frame_system::EnsureRoot;
 use node_primitives::{Moment, Nonce};
 use pallet_xcm::XcmPassthrough;
@@ -598,6 +599,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
+	CustomOnRuntimeUpgrade,
 >;
 
 impl_runtime_apis! {
@@ -702,6 +704,34 @@ impl_runtime_apis! {
 		fn authorities() -> Vec<AuraId> {
 			Aura::authorities()
 		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	impl frame_try_runtime::TryRuntime<Block> for Runtime {
+		fn on_runtime_upgrade() -> Result<(Weight, Weight), sp_runtime::RuntimeString> {
+			log::info!("try-runtime::on_runtime_upgrade bifrost.");
+			let weight = Executive::try_runtime_upgrade()?;
+			Ok((weight, RuntimeBlockWeights::get().max_block))
+		}
+	}
+}
+
+pub struct CustomOnRuntimeUpgrade;
+impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+
+		log::info!("Bifrost `pre_upgrade`...");
+
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn on_runtime_upgrade() -> Weight {
+		log::info!("Bifrost `on_runtime_upgrade`...");
+		RuntimeBlockWeights::get().max_block
 	}
 }
 

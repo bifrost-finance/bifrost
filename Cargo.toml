@@ -90,6 +90,8 @@ incremental = true
 node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 frame-executive = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 frame-metadata = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }

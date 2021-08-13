@@ -35,6 +35,8 @@ node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
 sc-cli = { version = "0.9.0", optional = true }
+try-runtime-cli = { version = "0.9.0", optional = true }
+frame-try-runtime = { version = "0.9.0", optional = true  }
 frame-benchmarking-cli = { version = "3.0.0", optional = true }
 node-inspect = { version = "0.8.0", optional = true }
 
@@ -58,6 +60,7 @@ cli = [
 	"node-inspect",
 	"sc-cli",
 	"frame-benchmarking-cli",
+	'try-runtime-cli',
 	"sc-service",
 	"structopt",
 	"substrate-build-script-utils",
@@ -75,4 +78,8 @@ with-dev-runtime = [
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",
+]
+try-runtime = [
+	"node-service/try-runtime",
+	"try-runtime-cli",
 ]

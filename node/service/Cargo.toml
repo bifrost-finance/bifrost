@@ -50,7 +50,7 @@ pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0" }
 frame-system-rpc-runtime-api = { version = "3.0.0" }
 substrate-prometheus-endpoint = { version = "0.9.0" }
 substrate-frame-rpc-system = { version = "3.0.0" }
-
+try-runtime-cli = { version = "0.9.0", optional = true }
 # Cumulus dependencies
 cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
 cumulus-client-consensus-common = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
@@ -107,5 +107,9 @@ with-dev-runtime = [
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",
+]
+try-runtime = [
+	"asgard-runtime/try-runtime",
+	"bifrost-runtime/try-runtime",
 ]
 

@@ -117,3 +117,11 @@ build-bifrost-wasm:
 .PHONY: build-asgard-wasm
 build-asgard-wasm:
 	.maintain/build-wasm.sh asgard
+
+.PHONY: try-bifrost-runtime-upgrade
+try-bifrost-runtime-upgrade:
+	./scripts/try-runtime.sh bifrost
+
+.PHONY: try-asgard-runtime-upgrade
+try-asgard-runtime-upgrade:
+	./scripts/try-runtime.sh asgard

@@ -61,3 +61,10 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 		self.id().starts_with("asgard-dev") || self.id().starts_with("dev")
 	}
 }
+
+pub const BIFROST_RUNTIME_NOT_AVAILABLE: &str =
+	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.";
+pub const ASGARD_RUNTIME_NOT_AVAILABLE: &str =
+	"Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.";
+pub const DEV_RUNTIME_NOT_AVAILABLE: &str =
+	"Dev runtime is not available. Please compile the node with `--features with-dev-runtime` to enable it.";

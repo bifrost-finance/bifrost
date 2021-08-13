@@ -76,6 +76,7 @@ use bifrost_runtime_common::xcm_impl::{
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
+use frame_support::traits::OnRuntimeUpgrade;
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
@@ -1250,6 +1251,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
+	CustomOnRuntimeUpgrade,
 >;
 
 impl_runtime_apis! {
@@ -1505,6 +1507,36 @@ impl_runtime_apis! {
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
 		}
+	}
+
+	#[cfg(feature = "try-runtime")]
+	impl frame_try_runtime::TryRuntime<Block> for Runtime {
+		fn on_runtime_upgrade() -> Result<(Weight, Weight), sp_runtime::RuntimeString> {
+			let weight = Executive::try_runtime_upgrade()?;
+			Ok((weight, RuntimeBlockWeights::get().max_block))
+		}
+	}
+}
+
+pub struct CustomOnRuntimeUpgrade;
+impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+
+		log::info!("Asgard `pre_upgrade`...");
+
+		bifrost_salp::migration::migrate();
+
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn on_runtime_upgrade() -> Weight {
+		log::info!("Asgard `on_runtime_upgrade`...");
+
+		RuntimeBlockWeights::get().max_block
 	}
 }
 

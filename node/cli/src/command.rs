@@ -83,21 +83,21 @@ fn load_spec(
 					Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?)
 				}
 				#[cfg(not(feature = "with-asgard-runtime"))]
-				return Err("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.".into());
+				return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
 			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
 				#[cfg(feature = "with-bifrost-runtime")]
 				{
 					Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
 				}
 				#[cfg(not(feature = "with-bifrost-runtime"))]
-				return Err("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.".into());
-			} else if path.to_str().map(|s| s.contains("dev")) == Some(true) {
+				return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
+			} else if path.to_str().map(|s| s.contains("asgard-dev")) == Some(true) {
 				#[cfg(feature = "with-dev-runtime")]
 				{
 					Box::new(service::chain_spec::dev::ChainSpec::from_json_file(path)?)
 				}
-				#[cfg(not(feature = "with-dev-runtime"))] 
-					return Err("Dev runtime is not available. Please compile the node with `--features with-dev-runtime` to enable it.".into());
+				#[cfg(not(feature = "with-dev-runtime"))]
+				return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				return Err("Unknown runtime is not available.".into());
 			}
@@ -147,21 +147,21 @@ impl SubstrateCli for Cli {
 				&service::collator::asgard_runtime::VERSION
 			}
 			#[cfg(not(feature = "with-asgard-runtime"))]
-			panic!("Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.");
+			panic!("{}", service::ASGARD_RUNTIME_NOT_AVAILABLE);
 		} else if spec.is_bifrost() {
 			#[cfg(feature = "with-bifrost-runtime")]
 			{
 				&service::collator::bifrost_runtime::VERSION
 			}
 			#[cfg(not(feature = "with-bifrost-runtime"))]
-			panic!("Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.");
+			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
 		} else {
 			#[cfg(feature = "with-dev-runtime")]
 			{
 				&service::dev::dev_runtime::VERSION
 			}
 			#[cfg(not(feature = "with-dev-runtime"))]
-			panic!("Asgard dev runtime is not available. Please compile the node with `--features with-dev-runtime` to enable it.");
+			panic!("{}", service::DEV_RUNTIME_NOT_AVAILABLE);
 		}
 	}
 }
@@ -252,6 +252,60 @@ macro_rules! construct_async_run {
 	}}
 }
 
+macro_rules! with_runtime_or_err {
+	($chain_spec:expr, { $( $code:tt )* }) => {
+		if $chain_spec.is_bifrost() {
+			#[cfg(feature = "with-bifrost-runtime")]
+			#[allow(unused_imports)]
+			use bifrost_runtime::{Block, RuntimeApi};
+			#[cfg(feature = "with-bifrost-runtime")]
+			#[allow(unused_imports)]
+	        use BifrostExecutor as Executor;
+			#[cfg(feature = "with-bifrost-runtime")]
+			$( $code )*
+
+			#[cfg(not(feature = "with-bifrost-runtime"))]
+			return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
+		} else if $chain_spec.is_asgard() {
+			#[cfg(feature = "with-asgard-runtime")]
+			#[allow(unused_imports)]
+			use asgard_runtime::{Block, RuntimeApi};
+			#[cfg(feature = "with-asgard-runtime")]
+			#[allow(unused_imports)]
+			use AsgardExecutor as Executor;
+			#[cfg(feature = "with-asgard-runtime")]
+			$( $code )*
+
+			#[cfg(not(feature = "with-asgard-runtime"))]
+			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
+		} else {
+			#[cfg(feature = "with-dev-runtime")]
+			#[allow(unused_imports)]
+			use service::dev::dev_runtime::{Block, RuntimeApi};
+			#[cfg(feature = "with-dev-runtime")]
+			#[allow(unused_imports)]
+			use service::dev::DevExecutor as Executor;
+			#[cfg(feature = "with-dev-runtime")]
+			$( $code )*
+
+			#[cfg(not(feature = "with-dev-runtime"))]
+			return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
+		}
+	}
+}
+
+fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
+	use sp_core::crypto::Ss58AddressFormat;
+
+	let ss58_version = if spec.is_bifrost() {
+		Ss58AddressFormat::BifrostAccount
+	} else {
+		Ss58AddressFormat::SubstrateAccount
+	};
+
+	sp_core::crypto::set_default_ss58_version(ss58_version);
+}
+
 /// Parse command line arguments into service configuration.
 #[allow(unreachable_code)]
 pub fn run() -> Result<()> {
@@ -309,39 +363,22 @@ pub fn run() -> Result<()> {
 		},
 		Some(Subcommand::Inspect(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+			set_default_ss58_version(chain_spec);
 
-			return runner.sync_run(|config| {
-				#[cfg(feature = "with-asgard-runtime")]
-				return cmd
-					.run::<service::asgard_runtime::Block, service::asgard_runtime::RuntimeApi, service::AsgardExecutor>(
-						config,
-					);
-				#[cfg(feature = "with-bifrost-runtime")]
-				return cmd
-					.run::<service::bifrost_runtime::Block, service::bifrost_runtime::RuntimeApi, service::BifrostExecutor>(
-						config,
-					);
-				#[cfg(feature = "with-dev-runtime")]
-					return cmd
-					.run::<service::dev_runtime::Block, service::dev_runtime::RuntimeApi, service::DevExecutor>(
-						config,
-					);
-			});
+			with_runtime_or_err!(chain_spec, {
+				return runner.sync_run(|config| cmd.run::<Block, RuntimeApi, Executor>(config));
+			})
 		},
 		Some(Subcommand::Benchmark(cmd)) =>
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
+				let chain_spec = &runner.config().chain_spec;
+				set_default_ss58_version(chain_spec);
 
-				return runner.sync_run(|config| {
-					#[cfg(feature = "with-asgard-runtime")]
-					return cmd
-						.run::<service::asgard_runtime::Block, service::AsgardExecutor>(config);
-					#[cfg(feature = "with-bifrost-runtime")]
-					return cmd
-						.run::<service::bifrost_runtime::Block, service::BifrostExecutor>(config);
-					#[cfg(feature = "with-dev-runtime")]
-					return cmd.run::<service::dev_runtime::Block, service::DevExecutor>(config);
-				});
+				with_runtime_or_err!(chain_spec, {
+					return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
+				})
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
@@ -445,6 +482,25 @@ pub fn run() -> Result<()> {
 			}
 
 			Ok(())
+		},
+		#[cfg(feature = "try-runtime")]
+		Some(Subcommand::TryRuntime(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			with_runtime_or_err!(chain_spec, {
+				return runner.async_run(|config| {
+					let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
+					let task_manager =
+						sc_service::TaskManager::new(config.task_executor.clone(), registry)
+							.map_err(|e| {
+								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
+							})?;
+					Ok((cmd.run::<Block, Executor>(config), task_manager))
+				});
+			})
 		},
 	}
 }

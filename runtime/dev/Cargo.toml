@@ -30,6 +30,7 @@ sp-arithmetic = { version = "3.0.0", default-features = false }
 
 # frame dependencies
 frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
+frame-try-runtime = { version = "0.9.0", default-features = false, optional = true  }
 frame-executive = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
@@ -109,6 +110,7 @@ std = [
 	"codec/std",
 	"log/std",
 	"frame-benchmarking/std",
+	"frame-try-runtime/std",
 	"frame-executive/std",
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
@@ -191,4 +193,11 @@ runtime-benchmarks = [
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-vtoken-mint/runtime-benchmarks",
 	"bifrost-minter-reward/runtime-benchmarks",
+]
+
+try-runtime = [
+	"frame-executive/try-runtime",
+	"frame-try-runtime",
+	"frame-system/try-runtime",
+	"pallet-vesting/try-runtime",
 ]
