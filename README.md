@@ -35,6 +35,12 @@ curl https://sh.rustup.rs -sSf | sh
 make init
 ```
 
+## Build binary
+
+```bash
+make build-all-release
+```
+
 ## Testing
 
 ```bash
@@ -49,10 +55,12 @@ if runtime logic change we may do the benchmarking to regenerate WeightInfo for 
 make run-benchmarking
 ```
 
-## Build binary
+## Testing runtime migration
+
+If modify the storage, should test the data migration before production upgrade.
 
 ```bash
-make build-all-release
+make try-bifrost-runtime-upgrade
 ```
 
 ## Run development chain

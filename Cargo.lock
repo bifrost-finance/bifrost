@@ -199,6 +199,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
  "hex-literal 0.3.2",
  "log",
  "max-encoded-len",
@@ -744,6 +745,8 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
+ "log",
  "node-primitives",
  "pallet-aura",
  "pallet-authorship",
@@ -2142,6 +2145,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
  "hex-literal 0.3.2",
  "log",
  "max-encoded-len",
@@ -4927,6 +4931,7 @@ dependencies = [
  "cumulus-client-service",
  "cumulus-primitives-core",
  "frame-benchmarking-cli",
+ "frame-try-runtime",
  "log",
  "node-inspect 0.8.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8)",
  "node-primitives",
@@ -4942,6 +4947,7 @@ dependencies = [
  "sp-runtime",
  "structopt",
  "substrate-build-script-utils",
+ "try-runtime-cli",
 ]
 
 [[package]]
@@ -5072,6 +5078,7 @@ dependencies = [
  "sp-trie",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
+ "try-runtime-cli",
  "zenlink-protocol-runtime-api",
 ]
 
