@@ -162,7 +162,7 @@ parameter_types! {
 	pub const MinimumDeposit: Balance = MICRO_UNIT;
 	pub const MinimumRewardPerBlock: Balance = NANO_UNIT;
 	pub const MinimumDuration: BlockNumber = MINUTES;
-	pub const MaximumActivated: u32 = 4;
+	pub const MaximumApproved: u32 = 4;
 }
 
 impl lm::Config for T {
@@ -174,7 +174,7 @@ impl lm::Config for T {
 	type MinimumDeposit = MinimumDeposit;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
-	type MaximumActivated = MaximumActivated;
+	type MaximumApproved = MaximumApproved;
 }
 
 pub const MINUTES: BlockNumber = 60 / (12 as BlockNumber);

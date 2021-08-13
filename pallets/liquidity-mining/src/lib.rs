@@ -91,11 +91,11 @@ impl<T: Config> PoolInfo<T> {
 		self
 	}
 
-	/// Trying to change the state from `PoolState::Activated` to `PoolState::Ongoing`
+	/// Trying to change the state from `PoolState::Approved` to `PoolState::Ongoing`
 	///
 	/// __NOTE__: Only called in the `Hook`
 	pub(crate) fn try_startup(mut self, pid: PoolId, n: BlockNumberFor<T>) -> Self {
-		if self.state == PoolState::Activated {
+		if self.state == PoolState::Approved {
 			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
 				self.block_startup = Some(n);
 				self.state = PoolState::Ongoing;
@@ -190,8 +190,8 @@ pub enum PoolType {
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq)]
 pub enum PoolState {
-	Init,
-	Activated,
+	UnderAudit,
+	Approved,
 	Ongoing,
 	Retired,
 	Dead,
@@ -319,7 +319,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Origin for anyone able to create/activate/kill the liquidity-pool.
+		/// Origin for anyone able to create/approve/kill the liquidity-pool.
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -346,9 +346,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinimumDuration: Get<BlockNumberFor<Self>>;
 
-		/// The number of liquidity-pool activated should be less than the value
+		/// The number of liquidity-pool approved should be less than the value
 		#[pallet::constant]
-		type MaximumActivated: Get<u32>;
+		type MaximumApproved: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -385,10 +385,10 @@ pub mod pallet {
 		///
 		/// [pool_id, pool_type, trading_pair, creator]
 		PoolCreated(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
-		/// The liquidity-pool has been activated
+		/// The liquidity-pool has been approved
 		///
 		/// [pool_id, pool_type, trading_pair]
-		PoolActivated(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		PoolApproved(PoolId, PoolType, (CurrencyId, CurrencyId)),
 		/// The liquidity-pool has been started up
 		///
 		/// [pool_id, pool_type, trading_pair]
@@ -426,8 +426,8 @@ pub mod pallet {
 	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn activated_pids)]
-	pub(crate) type ActivatedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+	#[pallet::getter(fn approved_pids)]
+	pub(crate) type ApprovedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool)]
@@ -503,22 +503,22 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn activate_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+		pub fn approve_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
-			ensure!(pool.state == PoolState::Init, Error::<T>::InvalidPoolState);
+			ensure!(pool.state == PoolState::UnderAudit, Error::<T>::InvalidPoolState);
 
-			ActivatedPoolIds::<T>::mutate(|pids| pids.insert(pid));
+			ApprovedPoolIds::<T>::mutate(|pids| pids.insert(pid));
 
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			let pool_activated = PoolInfo { state: PoolState::Activated, ..pool };
-			TotalPoolInfos::<T>::insert(pid, pool_activated);
+			let pool_approved = PoolInfo { state: PoolState::Approved, ..pool };
+			TotalPoolInfos::<T>::insert(pid, pool_approved);
 
-			Self::deposit_event(Event::PoolActivated(pid, r#type, trading_pair));
+			Self::deposit_event(Event::PoolApproved(pid, r#type, trading_pair));
 
 			Ok(().into())
 		}
@@ -531,7 +531,7 @@ pub mod pallet {
 
 			ensure!(signed == pool.creator, Error::<T>::InvalidPoolOwner);
 
-			ensure!(pool.state == PoolState::Init, Error::<T>::InvalidPoolState);
+			ensure!(pool.state == PoolState::UnderAudit, Error::<T>::InvalidPoolState);
 
 			for (token, reward) in pool.rewards.iter() {
 				let total = reward.total;
@@ -558,7 +558,7 @@ pub mod pallet {
 		///
 		/// The conditions to deposit:
 		/// - User should deposit enough(greater than `T::MinimumDeposit`) token to liquidity-pool;
-		/// - The liquidity-pool should be in special state: `Activated`, `Ongoing`;
+		/// - The liquidity-pool should be in special state: `Approved`, `Ongoing`;
 		#[pallet::weight(1_000)]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -571,7 +571,7 @@ pub mod pallet {
 				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
 
 			ensure!(
-				pool.state == PoolState::Activated || pool.state == PoolState::Ongoing,
+				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
 				Error::<T>::InvalidPoolState
 			);
 
@@ -793,7 +793,7 @@ pub mod pallet {
 				deposit: Zero::zero(),
 
 				rewards,
-				state: PoolState::Init,
+				state: PoolState::UnderAudit,
 				block_startup: None,
 			};
 
@@ -829,12 +829,12 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(n: BlockNumberFor<T>) {
 			// Check whether pool-activated is meet the startup condition
-			for pid in Self::activated_pids() {
+			for pid in Self::approved_pids() {
 				if let Some(mut pool) = Self::pool(pid) {
 					pool = pool.try_startup(pid, n);
 
 					if pool.state == PoolState::Ongoing {
-						ActivatedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
+						ApprovedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
 						TotalPoolInfos::<T>::insert(pid, pool);
 					}
 				}
