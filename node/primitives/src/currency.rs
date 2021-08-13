@@ -398,7 +398,7 @@ impl TryFrom<u64> for CurrencyId {
 				let token_symbol_2 = TokenSymbol::try_from(token_symbol_num_2).unwrap_or_default();
 
 				Ok(Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2))
-			},
+			}
 			_ => Err(()),
 		}
 	}
