@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 use sp_runtime::{RuntimeDebug, SaturatedConversion};
 use sp_std::{
 	convert::{Into, TryFrom, TryInto},
-	ops::Deref,
 	prelude::*,
 };
 use zenlink_protocol::{AssetId, LOCAL, NATIVE};
@@ -195,7 +194,14 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $name,)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $name,)*
-					$(CurrencyId::LPToken(TokenSymbol::$symbol, ..) => $name,)*
+					CurrencyId::LPToken(ts1, type1, ts2, type2) => {
+						let c1_u64: u64 = (((*type1 as u64) << 8) & 0x0000_0000_0000_ff00) + ((*ts1 as u64) & 0x0000_0000_0000_00ff);
+						let c2_u64: u64 = (((*type2 as u64) << 8) & 0x0000_0000_0000_ff00) + ((*ts2 as u64) & 0x0000_0000_0000_00ff);
+
+						let _c1: CurrencyId = c1_u64.try_into().unwrap_or_default();
+						let _c2: CurrencyId = c2_u64.try_into().unwrap_or_default();
+						stringify!(_c1.name(), ",", _c2.name())
+					}
 				}
 			}
 
@@ -207,7 +213,9 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => stringify!($symbol),)*
 					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
-					$(CurrencyId::LPToken(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
+					CurrencyId::LPToken(_ts1, _, _ts2, _) => {
+						stringify!(_ts1, ",", _ts2)
+					}
 				}
 			}
 
@@ -356,22 +364,6 @@ impl CurrencyIdExt for CurrencyId {
 
 	fn into(symbol: Self::TokenSymbol) -> Self {
 		CurrencyId::Token(symbol)
-	}
-}
-
-impl Deref for CurrencyId {
-	type Target = TokenSymbol;
-
-	fn deref(&self) -> &Self::Target {
-		match *self {
-			Self::Native(ref symbol) => symbol,
-			Self::Stable(ref symbol) => symbol,
-			Self::Token(ref symbol) => symbol,
-			Self::VToken(ref symbol) => symbol,
-			Self::VSToken(ref symbol) => symbol,
-			Self::VSBond(ref symbol, ..) => symbol,
-			Self::LPToken(ref symbol, ..) => symbol,
-		}
 	}
 }
 
