@@ -18,11 +18,13 @@
 
 use frame_support::{
 	construct_runtime, parameter_types,
+	sp_io::TestExternalities,
 	sp_runtime::{
 		generic,
 		traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 		MultiSignature,
 	},
+	traits::GenesisBuild,
 };
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -47,7 +49,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		TechnicalCommittee: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		LiquidityMining: lm::{Pallet, Call, Storage, Event<T>},
+		LM: lm::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -158,10 +160,10 @@ impl pallet_collective::Config<TechnicalCollective> for T {
 }
 
 parameter_types! {
-	pub const MaximumDepositInPool: Balance = MILLION_UNIT;
-	pub const MinimumDeposit: Balance = MICRO_UNIT;
-	pub const MinimumRewardPerBlock: Balance = NANO_UNIT;
-	pub const MinimumDuration: BlockNumber = MINUTES;
+	pub const MaximumDepositInPool: Balance = 1_000_000 * UNIT;
+	pub const MinimumDeposit: Balance = 0;
+	pub const MinimumRewardPerBlock: Balance = 0;
+	pub const MinimumDuration: BlockNumber = 0;
 	pub const MaximumApproved: u32 = 4;
 }
 
@@ -177,11 +179,37 @@ impl lm::Config for T {
 	type MaximumApproved = MaximumApproved;
 }
 
-pub const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
+pub(crate) fn new_test_ext() -> TestExternalities {
+	let mut t = frame_system::GenesisConfig::default().build_storage::<T>().unwrap();
 
-pub const NANO_UNIT: Balance = 1_000;
-pub const MICRO_UNIT: Balance = 1_000_000;
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLION_UNIT: Balance = 1_000_000 * UNIT;
+	orml_tokens::GenesisConfig::<T> {
+		balances: vec![
+			(CREATOR, REWARD_1, REWARD_AMOUNT),
+			(CREATOR, REWARD_2, REWARD_AMOUNT),
+			(USER_1, FARMING_DEPOSIT_1, UNIT),
+			(USER_1, FARMING_DEPOSIT_2, UNIT),
+			(USER_2, FARMING_DEPOSIT_1, UNIT),
+			(USER_2, FARMING_DEPOSIT_2, UNIT),
+		],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	t.into()
+}
+
+pub(crate) const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
+pub(crate) const HOURS: BlockNumber = MINUTES * 60;
+pub(crate) const DAYS: BlockNumber = HOURS * 24;
+
+pub(crate) const UNIT: Balance = 1_000_000_000_000;
+
+pub(crate) const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
+pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
+pub(crate) const REWARD_1: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub(crate) const REWARD_2: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub(crate) const REWARD_AMOUNT: Balance = UNIT;
+
+pub(crate) const CREATOR: AccountId = AccountId::new([0u8; 32]);
+pub(crate) const USER_1: AccountId = AccountId::new([1u8; 32]);
+pub(crate) const USER_2: AccountId = AccountId::new([2u8; 32]);

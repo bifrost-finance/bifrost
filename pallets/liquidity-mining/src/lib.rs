@@ -239,22 +239,18 @@ pub struct RewardData<T: Config> {
 }
 
 impl<T: Config> RewardData<T> {
-	fn new(
-		total: BalanceOf<T>,
-		duration: BlockNumberFor<T>,
-		min_per_block: BalanceOf<T>,
-	) -> Result<Self, DispatchError> {
+	fn new(total: BalanceOf<T>, duration: BlockNumberFor<T>) -> Result<Self, DispatchError> {
 		let total: u128 = total.saturated_into();
 		let (per_block, total) = {
 			let duration: u128 = duration.saturated_into();
 
-			let per_block = u128::from_fixed((U64F64::from_num(total) / duration).floor());
+			let per_block = total / duration;
 			let total = per_block * duration;
 
 			(BalanceOf::<T>::saturated_from(per_block), BalanceOf::<T>::saturated_from(total))
 		};
 
-		ensure!(per_block > min_per_block, Error::<T>::InvalidRewardPerBlock);
+		ensure!(per_block > T::MinimumRewardPerBlock::get(), Error::<T>::InvalidRewardPerBlock);
 
 		Ok(RewardData {
 			total,
@@ -752,7 +748,7 @@ pub mod pallet {
 			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
 
 			// Check the duration
-			ensure!(duration >= T::MinimumDuration::get(), Error::<T>::InvalidDuration);
+			ensure!(duration > T::MinimumDuration::get(), Error::<T>::InvalidDuration);
 
 			// Check the condition
 			ensure!(
@@ -771,7 +767,7 @@ pub mod pallet {
 			for (token, total) in raw_rewards.into_iter() {
 				ensure!(!rewards.contains_key(&token), Error::<T>::DuplicateReward);
 
-				let reward = RewardData::new(total, duration, T::MinimumRewardPerBlock::get())?;
+				let reward = RewardData::new(total, duration)?;
 
 				// Reserve the reward
 				T::MultiCurrency::reserve(token, &creator, reward.total)?;
