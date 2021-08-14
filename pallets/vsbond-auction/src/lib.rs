@@ -24,10 +24,10 @@ use frame_support::{
 	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod};
+use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
-use sp_std::{cmp::min, collections::btree_set::BTreeSet};
+use sp_std::{cmp::min, collections::btree_set::BTreeSet, convert::TryFrom};
 use substrate_fixed::{traits::FromFixed, types::U64F64};
 
 #[cfg(test)]
@@ -192,9 +192,13 @@ pub mod pallet {
 			// Check supply
 			ensure!(supply > T::MinimumSupply::get(), Error::<T>::NotEnoughSupply);
 
+			let currency_id_u64: u64 = T::InvoicingCurrency::get().currency_id();
+			let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
+			let currency_tokensymbol =
+				TokenSymbol::try_from(tokensymbo_bit).map_err(|_| Error::<T>::Unexpected)?;
+
 			// Construct vsbond
-			let vsbond =
-				CurrencyId::VSBond(*T::InvoicingCurrency::get(), index, first_slot, last_slot);
+			let vsbond = CurrencyId::VSBond(currency_tokensymbol, index, first_slot, last_slot);
 
 			// Check the balance of vsbond
 			ensure!(
