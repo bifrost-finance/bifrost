@@ -27,32 +27,27 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
-	fn set_vtoken_pool() -> Weight;
-	fn set_token_staking_lock_period() -> Weight;
-	fn mint() -> Weight;
-	fn redeem() -> Weight;
-	fn on_initialize() -> Weight;
+	fn create_order() -> Weight;
+	fn revoke_order() -> Weight;
+	fn clinch_order() -> Weight;
+	fn partial_clinch_order() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn set_vtoken_pool() -> Weight {
+	fn create_order() -> Weight {
 		(50_000_000 as Weight)
 	}
 
-	fn set_token_staking_lock_period() -> Weight {
+	fn revoke_order() -> Weight {
 		(50_000_000 as Weight)
 	}
 
-	fn mint() -> Weight {
+	fn clinch_order() -> Weight {
 		(50_000_000 as Weight)
 	}
 
-	fn redeem() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn on_initialize() -> Weight {
+	fn partial_clinch_order() -> Weight {
 		(50_000_000 as Weight)
 	}
 }
