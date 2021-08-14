@@ -34,9 +34,10 @@ mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, sp_runtime::MultiSignature};
-use node_primitives::ParaId;
+use node_primitives::{ParaId, TokenInfo, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use sp_std::convert::TryFrom;
 
 type TrieIndex = u32;
 
@@ -1108,7 +1109,9 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 		) -> (CurrencyId, CurrencyId) {
-			let token_symbol = *T::RelayChainToken::get();
+			let currency_id_u64: u64 = T::RelayChainToken::get().currency_id();
+			let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
+			let token_symbol = TokenSymbol::try_from(tokensymbo_bit).unwrap_or(TokenSymbol::KSM);
 
 			let vsToken = CurrencyId::VSToken(token_symbol);
 			let vsBond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);

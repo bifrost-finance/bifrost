@@ -748,6 +748,9 @@ dependencies = [
  "frame-try-runtime",
  "log",
  "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -782,6 +785,7 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "xcm-support",
 ]
 
 [[package]]

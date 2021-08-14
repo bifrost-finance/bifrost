@@ -36,6 +36,7 @@ use sp_std::{
 	cmp::{Eq, PartialEq},
 	fmt::Debug,
 	prelude::*,
+	vec,
 };
 pub use xcm::{v0::prelude::*, VersionedXcm};
 use xcm::{
