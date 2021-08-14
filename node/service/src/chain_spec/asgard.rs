@@ -24,7 +24,7 @@ use asgard_runtime::{
 	TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
-use frame_benchmarking::whitelisted_caller;
+use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
@@ -198,6 +198,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 		whitelisted_caller(), // Benchmarking whitelist_account
+		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
+		                       * with whitelistted_caller */
 	];
 	let balances = endowed_accounts
 		.iter()
@@ -224,6 +226,11 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 				(x.clone(), CurrencyId::Token(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::AUSD), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT * 4_000_000),
+				(
+					x.clone(),
+					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
+					ENDOWMENT * 4_000_000,
+				),
 			]
 		})
 		.collect();
