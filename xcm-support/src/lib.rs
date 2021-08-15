@@ -156,11 +156,32 @@ pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight>(PhantomData<(XcmSender, B
 impl<XcmSender: SendXcm, BaseXcmWeight: Get<u64>> BifrostXcmExecutor
 	for BifrostXcmAdaptor<XcmSender, BaseXcmWeight>
 {
-	fn ump_transact(origin: MultiLocation, call: DoubleEncoded<()>, relay: bool) -> XcmResult {
-		let mut message = Xcm::Transact {
-			origin_type: OriginKind::SovereignAccount,
-			require_weight_at_most: u64::MAX,
-			call,
+	fn transact_weight() -> u64 {
+		return 4 * BaseXcmWeight::get();
+	}
+
+	fn ump_transact(
+		origin: MultiLocation,
+		call: DoubleEncoded<()>,
+		weight: u64,
+		relay: bool,
+	) -> XcmResult {
+		let mut message = Xcm::WithdrawAsset {
+			assets: vec![MultiAsset::ConcreteFungible {
+				id: MultiLocation::Null,
+				amount: (weight + Self::transact_weight()) as u128,
+			}],
+			effects: vec![Order::BuyExecution {
+				fees: MultiAsset::All,
+				weight: weight + 2 * BaseXcmWeight::get(),
+				debt: 2 * BaseXcmWeight::get(),
+				halt_on_error: true,
+				xcm: vec![Xcm::Transact {
+					origin_type: OriginKind::SovereignAccount,
+					require_weight_at_most: u64::MAX,
+					call,
+				}],
+			}],
 		};
 
 		if relay {

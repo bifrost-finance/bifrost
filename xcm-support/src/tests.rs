@@ -21,10 +21,13 @@ mod tests {
 	use codec::Encode;
 	use frame_support::assert_ok;
 	use xcm::v0::{
-		Junction::{self, Parachain, Parent},
+		Junction,
+		Junction::{Parachain, Parent},
+		MultiAsset,
 		MultiAsset::*,
+		MultiLocation,
 		MultiLocation::*,
-		NetworkId, OriginKind,
+		NetworkId, OriginKind, Xcm,
 		Xcm::*,
 	};
 
@@ -104,6 +107,43 @@ mod tests {
 					require_weight_at_most: INITIAL_BALANCE as u64,
 					call: remark.encode().into(),
 				},
+			));
+		});
+
+		Relay::execute_with(|| {
+			print_events::<relay::Runtime>("RelayChain");
+		});
+	}
+
+	#[test]
+	fn ump_transact_buy_weight() {
+		MockNet::reset();
+
+		let remark =
+			relay::Call::System(frame_system::Call::<relay::Runtime>::remark_with_event(vec![
+				1, 2, 3,
+			]));
+		ParaA::execute_with(|| {
+			assert_ok!(ParachainPalletXcm::send_xcm(
+				Null,
+				X1(Parent),
+				Xcm::WithdrawAsset {
+					assets: vec![MultiAsset::ConcreteFungible {
+						id: MultiLocation::Null,
+						amount: 0
+					}],
+					effects: vec![Order::BuyExecution {
+						fees: MultiAsset::All,
+						weight: INITIAL_BALANCE as u64,
+						debt: INITIAL_BALANCE as u64,
+						halt_on_error: false,
+						xcm: vec![Xcm::Transact {
+							origin_type: OriginKind::SovereignAccount,
+							require_weight_at_most: u64::MAX,
+							call: remark.encode().into(),
+						}],
+					}],
+				}
 			));
 		});
 

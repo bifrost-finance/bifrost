@@ -170,6 +170,7 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 }
 
 impl frame_system::Config for Runtime {
@@ -955,6 +956,8 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
+	pub ContributionWeight:u64 = XCM_WEIGHT.into();
+	pub WithdrawWeight:u64 = XCM_WEIGHT.into();
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -975,7 +978,11 @@ impl bifrost_salp::Config for Runtime {
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
+	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
+	type SelfParaId = SelfParaId;
+	type ContributionWeight = ContributionWeight;
+	type WithdrawWeight = WithdrawWeight;
+	type BaseXcmWeight = XcmWeight;
 }
 
 parameter_types! {
@@ -1010,7 +1017,6 @@ impl bifrost_vsbond_auction::Config for Runtime {
 // zenlink runtime start
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
-	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
 
 	// xcm

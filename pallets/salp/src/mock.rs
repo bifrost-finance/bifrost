@@ -171,6 +171,10 @@ parameter_types! {
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromSelf;
+	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
+	pub ContributionWeight:u64 = 1_000_000_000 as u64;
+	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
+	pub const SelfParaId: u32 = 2001;
 }
 
 parameter_types! {
@@ -198,6 +202,10 @@ impl salp::Config for Test {
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = salp::TestWeightInfo;
+	type SelfParaId = SelfParaId;
+	type BaseXcmWeight = BaseXcmWeight;
+	type ContributionWeight = ContributionWeight;
+	type WithdrawWeight = WithdrawWeight;
 }
 
 // To control the result returned by `MockXcmExecutor`
@@ -207,7 +215,16 @@ pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 pub struct MockXcmExecutor;
 
 impl BifrostXcmExecutor for MockXcmExecutor {
-	fn ump_transact(_origin: MultiLocation, _call: DoubleEncoded<()>, _relayer: bool) -> XcmResult {
+	fn transact_weight() -> u64 {
+		return 0;
+	}
+
+	fn ump_transact(
+		_origin: MultiLocation,
+		_call: DoubleEncoded<()>,
+		_weight: u64,
+		_relayer: bool,
+	) -> XcmResult {
 		let result = unsafe { MOCK_XCM_RESULT.0 };
 
 		match result {

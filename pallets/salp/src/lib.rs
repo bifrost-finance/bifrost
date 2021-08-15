@@ -304,6 +304,17 @@ pub mod pallet {
 
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
+
+		type SelfParaId: Get<u32>;
+
+		#[pallet::constant]
+		type BaseXcmWeight: Get<u64>;
+
+		#[pallet::constant]
+		type ContributionWeight: Get<u64>;
+
+		#[pallet::constant]
+		type WithdrawWeight: Get<u64>;
 	}
 
 	#[pallet::pallet]
@@ -739,7 +750,7 @@ pub mod pallet {
 
 			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
-			Self::xcm_ump_withdraw(index).map_err(|_| Error::<T>::XcmFailed)?;
+			Self::xcm_ump_withdraw(origin, index).map_err(|_| Error::<T>::XcmFailed)?;
 
 			Self::deposit_event(Event::Withdrawing(owner, index, fund.raised));
 
@@ -1175,12 +1186,13 @@ pub mod pallet {
 			T::BifrostXcmExecutor::ump_transact(
 				MultiLocation::X1(Junction::Parachain(index)),
 				call,
+				T::ContributionWeight::get(),
 				false,
 			)
 		}
 
-		fn xcm_ump_withdraw(index: ParaId) -> XcmResult {
-			let who: AccountIdOf<T> = PolkadotParaId::from(index).into_account();
+		fn xcm_ump_withdraw(_origin: OriginFor<T>, index: ParaId) -> XcmResult {
+			let who: AccountIdOf<T> = PolkadotParaId::from(T::SelfParaId::get()).into_account();
 
 			let withdraw = Withdraw { who, index };
 			let call = CrowdloanWithdrawCall::CrowdloanWithdraw(WithdrawCall::Withdraw(withdraw))
@@ -1190,6 +1202,7 @@ pub mod pallet {
 			T::BifrostXcmExecutor::ump_transact(
 				MultiLocation::X1(Junction::Parachain(index)),
 				call,
+				T::WithdrawWeight::get(),
 				false,
 			)
 		}
