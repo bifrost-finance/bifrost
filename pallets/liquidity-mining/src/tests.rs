@@ -17,10 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
-use frame_system::pallet_prelude::OriginFor;
 use node_primitives::Balance;
 
-use crate::{mock::*, Error, PoolId, PoolState, PoolType};
+use crate::{mock::*, Error, PoolId, PoolState, PoolType, TotalPoolInfos};
 
 #[test]
 fn create_farming_pool_should_work() {
@@ -242,5 +241,131 @@ fn approve_pool_should_work() {
 
 		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.state, PoolState::Approved);
+
+		assert_eq!(LM::approved_pids().contains(&0), true);
+	});
+}
+
+#[test]
+fn approve_pool_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		assert_noop!(LM::approve_pool(Some(TC_MEMBER_1).into(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::approve_pool(Origin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::approve_pool(Origin::none(), 0), DispatchError::BadOrigin);
+	});
+}
+
+#[test]
+fn approve_pool_with_wrong_state_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_noop!(
+			LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0),
+			Error::<T>::InvalidPoolState
+		);
+	});
+}
+
+#[test]
+fn kill_pool_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		let pool = LM::pool(0).unwrap();
+		assert_eq!(pool.state, PoolState::UnderAudit);
+
+		let per_block = REWARD_AMOUNT / DAYS as Balance;
+		let reserved = per_block * DAYS as Balance;
+		let free = REWARD_AMOUNT - reserved;
+
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).free, free);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).reserved, reserved);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).free, free);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, reserved);
+
+		assert_ok!(LM::kill_pool(Some(CREATOR).into(), 0));
+
+		assert!(!TotalPoolInfos::<T>::contains_key(0));
+
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).free, REWARD_AMOUNT);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).free, REWARD_AMOUNT);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, 0);
+	});
+}
+
+#[test]
+fn kill_pool_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		assert_noop!(LM::kill_pool(Some(USER_1).into(), 0), Error::<T>::InvalidPoolOwner);
+		assert_noop!(LM::kill_pool(Origin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::kill_pool(Origin::none(), 0), DispatchError::BadOrigin);
+	});
+}
+
+#[test]
+fn kill_pool_with_wrong_state_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_noop!(LM::kill_pool(Some(CREATOR).into(), 0), Error::<T>::InvalidPoolState);
 	});
 }
