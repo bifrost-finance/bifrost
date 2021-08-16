@@ -263,19 +263,22 @@ impl<T: Config> RewardData<T> {
 
 	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf<T>) -> U64F64 {
 		let per_block: u128 = self.per_block.saturated_into();
-		let deposited: u128 = deposited.saturated_into();
+		let deposit: u128 = deposited.saturated_into();
 
-		U64F64::from_num(per_block) / deposited
+		match deposit {
+			0 => U64F64::from_num(0),
+			_ => U64F64::from_num(per_block) / deposit,
+		}
 	}
 
 	/// Trying to update the gain_avg
 	pub(crate) fn update(
 		&mut self,
-		deposited: BalanceOf<T>,
+		deposit: BalanceOf<T>,
 		block_startup: BlockNumberFor<T>,
 		n: BlockNumberFor<T>,
 	) {
-		let pbpd = self.per_block_per_deposited(deposited);
+		let pbpd = self.per_block_per_deposited(deposit);
 
 		let b_prev = max(self.gain_avg.1, block_startup);
 		let b_past: u128 = (n - b_prev).saturated_into();
