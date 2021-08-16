@@ -22,6 +22,7 @@ sp-session = { version = "3.0.0", default-features = false }
 sp-transaction-pool = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
 sp-consensus-aura = { version = "0.9.0",  default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
 
 # frame dependencies
 frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
@@ -44,6 +45,8 @@ pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-featur
 pallet-utility = { version = "3.0.0", default-features = false }
 pallet-scheduler = { version = "3.0.0", default-features = false }
 pallet-aura = { version = "3.0.0", default-features = false }
+pallet-treasury = { version = "3.0.0", default-features = false }
+pallet-bounties = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
@@ -107,6 +110,7 @@ std = [
 	"sp-runtime/std",
 	"sp-session/std",
 	"sp-transaction-pool/std",
+	"sp-arithmetic/std",
 	"parachain-info/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
