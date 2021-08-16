@@ -242,7 +242,7 @@ fn approve_pool_should_work() {
 		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.state, PoolState::Approved);
 
-		assert_eq!(LM::approved_pids().contains(&0), true);
+		assert!(LM::approved_pids().contains(&0));
 	});
 }
 
@@ -286,6 +286,52 @@ fn approve_pool_with_wrong_state_should_fail() {
 			LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0),
 			Error::<T>::InvalidPoolState
 		);
+	});
+}
+
+#[test]
+fn approve_pool_exceed_maximum_should_fail() {
+	new_test_ext().execute_with(|| {
+		for i in 0..MaximumApproved::get() as u128 {
+			assert_ok!(LM::create_pool(
+				Some(CREATOR).into(),
+				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+				(REWARD_1, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128),
+				vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)],
+				PoolType::Farming,
+				DAYS,
+				1_000 * UNIT,
+				0
+			));
+
+			assert_ok!(LM::approve_pool(
+				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+				i
+			));
+
+			assert!(LM::approved_pids().contains(&i));
+		}
+
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128),
+			vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		assert_noop!(
+			LM::approve_pool(
+				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+				MaximumApproved::get() as u128,
+			),
+			Error::<T>::ExceedMaximumApproved
+		);
+
+		assert!(!LM::approved_pids().contains(&(MaximumApproved::get() as u128)));
 	});
 }
 
@@ -368,4 +414,58 @@ fn kill_pool_with_wrong_state_should_fail() {
 
 		assert_noop!(LM::kill_pool(Some(CREATOR).into(), 0), Error::<T>::InvalidPoolState);
 	});
+}
+
+#[test]
+fn deposit_to_pool_approved_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			Some(CREATOR).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		let deposit = 1_000_000 as Balance;
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, deposit));
+
+		assert_eq!(Tokens::accounts(USER_1, FARMING_DEPOSIT_1).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_1, FARMING_DEPOSIT_1).frozen, deposit);
+		assert_eq!(Tokens::accounts(USER_1, FARMING_DEPOSIT_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, FARMING_DEPOSIT_2).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_1, FARMING_DEPOSIT_2).frozen, deposit);
+		assert_eq!(Tokens::accounts(USER_1, FARMING_DEPOSIT_2).reserved, 0);
+
+		let deposit_data = LM::user_deposit_data(USER_1, 0).unwrap();
+		assert_eq!(deposit_data.deposit, deposit);
+
+		// TODO: Deposit to mining-pool
+	});
+}
+
+#[test]
+fn double_deposit_to_pool_approved_should_work() {
+	// TODO
+}
+
+#[test]
+fn start_pool_should_auto_work() {
+	// TODO
+}
+
+#[test]
+fn deposit_to_pool_ongoing_should_work() {
+	// TODO
+}
+
+#[test]
+fn double_deposit_to_pool_ongoing_should_work() {
+	// TODO
 }

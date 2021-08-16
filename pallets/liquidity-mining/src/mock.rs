@@ -160,7 +160,7 @@ impl pallet_collective::Config<TechnicalCollective> for T {
 
 parameter_types! {
 	pub const MaximumDepositInPool: Balance = 1_000_000 * UNIT;
-	pub const MinimumDeposit: Balance = UNIT;
+	pub const MinimumDeposit: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = MINUTES;
 	pub const MaximumApproved: u32 = 4;
@@ -184,14 +184,14 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 			balances: vec![
 				(CREATOR, REWARD_1, REWARD_AMOUNT),
 				(CREATOR, REWARD_2, REWARD_AMOUNT),
-				(USER_1, FARMING_DEPOSIT_1, UNIT),
-				(USER_1, FARMING_DEPOSIT_2, UNIT),
-				(USER_2, FARMING_DEPOSIT_1, UNIT),
-				(USER_2, FARMING_DEPOSIT_2, UNIT),
-				(USER_1, MINING_DEPOSIT_1, UNIT),
-				(USER_1, MINING_DEPOSIT_2, UNIT),
-				(USER_2, MINING_DEPOSIT_1, UNIT),
-				(USER_2, MINING_DEPOSIT_2, UNIT),
+				(USER_1, FARMING_DEPOSIT_1, DEPOSIT_AMOUNT),
+				(USER_1, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
+				(USER_2, FARMING_DEPOSIT_1, DEPOSIT_AMOUNT),
+				(USER_2, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
+				(USER_1, MINING_DEPOSIT_1, DEPOSIT_AMOUNT),
+				(USER_1, MINING_DEPOSIT_2, DEPOSIT_AMOUNT),
+				(USER_2, MINING_DEPOSIT_1, DEPOSIT_AMOUNT),
+				(USER_2, MINING_DEPOSIT_2, DEPOSIT_AMOUNT),
 			],
 		},
 		technical_committee: pallet_collective::GenesisConfig {
@@ -214,6 +214,7 @@ pub(crate) const MINING_DEPOSIT_1: CurrencyId = CurrencyId::Token(TokenSymbol::K
 pub(crate) const MINING_DEPOSIT_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub(crate) const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
+pub(crate) const DEPOSIT_AMOUNT: Balance = UNIT;
 pub(crate) const REWARD_1: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub(crate) const REWARD_2: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub(crate) const REWARD_AMOUNT: Balance = UNIT;
