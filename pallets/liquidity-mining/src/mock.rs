@@ -159,6 +159,7 @@ impl pallet_collective::Config<TechnicalCollective> for T {
 }
 
 parameter_types! {
+	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
 	pub const MaximumDepositInPool: Balance = 1_000_000 * UNIT;
 	pub const MinimumDeposit: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
@@ -170,7 +171,7 @@ impl lm::Config for T {
 	type Event = Event;
 	type ControlOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
 	type MultiCurrency = Tokens;
-	type RelayChainToken = RelayCurrencyId;
+	type RelayChainTokenSymbol = RelayChainTokenSymbol;
 	type MaximumDepositInPool = MaximumDepositInPool;
 	type MinimumDeposit = MinimumDeposit;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;

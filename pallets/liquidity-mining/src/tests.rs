@@ -59,6 +59,11 @@ fn create_mining_pool_should_work() {
 }
 
 #[test]
+fn create_mining_pool_with_wrong_trading_pair_should_fail() {
+	// TODO
+}
+
+#[test]
 fn increase_pid_when_create_pool_should_work() {
 	new_test_ext().execute_with(|| {
 		const NUM: PoolId = 8;

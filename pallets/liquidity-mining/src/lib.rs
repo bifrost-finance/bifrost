@@ -25,11 +25,12 @@ use frame_support::{
 	sp_std::{
 		cmp::{max, min},
 		collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+		convert::TryFrom,
 	},
 	traits::{BalanceStatus, EnsureOrigin},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod, ParaId};
+use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use substrate_fixed::{traits::FromFixed, types::U64F64};
@@ -324,7 +325,7 @@ pub mod pallet {
 
 		/// The value used to construct vsbond when creating a farming-liquidity-pool
 		#[pallet::constant]
-		type RelayChainToken: Get<CurrencyId>;
+		type RelayChainTokenSymbol: Get<TokenSymbol>;
 
 		/// The amount deposited into a liquidity-pool should be less than the value
 		#[pallet::constant]
@@ -372,8 +373,6 @@ pub mod pallet {
 		TooLowToDeposit,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
-		/// __TEMP__: NotImpl
-		NotImpl,
 	}
 
 	#[pallet::event]
@@ -457,7 +456,14 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
-			// TODO: Order the trading_pair
+			// Order the trading_pair
+			let (token1, token2) = trading_pair;
+
+			ensure!(!token1.is_vsbond() && !token1.is_lptoken(), Error::<T>::InvalidTradingPair);
+			ensure!(!token2.is_vsbond() && !token2.is_lptoken(), Error::<T>::InvalidTradingPair);
+
+			let (id1, id2) = (token1.currency_id(), token2.currency_id());
+			let trading_pair = if id1 <= id2 { (token1, token2) } else { (token2, token1) };
 
 			Self::create_pool(
 				origin,
@@ -588,9 +594,21 @@ pub mod pallet {
 				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 			}
 
+			deposit_data.deposit = deposit_data.deposit.saturating_add(value);
+			pool.deposit = pool.deposit.saturating_add(value);
+			ensure!(
+				pool.deposit <= T::MaximumDepositInPool::get(),
+				Error::<T>::ExceedMaximumDeposit
+			);
+
 			// To lock the deposit
 			if pool.r#type == PoolType::Mining {
-				return Err(Error::<T>::NotImpl.into());
+				let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
+
+				T::MultiCurrency::ensure_can_withdraw(lpt, &user, value)
+					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
+
+				T::MultiCurrency::extend_lock(DEPOSIT_ID, lpt, &user, deposit_data.deposit)?;
 			} else {
 				let (token_a, token_b) = pool.trading_pair;
 
@@ -599,16 +617,9 @@ pub mod pallet {
 				T::MultiCurrency::ensure_can_withdraw(token_b, &user, value)
 					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
 
-				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, value)?;
-				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, value)?;
+				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, deposit_data.deposit)?;
+				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, deposit_data.deposit)?;
 			}
-
-			deposit_data.deposit = deposit_data.deposit.saturating_add(value);
-			pool.deposit = pool.deposit.saturating_add(value);
-			ensure!(
-				pool.deposit <= T::MaximumDepositInPool::get(),
-				Error::<T>::ExceedMaximumDeposit
-			);
 
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
@@ -670,10 +681,13 @@ pub mod pallet {
 
 			// To unlock the deposit
 			let left = deposit_data.deposit - redeemed;
-			let (token_a, token_b) = pool.trading_pair;
 			match pool.r#type {
-				PoolType::Mining => return Err(Error::<T>::NotImpl.into()),
+				PoolType::Mining => {
+					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
+					T::MultiCurrency::extend_lock(DEPOSIT_ID, lpt, &user, left)?;
+				},
 				PoolType::Farming => {
+					let (token_a, token_b) = pool.trading_pair;
 					T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, left)?;
 					T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, left)?;
 				},
@@ -818,13 +832,30 @@ pub mod pallet {
 			next_pool_id
 		}
 
+		pub(crate) fn convert_to_lptoken(
+			trading_pair_ordered: (CurrencyId, CurrencyId),
+		) -> Result<CurrencyId, DispatchError> {
+			let (token1, token2) = trading_pair_ordered;
+			let (discr1, discr2) = (token1.discriminant(), token2.discriminant());
+			let (sid1, sid2) = (
+				(token1.currency_id() & 0x0000_0000_0000_00ff) as u8,
+				(token2.currency_id() & 0x0000_0000_0000_00ff) as u8,
+			);
+			let (sym1, sym2) = (
+				TokenSymbol::try_from(sid1).map_err(|_| Error::<T>::InvalidTradingPair)?,
+				TokenSymbol::try_from(sid2).map_err(|_| Error::<T>::InvalidTradingPair)?,
+			);
+
+			Ok(CurrencyId::LPToken(sym1, discr1, sym2, discr2))
+		}
+
 		#[allow(non_snake_case)]
 		pub(crate) fn vsAssets(
 			index: ParaId,
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 		) -> (CurrencyId, CurrencyId) {
-			let token_symbol = *T::RelayChainToken::get();
+			let token_symbol = T::RelayChainTokenSymbol::get();
 
 			let vsToken = CurrencyId::VSToken(token_symbol);
 			let vsBond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);
