@@ -189,10 +189,8 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 				(USER_1, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
 				(USER_2, FARMING_DEPOSIT_1, DEPOSIT_AMOUNT),
 				(USER_2, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
-				(USER_1, MINING_DEPOSIT_1, DEPOSIT_AMOUNT),
-				(USER_1, MINING_DEPOSIT_2, DEPOSIT_AMOUNT),
-				(USER_2, MINING_DEPOSIT_1, DEPOSIT_AMOUNT),
-				(USER_2, MINING_DEPOSIT_2, DEPOSIT_AMOUNT),
+				(USER_1, MINING_DEPOSIT, DEPOSIT_AMOUNT),
+				(USER_2, MINING_DEPOSIT, DEPOSIT_AMOUNT),
 			],
 		},
 		technical_committee: pallet_collective::GenesisConfig {
@@ -211,8 +209,10 @@ pub(crate) const DAYS: BlockNumber = HOURS * 24;
 
 pub(crate) const UNIT: Balance = 1_000_000_000_000;
 
-pub(crate) const MINING_DEPOSIT_1: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-pub(crate) const MINING_DEPOSIT_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+pub(crate) const MINING_TRADING_PAIR: (CurrencyId, CurrencyId) =
+	(CurrencyId::Token(TokenSymbol::DOT), CurrencyId::Token(TokenSymbol::KSM));
+pub(crate) const MINING_DEPOSIT: CurrencyId =
+	CurrencyId::LPToken(TokenSymbol::DOT, 2u8, TokenSymbol::KSM, 2u8);
 pub(crate) const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
 pub(crate) const DEPOSIT_AMOUNT: Balance = UNIT;
