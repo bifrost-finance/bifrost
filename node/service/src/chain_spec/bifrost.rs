@@ -57,6 +57,7 @@ pub fn bifrost_genesis(
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
+		treasury: Default::default(),
 		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
