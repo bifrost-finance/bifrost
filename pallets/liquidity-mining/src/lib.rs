@@ -138,23 +138,21 @@ impl<T: Config> PoolInfo<T> {
 	) -> Result<(), DispatchError> {
 		let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
-		// When pool in `PoolState::Ongoing` or `PoolState::Retired`
-		if let Some(block_startup) = self.block_startup {
+		if self.state == PoolState::Ongoing || self.state == PoolState::Retired {
 			for (rtoken, reward) in self.rewards.iter_mut() {
-				let (vn, un) = reward.gain_avg;
+				let (v_new, u_new) = reward.gain_avg;
 				if let Some(gain_avg) = deposit_data.gain_avgs.get(rtoken) {
-					let (vo, uo) = *gain_avg;
-					let uo = max(uo, block_startup);
+					let (v_old, _u_old) = *gain_avg;
 
-					let block_past: u128 = (un - uo).saturated_into();
+					let user_deposit: u128 = deposit_data.deposit.saturated_into();
 					let amount = BalanceOf::<T>::saturated_from(u128::from_fixed(
-						((vn - vo) * block_past).floor(),
+						((v_new - v_old) * user_deposit).floor(),
 					));
 
 					// Update the claimed of the reward
 					reward.claimed = reward.claimed.saturating_add(amount);
 					// Sync the gain_avg between `DepositData` and `RewardData`
-					deposit_data.gain_avgs.insert(*rtoken, (vn, un));
+					deposit_data.gain_avgs.insert(*rtoken, (v_new, u_new));
 
 					to_rewards.push((*rtoken, amount));
 				}
@@ -203,7 +201,7 @@ pub struct DepositData<T: Config> {
 	/// The amount of trading-pair deposited in the liquidity-pool
 	deposit: BalanceOf<T>,
 	/// Important data used to calculate rewards,
-	/// updated when the `DepositData`'s owner redeems or claims from the liquidity-pool.
+	/// updated when the `DepositData`'s owner deposits/redeems/claims from the liquidity-pool.
 	///
 	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
 	/// - Arg1: The block number updated lastest
