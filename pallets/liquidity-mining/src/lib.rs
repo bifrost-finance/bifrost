@@ -457,6 +457,8 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			// TODO: Order the trading_pair
+
 			Self::create_pool(
 				origin,
 				trading_pair,
@@ -537,13 +539,14 @@ pub mod pallet {
 				ensure!(remain == Zero::zero(), Error::<T>::FailOnUnReserve);
 			}
 
-			let r#type = pool.r#type;
-			let trading_pair = pool.trading_pair;
-
 			let pool_killed = PoolInfo { state: PoolState::Dead, ..pool };
-			TotalPoolInfos::<T>::insert(pid, pool_killed);
+			TotalPoolInfos::<T>::remove(pid);
 
-			Self::deposit_event(Event::PoolKilled(pid, r#type, trading_pair));
+			Self::deposit_event(Event::PoolKilled(
+				pid,
+				pool_killed.r#type,
+				pool_killed.trading_pair,
+			));
 
 			Ok(().into())
 		}
@@ -631,6 +634,9 @@ pub mod pallet {
 		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
 		#[pallet::weight(1_000)]
 		pub fn redeem(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+			// TODO: Try to delete `DepositData` when the deposit in the pool becoomes zero.
+			// TODO: Try to delete the pool without any deposit.
+
 			let user = ensure_signed(origin)?;
 
 			let mut pool: PoolInfo<T> =
