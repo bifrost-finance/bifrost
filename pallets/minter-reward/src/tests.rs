@@ -65,7 +65,7 @@ fn minter_reward_should_work() {
 
 		// create DEX pair
 		let ausd_asset_id: AssetId =
-			AssetId::try_from(CurrencyId::Stable(TokenSymbol::AUSD)).unwrap();
+			AssetId::try_from(CurrencyId::Stable(TokenSymbol::KUSD)).unwrap();
 		let dot_asset_id: AssetId = AssetId::try_from(CurrencyId::Token(TokenSymbol::DOT)).unwrap();
 		let vdot_asset_id: AssetId =
 			AssetId::try_from(CurrencyId::VToken(TokenSymbol::DOT)).unwrap();
