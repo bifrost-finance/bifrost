@@ -170,10 +170,7 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
-<<<<<<< HEAD
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-=======
->>>>>>> c15f40c6dbfef906f2fbeee69d578c015e2eab8c
 }
 
 impl frame_system::Config for Runtime {
