@@ -500,17 +500,24 @@ pub mod para {
 
 pub mod relay {
 	use cumulus_primitives_core::ParaId;
-	use frame_support::{construct_runtime, parameter_types, traits::All, weights::Weight};
+	use frame_support::{
+		construct_runtime, parameter_types,
+		traits::{All, OnUnbalanced},
+		weights::{Weight, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
+	};
+	use pallet_balances::NegativeImbalance;
+	use polkadot_primitives;
 	use polkadot_runtime_parachains::{configuration, origin, shared, ump};
+	use smallvec::smallvec;
 	use sp_core::H256;
-	use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32};
+	use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32, Perbill};
 	use xcm::v0::{MultiAsset, MultiLocation, NetworkId};
 	use xcm_builder::{
-		AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative,
+		AccountId32Aliases, AllowTopLevelPaidExecutionFrom, ChildParachainAsNative,
 		ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
-		CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfConcreteFungible, FixedWeightBounds,
-		IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32,
-		SovereignSignedViaLocation,
+		CurrencyAdapter as XcmCurrencyAdapter, FixedWeightBounds, IsConcrete, LocationInverter,
+		SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
+		TakeWeightCredit, UsingComponents,
 	};
 	use xcm_executor::{Config, XcmExecutor};
 
@@ -519,6 +526,33 @@ pub mod relay {
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
+	}
+
+	/// Logic for the author to get a portion of fees.
+	pub struct ToAuthor<R>(sp_std::marker::PhantomData<R>);
+	impl<R> OnUnbalanced<NegativeImbalance<R>> for ToAuthor<R>
+	where
+		R: pallet_balances::Config,
+		<R as frame_system::Config>::AccountId: From<polkadot_primitives::v1::AccountId>,
+		<R as frame_system::Config>::AccountId: Into<polkadot_primitives::v1::AccountId>,
+		<R as frame_system::Config>::Event: From<pallet_balances::Event<R>>,
+	{
+		fn on_nonzero_unbalanced(_amount: NegativeImbalance<R>) {}
+	}
+
+	pub struct WeightToFee;
+	impl WeightToFeePolynomial for WeightToFee {
+		type Balance = Balance;
+		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+			let p = 1_000_000_00;
+			let q = 1_000_000;
+			smallvec![WeightToFeeCoefficient {
+				degree: 1,
+				negative: false,
+				coeff_frac: Perbill::from_rational(p % q, q),
+				coeff_integer: p / q,
+			}]
+		}
 	}
 
 	impl frame_system::Config for Runtime {
@@ -598,7 +632,7 @@ pub mod relay {
 	}
 
 	pub type XcmRouter = crate::mock::RelayChainXcmRouter;
-	pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
+	pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<All<MultiLocation>>);
 
 	pub struct XcmConfig;
 	impl Config for XcmConfig {
@@ -610,7 +644,8 @@ pub mod relay {
 		type LocationInverter = LocationInverter<Ancestry>;
 		type OriginConverter = LocalOriginConverter;
 		type ResponseHandler = ();
-		type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ()>;
+		type Trader =
+			UsingComponents<WeightToFee, KsmLocation, AccountId, Balances, ToAuthor<Runtime>>;
 		type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
 		type XcmSender = XcmRouter;
 	}

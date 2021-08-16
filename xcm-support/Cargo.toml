@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 paste = "1.0.5"
+smallvec = "1.6.1"
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
@@ -31,6 +32,7 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polk
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 
 [features]
 default = ["std"]
