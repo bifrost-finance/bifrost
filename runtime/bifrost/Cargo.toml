@@ -7,65 +7,68 @@ build = "build.rs"
 
 [dependencies]
 # third-party dependencies
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "max-encoded-len"] }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = [
+	"derive",
+	"max-encoded-len",
+] }
 log = { version = "0.4.14", default-features = false }
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
-sp-block-builder = { default-features = false, version = "3.0.0"}
+sp-api = { version = "3.0.0", default-features = false }
+sp-arithmetic = { version = "3.0.0", default-features = false }
+sp-block-builder = { default-features = false, version = "3.0.0" }
+sp-consensus-aura = { version = "0.9.0", default-features = false }
+sp-core = { version = "3.0.0", default-features = false }
 sp-inherents = { version = "3.0.0", default-features = false }
 sp-offchain = { version = "3.0.0", default-features = false }
-sp-core = { version = "3.0.0", default-features = false }
-sp-std = { version = "3.0.0", default-features = false }
-sp-api = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-session = { version = "3.0.0", default-features = false }
+sp-std = { version = "3.0.0", default-features = false }
 sp-transaction-pool = { version = "3.0.0", default-features = false }
 sp-version = { version = "3.0.0", default-features = false }
-sp-consensus-aura = { version = "0.9.0",  default-features = false }
-sp-arithmetic = { version = "3.0.0", default-features = false }
 
 # frame dependencies
 frame-benchmarking = { version = "3.0.0", default-features = false, optional = true }
-frame-try-runtime = { version = "0.9.0", default-features = false, optional = true  }
 frame-executive = { version = "3.0.0", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-system-rpc-runtime-api = { version = "3.0.0", default-features = false }
+frame-try-runtime = { version = "0.9.0", default-features = false, optional = true }
+pallet-aura = { version = "3.0.0", default-features = false }
 pallet-authorship = { version = "3.0.0", default-features = false }
 pallet-balances = { version = "3.0.0", default-features = false }
+pallet-bounties = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
+pallet-scheduler = { version = "3.0.0", default-features = false }
 pallet-session = { version = "3.0.0", default-features = false }
 pallet-sudo = { version = "3.0.0", default-features = false }
 pallet-timestamp = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
-pallet-utility = { version = "3.0.0", default-features = false }
-pallet-scheduler = { version = "3.0.0", default-features = false }
-pallet-aura = { version = "3.0.0", default-features = false }
 pallet-treasury = { version = "3.0.0", default-features = false }
-pallet-bounties = { version = "3.0.0", default-features = false }
+pallet-utility = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
-parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
+parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 
 # Polkadot dependencies
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 
 # Bifrost
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
@@ -81,7 +84,6 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 
 [features]
 default = ["std"]
-with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"codec/std",
 	"log/std",
@@ -100,17 +102,17 @@ std = [
 	"pallet-timestamp/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
-	"sp-consensus-aura/std",
+	"sp-api/std",
+	"sp-arithmetic/std",
 	"sp-block-builder/std",
+	"sp-consensus-aura/std",
 	"sp-inherents/std",
 	"sp-offchain/std",
 	"sp-core/std",
-	"sp-std/std",
-	"sp-api/std",
 	"sp-runtime/std",
+	"sp-std/std",
 	"sp-session/std",
 	"sp-transaction-pool/std",
-	"sp-arithmetic/std",
 	"parachain-info/std",
 	"cumulus-pallet-aura-ext/std",
 	"cumulus-pallet-dmp-queue/std",
@@ -131,6 +133,7 @@ std = [
 	"orml-traits/std",
 	"orml-tokens/std",
 ]
+with-tracing = ["frame-executive/with-tracing"]
 
 runtime-benchmarks = [
 	"frame-benchmarking",
