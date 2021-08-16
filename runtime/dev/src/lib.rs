@@ -926,6 +926,8 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
+	pub ContributionWeight:u64 = XCM_WEIGHT.into();
+	pub WithdrawWeight:u64 = XCM_WEIGHT.into();
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -946,7 +948,11 @@ impl bifrost_salp::Config for Runtime {
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>; // bifrost_salp::TestWeightInfo;
+	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
+	type SelfParaId = SelfParaId;
+	type ContributionWeight = ContributionWeight;
+	type WithdrawWeight = WithdrawWeight;
+	type BaseXcmWeight = XcmWeight;
 }
 
 parameter_types! {
