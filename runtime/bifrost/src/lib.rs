@@ -164,7 +164,7 @@ impl Filter<Call> for CallFilter {
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 }
 
 impl frame_system::Config for Runtime {

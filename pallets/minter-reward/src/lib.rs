@@ -306,7 +306,7 @@ pub mod pallet {
 			};
 			for (minter, currency_id, vtoken_amount) in Minter::<T>::iter() {
 				let weight = CurrencyWeights::<T>::get(&currency_id);
-				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // AUSD
+				let total_vtoken_mint = TotalVtokenMinted::<T>::get(currency_id); // KUSD
 				let reward = bnc_reward.saturating_mul(weight.into().saturating_mul(vtoken_amount)) /
 					(total_weight.saturating_mul(total_vtoken_mint));
 

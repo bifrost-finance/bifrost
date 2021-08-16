@@ -114,9 +114,9 @@ fn redeem_token_should_be_ok() {
 		assert_eq!(VtokenMint::get_mint_pool(DOT), dot_pool - minted_dot);
 		assert_eq!(VtokenMint::get_mint_pool(vDOT), vdot_pool - to_sell_vdot);
 
-		// Alice selling AUSD should not work.
+		// Alice selling KUSD should not work.
 		assert_noop!(
-			VtokenMint::redeem(Origin::signed(ALICE), AUSD, to_sell_vdot),
+			VtokenMint::redeem(Origin::signed(ALICE), KUSD, to_sell_vdot),
 			Error::<Runtime>::NotSupportTokenType
 		);
 

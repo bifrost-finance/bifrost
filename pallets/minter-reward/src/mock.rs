@@ -41,7 +41,7 @@ use crate::{self as bifrost_minter_reward};
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const AUSD: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+pub const KUSD: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -79,7 +79,7 @@ frame_support::construct_runtime!(
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 }
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<u64>;
@@ -277,13 +277,13 @@ impl ExtBuilder {
 	pub fn ten_thousand_for_alice_n_bob(self) -> Self {
 		self.balances(vec![
 			(ALICE, BNC, 100000),
-			(ALICE, AUSD, 10000),
+			(ALICE, KUSD, 10000),
 			(ALICE, vDOT, 10000),
 			(ALICE, vKSM, 10000),
 			(ALICE, DOT, 10000),
 			(ALICE, KSM, 10000),
 			(BOB, BNC, 100000),
-			(BOB, AUSD, 10000),
+			(BOB, KUSD, 10000),
 			(BOB, vDOT, 10000),
 			(BOB, vKSM, 10000),
 			(BOB, DOT, 10000),

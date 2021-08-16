@@ -32,7 +32,7 @@ fn currency_id_from_string_should_work() {
 fn currency_id_to_u64_should_work() {
 	let e00 = CurrencyId::Native(TokenSymbol::ASG);
 	let e01 = CurrencyId::Native(TokenSymbol::BNC);
-	let e02 = CurrencyId::Native(TokenSymbol::AUSD);
+	let e02 = CurrencyId::Native(TokenSymbol::KUSD);
 	let e03 = CurrencyId::Native(TokenSymbol::DOT);
 	let e04 = CurrencyId::Native(TokenSymbol::KSM);
 	let e05 = CurrencyId::Native(TokenSymbol::ETH);
@@ -46,7 +46,7 @@ fn currency_id_to_u64_should_work() {
 
 	let e10 = CurrencyId::VToken(TokenSymbol::ASG);
 	let e11 = CurrencyId::VToken(TokenSymbol::BNC);
-	let e12 = CurrencyId::VToken(TokenSymbol::AUSD);
+	let e12 = CurrencyId::VToken(TokenSymbol::KUSD);
 	let e13 = CurrencyId::VToken(TokenSymbol::DOT);
 	let e14 = CurrencyId::VToken(TokenSymbol::KSM);
 	let e15 = CurrencyId::VToken(TokenSymbol::ETH);
@@ -60,7 +60,7 @@ fn currency_id_to_u64_should_work() {
 
 	let e20 = CurrencyId::Token(TokenSymbol::ASG);
 	let e21 = CurrencyId::Token(TokenSymbol::BNC);
-	let e22 = CurrencyId::Token(TokenSymbol::AUSD);
+	let e22 = CurrencyId::Token(TokenSymbol::KUSD);
 	let e23 = CurrencyId::Token(TokenSymbol::DOT);
 	let e24 = CurrencyId::Token(TokenSymbol::KSM);
 	let e25 = CurrencyId::Token(TokenSymbol::ETH);
@@ -74,7 +74,7 @@ fn currency_id_to_u64_should_work() {
 
 	let e30 = CurrencyId::Stable(TokenSymbol::ASG);
 	let e31 = CurrencyId::Stable(TokenSymbol::BNC);
-	let e32 = CurrencyId::Stable(TokenSymbol::AUSD);
+	let e32 = CurrencyId::Stable(TokenSymbol::KUSD);
 	let e33 = CurrencyId::Stable(TokenSymbol::DOT);
 	let e34 = CurrencyId::Stable(TokenSymbol::KSM);
 	let e35 = CurrencyId::Stable(TokenSymbol::ETH);
@@ -88,7 +88,7 @@ fn currency_id_to_u64_should_work() {
 
 	let e40 = CurrencyId::VSToken(TokenSymbol::ASG);
 	let e41 = CurrencyId::VSToken(TokenSymbol::BNC);
-	let e42 = CurrencyId::VSToken(TokenSymbol::AUSD);
+	let e42 = CurrencyId::VSToken(TokenSymbol::KUSD);
 	let e43 = CurrencyId::VSToken(TokenSymbol::DOT);
 	let e44 = CurrencyId::VSToken(TokenSymbol::KSM);
 	let e45 = CurrencyId::VSToken(TokenSymbol::ETH);
@@ -102,7 +102,7 @@ fn currency_id_to_u64_should_work() {
 
 	let e50 = CurrencyId::VSBond(TokenSymbol::ASG, 0x07d0, 0x0000, 0x000f);
 	let e51 = CurrencyId::VSBond(TokenSymbol::BNC, 0x07d1, 0x000f, 0x001f);
-	let e52 = CurrencyId::VSBond(TokenSymbol::AUSD, 0x07d2, 0x001f, 0x002f);
+	let e52 = CurrencyId::VSBond(TokenSymbol::KUSD, 0x07d2, 0x001f, 0x002f);
 	let e53 = CurrencyId::VSBond(TokenSymbol::DOT, 0x07d3, 0x002f, 0x003f);
 	let e54 = CurrencyId::VSBond(TokenSymbol::KSM, 0x07d4, 0x003f, 0x004f);
 	let e55 = CurrencyId::VSBond(TokenSymbol::ETH, 0x07d5, 0x004f, 0x005f);
@@ -123,7 +123,7 @@ fn currency_id_to_u64_should_work() {
 fn u64_to_currency_id_should_work() {
 	let e00 = CurrencyId::Native(TokenSymbol::ASG);
 	let e01 = CurrencyId::Native(TokenSymbol::BNC);
-	let e02 = CurrencyId::Native(TokenSymbol::AUSD);
+	let e02 = CurrencyId::Native(TokenSymbol::KUSD);
 	let e03 = CurrencyId::Native(TokenSymbol::DOT);
 	let e04 = CurrencyId::Native(TokenSymbol::KSM);
 	let e05 = CurrencyId::Native(TokenSymbol::ETH);
@@ -138,7 +138,7 @@ fn u64_to_currency_id_should_work() {
 
 	let e10 = CurrencyId::VToken(TokenSymbol::ASG);
 	let e11 = CurrencyId::VToken(TokenSymbol::BNC);
-	let e12 = CurrencyId::VToken(TokenSymbol::AUSD);
+	let e12 = CurrencyId::VToken(TokenSymbol::KUSD);
 	let e13 = CurrencyId::VToken(TokenSymbol::DOT);
 	let e14 = CurrencyId::VToken(TokenSymbol::KSM);
 	let e15 = CurrencyId::VToken(TokenSymbol::ETH);
@@ -152,7 +152,7 @@ fn u64_to_currency_id_should_work() {
 
 	let e20 = CurrencyId::Token(TokenSymbol::ASG);
 	let e21 = CurrencyId::Token(TokenSymbol::BNC);
-	let e22 = CurrencyId::Token(TokenSymbol::AUSD);
+	let e22 = CurrencyId::Token(TokenSymbol::KUSD);
 	let e23 = CurrencyId::Token(TokenSymbol::DOT);
 	let e24 = CurrencyId::Token(TokenSymbol::KSM);
 	let e25 = CurrencyId::Token(TokenSymbol::ETH);
@@ -166,7 +166,7 @@ fn u64_to_currency_id_should_work() {
 
 	let e30 = CurrencyId::Stable(TokenSymbol::ASG);
 	let e31 = CurrencyId::Stable(TokenSymbol::BNC);
-	let e32 = CurrencyId::Stable(TokenSymbol::AUSD);
+	let e32 = CurrencyId::Stable(TokenSymbol::KUSD);
 	let e33 = CurrencyId::Stable(TokenSymbol::DOT);
 	let e34 = CurrencyId::Stable(TokenSymbol::KSM);
 	let e35 = CurrencyId::Stable(TokenSymbol::ETH);
@@ -180,7 +180,7 @@ fn u64_to_currency_id_should_work() {
 
 	let e40 = CurrencyId::VSToken(TokenSymbol::ASG);
 	let e41 = CurrencyId::VSToken(TokenSymbol::BNC);
-	let e42 = CurrencyId::VSToken(TokenSymbol::AUSD);
+	let e42 = CurrencyId::VSToken(TokenSymbol::KUSD);
 	let e43 = CurrencyId::VSToken(TokenSymbol::DOT);
 	let e44 = CurrencyId::VSToken(TokenSymbol::KSM);
 	let e45 = CurrencyId::VSToken(TokenSymbol::ETH);
@@ -194,7 +194,7 @@ fn u64_to_currency_id_should_work() {
 
 	let e50 = CurrencyId::VSBond(TokenSymbol::ASG, 0x07d0, 0x0000, 0x000f);
 	let e51 = CurrencyId::VSBond(TokenSymbol::BNC, 0x07d1, 0x000f, 0x001f);
-	let e52 = CurrencyId::VSBond(TokenSymbol::AUSD, 0x07d2, 0x001f, 0x002f);
+	let e52 = CurrencyId::VSBond(TokenSymbol::KUSD, 0x07d2, 0x001f, 0x002f);
 	let e53 = CurrencyId::VSBond(TokenSymbol::DOT, 0x07d3, 0x002f, 0x003f);
 	let e54 = CurrencyId::VSBond(TokenSymbol::KSM, 0x07d4, 0x003f, 0x004f);
 	let e55 = CurrencyId::VSBond(TokenSymbol::ETH, 0x07d5, 0x004f, 0x005f);
