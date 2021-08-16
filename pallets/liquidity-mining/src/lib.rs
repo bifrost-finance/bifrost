@@ -39,8 +39,6 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-// TODO: Purge `TotalPoolInfos` & `TotalDepositData` when the liquidity-pool is on `Dead`.
-
 const DEPOSIT_ID: LockIdentifier = *b"deposit ";
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
@@ -362,6 +360,8 @@ pub mod pallet {
 		DuplicateReward,
 		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
 		ExceedMaximumDeposit,
+		/// When the number of pool-approved exceeds the `MaximumApproved`
+		ExceedMaximumApproved,
 		/// Not enough balance to deposit
 		NotEnoughToDeposit,
 		/// Not enough balance of reward to unreserve
@@ -505,6 +505,9 @@ pub mod pallet {
 		#[pallet::weight(1_000)]
 		pub fn approve_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
+			let num = Self::approved_pids().len() as u32;
+			ensure!(num < T::MaximumApproved::get(), Error::<T>::ExceedMaximumApproved);
 
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
