@@ -191,6 +191,9 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 				(USER_2, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
 				(USER_1, MINING_DEPOSIT, DEPOSIT_AMOUNT),
 				(USER_2, MINING_DEPOSIT, DEPOSIT_AMOUNT),
+				(RICHER, FARMING_DEPOSIT_1, 1_000_000_000_000 * UNIT),
+				(RICHER, FARMING_DEPOSIT_2, 1_000_000_000_000 * UNIT),
+				(RICHER, MINING_DEPOSIT, 1_000_000_000_000 * UNIT),
 			],
 		},
 		technical_committee: pallet_collective::GenesisConfig {
@@ -226,3 +229,4 @@ pub(crate) const USER_2: AccountId = AccountId::new([2u8; 32]);
 pub(crate) const TC_MEMBER_1: AccountId = AccountId::new([3u8; 32]);
 pub(crate) const TC_MEMBER_2: AccountId = AccountId::new([4u8; 32]);
 pub(crate) const TC_MEMBER_3: AccountId = AccountId::new([5u8; 32]);
+pub(crate) const RICHER: AccountId = AccountId::new([6u8; 32]);

@@ -771,3 +771,127 @@ fn double_deposit_to_pool_ongoing_in_same_block_should_work() {
 		assert_eq!(deposit_data_2.deposit, 2_000_000);
 	});
 }
+
+#[test]
+fn deposit_with_wrong_pid_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(LM::deposit(Some(USER_1).into(), 0, 1_000_000), Error::<T>::InvalidPoolId);
+
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1_000_000,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_noop!(LM::deposit(Some(USER_1).into(), 1, 1_000_000), Error::<T>::InvalidPoolId);
+	});
+}
+
+#[test]
+fn deposit_with_wrong_state_should_fail() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(100);
+
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1_000_000,
+			0
+		));
+
+		assert_noop!(LM::deposit(Some(USER_1).into(), 0, 1_000_000), Error::<T>::InvalidPoolState);
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, 1_000_000));
+
+		run_to_block(100 + DAYS);
+
+		let result = LM::deposit(Some(USER_1).into(), 0, 1_000_000);
+		assert_noop!(result, Error::<T>::InvalidPoolState);
+	});
+}
+
+#[test]
+fn deposit_too_little_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(LM::deposit(Some(USER_1).into(), 0, 1_000_000), Error::<T>::InvalidPoolId);
+
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1_000_000,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_noop!(
+			LM::deposit(Some(USER_1).into(), 0, MinimumDeposit::get() - 1),
+			Error::<T>::TooLowToDeposit
+		);
+	});
+}
+
+#[test]
+fn deposit_with_wrong_origin_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(LM::deposit(Some(USER_1).into(), 0, 1_000_000), Error::<T>::InvalidPoolId);
+
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1_000_000,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_noop!(LM::deposit(Origin::root(), 0, 1_000_000), DispatchError::BadOrigin);
+		assert_noop!(LM::deposit(Origin::none(), 0, 1_000_000), DispatchError::BadOrigin);
+	});
+}
+
+#[test]
+fn deposit_exceed_the_limit_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(LM::deposit(Some(USER_1).into(), 0, 1_000_000), Error::<T>::InvalidPoolId);
+
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1_000_000,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, 1_000_000));
+		assert_noop!(
+			LM::deposit(Some(RICHER).into(), 0, MaximumDepositInPool::get() + 1),
+			Error::<T>::ExceedMaximumDeposit
+		);
+	});
+}
