@@ -36,7 +36,6 @@
 // --header=./HEADER-GPL3
 // --output=./runtime/bifrost/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
@@ -56,14 +55,14 @@ impl<T: frame_system::Config> pallet_treasury::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
-	fn approve_proposal(p: u32, ) -> Weight {
+	fn approve_proposal(p: u32) -> Weight {
 		(38_091_000 as Weight)
 			// Standard Error: 7_000
 			.saturating_add((293_000 as Weight).saturating_mul(p as Weight))
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
-	fn on_initialize_proposals(p: u32, ) -> Weight {
+	fn on_initialize_proposals(p: u32) -> Weight {
 		(150_370_000 as Weight)
 			// Standard Error: 3_556_000
 			.saturating_add((177_794_000 as Weight).saturating_mul(p as Weight))

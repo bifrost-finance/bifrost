@@ -36,7 +36,6 @@
 // --header=./HEADER-GPL3
 // --output=./runtime/bifrost/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
@@ -46,7 +45,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_utility.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_utility::WeightInfo for WeightInfo<T> {
-	fn batch(c: u32, ) -> Weight {
+	fn batch(c: u32) -> Weight {
 		(44_360_000 as Weight)
 			// Standard Error: 7_000
 			.saturating_add((6_778_000 as Weight).saturating_mul(c as Weight))
@@ -56,7 +55,7 @@ impl<T: frame_system::Config> pallet_utility::WeightInfo for WeightInfo<T> {
 	fn as_derivative() -> Weight {
 		(19_316_000 as Weight)
 	}
-	fn batch_all(c: u32, ) -> Weight {
+	fn batch_all(c: u32) -> Weight {
 		(638_011_000 as Weight)
 			// Standard Error: 79_000
 			.saturating_add((6_251_000 as Weight).saturating_mul(c as Weight))

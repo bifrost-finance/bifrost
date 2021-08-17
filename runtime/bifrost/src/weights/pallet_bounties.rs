@@ -36,7 +36,6 @@
 // --header=./HEADER-GPL3
 // --output=./runtime/bifrost/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
@@ -46,7 +45,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_bounties.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_bounties::WeightInfo for WeightInfo<T> {
-	fn propose_bounty(d: u32, ) -> Weight {
+	fn propose_bounty(d: u32) -> Weight {
 		(137_877_000 as Weight)
 			// Standard Error: 0
 			.saturating_add((1_000 as Weight).saturating_mul(d as Weight))
@@ -98,7 +97,7 @@ impl<T: frame_system::Config> pallet_bounties::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
-	fn spend_funds(b: u32, ) -> Weight {
+	fn spend_funds(b: u32) -> Weight {
 		(1_383_602_000 as Weight)
 			// Standard Error: 2_279_000
 			.saturating_add((150_816_000 as Weight).saturating_mul(b as Weight))

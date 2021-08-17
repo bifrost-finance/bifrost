@@ -36,7 +36,6 @@
 // --header=./HEADER-GPL3
 // --output=./runtime/bifrost/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
@@ -46,28 +45,28 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_scheduler.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_scheduler::WeightInfo for WeightInfo<T> {
-	fn schedule(s: u32, ) -> Weight {
+	fn schedule(s: u32) -> Weight {
 		(79_887_000 as Weight)
 			// Standard Error: 4_000
 			.saturating_add((353_000 as Weight).saturating_mul(s as Weight))
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
-	fn cancel(s: u32, ) -> Weight {
+	fn cancel(s: u32) -> Weight {
 		(75_324_000 as Weight)
 			// Standard Error: 32_000
 			.saturating_add((9_873_000 as Weight).saturating_mul(s as Weight))
 			.saturating_add(T::DbWeight::get().reads(5 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
-	fn schedule_named(s: u32, ) -> Weight {
+	fn schedule_named(s: u32) -> Weight {
 		(99_023_000 as Weight)
 			// Standard Error: 7_000
 			.saturating_add((350_000 as Weight).saturating_mul(s as Weight))
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
-	fn cancel_named(s: u32, ) -> Weight {
+	fn cancel_named(s: u32) -> Weight {
 		(68_604_000 as Weight)
 			// Standard Error: 97_000
 			.saturating_add((9_926_000 as Weight).saturating_mul(s as Weight))

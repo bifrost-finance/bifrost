@@ -155,9 +155,8 @@ impl Filter<Call> for CallFilter {
 			Call::Tokens(orml_tokens::Call::<Runtime>::transfer(..)) => false,
 			Call::Tokens(orml_tokens::Call::<Runtime>::transfer_all(..)) => false,
 			Call::Currencies(orml_currencies::Call::<Runtime>::transfer(..)) => false,
-			Call::Currencies(orml_currencies::Call::<Runtime>::transfer_native_currency(..)) => {
-				false
-			}
+			Call::Currencies(orml_currencies::Call::<Runtime>::transfer_native_currency(..)) =>
+				false,
 			_ => true,
 		}
 	}
