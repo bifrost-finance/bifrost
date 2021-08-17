@@ -5254,7 +5254,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5270,7 +5270,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5285,7 +5285,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5302,7 +5302,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/bifrost-finance/open-runtime-module-library?rev=3229e4d662b12e9a3f98a56c75a6d74e73bc204c#3229e4d662b12e9a3f98a56c75a6d74e73bc204c"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
