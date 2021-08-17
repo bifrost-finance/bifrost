@@ -256,7 +256,7 @@ create_currency_id! {
 	pub enum TokenSymbol {
 		ASG("Asgard", 12) = 0,
 		BNC("Bifrost", 12) = 1,
-		AUSD("Acala Dollar", 12) = 2,
+		KUSD("Karura Dollar", 12) = 2,
 		DOT("Polkadot", 10) = 3,
 		KSM("Kusama", 12) = 4,
 		ETH("Ethereum", 18) = 5,

@@ -33,7 +33,7 @@ fn initialize_pool_for_dispatches() {
 	// initialize some parameters used to dispatch the create_pool call.
 	let alice = 1;
 	let bob = 2;
-	let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+	let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 	let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 	let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -124,7 +124,7 @@ fn create_pool_should_work() {
 	new_test_ext().execute_with(|| {
 		// initialize some parameters used to dispatch the create_pool call.
 		let alice = 1;
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -165,12 +165,12 @@ fn create_pool_should_work() {
 		assert_eq!(result.active, false); // Validate the initial value of pool state is inactive.
 
 		// validate the value of storage TokenWeightsInPool.
-		assert_eq!(Swap::token_weights_in_pool(0, asud_id), 20_000); // the weight of AUSD token
+		assert_eq!(Swap::token_weights_in_pool(0, asud_id), 20_000); // the weight of KUSD token
 		assert_eq!(Swap::token_weights_in_pool(0, dot_id), 40_000); // the weight of dot token
 		assert_eq!(Swap::token_weights_in_pool(0, ksm_id), 40_000); // the weight of ksm token
 
 		// validate the value of storage TokenBalancesInPool.
-		assert_eq!(Swap::token_balances_in_pool(0, asud_id), 500); // the balance of AUSD token
+		assert_eq!(Swap::token_balances_in_pool(0, asud_id), 500); // the balance of KUSD token
 		assert_eq!(Swap::token_balances_in_pool(0, dot_id), 1_000); // the balance of dot token
 		assert_eq!(Swap::token_balances_in_pool(0, ksm_id), 400); // the balance of ksm token
 
@@ -319,7 +319,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		let pool_id = 0;
 		let new_pool_token = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -337,7 +337,7 @@ fn add_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 480);
 
 		// check wether bob's account has been deducted corresponding amount for different tokens.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_900); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_900); // get the user's balance for KUSD
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 999_800); // get the user's balance for dot
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 999_920); // get the user's balance for ksm
 
@@ -401,7 +401,7 @@ fn add_single_liquidity_given_amount_in_should_work() {
 		let bob = 2;
 		let creator = Origin::signed(bob);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let asset_id = asud_id;
 		let token_amount_in = 5_000;
 
@@ -421,8 +421,8 @@ fn add_single_liquidity_given_amount_in_should_work() {
 		// check wether the token balances are right.
 		assert_eq!(Swap::token_balances_in_pool(pool_id, asud_id), 5_500);
 
-		// check wether bob's account has been deducted corresponding amount for AUSD.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 995_000); // get the user's balance for AUSD
+		// check wether bob's account has been deducted corresponding amount for KUSD.
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 995_000); // get the user's balance for KUSD
 
 		// Below are the incorrect operations.
 
@@ -509,7 +509,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 		let pool_id = 0;
 		let new_pool_token = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -533,7 +533,7 @@ fn add_single_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check wether bob's account has been deducted corresponding amount for different tokens.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 981_396); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 981_396); // get the user's balance for KUSD
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 1_000_000); // get the user's balance for dot
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 1_000_000); // get the user's balance for ksm
 
@@ -624,7 +624,7 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 		let pool_id = 0;
 		let pool_token_out = 200; // Alice initial pool token amount is 1000. Bob want's to get 20% of that of Alice's.
 
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -647,8 +647,8 @@ fn remove_single_asset_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, dot_id), 1_000);
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
-		// check wether Alice's account has been added by corresponding amount for AUSD.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_822); // get the user's balance for AUSD
+		// check wether Alice's account has been added by corresponding amount for KUSD.
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_822); // get the user's balance for KUSD
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &alice), 29_000); // get the user's balance for dot
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &alice), 29_600); // get the user's balance for ksm
 
@@ -751,7 +751,7 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 		let remover = Origin::signed(alice);
 		let pool_id = 0;
 		let token_amount = 400; // Alice initial pool token amount is 1000.
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let asset_id = asud_id;
 		assert_ok!(Swap::remove_single_asset_liquidity_given_amount_in(
 			remover,
@@ -769,8 +769,8 @@ fn remove_single_asset_liquidity_given_amount_in_should_work() {
 		// check wether the token balances are right.
 		assert_eq!(Swap::token_balances_in_pool(pool_id, asud_id), 100);
 
-		// check wether bob's account has been deducted corresponding amount for AUSD.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_900); // get the user's balance for AUSD
+		// check wether bob's account has been deducted corresponding amount for KUSD.
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_900); // get the user's balance for KUSD
 
 		// Below are the incorrect operations.
 
@@ -880,7 +880,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 		let alice = 1;
 		let remover = Origin::signed(alice);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -903,7 +903,7 @@ fn remove_assets_liquidity_given_shares_in_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 200);
 
 		// check wether Alice's account has been added corresponding amount for different tokens.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_750); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &alice), 9_750); // get the user's balance for KUSD
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &alice), 29_500); // get the user's balance for dot
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &alice), 29_800); // get the user's balance for ksm
 
@@ -986,7 +986,7 @@ fn swap_exact_in_should_work() {
 		let bob = 2;
 		let swapper = Origin::signed(bob);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -1001,15 +1001,15 @@ fn swap_exact_in_should_work() {
 			token_amount_in,
 			min_token_amount_out,
 			token_out_asset_id
-		)); // Bob to swap 100 AUSD for x amount of dot.
+		)); // Bob to swap 100 KUSD for x amount of dot.
 
-		// check whether the pool has added 100 AUSD.
+		// check whether the pool has added 100 KUSD.
 		assert_eq!(Swap::token_balances_in_pool(pool_id, token_in_asset_id), 600);
 		assert_eq!(Swap::token_balances_in_pool(pool_id, token_out_asset_id), 917);
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check whether bob's account has been added and deducted with corresponding amounts.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_900); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_900); // get the user's balance for KUSD
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 1_000_083); // get the user's balance for dot
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 1_000_000); // get the user's balance for dot
 
@@ -1123,7 +1123,7 @@ fn swap_exact_out_should_work() {
 		let bob = 2;
 		let swapper = Origin::signed(bob);
 		let pool_id = 0;
-		let asud_id = CurrencyId::Stable(TokenSymbol::AUSD);
+		let asud_id = CurrencyId::Stable(TokenSymbol::KUSD);
 		let dot_id = CurrencyId::Token(TokenSymbol::DOT);
 		let ksm_id = CurrencyId::Token(TokenSymbol::KSM);
 
@@ -1147,7 +1147,7 @@ fn swap_exact_out_should_work() {
 		assert_eq!(Swap::token_balances_in_pool(pool_id, ksm_id), 400);
 
 		// check whether bob's account has been added and deducted with corresponding amounts.
-		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_938); // get the user's balance for AUSD
+		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(asud_id, &bob), 999_938); // get the user's balance for KUSD
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(dot_id, &bob), 1_000_200); // get the user's balance for dot
 		assert_eq!(<Test as Config>::CurrenciesHandler::free_balance(ksm_id, &bob), 1_000_000); // get the user's balance for ksm
 
@@ -1237,7 +1237,7 @@ fn swap_exact_out_should_work() {
 		// swap more than the user has
 		let max_token_amount_in = Some(2000);
 		let token_amount_out = 400;
-		assert_ok!(<Test as Config>::CurrenciesHandler::withdraw(token_in_asset_id, &bob, 999_800)); // destroy most of bob's AUSD
+		assert_ok!(<Test as Config>::CurrenciesHandler::withdraw(token_in_asset_id, &bob, 999_800)); // destroy most of bob's KUSD
 		assert_eq!(
 			Swap::swap_exact_out(
 				swapper.clone(),

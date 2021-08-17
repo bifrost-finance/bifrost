@@ -127,7 +127,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::AUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
