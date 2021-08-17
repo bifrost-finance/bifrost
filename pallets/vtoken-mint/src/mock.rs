@@ -145,6 +145,7 @@ impl orml_tokens::Config for Runtime {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = ();
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();
