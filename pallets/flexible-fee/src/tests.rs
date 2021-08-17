@@ -42,7 +42,7 @@ pub const BOB: AccountId32 = AccountId32::new([1u8; 32]);
 pub const ALICE: AccountId32 = AccountId32::new([2u8; 32]);
 pub const DICK: AccountId32 = AccountId32::new([3u8; 32]);
 pub const CURRENCY_ID_0: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+pub const CURRENCY_ID_1: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 pub const CURRENCY_ID_2: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const CURRENCY_ID_3: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const CURRENCY_ID_4: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -156,7 +156,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
 		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
-		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
+		default_order_list.push(CurrencyId::Stable(TokenSymbol::KUSD));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
@@ -189,7 +189,7 @@ fn ensure_can_charge_fee_should_work() {
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
 
 		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
-		default_order_list.push(CurrencyId::Stable(TokenSymbol::AUSD));
+		default_order_list.push(CurrencyId::Stable(TokenSymbol::KUSD));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
