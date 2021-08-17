@@ -123,7 +123,7 @@ pub mod pallet {
 	pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
 		[
 			CurrencyId::Native(TokenSymbol::ASG),
-			CurrencyId::Stable(TokenSymbol::AUSD),
+			CurrencyId::Stable(TokenSymbol::KUSD),
 			CurrencyId::Token(TokenSymbol::DOT),
 			CurrencyId::VToken(TokenSymbol::DOT),
 			CurrencyId::Token(TokenSymbol::KSM),

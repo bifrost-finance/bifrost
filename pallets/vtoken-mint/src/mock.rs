@@ -45,7 +45,7 @@ use crate::{self as vtoken_mint};
 
 pub type AccountId = AccountId32;
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-pub const AUSD: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+pub const KUSD: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -81,7 +81,7 @@ parameter_types! {
 	pub BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::simple_max(1024);
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
-	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::AUSD);
+	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 }
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;

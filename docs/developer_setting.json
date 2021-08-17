@@ -9,7 +9,7 @@
 	"TokenSymbol": {
 		"_enum": {
 			"ASG": 0,
-			"aUSD": 2,
+			"KUSD": 2,
 			"DOT": 3,
 			"KSM": 4,
 			"ETH": 5
@@ -22,7 +22,8 @@
 			"Token": "TokenSymbol",
 			"Stable": "TokenSymbol",
 			"VSToken": "TokenSymbol",
-			"VSBond": "(TokenSymbol, ParaId, LeasePeriod, LeasePeriod)"
+			"VSBond": "(TokenSymbol, ParaId, LeasePeriod, LeasePeriod)",
+			"LPToken": "(TokenSymbol, u8, TokenSymbol, u8)"
 		}
 	},
 	"CurrencyIdOf": "CurrencyId",
@@ -63,7 +64,11 @@
 		"order_state": "OrderState"
 	},
 	"OrderState": {
-		"_enum": ["InTrade", "Revoked", "Clinchd"]
+		"_enum": [
+			"InTrade",
+			"Revoked",
+			"Clinchd"
+		]
 	},
 	"AssetId": {
 		"chain_id": "u32",
