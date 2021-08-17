@@ -367,6 +367,36 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(0)]
+		pub fn force_set_vested(
+			origin: OriginFor<T>,
+			source: <T::Lookup as StaticLookup>::Source,
+			target: <T::Lookup as StaticLookup>::Source,
+			schedule: VestingInfo<BalanceOf<T>, T::BlockNumber>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			ensure!(schedule.locked >= T::MinVestedTransfer::get(), Error::<T>::AmountLow);
+
+			let target = T::Lookup::lookup(target)?;
+			let source = T::Lookup::lookup(source)?;
+
+			T::Currency::remove_lock(VESTING_ID, &target);
+
+			let (from, to, value) = if schedule.locked > T::Currency::free_balance(&target) {
+				(&source, &target, schedule.locked - T::Currency::free_balance(&target))
+			} else {
+				(&target, &source, T::Currency::free_balance(&target) - schedule.locked)
+			};
+
+			T::Currency::transfer(&from, &to, value, ExistenceRequirement::AllowDeath)?;
+
+			Vesting::<T>::insert(target.clone(), schedule);
+			let res = Self::update_lock(target.clone());
+			debug_assert!(res.is_ok());
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
 		pub fn init_vesting_start_at(
 			origin: OriginFor<T>,
 			vesting_start_at: T::BlockNumber,
