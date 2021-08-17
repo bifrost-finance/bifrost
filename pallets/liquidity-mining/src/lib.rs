@@ -26,6 +26,7 @@ use frame_support::{
 		cmp::{max, min},
 		collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 		convert::TryFrom,
+		vec::Vec,
 	},
 	traits::{BalanceStatus, EnsureOrigin},
 };
@@ -333,7 +334,7 @@ pub mod pallet {
 
 		/// The amount deposited by a user to a liquidity-pool should be greater than the value
 		#[pallet::constant]
-		type MinimumDeposit: Get<BalanceOf<Self>>;
+		type MinimumDepositOfUser: Get<BalanceOf<Self>>;
 
 		/// The amount of token to reward per block should be greater than the value
 		#[pallet::constant]
@@ -589,7 +590,7 @@ pub mod pallet {
 				Error::<T>::InvalidPoolState
 			);
 
-			ensure!(value >= T::MinimumDeposit::get(), Error::<T>::TooLowToDeposit);
+			ensure!(value >= T::MinimumDepositOfUser::get(), Error::<T>::TooLowToDeposit);
 
 			let mut deposit_data: DepositData<T> =
 				Self::user_deposit_data(&user, &pid).unwrap_or(DepositData::<T>::from_pool(&pool));
@@ -673,7 +674,7 @@ pub mod pallet {
 
 			// Keep minimum deposit in pool when the pool is ongoing.
 			let minimum_in_pool = match pool.state {
-				PoolState::Ongoing => T::MinimumDeposit::get(),
+				PoolState::Ongoing => T::MinimumDepositOfUser::get(),
 				PoolState::Retired => Zero::zero(),
 				_ => return Err(Error::<T>::InvalidPoolState.into()),
 			};
@@ -796,7 +797,7 @@ pub mod pallet {
 
 			// Check the condition
 			ensure!(
-				min_deposit_to_start >= T::MinimumDeposit::get(),
+				min_deposit_to_start >= T::MinimumDepositOfUser::get(),
 				Error::<T>::InvalidDepositLimit
 			);
 			ensure!(

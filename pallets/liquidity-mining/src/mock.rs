@@ -173,7 +173,7 @@ impl lm::Config for T {
 	type MultiCurrency = Tokens;
 	type RelayChainTokenSymbol = RelayChainTokenSymbol;
 	type MaximumDepositInPool = MaximumDepositInPool;
-	type MinimumDeposit = MinimumDeposit;
+	type MinimumDepositOfUser = MinimumDeposit;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
 	type MaximumApproved = MaximumApproved;

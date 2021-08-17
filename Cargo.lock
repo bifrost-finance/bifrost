@@ -181,6 +181,7 @@ dependencies = [
  "bifrost-bancor-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining",
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -704,6 +705,23 @@ dependencies = [
  "node-primitives",
  "parity-scale-codec",
  "sp-api",
+]
+
+[[package]]
+name = "bifrost-liquidity-mining"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-collective",
+ "parity-scale-codec",
+ "sp-core",
+ "substrate-fixed",
 ]
 
 [[package]]
@@ -4496,23 +4514,6 @@ checksum = "1e6e407dadb4ca4b31bc69c27aff00e7ca4534fdcee855159b039a7cebb5f395"
 dependencies = [
  "nalgebra",
  "statrs",
-]
-
-[[package]]
-name = "liquidity-mining"
-version = "0.8.0"
-dependencies = [
- "frame-support",
- "frame-system",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "pallet-collective",
- "parity-scale-codec",
- "sp-core",
- "substrate-fixed",
 ]
 
 [[package]]

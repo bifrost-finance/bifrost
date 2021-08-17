@@ -1,5 +1,5 @@
 [package]
-name = "liquidity-mining"
+name = "bifrost-liquidity-mining"
 version = "0.8.0"
 authors = ["Allen Pocket <AllenPocketGamer@Gmail.com>"]
 edition = "2018"

@@ -1012,6 +1012,28 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
+	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub const MinimumDepositOfUser: Balance = 1_000_000;
+	pub const MinimumRewardPerBlock: Balance = 1_000;
+	pub const MinimumDuration: BlockNumber = DAYS;
+	pub const MaximumApproved: u32 = 8;
+}
+
+impl bifrost_liquidity_mining::Config for Runtime {
+	type Event = Event;
+	type ControlOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbol;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumApproved = MaximumApproved;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1210,6 +1232,7 @@ construct_runtime! {
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
+		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 	}
 }
 
