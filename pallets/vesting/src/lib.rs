@@ -903,62 +903,6 @@ mod tests {
 	}
 
 	#[test]
-	fn force_set_vest_works() {
-		ExtBuilder::default().existential_deposit(256).build().execute_with(|| {
-			let user3_free_balance = Balances::free_balance(&3);
-			let user4_free_balance = Balances::free_balance(&4);
-			assert_eq!(user3_free_balance, 256 * 30);
-			assert_eq!(user4_free_balance, 256 * 40);
-			// Account 4 should not have any vesting yet.
-			assert_eq!(Vesting::vesting(&4), None);
-			// Make the schedule for the new transfer.
-			let new_vesting_schedule = VestingInfo {
-				locked: 256 * 20,
-				per_block: 64, // Vesting over 20 blocks
-				starting_block: 10,
-			};
-			// assert_ok!(Balances::set_balance(
-			// 	RawOrigin::Root.into(),
-			// 	1,
-			// 	256 * 5,
-			// 	0
-			// ));
-			assert_noop!(
-				Vesting::force_set_vested(Some(1).into(), 1, 2, new_vesting_schedule),
-				BadOrigin
-			);
-			assert_ok!(Vesting::force_set_vested(
-				RawOrigin::Root.into(),
-				1,
-				2,
-				new_vesting_schedule
-			));
-			// Now account 4 should have vesting.
-			// assert_eq!(Vesting::vesting(&4), Some(new_vesting_schedule));
-			// Ensure the transfer happened correctly.
-			let user3_free_balance_updated = Balances::free_balance(&1);
-			assert_eq!(user3_free_balance_updated, 0);
-			// let user4_free_balance_updated = Balances::free_balance(&2);
-			// assert_eq!(user4_free_balance_updated, 256 * 20);
-			// Account 4 has 5 * 256 locked.
-			assert_eq!(Vesting::vesting_balance(&2), Some(256 * 5));
-
-			System::set_block_number(20);
-			assert_eq!(System::block_number(), 20);
-
-			// Account 4 has 5 * 256 locked.
-			assert_eq!(Vesting::vesting_balance(&2), Some(256 * 5));
-
-			System::set_block_number(30);
-			assert_eq!(System::block_number(), 30);
-
-			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
-
-			// assert_eq!(Vesting::vesting_balance(&1), Some(64 * 10));
-		});
-	}
-
-	#[test]
 	fn force_vested_transfer_correctly_fails() {
 		ExtBuilder::default().existential_deposit(256).build().execute_with(|| {
 			let user2_free_balance = Balances::free_balance(&2);
