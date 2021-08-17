@@ -102,7 +102,7 @@ run-dev:
 
 .PHONY: run-dev-manual-seal
 run-dev-manual-seal:
-	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev --sealing instant
+	RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
 
 # Build docker image
 .PHONY: build-docker-image
