@@ -147,16 +147,10 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(c: &Call) -> bool {
 		match *c {
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest_other(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vested_transfer(..)) => false,
-			Call::Tokens(orml_tokens::Call::<Runtime>::transfer(..)) => false,
-			Call::Tokens(orml_tokens::Call::<Runtime>::transfer_all(..)) => false,
-			Call::Currencies(orml_currencies::Call::<Runtime>::transfer(..)) => false,
-			Call::Currencies(orml_currencies::Call::<Runtime>::transfer_native_currency(..)) =>
-				false,
+			Call::Balances(_) => false,
+			Call::Vesting(_) => false,
+			Call::Tokens(_) => false,
+			Call::Currencies(_) => false,
 			_ => true,
 		}
 	}
@@ -542,6 +536,7 @@ impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = ();
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
