@@ -70,6 +70,8 @@ pub struct PoolInfo<T: Config> {
 
 	/// The reward infos about the liquidity-pool
 	rewards: BTreeMap<CurrencyId, RewardData<T>>,
+	/// The block of the last update of the rewards
+	update_b: BlockNumberFor<T>,
 	/// The liquidity-pool state
 	state: PoolState,
 	/// The block number when the liquidity-pool startup
@@ -85,8 +87,10 @@ impl<T: Config> PoolInfo<T> {
 			let n = min(frame_system::Pallet::<T>::block_number(), block_end);
 
 			for (_, reward) in self.rewards.iter_mut() {
-				reward.update(self.deposit, block_startup, n);
+				reward.update(self.deposit, block_startup, self.update_b, n);
 			}
+
+			self.update_b = n;
 		}
 
 		self
@@ -140,9 +144,9 @@ impl<T: Config> PoolInfo<T> {
 
 		if self.state == PoolState::Ongoing || self.state == PoolState::Retired {
 			for (rtoken, reward) in self.rewards.iter_mut() {
-				let (v_new, u_new) = reward.gain_avg;
+				let v_new = reward.gain_avg;
 				if let Some(gain_avg) = deposit_data.gain_avgs.get(rtoken) {
-					let (v_old, _u_old) = *gain_avg;
+					let v_old = *gain_avg;
 
 					let user_deposit: u128 = deposit_data.deposit.saturated_into();
 					let amount = BalanceOf::<T>::saturated_from(u128::from_fixed(
@@ -152,7 +156,8 @@ impl<T: Config> PoolInfo<T> {
 					// Update the claimed of the reward
 					reward.claimed = reward.claimed.saturating_add(amount);
 					// Sync the gain_avg between `DepositData` and `RewardData`
-					deposit_data.gain_avgs.insert(*rtoken, (v_new, u_new));
+					deposit_data.gain_avgs.insert(*rtoken, v_new);
+					deposit_data.update_b = self.update_b;
 
 					to_rewards.push((*rtoken, amount));
 				}
@@ -202,23 +207,24 @@ pub enum PoolState {
 pub struct DepositData<T: Config> {
 	/// The amount of trading-pair deposited in the liquidity-pool
 	deposit: BalanceOf<T>,
-	/// Important data used to calculate rewards,
+	/// The average gain in pico by 1 pico deposited from the startup of the liquidity-pool,
 	/// updated when the `DepositData`'s owner deposits/redeems/claims from the liquidity-pool.
 	///
 	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
 	/// - Arg1: The block number updated lastest
-	gain_avgs: BTreeMap<CurrencyId, (U64F64, BlockNumberFor<T>)>,
+	gain_avgs: BTreeMap<CurrencyId, U64F64>,
+	update_b: BlockNumberFor<T>,
 }
 
 impl<T: Config> DepositData<T> {
 	pub(crate) fn from_pool(pool: &PoolInfo<T>) -> Self {
-		let mut gain_avgs = BTreeMap::<CurrencyId, (U64F64, BlockNumberFor<T>)>::new();
+		let mut gain_avgs = BTreeMap::<CurrencyId, U64F64>::new();
 
 		for (rtoken, reward) in pool.rewards.iter() {
 			gain_avgs.insert(*rtoken, reward.gain_avg);
 		}
 
-		Self { deposit: Zero::zero(), gain_avgs }
+		Self { deposit: Zero::zero(), gain_avgs, update_b: pool.update_b }
 	}
 }
 
@@ -231,12 +237,9 @@ pub struct RewardData<T: Config> {
 
 	/// The amount of token was already rewarded
 	claimed: BalanceOf<T>,
-	/// Important data used to calculate rewards,
+	/// The average gain in pico by 1 pico deposited from the startup of the liquidity-pool,
 	/// updated when anyone deposits to / redeems from / claims from the liquidity-pool.
-	///
-	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
-	/// - Arg1: The block number updated latest
-	gain_avg: (U64F64, BlockNumberFor<T>),
+	gain_avg: U64F64,
 }
 
 impl<T: Config> RewardData<T> {
@@ -253,14 +256,7 @@ impl<T: Config> RewardData<T> {
 
 		ensure!(per_block > T::MinimumRewardPerBlock::get(), Error::<T>::InvalidRewardPerBlock);
 
-		Ok(RewardData {
-			total,
-			per_block,
-
-			claimed: Zero::zero(),
-
-			gain_avg: (U64F64::from_num(0), Zero::zero()),
-		})
+		Ok(RewardData { total, per_block, claimed: Zero::zero(), gain_avg: U64F64::from_num(0) })
 	}
 
 	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf<T>) -> U64F64 {
@@ -278,16 +274,17 @@ impl<T: Config> RewardData<T> {
 		&mut self,
 		deposit: BalanceOf<T>,
 		block_startup: BlockNumberFor<T>,
+		block_last_updated: BlockNumberFor<T>,
 		n: BlockNumberFor<T>,
 	) {
 		let pbpd = self.per_block_per_deposited(deposit);
 
-		let b_prev = max(self.gain_avg.1, block_startup);
+		let b_prev = max(block_last_updated, block_startup);
 		let b_past: u128 = (n - b_prev).saturated_into();
 
-		let gain_avg_new = self.gain_avg.0 + pbpd * b_past;
+		let gain_avg_new = self.gain_avg + pbpd * b_past;
 
-		self.gain_avg = (gain_avg_new, n);
+		self.gain_avg = gain_avg_new;
 	}
 }
 
@@ -376,6 +373,8 @@ pub mod pallet {
 		TooLowToDeposit,
 		/// The deposit in liquidity-pool ongoing should be greater than `T::MinimumDeposit`
 		TooLowDepositInPoolToRedeem,
+		/// The interval between two claims is short
+		TooShortBetweenTwoClaim,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
 	}
@@ -595,7 +594,7 @@ pub mod pallet {
 			let mut deposit_data: DepositData<T> =
 				Self::user_deposit_data(&user, &pid).unwrap_or(DepositData::<T>::from_pool(&pool));
 
-			if pool.state == PoolState::Ongoing {
+			if pool.state == PoolState::Ongoing && pool.update_b != deposit_data.update_b {
 				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 			}
 
@@ -668,7 +667,9 @@ pub mod pallet {
 			let mut deposit_data: DepositData<T> =
 				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
 
-			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+			if pool.update_b != deposit_data.update_b {
+				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+			}
 
 			// Keep minimum deposit in pool when the pool is ongoing.
 			let minimum_in_pool = match pool.state {
@@ -764,8 +765,7 @@ pub mod pallet {
 			let mut deposit_data: DepositData<T> =
 				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
 
-			ensure!(deposit_data.deposit >= T::MinimumDeposit::get(), Error::<T>::NoDepositOfUser);
-
+			ensure!(pool.update_b != deposit_data.update_b, Error::<T>::TooShortBetweenTwoClaim);
 			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 
 			TotalPoolInfos::<T>::insert(pid, pool);
@@ -834,6 +834,7 @@ pub mod pallet {
 				deposit: Zero::zero(),
 
 				rewards,
+				update_b: Zero::zero(),
 				state: PoolState::UnderAudit,
 				block_startup: None,
 			};
