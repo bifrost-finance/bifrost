@@ -97,10 +97,7 @@ fn set_fund_success_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(Salp::fund_success(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_success(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(
-			Salp::fund_success(Some(BRUCE).into(), 3_000),
-			Error::<Test>::UnauthorizedAccount
-		);
+		assert_noop!(Salp::fund_success(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	})
 }
 
@@ -142,10 +139,7 @@ fn set_fund_fail_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(Salp::fund_fail(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_fail(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(
-			Salp::fund_fail(Some(BRUCE).into(), 3_000),
-			Error::<Test>::UnauthorizedAccount
-		);
+		assert_noop!(Salp::fund_fail(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -186,10 +180,7 @@ fn set_fund_retire_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_noop!(Salp::fund_retire(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_retire(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(
-			Salp::fund_retire(Some(BRUCE).into(), 3_000),
-			Error::<Test>::UnauthorizedAccount
-		);
+		assert_noop!(Salp::fund_retire(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -240,7 +231,7 @@ fn set_fund_end_with_wrong_origin_should_fail() {
 
 		assert_noop!(Salp::fund_end(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_end(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::fund_end(Some(BRUCE).into(), 3_000), Error::<Test>::UnauthorizedAccount);
+		assert_noop!(Salp::fund_end(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -463,7 +454,7 @@ fn contribute_with_wrong_origin_should_fail() {
 		);
 		assert_noop!(
 			Salp::confirm_contribute(Some(BRUCE).into(), BRUCE, 3000, true),
-			Error::<Test>::UnauthorizedAccount,
+			DispatchError::BadOrigin,
 		);
 	});
 }
@@ -942,7 +933,7 @@ fn refund_with_wrong_origin_should_fail() {
 		);
 		assert_noop!(
 			Salp::confirm_refund(Some(BRUCE).into(), BRUCE, 3_000, true),
-			Error::<Test>::UnauthorizedAccount
+			DispatchError::BadOrigin
 		);
 	});
 }
@@ -1081,7 +1072,14 @@ fn redeem_should_work() {
 		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vsBond, &BRUCE, &CATHI, 50));
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50));
-		assert_ok!(Salp::confirm_redeem(Origin::root(), BRUCE, 3_000, 1, SlotLength::get(), true));
+		assert_ok!(Salp::confirm_redeem(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1,
+			SlotLength::get(),
+			true
+		));
 
 		assert_eq!(Salp::redeem_pool(), 50);
 
@@ -1093,7 +1091,14 @@ fn redeem_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 
 		assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 1, SlotLength::get(), 50));
-		assert_ok!(Salp::confirm_redeem(Origin::root(), CATHI, 3_000, 1, SlotLength::get(), true));
+		assert_ok!(Salp::confirm_redeem(
+			Some(ALICE).into(),
+			CATHI,
+			3_000,
+			1,
+			SlotLength::get(),
+			true
+		));
 
 		assert_eq!(Salp::redeem_pool(), 0);
 
@@ -1127,7 +1132,14 @@ fn redeem_when_xcm_error_should_work() {
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50));
-		assert_ok!(Salp::confirm_redeem(Origin::root(), BRUCE, 3_000, 1, SlotLength::get(), false));
+		assert_ok!(Salp::confirm_redeem(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			1,
+			SlotLength::get(),
+			false
+		));
 
 		assert_eq!(Salp::redeem_pool(), 100);
 
@@ -1181,7 +1193,7 @@ fn confirm_redeem_when_not_in_redeeming_should_fail() {
 		assert_ok!(Salp::confirm_withdraw(Some(ALICE).into(), 3_000, true));
 
 		assert_noop!(
-			Salp::confirm_redeem(Origin::root(), BRUCE, 3_000, 1, SlotLength::get(), true),
+			Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 1, SlotLength::get(), true),
 			Error::<Test>::InvalidRedeemStatus
 		);
 	});
@@ -1215,11 +1227,7 @@ fn redeem_with_wrong_origin_should_fail() {
 
 		assert_noop!(
 			Salp::confirm_redeem(Origin::none(), BRUCE, 3_000, 1, SlotLength::get(), true),
-			Error::<Test>::UnauthorizedAccount
-		);
-		assert_noop!(
-			Salp::confirm_redeem(Some(ALICE).into(), BRUCE, 3_000, 1, SlotLength::get(), true),
-			Error::<Test>::UnauthorizedAccount
+			DispatchError::BadOrigin
 		);
 	});
 }

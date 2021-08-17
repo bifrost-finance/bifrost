@@ -18,7 +18,12 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{
+	construct_runtime, parameter_types,
+	traits::{EnsureOrigin, GenesisBuild},
+	PalletId,
+};
+use frame_system::RawOrigin;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol, TransferOriginType};
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -164,7 +169,6 @@ parameter_types! {
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -175,6 +179,7 @@ parameter_types! {
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
 	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
 	pub const SelfParaId: u32 = 2001;
+	pub ConfirmMuitiSigAccount:AccountId = ALICE;//AccountId::new([0u8; 32]);
 }
 
 parameter_types! {
@@ -182,6 +187,28 @@ parameter_types! {
 }
 
 type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == ConfirmMuitiSigAccount::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	}
+}
 
 impl salp::Config for Test {
 	type BancorPool = Bancor;
@@ -206,6 +233,7 @@ impl salp::Config for Test {
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
 	type WithdrawWeight = WithdrawWeight;
+	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
 }
 
 // To control the result returned by `MockXcmExecutor`

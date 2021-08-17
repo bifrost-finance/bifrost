@@ -40,8 +40,9 @@ pub use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureOneOf, EnsureRoot,
+	EnsureOneOf, EnsureRoot, RawOrigin,
 };
+use hex_literal::hex;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -79,7 +80,10 @@ use bifrost_runtime_common::xcm_impl::{
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::{sp_runtime::KeyTypeId, traits::KeyOwnerProofSystem};
+use frame_support::{
+	sp_runtime::KeyTypeId,
+	traits::{EnsureOrigin, KeyOwnerProofSystem},
+};
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
@@ -928,6 +932,32 @@ parameter_types! {
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
 	pub ContributionWeight:u64 = XCM_WEIGHT.into();
 	pub WithdrawWeight:u64 = XCM_WEIGHT.into();
+	pub ConfirmMuitiSigAccount: AccountId = hex![
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+	]
+	.into();
+}
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == ConfirmMuitiSigAccount::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	}
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -953,6 +983,7 @@ impl bifrost_salp::Config for Runtime {
 	type ContributionWeight = ContributionWeight;
 	type WithdrawWeight = WithdrawWeight;
 	type BaseXcmWeight = XcmWeight;
+	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
 }
 
 parameter_types! {
