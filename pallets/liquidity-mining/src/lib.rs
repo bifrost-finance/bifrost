@@ -160,13 +160,15 @@ impl<T: Config> PoolInfo<T> {
 		}
 
 		for (rtoken, amount) in to_rewards.iter() {
-			T::MultiCurrency::repatriate_reserved(
+			let remain = T::MultiCurrency::repatriate_reserved(
 				*rtoken,
 				&self.creator,
 				&user,
 				*amount,
 				BalanceStatus::Free,
 			)?;
+
+			ensure!(remain == Zero::zero(), Error::<T>::Unexpected);
 		}
 
 		Pallet::<T>::deposit_event(Event::UserClaimed(
@@ -369,9 +371,11 @@ pub mod pallet {
 		/// Not enough balance of reward to unreserve
 		FailOnUnReserve,
 		/// Not enough deposit of the user in the liquidity-pool
-		NotEnoughDepositOfUser,
+		NoDepositOfUser,
 		/// Too low balance to deposit
 		TooLowToDeposit,
+		/// The deposit in liquidity-pool ongoing should be greater than `T::MinimumDeposit`
+		TooLowDepositInPoolToRedeem,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
 	}
@@ -643,15 +647,14 @@ pub mod pallet {
 		/// - Try to settle the rewards when the liquidity-pool in `Ongoing`.
 		/// - Try to unreserve the remaining rewards to the pool creator when the deposit in the
 		///   liquidity-pool is clear.
+		/// - Try to delete the liquidity-pool in which the deposit becomes zero.
+		/// - Try to delete the deposit-data in which the deposit becomes zero.
 		///
 		/// The condition to redeem:
 		/// - User should have some deposit in the liquidity-pool;
 		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
 		#[pallet::weight(1_000)]
 		pub fn redeem(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
-			// TODO: Try to delete `DepositData` when the deposit in the pool becoomes zero.
-			// TODO: Try to delete the pool without any deposit.
-
 			let user = ensure_signed(origin)?;
 
 			let mut pool: PoolInfo<T> =
@@ -663,39 +666,50 @@ pub mod pallet {
 			);
 
 			let mut deposit_data: DepositData<T> =
-				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NotEnoughDepositOfUser)?;
-
-			ensure!(
-				deposit_data.deposit >= T::MinimumDeposit::get(),
-				Error::<T>::NotEnoughDepositOfUser
-			);
+				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
 
 			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 
-			let redeemed = {
-				match pool.state {
-					PoolState::Ongoing => deposit_data.deposit - T::MinimumDeposit::get(),
-					PoolState::Retired => deposit_data.deposit,
-					_ => return Err(Error::<T>::InvalidPoolState.into()),
-				}
+			// Keep minimum deposit in pool when the pool is ongoing.
+			let minimum_in_pool = match pool.state {
+				PoolState::Ongoing => T::MinimumDeposit::get(),
+				PoolState::Retired => Zero::zero(),
+				_ => return Err(Error::<T>::InvalidPoolState.into()),
 			};
 
+			let try_redeemed = deposit_data.deposit;
+			let left_in_pool = max(pool.deposit - try_redeemed, minimum_in_pool);
+			let can_redeemed = pool.deposit - left_in_pool;
+			let left_in_user = deposit_data.deposit - can_redeemed;
+
+			ensure!(can_redeemed != Zero::zero(), Error::<T>::TooLowDepositInPoolToRedeem);
+
 			// To unlock the deposit
-			let left = deposit_data.deposit - redeemed;
 			match pool.r#type {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
-					T::MultiCurrency::extend_lock(DEPOSIT_ID, lpt, &user, left)?;
+					match left_in_user.saturated_into() {
+						0u128 => T::MultiCurrency::remove_lock(DEPOSIT_ID, lpt, &user)?,
+						_ => T::MultiCurrency::set_lock(DEPOSIT_ID, lpt, &user, left_in_user)?,
+					}
 				},
 				PoolType::Farming => {
 					let (token_a, token_b) = pool.trading_pair;
-					T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, left)?;
-					T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, left)?;
+					match left_in_user.saturated_into() {
+						0u128 => {
+							T::MultiCurrency::remove_lock(DEPOSIT_ID, token_a, &user)?;
+							T::MultiCurrency::remove_lock(DEPOSIT_ID, token_b, &user)?;
+						},
+						_ => {
+							T::MultiCurrency::set_lock(DEPOSIT_ID, token_a, &user, left_in_user)?;
+							T::MultiCurrency::set_lock(DEPOSIT_ID, token_b, &user, left_in_user)?;
+						},
+					}
 				},
 			};
 
-			deposit_data.deposit = deposit_data.deposit.saturating_sub(redeemed);
-			pool.deposit = pool.deposit.saturating_sub(redeemed);
+			deposit_data.deposit = left_in_user;
+			pool.deposit = left_in_pool;
 
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
 				for (rtoken, reward) in pool.rewards.iter() {
@@ -712,10 +726,17 @@ pub mod pallet {
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			TotalPoolInfos::<T>::insert(pid, pool);
-			TotalDepositData::<T>::insert(user.clone(), pid, deposit_data);
+			match pool.deposit.saturated_into() {
+				0u128 => TotalPoolInfos::<T>::remove(pid),
+				_ => TotalPoolInfos::<T>::insert(pid, pool),
+			}
 
-			Self::deposit_event(Event::UserRedeemed(pid, r#type, trading_pair, redeemed, user));
+			match deposit_data.deposit.saturated_into() {
+				0u128 => TotalDepositData::<T>::remove(user.clone(), pid),
+				_ => TotalDepositData::<T>::insert(user.clone(), pid, deposit_data),
+			}
+
+			Self::deposit_event(Event::UserRedeemed(pid, r#type, trading_pair, try_redeemed, user));
 
 			Ok(().into())
 		}
@@ -741,12 +762,9 @@ pub mod pallet {
 			);
 
 			let mut deposit_data: DepositData<T> =
-				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NotEnoughDepositOfUser)?;
+				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
 
-			ensure!(
-				deposit_data.deposit >= T::MinimumDeposit::get(),
-				Error::<T>::NotEnoughDepositOfUser
-			);
+			ensure!(deposit_data.deposit >= T::MinimumDeposit::get(), Error::<T>::NoDepositOfUser);
 
 			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
 
