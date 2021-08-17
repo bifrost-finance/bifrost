@@ -57,7 +57,6 @@ pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
 pallet-treasury = { version = "3.0.0", default-features = false }
 pallet-utility = { version = "3.0.0", default-features = false }
-pallet-vesting = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
@@ -80,16 +79,17 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features 
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 
 # bifrost pallets
-bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
-bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
-bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
+bifrost-bancor= { path = "../../pallets/bancor",default-features = false }
+bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
-bifrost-salp= {path = "../../pallets/salp",default-features = false}
-bifrost-bancor= {path = "../../pallets/bancor",default-features = false}
-bifrost-vsbond-auction  = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
-bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
+bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
+bifrost-salp = { path = "../../pallets/salp", default-features = false }
+bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
+bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
+pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
