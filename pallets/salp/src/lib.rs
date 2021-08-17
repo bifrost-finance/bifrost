@@ -297,10 +297,7 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
-		type EnsureConfirmAsMultiSig: EnsureOrigin<
-			<Self as frame_system::Config>::Origin,
-			Success = AccountIdOf<Self>,
-		>;
+		type EnsureConfirmAsMultiSig: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		type BifrostXcmExecutor: BifrostXcmExecutor;
 
@@ -340,9 +337,9 @@ pub mod pallet {
 		/// Withdrawing full balance of a contributor. [who, fund_index, amount]
 		Withdrawing(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
-		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		Withdrew(ParaId, BalanceOf<T>),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
-		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		WithdrawFailed(ParaId, BalanceOf<T>),
 		/// Refunding to account. [who, fund_index, amount]
 		Refunding(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Refunded to account. [who, fund_index, amount]
@@ -458,7 +455,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
@@ -475,7 +472,7 @@ pub mod pallet {
 		Pays::No
 		))]
 		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -496,7 +493,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Success, Error::<T>::InvalidFundStatus);
@@ -762,7 +759,7 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
 		) -> DispatchResult {
-			let owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
@@ -783,9 +780,9 @@ pub mod pallet {
 					Funds::<T>::insert(index, Some(fund_new));
 				}
 
-				Self::deposit_event(Event::Withdrew(owner, index, amount_withdrew));
+				Self::deposit_event(Event::Withdrew(index, amount_withdrew));
 			} else {
-				Self::deposit_event(Event::WithdrawFailed(owner, index, amount_withdrew));
+				Self::deposit_event(Event::WithdrawFailed(index, amount_withdrew));
 			}
 
 			Ok(())
@@ -846,7 +843,7 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
 		) -> DispatchResult {
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
@@ -951,7 +948,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			use RedeemStatus as RS;
 
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let status = Self::redeem_status(who.clone(), (index, first_slot, last_slot));
 			ensure!(status.is_redeeming(), Error::<T>::InvalidRedeemStatus);
