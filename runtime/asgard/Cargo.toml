@@ -83,6 +83,7 @@ bifrost-bancor= { path = "../../pallets/bancor",default-features = false }
 bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
+bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
