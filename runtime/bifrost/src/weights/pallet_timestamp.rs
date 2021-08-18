@@ -36,7 +36,6 @@
 // --header=./HEADER-GPL3
 // --output=./runtime/bifrost/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 

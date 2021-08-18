@@ -36,7 +36,6 @@
 // --header=./HEADER-GPL3
 // --output=./runtime/bifrost/src/weights/
 
-
 #![allow(unused_parens)]
 #![allow(unused_imports)]
 
@@ -46,42 +45,42 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_vesting.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_vesting::WeightInfo for WeightInfo<T> {
-	fn vest_locked(l: u32, ) -> Weight {
+	fn vest_locked(l: u32) -> Weight {
 		(139_430_000 as Weight)
 			// Standard Error: 29_000
 			.saturating_add((723_000 as Weight).saturating_mul(l as Weight))
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
-	fn vest_unlocked(l: u32, ) -> Weight {
+	fn vest_unlocked(l: u32) -> Weight {
 		(144_165_000 as Weight)
 			// Standard Error: 13_000
 			.saturating_add((713_000 as Weight).saturating_mul(l as Weight))
 			.saturating_add(T::DbWeight::get().reads(7 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
-	fn vest_other_locked(l: u32, ) -> Weight {
+	fn vest_other_locked(l: u32) -> Weight {
 		(132_758_000 as Weight)
 			// Standard Error: 24_000
 			.saturating_add((752_000 as Weight).saturating_mul(l as Weight))
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
-	fn vest_other_unlocked(l: u32, ) -> Weight {
+	fn vest_other_unlocked(l: u32) -> Weight {
 		(138_258_000 as Weight)
 			// Standard Error: 13_000
 			.saturating_add((723_000 as Weight).saturating_mul(l as Weight))
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
-	fn vested_transfer(l: u32, ) -> Weight {
+	fn vested_transfer(l: u32) -> Weight {
 		(249_078_000 as Weight)
 			// Standard Error: 23_000
 			.saturating_add((741_000 as Weight).saturating_mul(l as Weight))
 			.saturating_add(T::DbWeight::get().reads(8 as Weight))
 			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
-	fn force_vested_transfer(l: u32, ) -> Weight {
+	fn force_vested_transfer(l: u32) -> Weight {
 		(246_188_000 as Weight)
 			// Standard Error: 23_000
 			.saturating_add((749_000 as Weight).saturating_mul(l as Weight))
