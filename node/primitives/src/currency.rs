@@ -84,7 +84,7 @@ macro_rules! create_currency_id {
 				};
 				let asset_index: u32 = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
 				if id.is_native() {
-					Ok(AssetId { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: asset_index })
+					Ok(AssetId { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: 0 })
 				} else {
 					Ok(AssetId {
 						chain_id: BIFROST_PARACHAIN_ID,
@@ -111,7 +111,13 @@ macro_rules! create_currency_id {
 					_ => Err(()),
 				};
 				match c_discr {
-					0 => Ok(CurrencyId::Native(token_symbol?)),
+					0 => {
+							if (_index == 0) {
+								Ok(CurrencyId::Native(TokenSymbol::ASG))
+							} else {
+								Ok(CurrencyId::Native(TokenSymbol::BNC))
+							}
+						},
 					1 => Ok(CurrencyId::VToken(token_symbol?)),
 					2 => Ok(CurrencyId::Token(token_symbol?)),
 					3 => Ok(CurrencyId::Stable(token_symbol?)),
