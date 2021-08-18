@@ -297,6 +297,8 @@ pub mod pallet {
 			Success = MultiLocation,
 		>;
 
+		type EnsureConfirmAsMultiSig: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+
 		type BifrostXcmExecutor: BifrostXcmExecutor;
 
 		#[pallet::constant]
@@ -335,9 +337,9 @@ pub mod pallet {
 		/// Withdrawing full balance of a contributor. [who, fund_index, amount]
 		Withdrawing(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
-		Withdrew(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		Withdrew(ParaId, BalanceOf<T>),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
-		WithdrawFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		WithdrawFailed(ParaId, BalanceOf<T>),
 		/// Refunding to account. [who, fund_index, amount]
 		Refunding(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Refunded to account. [who, fund_index, amount]
@@ -453,12 +455,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let fund_new = FundInfo { status: FundStatus::Success, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
@@ -472,13 +472,11 @@ pub mod pallet {
 		Pays::No
 		))]
 		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let fund_new = FundInfo { status: FundStatus::Failed, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
@@ -495,12 +493,10 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Success, Error::<T>::InvalidFundStatus);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let fund_new = FundInfo { status: FundStatus::Retired, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
@@ -514,7 +510,7 @@ pub mod pallet {
 		Pays::No
 		))]
 		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -522,8 +518,6 @@ pub mod pallet {
 					fund.status == FundStatus::RedeemWithdrew,
 				Error::<T>::InvalidFundStatus
 			);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let fund_new = FundInfo { status: FundStatus::End, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
@@ -574,7 +568,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// TODO: Refactor the docs.
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
 		#[pallet::weight((
 		0,
@@ -675,15 +668,13 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
 				fund.status == FundStatus::Failed ||
 				fund.status == FundStatus::Success;
 			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(status.is_contributing(), Error::<T>::InvalidContributionStatus);
@@ -768,13 +759,11 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
 			ensure!(can, Error::<T>::InvalidFundStatus);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let amount_withdrew = fund.raised;
 
@@ -791,9 +780,9 @@ pub mod pallet {
 					Funds::<T>::insert(index, Some(fund_new));
 				}
 
-				Self::deposit_event(Event::Withdrew(owner, index, amount_withdrew));
+				Self::deposit_event(Event::Withdrew(index, amount_withdrew));
 			} else {
-				Self::deposit_event(Event::WithdrawFailed(owner, index, amount_withdrew));
+				Self::deposit_event(Event::WithdrawFailed(index, amount_withdrew));
 			}
 
 			Ok(())
@@ -854,12 +843,10 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
-
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(status == ContributionStatus::Refunding, Error::<T>::InvalidContributionStatus);
@@ -961,7 +948,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			use RedeemStatus as RS;
 
-			ensure_root(origin).map_err(|_| Error::<T>::UnauthorizedAccount)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let status = Self::redeem_status(who.clone(), (index, first_slot, last_slot));
 			ensure!(status.is_redeeming(), Error::<T>::InvalidRedeemStatus);

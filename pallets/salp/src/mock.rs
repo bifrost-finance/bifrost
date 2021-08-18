@@ -18,7 +18,12 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{
+	construct_runtime, parameter_types,
+	traits::{EnsureOrigin, GenesisBuild},
+	PalletId,
+};
+use frame_system::RawOrigin;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol, TransferOriginType};
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -53,6 +58,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -118,6 +124,22 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+parameter_types! {
+	pub const DepositBase: Balance = 0;
+	pub const DepositFactor: Balance = 0;
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Config for Test {
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type Event = Event;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Test>;
+}
+
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		0
@@ -165,7 +187,6 @@ parameter_types! {
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-
 	pub const LeasePeriod: BlockNumber = 6 * WEEKS;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -176,6 +197,12 @@ parameter_types! {
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
 	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
 	pub const SelfParaId: u32 = 2001;
+	pub PrimaryAccount: AccountId = ALICE;
+	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
+		ALICE,
+		BRUCE,
+		CATHI
+	],2);
 }
 
 parameter_types! {
@@ -183,6 +210,28 @@ parameter_types! {
 }
 
 type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == PrimaryAccount::get() || who == ConfirmMuitiSigAccount::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+	}
+}
 
 impl salp::Config for Test {
 	type BancorPool = Bancor;
@@ -207,6 +256,7 @@ impl salp::Config for Test {
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
 	type WithdrawWeight = WithdrawWeight;
+	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
 }
 
 // To control the result returned by `MockXcmExecutor`

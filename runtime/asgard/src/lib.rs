@@ -40,8 +40,9 @@ pub use frame_support::{
 };
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureOneOf, EnsureRoot,
+	EnsureOneOf, EnsureRoot, RawOrigin,
 };
+use hex_literal::hex;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
@@ -78,7 +79,7 @@ use bifrost_runtime_common::xcm_impl::{
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::OnRuntimeUpgrade;
+use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
@@ -961,6 +962,35 @@ parameter_types! {
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
 	pub ContributionWeight:u64 = XCM_WEIGHT.into();
 	pub WithdrawWeight:u64 = XCM_WEIGHT.into();
+	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
+		hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
+		hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
+		hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"].into(),
+		hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
+		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(),//5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+	],3);
+}
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == ConfirmMuitiSigAccount::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(Default::default()))
+	}
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -986,6 +1016,8 @@ impl bifrost_salp::Config for Runtime {
 	type ContributionWeight = ContributionWeight;
 	type WithdrawWeight = WithdrawWeight;
 	type BaseXcmWeight = XcmWeight;
+	type EnsureConfirmAsMultiSig =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
 }
 
 parameter_types! {
