@@ -195,3 +195,5 @@ zenlink-protocol-runtime-api = { git = "ssh://git@github.com/bifrost-finance/Zen
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "650ef607d023e4537d3f2932baa5e50bc3a349cb" }
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "650ef607d023e4537d3f2932baa5e50bc3a349cb" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "650ef607d023e4537d3f2932baa5e50bc3a349cb" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "650ef607d023e4537d3f2932baa5e50bc3a349cb" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "650ef607d023e4537d3f2932baa5e50bc3a349cb" }
