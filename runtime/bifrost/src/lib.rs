@@ -156,7 +156,7 @@ impl Filter<Call> for CallFilter {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 }
@@ -525,7 +525,7 @@ impl orml_currencies::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::ASG) => 1 * CENTS,
+			&CurrencyId::Native(TokenSymbol::BNC) => 1 * CENTS,
 			_ => Zero::zero(),
 		}
 	};
