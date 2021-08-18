@@ -48,7 +48,7 @@ fn add_vesting_schedule<T: Config>(who: &T::AccountId) -> Result<(), &'static st
 
 	System::<T>::set_block_number(0u32.into());
 
-	Vesting::<T>::init_vesting_start_at(RawOrigin::Root.into(), 0u32.into());
+	Vesting::<T>::init_vesting_start_at(RawOrigin::Root.into(), 0u32.into())?;
 
 	// Add schedule to avoid `NotVesting` error.
 	Vesting::<T>::add_vesting_schedule(
