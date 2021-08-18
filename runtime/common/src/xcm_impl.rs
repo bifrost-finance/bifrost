@@ -114,10 +114,10 @@ fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::Token;
+		use CurrencyId::{Native, Token};
 		match id {
-			Token(TokenSymbol::KSM) | Token(TokenSymbol::DOT) => Some(X1(Parent)),
-			Token(TokenSymbol::ASG) | Token(TokenSymbol::BNC) =>
+			Token(TokenSymbol::KSM) => Some(X1(Parent)),
+			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
 				Some(native_currency_location(id, T::get())),
 			_ => None,
 		}
@@ -125,7 +125,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 }
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::Token;
+		use CurrencyId::{Native, Token};
 		use TokenSymbol::*;
 		match location {
 			X1(Parent) => Some(Token(KSM)),
@@ -136,7 +136,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 					// check `currency_id` is cross-chain asset
 					match currency_id {
-						Token(TokenSymbol::ASG) | Token(TokenSymbol::BNC) => Some(currency_id),
+						Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) => Some(currency_id),
 						_ => None,
 					}
 				} else {
@@ -154,5 +154,12 @@ impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrency
 		} else {
 			None
 		}
+	}
+}
+
+pub struct BifrostAccountIdToMultiLocation;
+impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
+	fn convert(account: AccountId) -> MultiLocation {
+		X1(AccountId32 { network: NetworkId::Any, id: account.into() })
 	}
 }

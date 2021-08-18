@@ -208,6 +208,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -2162,6 +2164,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -5310,6 +5314,39 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm-support"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
+dependencies = [
+ "frame-support",
+ "orml-traits",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "orml-xtokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
