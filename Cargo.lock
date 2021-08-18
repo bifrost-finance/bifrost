@@ -854,6 +854,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-multisig",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-parachain",

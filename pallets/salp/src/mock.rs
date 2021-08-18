@@ -58,6 +58,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -123,6 +124,22 @@ impl pallet_balances::Config for Test {
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
 }
 
+parameter_types! {
+	pub const DepositBase: Balance = 0;
+	pub const DepositFactor: Balance = 0;
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Config for Test {
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type Event = Event;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Test>;
+}
+
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
 		0
@@ -179,7 +196,12 @@ parameter_types! {
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
 	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
 	pub const SelfParaId: u32 = 2001;
-	pub ConfirmMuitiSigAccount:AccountId = ALICE;//AccountId::new([0u8; 32]);
+	pub PrimaryAccount: AccountId = ALICE;
+	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
+		ALICE,
+		BRUCE,
+		CATHI
+	],2);
 }
 
 parameter_types! {
@@ -195,7 +217,7 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
 			RawOrigin::Signed(who) =>
-				if who == ConfirmMuitiSigAccount::get() {
+				if who == PrimaryAccount::get() || who == ConfirmMuitiSigAccount::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
