@@ -29,7 +29,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{All, Filter, IsInVec, Randomness},
+	traits::{All, Contains, Filter, IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -46,7 +46,7 @@ use sp_core::OpaqueMetadata;
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -156,9 +156,17 @@ impl Filter<Call> for CallFilter {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+}
+
+parameter_types! {
+	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+}
+
+pub fn get_all_pallet_accounts() -> Vec<AccountId> {
+	vec![TreasuryPalletId::get().into_account()]
 }
 
 impl frame_system::Config for Runtime {
@@ -512,34 +520,46 @@ impl pallet_vesting::Config for Runtime {
 
 // orml runtime start
 
-pub type BifrostToken = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-
 impl orml_currencies::Config for Runtime {
 	type Event = Event;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
-	type NativeCurrency = BifrostToken;
+	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
 	type WeightInfo = ();
 }
 
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::ASG) => 1 * CENTS,
-			_ => Zero::zero(),
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * MILLIBNC,
+			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
+			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
+			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
+			_ => Balance::max_value() // unsupported
 		}
 	};
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		get_all_pallet_accounts().contains(a)
+	}
+}
+
+parameter_types! {
+	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
 impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = DustRemovalWhitelist;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
-	type OnDust = ();
+	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
 	type WeightInfo = ();
 }
 
@@ -550,7 +570,6 @@ impl orml_tokens::Config for Runtime {
 // 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
 // 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 // 	pub const Burn: Permill = Permill::from_perthousand(2);
-// 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 //
 // 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 // 	pub const TipFindersFee: Percent = Percent::from_percent(20);

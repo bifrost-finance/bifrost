@@ -46,19 +46,17 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 	fn create() -> Weight {
-		(37_000_000 as Weight)
+		(38_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 	fn contribute() -> Weight {
-		(45_000_000 as Weight)
+		(48_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
-	fn on_finalize(n: u32) -> Weight {
-		(4_307_000 as Weight)
-			// Standard Error: 2_000
-			.saturating_add((40_000 as Weight).saturating_mul(n as Weight))
+	fn on_finalize(_n: u32) -> Weight {
+		(8_405_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
