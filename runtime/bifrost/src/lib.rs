@@ -40,7 +40,6 @@ use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_api::impl_runtime_apis;
-use sp_arithmetic::Percent;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
@@ -152,16 +151,10 @@ pub struct CallFilter;
 impl Filter<Call> for CallFilter {
 	fn filter(c: &Call) -> bool {
 		match *c {
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer(..)) => false,
-			Call::Balances(pallet_balances::Call::<Runtime>::transfer_keep_alive(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vest_other(..)) => false,
-			Call::Vesting(pallet_vesting::Call::<Runtime>::vested_transfer(..)) => false,
-			Call::Tokens(orml_tokens::Call::<Runtime>::transfer(..)) => false,
-			Call::Tokens(orml_tokens::Call::<Runtime>::transfer_all(..)) => false,
-			Call::Currencies(orml_currencies::Call::<Runtime>::transfer(..)) => false,
-			Call::Currencies(orml_currencies::Call::<Runtime>::transfer_native_currency(..)) =>
-				false,
+			Call::Balances(_) => false,
+			Call::Vesting(_) => false,
+			Call::Tokens(_) => false,
+			Call::Currencies(_) => false,
 			_ => true,
 		}
 	}
@@ -221,7 +214,7 @@ impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = Moment;
 	type OnTimestampSet = ();
-	type WeightInfo = pallet_timestamp::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_timestamp::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -236,7 +229,7 @@ parameter_types! {
 impl pallet_utility::Config for Runtime {
 	type Call = Call;
 	type Event = Event;
-	type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_utility::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -253,7 +246,7 @@ impl pallet_scheduler::Config for Runtime {
 	type Origin = Origin;
 	type PalletsOrigin = OriginCaller;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -265,7 +258,7 @@ impl pallet_indices::Config for Runtime {
 	type Currency = Balances;
 	type Deposit = IndexDeposit;
 	type Event = Event;
-	type WeightInfo = pallet_indices::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_indices::WeightInfo<Runtime>;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -279,7 +272,7 @@ impl pallet_balances::Config for Runtime {
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -557,6 +550,7 @@ impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = ();
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
@@ -564,54 +558,56 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
-	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-	pub const Burn: Permill = Permill::from_perthousand(2);
-	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+// orml runtime end
 
-	pub const TipCountdown: BlockNumber = 1 * DAYS;
-	pub const TipFindersFee: Percent = Percent::from_percent(20);
-	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-	pub const DataDepositPerByte: Balance = 10 * CENTS;
-	pub const BountyDepositBase: Balance = 1 * DOLLARS;
-	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
-	pub const MaximumReasonLength: u32 = 16384;
-	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
-	pub const MaxApprovals: u32 = 100;
-}
-
-impl pallet_treasury::Config for Runtime {
-	type ApproveOrigin = EnsureRoot<AccountId>;
-	type Burn = Burn;
-	type BurnDestination = Treasury;
-	type Currency = Balances;
-	type Event = Event;
-	type MaxApprovals = MaxApprovals;
-	type OnSlash = Treasury;
-	type PalletId = TreasuryPalletId;
-	type ProposalBond = ProposalBond;
-	type ProposalBondMinimum = ProposalBondMinimum;
-	type RejectOrigin = EnsureRoot<AccountId>;
-	type SpendFunds = Bounties;
-	type SpendPeriod = SpendPeriod;
-	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
-}
-
-impl pallet_bounties::Config for Runtime {
-	type BountyCuratorDeposit = BountyCuratorDeposit;
-	type BountyDepositBase = BountyDepositBase;
-	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-	type BountyUpdatePeriod = BountyUpdatePeriod;
-	type BountyValueMinimum = BountyValueMinimum;
-	type DataDepositPerByte = DataDepositPerByte;
-	type Event = Event;
-	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
-}
+// parameter_types! {
+// 	pub const ProposalBond: Permill = Permill::from_percent(5);
+// 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
+// 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
+// 	pub const Burn: Permill = Permill::from_perthousand(2);
+// 	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
+//
+// 	pub const TipCountdown: BlockNumber = 1 * DAYS;
+// 	pub const TipFindersFee: Percent = Percent::from_percent(20);
+// 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
+// 	pub const DataDepositPerByte: Balance = 10 * CENTS;
+// 	pub const BountyDepositBase: Balance = 1 * DOLLARS;
+// 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
+// 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
+// 	pub const MaximumReasonLength: u32 = 16384;
+// 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
+// 	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+// 	pub const MaxApprovals: u32 = 100;
+// }
+//
+// impl pallet_treasury::Config for Runtime {
+// 	type ApproveOrigin = EnsureRoot<AccountId>;
+// 	type Burn = Burn;
+// 	type BurnDestination = Treasury;
+// 	type Currency = Balances;
+// 	type Event = Event;
+// 	type MaxApprovals = MaxApprovals;
+// 	type OnSlash = Treasury;
+// 	type PalletId = TreasuryPalletId;
+// 	type ProposalBond = ProposalBond;
+// 	type ProposalBondMinimum = ProposalBondMinimum;
+// 	type RejectOrigin = EnsureRoot<AccountId>;
+// 	type SpendFunds = Bounties;
+// 	type SpendPeriod = SpendPeriod;
+// 	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
+// }
+//
+// impl pallet_bounties::Config for Runtime {
+// 	type BountyCuratorDeposit = BountyCuratorDeposit;
+// 	type BountyDepositBase = BountyDepositBase;
+// 	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
+// 	type BountyUpdatePeriod = BountyUpdatePeriod;
+// 	type BountyValueMinimum = BountyValueMinimum;
+// 	type DataDepositPerByte = DataDepositPerByte;
+// 	type Event = Event;
+// 	type MaximumReasonLength = MaximumReasonLength;
+// 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
+// }
 
 construct_runtime! {
 	pub enum Runtime where
@@ -643,8 +639,8 @@ construct_runtime! {
 		// Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
 		// Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
 		// TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 36,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
+		// Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 36,
+		// Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -815,6 +811,34 @@ impl_runtime_apis! {
 
 		fn authorities() -> Vec<AuraId> {
 			Aura::authorities()
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn dispatch_benchmark(
+			config: frame_benchmarking::BenchmarkConfig
+		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+
+			let whitelist: Vec<TrackedStorageKey> = vec![
+			// you can whitelist any storage keys you do not want to track here
+			];
+
+			let mut batches = Vec::<BenchmarkBatch>::new();
+			let params = (&config, &whitelist);
+
+			// Adding the pallet you will perform thee benchmarking
+			add_benchmark!(params, batches, pallet_balances, Balances);
+			add_benchmark!(params, batches, pallet_bounties, Bounties);
+			add_benchmark!(params, batches, pallet_indices, Indices);
+			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
+			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			add_benchmark!(params, batches, pallet_treasury, Treasury);
+			add_benchmark!(params, batches, pallet_utility, Utility);
+
+			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
+			Ok(batches)
 		}
 	}
 

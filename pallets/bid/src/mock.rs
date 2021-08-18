@@ -48,7 +48,7 @@ construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
 		Assets: orml_tokens::{Pallet, Storage, Event<T>},
-	Balances: balances::{Pallet, Call, Storage, Event<T>},
+		Balances: balances::{Pallet, Call, Storage, Event<T>},
 		Bid: pallet_bid::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -124,6 +124,7 @@ impl orml_tokens::Config for Test {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = ();
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();
