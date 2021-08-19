@@ -77,7 +77,7 @@ parameter_types! {
 
 impl system::Config for Test {
 	type AccountData = balances::AccountData<u64>;
-	type AccountId = AccountId32;
+	type AccountId = AccountId;
 	type BaseCallFilter = ();
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
