@@ -208,7 +208,7 @@ impl frame_system::Config for Runtime {
 	/// Converts a module to an index of this module in the runtime.
 	type PalletInfo = PalletInfo;
 	type SS58Prefix = SS58Prefix;
-	type SystemWeightInfo = ();
+	type SystemWeightInfo = weights::frame_system::WeightInfo<Runtime>;
 	/// Runtime version.
 	type Version = Version;
 }
@@ -575,7 +575,7 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 // orml runtime end
@@ -839,6 +839,9 @@ impl_runtime_apis! {
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+			use frame_system_benchmarking::Pallet as SystemBench;
+
+			impl frame_system_benchmarking::Config for Runtime {}
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 			// you can whitelist any storage keys you do not want to track here
@@ -848,6 +851,7 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			// Adding the pallet you will perform thee benchmarking
+			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			// add_benchmark!(params, batches, pallet_bounties, Bounties);
 			add_benchmark!(params, batches, pallet_indices, Indices);
