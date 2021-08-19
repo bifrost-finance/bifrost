@@ -181,6 +181,7 @@ dependencies = [
  "bifrost-bancor-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining",
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -208,6 +209,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -709,6 +712,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-liquidity-mining"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "pallet-collective",
+ "parity-scale-codec",
+ "sp-core",
+ "substrate-fixed",
+]
+
+[[package]]
 name = "bifrost-minter-reward"
 version = "0.8.0"
 dependencies = [
@@ -733,6 +753,7 @@ dependencies = [
 name = "bifrost-runtime"
 version = "0.8.0"
 dependencies = [
+ "bifrost-runtime-common",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -2166,6 +2187,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -5316,6 +5339,39 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm-support"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
+dependencies = [
+ "frame-support",
+ "orml-traits",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "orml-xtokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=650ef607d023e4537d3f2932baa5e50bc3a349cb#650ef607d023e4537d3f2932baa5e50bc3a349cb"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

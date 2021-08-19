@@ -58,7 +58,11 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use bifrost_runtime_common::xcm_impl::{
+	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
+};
 use constants::{currency::*, time::*};
+use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::traits::OnRuntimeUpgrade;
 use frame_system::EnsureRoot;
 use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
@@ -77,6 +81,7 @@ use xcm_builder::{
 	SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
+use xcm_support::BifrostCurrencyAdapter;
 
 // Weights used in the runtime.
 mod weights;
@@ -317,6 +322,7 @@ parameter_types! {
 	pub const KsmLocation: MultiLocation = X1(Parent);
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+	pub SelfParaChainId: CumulusParaId = ParachainInfo::parachain_id();
 	pub Ancestry: MultiLocation = X1(Parachain(ParachainInfo::parachain_id().into()));
 }
 
@@ -388,16 +394,25 @@ pub type Barrier = (
 	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
 	// ^^^ Parent & its unit plurality gets free execution
 	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+	BifrostXcmTransactFilter<All<MultiLocation>>,
 );
+
+pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
+	Tokens,
+	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert<SelfParaChainId>>,
+	AccountId,
+	LocationToAccountId,
+	CurrencyId,
+	BifrostCurrencyIdConvert<SelfParaChainId>,
+>;
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
-	// How to withdraw and deposit an asset.
-	type AssetTransactor = LocalAssetTransactor;
+	type AssetTransactor = BifrostAssetTransactor;
 	type Barrier = Barrier;
 	type Call = Call;
-	type IsReserve = NativeAsset;
-	type IsTeleporter = NativeAsset;
+	type IsReserve = BifrostFilteredAssets;
+	type IsTeleporter = BifrostFilteredAssets;
 	// <- should be enough to allow teleportation of ROC
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;

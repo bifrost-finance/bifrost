@@ -70,12 +70,14 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_flexible_fee::fee_dealer::FixedCurrencyFeeRate;
 use bifrost_runtime_common::xcm_impl::{
-	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
+	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
+	BifrostFilteredAssets, BifrostXcmTransactFilter,
 };
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
@@ -1149,6 +1151,22 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub SelfLocation: MultiLocation = X2(Parent, Parachain(ParachainInfo::get().into()));
+}
+
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type SelfLocation = SelfLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type BaseXcmWeight = XcmWeight;
+}
+
 // orml runtime end
 
 construct_runtime! {
@@ -1201,7 +1219,7 @@ construct_runtime! {
 
 		// Third party modules
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 61,
-		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 

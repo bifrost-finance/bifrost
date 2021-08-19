@@ -67,12 +67,14 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_flexible_fee::fee_dealer::FixedCurrencyFeeRate;
 use bifrost_runtime_common::xcm_impl::{
-	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
+	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
+	BifrostFilteredAssets, BifrostXcmTransactFilter,
 };
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
@@ -1048,6 +1050,28 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
+	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub const MinimumDepositOfUser: Balance = 1_000_000;
+	pub const MinimumRewardPerBlock: Balance = 1_000;
+	pub const MinimumDuration: BlockNumber = DAYS;
+	pub const MaximumApproved: u32 = 8;
+}
+
+impl bifrost_liquidity_mining::Config for Runtime {
+	type Event = Event;
+	type ControlOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbol;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumApproved = MaximumApproved;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1179,6 +1203,22 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub SelfLocation: MultiLocation = X2(Parent, Parachain(ParachainInfo::get().into()));
+}
+
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type SelfLocation = SelfLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type BaseXcmWeight = XcmWeight;
+}
+
 // orml runtime end
 
 construct_runtime! {
@@ -1235,7 +1275,7 @@ construct_runtime! {
 
 		// Third party modules
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 61,
-		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 
@@ -1246,6 +1286,7 @@ construct_runtime! {
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
+		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 	}
 }
 

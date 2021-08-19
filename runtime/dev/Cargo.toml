@@ -92,12 +92,14 @@ bifrost-salp = { path = "../../pallets/salp", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
+xcm-support = { path = "../../xcm-support", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-xcm-support = { path = "../../xcm-support", default-features = false }
+orml-xtokens = { version = "0.4.1-dev", default-features = false }
+orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
@@ -174,10 +176,12 @@ std = [
 	"bifrost-salp/std",
 	"bifrost-vsbond-auction/std",
 	"bifrost-vtoken-mint/std",
+	"xcm-support/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
-	"xcm-support/std",
+	"orml-xtokens/std",
+	"orml-xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 ]
