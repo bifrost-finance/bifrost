@@ -20,6 +20,8 @@
 
 //! A list of the different weight modules for our runtime.
 
+pub mod frame_system;
+pub mod orml_tokens;
 pub mod pallet_balances;
 pub mod pallet_bounties;
 pub mod pallet_indices;
