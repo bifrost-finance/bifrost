@@ -25,8 +25,10 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-f
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8"  }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8" }
 pallet-multisig = { version = "3.0.0"}
+smallvec = "1.6.1"
 sp-io = "3.0.0"
 sp-core = "3.0.0"
+sp-runtime = "3.0.0"
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = "3.0.0"

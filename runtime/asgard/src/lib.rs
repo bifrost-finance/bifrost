@@ -106,6 +106,8 @@ use zenlink_protocol::{
 	ZenlinkMultiAssets,
 };
 
+use crate::constants::relay_fee::WeightToFee;
+
 mod weights;
 
 pub type SessionHandlers = ();
@@ -1018,6 +1020,7 @@ impl bifrost_salp::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+	type WeightToFee = WeightToFee;
 }
 
 parameter_types! {

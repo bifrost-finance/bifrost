@@ -43,7 +43,7 @@ pub trait HandleXcmpMessage {
 
 /// Bifrost Xcm Executor
 pub trait BifrostXcmExecutor {
-	fn transact_weight() -> u64;
+	fn transact_weight(weight: u64) -> u64;
 
 	fn ump_transact(
 		origin: MultiLocation,

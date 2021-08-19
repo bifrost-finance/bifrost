@@ -33,7 +33,7 @@ mod mock;
 mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
-use frame_support::{pallet_prelude::*, sp_runtime::MultiSignature};
+use frame_support::{pallet_prelude::*, sp_runtime::MultiSignature, transactional};
 use node_primitives::{ParaId, TokenInfo, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
@@ -44,22 +44,12 @@ type TrieIndex = u32;
 pub trait WeightInfo {
 	fn create() -> Weight;
 	fn contribute() -> Weight;
-	fn on_finalize(n: u32) -> Weight;
-}
-
-pub struct TestWeightInfo;
-impl WeightInfo for TestWeightInfo {
-	fn create() -> Weight {
-		0
-	}
-
-	fn contribute() -> Weight {
-		0
-	}
-
-	fn on_finalize(_n: u32) -> Weight {
-		0
-	}
+	fn unlock() -> Weight;
+	fn withdraw() -> Weight;
+	fn refund() -> Weight;
+	fn redeem() -> Weight;
+	fn dissolve(n: u32) -> Weight;
+	fn on_initialize(n: u32) -> Weight;
 }
 
 #[allow(type_alias_bounds)]
@@ -224,6 +214,7 @@ pub mod pallet {
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
 		storage::ChildTriePrefixIterator,
+		weights::WeightToFeePolynomial,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
@@ -317,6 +308,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type WithdrawWeight: Get<u64>;
+
+		type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -510,7 +503,7 @@ pub mod pallet {
 		Pays::No
 		))]
 		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -526,11 +519,7 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(
 			_origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -569,11 +558,7 @@ pub mod pallet {
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::create())]
 		pub fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -619,11 +604,8 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::contribute())]
+		#[transactional]
 		pub fn contribute(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -668,7 +650,7 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
 		) -> DispatchResult {
-			let _owner = T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
@@ -727,11 +709,8 @@ pub mod pallet {
 		/// Withdraw full balance of the parachain. this function may need to be called multiple
 		/// times
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::withdraw())]
+		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			let owner = ensure_signed(origin.clone())?;
 
@@ -788,11 +767,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::refund())]
+		#[transactional]
 		pub fn refund(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			let who = ensure_signed(origin.clone())?;
 
@@ -885,11 +861,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::redeem())]
+		#[transactional]
 		pub fn redeem(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -989,11 +962,7 @@ pub mod pallet {
 		}
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::dissolve(T::RemoveKeysLimit::get()))]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			let depositor = ensure_signed(origin)?;
 
@@ -1030,7 +999,7 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_finalize(n: BlockNumberFor<T>) {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// Release x% KSM/DOT from redeem-pool to bancor-pool per cycle
 			if n != 0 && (n % T::ReleaseCycle::get()) == 0 {
 				if let Ok(rp_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
@@ -1052,13 +1021,9 @@ pub mod pallet {
 					}
 				}
 			}
+			<T as Config>::WeightInfo::on_initialize(n)
 
 			// TODO: Auto unlock vsToken/vsBond?
-		}
-
-		fn on_initialize(_n: BlockNumberFor<T>) -> frame_support::weights::Weight {
-			// TODO estimate weight
-			Zero::zero()
 		}
 	}
 
@@ -1160,8 +1125,13 @@ pub mod pallet {
 		fn xcm_ump_contribute(
 			_origin: OriginFor<T>,
 			index: ParaId,
-			value: BalanceOf<T>,
+			mut value: BalanceOf<T>,
 		) -> XcmResult {
+			let fee: BalanceOf<T> = T::WeightToFee::calc(&T::BifrostXcmExecutor::transact_weight(
+				T::ContributionWeight::get(),
+			));
+			value = value.saturating_sub(fee);
+
 			let contribution = Contribution { index, value, signature: None };
 
 			let call = CrowdloanContributeCall::CrowdloanContribute(ContributeCall::Contribute(

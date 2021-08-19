@@ -42,7 +42,8 @@
 use frame_support::{traits::Get, weights::Weight};
 use sp_std::marker::PhantomData;
 
-/// Weight functions for bifrost_salp.
+/// Weight functions for bifrost_salp
+/// @todo benchmark again later
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 	fn create() -> Weight {
@@ -55,9 +56,37 @@ impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
-	fn on_finalize(_n: u32) -> Weight {
-		(8_405_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+	fn unlock() -> Weight {
+		(0 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	fn withdraw() -> Weight {
+		(64_140_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	fn redeem() -> Weight {
+		(110_824_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+	}
+	fn refund() -> Weight {
+		(110_824_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+	}
+	fn dissolve(k: u32) -> Weight {
+		(0 as Weight)
+			.saturating_add((45_890_000 as Weight).saturating_mul(k as Weight))
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(k as Weight)))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(k as Weight)))
+	}
+	fn on_initialize(_n: u32) -> Weight {
+		(9_002_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 }

@@ -156,8 +156,8 @@ pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight>(PhantomData<(XcmSender, B
 impl<XcmSender: SendXcm, BaseXcmWeight: Get<u64>> BifrostXcmExecutor
 	for BifrostXcmAdaptor<XcmSender, BaseXcmWeight>
 {
-	fn transact_weight() -> u64 {
-		return 4 * BaseXcmWeight::get();
+	fn transact_weight(weight: u64) -> u64 {
+		return weight + 4 * BaseXcmWeight::get();
 	}
 
 	fn ump_transact(
@@ -169,7 +169,7 @@ impl<XcmSender: SendXcm, BaseXcmWeight: Get<u64>> BifrostXcmExecutor
 		let mut message = Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: MultiLocation::Null,
-				amount: (weight + Self::transact_weight()) as u128,
+				amount: Self::transact_weight(weight) as u128,
 			}],
 			effects: vec![Order::BuyExecution {
 				fees: MultiAsset::All,
