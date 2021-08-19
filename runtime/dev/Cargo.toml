@@ -12,6 +12,7 @@ log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1"}
+smallvec = "1.6.1"
 
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
@@ -72,6 +73,7 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", default-featur
 pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
 
 # Polkadot dependencies
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", default-features = false,branch = "release-v0.9.8" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.8" }

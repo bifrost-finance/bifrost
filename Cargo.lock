@@ -234,8 +234,10 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-primitives",
  "polkadot-runtime-parachains",
  "serde",
+ "smallvec 1.6.1",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -854,9 +856,11 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
+ "pallet-multisig",
  "pallet-xcm",
  "parity-scale-codec",
  "polkadot-parachain",
+ "smallvec 1.6.1",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
@@ -2189,8 +2193,10 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-primitives",
  "polkadot-runtime-parachains",
  "serde",
+ "smallvec 1.6.1",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -4933,7 +4939,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",

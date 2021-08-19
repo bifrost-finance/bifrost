@@ -25,6 +25,7 @@ pub mod currency {
 	pub const BNCS: Balance = 1_000_000_000_000;
 	pub const DOLLARS: Balance = BNCS;
 	pub const CENTS: Balance = DOLLARS / 100; // assume this is worth about a cent.
+	pub const RELAY_CENTS: Balance = DOLLARS / 30_000;
 	pub const MILLICENTS: Balance = CENTS / 1_000;
 	pub const MILLIBNC: Balance = 1_000_000_000;
 	pub const MICROBNC: Balance = 1_000_000;
@@ -81,4 +82,30 @@ pub mod time {
 	pub const KUSAMA_LEASE_PERIOD: BlockNumber = 6 * WEEKS;
 	pub const ROCOCO_LEASE_PERIOD: BlockNumber = 1 * DAYS;
 	pub const WESTEND_LEASE_PERIOD: BlockNumber = 28 * DAYS;
+}
+
+/// Relaychain Fee related.
+pub mod relay_fee {
+	use frame_support::weights::{
+		constants::ExtrinsicBaseWeight, WeightToFeeCoefficient, WeightToFeeCoefficients,
+		WeightToFeePolynomial,
+	};
+	use polkadot_primitives::v0::Balance;
+	use smallvec::smallvec;
+	pub use sp_runtime::Perbill;
+
+	pub struct WeightToFee;
+	impl WeightToFeePolynomial for WeightToFee {
+		type Balance = Balance;
+		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+			let p = super::currency::RELAY_CENTS;
+			let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
+			smallvec![WeightToFeeCoefficient {
+				degree: 1,
+				negative: false,
+				coeff_frac: Perbill::from_rational(p % q, q),
+				coeff_integer: p / q,
+			}]
+		}
+	}
 }
