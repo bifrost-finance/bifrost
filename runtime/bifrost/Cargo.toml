@@ -12,6 +12,9 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 	"max-encoded-len",
 ] }
 log = { version = "0.4.14", default-features = false }
+static_assertions = "1.1.0"
+hex-literal = { version = "0.3.1"}
+smallvec = "1.6.1"
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
 sp-api = { version = "3.0.0", default-features = false }
@@ -41,6 +44,8 @@ pallet-balances = { version = "3.0.0", default-features = false }
 pallet-bounties = { version = "3.0.0", default-features = false }
 pallet-collective = { version = "3.0.0", default-features = false }
 pallet-democracy = { version = "3.0.0", default-features = false }
+pallet-elections-phragmen = { version = "4.0.0", default-features = false }
+pallet-membership = { version = "3.0.0", default-features = false }
 pallet-indices = { version = "3.0.0", default-features = false }
 pallet-randomness-collective-flip = { version = "3.0.0", default-features = false }
 pallet-scheduler = { version = "3.0.0", default-features = false }
@@ -50,6 +55,7 @@ pallet-timestamp = { version = "3.0.0", default-features = false }
 pallet-transaction-payment = { version = "3.0.0", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { version = "3.0.0", default-features = false }
 pallet-treasury = { version = "3.0.0", default-features = false }
+pallet-tips = { version = "3.0.0", default-features = false }
 pallet-utility = { version = "3.0.0", default-features = false }
 
 # Cumulus dependencies

@@ -23,8 +23,9 @@ use std::{
 
 use bifrost_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
-	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, SessionConfig,
-	SudoConfig, SystemConfig, VestingConfig, WASM_BINARY,
+	CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
+	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+	VestingConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
@@ -57,7 +58,16 @@ pub fn bifrost_genesis(
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
-		// treasury: Default::default(),
+		democracy: DemocracyConfig::default(),
+		council: CouncilConfig { members: vec![], phantom: Default::default() },
+		technical_committee: TechnicalCommitteeConfig {
+			members: vec![],
+			phantom: Default::default(),
+		},
+		council_membership: Default::default(),
+		technical_membership: Default::default(),
+		treasury: Default::default(),
+		elections: Default::default(),
 		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
