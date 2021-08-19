@@ -137,6 +137,7 @@ impl orml_tokens::Config for T {
 	type MaxLocks = MaxLocks;
 	type OnDust = ();
 	type WeightInfo = ();
+	type DustRemovalWhitelist = ();
 }
 
 parameter_types! {
