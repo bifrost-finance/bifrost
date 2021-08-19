@@ -21,6 +21,7 @@
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{EnsureOrigin, GenesisBuild},
+	weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
 	PalletId,
 };
 use frame_system::RawOrigin;
@@ -36,9 +37,10 @@ use xcm::{
 	DoubleEncoded,
 };
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
-use xcm_support::BifrostXcmExecutor;
+use xcm_support::{BifrostXcmExecutor, Weight};
 
 use crate as salp;
+use crate::WeightInfo;
 
 pub(crate) type AccountId = <<Signature as sp_runtime::traits::Verify>::Signer as sp_runtime::traits::IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -233,6 +235,21 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	}
 }
 
+use smallvec::smallvec;
+pub use sp_runtime::Perbill;
+pub struct WeightToFee;
+impl WeightToFeePolynomial for WeightToFee {
+	type Balance = Balance;
+	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		smallvec![WeightToFeeCoefficient {
+			degree: 1,
+			negative: false,
+			coeff_frac: Perbill::from_rational(90u32, 100u32),
+			coeff_integer: 1,
+		}]
+	}
+}
+
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
@@ -251,12 +268,48 @@ impl salp::Config for Test {
 	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = salp::TestWeightInfo;
+	type WeightInfo = SalpWeightInfo;
 	type SelfParaId = SelfParaId;
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
 	type WithdrawWeight = WithdrawWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
+	type WeightToFee = WeightToFee;
+}
+
+pub struct SalpWeightInfo;
+impl WeightInfo for SalpWeightInfo {
+	fn create() -> Weight {
+		0
+	}
+
+	fn contribute() -> Weight {
+		0
+	}
+
+	fn unlock() -> Weight {
+		0
+	}
+
+	fn withdraw() -> Weight {
+		0
+	}
+
+	fn redeem() -> Weight {
+		0
+	}
+
+	fn refund() -> Weight {
+		0
+	}
+
+	fn dissolve(_n: u32) -> Weight {
+		0
+	}
+
+	fn on_initialize(_n: u32) -> Weight {
+		0
+	}
 }
 
 // To control the result returned by `MockXcmExecutor`
@@ -266,7 +319,7 @@ pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 pub struct MockXcmExecutor;
 
 impl BifrostXcmExecutor for MockXcmExecutor {
-	fn transact_weight() -> u64 {
+	fn transact_weight(_: u64) -> u64 {
 		return 0;
 	}
 

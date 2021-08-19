@@ -921,6 +921,8 @@ impl bifrost_minter_reward::Config for Runtime {
 	type WeightInfo = weights::bifrost_minter_reward::WeightInfo<Runtime>;
 }
 
+use crate::constants::relay_fee::WeightToFee;
+
 parameter_types! {
 	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
 	pub const MinContribution: Balance = 1 * DOLLARS;
@@ -987,6 +989,7 @@ impl bifrost_salp::Config for Runtime {
 	type WithdrawWeight = WithdrawWeight;
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
+	type WeightToFee = WeightToFee;
 }
 
 parameter_types! {
