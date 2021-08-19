@@ -132,6 +132,7 @@ impl orml_tokens::Config for T {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
+	type DustRemovalWhitelist = ();
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
