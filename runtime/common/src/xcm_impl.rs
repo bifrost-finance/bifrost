@@ -114,35 +114,48 @@ fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Token};
+		use CurrencyId::{Native, Stable, Token};
 		match id {
 			Token(TokenSymbol::KSM) => Some(X1(Parent)),
 			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
 				Some(native_currency_location(id, T::get())),
+			// Karura currencyId types
+			Token(TokenSymbol::KAR) | Stable(TokenSymbol::KUSD) =>
+				Some(X3(Parent, Parachain(2000), GeneralKey(id.encode()))),
 			_ => None,
 		}
 	}
 }
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::{Native, Token};
+		use CurrencyId::{Native, Stable, Token};
 		use TokenSymbol::*;
 		match location {
 			X1(Parent) => Some(Token(KSM)),
-			X3(Parent, Junction::Parachain(id), GeneralKey(key))
-				if ParaId::from(id) == T::get() =>
-			{
+			X3(Parent, Junction::Parachain(id), GeneralKey(key)) => {
 				// decode the general key
 				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 					// check `currency_id` is cross-chain asset
-					match currency_id {
-						Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) => Some(currency_id),
-						_ => None,
+					if ParaId::from(id) == T::get() {
+						match currency_id {
+							Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
+								Some(currency_id),
+							_ => None,
+						}
+					// Kurara CurrencyId types
+					} else if id == 2000 {
+						match currency_id {
+							Token(TokenSymbol::KAR) | Stable(TokenSymbol::KUSD) =>
+								Some(currency_id),
+							_ => None,
+						}
+					} else {
+						None
 					}
 				} else {
 					None
 				}
-			}
+			},
 			_ => None,
 		}
 	}
