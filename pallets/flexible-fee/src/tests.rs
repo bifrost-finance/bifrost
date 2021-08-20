@@ -378,7 +378,7 @@ fn ensure_can_charge_fee_v2_should_work() {
 		.unwrap();
 
 		assert_eq!(sign, false);
-		assert_eq!(amount, 0);
+		assert_eq!(amount, 800);
 	});
 }
 
