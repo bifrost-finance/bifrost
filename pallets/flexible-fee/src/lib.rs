@@ -90,6 +90,9 @@ pub mod pallet {
 		type FeeDealer: FeeDealer<Self::AccountId, PalletBalanceOf<Self>>;
 
 		#[pallet::constant]
+		type TreasuaryAccount: Get<Self::AccountId>;
+
+		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
 
 		#[pallet::constant]
@@ -269,20 +272,39 @@ where
 
 		// Make sure there are enough BNC to be deducted if the user has assets in other form of
 		// tokens rather than BNC.
-		T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)
+		let (fee_sign, fee_amount) = T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-		let payment = match T::Currency::withdraw(
-			who,
-			fee,
-			withdraw_reason,
-			ExistenceRequirement::AllowDeath,
-		) {
-			Ok(imbalance) => Ok(Some(imbalance)),
-			Err(_msg) => Err(InvalidTransaction::Payment.into()),
-		};
+		// if the user has enough BNC for fee
+		if fee_sign == false {
+			match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::AllowDeath)
+			{
+				Ok(imbalance) => Ok(Some(imbalance)),
+				Err(_msg) => Err(InvalidTransaction::Payment.into()),
+			}
+		// if the user donsn't enough BNC but has enough KSM
+		} else {
+			// deduct fee currency and increase native currency amount
+			// This withdraw operation allows death. So it will succeed given the remaining amount
+			// less than the existential deposit.
+			let fee_currency_id = T::AlternativeFeeCurrencyId::get();
+			T::MultiCurrency::withdraw(fee_currency_id, who, T::Balance::from(fee_amount))
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+			// deposit the fee_currency amount to Treasuary
+			T::MultiCurrency::deposit(
+				fee_currency_id,
+				&T::TreasuaryAccount::get(),
+				T::Balance::from(fee_amount),
+			)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-		payment
+			Self::deposit_event(Event::FixedRateFeeExchanged(fee_currency_id, fee_amount));
+
+			// need to return 0 value of imbalance type
+			// this value will be used to see post dispatch refund in BNC
+			// if charge less than actual payment, no refund will be paid
+			Ok(Some(NegativeImbalanceOf::<T>::zero()))
+		}
 	}
 
 	/// Hand the fee and the tip over to the `[OnUnbalanced]` implementation.
@@ -332,7 +354,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for Pallet<T> {
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
 		reason: WithdrawReasons,
-	) -> DispatchResult {
+	) -> Result<(bool, PalletBalanceOf<T>), DispatchError> {
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
 		let existential_deposit = <<T as Config>::Currency as Currency<
@@ -405,6 +427,6 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for Pallet<T> {
 				}
 			}
 		}
-		Ok(())
+		Ok((false, Zero::zero()))
 	}
 }
