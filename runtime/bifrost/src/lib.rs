@@ -105,7 +105,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 802,
+	spec_version: 803,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -159,7 +159,7 @@ impl Filter<Call> for CallFilter {
 			Call::Balances(_) => false,
 			Call::Vesting(_) => false,
 			Call::Tokens(_) => false,
-			Call::Currencies(_) => false,
+			Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
 			_ => true,
 		}
 	}
@@ -446,8 +446,7 @@ impl pallet_democracy::Config for Runtime {
 	type PreimageByteDeposit = PreimageByteDeposit;
 	type Proposal = Call;
 	type Scheduler = Scheduler;
-	// NOTE: Treasury replaced by `()`.
-	type Slash = ();
+	type Slash = Treasury;
 	// Any single technical committee member may veto a coming council proposal, however they can
 	// only do it once and it lasts only for the cool-off period.
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
