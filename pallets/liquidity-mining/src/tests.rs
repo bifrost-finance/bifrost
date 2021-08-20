@@ -1474,3 +1474,62 @@ fn double_claim_in_same_block_should_fail() {
 		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::TooShortBetweenTwoClaim);
 	});
 }
+
+#[test]
+fn simple_integration_test() {
+	new_test_ext().execute_with(|| {
+		const PER_BLOCK: Balance = REWARD_AMOUNT / DAYS as Balance;
+
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, UNIT);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).reserved, 0);
+
+		run_to_block(100);
+
+		assert_ok!(LM::deposit(Some(USER_2).into(), 0, UNIT));
+
+		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).frozen, UNIT);
+		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).reserved, 0);
+
+		run_to_block(200);
+
+		assert_ok!(LM::claim(Some(USER_1).into(), 0));
+		assert_ok!(LM::claim(Some(USER_2).into(), 0));
+
+		let pbpd_1 = FixedU128::from((PER_BLOCK, UNIT));
+		let reward_step_1 = (pbpd_1 * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
+
+		let pbpd_2 = FixedU128::from((PER_BLOCK, 2 * UNIT));
+		let reward_step_2 = (pbpd_2 * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, reward_step_1 + reward_step_2);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, reward_step_1 + reward_step_2);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
+
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).free, reward_step_2);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, reward_step_2);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
+	});
+}
