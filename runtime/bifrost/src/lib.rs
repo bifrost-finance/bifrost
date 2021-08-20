@@ -457,7 +457,7 @@ impl pallet_democracy::Config for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
+	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(2);
 
@@ -483,7 +483,7 @@ type ApproveOrigin = EnsureOneOf<
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
 	type Burn = Burn;
-	type BurnDestination = ();
+	type BurnDestination = Treasury;
 	type Currency = Balances;
 	type Event = Event;
 	type MaxApprovals = MaxApprovals;
@@ -494,7 +494,7 @@ impl pallet_treasury::Config for Runtime {
 	type RejectOrigin = MoreThanHalfCouncil;
 	type SpendFunds = Bounties;
 	type SpendPeriod = SpendPeriod;
-	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -506,7 +506,7 @@ impl pallet_bounties::Config for Runtime {
 	type DataDepositPerByte = DataDepositPerByte;
 	type Event = Event;
 	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
 }
 
 impl pallet_tips::Config for Runtime {
@@ -817,54 +817,6 @@ impl orml_tokens::Config for Runtime {
 
 // orml runtime end
 
-// parameter_types! {
-// 	pub const ProposalBond: Permill = Permill::from_percent(5);
-// 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
-// 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-// 	pub const Burn: Permill = Permill::from_perthousand(2);
-//
-// 	pub const TipCountdown: BlockNumber = 1 * DAYS;
-// 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-// 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-// 	pub const DataDepositPerByte: Balance = 10 * CENTS;
-// 	pub const BountyDepositBase: Balance = 1 * DOLLARS;
-// 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-// 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
-// 	pub const MaximumReasonLength: u32 = 16384;
-// 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-// 	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
-// 	pub const MaxApprovals: u32 = 100;
-// }
-//
-// impl pallet_treasury::Config for Runtime {
-// 	type ApproveOrigin = EnsureRoot<AccountId>;
-// 	type Burn = Burn;
-// 	type BurnDestination = Treasury;
-// 	type Currency = Balances;
-// 	type Event = Event;
-// 	type MaxApprovals = MaxApprovals;
-// 	type OnSlash = Treasury;
-// 	type PalletId = TreasuryPalletId;
-// 	type ProposalBond = ProposalBond;
-// 	type ProposalBondMinimum = ProposalBondMinimum;
-// 	type RejectOrigin = EnsureRoot<AccountId>;
-// 	type SpendFunds = Bounties;
-// 	type SpendPeriod = SpendPeriod;
-// 	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
-// }
-//
-// impl pallet_bounties::Config for Runtime {
-// 	type BountyCuratorDeposit = BountyCuratorDeposit;
-// 	type BountyDepositBase = BountyDepositBase;
-// 	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-// 	type BountyUpdatePeriod = BountyUpdatePeriod;
-// 	type BountyValueMinimum = BountyValueMinimum;
-// 	type DataDepositPerByte = DataDepositPerByte;
-// 	type Event = Event;
-// 	type MaximumReasonLength = MaximumReasonLength;
-// 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
-// }
-
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -898,9 +850,6 @@ construct_runtime! {
 		Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
 		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
 		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 36,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
-		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -914,6 +863,11 @@ construct_runtime! {
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
+
+		// Treasury stuff
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 61,
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
+		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
@@ -1094,11 +1048,11 @@ impl_runtime_apis! {
 			// Adding the pallet you will perform thee benchmarking
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
-			// add_benchmark!(params, batches, pallet_bounties, Bounties);
+			add_benchmark!(params, batches, pallet_bounties, Bounties);
 			add_benchmark!(params, batches, pallet_indices, Indices);
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			// add_benchmark!(params, batches, pallet_treasury, Treasury);
+			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 
