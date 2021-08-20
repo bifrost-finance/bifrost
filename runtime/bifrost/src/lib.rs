@@ -307,40 +307,6 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 100 * CENTS;
-	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = deposit(1, 64);
-	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = deposit(0, 32);
-	/// Daily council elections
-	pub const TermDuration: BlockNumber = 24 * HOURS;
-	pub const DesiredMembers: u32 = 7;
-	pub const DesiredRunnersUp: u32 = 7;
-	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
-}
-
-// Make sure that there are no more than MaxMembers members elected via phragmen.
-const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
-
-impl pallet_elections_phragmen::Config for Runtime {
-	type CandidacyBond = CandidacyBond;
-	type ChangeMembers = Council;
-	type Currency = Balances;
-	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
-	type DesiredMembers = DesiredMembers;
-	type DesiredRunnersUp = DesiredRunnersUp;
-	type Event = Event;
-	type InitializeMembers = Council;
-	type KickedMember = Treasury;
-	type LoserCandidate = Treasury;
-	type PalletId = PhragmenElectionPalletId;
-	type TermDuration = TermDuration;
-	type VotingBondBase = VotingBondBase;
-	type VotingBondFactor = VotingBondFactor;
-	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
 	pub const TechnicalMotionDuration: BlockNumber = 2 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
 	pub const TechnicalMaxMembers: u32 = 100;
@@ -388,6 +354,40 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 	type ResetOrigin = MoreThanHalfCouncil;
 	type SwapOrigin = MoreThanHalfCouncil;
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const CandidacyBond: Balance = 100 * CENTS;
+	// 1 storage item created, key size is 32 bytes, value size is 16+16.
+	pub const VotingBondBase: Balance = deposit(1, 64);
+	// additional data per vote is 32 bytes (account id).
+	pub const VotingBondFactor: Balance = deposit(0, 32);
+	/// Daily council elections
+	pub const TermDuration: BlockNumber = 24 * HOURS;
+	pub const DesiredMembers: u32 = 7;
+	pub const DesiredRunnersUp: u32 = 7;
+	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+}
+
+// Make sure that there are no more than MaxMembers members elected via phragmen.
+const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
+
+impl pallet_elections_phragmen::Config for Runtime {
+	type CandidacyBond = CandidacyBond;
+	type ChangeMembers = Council;
+	type Currency = Balances;
+	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+	type DesiredMembers = DesiredMembers;
+	type DesiredRunnersUp = DesiredRunnersUp;
+	type Event = Event;
+	type InitializeMembers = Council;
+	type KickedMember = Treasury;
+	type LoserCandidate = Treasury;
+	type PalletId = PhragmenElectionPalletId;
+	type TermDuration = TermDuration;
+	type VotingBondBase = VotingBondBase;
+	type VotingBondFactor = VotingBondFactor;
+	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
