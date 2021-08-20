@@ -16,9 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::Hooks};
+use frame_support::{
+	assert_noop, assert_ok,
+	dispatch::DispatchError,
+	sp_runtime::{FixedPointNumber, FixedU128},
+	traits::Hooks,
+};
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
-use substrate_fixed::{traits::FromFixed, types::U64F64};
 
 use crate::{mock::*, Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos};
 
@@ -649,8 +653,9 @@ fn deposit_to_pool_ongoing_with_init_deposit_should_work() {
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, 1_000_000));
 
 		let per_block: Balance = REWARD_AMOUNT / DAYS as Balance;
-		let pbpd: U64F64 = U64F64::from_num(per_block) / (2 * 1_000_000);
-		let reward_to_user_1: Balance = u128::from_fixed(pbpd * 100 * 1_000_000);
+		let pbpd = FixedU128::from((per_block, 2 * 1_000_000));
+		let reward_to_user_1 =
+			(pbpd * (100 * 1_000_000).into()).into_inner() / FixedU128::accuracy();
 
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, reward_to_user_1);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
@@ -702,8 +707,9 @@ fn double_deposit_to_pool_ongoing_in_diff_block_should_work() {
 		assert_ok!(LM::deposit(Some(USER_2).into(), 0, 1_000_000));
 
 		let per_block = REWARD_AMOUNT / DAYS as Balance;
-		let pbpd = U64F64::from_num(per_block) / 2_000_000;
-		let reward_to_user_2: Balance = u128::from_fixed(pbpd * 100 * 1_000_000);
+		let pbpd = FixedU128::from((per_block, 2 * 1_000_000));
+		let reward_to_user_2 =
+			(pbpd * (100 * 1_000_000).into()).into_inner() / FixedU128::accuracy();
 
 		assert_eq!(Tokens::accounts(USER_2, REWARD_1).free, reward_to_user_2);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_1).frozen, 0);
@@ -926,8 +932,8 @@ fn redeem_from_pool_ongoing_should_work() {
 		run_to_block(100);
 
 		let per_block = REWARD_AMOUNT / DAYS as Balance;
-		let pbpd = U64F64::from_num(per_block) / (2 * UNIT);
-		let rewarded: Balance = u128::from_fixed((pbpd * 100 * UNIT).floor());
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let rewarded = (pbpd * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
 
 		assert_ok!(LM::redeem(Some(USER_1).into(), 0));
 
@@ -989,8 +995,9 @@ fn redeem_from_pool_retired_should_work() {
 		run_to_block(DAYS);
 
 		let per_block = REWARD_AMOUNT / DAYS as Balance;
-		let pbpd = U64F64::from_num(per_block) / (2 * UNIT);
-		let rewarded: Balance = u128::from_fixed((pbpd * DAYS as Balance * UNIT).floor());
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let rewarded =
+			(pbpd * (DAYS as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
 
 		assert_ok!(LM::redeem(Some(USER_1).into(), 0));
 
@@ -1059,8 +1066,8 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		run_to_block(100);
 
 		let per_block = REWARD_AMOUNT / DAYS as Balance;
-		let pbpd = U64F64::from_num(per_block) / (2 * UNIT);
-		let old_rewarded: Balance = u128::from_fixed((pbpd * 100 * UNIT).floor());
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let old_rewarded = (pbpd * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
 
 		assert_ok!(LM::redeem(Some(USER_1).into(), 0));
 
@@ -1092,9 +1099,10 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 
 		// USER_2 didn't remember to redeem until the seventh day
 		run_to_block(7 * DAYS);
-		let pbpd = U64F64::from_num(per_block) / MinimumDeposit::get();
-		let new_rewarded: Balance =
-			u128::from_fixed((pbpd * (DAYS - 100) as Balance * MinimumDeposit::get()).floor());
+		let pbpd = FixedU128::from((per_block, MinimumDeposit::get()));
+		let new_rewarded = (pbpd * ((DAYS - 100) as Balance * MinimumDeposit::get()).into())
+			.into_inner() /
+			FixedU128::accuracy();
 
 		assert_ok!(LM::redeem(Some(USER_2).into(), 0));
 
@@ -1259,12 +1267,11 @@ fn claim_from_pool_ongoing_should_work() {
 		assert_ok!(LM::claim(Some(USER_1).into(), 0));
 
 		let per_block = REWARD_AMOUNT / DAYS as Balance;
-
 		let reserved = per_block * DAYS as Balance;
 		let free = REWARD_AMOUNT - reserved;
 
-		let pbpd = U64F64::from_num(per_block) / (2 * UNIT);
-		let rewarded: Balance = u128::from_fixed((pbpd * 100 * UNIT).floor());
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let rewarded: Balance = (pbpd * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
 
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
@@ -1314,8 +1321,9 @@ fn claim_from_pool_retired_should_work() {
 		let reserved = per_block * DAYS as Balance;
 		let free = REWARD_AMOUNT - reserved;
 
-		let pbpd = U64F64::from_num(per_block) / (2 * UNIT);
-		let rewarded: Balance = u128::from_fixed((pbpd * DAYS as Balance * UNIT).floor());
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let rewarded: Balance =
+			(pbpd * (DAYS as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
 
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);

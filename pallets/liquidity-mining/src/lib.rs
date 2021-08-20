@@ -21,7 +21,10 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
+	sp_runtime::{
+		traits::{SaturatedConversion, Saturating, Zero},
+		FixedPointNumber, FixedU128,
+	},
 	sp_std::{
 		cmp::{max, min},
 		collections::{btree_map::BTreeMap, btree_set::BTreeSet},
@@ -34,7 +37,6 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
-use substrate_fixed::{traits::FromFixed, types::U64F64};
 
 #[cfg(test)]
 mod mock;
@@ -150,9 +152,9 @@ impl<T: Config> PoolInfo<T> {
 					let v_old = *gain_avg;
 
 					let user_deposit: u128 = deposit_data.deposit.saturated_into();
-					let amount = BalanceOf::<T>::saturated_from(u128::from_fixed(
-						((v_new - v_old) * user_deposit).floor(),
-					));
+					let amount = BalanceOf::<T>::saturated_from(
+						(v_new - v_old).saturating_mul_int(user_deposit),
+					);
 
 					// Update the claimed of the reward
 					reward.claimed = reward.claimed.saturating_add(amount);
@@ -213,13 +215,13 @@ pub struct DepositData<T: Config> {
 	///
 	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
 	/// - Arg1: The block number updated lastest
-	gain_avgs: BTreeMap<CurrencyId, U64F64>,
+	gain_avgs: BTreeMap<CurrencyId, FixedU128>,
 	update_b: BlockNumberFor<T>,
 }
 
 impl<T: Config> DepositData<T> {
 	pub(crate) fn from_pool(pool: &PoolInfo<T>) -> Self {
-		let mut gain_avgs = BTreeMap::<CurrencyId, U64F64>::new();
+		let mut gain_avgs = BTreeMap::<CurrencyId, FixedU128>::new();
 
 		for (rtoken, reward) in pool.rewards.iter() {
 			gain_avgs.insert(*rtoken, reward.gain_avg);
@@ -240,7 +242,7 @@ pub struct RewardData<T: Config> {
 	claimed: BalanceOf<T>,
 	/// The average gain in pico by 1 pico deposited from the startup of the liquidity-pool,
 	/// updated when anyone deposits to / redeems from / claims from the liquidity-pool.
-	gain_avg: U64F64,
+	gain_avg: FixedU128,
 }
 
 impl<T: Config> RewardData<T> {
@@ -257,16 +259,16 @@ impl<T: Config> RewardData<T> {
 
 		ensure!(per_block > T::MinimumRewardPerBlock::get(), Error::<T>::InvalidRewardPerBlock);
 
-		Ok(RewardData { total, per_block, claimed: Zero::zero(), gain_avg: U64F64::from_num(0) })
+		Ok(RewardData { total, per_block, claimed: Zero::zero(), gain_avg: 0.into() })
 	}
 
-	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf<T>) -> U64F64 {
+	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf<T>) -> FixedU128 {
 		let per_block: u128 = self.per_block.saturated_into();
 		let deposit: u128 = deposited.saturated_into();
 
 		match deposit {
-			0 => U64F64::from_num(0),
-			_ => U64F64::from_num(per_block) / deposit,
+			0 => 0.into(),
+			_ => FixedU128::from((per_block, deposit)),
 		}
 	}
 
@@ -283,7 +285,7 @@ impl<T: Config> RewardData<T> {
 		let b_prev = max(block_last_updated, block_startup);
 		let b_past: u128 = (n - b_prev).saturated_into();
 
-		let gain_avg_new = self.gain_avg + pbpd * b_past;
+		let gain_avg_new = self.gain_avg + pbpd * b_past.into();
 
 		self.gain_avg = gain_avg_new;
 	}

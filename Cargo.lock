@@ -725,7 +725,6 @@ dependencies = [
  "pallet-collective",
  "parity-scale-codec",
  "sp-core",
- "substrate-fixed",
 ]
 
 [[package]]
