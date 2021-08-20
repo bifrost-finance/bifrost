@@ -668,7 +668,6 @@ fn withdraw_with_wrong_origin_should_fail() {
 
 		assert_noop!(Salp::withdraw(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::withdraw(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::withdraw(Some(BRUCE).into(), 3_000), Error::<Test>::UnauthorizedAccount);
 	});
 }
 
@@ -1017,7 +1016,6 @@ fn dissolve_with_wrong_origin_should_fail() {
 
 		assert_noop!(Salp::dissolve(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::dissolve(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::dissolve(Some(BRUCE).into(), 3_000), Error::<Test>::UnauthorizedAccount);
 	});
 }
 

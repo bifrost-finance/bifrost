@@ -81,9 +81,7 @@ impl Default for FundStatus {
 /// (`Funds`).
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 #[codec(dumb_trait_bound)]
-pub struct FundInfo<AccountId, Balance, LeasePeriod> {
-	/// The owning account who placed the deposit.
-	depositor: AccountId,
+pub struct FundInfo<Balance, LeasePeriod> {
 	/// The amount of deposit placed.
 	deposit: Balance,
 	/// The total amount raised.
@@ -328,7 +326,7 @@ pub mod pallet {
 		/// Fail on contribute to crowd sale. [who, fund_index, amount]
 		ContributeFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrawing full balance of a contributor. [who, fund_index, amount]
-		Withdrawing(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		Withdrawing(ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(ParaId, BalanceOf<T>),
 		/// Fail on withdraw full balance of a contributor. [who, fund_index, amount]
@@ -411,7 +409,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		ParaId,
-		Option<FundInfo<AccountIdOf<T>, BalanceOf<T>, LeasePeriod>>,
+		Option<FundInfo<BalanceOf<T>, LeasePeriod>>,
 		ValueQuery,
 	>;
 
@@ -558,7 +556,11 @@ pub mod pallet {
 		}
 
 		/// Create a new crowdloaning campaign for a parachain slot deposit for the current auction.
-		#[pallet::weight(T::WeightInfo::create())]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -566,7 +568,7 @@ pub mod pallet {
 			#[pallet::compact] first_slot: LeasePeriod,
 			#[pallet::compact] last_slot: LeasePeriod,
 		) -> DispatchResult {
-			let owner = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundAlreadyCreated);
 
@@ -579,12 +581,9 @@ pub mod pallet {
 
 			let deposit = T::SubmissionDeposit::get();
 
-			T::MultiCurrency::reserve(T::DepositToken::get(), &owner, deposit)?;
-
 			Funds::<T>::insert(
 				index,
 				Some(FundInfo {
-					depositor: owner,
 					deposit,
 					raised: Zero::zero(),
 					cap,
@@ -706,23 +705,24 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Withdraw full balance of the parachain. this function may need to be called multiple
-		/// times
+		/// Withdraw full balance of the parachain.
 		/// - `index`: The parachain to whose crowdloan the contribution was made.
-		#[pallet::weight(T::WeightInfo::withdraw())]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let owner = ensure_signed(origin.clone())?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
 			ensure!(can, Error::<T>::InvalidFundStatus);
 
-			ensure!(owner == fund.depositor, Error::<T>::UnauthorizedAccount);
-
 			Self::xcm_ump_withdraw(origin, index).map_err(|_| Error::<T>::XcmFailed)?;
 
-			Self::deposit_event(Event::Withdrawing(owner, index, fund.raised));
+			Self::deposit_event(Event::Withdrawing(index, fund.raised));
 
 			Ok(())
 		}
@@ -962,14 +962,16 @@ pub mod pallet {
 		}
 
 		/// Remove a fund after the retirement period has ended and all funds have been returned.
-		#[pallet::weight(T::WeightInfo::dissolve(T::RemoveKeysLimit::get()))]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			let depositor = ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::End, Error::<T>::InvalidFundStatus);
-
-			ensure!(depositor == fund.depositor, Error::<T>::UnauthorizedAccount);
 
 			// TODO: Delete element when iter? Fix it?
 			let mut refund_count = 0u32;
@@ -988,7 +990,6 @@ pub mod pallet {
 			}
 
 			if all_refunded == true {
-				T::MultiCurrency::unreserve(T::DepositToken::get(), &depositor, fund.deposit);
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
