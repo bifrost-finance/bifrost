@@ -278,7 +278,7 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = Treasury;
 	/// The ubiquitous event type.
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;

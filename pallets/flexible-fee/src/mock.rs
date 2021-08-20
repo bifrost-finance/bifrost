@@ -50,6 +50,8 @@ pub type AccountId = AccountId32;
 pub type BlockNumber = u64;
 pub type Amount = i128;
 
+pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
+
 pub type Balance = u64;
 pub type Block = sp_runtime::generic::Block<Header, UncheckedExtrinsic>;
 pub type UncheckedExtrinsic = sp_runtime::generic::UncheckedExtrinsic<u32, u64, Call, ()>;
@@ -149,7 +151,7 @@ impl balances::Config for Test {
 
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		0
+		1
 	};
 }
 
@@ -173,6 +175,7 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 }
 
 impl crate::Config for Test {
@@ -183,6 +186,7 @@ impl crate::Config for Test {
 	// type FeeDealer = FlexibleFee;
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type TreasuryAccount = TreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;

@@ -61,7 +61,9 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::RuntimeString;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, NumberFor, UniqueSaturatedInto, Zero},
+	traits::{
+		AccountIdConversion, BlakeTwo256, Block as BlockT, NumberFor, UniqueSaturatedInto, Zero,
+	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
 };
@@ -393,7 +395,7 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = Treasury;
 	/// The ubiquitous event type.
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -871,6 +873,10 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
+parameter_types! {
+	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+}
+
 impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
@@ -879,7 +885,7 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
-	type OnDust = ();
+	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
 	type WeightInfo = ();
 }
 
@@ -896,6 +902,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;

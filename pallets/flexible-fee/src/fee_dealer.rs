@@ -81,7 +81,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for FixedCurrencyFee
 
 			Ok((true, consume_fee_currency_amount))
 		} else {
-			Ok((false, Zero::zero()))
+			Ok((false, fee))
 		}
 	}
 }

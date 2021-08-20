@@ -90,7 +90,7 @@ pub mod pallet {
 		type FeeDealer: FeeDealer<Self::AccountId, PalletBalanceOf<Self>>;
 
 		#[pallet::constant]
-		type TreasuaryAccount: Get<Self::AccountId>;
+		type TreasuryAccount: Get<Self::AccountId>;
 
 		#[pallet::constant]
 		type NativeCurrencyId: Get<CurrencyId>;
@@ -290,10 +290,10 @@ where
 			let fee_currency_id = T::AlternativeFeeCurrencyId::get();
 			T::MultiCurrency::withdraw(fee_currency_id, who, T::Balance::from(fee_amount))
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
-			// deposit the fee_currency amount to Treasuary
+			// deposit the fee_currency amount to Treasury
 			T::MultiCurrency::deposit(
 				fee_currency_id,
-				&T::TreasuaryAccount::get(),
+				&T::TreasuryAccount::get(),
 				T::Balance::from(fee_amount),
 			)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
@@ -427,6 +427,6 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for Pallet<T> {
 				}
 			}
 		}
-		Ok((false, Zero::zero()))
+		Ok((false, fee))
 	}
 }

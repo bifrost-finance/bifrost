@@ -328,26 +328,57 @@ fn ensure_can_charge_fee_v2_should_work() {
 
 		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 1));
 
-		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+		// existential deposit for KSM is 1. So there is no enough KSM for fee charging
+		assert_noop!(
+			<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+				&ALICE,
+				100,
+				WithdrawReasons::TRANSACTION_PAYMENT,
+			),
+			crate::Error::<Test>::NotEnoughBalance
+		);
+
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 1));
+
+		let (sign, amount) = (<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
 			&ALICE,
 			100,
 			WithdrawReasons::TRANSACTION_PAYMENT,
-		));
+		))
+		.unwrap();
+
+		assert_eq!(sign, true);
+		assert_eq!(amount, 1);
 
 		assert_eq!(
 			<Test as crate::Config>::MultiCurrency::free_balance(
 				CurrencyId::Token(TokenSymbol::KSM),
 				&ALICE
 			),
-			0
+			2
 		);
-		assert_eq!(
-			<Test as crate::Config>::MultiCurrency::free_balance(
-				CurrencyId::Native(TokenSymbol::ASG),
-				&ALICE
+
+		assert_noop!(
+			<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+				&ALICE,
+				800,
+				WithdrawReasons::TRANSACTION_PAYMENT,
 			),
-			100
+			crate::Error::<Test>::NotEnoughBalance
 		);
+
+		// deposit enough native token for fee
+		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::ASG), &ALICE, 1000));
+
+		let (sign, amount) = (<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(
+			&ALICE,
+			800,
+			WithdrawReasons::TRANSACTION_PAYMENT,
+		))
+		.unwrap();
+
+		assert_eq!(sign, false);
+		assert_eq!(amount, 0);
 	});
 }
 
@@ -378,6 +409,15 @@ fn withdraw_fee_should_work_v2() {
 		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 1);
+
+		// check the treasury account for fee ksm income
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CurrencyId::Token(TokenSymbol::KSM),
+				&TREASURY_ACCOUNT
+			),
+			1
+		);
 	});
 }
 
@@ -403,12 +443,15 @@ fn correct_and_deposit_fee_should_work_v2() {
 		let corrected_fee = 80;
 		let tip = 8;
 
+		// When the user is charged with KSM as fee, the already_withdrawn returned will be 0.
 		let already_withdrawn = FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8).unwrap();
 
 		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 30);
 
 		// Since the fee withdrawl mode if allowdeath, if the account is destroyed
 		// due to balance less than the existential deposit, no refund will be returned.
+
+		// If already_withdrawn is less than corrected_fee, no refund will be executed
 		assert_ok!(FlexibleFee::correct_and_deposit_fee(
 			&CHARLIE,
 			&info,
@@ -423,7 +466,7 @@ fn correct_and_deposit_fee_should_work_v2() {
 				CurrencyId::Native(TokenSymbol::ASG),
 				&CHARLIE
 			),
-			57
+			30
 		);
 
 		assert_eq!(
