@@ -816,10 +816,12 @@ pub mod pallet {
 
 				let reward = RewardData::new(total, duration)?;
 
-				// Reserve the reward
-				T::MultiCurrency::reserve(token, &creator, reward.total)?;
-
 				rewards.insert(token, reward);
+			}
+
+			// Reserve rewards
+			for (token, reward) in rewards.iter() {
+				T::MultiCurrency::reserve(*token, &creator, reward.total)?;
 			}
 
 			// Construct the PoolInfo
