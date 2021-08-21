@@ -1244,6 +1244,125 @@ fn redeem_all_deposit_from_pool_ongoing_should_fail() {
 }
 
 #[test]
+fn volunteer_to_redeem_should_work() {
+	const PER_BLOCK: Balance = REWARD_AMOUNT / DAYS as Balance;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+		assert_ok!(LM::deposit(Some(USER_2).into(), 0, UNIT));
+
+		run_to_block(DAYS);
+
+		assert_ok!(LM::volunteer_to_redeem(Some(RICHER).into(), 0, Some(USER_1)));
+		assert_ok!(LM::volunteer_to_redeem(Origin::root(), 0, None));
+
+		let pbpd = FixedU128::from((PER_BLOCK, 2 * UNIT));
+		let reward_to_user =
+			(pbpd * (DAYS as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, reward_to_user);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, reward_to_user);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
+
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).free, reward_to_user);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, reward_to_user);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
+
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, UNIT);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).reserved, 0);
+
+		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).free, UNIT);
+		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).reserved, 0);
+
+		assert!(LM::pool(0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
+	});
+}
+
+#[test]
+fn volunteer_to_redeem_with_wrong_pid_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+
+		run_to_block(DAYS);
+
+		assert_noop!(LM::volunteer_to_redeem(Origin::none(), 1, None), Error::<T>::InvalidPoolId);
+	});
+}
+
+#[test]
+fn volunteer_to_redeem_with_wrong_state_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		assert_noop!(
+			LM::volunteer_to_redeem(Origin::none(), 0, None),
+			Error::<T>::InvalidPoolState
+		);
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_noop!(
+			LM::volunteer_to_redeem(Origin::none(), 0, None),
+			Error::<T>::InvalidPoolState
+		);
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+
+		run_to_block(100);
+
+		assert_noop!(
+			LM::volunteer_to_redeem(Origin::none(), 0, None),
+			Error::<T>::InvalidPoolState
+		);
+	});
+}
+
+#[test]
 fn claim_from_pool_ongoing_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_mining_pool(
@@ -1543,7 +1662,27 @@ fn force_retire_pool_approved_should_work() {
 
 #[test]
 fn force_retire_pool_approved_with_no_deposit_should_work() {
-	// TODO
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			Some(CREATOR).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
+
+		assert_ok!(LM::force_retire_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			0
+		));
+
+		assert!(LM::pool(0).is_none());
+	});
 }
 
 #[test]

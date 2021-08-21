@@ -788,6 +788,9 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Help someone to redeem the deposit whose deposited in a liquidity-pool.
+		///
+		/// NOTE: The liquidity-pool should be in retired state.
 		#[pallet::weight(1_000)]
 		pub fn volunteer_to_redeem(
 			_origin: OriginFor<T>,
