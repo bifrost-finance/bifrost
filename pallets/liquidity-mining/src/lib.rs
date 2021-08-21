@@ -324,6 +324,8 @@ type PoolId = u128;
 
 #[frame_support::pallet]
 pub mod pallet {
+	use frame_system::RawOrigin;
+
 	use super::*;
 
 	#[pallet::config]
@@ -453,9 +455,9 @@ pub mod pallet {
 	pub(crate) type TotalDepositData<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
-		AccountIdOf<T>,
-		Blake2_128Concat,
 		PoolId,
+		Blake2_128Concat,
+		AccountIdOf<T>,
 		DepositData<T>,
 	>;
 
@@ -592,12 +594,16 @@ pub mod pallet {
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			let pool_retired = PoolInfo {
-				state: PoolState::Retired,
-				block_retired: Some(frame_system::Pallet::<T>::block_number()),
-				..pool
-			};
-			TotalPoolInfos::<T>::insert(pid, pool_retired);
+			if pool.deposit == Zero::zero() {
+				TotalPoolInfos::<T>::remove(pid);
+			} else {
+				let pool_retired = PoolInfo {
+					state: PoolState::Retired,
+					block_retired: Some(frame_system::Pallet::<T>::block_number()),
+					..pool
+				};
+				TotalPoolInfos::<T>::insert(pid, pool_retired);
+			}
 
 			Self::deposit_event(Event::PoolRetired(pid, r#type, trading_pair));
 
@@ -631,8 +637,8 @@ pub mod pallet {
 
 			ensure!(value >= T::MinimumDepositOfUser::get(), Error::<T>::TooLowToDeposit);
 
-			let mut deposit_data: DepositData<T> =
-				Self::user_deposit_data(&user, &pid).unwrap_or(DepositData::<T>::from_pool(&pool));
+			let mut deposit_data: DepositData<T> = Self::user_deposit_data(pid, user.clone())
+				.unwrap_or(DepositData::<T>::from_pool(&pool));
 
 			if pool.state == PoolState::Ongoing && pool.update_b != deposit_data.update_b {
 				pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
@@ -669,7 +675,7 @@ pub mod pallet {
 			let trading_pair = pool.trading_pair;
 
 			TotalPoolInfos::<T>::insert(pid, pool);
-			TotalDepositData::<T>::insert(user.clone(), pid, deposit_data);
+			TotalDepositData::<T>::insert(pid, user.clone(), deposit_data);
 
 			Self::deposit_event(Event::UserDeposited(pid, r#type, trading_pair, value, user));
 
@@ -705,7 +711,7 @@ pub mod pallet {
 			);
 
 			let mut deposit_data: DepositData<T> =
-				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
+				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T>::NoDepositOfUser)?;
 
 			if pool.update_b != deposit_data.update_b {
 				pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
@@ -773,11 +779,37 @@ pub mod pallet {
 			}
 
 			match deposit_data.deposit.saturated_into() {
-				0u128 => TotalDepositData::<T>::remove(user.clone(), pid),
-				_ => TotalDepositData::<T>::insert(user.clone(), pid, deposit_data),
+				0u128 => TotalDepositData::<T>::remove(pid, user.clone()),
+				_ => TotalDepositData::<T>::insert(pid, user.clone(), deposit_data),
 			}
 
 			Self::deposit_event(Event::UserRedeemed(pid, r#type, trading_pair, try_redeemed, user));
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(1_000)]
+		pub fn volunteer_to_redeem(
+			_origin: OriginFor<T>,
+			pid: PoolId,
+			account: Option<AccountIdOf<T>>,
+		) -> DispatchResultWithPostInfo {
+			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire();
+
+			ensure!(pool.state == PoolState::Retired, Error::<T>::InvalidPoolState);
+
+			let origin = match account {
+				Some(account) => RawOrigin::Signed(account).into(),
+				None => {
+					let (account, _) = TotalDepositData::<T>::iter_prefix(pid)
+						.next()
+						.ok_or(Error::<T>::NoDepositOfUser)?;
+
+					RawOrigin::Signed(account).into()
+				},
+			};
+
+			Self::redeem(origin, pid)?;
 
 			Ok(().into())
 		}
@@ -803,13 +835,13 @@ pub mod pallet {
 			);
 
 			let mut deposit_data: DepositData<T> =
-				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
+				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T>::NoDepositOfUser)?;
 
 			ensure!(pool.update_b != deposit_data.update_b, Error::<T>::TooShortBetweenTwoClaim);
 			pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
 
 			TotalPoolInfos::<T>::insert(pid, pool);
-			TotalDepositData::<T>::insert(user, pid, deposit_data);
+			TotalDepositData::<T>::insert(pid, user, deposit_data);
 
 			Ok(().into())
 		}
