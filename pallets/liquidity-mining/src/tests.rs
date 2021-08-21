@@ -520,7 +520,7 @@ fn deposit_to_mining_pool_approved_should_work() {
 		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 2 * deposit);
 
-		let deposit_data = LM::user_deposit_data(USER_1, 0).unwrap();
+		let deposit_data = LM::user_deposit_data(0, USER_1).unwrap();
 		assert_eq!(deposit_data.deposit, 2 * deposit);
 	});
 }
@@ -557,7 +557,7 @@ fn deposit_to_farming_pool_approved_should_work() {
 		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 2 * deposit);
 
-		let deposit_data = LM::user_deposit_data(USER_1, 0).unwrap();
+		let deposit_data = LM::user_deposit_data(0, USER_1).unwrap();
 		assert_eq!(deposit_data.deposit, 2 * deposit);
 	});
 }
@@ -622,7 +622,7 @@ fn deposit_to_pool_ongoing_should_work() {
 		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 2 * DEPOSIT_AMOUNT);
 
-		let deposit_data = LM::user_deposit_data(USER_2, 0).unwrap();
+		let deposit_data = LM::user_deposit_data(0, USER_2).unwrap();
 		assert_eq!(deposit_data.deposit, DEPOSIT_AMOUNT);
 	});
 }
@@ -671,9 +671,9 @@ fn deposit_to_pool_ongoing_with_init_deposit_should_work() {
 			assert_eq!(reward.claimed, reward_to_user_1);
 		}
 
-		let deposit_data_1 = LM::user_deposit_data(USER_1, 0).unwrap();
+		let deposit_data_1 = LM::user_deposit_data(0, USER_1).unwrap();
 		assert_eq!(deposit_data_1.deposit, 2_000_000);
-		let deposit_data_2 = LM::user_deposit_data(USER_2, 0).unwrap();
+		let deposit_data_2 = LM::user_deposit_data(0, USER_2).unwrap();
 		assert_eq!(deposit_data_2.deposit, 1_000_000);
 	});
 }
@@ -725,9 +725,9 @@ fn double_deposit_to_pool_ongoing_in_diff_block_should_work() {
 			assert_eq!(reward.claimed, reward_to_user_2);
 		}
 
-		let deposit_data_1 = LM::user_deposit_data(USER_1, 0).unwrap();
+		let deposit_data_1 = LM::user_deposit_data(0, USER_1).unwrap();
 		assert_eq!(deposit_data_1.deposit, 1_000_000);
-		let deposit_data_2 = LM::user_deposit_data(USER_2, 0).unwrap();
+		let deposit_data_2 = LM::user_deposit_data(0, USER_2).unwrap();
 		assert_eq!(deposit_data_2.deposit, 2_000_000);
 	});
 }
@@ -771,9 +771,9 @@ fn double_deposit_to_pool_ongoing_in_same_block_should_work() {
 			assert_eq!(reward.claimed, 0);
 		}
 
-		let deposit_data_1 = LM::user_deposit_data(USER_1, 0).unwrap();
+		let deposit_data_1 = LM::user_deposit_data(0, USER_1).unwrap();
 		assert_eq!(deposit_data_1.deposit, 1_000_000);
-		let deposit_data_2 = LM::user_deposit_data(USER_2, 0).unwrap();
+		let deposit_data_2 = LM::user_deposit_data(0, USER_2).unwrap();
 		assert_eq!(deposit_data_2.deposit, 2_000_000);
 	});
 }
@@ -946,7 +946,7 @@ fn redeem_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
-		assert!(LM::user_deposit_data(USER_1, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
 
 		assert_ok!(LM::redeem(Some(USER_2).into(), 0));
 
@@ -959,7 +959,7 @@ fn redeem_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, rewarded);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
-		assert_eq!(LM::user_deposit_data(USER_2, 0).unwrap().deposit, MinimumDeposit::get());
+		assert_eq!(LM::user_deposit_data(0, USER_2).unwrap().deposit, MinimumDeposit::get());
 
 		assert_eq!(LM::pool(0).unwrap().deposit, MinimumDeposit::get());
 	});
@@ -1010,7 +1010,7 @@ fn redeem_from_pool_retired_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
-		assert!(LM::user_deposit_data(USER_1, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
 
 		assert_ok!(LM::redeem(Some(USER_2).into(), 0));
 
@@ -1023,7 +1023,7 @@ fn redeem_from_pool_retired_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, rewarded);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
-		assert!(LM::user_deposit_data(USER_2, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
 
 		assert!(LM::pool(0).is_none());
 
@@ -1080,7 +1080,7 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, old_rewarded);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
-		assert!(LM::user_deposit_data(USER_1, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
 
 		assert_ok!(LM::redeem(Some(USER_2).into(), 0));
 
@@ -1093,7 +1093,7 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, old_rewarded);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
-		assert_eq!(LM::user_deposit_data(USER_2, 0).unwrap().deposit, MinimumDeposit::get());
+		assert_eq!(LM::user_deposit_data(0, USER_2).unwrap().deposit, MinimumDeposit::get());
 
 		assert_eq!(LM::pool(0).unwrap().deposit, MinimumDeposit::get());
 
@@ -1115,7 +1115,7 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, old_rewarded + new_rewarded);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
-		assert!(LM::user_deposit_data(USER_2, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
 
 		assert!(LM::pool(0).is_none());
 
@@ -1536,9 +1536,14 @@ fn force_retire_pool_approved_should_work() {
 		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, 0);
 
 		assert!(LM::pool(0).is_none());
-		assert!(LM::user_deposit_data(USER_1, 0).is_none());
-		assert!(LM::user_deposit_data(USER_2, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
 	});
+}
+
+#[test]
+fn force_retire_pool_approved_with_no_deposit_should_work() {
+	// TODO
 }
 
 #[test]
@@ -1572,6 +1577,8 @@ fn force_retire_pool_ongoing_should_work() {
 			0
 		));
 		assert_noop!(LM::deposit(Some(RICHER).into(), 0, UNIT), Error::<T>::InvalidPoolState);
+
+		run_to_block(DAYS - 100);
 
 		assert_ok!(LM::claim(Some(USER_1).into(), 0));
 		assert_ok!(LM::claim(Some(USER_2).into(), 0));
@@ -1615,8 +1622,8 @@ fn force_retire_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, 0);
 
 		assert!(LM::pool(0).is_none());
-		assert!(LM::user_deposit_data(USER_1, 0).is_none());
-		assert!(LM::user_deposit_data(USER_2, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
 	});
 }
 
@@ -1775,7 +1782,7 @@ fn simple_integration_test() {
 		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, 0);
 
 		assert!(LM::pool(0).is_none());
-		assert!(LM::user_deposit_data(USER_1, 0).is_none());
-		assert!(LM::user_deposit_data(USER_2, 0).is_none());
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
 	});
 }
