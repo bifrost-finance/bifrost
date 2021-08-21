@@ -38,7 +38,7 @@ use sp_std::{
 	prelude::*,
 	vec,
 };
-pub use xcm::{v0::prelude::*, VersionedXcm};
+pub use xcm::VersionedXcm;
 use xcm::{
 	v0::{
 		Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind, Result as XcmResult,
@@ -48,10 +48,17 @@ use xcm::{
 };
 use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
 pub use xcm_executor::XcmExecutor;
+mod calls;
 mod traits;
+pub use calls::*;
 use frame_support::weights::WeightToFeePolynomial;
 pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
+#[allow(unused_imports)]
+use xcm::v0::{
+	prelude::{Parachain, Parent, X1, X2},
+	Order,
+};
 
 #[cfg(test)]
 mod mock;
@@ -213,7 +220,7 @@ impl<
 					halt_on_error: false,
 					xcm: vec![],
 				},
-				DepositAsset { assets: vec![All], dest },
+				Order::DepositAsset { assets: vec![MultiAsset::All], dest },
 			],
 		};
 

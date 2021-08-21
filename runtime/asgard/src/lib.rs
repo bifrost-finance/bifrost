@@ -58,7 +58,7 @@ pub use sp_runtime::BuildStorage;
 use sp_runtime::RuntimeString;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
 };
@@ -71,7 +71,7 @@ use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_flexible_fee::fee_dealer::FixedCurrencyFeeRate;
+use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::xcm_impl::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 	BifrostFilteredAssets, BifrostXcmTransactFilter,
@@ -393,7 +393,7 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = Treasury;
 	/// The ubiquitous event type.
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -900,6 +900,10 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
+parameter_types! {
+	pub BifrostTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+}
+
 impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
@@ -908,7 +912,7 @@ impl orml_tokens::Config for Runtime {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
-	type OnDust = ();
+	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
 	type WeightInfo = ();
 }
 
@@ -925,6 +929,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
 	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
@@ -962,8 +967,10 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:u64 = XCM_WEIGHT.into();
-	pub WithdrawWeight:u64 = XCM_WEIGHT.into();
+	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub WithdrawWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
 		hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
 		hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
@@ -1021,6 +1028,8 @@ impl bifrost_salp::Config for Runtime {
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
 	type WeightToFee = WeightToFee;
+	type AddProxyWeight = AddProxyWeight;
+	type RemoveProxyWeight = RemoveProxyWeight;
 }
 
 parameter_types! {

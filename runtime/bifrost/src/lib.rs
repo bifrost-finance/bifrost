@@ -49,7 +49,7 @@ use sp_core::{
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -62,6 +62,7 @@ use static_assertions::const_assert;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::xcm_impl::{
 	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
 };
@@ -278,7 +279,7 @@ impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
-	type DustRemoval = ();
+	type DustRemoval = Treasury;
 	/// The ubiquitous event type.
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -289,7 +290,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	pub const CouncilMotionDuration: BlockNumber = 3 * DAYS;
+	pub const CouncilMotionDuration: BlockNumber = 2 * DAYS;
 	pub const CouncilMaxProposals: u32 = 100;
 	pub const CouncilMaxMembers: u32 = 100;
 }
@@ -307,41 +308,7 @@ impl pallet_collective::Config<CouncilCollective> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 100 * CENTS;
-	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = deposit(1, 64);
-	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = deposit(0, 32);
-	/// Daily council elections
-	pub const TermDuration: BlockNumber = 24 * HOURS;
-	pub const DesiredMembers: u32 = 19;
-	pub const DesiredRunnersUp: u32 = 19;
-	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
-}
-
-// Make sure that there are no more than MaxMembers members elected via phragmen.
-const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
-
-impl pallet_elections_phragmen::Config for Runtime {
-	type CandidacyBond = CandidacyBond;
-	type ChangeMembers = Council;
-	type Currency = Balances;
-	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
-	type DesiredMembers = DesiredMembers;
-	type DesiredRunnersUp = DesiredRunnersUp;
-	type Event = Event;
-	type InitializeMembers = Council;
-	type KickedMember = Treasury;
-	type LoserCandidate = Treasury;
-	type PalletId = PhragmenElectionPalletId;
-	type TermDuration = TermDuration;
-	type VotingBondBase = VotingBondBase;
-	type VotingBondFactor = VotingBondFactor;
-	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	pub const TechnicalMotionDuration: BlockNumber = 3 * DAYS;
+	pub const TechnicalMotionDuration: BlockNumber = 2 * DAYS;
 	pub const TechnicalMaxProposals: u32 = 100;
 	pub const TechnicalMaxMembers: u32 = 100;
 }
@@ -391,14 +358,47 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
+	pub const CandidacyBond: Balance = 100 * CENTS;
+	// 1 storage item created, key size is 32 bytes, value size is 16+16.
+	pub const VotingBondBase: Balance = deposit(1, 64);
+	// additional data per vote is 32 bytes (account id).
+	pub const VotingBondFactor: Balance = deposit(0, 32);
+	/// Daily council elections
+	pub const TermDuration: BlockNumber = 24 * HOURS;
+	pub const DesiredMembers: u32 = 7;
+	pub const DesiredRunnersUp: u32 = 7;
+	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
+}
+
+// Make sure that there are no more than MaxMembers members elected via phragmen.
+const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
+
+impl pallet_elections_phragmen::Config for Runtime {
+	type CandidacyBond = CandidacyBond;
+	type ChangeMembers = Council;
+	type Currency = Balances;
+	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
+	type DesiredMembers = DesiredMembers;
+	type DesiredRunnersUp = DesiredRunnersUp;
+	type Event = Event;
+	type InitializeMembers = Council;
+	type KickedMember = Treasury;
+	type LoserCandidate = Treasury;
+	type PalletId = PhragmenElectionPalletId;
+	type TermDuration = TermDuration;
+	type VotingBondBase = VotingBondBase;
+	type VotingBondFactor = VotingBondFactor;
+	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
 	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
 	pub const VotingPeriod: BlockNumber = 7 * DAYS;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub const MinimumDeposit: Balance = 50 * DOLLARS;
-	pub const EnactmentPeriod: BlockNumber = 8 * DAYS;
+	pub const MinimumDeposit: Balance = 100 * DOLLARS;
+	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
 	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
-	// One cent: $10,000 / MB
-	pub const PreimageByteDeposit: Balance = 100 * MILLICENTS;
+	pub const PreimageByteDeposit: Balance = 10 * MILLICENTS;
 	pub const InstantAllowed: bool = true;
 	pub const MaxVotes: u32 = 100;
 	pub const MaxProposals: u32 = 100;
@@ -458,7 +458,7 @@ impl pallet_democracy::Config for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
+	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(2);
 
@@ -484,7 +484,7 @@ type ApproveOrigin = EnsureOneOf<
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
 	type Burn = Burn;
-	type BurnDestination = ();
+	type BurnDestination = Treasury;
 	type Currency = Balances;
 	type Event = Event;
 	type MaxApprovals = MaxApprovals;
@@ -495,7 +495,7 @@ impl pallet_treasury::Config for Runtime {
 	type RejectOrigin = MoreThanHalfCouncil;
 	type SpendFunds = Bounties;
 	type SpendPeriod = SpendPeriod;
-	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
 }
 
 impl pallet_bounties::Config for Runtime {
@@ -507,7 +507,7 @@ impl pallet_bounties::Config for Runtime {
 	type DataDepositPerByte = DataDepositPerByte;
 	type Event = Event;
 	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
 }
 
 impl pallet_tips::Config for Runtime {
@@ -523,7 +523,7 @@ impl pallet_tips::Config for Runtime {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type FeeMultiplierUpdate = ();
-	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 }
@@ -818,53 +818,29 @@ impl orml_tokens::Config for Runtime {
 
 // orml runtime end
 
-// parameter_types! {
-// 	pub const ProposalBond: Permill = Permill::from_percent(5);
-// 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
-// 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-// 	pub const Burn: Permill = Permill::from_perthousand(2);
-//
-// 	pub const TipCountdown: BlockNumber = 1 * DAYS;
-// 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-// 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-// 	pub const DataDepositPerByte: Balance = 10 * CENTS;
-// 	pub const BountyDepositBase: Balance = 1 * DOLLARS;
-// 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-// 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
-// 	pub const MaximumReasonLength: u32 = 16384;
-// 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-// 	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
-// 	pub const MaxApprovals: u32 = 100;
-// }
-//
-// impl pallet_treasury::Config for Runtime {
-// 	type ApproveOrigin = EnsureRoot<AccountId>;
-// 	type Burn = Burn;
-// 	type BurnDestination = Treasury;
-// 	type Currency = Balances;
-// 	type Event = Event;
-// 	type MaxApprovals = MaxApprovals;
-// 	type OnSlash = Treasury;
-// 	type PalletId = TreasuryPalletId;
-// 	type ProposalBond = ProposalBond;
-// 	type ProposalBondMinimum = ProposalBondMinimum;
-// 	type RejectOrigin = EnsureRoot<AccountId>;
-// 	type SpendFunds = Bounties;
-// 	type SpendPeriod = SpendPeriod;
-// 	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
-// }
-//
-// impl pallet_bounties::Config for Runtime {
-// 	type BountyCuratorDeposit = BountyCuratorDeposit;
-// 	type BountyDepositBase = BountyDepositBase;
-// 	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-// 	type BountyUpdatePeriod = BountyUpdatePeriod;
-// 	type BountyValueMinimum = BountyValueMinimum;
-// 	type DataDepositPerByte = DataDepositPerByte;
-// 	type Event = Event;
-// 	type MaximumReasonLength = MaximumReasonLength;
-// 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
-// }
+// Bifrost modules start
+parameter_types! {
+	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+}
+
+impl bifrost_flexible_fee::Config for Runtime {
+	type Balance = Balance;
+	type Currency = Balances;
+	type DexOperator = ();
+	// type FeeDealer = FlexibleFee;
+	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type NativeCurrencyId = NativeCurrencyId;
+	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type OnUnbalanced = Treasury;
+	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
+}
+
+// Bifrost modules end
 
 construct_runtime! {
 	pub enum Runtime where
@@ -899,9 +875,6 @@ construct_runtime! {
 		Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
 		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
 		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
-		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 36,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 37,
-		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 38,
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
@@ -916,9 +889,17 @@ construct_runtime! {
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 
+		// Treasury stuff
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 61,
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
+		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
+
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
+
+		// Bifrost modules
+		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 	}
 }
 
@@ -1075,6 +1056,16 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+			}
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn dispatch_benchmark(
@@ -1095,13 +1086,14 @@ impl_runtime_apis! {
 			// Adding the pallet you will perform thee benchmarking
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
-			// add_benchmark!(params, batches, pallet_bounties, Bounties);
+			add_benchmark!(params, batches, pallet_bounties, Bounties);
 			add_benchmark!(params, batches, pallet_indices, Indices);
 			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			// add_benchmark!(params, batches, pallet_treasury, Treasury);
+			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
+			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
