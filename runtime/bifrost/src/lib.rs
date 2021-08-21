@@ -1106,7 +1106,7 @@ impl_runtime_apis! {
 			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
 			match rs {
 				Ok(val) => val,
-				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),
+				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
 			}
 		}
 	}
