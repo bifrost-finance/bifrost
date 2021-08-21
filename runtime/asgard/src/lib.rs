@@ -71,7 +71,7 @@ use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_flexible_fee::fee_dealer::FixedCurrencyFeeRate;
+use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::xcm_impl::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 	BifrostFilteredAssets, BifrostXcmTransactFilter,

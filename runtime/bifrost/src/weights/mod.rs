@@ -20,6 +20,7 @@
 
 //! A list of the different weight modules for our runtime.
 
+pub mod bifrost_flexible_fee;
 pub mod frame_system;
 pub mod orml_tokens;
 pub mod pallet_balances;

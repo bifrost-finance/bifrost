@@ -73,7 +73,8 @@ pub mod pallet {
 			+ Copy
 			+ MaybeSerializeDeserialize
 			+ Into<u128>
-			+ From<PalletBalanceOf<Self>>;
+			+ From<PalletBalanceOf<Self>>
+			+ Into<PalletBalanceOf<Self>>;
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
@@ -87,7 +88,7 @@ pub mod pallet {
 		/// Handler for the unbalanced decrease
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
 		type DexOperator: ExportZenlink<Self::AccountId>;
-		type FeeDealer: FeeDealer<Self::AccountId, PalletBalanceOf<Self>>;
+		type FeeDealer: FeeDealer<Self::AccountId, PalletBalanceOf<Self>, CurrencyIdOf<Self>>;
 
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
@@ -185,56 +186,6 @@ impl<T: Config> Pallet<T> {
 			charge_order_list = DefaultFeeChargeOrderList::<T>::get();
 		}
 		charge_order_list
-	}
-
-	/// This function is for runtime-api to call
-	pub fn cal_fee_token_and_amount(
-		who: &T::AccountId,
-		fee: PalletBalanceOf<T>,
-	) -> Result<(CurrencyId, T::Balance), DispatchError> {
-		let mut fee_token_id_out: CurrencyIdOf<T> = T::NativeCurrencyId::get();
-		let mut fee_token_amount_out: T::Balance = T::Balance::from(0 as u32);
-
-		// get the user defined fee charge order list.
-		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
-		let amount_out: AssetBalance = fee.saturated_into();
-		let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
-			.map_err(|_| DispatchError::Other("Conversion Error"))?;
-
-		// charge the fee by the order of the above order list.
-		// first to check whether the user has the asset. If no, pass it. If yes, try to make
-		// transaction in the DEX in exchange for BNC
-		for currency_id in user_fee_charge_order_list {
-			// If it is mainnet currency
-			if currency_id == T::NativeCurrencyId::get() {
-				// check native balance if is enough
-				let native_balance = <<T as Config>::Currency as Currency<
-					<T as frame_system::Config>::AccountId,
-				>>::free_balance(who);
-
-				if native_balance >= fee.into() {
-					fee_token_amount_out = fee.into();
-					break;
-				}
-			} else {
-				// If it is other assets
-				let asset_balance = T::MultiCurrency::total_balance(currency_id, who);
-				let token_asset_id: AssetId = AssetId::try_from(currency_id)
-					.map_err(|_| DispatchError::Other("Conversion Error"))?;
-				let path = vec![native_asset_id.clone(), token_asset_id];
-
-				let amount_vec = T::DexOperator::get_amount_in_by_path(amount_out, &path)?;
-				let amount_in = amount_vec[0];
-				let amount_in_balance = amount_in.saturated_into();
-
-				if asset_balance >= amount_in_balance {
-					fee_token_id_out = currency_id;
-					fee_token_amount_out = amount_in_balance;
-					break;
-				}
-			}
-		}
-		Ok((fee_token_id_out, fee_token_amount_out))
 	}
 }
 
@@ -347,7 +298,7 @@ where
 	}
 }
 
-impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for Pallet<T> {
+impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for Pallet<T> {
 	/// Make sure there are enough BNC to be deducted if the user has assets in other form of tokens
 	/// rather than BNC.
 	fn ensure_can_charge_fee(
@@ -428,5 +379,55 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for Pallet<T> {
 			}
 		}
 		Ok((false, fee))
+	}
+
+	/// This function is for runtime-api to call
+	fn cal_fee_token_and_amount(
+		who: &T::AccountId,
+		fee: PalletBalanceOf<T>,
+	) -> Result<(CurrencyId, PalletBalanceOf<T>), DispatchError> {
+		let mut fee_token_id_out: CurrencyIdOf<T> = T::NativeCurrencyId::get();
+		let mut fee_token_amount_out: T::Balance = T::Balance::from(0 as u32);
+
+		// get the user defined fee charge order list.
+		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);
+		let amount_out: AssetBalance = fee.saturated_into();
+		let native_asset_id: AssetId = AssetId::try_from(T::NativeCurrencyId::get())
+			.map_err(|_| DispatchError::Other("Conversion Error"))?;
+
+		// charge the fee by the order of the above order list.
+		// first to check whether the user has the asset. If no, pass it. If yes, try to make
+		// transaction in the DEX in exchange for BNC
+		for currency_id in user_fee_charge_order_list {
+			// If it is mainnet currency
+			if currency_id == T::NativeCurrencyId::get() {
+				// check native balance if is enough
+				let native_balance = <<T as Config>::Currency as Currency<
+					<T as frame_system::Config>::AccountId,
+				>>::free_balance(who);
+
+				if native_balance >= fee.into() {
+					fee_token_amount_out = fee.into();
+					break;
+				}
+			} else {
+				// If it is other assets
+				let asset_balance = T::MultiCurrency::total_balance(currency_id, who);
+				let token_asset_id: AssetId = AssetId::try_from(currency_id)
+					.map_err(|_| DispatchError::Other("Conversion Error"))?;
+				let path = vec![native_asset_id.clone(), token_asset_id];
+
+				let amount_vec = T::DexOperator::get_amount_in_by_path(amount_out, &path)?;
+				let amount_in = amount_vec[0];
+				let amount_in_balance = amount_in.saturated_into();
+
+				if asset_balance >= amount_in_balance {
+					fee_token_id_out = currency_id;
+					fee_token_amount_out = amount_in_balance;
+					break;
+				}
+			}
+		}
+		Ok((fee_token_id_out, fee_token_amount_out.into()))
 	}
 }
