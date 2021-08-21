@@ -63,8 +63,12 @@ use static_assertions::const_assert;
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
-use bifrost_runtime_common::xcm_impl::{
-	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
+use bifrost_runtime_common::{
+	xcm_impl::{
+		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
+		BifrostFilteredAssets, BifrostXcmTransactFilter,
+	},
+	SlowAdjustingFeeUpdate,
 };
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -522,7 +526,7 @@ impl pallet_tips::Config for Runtime {
 }
 
 impl pallet_transaction_payment::Config for Runtime {
-	type FeeMultiplierUpdate = ();
+	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
 	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
