@@ -79,6 +79,8 @@ pub struct PoolInfo<T: Config> {
 	state: PoolState,
 	/// The block number when the liquidity-pool startup
 	block_startup: Option<BlockNumberFor<T>>,
+	/// The block number when the liquidity-pool retired
+	block_retired: Option<BlockNumberFor<T>>,
 }
 
 impl<T: Config> PoolInfo<T> {
@@ -86,8 +88,11 @@ impl<T: Config> PoolInfo<T> {
 	pub(crate) fn try_update(mut self) -> Self {
 		// When pool in `PoolState::Ongoing` or `PoolState::Retired`
 		if let Some(block_startup) = self.block_startup {
-			let block_end = self.duration + block_startup;
-			let n = min(frame_system::Pallet::<T>::block_number(), block_end);
+			let block_retired = match self.block_retired {
+				Some(block_retired) => block_retired,
+				None => self.duration + block_startup,
+			};
+			let n = min(frame_system::Pallet::<T>::block_number(), block_retired);
 
 			for (_, reward) in self.rewards.iter_mut() {
 				reward.update(self.deposit, block_startup, self.update_b, n);
@@ -102,13 +107,17 @@ impl<T: Config> PoolInfo<T> {
 	/// Trying to change the state from `PoolState::Approved` to `PoolState::Ongoing`
 	///
 	/// __NOTE__: Only called in the `Hook`
-	pub(crate) fn try_startup(mut self, pid: PoolId, n: BlockNumberFor<T>) -> Self {
+	pub(crate) fn try_startup(mut self, n: BlockNumberFor<T>) -> Self {
 		if self.state == PoolState::Approved {
 			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
 				self.block_startup = Some(n);
 				self.state = PoolState::Ongoing;
 
-				Pallet::<T>::deposit_event(Event::PoolStarted(pid, self.r#type, self.trading_pair));
+				Pallet::<T>::deposit_event(Event::PoolStarted(
+					self.pool_id,
+					self.r#type,
+					self.trading_pair,
+				));
 			}
 		}
 
@@ -116,16 +125,18 @@ impl<T: Config> PoolInfo<T> {
 	}
 
 	/// Trying to change the state from `PoolState::Ongoing` to `PoolState::Retired`
-	pub(crate) fn try_retire(mut self, pid: PoolId) -> Self {
+	pub(crate) fn try_retire(mut self) -> Self {
 		if self.state == PoolState::Ongoing {
 			let n = frame_system::Pallet::<T>::block_number();
 
 			if let Some(block_startup) = self.block_startup {
-				if n >= block_startup + self.duration {
+				let block_retired = block_startup + self.duration;
+				if n >= block_retired {
 					self.state = PoolState::Retired;
+					self.block_retired = Some(block_retired);
 
 					Pallet::<T>::deposit_event(Event::PoolRetired(
-						pid,
+						self.pool_id,
 						self.r#type,
 						self.trading_pair,
 					));
@@ -140,12 +151,12 @@ impl<T: Config> PoolInfo<T> {
 	pub(crate) fn try_settle_and_transfer(
 		&mut self,
 		deposit_data: &mut DepositData<T>,
-		pid: PoolId,
 		user: AccountIdOf<T>,
 	) -> Result<(), DispatchError> {
 		let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T>)>::new();
 
-		if self.state == PoolState::Ongoing || self.state == PoolState::Retired {
+		// The pool was startup before.
+		if let Some(_block_startup) = self.block_startup {
 			for (rtoken, reward) in self.rewards.iter_mut() {
 				let v_new = reward.gain_avg;
 				if let Some(gain_avg) = deposit_data.gain_avgs.get(rtoken) {
@@ -180,7 +191,7 @@ impl<T: Config> PoolInfo<T> {
 		}
 
 		Pallet::<T>::deposit_event(Event::UserClaimed(
-			pid,
+			self.pool_id,
 			self.r#type,
 			self.trading_pair,
 			to_rewards,
@@ -567,6 +578,32 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		#[pallet::weight(1_000)]
+		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
+			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire();
+
+			ensure!(
+				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
+				Error::<T>::InvalidPoolState
+			);
+
+			let r#type = pool.r#type;
+			let trading_pair = pool.trading_pair;
+
+			let pool_retired = PoolInfo {
+				state: PoolState::Retired,
+				block_retired: Some(frame_system::Pallet::<T>::block_number()),
+				..pool
+			};
+			TotalPoolInfos::<T>::insert(pid, pool_retired);
+
+			Self::deposit_event(Event::PoolRetired(pid, r#type, trading_pair));
+
+			Ok(().into())
+		}
+
 		/// User deposits some token to a liquidity-pool.
 		///
 		/// The extrinsic will:
@@ -585,7 +622,7 @@ pub mod pallet {
 			let user = ensure_signed(origin)?;
 
 			let mut pool: PoolInfo<T> =
-				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
+				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire().try_update();
 
 			ensure!(
 				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
@@ -598,7 +635,7 @@ pub mod pallet {
 				Self::user_deposit_data(&user, &pid).unwrap_or(DepositData::<T>::from_pool(&pool));
 
 			if pool.state == PoolState::Ongoing && pool.update_b != deposit_data.update_b {
-				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+				pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
 			}
 
 			deposit_data.deposit = deposit_data.deposit.saturating_add(value);
@@ -660,7 +697,7 @@ pub mod pallet {
 			let user = ensure_signed(origin)?;
 
 			let mut pool: PoolInfo<T> =
-				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
+				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire().try_update();
 
 			ensure!(
 				pool.state == PoolState::Ongoing || pool.state == PoolState::Retired,
@@ -671,7 +708,7 @@ pub mod pallet {
 				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
 
 			if pool.update_b != deposit_data.update_b {
-				pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+				pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
 			}
 
 			// Keep minimum deposit in pool when the pool is ongoing.
@@ -758,7 +795,7 @@ pub mod pallet {
 			let user = ensure_signed(origin)?;
 
 			let mut pool: PoolInfo<T> =
-				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire(pid).try_update();
+				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire().try_update();
 
 			ensure!(
 				pool.state == PoolState::Ongoing || pool.state == PoolState::Retired,
@@ -769,7 +806,7 @@ pub mod pallet {
 				Self::user_deposit_data(&user, &pid).ok_or(Error::<T>::NoDepositOfUser)?;
 
 			ensure!(pool.update_b != deposit_data.update_b, Error::<T>::TooShortBetweenTwoClaim);
-			pool.try_settle_and_transfer(&mut deposit_data, pid, user.clone())?;
+			pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
 
 			TotalPoolInfos::<T>::insert(pid, pool);
 			TotalDepositData::<T>::insert(user, pid, deposit_data);
@@ -842,6 +879,7 @@ pub mod pallet {
 				update_b: Zero::zero(),
 				state: PoolState::UnderAudit,
 				block_startup: None,
+				block_retired: None,
 			};
 
 			TotalPoolInfos::<T>::insert(pool_id, mining_pool);
@@ -895,7 +933,7 @@ pub mod pallet {
 			// Check whether pool-activated is meet the startup condition
 			for pid in Self::approved_pids() {
 				if let Some(mut pool) = Self::pool(pid) {
-					pool = pool.try_startup(pid, n);
+					pool = pool.try_startup(n);
 
 					if pool.state == PoolState::Ongoing {
 						ApprovedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
