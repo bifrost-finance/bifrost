@@ -22,17 +22,24 @@
 use super::*;
 use crate::Config;
 
-pub trait FeeDealer<AccountId, Balance> {
+pub trait FeeDealer<AccountId, Balance, CurrencyId> {
 	fn ensure_can_charge_fee(
 		who: &AccountId,
 		fee: Balance,
 		reason: WithdrawReasons,
 	) -> Result<(bool, Balance), DispatchError>;
+
+	fn cal_fee_token_and_amount(
+		who: &AccountId,
+		fee: Balance,
+	) -> Result<(CurrencyId, Balance), DispatchError>;
 }
 
 pub struct FixedCurrencyFeeRate<T: Config>(PhantomData<T>);
 
-impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for FixedCurrencyFeeRate<T> {
+impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>>
+	for FixedCurrencyFeeRate<T>
+{
 	/// Make sure there is enough BNC to be deducted if the user has assets in other form of tokens
 	/// rather than BNC.
 	fn ensure_can_charge_fee(
@@ -82,6 +89,23 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>> for FixedCurrencyFee
 			Ok((true, consume_fee_currency_amount))
 		} else {
 			Ok((false, fee))
+		}
+	}
+
+	/// This function is for runtime-api to call
+	fn cal_fee_token_and_amount(
+		who: &T::AccountId,
+		fee: PalletBalanceOf<T>,
+	) -> Result<(CurrencyId, PalletBalanceOf<T>), DispatchError> {
+		// Make sure there are enough BNC to be deducted if the user has assets in other form of
+		// tokens rather than BNC.
+		let withdraw_reason = WithdrawReasons::TRANSACTION_PAYMENT;
+		let (fee_sign, fee_amount) =
+			T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)?;
+
+		match fee_sign {
+			true => Ok((T::AlternativeFeeCurrencyId::get(), fee_amount.into())),
+			false => Ok((T::NativeCurrencyId::get(), fee_amount.into())),
 		}
 	}
 }
