@@ -67,7 +67,7 @@ pub fn bifrost_genesis(
 		council_membership: Default::default(),
 		technical_membership: Default::default(),
 		treasury: Default::default(),
-		elections: Default::default(),
+		phragmen_election: Default::default(),
 		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
