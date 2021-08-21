@@ -1834,6 +1834,14 @@ fn simple_integration_test() {
 			0
 		));
 
+		let reserved = PER_BLOCK * DAYS as Balance;
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).free, REWARD_AMOUNT - reserved);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).reserved, reserved);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).free, REWARD_AMOUNT - reserved);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, reserved);
+
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
 
