@@ -942,8 +942,10 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:u64 = XCM_WEIGHT.into();
-	pub WithdrawWeight:u64 = XCM_WEIGHT.into();
+	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub WithdrawWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex![
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	]
@@ -997,6 +999,8 @@ impl bifrost_salp::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
 	type WeightToFee = WeightToFee;
+	type AddProxyWeight = AddProxyWeight;
+	type RemoveProxyWeight = RemoveProxyWeight;
 }
 
 parameter_types! {
