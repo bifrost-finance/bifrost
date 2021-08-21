@@ -49,6 +49,7 @@ use xcm::{
 use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
 pub use xcm_executor::XcmExecutor;
 mod traits;
+use frame_support::weights::WeightToFeePolynomial;
 pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
 
@@ -151,10 +152,15 @@ impl<
 	}
 }
 
-pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight>(PhantomData<(XcmSender, BaseXcmWeight)>);
+pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>(
+	PhantomData<(XcmSender, BaseXcmWeight, WeightToFee)>,
+);
 
-impl<XcmSender: SendXcm, BaseXcmWeight: Get<u64>> BifrostXcmExecutor
-	for BifrostXcmAdaptor<XcmSender, BaseXcmWeight>
+impl<
+		XcmSender: SendXcm,
+		BaseXcmWeight: Get<u64>,
+		WeightToFee: WeightToFeePolynomial<Balance = u128>,
+	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>
 {
 	fn transact_weight(weight: u64) -> u64 {
 		return weight + 4 * BaseXcmWeight::get();
@@ -169,7 +175,7 @@ impl<XcmSender: SendXcm, BaseXcmWeight: Get<u64>> BifrostXcmExecutor
 		let mut message = Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: MultiLocation::Null,
-				amount: Self::transact_weight(weight) as u128,
+				amount: WeightToFee::calc(&Self::transact_weight(weight)),
 			}],
 			effects: vec![Order::BuyExecution {
 				fees: MultiAsset::All,
