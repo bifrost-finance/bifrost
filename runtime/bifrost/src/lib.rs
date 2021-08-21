@@ -49,7 +49,7 @@ use sp_core::{
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -62,6 +62,7 @@ use static_assertions::const_assert;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::xcm_impl::{
 	BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets, BifrostXcmTransactFilter,
 };
@@ -523,7 +524,7 @@ impl pallet_tips::Config for Runtime {
 
 impl pallet_transaction_payment::Config for Runtime {
 	type FeeMultiplierUpdate = ();
-	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
+	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 }
@@ -818,6 +819,27 @@ impl orml_tokens::Config for Runtime {
 
 // orml runtime end
 
+parameter_types! {
+	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+}
+
+impl bifrost_flexible_fee::Config for Runtime {
+	type Balance = Balance;
+	type Currency = Balances;
+	type DexOperator = ();
+	// type FeeDealer = FlexibleFee;
+	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type NativeCurrencyId = NativeCurrencyId;
+	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
+	type OnUnbalanced = Treasury;
+	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
+}
+
 // parameter_types! {
 // 	pub const ProposalBond: Permill = Permill::from_percent(5);
 // 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
@@ -919,6 +941,9 @@ construct_runtime! {
 		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
+
+		// Bifrost modules
+		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 104,
 	}
 }
 
@@ -1075,6 +1100,16 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
+		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
+			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
+			match rs {
+				Ok(val) => val,
+				_ => (CurrencyId::Native(TokenSymbol::ASG), Zero::zero()),
+			}
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn dispatch_benchmark(
@@ -1102,6 +1137,7 @@ impl_runtime_apis! {
 			// add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
+			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

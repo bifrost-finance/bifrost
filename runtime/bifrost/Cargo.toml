@@ -80,6 +80,8 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 # Bifrost
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
+bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
+bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -143,6 +145,8 @@ std = [
 	"orml-traits/std",
 	"orml-tokens/std",
 	"bifrost-runtime-common/std",
+	"bifrost-flexible-fee/std",
+	"bifrost-flexible-fee-rpc-runtime-api/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 
@@ -163,6 +167,7 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"bifrost-flexible-fee/runtime-benchmarks",
 ]
 
 try-runtime = [
