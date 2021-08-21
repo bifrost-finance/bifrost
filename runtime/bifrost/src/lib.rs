@@ -818,6 +818,7 @@ impl orml_tokens::Config for Runtime {
 
 // orml runtime end
 
+// Bifrost modules start
 parameter_types! {
 	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
@@ -839,53 +840,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
 }
 
-// parameter_types! {
-// 	pub const ProposalBond: Permill = Permill::from_percent(5);
-// 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
-// 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-// 	pub const Burn: Permill = Permill::from_perthousand(2);
-//
-// 	pub const TipCountdown: BlockNumber = 1 * DAYS;
-// 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-// 	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-// 	pub const DataDepositPerByte: Balance = 10 * CENTS;
-// 	pub const BountyDepositBase: Balance = 1 * DOLLARS;
-// 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-// 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
-// 	pub const MaximumReasonLength: u32 = 16384;
-// 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-// 	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
-// 	pub const MaxApprovals: u32 = 100;
-// }
-//
-// impl pallet_treasury::Config for Runtime {
-// 	type ApproveOrigin = EnsureRoot<AccountId>;
-// 	type Burn = Burn;
-// 	type BurnDestination = Treasury;
-// 	type Currency = Balances;
-// 	type Event = Event;
-// 	type MaxApprovals = MaxApprovals;
-// 	type OnSlash = Treasury;
-// 	type PalletId = TreasuryPalletId;
-// 	type ProposalBond = ProposalBond;
-// 	type ProposalBondMinimum = ProposalBondMinimum;
-// 	type RejectOrigin = EnsureRoot<AccountId>;
-// 	type SpendFunds = Bounties;
-// 	type SpendPeriod = SpendPeriod;
-// 	type WeightInfo = weights::pallet_treasury::WeightInfo<Runtime>;
-// }
-//
-// impl pallet_bounties::Config for Runtime {
-// 	type BountyCuratorDeposit = BountyCuratorDeposit;
-// 	type BountyDepositBase = BountyDepositBase;
-// 	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-// 	type BountyUpdatePeriod = BountyUpdatePeriod;
-// 	type BountyValueMinimum = BountyValueMinimum;
-// 	type DataDepositPerByte = DataDepositPerByte;
-// 	type Event = Event;
-// 	type MaximumReasonLength = MaximumReasonLength;
-// 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
-// }
+// Bifrost modules end
 
 construct_runtime! {
 	pub enum Runtime where
@@ -944,7 +899,7 @@ construct_runtime! {
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 
 		// Bifrost modules
-		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 104,
+		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 	}
 }
 
