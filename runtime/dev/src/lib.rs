@@ -82,7 +82,7 @@ use bifrost_runtime_common::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter,
 	},
-	SlowAdjustingFeeUpdate,
+	RelaychainSubAccountId, SlowAdjustingFeeUpdate,
 };
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
@@ -101,7 +101,9 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
+use xcm::v0::{
+	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm,
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
@@ -953,6 +955,17 @@ parameter_types! {
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	]
 	.into();
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(RelaychainSubAccountId::Salp as u16);
+}
+
+pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::X2(
+		Junction::Parent,
+		Junction::AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		},
+	)
 }
 
 pub struct EnsureConfirmAsMultiSig;
@@ -1004,6 +1017,8 @@ impl bifrost_salp::Config for Runtime {
 	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
 	type RemoveProxyWeight = RemoveProxyWeight;
+	type XcmTransfer = XTokens;
+	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 }
 
 parameter_types! {

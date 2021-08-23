@@ -177,7 +177,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, ParaId, TransferOriginType};
-	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
+	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
@@ -256,8 +256,13 @@ pub mod pallet {
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
+		/// Parachain Id
 		type SelfParaId: Get<u32>;
 
+		/// Weight to Fee calculator
+		type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
+
+		/// Xcm weight
 		#[pallet::constant]
 		type BaseXcmWeight: Get<u64>;
 
@@ -267,13 +272,18 @@ pub mod pallet {
 		#[pallet::constant]
 		type WithdrawWeight: Get<u64>;
 
-		type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
-
 		#[pallet::constant]
 		type AddProxyWeight: Get<u64>;
 
 		#[pallet::constant]
 		type RemoveProxyWeight: Get<u64>;
+
+		/// The interface to Cross-chain transfer.
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+
+		/// The sovereign sub-account for where the staking currencies are sent to.
+		#[pallet::constant]
+		type SovereignSubAccountLocation: Get<MultiLocation>;
 	}
 
 	#[pallet::pallet]
@@ -316,6 +326,8 @@ pub mod pallet {
 		/// Proxy
 		ProxyAdded(AccountIdOf<T>),
 		ProxyRemoved(AccountIdOf<T>),
+		/// Mint
+		Minted(AccountIdOf<T>, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -593,7 +605,7 @@ pub mod pallet {
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_contribute(origin, index, value)
 					.map_err(|_e| Error::<T>::XcmFailed)?;
 			}
@@ -697,7 +709,7 @@ pub mod pallet {
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
 			ensure!(can, Error::<T>::InvalidFundStatus);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_withdraw(origin, index).map_err(|_| Error::<T>::XcmFailed)?;
 			}
 
@@ -775,7 +787,7 @@ pub mod pallet {
 				Error::<T>::NotEnoughReservedAssetsToRefund
 			);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_redeem(origin, index, contributed)
 					.map_err(|_| Error::<T>::XcmFailed)?;
 			}
@@ -874,7 +886,7 @@ pub mod pallet {
 			let status = Self::redeem_status(who.clone(), (index, fund.first_slot, fund.last_slot));
 			ensure!(status == RedeemStatus::Idle, Error::<T>::InvalidRedeemStatus);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_redeem(origin.clone(), index, value)
 					.map_err(|_| Error::<T>::XcmFailed)?;
 			}
@@ -1041,6 +1053,29 @@ pub mod pallet {
 			Self::xcm_ump_remove_proxy(delegate.clone()).map_err(|_| Error::<T>::XcmFailed)?;
 
 			Self::deposit_event(Event::ProxyRemoved(delegate));
+
+			Ok(())
+		}
+
+		/// transfer to parachain salp account
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		#[transactional]
+		pub fn mint(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			T::XcmTransfer::transfer(
+				who.clone(),
+				T::RelayChainToken::get(),
+				amount,
+				T::SovereignSubAccountLocation::get(),
+				3 * T::BaseXcmWeight::get(),
+			)?;
+
+			Self::deposit_event(Event::<T>::Minted(who, amount));
 
 			Ok(())
 		}
