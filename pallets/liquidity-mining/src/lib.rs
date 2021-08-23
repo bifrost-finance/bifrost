@@ -206,6 +206,7 @@ impl<T: Config> PoolInfo<T> {
 pub enum PoolType {
 	Mining,
 	Farming,
+	EBFarming,
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
@@ -373,6 +374,7 @@ pub mod pallet {
 		InvalidPoolId,
 		InvalidPoolState,
 		InvalidPoolOwner,
+		InvalidPooltype,
 		/// Find duplicate reward when creating the liquidity-pool
 		DuplicateReward,
 		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
@@ -529,6 +531,35 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000)]
+		pub fn create_eb_farming_pool(
+			origin: OriginFor<T>,
+			index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+			main_reward: (CurrencyId, BalanceOf<T>),
+			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			#[pallet::compact] duration: BlockNumberFor<T>,
+			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
+			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+		) -> DispatchResultWithPostInfo {
+			#[allow(non_snake_case)]
+			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
+
+			Self::create_pool(
+				origin,
+				trading_pair,
+				main_reward,
+				option_rewards,
+				PoolType::EBFarming,
+				duration,
+				min_deposit_to_start,
+				after_block_to_start,
+			)?;
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(1_000)]
 		pub fn approve_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -651,24 +682,49 @@ pub mod pallet {
 				Error::<T>::ExceedMaximumDeposit
 			);
 
-			// To lock the deposit
-			if pool.r#type == PoolType::Mining {
-				let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
+			// To "lock" the deposit
+			match pool.r#type {
+				PoolType::Mining => {
+					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
 
-				T::MultiCurrency::ensure_can_withdraw(lpt, &user, value)
-					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
+					T::MultiCurrency::ensure_can_withdraw(lpt, &user, value)
+						.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
 
-				T::MultiCurrency::extend_lock(DEPOSIT_ID, lpt, &user, deposit_data.deposit)?;
-			} else {
-				let (token_a, token_b) = pool.trading_pair;
+					T::MultiCurrency::extend_lock(DEPOSIT_ID, lpt, &user, deposit_data.deposit)?;
+				},
+				PoolType::Farming => {
+					let (token_a, token_b) = pool.trading_pair;
 
-				T::MultiCurrency::ensure_can_withdraw(token_a, &user, value)
-					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
-				T::MultiCurrency::ensure_can_withdraw(token_b, &user, value)
-					.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
+					T::MultiCurrency::ensure_can_withdraw(token_a, &user, value)
+						.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
+					T::MultiCurrency::ensure_can_withdraw(token_b, &user, value)
+						.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
 
-				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_a, &user, deposit_data.deposit)?;
-				T::MultiCurrency::extend_lock(DEPOSIT_ID, token_b, &user, deposit_data.deposit)?;
+					T::MultiCurrency::extend_lock(
+						DEPOSIT_ID,
+						token_a,
+						&user,
+						deposit_data.deposit,
+					)?;
+					T::MultiCurrency::extend_lock(
+						DEPOSIT_ID,
+						token_b,
+						&user,
+						deposit_data.deposit,
+					)?;
+				},
+				PoolType::EBFarming => {
+					let (token_a, token_b) = pool.trading_pair;
+
+					ensure!(
+						T::MultiCurrency::reserved_balance(token_a, &user) >= deposit_data.deposit,
+						Error::<T>::NotEnoughToDeposit
+					);
+					ensure!(
+						T::MultiCurrency::reserved_balance(token_b, &user) >= deposit_data.deposit,
+						Error::<T>::NotEnoughToDeposit
+					);
+				},
 			}
 
 			let r#type = pool.r#type;
@@ -753,6 +809,7 @@ pub mod pallet {
 						},
 					}
 				},
+				PoolType::EBFarming => {},
 			};
 
 			deposit_data.deposit = left_in_user;
@@ -824,7 +881,7 @@ pub mod pallet {
 		///
 		/// The conditions to claim:
 		/// - User should have enough token deposited in the liquidity-pool;
-		/// - The liquidity-pool should be in special states: `Ongoing`, `Retired`;
+		/// - The liquidity-pool should be in special states: `Ongoing`;
 		#[pallet::weight(1_000)]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
@@ -832,10 +889,7 @@ pub mod pallet {
 			let mut pool: PoolInfo<T> =
 				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire().try_update();
 
-			ensure!(
-				pool.state == PoolState::Ongoing || pool.state == PoolState::Retired,
-				Error::<T>::InvalidPoolState
-			);
+			ensure!(pool.state == PoolState::Ongoing, Error::<T>::InvalidPoolState);
 
 			let mut deposit_data: DepositData<T> =
 				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T>::NoDepositOfUser)?;
