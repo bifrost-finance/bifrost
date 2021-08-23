@@ -1413,7 +1413,7 @@ fn claim_from_pool_ongoing_should_work() {
 }
 
 #[test]
-fn claim_from_pool_retired_should_work() {
+fn claim_from_pool_retired_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_mining_pool(
 			Some(CREATOR).into(),
@@ -1429,38 +1429,11 @@ fn claim_from_pool_retired_should_work() {
 		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
 
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
-		assert_ok!(LM::deposit(Some(USER_2).into(), 0, UNIT));
 
 		run_to_block(DAYS);
 
-		assert_ok!(LM::claim(Some(USER_1).into(), 0));
-
-		let per_block = REWARD_AMOUNT / DAYS as Balance;
-
-		let reserved = per_block * DAYS as Balance;
-		let free = REWARD_AMOUNT - reserved;
-
-		let pbpd = FixedU128::from((per_block, 2 * UNIT));
-		let rewarded: Balance =
-			(pbpd * (DAYS as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
-
-		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
-		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
-		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
-		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
-		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
-		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
-
-		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).free, free);
-		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).frozen, 0);
-		assert_eq!(Tokens::accounts(CREATOR, REWARD_1).reserved, reserved - rewarded);
-		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).free, free);
-		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).frozen, 0);
-		assert_eq!(Tokens::accounts(CREATOR, REWARD_2).reserved, reserved - rewarded);
-
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
-		assert_eq!(pool.rewards.get(&REWARD_1).unwrap().claimed, rewarded);
-		assert_eq!(pool.rewards.get(&REWARD_2).unwrap().claimed, rewarded);
+		let result = LM::claim(Some(USER_1).into(), 0);
+		assert_noop!(result, Error::<T>::InvalidPoolState);
 	});
 }
 
@@ -1562,7 +1535,7 @@ fn claim_without_deposit_should_fail() {
 
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
 
-		run_to_block(DAYS);
+		run_to_block(DAYS - 1);
 
 		let result = LM::claim(Some(USER_2).into(), 0);
 		assert_noop!(result, Error::<T>::NoDepositOfUser);
@@ -1587,7 +1560,7 @@ fn double_claim_in_same_block_should_fail() {
 
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
 
-		run_to_block(DAYS);
+		run_to_block(DAYS - 1);
 
 		assert_ok!(LM::claim(Some(USER_1).into(), 0));
 		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::TooShortBetweenTwoClaim);
@@ -1620,8 +1593,8 @@ fn force_retire_pool_approved_should_work() {
 
 		assert_noop!(LM::deposit(Some(RICHER).into(), 0, UNIT), Error::<T>::InvalidPoolState);
 
-		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::TooShortBetweenTwoClaim);
-		assert_noop!(LM::claim(Some(USER_2).into(), 0), Error::<T>::TooShortBetweenTwoClaim);
+		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
+		assert_noop!(LM::claim(Some(USER_2).into(), 0), Error::<T>::InvalidPoolState);
 		assert_ok!(LM::redeem(Some(USER_1).into(), 0));
 		assert_ok!(LM::redeem(Some(USER_2).into(), 0));
 
@@ -1719,8 +1692,8 @@ fn force_retire_pool_ongoing_should_work() {
 
 		run_to_block(DAYS - 100);
 
-		assert_ok!(LM::claim(Some(USER_1).into(), 0));
-		assert_ok!(LM::claim(Some(USER_2).into(), 0));
+		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
+		assert_noop!(LM::claim(Some(USER_2).into(), 0), Error::<T>::InvalidPoolState);
 		assert_ok!(LM::redeem(Some(USER_1).into(), 0));
 		assert_ok!(LM::redeem(Some(USER_2).into(), 0));
 
