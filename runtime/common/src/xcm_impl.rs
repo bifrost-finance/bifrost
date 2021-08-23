@@ -23,7 +23,7 @@ use frame_support::{
 	traits::{Contains, Get},
 	weights::Weight,
 };
-use node_primitives::{AccountId, CurrencyId, TokenSymbol};
+use node_primitives::{AccountId, CurrencyId, TokenSymbol, TokenInfo};
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::v0::Junction;
@@ -108,7 +108,14 @@ impl FilterAssetLocation for BifrostFilterAsset {
 pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	X3(Parent, Parachain(para_id.into()), GeneralKey(id.encode()))
+	// Since Acala doesn't have Native Currency, before we transfer to Acala, we need to first make Native(TokenSymbol::ASG) into Token(TokenSymbol::ASG)
+	let currency_id_u64: u64 = id.currency_id();
+	let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
+	let currency_tokensymbol =
+		TokenSymbol::try_from(tokensymbo_bit).unwrap_or_default();
+	let new_id = CurrencyId::Token(currency_tokensymbol);
+
+	X3(Parent, Parachain(para_id.into()), GeneralKey(new_id.encode()))
 }
 
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
@@ -138,15 +145,15 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// check `currency_id` is cross-chain asset
 					if ParaId::from(id) == T::get() {
 						match currency_id {
-							Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
-								Some(currency_id),
+							Token(TokenSymbol::ASG) | Native(TokenSymbol::ASG) =>  Some(Native(TokenSymbol::ASG)),
+							Token(TokenSymbol::BNC) | Native(TokenSymbol::BNC) =>  Some(Native(TokenSymbol::BNC)),
 							_ => None,
 						}
 					// Kurara CurrencyId types
 					} else if id == 2000 {
 						match currency_id {
-							Token(TokenSymbol::KAR) | Stable(TokenSymbol::KUSD) =>
-								Some(currency_id),
+							Token(TokenSymbol::KAR)=> Some(currency_id),
+							Token(TokenSymbol::KUSD) => Some(Stable(TokenSymbol::KUSD)),
 							_ => None,
 						}
 					} else {
