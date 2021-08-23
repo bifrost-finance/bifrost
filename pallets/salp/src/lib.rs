@@ -605,6 +605,10 @@ pub mod pallet {
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
 
+			if T::XcmTransferOrigin::get() == TransferOriginType::FromRelayChain {
+				T::MultiCurrency::reserve(T::RelayChainToken::get(), &who, value)?;
+			}
+
 			if !is_proxy {
 				Self::xcm_ump_contribute(origin, index, value)
 					.map_err(|_e| Error::<T>::XcmFailed)?;
