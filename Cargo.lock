@@ -846,6 +846,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-collator-selection",
+ "pallet-transaction-payment",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
