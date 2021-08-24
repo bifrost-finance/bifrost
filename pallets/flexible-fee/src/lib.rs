@@ -37,7 +37,7 @@ pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
 use sp_arithmetic::traits::SaturatedConversion;
 use sp_runtime::{
-	traits::{AtLeast32Bit, CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
+	traits::{CheckedSub, DispatchInfoOf, PostDispatchInfoOf, Saturating, Zero},
 	transaction_validity::TransactionValidityError,
 };
 use sp_std::{vec, vec::Vec};
@@ -53,10 +53,6 @@ mod mock;
 mod tests;
 mod weights;
 
-type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-	<T as frame_system::Config>::AccountId,
->>::CurrencyId;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -65,23 +61,13 @@ pub mod pallet {
 	pub trait Config: frame_system::Config + pallet_transaction_payment::Config {
 		/// Event
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-		/// The units in which we record balances.
-		type Balance: Member
-			+ Parameter
-			+ AtLeast32Bit
-			+ Default
-			+ Copy
-			+ MaybeSerializeDeserialize
-			+ Into<u128>
-			+ From<PalletBalanceOf<Self>>
-			+ Into<PalletBalanceOf<Self>>;
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 		/// Handler for both NativeCurrency and MultiCurrency
 		type MultiCurrency: MultiCurrency<
 			Self::AccountId,
 			CurrencyId = CurrencyId,
-			Balance = Self::Balance,
+			Balance = PalletBalanceOf<Self>,
 		>;
 		/// The currency type in which fees will be paid.
 		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
@@ -94,16 +80,19 @@ pub mod pallet {
 		type TreasuryAccount: Get<Self::AccountId>;
 
 		#[pallet::constant]
-		type NativeCurrencyId: Get<CurrencyId>;
+		type NativeCurrencyId: Get<CurrencyIdOf<Self>>;
 
 		#[pallet::constant]
-		type AlternativeFeeCurrencyId: Get<CurrencyId>;
+		type AlternativeFeeCurrencyId: Get<CurrencyIdOf<Self>>;
 
 		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
 		#[pallet::constant]
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
 	}
 
+	pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
+		<T as frame_system::Config>::AccountId,
+	>>::CurrencyId;
 	pub type PalletBalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
@@ -119,28 +108,24 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FlexibleFeeExchanged(CurrencyId, u128), // token and amount
-		FixedRateFeeExchanged(CurrencyId, PalletBalanceOf<T>),
+		FlexibleFeeExchanged(CurrencyIdOf<T>, u128), // token and amount
+		FixedRateFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>),
 	}
 
 	#[pallet::type_value]
 	pub fn DefaultFeeChargeOrder<T: Config>() -> Vec<CurrencyIdOf<T>> {
-		[
-			T::NativeCurrencyId::get(),
-			CurrencyId::Token(TokenSymbol::KSM),
-		]
-		.to_vec()
+		[T::NativeCurrencyId::get(), CurrencyId::Token(TokenSymbol::KSM)].to_vec()
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_fee_charge_order_list)]
 	pub type UserFeeChargeOrderList<T: Config> =
-		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyId>, ValueQuery>;
+		StorageMap<_, Twox64Concat, T::AccountId, Vec<CurrencyIdOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn default_fee_charge_order_list)]
 	pub type DefaultFeeChargeOrderList<T: Config> =
-		StorageValue<_, Vec<CurrencyId>, ValueQuery, DefaultFeeChargeOrder<T>>;
+		StorageValue<_, Vec<CurrencyIdOf<T>>, ValueQuery, DefaultFeeChargeOrder<T>>;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -157,7 +142,7 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::set_user_fee_charge_order())]
 		pub fn set_user_fee_charge_order(
 			origin: OriginFor<T>,
-			asset_order_list_vec: Option<Vec<CurrencyId>>,
+			asset_order_list_vec: Option<Vec<CurrencyIdOf<T>>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 
@@ -176,7 +161,7 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	/// Get user fee charge assets order
-	fn inner_get_user_fee_charge_order_list(account_id: &T::AccountId) -> Vec<CurrencyId> {
+	fn inner_get_user_fee_charge_order_list(account_id: &T::AccountId) -> Vec<CurrencyIdOf<T>> {
 		let mut charge_order_list = UserFeeChargeOrderList::<T>::get(&account_id);
 		if charge_order_list.is_empty() {
 			charge_order_list = DefaultFeeChargeOrderList::<T>::get();
@@ -235,15 +220,11 @@ where
 			// This withdraw operation allows death. So it will succeed given the remaining amount
 			// less than the existential deposit.
 			let fee_currency_id = T::AlternativeFeeCurrencyId::get();
-			T::MultiCurrency::withdraw(fee_currency_id, who, T::Balance::from(fee_amount))
+			T::MultiCurrency::withdraw(fee_currency_id, who, fee_amount)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 			// deposit the fee_currency amount to Treasury
-			T::MultiCurrency::deposit(
-				fee_currency_id,
-				&T::TreasuryAccount::get(),
-				T::Balance::from(fee_amount),
-			)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+			T::MultiCurrency::deposit(fee_currency_id, &T::TreasuryAccount::get(), fee_amount)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
 			Self::deposit_event(Event::FixedRateFeeExchanged(fee_currency_id, fee_amount));
 
@@ -342,7 +323,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 				// If native token balance is below existential deposit requirement,
 				// go exchange fee + existential deposit. Else to exchange fee amount.
 				let amount_out: AssetBalance;
-				if native_balance > T::Balance::from(existential_deposit) {
+				if native_balance > existential_deposit {
 					amount_out = fee.saturated_into();
 				} else {
 					amount_out = (fee + existential_deposit).saturated_into();
@@ -381,9 +362,9 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 	fn cal_fee_token_and_amount(
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
-	) -> Result<(CurrencyId, PalletBalanceOf<T>), DispatchError> {
+	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), DispatchError> {
 		let mut fee_token_id_out: CurrencyIdOf<T> = T::NativeCurrencyId::get();
-		let mut fee_token_amount_out: T::Balance = T::Balance::from(0 as u32);
+		let mut fee_token_amount_out = Zero::zero();
 
 		// get the user defined fee charge order list.
 		let user_fee_charge_order_list = Self::inner_get_user_fee_charge_order_list(who);

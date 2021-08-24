@@ -65,8 +65,8 @@ pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
 	xcm_impl::{
-		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets, BifrostXcmTransactFilter,
+		BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets,
+		BifrostXcmTransactFilter,
 	},
 	SlowAdjustingFeeUpdate,
 };
@@ -824,12 +824,10 @@ impl orml_tokens::Config for Runtime {
 
 // Bifrost modules start
 parameter_types! {
-	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
-	type Balance = Balance;
 	type Currency = Balances;
 	type DexOperator = ();
 	// type FeeDealer = FlexibleFee;
@@ -838,7 +836,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AlternativeFeeCurrencyId = RelayCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;

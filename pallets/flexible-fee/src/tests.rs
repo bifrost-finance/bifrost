@@ -156,11 +156,7 @@ fn inner_get_user_fee_charge_order_list_should_work() {
 
 		let mut default_order_list: Vec<CurrencyId> = Vec::new();
 		default_order_list.push(CurrencyId::Native(TokenSymbol::ASG));
-		default_order_list.push(CurrencyId::Stable(TokenSymbol::KUSD));
-		default_order_list.push(CurrencyId::Token(TokenSymbol::DOT));
-		default_order_list.push(CurrencyId::VToken(TokenSymbol::DOT));
 		default_order_list.push(CurrencyId::Token(TokenSymbol::KSM));
-		default_order_list.push(CurrencyId::VToken(TokenSymbol::KSM));
 
 		assert_eq!(FlexibleFee::inner_get_user_fee_charge_order_list(&ALICE), default_order_list);
 

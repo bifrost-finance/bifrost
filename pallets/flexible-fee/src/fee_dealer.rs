@@ -81,7 +81,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>>
 			let consume_fee_currency_amount =
 				fee.saturating_mul(fee_currency_base.into()) / native_currency_base.into();
 			ensure!(
-				(T::Balance::from(consume_fee_currency_amount) + fee_currency_existential_deposit) <=
+				(consume_fee_currency_amount + fee_currency_existential_deposit) <=
 					fee_currency_balance,
 				Error::<T>::NotEnoughBalance
 			);
@@ -96,7 +96,7 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>>
 	fn cal_fee_token_and_amount(
 		who: &T::AccountId,
 		fee: PalletBalanceOf<T>,
-	) -> Result<(CurrencyId, PalletBalanceOf<T>), DispatchError> {
+	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), DispatchError> {
 		// Make sure there are enough BNC to be deducted if the user has assets in other form of
 		// tokens rather than BNC.
 		let withdraw_reason = WithdrawReasons::TRANSACTION_PAYMENT;
