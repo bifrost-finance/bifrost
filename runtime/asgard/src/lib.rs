@@ -84,7 +84,7 @@ use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
@@ -1582,6 +1582,16 @@ impl_runtime_apis! {
 				amount_0_min,
 				amount_1_min
 			)
+		}
+	}
+
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
+			let rs = Salp::contribution_by_fund(index, &who);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
 		}
 	}
 

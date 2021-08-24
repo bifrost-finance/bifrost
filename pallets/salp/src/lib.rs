@@ -1139,6 +1139,15 @@ pub mod pallet {
 			})
 		}
 
+		pub fn contribution_by_fund(
+			index: ParaId,
+			who: &AccountIdOf<T>,
+		) -> Result<BalanceOf<T>, Error<T>> {
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			let (contributed, _) = Self::contribution(fund.trie_index, who);
+			Ok(contributed)
+		}
+
 		pub(crate) fn contribution_iterator(
 			index: TrieIndex,
 		) -> ChildTriePrefixIterator<(

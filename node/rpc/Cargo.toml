@@ -18,5 +18,7 @@ sp-transaction-pool = { version = "3.0.0" }
 pallet-transaction-payment-rpc = { version = "3.0.0" }
 bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
+bifrost-salp-rpc-api = { path = "../../pallets/salp/rpc" }
+bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
 zenlink-protocol-rpc = "*"
 zenlink-protocol-runtime-api = "*"

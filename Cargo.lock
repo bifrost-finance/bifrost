@@ -185,6 +185,7 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
@@ -900,6 +901,30 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-support",
+]
+
+[[package]]
+name = "bifrost-salp-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-salp-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-salp-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
@@ -5063,6 +5088,8 @@ version = "0.8.0"
 dependencies = [
  "bifrost-flexible-fee-rpc",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-salp-rpc-api",
+ "bifrost-salp-rpc-runtime-api",
  "jsonrpc-core",
  "node-primitives",
  "pallet-transaction-payment-rpc",
@@ -5084,6 +5111,7 @@ dependencies = [
  "async-trait",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime",
+ "bifrost-salp-rpc-runtime-api",
  "bs58 0.3.1",
  "cumulus-client-consensus-aura",
  "cumulus-client-consensus-common",

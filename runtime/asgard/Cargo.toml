@@ -89,6 +89,7 @@ bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-fe
 bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
+bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
