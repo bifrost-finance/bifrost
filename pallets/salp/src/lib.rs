@@ -176,8 +176,11 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, ParaId, TransferOriginType};
-	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
+	use node_primitives::{
+		BancorHandler, CurrencyId, LeasePeriod, ParaId, ParachainTransactProxyType,
+		TransferOriginType,
+	};
+	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
 	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
@@ -256,8 +259,13 @@ pub mod pallet {
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
+		/// Parachain Id
 		type SelfParaId: Get<u32>;
 
+		/// Weight to Fee calculator
+		type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
+
+		/// Xcm weight
 		#[pallet::constant]
 		type BaseXcmWeight: Get<u64>;
 
@@ -267,13 +275,21 @@ pub mod pallet {
 		#[pallet::constant]
 		type WithdrawWeight: Get<u64>;
 
-		type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
-
 		#[pallet::constant]
 		type AddProxyWeight: Get<u64>;
 
 		#[pallet::constant]
 		type RemoveProxyWeight: Get<u64>;
+
+		/// The interface to Cross-chain transfer.
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+
+		/// The sovereign sub-account for where the staking currencies are sent to.
+		#[pallet::constant]
+		type SovereignSubAccountLocation: Get<MultiLocation>;
+
+		#[pallet::constant]
+		type TransactType: Get<ParachainTransactProxyType>;
 	}
 
 	#[pallet::pallet]
@@ -316,6 +332,8 @@ pub mod pallet {
 		/// Proxy
 		ProxyAdded(AccountIdOf<T>),
 		ProxyRemoved(AccountIdOf<T>),
+		/// Mint
+		Minted(AccountIdOf<T>, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -568,7 +586,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// TODO: Refactor the docs.
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
@@ -593,9 +610,10 @@ pub mod pallet {
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
 
-			if is_proxy {
-				Self::xcm_ump_contribute(origin, index, value)
-					.map_err(|_e| Error::<T>::XcmFailed)?;
+			if (!is_proxy && T::XcmTransferOrigin::get() == TransferOriginType::FromRelayChain) ||
+				T::TransactType::get() == ParachainTransactProxyType::Primary
+			{
+				T::MultiCurrency::reserve(T::RelayChainToken::get(), &who, value)?;
 			}
 
 			Self::put_contribution(
@@ -605,8 +623,16 @@ pub mod pallet {
 				ContributionStatus::Contributing(value),
 			);
 
-			Self::deposit_event(Event::Contributing(who, index, value));
+			Self::deposit_event(Event::Contributing(who.clone(), index, value.clone()));
 
+			if !is_proxy {
+				Self::xcm_ump_contribute(origin, index, value)
+					.map_err(|_e| Error::<T>::XcmFailed)?;
+			} else {
+				if T::TransactType::get() == ParachainTransactProxyType::Derived {
+					Self::xcm_ump_transfer(who.clone(), value)?;
+				}
+			}
 			Ok(())
 		}
 
@@ -623,7 +649,6 @@ pub mod pallet {
 			is_success: bool,
 		) -> DispatchResult {
 			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
-
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
 				fund.status == FundStatus::Failed ||
@@ -649,7 +674,9 @@ pub mod pallet {
 					FundInfo { raised: fund.raised.saturating_add(contributing), ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
 
-				if T::XcmTransferOrigin::get() == TransferOriginType::FromRelayChain {
+				if T::TransactType::get() == ParachainTransactProxyType::Primary &&
+					T::XcmTransferOrigin::get() == TransferOriginType::FromRelayChain
+				{
 					T::MultiCurrency::withdraw(T::RelayChainToken::get(), &who, contributing)?;
 				}
 
@@ -697,7 +724,7 @@ pub mod pallet {
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
 			ensure!(can, Error::<T>::InvalidFundStatus);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_withdraw(origin, index).map_err(|_| Error::<T>::XcmFailed)?;
 			}
 
@@ -775,7 +802,7 @@ pub mod pallet {
 				Error::<T>::NotEnoughReservedAssetsToRefund
 			);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_redeem(origin, index, contributed)
 					.map_err(|_| Error::<T>::XcmFailed)?;
 			}
@@ -874,7 +901,7 @@ pub mod pallet {
 			let status = Self::redeem_status(who.clone(), (index, fund.first_slot, fund.last_slot));
 			ensure!(status == RedeemStatus::Idle, Error::<T>::InvalidRedeemStatus);
 
-			if is_proxy {
+			if !is_proxy {
 				Self::xcm_ump_redeem(origin.clone(), index, value)
 					.map_err(|_| Error::<T>::XcmFailed)?;
 			}
@@ -985,7 +1012,6 @@ pub mod pallet {
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::End, Error::<T>::InvalidFundStatus);
 
-			// TODO: Delete element when iter? Fix it?
 			let mut refund_count = 0u32;
 			// Try killing the crowdloan child trie and Assume everyone will be refunded.
 			let contributions = Self::contribution_iterator(fund.trie_index);
@@ -1041,6 +1067,23 @@ pub mod pallet {
 			Self::xcm_ump_remove_proxy(delegate.clone()).map_err(|_| Error::<T>::XcmFailed)?;
 
 			Self::deposit_event(Event::ProxyRemoved(delegate));
+
+			Ok(())
+		}
+
+		/// transfer to parachain salp account
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		#[transactional]
+		pub fn mint(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+
+			Self::xcm_ump_transfer(who.clone(), amount.clone())?;
+
+			Self::deposit_event(Event::<T>::Minted(who, amount));
 
 			Ok(())
 		}
@@ -1258,6 +1301,16 @@ pub mod pallet {
 				call,
 				T::AddProxyWeight::get(),
 				false,
+			)
+		}
+
+		fn xcm_ump_transfer(who: AccountIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
+			T::XcmTransfer::transfer(
+				who.clone(),
+				T::RelayChainToken::get(),
+				amount,
+				T::SovereignSubAccountLocation::get(),
+				3 * T::BaseXcmWeight::get(),
 			)
 		}
 	}

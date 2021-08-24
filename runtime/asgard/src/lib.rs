@@ -84,7 +84,8 @@ use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
+	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -93,7 +94,9 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
+use xcm::v0::{
+	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm,
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
@@ -956,6 +959,38 @@ impl bifrost_minter_reward::Config for Runtime {
 	type WeightInfo = weights::bifrost_minter_reward::WeightInfo<Runtime>;
 }
 
+pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::X2(
+		Junction::Parent,
+		Junction::AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		},
+	)
+}
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == ConfirmMuitiSigAccount::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(Default::default()))
+	}
+}
+
 parameter_types! {
 	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
 	pub const MinContribution: Balance = 1 * DOLLARS;
@@ -979,28 +1014,8 @@ parameter_types! {
 		hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
 		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(),//5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 	],3);
-}
-
-pub struct EnsureConfirmAsMultiSig;
-impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
-	type Success = AccountId;
-
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) =>
-				if who == ConfirmMuitiSigAccount::get() {
-					Ok(who)
-				} else {
-					Err(Origin::from(Some(who)))
-				},
-			r => Err(Origin::from(r)),
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(Default::default()))
-	}
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -1031,6 +1046,9 @@ impl bifrost_salp::Config for Runtime {
 	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
 	type RemoveProxyWeight = RemoveProxyWeight;
+	type XcmTransfer = XTokens;
+	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactType = SalpTransactType;
 }
 
 parameter_types! {
