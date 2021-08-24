@@ -559,9 +559,8 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_ws(default_listen_port)
 	}
 
-	fn prometheus_config(&self, _default_listen_port: u16) -> Result<Option<PrometheusConfig>> {
-		// self.base.base.prometheus_config(default_listen_port)
-		Ok(None)
+	fn prometheus_config(&self, default_listen_port: u16) -> Result<Option<PrometheusConfig>> {
+		self.base.base.prometheus_config(default_listen_port)
 	}
 
 	fn init<C: SubstrateCli>(&self) -> Result<()> {
@@ -571,7 +570,11 @@ impl CliConfiguration<Self> for RelayChainCli {
 	fn chain_id(&self, is_dev: bool) -> Result<String> {
 		let chain_id = self.base.base.chain_id(is_dev)?;
 
-		Ok(if chain_id.is_empty() { self.chain_id.clone().unwrap_or_default() } else { chain_id })
+		Ok(if chain_id.is_empty() {
+			self.chain_id.clone().unwrap_or_default()
+		} else {
+			chain_id
+		})
 	}
 
 	fn role(&self, is_dev: bool) -> Result<sc_service::Role> {
@@ -592,6 +595,10 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn rpc_ws_max_connections(&self) -> Result<Option<usize>> {
 		self.base.base.rpc_ws_max_connections()
+	}
+
+	fn rpc_http_threads(&self) -> Result<Option<usize>> {
+		self.base.base.rpc_http_threads()
 	}
 
 	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {
@@ -620,5 +627,12 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn announce_block(&self) -> Result<bool> {
 		self.base.base.announce_block()
+	}
+
+	fn telemetry_endpoints(
+		&self,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
+		self.base.base.telemetry_endpoints(chain_spec)
 	}
 }

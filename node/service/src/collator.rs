@@ -81,7 +81,7 @@ pub fn new_partial<RuntimeApi, Executor, BIQ>(
 		TFullClient<Block, RuntimeApi, Executor>,
 		TFullBackend<Block>,
 		(),
-		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
@@ -100,7 +100,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 	) -> Result<
-		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_service::Error,
 	>,
 {
@@ -179,7 +179,7 @@ where
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
+		) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
 		+ Send
 		+ 'static,
 	BIQ: FnOnce(
@@ -243,6 +243,7 @@ where
 			import_queue: import_queue.clone(),
 			on_demand: None,
 			block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
+			warp_sync: None,
 		})?;
 
 	let rpc_client = client.clone();
@@ -346,7 +347,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 	) -> Result<
-		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_service::Error,
 	>,
 	BIC: FnOnce(
@@ -401,6 +402,7 @@ where
 			import_queue: import_queue.clone(),
 			on_demand: None,
 			block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
+			warp_sync: None,
 		})?;
 
 	let rpc_extensions_builder = {
@@ -491,7 +493,7 @@ pub fn asgard_parachain_build_import_queue(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
-	sp_consensus::DefaultImportQueue<
+	sc_consensus::DefaultImportQueue<
 		Block,
 		TFullClient<Block, asgard_runtime::RuntimeApi, AsgardExecutor>,
 	>,
@@ -537,7 +539,7 @@ pub fn bifrost_parachain_build_import_queue(
 	telemetry: Option<TelemetryHandle>,
 	task_manager: &TaskManager,
 ) -> Result<
-	sp_consensus::DefaultImportQueue<
+	sc_consensus::DefaultImportQueue<
 		Block,
 		TFullClient<Block, bifrost_runtime::RuntimeApi, BifrostExecutor>,
 	>,
@@ -594,7 +596,7 @@ pub async fn start_node(
 			parachain_config,
 			polkadot_config,
 			id,
-			|_| Default::default(),
+			|_| Ok(Default::default()),
 			asgard_parachain_build_import_queue,
 			|client,
 			 prometheus_registry,
@@ -683,7 +685,7 @@ pub async fn start_node(
 			parachain_config,
 			polkadot_config,
 			id,
-			|_| Default::default(),
+			|_| Ok(Default::default()),
 			bifrost_parachain_build_import_queue,
 			|client,
 			 prometheus_registry,

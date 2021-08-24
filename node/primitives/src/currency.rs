@@ -82,14 +82,14 @@ macro_rules! create_currency_id {
 					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((4_u32, TokenSymbol::$symbol as u32)),)*
 					_ => Err(()),
 				};
-				let asset_index: u32 = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
+				let asset_index = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
 				if id.is_native() {
 					Ok(AssetId { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: 0 })
 				} else {
 					Ok(AssetId {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
-						asset_index: asset_index,
+						asset_index: asset_index as u64,
 					})
 				}
 			}

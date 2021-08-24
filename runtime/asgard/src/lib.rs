@@ -31,7 +31,7 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{All, InstanceFilter, IsInVec, LockIdentifier, MaxEncodedLen, Randomness},
+	traits::{Everything, InstanceFilter, IsInVec, LockIdentifier, MaxEncodedLen, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -747,10 +747,10 @@ match_type! {
 
 pub type Barrier = (
 	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
+	AllowTopLevelPaidExecutionFrom<Everything>,
 	// ^^^ Parent & its unit plurality gets free execution
 	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
-	BifrostXcmTransactFilter<All<MultiLocation>>,
+	BifrostXcmTransactFilter<Everything>,
 );
 
 pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
@@ -792,13 +792,14 @@ pub type XcmRouter = (
 impl pallet_xcm::Config for Runtime {
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type LocationInverter = LocationInverter<Ancestry>;
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = XcmRouter;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmTeleportFilter = Everything;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -852,6 +853,7 @@ impl pallet_authorship::Config for Runtime {
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
+	type DisabledValidators = ();
 }
 
 parameter_types! {
@@ -1243,7 +1245,7 @@ construct_runtime! {
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>} = 5,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
 		// Monetary stuff

@@ -83,7 +83,7 @@ cd -
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.8
+git checkout release-v0.9.9
 cargo build --release
 cd -
 ```
@@ -136,14 +136,14 @@ wget -O ~/bifrost-fullnode/bifrost.json https://github.com/bifrost-finance/bifro
 
 Replace your-fullnode-name
 ```sh
-docker pull bifrostnetwork/bifrost:v0.8.1-fix_crash
+docker pull bifrostnetwork/bifrost:v0.8.3
 docker run -d \
 -v ~/bifrost-fullnode:/bifrost \
 -p 9944:9944 \
 -p 9933:9933 \
 -p 30333:30333 \
 -p 9615:9615 \
-bifrostnetwork/bifrost:v0.8.1-fix_crash \
+bifrostnetwork/bifrost:v0.8.3 \
   --name your-fullnode-name \
   --base-path "/bifrost" \
   --node-key-file "/bifrost/network/node-key" \
