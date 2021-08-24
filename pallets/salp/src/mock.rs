@@ -25,7 +25,9 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::RawOrigin;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol, TransferOriginType};
+use node_primitives::{
+	Amount, Balance, CurrencyId, ParachainTransactProxyType, TokenSymbol, TransferOriginType,
+};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
@@ -183,6 +185,13 @@ impl bifrost_bancor::Config for Test {
 	type WeightInfo = ();
 }
 
+pub fn create_x2_parachain_multilocation(_index: u16) -> MultiLocation {
+	MultiLocation::X2(
+		Junction::Parent,
+		Junction::AccountId32 { network: NetworkId::Any, id: ALICE.into() },
+	)
+}
+
 parameter_types! {
 	pub const SubmissionDeposit: u32 = 1;
 	pub const MinContribution: Balance = 10;
@@ -207,6 +216,8 @@ parameter_types! {
 		BRUCE,
 		CATHI
 	],2);
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(0 as u16);
+	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 parameter_types! {
@@ -237,8 +248,12 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	}
 }
 
+use frame_support::dispatch::DispatchResult;
+use orml_traits::XcmTransfer;
 use smallvec::smallvec;
 pub use sp_runtime::Perbill;
+use xcm::{opaque::v0::MultiAsset, v0::Junction};
+
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
@@ -249,6 +264,29 @@ impl WeightToFeePolynomial for WeightToFee {
 			coeff_frac: Perbill::from_rational(90u32, 100u32),
 			coeff_integer: 1,
 		}]
+	}
+}
+
+pub struct MockXTokens;
+
+impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
+	fn transfer(
+		_who: AccountId,
+		_currency_id: CurrencyId,
+		_amount: Balance,
+		_dest: MultiLocation,
+		_dest_weight: Weight,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn transfer_multi_asset(
+		_who: AccountId,
+		_asset: MultiAsset,
+		_dest: MultiLocation,
+		_dest_weight: Weight,
+	) -> DispatchResult {
+		Ok(())
 	}
 }
 
@@ -279,6 +317,9 @@ impl salp::Config for Test {
 	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
 	type RemoveProxyWeight = RemoveProxyWeight;
+	type XcmTransfer = MockXTokens;
+	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactType = SalpTransactType;
 }
 
 pub struct SalpWeightInfo;

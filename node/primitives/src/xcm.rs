@@ -40,3 +40,16 @@ impl From<XcmBaseWeight> for u64 {
 		x.0.into()
 	}
 }
+
+/// represent the xcmp transact type
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
+pub enum ParachainTransactProxyType {
+	Primary = 0,
+	Derived = 1,
+}
+
+#[repr(u16)]
+pub enum ParachainDerivedProxyAccountType {
+	Salp = 0,
+	Staking = 1,
+}
