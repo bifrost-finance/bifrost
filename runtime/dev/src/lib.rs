@@ -82,7 +82,7 @@ use bifrost_runtime_common::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter,
 	},
-	RelaychainSubAccountId, SlowAdjustingFeeUpdate,
+	SlowAdjustingFeeUpdate,
 };
 use codec::{Decode, Encode};
 use constants::{currency::*, time::*};
@@ -92,7 +92,8 @@ use frame_support::{
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
+	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -955,7 +956,8 @@ parameter_types! {
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	]
 	.into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(RelaychainSubAccountId::Salp as u16);
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
@@ -1019,6 +1021,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactType = SalpTransactType;
 }
 
 parameter_types! {

@@ -53,9 +53,3 @@ parameter_types! {
 
 pub type SlowAdjustingFeeUpdate<R> =
 	TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
-
-#[repr(u16)]
-pub enum RelaychainSubAccountId {
-	Salp = 0,
-	Staking = 1,
-}

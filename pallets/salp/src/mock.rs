@@ -25,7 +25,9 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::RawOrigin;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol, TransferOriginType};
+use node_primitives::{
+	Amount, Balance, CurrencyId, ParachainTransactProxyType, TokenSymbol, TransferOriginType,
+};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
@@ -215,7 +217,7 @@ parameter_types! {
 		CATHI
 	],2);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(0 as u16);
-
+	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 parameter_types! {
@@ -317,6 +319,7 @@ impl salp::Config for Test {
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactType = SalpTransactType;
 }
 
 pub struct SalpWeightInfo;
