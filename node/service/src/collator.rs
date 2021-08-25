@@ -188,7 +188,7 @@ where
 		Option<TelemetryHandle>,
 		&TaskManager,
 	) -> Result<
-		sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
+		sc_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
 		sc_service::Error,
 	>,
 	BIC: FnOnce(
@@ -338,7 +338,7 @@ where
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, Executor>>,
-		) -> jsonrpc_core::IoHandler<sc_rpc::Metadata>
+		) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
 		+ Send
 		+ 'static,
 	BIQ: FnOnce(
@@ -409,15 +409,19 @@ where
 		let rpc_client = client.clone();
 		let rpc_transaction_pool = transaction_pool.clone();
 
-		Box::new(move |deny_unsafe, _| -> node_rpc::RpcExtension {
-			let deps = node_rpc::FullDeps {
-				client: rpc_client.clone(),
-				pool: rpc_transaction_pool.clone(),
-				deny_unsafe,
-			};
+		Box::new(
+			move |deny_unsafe,
+			      _|
+			      -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error> {
+				let deps = node_rpc::FullDeps {
+					client: rpc_client.clone(),
+					pool: rpc_transaction_pool.clone(),
+					deny_unsafe,
+				};
 
-			node_rpc::PATCH_FOR_ASGARD_create_full(deps)
-		})
+				node_rpc::PATCH_FOR_ASGARD_create_full(deps).map_err(|e| e.into())
+			},
+		)
 	};
 
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {

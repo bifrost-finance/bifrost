@@ -27,6 +27,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 # client dependencies
 sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
+sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 
 # node-specific dependencies

@@ -33,12 +33,14 @@
 
 use std::sync::Arc;
 
+use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use node_primitives::{AccountId, Balance, Block};
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 /// Full client dependencies.
@@ -58,7 +60,9 @@ pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 ///
 /// NOTE: It's a `PATCH` for the RPC of asgard runtime.
 #[allow(non_snake_case)]
-pub fn PATCH_FOR_ASGARD_create_full<C, P>(deps: FullDeps<C, P>) -> RpcExtension
+pub fn PATCH_FOR_ASGARD_create_full<C, P>(
+	deps: FullDeps<C, P>,
+) -> Result<jsonrpc_core::IoHandler<sc_rpc_api::Metadata>, Box<dyn std::error::Error + Send + Sync>>
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
@@ -76,12 +80,9 @@ where
 
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
 
-	use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
-	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
 
 	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
-	io
+	Ok(io)
 }

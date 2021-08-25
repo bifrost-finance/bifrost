@@ -100,7 +100,6 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
-
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
