@@ -92,7 +92,8 @@ use frame_support::{
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
+	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -101,7 +102,9 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm};
+use xcm::v0::{
+	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm,
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
@@ -953,6 +956,18 @@ parameter_types! {
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
 	]
 	.into();
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+}
+
+pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::X2(
+		Junction::Parent,
+		Junction::AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		},
+	)
 }
 
 pub struct EnsureConfirmAsMultiSig;
@@ -1004,6 +1019,9 @@ impl bifrost_salp::Config for Runtime {
 	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
 	type RemoveProxyWeight = RemoveProxyWeight;
+	type XcmTransfer = XTokens;
+	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactType = SalpTransactType;
 }
 
 parameter_types! {
