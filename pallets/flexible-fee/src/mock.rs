@@ -179,7 +179,6 @@ parameter_types! {
 }
 
 impl crate::Config for Test {
-	type Balance = u64;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
 	type FeeDealer = FixedCurrencyFeeRate<Test>;

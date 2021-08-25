@@ -65,8 +65,8 @@ pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
 	xcm_impl::{
-		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets, BifrostXcmTransactFilter,
+		BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets,
+		BifrostXcmTransactFilter,
 	},
 	SlowAdjustingFeeUpdate,
 };
@@ -110,7 +110,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 802,
+	spec_version: 803,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -164,7 +164,8 @@ impl Filter<Call> for CallFilter {
 			Call::Balances(_) => false,
 			Call::Vesting(_) => false,
 			Call::Tokens(_) => false,
-			Call::Currencies(_) => false,
+			Call::PhragmenElection(_) => false,
+			Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
 			_ => true,
 		}
 	}
@@ -451,8 +452,7 @@ impl pallet_democracy::Config for Runtime {
 	type PreimageByteDeposit = PreimageByteDeposit;
 	type Proposal = Call;
 	type Scheduler = Scheduler;
-	// NOTE: Treasury replaced by `()`.
-	type Slash = ();
+	type Slash = Treasury;
 	// Any single technical committee member may veto a coming council proposal, however they can
 	// only do it once and it lasts only for the cool-off period.
 	type VetoOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
@@ -521,7 +521,7 @@ impl pallet_tips::Config for Runtime {
 	type TipCountdown = TipCountdown;
 	type TipFindersFee = TipFindersFee;
 	type TipReportDepositBase = TipReportDepositBase;
-	type Tippers = Elections;
+	type Tippers = PhragmenElection;
 	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
@@ -824,12 +824,10 @@ impl orml_tokens::Config for Runtime {
 
 // Bifrost modules start
 parameter_types! {
-	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
-	type Balance = Balance;
 	type Currency = Balances;
 	type DexOperator = ();
 	// type FeeDealer = FlexibleFee;
@@ -838,7 +836,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AlternativeFeeCurrencyId = RelayCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
@@ -876,7 +874,7 @@ construct_runtime! {
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
-		Elections: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
+		PhragmenElection: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
 		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
 		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
 
@@ -940,7 +938,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	// pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;

@@ -923,12 +923,10 @@ impl orml_tokens::Config for Runtime {
 }
 
 parameter_types! {
-	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
-	type Balance = Balance;
 	type Currency = Balances;
 	type DexOperator = ZenlinkProtocol;
 	// type FeeDealer = FlexibleFee;
@@ -937,7 +935,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type NativeCurrencyId = NativeCurrencyId;
-	type AlternativeFeeCurrencyId = AlternativeFeeCurrencyId;
+	type AlternativeFeeCurrencyId = RelayCurrencyId;
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
