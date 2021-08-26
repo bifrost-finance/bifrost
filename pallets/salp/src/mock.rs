@@ -26,7 +26,8 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use node_primitives::{
-	Amount, Balance, CurrencyId, ParachainTransactProxyType, TokenSymbol, TransferOriginType,
+	Amount, Balance, CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType,
+	TokenSymbol, TransferOriginType,
 };
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -217,7 +218,8 @@ parameter_types! {
 		CATHI
 	],2);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(0 as u16);
-	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 }
 
 parameter_types! {
@@ -252,7 +254,10 @@ use frame_support::dispatch::DispatchResult;
 use orml_traits::XcmTransfer;
 use smallvec::smallvec;
 pub use sp_runtime::Perbill;
-use xcm::{opaque::v0::MultiAsset, v0::Junction};
+use xcm::{
+	opaque::v0::MultiAsset,
+	v0::{prelude::XcmError, Junction},
+};
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
@@ -319,6 +324,7 @@ impl salp::Config for Test {
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
 }
 
@@ -371,6 +377,20 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 	fn ump_transact(
 		_origin: MultiLocation,
 		_call: DoubleEncoded<()>,
+		_weight: u64,
+		_relayer: bool,
+	) -> Result<[u8; 32], XcmError> {
+		let result = unsafe { MOCK_XCM_RESULT.0 };
+
+		match result {
+			true => Ok([0; 32]),
+			false => Err(xcm::v0::Error::Undefined),
+		}
+	}
+
+	fn ump_transacts(
+		_origin: MultiLocation,
+		_call: Vec<DoubleEncoded<()>>,
 		_weight: u64,
 		_relayer: bool,
 	) -> XcmResult {
@@ -426,3 +446,4 @@ pub const WEEKS: BlockNumber = DAYS * 7;
 pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const CATHI: AccountId = AccountId::new([2u8; 32]);
+pub(crate) const CONTRIBUTON_INDEX: MessageId = [0; 32];

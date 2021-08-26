@@ -122,3 +122,5 @@ pub type ParaId = u32;
 
 /// The measurement type for counting lease periods (generally the same as `BlockNumber`).
 pub type LeasePeriod = BlockNumber;
+
+pub type MessageId = [u8; 32];

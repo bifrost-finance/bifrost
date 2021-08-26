@@ -93,7 +93,8 @@ use frame_support::{
 };
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
+	XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -955,7 +956,8 @@ parameter_types! {
 	]
 	.into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 }
 
 pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
@@ -1019,6 +1021,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
 }
 

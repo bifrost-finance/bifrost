@@ -85,7 +85,8 @@ use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
+	XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -1015,7 +1016,8 @@ parameter_types! {
 		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(),//5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 	],3);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Proxy;
+	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -1048,6 +1050,7 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpProxyType;
 	type TransactType = SalpTransactType;
 }
 

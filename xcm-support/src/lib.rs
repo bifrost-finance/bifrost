@@ -26,7 +26,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::FullCodec;
+use codec::{Encode, FullCodec};
 pub use cumulus_primitives_core::{self, ParaId};
 pub use frame_support::{traits::Get, weights::Weight};
 pub use paste;
@@ -52,6 +52,7 @@ mod calls;
 mod traits;
 pub use calls::*;
 use frame_support::weights::WeightToFeePolynomial;
+use node_primitives::MessageId;
 pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
 #[allow(unused_imports)]
@@ -178,7 +179,7 @@ impl<
 		call: DoubleEncoded<()>,
 		weight: u64,
 		relay: bool,
-	) -> XcmResult {
+	) -> Result<MessageId, XcmError> {
 		let mut message = Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: MultiLocation::Null,
@@ -194,6 +195,48 @@ impl<
 					require_weight_at_most: u64::MAX,
 					call,
 				}],
+			}],
+		};
+
+		if relay {
+			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message.clone()) };
+		}
+
+		let data = VersionedXcm::<()>::from(message.clone()).encode();
+
+		let id = sp_io::hashing::blake2_256(&data[..]);
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
+			.map_err(|_e| XcmError::Undefined)?;
+
+		Ok(id)
+	}
+
+	fn ump_transacts(
+		origin: MultiLocation,
+		calls: Vec<DoubleEncoded<()>>,
+		weight: u64,
+		relay: bool,
+	) -> XcmResult {
+		let transacts = calls
+			.iter()
+			.map(|call| Xcm::Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: u64::MAX,
+				call: call.clone(),
+			})
+			.collect();
+		let mut message = Xcm::WithdrawAsset {
+			assets: vec![MultiAsset::ConcreteFungible {
+				id: MultiLocation::Null,
+				amount: WeightToFee::calc(&Self::transact_weight(weight)),
+			}],
+			effects: vec![Order::BuyExecution {
+				fees: MultiAsset::All,
+				weight: weight + 4 * BaseXcmWeight::get(),
+				debt: 2 * BaseXcmWeight::get(),
+				halt_on_error: true,
+				xcm: transacts,
 			}],
 		};
 

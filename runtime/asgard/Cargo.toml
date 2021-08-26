@@ -21,6 +21,7 @@ sp-inherents = { version = "3.0.0", default-features = false }
 sp-offchain = { version = "3.0.0", default-features = false }
 sp-core = { version = "3.0.0", default-features = false }
 sp-std = { version = "3.0.0", default-features = false }
+sp-io = { version = "3.0.0", default-features = false }
 sp-api = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-session = { version = "3.0.0", default-features = false }
