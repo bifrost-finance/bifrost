@@ -519,7 +519,7 @@ impl DefaultConfigurationValues for RelayChainCli {
 	}
 
 	fn prometheus_listen_port() -> u16 {
-		9615
+		9616
 	}
 }
 
