@@ -22,7 +22,7 @@ use bstringify::bstringify;
 use codec::{Decode, Encode};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use sp_runtime::{RuntimeDebug, SaturatedConversion};
+use sp_runtime::RuntimeDebug;
 use sp_std::{
 	convert::{Into, TryFrom, TryInto},
 	prelude::*,
@@ -75,21 +75,28 @@ macro_rules! create_currency_id {
 			type Error = ();
 			fn try_from(id: CurrencyId) -> Result<AssetId, ()> {
 				let _index = match id {
-					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((0_u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::VToken(TokenSymbol::$symbol) => Ok((1_u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::Token(TokenSymbol::$symbol) => Ok((2_u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::Stable(TokenSymbol::$symbol) => Ok((3_u32, TokenSymbol::$symbol as u32)),)*
-					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((4_u32, TokenSymbol::$symbol as u32)),)*
+					$(CurrencyId::Native(TokenSymbol::$symbol) => Ok((0_u64, TokenSymbol::$symbol as u64)),)*
+					$(CurrencyId::VToken(TokenSymbol::$symbol) => Ok((1_u64, TokenSymbol::$symbol as u64)),)*
+					$(CurrencyId::Token(TokenSymbol::$symbol) => Ok((2_u64, TokenSymbol::$symbol as u64)),)*
+					$(CurrencyId::Stable(TokenSymbol::$symbol) => Ok((3_u64, TokenSymbol::$symbol as u64)),)*
+					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Ok((4_u64, TokenSymbol::$symbol as u64)),)*
+					CurrencyId::LPToken(symbol0, index0, symbol1, index1) => {
+						let currency_index0 =
+							(((((index0 as u64) << 8) & 0x0000_ff00) + (symbol0 as u64 & 0x0000_00ff)) as u64) << 16;
+						let currency_index1 =
+							(((((index1 as u64) << 8) & 0x0000_ff00) + (symbol1 as u64 & 0x0000_00ff)) as u64) << 32;
+						Ok((6 as u64, currency_index0 + currency_index1))
+					}
 					_ => Err(()),
 				};
-				let asset_index: u32 = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
+				let asset_index = ((_index?.0 << 8) & 0x0000_ff00) + (_index?.1 & 0x0000_00ff);
 				if id.is_native() {
 					Ok(AssetId { chain_id: BIFROST_PARACHAIN_ID, asset_type: NATIVE, asset_index: 0 })
 				} else {
 					Ok(AssetId {
 						chain_id: BIFROST_PARACHAIN_ID,
 						asset_type: LOCAL,
-						asset_index: asset_index,
+						asset_index: asset_index as u64,
 					})
 				}
 			}
@@ -103,25 +110,17 @@ macro_rules! create_currency_id {
 			// TokenSymbol Index:       1byte
 			type Error = ();
 			fn try_into(self) -> Result<CurrencyId, Self::Error> {
-				let id: u32 = self.asset_index.saturated_into();
-				let c_discr = (id >> 8) as u32;
-				let _index = (0x0000_00ff & id) as u32;
-				let token_symbol = match _index {
-					$(x if x == TokenSymbol::$symbol as u32 => Ok(TokenSymbol::$symbol),)*
-					_ => Err(()),
-				};
+				let id = self.asset_index;
+				let c_discr = ((id & 0x0000_0000_0000_ff00) >> 8) as u32;
+				let _index = (0x0000_00ff & id) as u8;
+
 				match c_discr {
-					0 => {
-							if (_index == 0) {
-								Ok(CurrencyId::Native(TokenSymbol::ASG))
-							} else {
-								Ok(CurrencyId::Native(TokenSymbol::BNC))
-							}
-						},
-					1 => Ok(CurrencyId::VToken(token_symbol?)),
-					2 => Ok(CurrencyId::Token(token_symbol?)),
-					3 => Ok(CurrencyId::Stable(token_symbol?)),
-					4 => Ok(CurrencyId::VSToken(token_symbol?)),
+					0 => Ok(CurrencyId::Native(TokenSymbol::try_from(_index)?)),
+					1 => Ok(CurrencyId::VToken(TokenSymbol::try_from(_index)?)),
+					2 => Ok(CurrencyId::Token(TokenSymbol::try_from(_index)?)),
+					3 => Ok(CurrencyId::Stable(TokenSymbol::try_from(_index)?)),
+					4 => Ok(CurrencyId::VSToken(TokenSymbol::try_from(_index)?)),
+					6 => Ok(CurrencyId::try_from(id)?),
 					_ => Err(()),
 				}
 			}

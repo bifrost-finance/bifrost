@@ -82,12 +82,6 @@ fn basic_setup() {
 	let asset_1_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
 	let asset_2_currency_id: AssetId = AssetId::try_from(CURRENCY_ID_2).unwrap();
 
-	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::signed(ALICE),
-		asset_0_currency_id,
-		asset_1_currency_id
-	));
-
 	let mut deadline: BlockNumberFor<Test> = <frame_system::Pallet<Test>>::block_number() +
 		<Test as frame_system::Config>::BlockNumber::from(100u32);
 	assert_ok!(ZenlinkProtocol::add_liquidity(
@@ -100,17 +94,6 @@ fn basic_setup() {
 		1,
 		deadline
 	));
-
-	assert_ok!(ZenlinkProtocol::create_pair(
-		Origin::signed(ALICE),
-		asset_0_currency_id,
-		asset_2_currency_id
-	)); // asset 0 and 2
-
-	let pool_0_2_account = ZenlinkProtocol::lp_metadata((asset_0_currency_id, asset_2_currency_id))
-		.unwrap()
-		.0;
-	println!("pool_0_2_account: {:?}", pool_0_2_account);
 
 	// pool 0 2
 	deadline = <frame_system::Pallet<Test>>::block_number() +
@@ -197,27 +180,6 @@ fn ensure_can_charge_fee_should_work() {
 		let _ = FlexibleFee::set_user_fee_charge_order(
 			origin_signed_bob.clone(),
 			Some(asset_order_list_vec.clone()),
-		);
-
-		let native_asset_id: AssetId = AssetId::try_from(CURRENCY_ID_0).unwrap();
-		let asset_id: AssetId = AssetId::try_from(CURRENCY_ID_1).unwrap();
-
-		let path = vec![asset_id, native_asset_id];
-		let pool_0_1_account = ZenlinkProtocol::lp_metadata((native_asset_id, asset_id)).unwrap().0;
-
-		println!("pool_0_1_account: {:?}", pool_0_1_account);
-
-		let pool_0_1_price = ZenlinkProtocol::get_amount_in_by_path(100, &path);
-		let pool_0_1_account = ZenlinkProtocol::lp_metadata((native_asset_id, asset_id)).unwrap().0;
-
-		println!("pool_0_1_price: {:?}", pool_0_1_price);
-		println!(
-			"crrency 0 total balance of pool_0_1: {:?}",
-			Currencies::total_balance(CURRENCY_ID_0, &pool_0_1_account)
-		);
-		println!(
-			"crrency 1 total balance of pool_0_1: {:?}",
-			Currencies::total_balance(CURRENCY_ID_1, &pool_0_1_account)
 		);
 
 		assert_ok!(<Test as crate::Config>::FeeDealer::ensure_can_charge_fee(

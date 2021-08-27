@@ -6,25 +6,25 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
-sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
-pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8", default-features = false, optional = true }
 
 [dev-dependencies]
 orml-tokens = { version = "0.4.1-dev" }
 orml-currencies = { version = "0.4.1-dev" }
-balances = { package = "pallet-balances", version = "3.0.0", default-features = false }
-sp-core = "3.0.0"
-sp-io = "3.0.0"
+balances = { package = "pallet-balances", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 smallvec = "1.4.1"
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.8" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.9" }
 
 [features]
 default = ["std"]

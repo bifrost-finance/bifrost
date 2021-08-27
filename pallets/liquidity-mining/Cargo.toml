@@ -8,15 +8,15 @@ edition = "2018"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-frame-system = { version = "3.0.0", default-features = false }
-frame-support = { version = "3.0.0", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
-sp-core = "3.0.0"
-pallet-balances = "3.0.0"
-pallet-collective = "3.0.0"
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 
