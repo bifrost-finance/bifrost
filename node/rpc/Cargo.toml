@@ -10,12 +10,12 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 jsonrpc-core = "15.1.0"
 node-primitives = { path = "../primitives" }
-sc-rpc-api = { version = "0.9.0" }
-sc-rpc = { version = "3.0.0" }
-sp-api = { version = "3.0.0" }
-sp-blockchain = { version = "3.0.0" }
-sp-transaction-pool = { version = "3.0.0" }
-pallet-transaction-payment-rpc = { version = "3.0.0" }
+sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sc-transaction-pool-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
 zenlink-protocol-rpc = "*"

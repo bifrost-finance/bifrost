@@ -215,14 +215,14 @@ parameter_types! {
 }
 
 impl zenlink_protocol::Config for Test {
-	type Conversion = ();
 	type Event = Event;
-	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
+
 	type TargetChains = ();
 	type XcmExecutor = ();
+	type Conversion = ();
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;

@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-use frame_support::{parameter_types, sp_runtime::offchain::storage_lock::BlockNumberProvider};
+use frame_support::{parameter_types, sp_runtime::traits::BlockNumberProvider};
 use node_primitives::BlockNumber;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{FixedPointNumber, Perquintill};
