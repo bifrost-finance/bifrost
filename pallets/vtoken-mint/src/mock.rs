@@ -189,7 +189,6 @@ parameter_types! {
 impl zenlink_protocol::Config for Runtime {
 	type Conversion = ();
 	type Event = Event;
-	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = ();
