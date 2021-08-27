@@ -31,7 +31,7 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{All, InstanceFilter, IsInVec, LockIdentifier, MaxEncodedLen, Randomness},
+	traits::{Everything, InstanceFilter, IsInVec, LockIdentifier, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -79,7 +79,7 @@ use bifrost_runtime_common::{
 	},
 	SlowAdjustingFeeUpdate,
 };
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
@@ -95,9 +95,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{
-	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm,
-};
+use xcm::v0::{BodyId, Junction, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
@@ -751,10 +749,10 @@ match_type! {
 
 pub type Barrier = (
 	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
+	AllowTopLevelPaidExecutionFrom<Everything>,
 	// ^^^ Parent & its unit plurality gets free execution
 	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
-	BifrostXcmTransactFilter<All<MultiLocation>>,
+	BifrostXcmTransactFilter<Everything>,
 );
 
 pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
@@ -796,13 +794,14 @@ pub type XcmRouter = (
 impl pallet_xcm::Config for Runtime {
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type LocationInverter = LocationInverter<Ancestry>;
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-	type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = XcmRouter;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmTeleportFilter = Everything;
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
@@ -856,6 +855,7 @@ impl pallet_authorship::Config for Runtime {
 
 impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
+	type DisabledValidators = ();
 }
 
 parameter_types! {
@@ -1132,7 +1132,6 @@ parameter_types! {
 impl zenlink_protocol::Config for Runtime {
 	type Conversion = ZenlinkLocationToAccountId;
 	type Event = Event;
-	type GetExchangeFee = GetExchangeFee;
 	type MultiAssetsHandler = MultiAssets;
 	type PalletId = ZenlinkPalletId;
 	type SelfParaId = SelfParaId;
@@ -1264,7 +1263,7 @@ construct_runtime! {
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
-		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>} = 5,
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
 		// Monetary stuff
@@ -1519,9 +1518,6 @@ impl_runtime_apis! {
 
 	// zenlink runtime outer apis
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-		fn get_assets() -> Vec<AssetId> {
-			ZenlinkProtocol::get_assets()
-		}
 
 		fn get_balance(
 			asset_id: AssetId,
@@ -1536,53 +1532,11 @@ impl_runtime_apis! {
 			ZenlinkProtocol::get_sovereigns_info(&asset_id)
 		}
 
-		fn get_all_pairs() -> Vec<PairInfo<AccountId, AssetBalance>> {
-			ZenlinkProtocol::get_all_pairs()
-		}
-
-		fn get_owner_pairs(
-			owner: AccountId
-		) -> Vec<PairInfo<AccountId, AssetBalance>> {
-			ZenlinkProtocol::get_owner_pairs(&owner)
-		}
-
 		fn get_pair_by_asset_id(
 			asset_0: AssetId,
 			asset_1: AssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
-		}
-
-		fn get_amount_in_price(
-			supply: AssetBalance,
-			path: Vec<AssetId>
-		) -> AssetBalance {
-			ZenlinkProtocol::desired_in_amount(supply, path)
-		}
-
-		fn get_amount_out_price(
-			supply: AssetBalance,
-			path: Vec<AssetId>
-		) -> AssetBalance {
-			ZenlinkProtocol::supply_out_amount(supply, path)
-		}
-
-		fn get_estimate_lptoken(
-			token_0: AssetId,
-			token_1: AssetId,
-			amount_0_desired: AssetBalance,
-			amount_1_desired: AssetBalance,
-			amount_0_min: AssetBalance,
-			amount_1_min: AssetBalance,
-		) -> AssetBalance{
-			ZenlinkProtocol::get_estimate_lptoken(
-				token_0,
-				token_1,
-				amount_0_desired,
-				amount_1_desired,
-				amount_0_min,
-				amount_1_min
-			)
 		}
 	}
 
