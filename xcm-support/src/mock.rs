@@ -49,7 +49,7 @@ pub fn encode_xcm(message: Xcm<()>, message_kind: MessageKind) -> Vec<u8> {
 	match message_kind {
 		MessageKind::Ump | MessageKind::Dmp => VersionedXcm::<()>::from(message).encode(),
 		MessageKind::Xcmp => {
-			let fmt = cumulus_pallet_xcmp_queue::XcmpMessageFormat::ConcatenatedVersionedXcm;
+			let fmt = polkadot_parachain::primitives::XcmpMessageFormat::ConcatenatedVersionedXcm;
 			let mut outbound = fmt.encode();
 
 			let encoded = VersionedXcm::<()>::from(message).encode();
@@ -304,7 +304,7 @@ pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
 pub mod para {
 	use frame_support::{
 		construct_runtime, parameter_types,
-		traits::All,
+		traits::Everything,
 		weights::{constants::WEIGHT_PER_SECOND, Weight},
 	};
 	use frame_system::EnsureRoot;
@@ -427,7 +427,7 @@ pub mod para {
 		XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
 	pub type XcmRouter = crate::mock::ParachainXcmRouter<ParachainInfo>;
-	pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
+	pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 	pub struct XcmConfig;
 	impl Config for XcmConfig {
@@ -466,11 +466,12 @@ pub mod para {
 	impl pallet_xcm::Config for Runtime {
 		type Event = Event;
 		type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+		type LocationInverter = LocationInverter<Ancestry>;
 		type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-		type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+		type XcmExecuteFilter = Everything;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
-		type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+		type XcmReserveTransferFilter = Everything;
 		type XcmRouter = XcmRouter;
 		type XcmTeleportFilter = ();
 	}
@@ -502,7 +503,7 @@ pub mod relay {
 	use cumulus_primitives_core::ParaId;
 	use frame_support::{
 		construct_runtime, parameter_types,
-		traits::{All, OnUnbalanced},
+		traits::{Everything, OnUnbalanced},
 		weights::{Weight, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
 	};
 	use pallet_balances::NegativeImbalance;
@@ -511,7 +512,7 @@ pub mod relay {
 	use smallvec::smallvec;
 	use sp_core::H256;
 	use sp_runtime::{testing::Header, traits::IdentityLookup, AccountId32, Perbill};
-	use xcm::v0::{MultiAsset, MultiLocation, NetworkId};
+	use xcm::v0::{MultiLocation, NetworkId};
 	use xcm_builder::{
 		AccountId32Aliases, AllowTopLevelPaidExecutionFrom, ChildParachainAsNative,
 		ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
@@ -632,7 +633,7 @@ pub mod relay {
 	}
 
 	pub type XcmRouter = crate::mock::RelayChainXcmRouter;
-	pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<All<MultiLocation>>);
+	pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
 
 	pub struct XcmConfig;
 	impl Config for XcmConfig {
@@ -656,13 +657,14 @@ pub mod relay {
 		type Event = Event;
 		// Anyone can execute XCM messages locally...
 		type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+		type LocationInverter = LocationInverter<Ancestry>;
 		type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 		type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
 		type XcmExecuteFilter = ();
 		type XcmExecutor = XcmExecutor<XcmConfig>;
-		type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+		type XcmReserveTransferFilter = Everything;
 		type XcmRouter = XcmRouter;
-		type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+		type XcmTeleportFilter = Everything;
 	}
 
 	parameter_types! {
