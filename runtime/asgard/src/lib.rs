@@ -1016,7 +1016,7 @@ parameter_types! {
 		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(),//5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 	],3);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Proxy;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
