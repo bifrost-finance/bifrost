@@ -52,7 +52,7 @@ impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 	fn contribute() -> Weight {
-		(48_000_000 as Weight)
+		(8_000_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}

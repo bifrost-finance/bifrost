@@ -313,9 +313,9 @@ pub mod pallet {
 		/// Contributing to a crowd sale. [who, fund_index, amount]
 		Contributing(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
 		/// Contributed to a crowd sale. [who, fund_index, amount]
-		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
 		/// Fail on contribute to crowd sale. [who, fund_index, amount]
-		ContributeFailed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		ContributeFailed(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
 		/// Withdrawing full balance of a contributor. [who, fund_index, amount]
 		Withdrawing(ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
@@ -721,7 +721,7 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
 			is_success: bool,
-			_contribution_index: MessageId,
+			contribution_index: MessageId,
 		) -> DispatchResult {
 			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -764,7 +764,12 @@ pub mod pallet {
 					ContributionStatus::Idle,
 				);
 
-				Self::deposit_event(Event::Contributed(who, index, contributing));
+				Self::deposit_event(Event::Contributed(
+					who,
+					index,
+					contributing,
+					contribution_index,
+				));
 			} else {
 				// Update the contribution of who
 				Self::put_contribution(
@@ -779,7 +784,12 @@ pub mod pallet {
 					T::MultiCurrency::unreserve(T::RelayChainToken::get(), &who, contributing);
 				}
 
-				Self::deposit_event(Event::ContributeFailed(who, index, contributing));
+				Self::deposit_event(Event::ContributeFailed(
+					who,
+					index,
+					contributing,
+					contribution_index,
+				));
 			}
 
 			Ok(())
