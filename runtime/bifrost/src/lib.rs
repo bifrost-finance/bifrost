@@ -165,7 +165,8 @@ impl Filter<Call> for CallFilter {
 			Call::Vesting(_) => false,
 			Call::Tokens(_) => false,
 			Call::PhragmenElection(_) => false,
-			Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
+			Call::Currencies(_) => false,
+			// Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
 			_ => true,
 		}
 	}
