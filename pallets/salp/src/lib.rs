@@ -394,12 +394,12 @@ pub mod pallet {
 		InvalidRedeemStatus,
 	}
 
-	/// Tracker for the next available trie index
+	/// Tracker for the next available fund index
 	#[pallet::storage]
 	#[pallet::getter(fn current_trie_index)]
 	pub(super) type CurrentTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
 
-	/// Tracker for the next available trie index
+	/// Tracker for the next available contribution index
 	#[pallet::storage]
 	#[pallet::getter(fn current_contribution_index)]
 	pub(super) type CurrentContributionIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
@@ -694,24 +694,19 @@ pub mod pallet {
 				ContributionStatus::Contributing(value),
 			);
 
-			let contribution_index: MessageId;
+			let contribution_index = Self::next_contribution_index()?;
+			let message_id: MessageId;
 
 			if T::TransactType::get() == ParachainTransactType::Xcm {
-				contribution_index = Self::xcm_ump_contribute(origin, index, value)
+				message_id = Self::xcm_ump_contribute(origin, index, value, contribution_index)
 					.map_err(|_e| Error::<T>::XcmFailed)?;
 			} else {
-				contribution_index =
-					sp_io::hashing::blake2_256(&Self::next_contribution_index()?.encode());
+				message_id = sp_io::hashing::blake2_256(&contribution_index.encode());
 				if T::TransactProxyType::get() == ParachainTransactProxyType::Derived {
 					Self::xcm_ump_transfer(who.clone(), value)?;
 				}
 			}
-			Self::deposit_event(Event::Contributing(
-				who.clone(),
-				index,
-				value.clone(),
-				contribution_index,
-			));
+			Self::deposit_event(Event::Contributing(who.clone(), index, value.clone(), message_id));
 			Ok(())
 		}
 
@@ -1245,8 +1240,12 @@ pub mod pallet {
 
 		pub(crate) fn next_contribution_index() -> Result<TrieIndex, Error<T>> {
 			CurrentContributionIndex::<T>::try_mutate(|ti| {
-				*ti = ti.checked_add(1).ok_or(Error::<T>::Overflow)?;
-				Ok(*ti - 1)
+				*ti = ti.saturating_add(1);
+				if *ti == u32::MAX {
+					Ok(0)
+				} else {
+					Ok(*ti - 1)
+				}
 			})
 		}
 
@@ -1310,11 +1309,12 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			index: ParaId,
 			mut value: BalanceOf<T>,
+			nonce: TrieIndex,
 		) -> Result<MessageId, XcmError> {
 			let _who = ensure_signed(origin).map_err(|_e| XcmError::BadOrigin)?;
 
 			let fee: BalanceOf<T> = T::WeightToFee::calc(&T::BifrostXcmExecutor::transact_weight(
-				T::ContributionWeight::get(),
+				T::ContributionWeight::get() + nonce as u64,
 			));
 			value = value.saturating_sub(fee);
 
