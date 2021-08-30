@@ -122,3 +122,6 @@ pub type ParaId = u32;
 
 /// The measurement type for counting lease periods (generally the same as `BlockNumber`).
 pub type LeasePeriod = BlockNumber;
+
+/// Index used for the child trie
+pub type TrieIndex = u32;

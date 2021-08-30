@@ -19,17 +19,12 @@
 use codec::{Decode, Encode};
 use node_primitives::ParaId;
 use sp_runtime::MultiSignature;
+use sp_std::vec::Vec;
 
 #[derive(Encode, Decode)]
 pub enum CrowdloanContributeCall<BalanceOf> {
 	#[codec(index = 73)]
 	CrowdloanContribute(ContributeCall<BalanceOf>),
-}
-
-#[derive(Encode, Decode)]
-pub enum CrowdloanWithdrawCall<AccountIdOf> {
-	#[codec(index = 73)]
-	CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
 }
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -47,6 +42,12 @@ pub enum ContributeCall<BalanceOf> {
 	Contribute(Contribution<BalanceOf>),
 }
 
+#[derive(Encode, Decode)]
+pub enum CrowdloanWithdrawCall<AccountIdOf> {
+	#[codec(index = 73)]
+	CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
+}
+
 #[derive(Debug, PartialEq, Encode, Decode)]
 pub struct Withdraw<AccountIdOf> {
 	pub who: AccountIdOf,
@@ -58,6 +59,24 @@ pub struct Withdraw<AccountIdOf> {
 pub enum WithdrawCall<AccountIdOf> {
 	#[codec(index = 2)]
 	Withdraw(Withdraw<AccountIdOf>),
+}
+
+#[derive(Encode, Decode)]
+pub enum CrowdloanAddMemoCall {
+	#[codec(index = 73)]
+	CrowdloanAddMemo(AddMemoCall),
+}
+
+#[derive(Encode, Decode)]
+pub enum AddMemoCall {
+	#[codec(index = 6)]
+	AddMemo(AddMemo),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct AddMemo {
+	pub index: ParaId,
+	pub memo: Vec<u8>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug)]
@@ -106,4 +125,38 @@ pub struct RemoveProxy<AccountIdOf, BlockNumberOf> {
 	pub delegate: AccountIdOf,
 	pub proxy_type: ProxyType,
 	pub delay: BlockNumberOf,
+}
+
+#[derive(Encode, Decode)]
+pub enum UtilityBatchCall {
+	#[codec(index = 24)]
+	UtilityBatch(BatchCall),
+}
+
+#[derive(Encode, Decode)]
+pub enum BatchCall {
+	#[codec(index = 0)]
+	Batch(BatchCalls),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct BatchCalls {
+	pub calls: Vec<Vec<u8>>,
+}
+
+#[derive(Encode, Decode)]
+pub enum SystemRemarkCall {
+	#[codec(index = 0)]
+	SystemRemark(RemarkCall),
+}
+
+#[derive(Encode, Decode)]
+pub enum RemarkCall {
+	#[codec(index = 9)]
+	Remark(RemarkWithEvent),
+}
+
+#[derive(Debug, PartialEq, Encode, Decode)]
+pub struct RemarkWithEvent {
+	pub remark: Vec<u8>,
 }

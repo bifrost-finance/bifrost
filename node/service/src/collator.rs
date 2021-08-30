@@ -19,6 +19,7 @@
 use std::sync::Arc;
 
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
 };
@@ -28,7 +29,7 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use node_primitives::AccountId;
+use node_primitives::{AccountId, Balance, ParaId as BifrostParaId};
 use sc_client_api::ExecutorProvider;
 use sc_executor::native_executor_instance;
 pub use sc_executor::NativeExecutor;
@@ -335,6 +336,7 @@ where
 	>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId, Balance>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
 			Arc<TFullClient<Block, RuntimeApi, Executor>>,

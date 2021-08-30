@@ -35,7 +35,8 @@ use std::sync::Arc;
 
 use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use node_primitives::{AccountId, Balance, Block};
+use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
+use node_primitives::{AccountId, Balance, Block, ParaId};
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
@@ -70,6 +71,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	C::Api: SalpRuntimeApi<Block, ParaId, AccountId, Balance>,
 	P: TransactionPool + 'static,
 {
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
@@ -80,9 +82,15 @@ where
 
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
 
+	use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
+	use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
+	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
 
 	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
-	Ok(io)
+	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
+
+	io
 }
