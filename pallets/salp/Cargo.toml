@@ -12,6 +12,7 @@ frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
 frame-benchmarking = {  version = "3.0.0", default-features = false, optional = true }
 sp-std = { version = "3.0.0", default-features = false }
+sp-io = { version = "3.0.0", default-features = false }
 sp-runtime = { version = "3.0.0", default-features = false }
 sp-arithmetic = { version = "3.0.0", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.8", default-features = false }

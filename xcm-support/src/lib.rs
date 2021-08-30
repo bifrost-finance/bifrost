@@ -26,7 +26,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::FullCodec;
+use codec::{Encode, FullCodec};
 pub use cumulus_primitives_core::{self, ParaId};
 pub use frame_support::{traits::Get, weights::Weight};
 pub use paste;
@@ -52,6 +52,7 @@ mod calls;
 mod traits;
 pub use calls::*;
 use frame_support::weights::WeightToFeePolynomial;
+use node_primitives::MessageId;
 pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
 #[allow(unused_imports)]
@@ -169,8 +170,12 @@ impl<
 		WeightToFee: WeightToFeePolynomial<Balance = u128>,
 	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>
 {
-	fn transact_weight(weight: u64) -> u64 {
-		return weight + 4 * BaseXcmWeight::get();
+	fn transact_weight(weight: u64, nonce: u32) -> u64 {
+		return weight + 4 * BaseXcmWeight::get() + nonce as u64;
+	}
+
+	fn transact_id(data: &[u8]) -> MessageId {
+		return sp_io::hashing::blake2_256(&data[..]);
 	}
 
 	fn ump_transact(
@@ -178,15 +183,16 @@ impl<
 		call: DoubleEncoded<()>,
 		weight: u64,
 		relay: bool,
-	) -> XcmResult {
+		nonce: u32,
+	) -> Result<MessageId, XcmError> {
 		let mut message = Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible {
 				id: MultiLocation::Null,
-				amount: WeightToFee::calc(&Self::transact_weight(weight)),
+				amount: WeightToFee::calc(&Self::transact_weight(weight, nonce)),
 			}],
 			effects: vec![Order::BuyExecution {
 				fees: MultiAsset::All,
-				weight: weight + 2 * BaseXcmWeight::get(),
+				weight: weight + 2 * BaseXcmWeight::get() + nonce as u64,
 				debt: 2 * BaseXcmWeight::get(),
 				halt_on_error: true,
 				xcm: vec![Xcm::Transact {
@@ -198,10 +204,58 @@ impl<
 		};
 
 		if relay {
+			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message.clone()) };
+		}
+
+		let data = VersionedXcm::<()>::from(message.clone()).encode();
+
+		let id = Self::transact_id(&data);
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
+			.map_err(|_e| XcmError::Undefined)?;
+
+		Ok(id)
+	}
+
+	fn ump_transacts(
+		origin: MultiLocation,
+		calls: Vec<DoubleEncoded<()>>,
+		weight: u64,
+		relay: bool,
+	) -> Result<MessageId, XcmError> {
+		let transacts = calls
+			.iter()
+			.map(|call| Xcm::Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: u64::MAX,
+				call: call.clone(),
+			})
+			.collect();
+		let mut message = Xcm::WithdrawAsset {
+			assets: vec![MultiAsset::ConcreteFungible {
+				id: MultiLocation::Null,
+				amount: WeightToFee::calc(&Self::transact_weight(weight, 0)),
+			}],
+			effects: vec![Order::BuyExecution {
+				fees: MultiAsset::All,
+				weight: weight + 4 * BaseXcmWeight::get(),
+				debt: 2 * BaseXcmWeight::get(),
+				halt_on_error: true,
+				xcm: transacts,
+			}],
+		};
+
+		if relay {
 			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message) };
 		}
 
-		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
+		let data = VersionedXcm::<()>::from(message.clone()).encode();
+
+		let id = Self::transact_id(&data);
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)?;
+
+		Ok(id)
 	}
 
 	fn ump_transfer_asset(
@@ -209,13 +263,14 @@ impl<
 		dest: MultiLocation,
 		amount: u128,
 		relay: bool,
-	) -> XcmResult {
+		nonce: u32,
+	) -> Result<MessageId, XcmError> {
 		let mut message = Xcm::WithdrawAsset {
 			assets: vec![MultiAsset::ConcreteFungible { id: MultiLocation::Null, amount }],
 			effects: vec![
 				Order::BuyExecution {
 					fees: MultiAsset::All,
-					weight: 0,
+					weight: nonce as u64,
 					debt: 3 * BaseXcmWeight::get(),
 					halt_on_error: false,
 					xcm: vec![],
@@ -228,6 +283,12 @@ impl<
 			message = Xcm::<()>::RelayedFrom { who: origin, message: Box::new(message) };
 		}
 
-		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
+		let data = VersionedXcm::<()>::from(message.clone()).encode();
+
+		let id = Self::transact_id(&data);
+
+		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)?;
+
+		Ok(id)
 	}
 }
