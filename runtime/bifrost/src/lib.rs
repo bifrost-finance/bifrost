@@ -464,7 +464,7 @@ parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
 	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
-	pub const Burn: Permill = Permill::from_perthousand(2);
+	pub const Burn: Permill = Permill::from_perthousand(0);
 
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
@@ -488,7 +488,7 @@ type ApproveOrigin = EnsureOneOf<
 impl pallet_treasury::Config for Runtime {
 	type ApproveOrigin = ApproveOrigin;
 	type Burn = Burn;
-	type BurnDestination = Treasury;
+	type BurnDestination = ();
 	type Currency = Balances;
 	type Event = Event;
 	type MaxApprovals = MaxApprovals;
