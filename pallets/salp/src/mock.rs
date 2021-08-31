@@ -204,7 +204,7 @@ parameter_types! {
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromSelf;
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
 	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
@@ -425,16 +425,15 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	let initial_balance = 100000 as u128;
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
-			(ALICE, NativeCurrencyId::get(), initial_balance),
-			(ALICE, RelayCurrencyId::get(), initial_balance),
-			(BRUCE, NativeCurrencyId::get(), initial_balance),
-			(BRUCE, RelayCurrencyId::get(), initial_balance),
-			(CATHI, NativeCurrencyId::get(), initial_balance),
-			(CATHI, RelayCurrencyId::get(), initial_balance),
+			(ALICE, NativeCurrencyId::get(), INIT_BALANCE),
+			(ALICE, RelayCurrencyId::get(), INIT_BALANCE),
+			(BRUCE, NativeCurrencyId::get(), INIT_BALANCE),
+			(BRUCE, RelayCurrencyId::get(), INIT_BALANCE),
+			(CATHI, NativeCurrencyId::get(), INIT_BALANCE),
+			(CATHI, RelayCurrencyId::get(), INIT_BALANCE),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -453,3 +452,5 @@ pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const CATHI: AccountId = AccountId::new([2u8; 32]);
 pub(crate) const CONTRIBUTON_INDEX: MessageId = [0; 32];
+
+pub(crate) const INIT_BALANCE: Balance = 100_000;

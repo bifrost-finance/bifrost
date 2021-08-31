@@ -155,10 +155,9 @@ pub mod pallet {
 		ParachainTransactProxyType, ParachainTransactType, TransferOriginType,
 	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
-	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
-	use xcm::v0::{prelude::XcmError, Junction, MultiLocation};
+	use xcm::v0::{prelude::XcmError, MultiLocation};
 	use xcm_support::*;
 
 	use super::*;
@@ -842,10 +841,12 @@ pub mod pallet {
 
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
-			let balance = T::MultiCurrency::slash_reserved(vsToken, &who, value);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
-			let balance = T::MultiCurrency::slash_reserved(vsBond, &who, value);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
+			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			T::MultiCurrency::withdraw(vsToken, &who, value)?;
+			T::MultiCurrency::withdraw(vsBond, &who, value)?;
 
 			if T::TransactType::get() == ParachainTransactType::Xcm &&
 				T::XcmTransferOrigin::get() == TransferOriginType::FromRelayChain
