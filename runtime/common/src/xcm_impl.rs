@@ -108,7 +108,6 @@ impl FilterAssetLocation for BifrostFilterAsset {
 pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	// Since Acala doesn't have Native Currency, before we transfer to Acala, we need to first make Native(TokenSymbol::ASG) into Token(TokenSymbol::ASG)
 	let currency_id_u64: u64 = id.currency_id();
 	let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
 	let currency_tokensymbol =
@@ -127,8 +126,8 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
 				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
-			Token(TokenSymbol::KAR) | Stable(TokenSymbol::KUSD) =>
-				Some(X3(Parent, Parachain(2000), GeneralKey(id.encode()))),
+			Token(TokenSymbol::KAR) =>
+				Some(X3(Parent, Parachain(2000), GeneralKey([0,128].to_vec()))),
 			_ => None,
 		}
 	}
@@ -140,22 +139,23 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 		match location {
 			X1(Parent) => Some(Token(KSM)),
 			X3(Parent, Junction::Parachain(id), GeneralKey(key)) => {
-				// decode the general key
-				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
-					// check `currency_id` is cross-chain asset
-					if ParaId::from(id) == T::get() {
+				// check `currency_id` is cross-chain asset
+				if ParaId::from(id) == T::get() {
+					// decode the general key
+					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
 							Token(TokenSymbol::ASG) | Native(TokenSymbol::ASG) =>  Some(Native(TokenSymbol::ASG)),
 							Token(TokenSymbol::BNC) | Native(TokenSymbol::BNC) =>  Some(Native(TokenSymbol::BNC)),
 							_ => None,
 						}
+					} else {
+						None
+					}
 					// Kurara CurrencyId types
-					} else if id == 2000 {
-						match currency_id {
-							Token(TokenSymbol::KAR)=> Some(currency_id),
-							Token(TokenSymbol::KUSD) => Some(Stable(TokenSymbol::KUSD)),
-							_ => None,
-						}
+				} else if id == 2000 {
+					let kar_vec = [0, 128].to_vec();
+					if key == kar_vec {
+						Some(Token(TokenSymbol::KAR))
 					} else {
 						None
 					}
@@ -165,6 +165,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 			},
 			_ => None,
 		}
+			
 	}
 }
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
