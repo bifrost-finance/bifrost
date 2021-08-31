@@ -220,7 +220,7 @@ pub mod pallet {
 
 		/// The time interval from 1:1 redeem-pool to bancor-pool to release.
 		#[pallet::constant]
-		type ReleaseCycle: Get<LeasePeriod>;
+		type ReleaseCycle: Get<BlockNumberFor<Self>>;
 
 		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
 		///
@@ -1275,7 +1275,7 @@ pub mod pallet {
 		/// Check if the vsBond is `past` the redeemable date
 		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
 			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
-			let block_end_redeem = block_begin_redeem + T::VSBondValidPeriod::get();
+			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			block >= block_end_redeem
 		}
@@ -1283,18 +1283,19 @@ pub mod pallet {
 		/// Check if the vsBond is `in` the redeemable date
 		pub(crate) fn can_redeem(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
 			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
-			let block_end_redeem = block_begin_redeem + T::VSBondValidPeriod::get();
+			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
 
 			block >= block_begin_redeem && block < block_end_redeem
 		}
 
 		#[allow(unused)]
 		pub(crate) fn block_start_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			slot * T::LeasePeriod::get()
+			slot.saturating_mul(T::LeasePeriod::get())
 		}
 
 		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			(slot + 1) * T::LeasePeriod::get()
+			(slot + 1).saturating_mul(T::LeasePeriod::get())
+
 		}
 
 		fn put_contribution(
