@@ -19,13 +19,16 @@
 #![cfg(test)]
 
 use frame_support::{
-	construct_runtime, parameter_types
-};
-use frame_support::traits::{
-	OnInitialize, OnFinalize
+	construct_runtime, parameter_types,
+	traits::{OnFinalize, OnInitialize},
 };
 use sp_core::H256;
-use sp_runtime::{Perbill, testing::Header, traits::{BlakeTwo256, IdentityLookup}};
+use sp_runtime::{
+	testing::Header,
+	traits::{BlakeTwo256, IdentityLookup},
+	Perbill,
+};
+
 use super::*;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -49,7 +52,7 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();

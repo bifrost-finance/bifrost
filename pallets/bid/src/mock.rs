@@ -21,7 +21,7 @@
 // use super::*;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{OnFinalize, OnInitialize},
+	traits::{Everything, OnFinalize, OnInitialize},
 };
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -61,7 +61,7 @@ parameter_types! {
 impl frame_system::Config for Test {
 	type AccountData = balances::AccountData<u64>;
 	type AccountId = u128;
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
 	type BlockNumber = u64;

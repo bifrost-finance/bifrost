@@ -338,7 +338,7 @@ pub mod para {
 	impl frame_system::Config for Runtime {
 		type AccountData = pallet_balances::AccountData<Balance>;
 		type AccountId = AccountId;
-		type BaseCallFilter = ();
+		type BaseCallFilter = frame_support::traits::Everything;
 		type BlockHashCount = BlockHashCount;
 		type BlockLength = ();
 		type BlockNumber = u64;
@@ -559,7 +559,7 @@ pub mod relay {
 	impl frame_system::Config for Runtime {
 		type AccountData = pallet_balances::AccountData<Balance>;
 		type AccountId = AccountId;
-		type BaseCallFilter = ();
+		type BaseCallFilter = frame_support::traits::Everything;
 		type BlockHashCount = BlockHashCount;
 		type BlockLength = ();
 		type BlockNumber = u64;

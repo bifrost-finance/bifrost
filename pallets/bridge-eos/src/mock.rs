@@ -18,15 +18,20 @@
 
 #![cfg(test)]
 
-use crate as pallet_bridge_eos;
 use codec::Decode;
 use frame_support::{
-	construct_runtime, parameter_types, ConsensusEngineId, PalletId,
-	traits::{OnInitialize, OnFinalize, FindAuthor}
+	construct_runtime, parameter_types,
+	traits::{FindAuthor, OnFinalize, OnInitialize},
+	ConsensusEngineId, PalletId,
 };
 use sp_core::H256;
-use sp_runtime::{testing::{Header, TestXt}, traits::{BlakeTwo256, IdentityLookup}};
+use sp_runtime::{
+	testing::{Header, TestXt},
+	traits::{BlakeTwo256, IdentityLookup},
+};
+
 use super::*;
+use crate as pallet_bridge_eos;
 pub type AccountId = u64;
 pub type BlockNumber = u64;
 pub type Amount = i128;
@@ -61,7 +66,7 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 impl frame_system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
@@ -136,7 +141,8 @@ pub struct AuthorGiven;
 
 impl FindAuthor<u64> for AuthorGiven {
 	fn find_author<'a, I>(digests: I) -> Option<u64>
-		where I: 'a + IntoIterator<Item=(ConsensusEngineId, &'a [u8])>
+	where
+		I: 'a + IntoIterator<Item = (ConsensusEngineId, &'a [u8])>,
 	{
 		for (id, data) in digests {
 			if id == TEST_ID {
@@ -162,7 +168,8 @@ impl pallet_authorship::Config for Test {
 /// An extrinsic type used for tests.
 pub type Extrinsic = TestXt<Call, ()>;
 
-impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test where
+impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
+where
 	Call: From<LocalCall>,
 {
 	type Extrinsic = Extrinsic;
@@ -185,7 +192,6 @@ impl crate::Config for Test {
 	type VtokenPoolHandler = VtokenMint;
 	type WeightInfo = ();
 }
-
 
 parameter_types! {
 	// 3 hours(1800 blocks) as an era
@@ -243,6 +249,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 		all_crosschain_privilege: Vec::new(),
 		cross_trade_eos_limit: 50,
 		eos_asset_id: CurrencyId::Token(TokenSymbol::EOS),
-	}.assimilate_storage(&mut t).unwrap();
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 	t.into()
 }
