@@ -758,7 +758,7 @@ pub type Barrier = (
 );
 
 pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
-	Tokens,
+	Currencies,
 	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert<SelfParaChainId>>,
 	AccountId,
 	LocationToAccountId,

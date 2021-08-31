@@ -108,19 +108,13 @@ impl FilterAssetLocation for BifrostFilterAsset {
 pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	let currency_id_u64: u64 = id.currency_id();
-	let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
-	let currency_tokensymbol =
-		TokenSymbol::try_from(tokensymbo_bit).unwrap_or_default();
-	let new_id = CurrencyId::Token(currency_tokensymbol);
-
-	X3(Parent, Parachain(para_id.into()), GeneralKey(new_id.encode()))
+	X3(Parent, Parachain(para_id.into()), GeneralKey(id.encode()))
 }
 
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Stable, Token};
+		use CurrencyId::{Native, Token};
 		match id {
 			Token(TokenSymbol::KSM) => Some(X1(Parent)),
 			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
@@ -134,7 +128,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 }
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::{Native, Stable, Token};
+		use CurrencyId::{Native, Token};
 		use TokenSymbol::*;
 		match location {
 			X1(Parent) => Some(Token(KSM)),
