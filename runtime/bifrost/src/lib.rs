@@ -821,6 +821,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
+			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
 			_ => Balance::max_value() // unsupported
 		}
 	};
