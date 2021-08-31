@@ -660,9 +660,9 @@ fn withdraw_when_xcm_error_should_work() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
 
 		let fund = Salp::funds(4_000).unwrap();
-		assert_eq!(fund.status, FundStatus::Failed);
+		assert_eq!(fund.status, FundStatus::RefundWithdrew);
 
-		assert_eq!(Salp::refund_pool(), 0);
+		assert_eq!(Salp::refund_pool(), 100);
 	});
 }
 
@@ -821,16 +821,16 @@ fn refund_when_xcm_error_should_work() {
 		let fund = Salp::funds(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
 		assert_eq!(contributed, 100);
-		assert_eq!(status, ContributionStatus::Idle);
+		assert_eq!(status, ContributionStatus::Refunded);
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 	});
 }
 
@@ -1104,7 +1104,7 @@ fn redeem_should_work() {
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
 
-		assert_eq!(Salp::redeem_pool(), 50);
+		assert_eq!(Salp::redeem_pool(), 100);
 
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
