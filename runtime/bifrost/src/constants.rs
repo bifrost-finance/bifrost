@@ -22,16 +22,20 @@
 pub mod currency {
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
-		WeightToFeeCoefficients, WeightToFeePolynomial,
+		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
 	use node_primitives::Balance;
+	use smallvec::smallvec;
+	pub use sp_runtime::Perbill;
 
 	pub const BNCS: Balance = 1_000_000_000_000;
 	pub const DOLLARS: Balance = BNCS;
 	pub const CENTS: Balance = DOLLARS / 100; // assume this is worth about a cent.
+	pub const RELAY_CENTS: Balance = DOLLARS / 30_000;
 	pub const MILLICENTS: Balance = CENTS / 1_000;
 	pub const MILLIBNC: Balance = 1_000_000_000;
 	pub const MICROBNC: Balance = 1_000_000;
+	pub const XCM_WEIGHT: u64 = 1_000_000_000;
 
 	pub const fn deposit(items: u32, bytes: u32) -> Balance {
 		items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
@@ -104,4 +108,10 @@ pub mod time {
 	pub const MINUTES: BlockNumber = 60 / (SECS_PER_BLOCK as BlockNumber);
 	pub const HOURS: BlockNumber = MINUTES * 60;
 	pub const DAYS: BlockNumber = HOURS * 24;
+	pub const WEEKS: BlockNumber = DAYS * 7;
+
+	// The `LeasePeriod` defination from `polkadot`.
+	pub const KUSAMA_LEASE_PERIOD: BlockNumber = 6 * WEEKS;
+	pub const ROCOCO_LEASE_PERIOD: BlockNumber = 1 * DAYS;
+	pub const WESTEND_LEASE_PERIOD: BlockNumber = 28 * DAYS;
 }
