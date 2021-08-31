@@ -643,9 +643,9 @@ fn withdraw_when_xcm_error_should_work() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
 		let fund = Salp::funds(3_000).unwrap();
-		assert_eq!(fund.status, FundStatus::Retired);
+		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
-		assert_eq!(Salp::redeem_pool(), 0);
+		assert_eq!(Salp::redeem_pool(), 100);
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::contribute(Some(BRUCE).into(), 4_000, 100));
@@ -816,7 +816,7 @@ fn refund_when_xcm_error_should_work() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
 
-		assert_eq!(Salp::refund_pool(), 100);
+		assert_eq!(Salp::refund_pool(), 0);
 
 		let fund = Salp::funds(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
