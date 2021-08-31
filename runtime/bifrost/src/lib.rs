@@ -72,7 +72,10 @@ use bifrost_runtime_common::{
 };
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{LockIdentifier, OnRuntimeUpgrade};
+use frame_support::{
+	sp_runtime::traits::Convert,
+	traits::{LockIdentifier, OnRuntimeUpgrade},
+};
 use frame_system::{EnsureOneOf, EnsureRoot};
 use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
 // orml imports
@@ -82,13 +85,13 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
 use sp_runtime::traits::ConvertInto;
-use xcm::v0::{BodyId, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
+use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	UsingComponents,
+	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
 use xcm_support::BifrostCurrencyAdapter;
@@ -648,6 +651,21 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 	BifrostCurrencyIdConvert<SelfParaChainId>,
 >;
 
+parameter_types! {
+	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+}
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		if let MultiAsset::ConcreteFungible { id, amount } = revenue {
+			if let Some(currency_id) = BifrostCurrencyIdConvert::<SelfParaChainId>::convert(id) {
+				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
+			}
+		}
+	}
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -659,7 +677,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = UsingComponents<IdentityFee<Balance>, KsmLocation, AccountId, Balances, ()>;
+	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
@@ -904,6 +922,8 @@ construct_runtime! {
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 	}
 }
 

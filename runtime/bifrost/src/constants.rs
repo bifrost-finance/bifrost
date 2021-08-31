@@ -20,6 +20,10 @@
 
 /// Money matters.
 pub mod currency {
+	use frame_support::weights::{
+		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
+		WeightToFeeCoefficients, WeightToFeePolynomial,
+	};
 	use node_primitives::Balance;
 
 	pub const BNCS: Balance = 1_000_000_000_000;
@@ -31,6 +35,32 @@ pub mod currency {
 
 	pub const fn deposit(items: u32, bytes: u32) -> Balance {
 		items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
+	}
+
+	pub struct WeightToFee;
+	impl WeightToFeePolynomial for WeightToFee {
+		type Balance = Balance;
+		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+			let p = super::currency::RELAY_CENTS;
+			let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
+			smallvec![WeightToFeeCoefficient {
+				degree: 1,
+				negative: false,
+				coeff_frac: Perbill::from_rational(p % q, q),
+				coeff_integer: p / q,
+			}]
+		}
+	}
+
+	fn base_tx_fee() -> Balance {
+		CENTS / 10
+	}
+
+	pub fn ksm_per_second() -> u128 {
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+		let fee_per_second = base_tx_per_second * base_tx_fee();
+		fee_per_second / 100
 	}
 }
 

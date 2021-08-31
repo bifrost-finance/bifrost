@@ -98,7 +98,9 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{BodyId, Junction, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
+use xcm::v0::{
+	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId,
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,

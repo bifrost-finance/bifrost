@@ -155,10 +155,9 @@ pub mod pallet {
 		ParachainTransactProxyType, ParachainTransactType, TransferOriginType,
 	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
-	use polkadot_parachain::primitives::Id as PolkadotParaId;
 	use sp_arithmetic::Percent;
 	use sp_std::{convert::TryInto, prelude::*};
-	use xcm::v0::{prelude::XcmError, Junction, MultiLocation};
+	use xcm::v0::{prelude::XcmError, MultiLocation};
 	use xcm_support::*;
 
 	use super::*;
@@ -842,9 +841,9 @@ pub mod pallet {
 
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
-			let balance = T::MultiCurrency::slash_reserved(vsToken, &who, value);
+			let balance = T::MultiCurrency::slash(vsToken, &who, value);
 			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
-			let balance = T::MultiCurrency::slash_reserved(vsBond, &who, value);
+			let balance = T::MultiCurrency::slash(vsBond, &who, value);
 			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
 
 			if T::TransactType::get() == ParachainTransactType::Xcm &&
@@ -1090,7 +1089,6 @@ pub mod pallet {
 
 		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
 			(slot + 1).saturating_mul(T::LeasePeriod::get())
-
 		}
 
 		fn put_contribution(
@@ -1124,50 +1122,6 @@ pub mod pallet {
 				MultiLocation::Null,
 				contribute_call,
 				T::ContributionWeight::get(),
-				false,
-				nonce,
-			)
-		}
-
-		fn xcm_ump_withdraw(
-			_origin: OriginFor<T>,
-			index: ParaId,
-			nonce: Nonce,
-		) -> Result<MessageId, XcmError> {
-			let who: AccountIdOf<T> = PolkadotParaId::from(T::SelfParaId::get()).into_account();
-
-			let withdraw_call =
-				CrowdloanWithdrawCall::CrowdloanWithdraw(WithdrawCall::Withdraw(Withdraw {
-					who,
-					index,
-				}))
-				.encode()
-				.into();
-
-			T::BifrostXcmExecutor::ump_transact(
-				MultiLocation::X1(Junction::Parachain(index)),
-				withdraw_call,
-				T::WithdrawWeight::get(),
-				false,
-				nonce,
-			)
-		}
-
-		fn xcm_ump_redeem(
-			origin: OriginFor<T>,
-			index: ParaId,
-			value: BalanceOf<T>,
-			nonce: Nonce,
-		) -> Result<MessageId, XcmError> {
-			let origin_location: MultiLocation =
-				T::ExecuteXcmOrigin::ensure_origin(origin).map_err(|_e| XcmError::BadOrigin)?;
-
-			let amount = TryInto::<u128>::try_into(value).map_err(|_| XcmError::Unimplemented)?;
-
-			T::BifrostXcmExecutor::ump_transfer_asset(
-				MultiLocation::X1(Junction::Parachain(index)),
-				origin_location,
-				amount,
 				false,
 				nonce,
 			)

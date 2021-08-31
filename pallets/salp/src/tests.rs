@@ -18,9 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-use frame_support::{
-	assert_err, assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS,
-};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{mock::*, ContributionStatus, Error, FundStatus};
@@ -1104,7 +1102,7 @@ fn redeem_should_work() {
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
 
-		assert_eq!(Salp::redeem_pool(), 100);
+		assert_eq!(Salp::redeem_pool(), 50);
 
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
@@ -1153,12 +1151,12 @@ fn redeem_when_xcm_error_should_work() {
 
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
 
-		assert_eq!(Salp::redeem_pool(), 100);
+		assert_eq!(Salp::redeem_pool(), 50);
 
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 50);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 50);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 	});
@@ -1186,9 +1184,7 @@ fn redeem_when_redeeming_should_fail() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
-
-		let result = Salp::redeem(Some(BRUCE).into(), 3_000, 50);
-		assert_noop!(result, Error::<Test>::InvalidRedeemStatus);
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
 	});
 }
 
