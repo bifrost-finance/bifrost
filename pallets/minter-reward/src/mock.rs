@@ -84,7 +84,7 @@ parameter_types! {
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<u64>;
 	type AccountId = sp_runtime::AccountId32;
-	type BaseCallFilter = ();
+	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
 	type BlockNumber = u64;
