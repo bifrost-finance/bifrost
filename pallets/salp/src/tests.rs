@@ -18,9 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 
-use frame_support::{
-	assert_err, assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS,
-};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{mock::*, ContributionStatus, Error, FundStatus};
