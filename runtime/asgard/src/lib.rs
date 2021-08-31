@@ -82,10 +82,14 @@ use bifrost_runtime_common::{
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
+use frame_support::{
+	sp_runtime::traits::Convert,
+	traits::{EnsureOrigin, OnRuntimeUpgrade},
+};
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
+	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
+	XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -94,13 +98,15 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{BodyId, Junction, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
+use xcm::v0::{
+	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId,
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	UsingComponents,
+	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
 use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor};
@@ -109,8 +115,6 @@ use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
 	ZenlinkMultiAssets,
 };
-
-use crate::constants::relay_fee::WeightToFee;
 
 mod weights;
 
@@ -763,6 +767,21 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 	BifrostCurrencyIdConvert<SelfParaChainId>,
 >;
 
+parameter_types! {
+	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+}
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		if let MultiAsset::ConcreteFungible { id, amount } = revenue {
+			if let Some(currency_id) = BifrostCurrencyIdConvert::<SelfParaChainId>::convert(id) {
+				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
+			}
+		}
+	}
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -773,7 +792,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
@@ -1008,19 +1027,19 @@ parameter_types! {
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
-		hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
-		hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
-		hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"].into(),
-		hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
-		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(),//5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
-	],3);
+		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),  // alice
+		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),  // bob
+		hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"].into(),  // charlie
+	],2);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
+	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee>;
+	type WeightToFee = IdentityFee<Balance>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
 	type DepositToken = NativeCurrencyId;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
@@ -1043,11 +1062,11 @@ impl bifrost_salp::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
-	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpProxyType;
 	type TransactType = SalpTransactType;
 }
 
@@ -1534,6 +1553,16 @@ impl_runtime_apis! {
 			asset_1: AssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+		}
+	}
+
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
+			let rs = Salp::contribution_by_fund(index, &who);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
 		}
 	}
 
