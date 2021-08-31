@@ -188,6 +188,7 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
@@ -249,6 +250,7 @@ dependencies = [
  "sp-consensus-aura",
  "sp-core",
  "sp-inherents",
+ "sp-io",
  "sp-offchain",
  "sp-runtime",
  "sp-session",
@@ -774,9 +776,13 @@ dependencies = [
 name = "bifrost-runtime"
 version = "0.8.0"
 dependencies = [
+ "bifrost-bancor",
+ "bifrost-bancor-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime-common",
+ "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -799,6 +805,8 @@ dependencies = [
  "orml-currencies",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -823,6 +831,7 @@ dependencies = [
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
+ "polkadot-primitives",
  "smallvec 1.6.1",
  "sp-api",
  "sp-arithmetic",
@@ -920,6 +929,30 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-support",
+]
+
+[[package]]
+name = "bifrost-salp-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-salp-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-salp-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
@@ -5118,6 +5151,8 @@ version = "0.8.0"
 dependencies = [
  "bifrost-flexible-fee-rpc",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-salp-rpc-api",
+ "bifrost-salp-rpc-runtime-api",
  "jsonrpc-core",
  "node-primitives",
  "pallet-transaction-payment-rpc",
@@ -5139,6 +5174,7 @@ dependencies = [
  "async-trait",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-runtime",
+ "bifrost-salp-rpc-runtime-api",
  "bs58 0.3.1",
  "cumulus-client-consensus-aura",
  "cumulus-client-consensus-common",

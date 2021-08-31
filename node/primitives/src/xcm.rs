@@ -41,15 +41,26 @@ impl From<XcmBaseWeight> for u64 {
 	}
 }
 
-/// represent the xcmp transact type
+/// represent the transact type
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
+pub enum ParachainTransactType {
+	Xcm = 0,
+	Proxy = 1,
+}
+
+/// represent the proxy type
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
 pub enum ParachainTransactProxyType {
 	Primary = 0,
 	Derived = 1,
 }
 
+/// represent the derived proxy account type
 #[repr(u16)]
 pub enum ParachainDerivedProxyAccountType {
 	Salp = 0,
 	Staking = 1,
 }
+
+/// Xcm Message Id
+pub type MessageId = [u8; 32];

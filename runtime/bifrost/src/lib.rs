@@ -65,33 +65,44 @@ pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
 	xcm_impl::{
-		BifrostAssetMatcher, BifrostCurrencyIdConvert, BifrostFilteredAssets,
-		BifrostXcmTransactFilter,
+		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
+		BifrostFilteredAssets, BifrostXcmTransactFilter,
 	},
 	SlowAdjustingFeeUpdate,
 };
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{LockIdentifier, OnRuntimeUpgrade};
-use frame_system::{EnsureOneOf, EnsureRoot};
-use node_primitives::{Amount, CurrencyId, Moment, Nonce, TokenSymbol};
+use frame_support::{
+	sp_runtime::traits::Convert,
+	traits::{EnsureOrigin, LockIdentifier, OnRuntimeUpgrade},
+};
+use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
+use hex_literal::hex;
+use node_primitives::{
+	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
+	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
+	XcmBaseWeight,
+};
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::MultiCurrency;
 use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
 use sp_runtime::traits::ConvertInto;
-use xcm::v0::{BodyId, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
+use xcm::v0::{
+	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId,
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	UsingComponents,
+	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_support::BifrostCurrencyAdapter;
+use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor, Get};
 
 // Weights used in the runtime.
 mod weights;
@@ -176,6 +187,7 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
+	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
 }
 
 parameter_types! {
@@ -649,6 +661,21 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 	BifrostCurrencyIdConvert<SelfParaChainId>,
 >;
 
+parameter_types! {
+	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+}
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		if let MultiAsset::ConcreteFungible { id, amount } = revenue {
+			if let Some(currency_id) = BifrostCurrencyIdConvert::<SelfParaChainId>::convert(id) {
+				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
+			}
+		}
+	}
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -660,7 +687,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = UsingComponents<IdentityFee<Balance>, KsmLocation, AccountId, Balances, ()>;
+	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
@@ -823,6 +850,22 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub SelfLocation: MultiLocation = X2(Parent, Parachain(ParachainInfo::get().into()));
+}
+
+impl orml_xtokens::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type CurrencyId = CurrencyId;
+	type CurrencyIdConvert = BifrostCurrencyIdConvert<ParachainInfo>;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type SelfLocation = SelfLocation;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+	type BaseXcmWeight = XcmWeight;
+}
+
 // orml runtime end
 
 // Bifrost modules start
@@ -843,6 +886,107 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
+}
+
+pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::X2(
+		Junction::Parent,
+		Junction::AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		},
+	)
+}
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == ConfirmMuitiSigAccount::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(Default::default()))
+	}
+}
+
+parameter_types! {
+	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
+	pub const MinContribution: Balance = 1 * DOLLARS;
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const RemoveKeysLimit: u32 = 500;
+	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
+	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
+	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
+	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
+	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub WithdrawWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub ConfirmMuitiSigAccount: AccountId = hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into();
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
+	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+}
+
+impl bifrost_salp::Config for Runtime {
+	type BancorPool = Bancor;
+	type WeightToFee = IdentityFee<Balance>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
+	type DepositToken = NativeCurrencyId;
+	type Event = Event;
+	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
+	type LeasePeriod = LeasePeriod;
+	type MinContribution = MinContribution;
+	type MultiCurrency = Currencies;
+	type PalletId = BifrostCrowdloanId;
+	type RelayChainToken = RelayCurrencyId;
+	type ReleaseCycle = ReleaseCycle;
+	type ReleaseRatio = ReleaseRatio;
+	type RemoveKeysLimit = RemoveKeysLimit;
+	type SlotLength = SlotLength;
+	type SubmissionDeposit = SubmissionDeposit;
+	type VSBondValidPeriod = VSBondValidPeriod;
+	type XcmTransferOrigin = XcmTransferOrigin;
+	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
+	type SelfParaId = SelfParaId;
+	type ContributionWeight = ContributionWeight;
+	type WithdrawWeight = WithdrawWeight;
+	type BaseXcmWeight = XcmWeight;
+	type EnsureConfirmAsMultiSig =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+	type AddProxyWeight = AddProxyWeight;
+	type RemoveProxyWeight = RemoveProxyWeight;
+	type XcmTransfer = XTokens;
+	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpProxyType;
+	type TransactType = SalpTransactType;
+}
+
+parameter_types! {
+	pub const InterventionPercentage: Percent = Percent::from_percent(75);
+	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
+}
+
+impl bifrost_bancor::Config for Runtime {
+	type Event = Event;
+	type InterventionPercentage = InterventionPercentage;
+	type DailyReleasePercentage = DailyReleasePercentage;
+	type MultiCurrency = Currencies;
+	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
 }
 
 // Bifrost modules end
@@ -899,12 +1043,14 @@ construct_runtime! {
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
 		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
-		// XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 	}
 }
 

@@ -18,9 +18,10 @@
 
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::weights::Weight;
+use node_primitives::MessageId;
 use sp_std::vec::Vec;
 use xcm::{
-	v0::{prelude::XcmResult, MultiLocation},
+	v0::{prelude::XcmError, MultiLocation},
 	DoubleEncoded,
 };
 
@@ -43,19 +44,30 @@ pub trait HandleXcmpMessage {
 
 /// Bifrost Xcm Executor
 pub trait BifrostXcmExecutor {
-	fn transact_weight(weight: u64) -> u64;
+	fn transact_weight(weight: u64, nonce: u32) -> u64;
+
+	fn transact_id(data: &[u8]) -> MessageId;
 
 	fn ump_transact(
 		origin: MultiLocation,
 		call: DoubleEncoded<()>,
 		weight: u64,
 		relay: bool,
-	) -> XcmResult;
+		nonce: u32,
+	) -> Result<MessageId, XcmError>;
+
+	fn ump_transacts(
+		origin: MultiLocation,
+		calls: Vec<DoubleEncoded<()>>,
+		weight: u64,
+		relay: bool,
+	) -> Result<MessageId, XcmError>;
 
 	fn ump_transfer_asset(
 		origin: MultiLocation,
 		dest: MultiLocation,
 		amount: u128,
 		relay: bool,
-	) -> XcmResult;
+		nonce: u32,
+	) -> Result<MessageId, XcmError>;
 }

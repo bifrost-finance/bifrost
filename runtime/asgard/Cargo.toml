@@ -21,6 +21,7 @@ sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
@@ -88,6 +89,7 @@ bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-fe
 bifrost-minter-reward = { path = "../../pallets/minter-reward", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
+bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
@@ -172,6 +174,7 @@ std = [
 	"bifrost-minter-reward/std",
 	"bifrost-runtime-common/std",
 	"bifrost-salp/std",
+	"bifrost-salp-rpc-runtime-api/std",
 	"bifrost-vsbond-auction/std",
 	"bifrost-vtoken-mint/std",
 	"xcm-support/std",

@@ -20,9 +20,11 @@ use std::sync::Arc;
 
 pub use dev_runtime;
 use futures::StreamExt;
+use jsonrpc_core::IoHandler;
 use node_rpc::{self, RpcExtension};
 use sc_consensus::LongestChain;
 pub use sc_executor::NativeExecutor;
+use sc_rpc::Metadata;
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, TaskManager};
 use sc_telemetry::TelemetryWorker;
 
@@ -43,7 +45,7 @@ pub fn new_partial(
 		FullClient,
 		FullBackend,
 		FullSelectChain,
-		sp_consensus::DefaultImportQueue<Block, FullClient>,
+		sc_consensus::DefaultImportQueue<Block, FullClient>,
 		sc_transaction_pool::FullPool<Block, FullClient>,
 		(),
 	>,
@@ -120,6 +122,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 			import_queue,
 			on_demand: None,
 			block_announce_validator_builder: None,
+			warp_sync: None,
 		})?;
 
 	if config.offchain_worker.enabled {
@@ -158,7 +161,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 				block_import: client.clone(),
 				env: proposer_factory,
 				client: client.clone(),
-				pool,
+				pool: transaction_pool.clone(),
 				commands_stream,
 				select_chain,
 				consensus_data_provider: None,
@@ -179,8 +182,8 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
 
-		Box::new(move |_deny_unsafe, _| -> node_rpc::RpcExtension {
-			return RpcExtension::default();
+		Box::new(move |_deny_unsafe, _| -> Result<IoHandler<Metadata>, _> {
+			return Ok(RpcExtension::default());
 		})
 	};
 

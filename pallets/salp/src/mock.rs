@@ -26,7 +26,8 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use node_primitives::{
-	Amount, Balance, CurrencyId, ParachainTransactProxyType, TokenSymbol, TransferOriginType,
+	Amount, Balance, CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType,
+	TokenSymbol, TransferOriginType,
 };
 use sp_arithmetic::Percent;
 use sp_core::H256;
@@ -35,7 +36,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 };
 use xcm::{
-	v0::{prelude::XcmResult, MultiLocation, NetworkId},
+	v0::{MultiLocation, NetworkId},
 	DoubleEncoded,
 };
 use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
@@ -203,7 +204,7 @@ parameter_types! {
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromSelf;
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
 	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
@@ -217,7 +218,8 @@ parameter_types! {
 		CATHI
 	],2);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(0 as u16);
-	pub SalpTransactType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 }
 
 parameter_types! {
@@ -252,7 +254,10 @@ use frame_support::dispatch::DispatchResult;
 use orml_traits::XcmTransfer;
 use smallvec::smallvec;
 pub use sp_runtime::Perbill;
-use xcm::{opaque::v0::MultiAsset, v0::Junction};
+use xcm::{
+	opaque::v0::MultiAsset,
+	v0::{prelude::XcmError, Junction},
+};
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
@@ -319,6 +324,7 @@ impl salp::Config for Test {
 	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
 }
 
@@ -364,8 +370,12 @@ pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 pub struct MockXcmExecutor;
 
 impl BifrostXcmExecutor for MockXcmExecutor {
-	fn transact_weight(_: u64) -> u64 {
+	fn transact_weight(_: u64, _: u32) -> u64 {
 		return 0;
+	}
+
+	fn transact_id(_data: &[u8]) -> MessageId {
+		return [0; 32];
 	}
 
 	fn ump_transact(
@@ -373,11 +383,26 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 		_call: DoubleEncoded<()>,
 		_weight: u64,
 		_relayer: bool,
-	) -> XcmResult {
+		_nonce: u32,
+	) -> Result<[u8; 32], XcmError> {
 		let result = unsafe { MOCK_XCM_RESULT.0 };
 
 		match result {
-			true => Ok(()),
+			true => Ok([0; 32]),
+			false => Err(xcm::v0::Error::Undefined),
+		}
+	}
+
+	fn ump_transacts(
+		_origin: MultiLocation,
+		_call: Vec<DoubleEncoded<()>>,
+		_weight: u64,
+		_relayer: bool,
+	) -> Result<MessageId, XcmError> {
+		let result = unsafe { MOCK_XCM_RESULT.0 };
+
+		match result {
+			true => Ok([0; 32]),
 			false => Err(xcm::v0::Error::Undefined),
 		}
 	}
@@ -387,11 +412,12 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 		_dest: MultiLocation,
 		_amount: u128,
 		_relay: bool,
-	) -> XcmResult {
+		_nonce: u32,
+	) -> Result<MessageId, XcmError> {
 		let result = unsafe { MOCK_XCM_RESULT.1 };
 
 		match result {
-			true => Ok(()),
+			true => Ok([0; 32]),
 			false => Err(xcm::v0::Error::Undefined),
 		}
 	}
@@ -399,16 +425,15 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	let initial_balance = 100000 as u128;
 
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
-			(ALICE, NativeCurrencyId::get(), initial_balance),
-			(ALICE, RelayCurrencyId::get(), initial_balance),
-			(BRUCE, NativeCurrencyId::get(), initial_balance),
-			(BRUCE, RelayCurrencyId::get(), initial_balance),
-			(CATHI, NativeCurrencyId::get(), initial_balance),
-			(CATHI, RelayCurrencyId::get(), initial_balance),
+			(ALICE, NativeCurrencyId::get(), INIT_BALANCE),
+			(ALICE, RelayCurrencyId::get(), INIT_BALANCE),
+			(BRUCE, NativeCurrencyId::get(), INIT_BALANCE),
+			(BRUCE, RelayCurrencyId::get(), INIT_BALANCE),
+			(CATHI, NativeCurrencyId::get(), INIT_BALANCE),
+			(CATHI, RelayCurrencyId::get(), INIT_BALANCE),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -426,3 +451,6 @@ pub const WEEKS: BlockNumber = DAYS * 7;
 pub(crate) const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const CATHI: AccountId = AccountId::new([2u8; 32]);
+pub(crate) const CONTRIBUTON_INDEX: MessageId = [0; 32];
+
+pub(crate) const INIT_BALANCE: Balance = 100_000;
