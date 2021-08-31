@@ -33,7 +33,6 @@
 
 use std::sync::Arc;
 
-use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
@@ -42,7 +41,6 @@ pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 /// Full client dependencies.
@@ -75,7 +73,10 @@ where
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId, Balance>,
 	P: TransactionPool + 'static,
 {
+	use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
+	use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 
 	let FullDeps { client, .. } = deps;
 

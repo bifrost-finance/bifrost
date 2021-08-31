@@ -209,7 +209,7 @@ impl<
 
 		let data = VersionedXcm::<()>::from(message.clone()).encode();
 
-		let id = Self::transact_id(&data);
+		let id = sp_io::hashing::blake2_256(&data[..]);
 
 		XcmSender::send_xcm(MultiLocation::X1(Junction::Parent), message)
 			.map_err(|_e| XcmError::Undefined)?;

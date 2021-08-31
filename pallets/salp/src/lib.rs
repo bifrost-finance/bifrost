@@ -98,6 +98,12 @@ pub struct FundInfo<Balance, LeasePeriod> {
 	status: FundStatus,
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[codec(dumb_trait_bound)]
+pub struct ContributionMemoInfo {
+	index: TrieIndex,
+}
+
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
 pub enum ContributionStatus<BalanceOf> {
 	Idle,
@@ -755,7 +761,6 @@ pub mod pallet {
 					contributed_new,
 					ContributionStatus::Idle,
 				);
-
 				Self::deposit_event(Event::Contributed(who, index, contributing, message_id));
 			} else {
 				// Update the contribution of who
@@ -770,7 +775,6 @@ pub mod pallet {
 				{
 					T::MultiCurrency::unreserve(T::RelayChainToken::get(), &who, contributing);
 				}
-
 				Self::deposit_event(Event::ContributeFailed(who, index, contributing, message_id));
 			}
 

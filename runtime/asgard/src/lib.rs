@@ -1007,9 +1007,9 @@ parameter_types! {
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
+		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),  // alice
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),  // bob
 		hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"].into(),  // charlie
-		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),  // alice
 	],2);
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
