@@ -841,10 +841,12 @@ pub mod pallet {
 
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
-			let balance = T::MultiCurrency::slash(vsToken, &who, value);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
-			let balance = T::MultiCurrency::slash(vsBond, &who, value);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughFreeAssetsToRedeem);
+			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			T::MultiCurrency::withdraw(vsToken, &who, value)?;
+			T::MultiCurrency::withdraw(vsBond, &who, value)?;
 
 			if T::TransactType::get() == ParachainTransactType::Xcm &&
 				T::XcmTransferOrigin::get() == TransferOriginType::FromRelayChain
