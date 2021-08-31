@@ -35,6 +35,7 @@ use std::sync::Arc;
 
 use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use node_primitives::{AccountId, Balance, Block, ParaId};
 pub use sc_rpc_api::DenyUnsafe;
@@ -82,15 +83,11 @@ where
 
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
 
-	use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
-	use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
-	use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
 
 	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
 	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
 
-	io
+	Ok(io)
 }
