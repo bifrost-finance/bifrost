@@ -82,7 +82,10 @@ use bifrost_runtime_common::{
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{EnsureOrigin, OnRuntimeUpgrade};
+use frame_support::{
+	sp_runtime::traits::Convert,
+	traits::{EnsureOrigin, OnRuntimeUpgrade},
+};
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
@@ -98,10 +101,10 @@ use static_assertions::const_assert;
 use xcm::v0::{BodyId, Junction, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	UsingComponents,
+	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
 use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor};
@@ -762,6 +765,21 @@ pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
 	BifrostCurrencyIdConvert<SelfParaChainId>,
 >;
 
+parameter_types! {
+	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+}
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		if let MultiAsset::ConcreteFungible { id, amount } = revenue {
+			if let Some(currency_id) = BifrostCurrencyIdConvert::<SelfParaChainId>::convert(id) {
+				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
+			}
+		}
+	}
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -772,7 +790,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
