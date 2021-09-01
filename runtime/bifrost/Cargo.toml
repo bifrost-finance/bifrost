@@ -11,10 +11,10 @@ codec = { package = "parity-scale-codec", version = "2.0.0", default-features = 
 	"derive",
 	"max-encoded-len",
 ] }
+hex-literal = { version = "0.3.1" }
 log = { version = "0.4.14", default-features = false }
-static_assertions = "1.1.0"
-hex-literal = { version = "0.3.1"}
 smallvec = "1.6.1"
+static_assertions = "1.1.0"
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
@@ -45,17 +45,18 @@ pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-elections-phragmen = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
-pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-tips = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
-pallet-tips = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 
 # Cumulus dependencies
@@ -71,30 +72,30 @@ pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", bra
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 
 # Bifrost
-pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
-bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
+bifrost-bancor = { path = "../../pallets/bancor", default-features = false }
+bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
-bifrost-bancor= { path = "../../pallets/bancor",default-features = false }
-bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
+pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+orml-xtokens = { version = "0.4.1-dev", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
@@ -115,6 +116,7 @@ std = [
 	"pallet-collective/std",
 	"pallet-democracy/std",
 	"pallet-indices/std",
+	"pallet-multisig/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
