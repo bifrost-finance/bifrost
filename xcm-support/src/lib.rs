@@ -31,16 +31,10 @@ pub use cumulus_primitives_core::{self, ParaId};
 pub use frame_support::{traits::Get, weights::Weight};
 pub use paste;
 pub use sp_std::{cell::RefCell, marker::PhantomData};
-use sp_std::{
-	prelude::*,
-	vec,
-};
+use sp_std::{prelude::*, vec};
 pub use xcm::VersionedXcm;
 use xcm::{
-	v0::{
-		Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind,
-		SendXcm, Xcm,
-	},
+	v0::{Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind, SendXcm, Xcm},
 	DoubleEncoded,
 };
 pub use xcm_executor::XcmExecutor;

@@ -122,6 +122,8 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			// Karura currencyId types
 			Token(TokenSymbol::KAR) =>
 				Some(X3(Parent, Parachain(2000), GeneralKey([0, 128].to_vec()))),
+			Token(TokenSymbol::KUSD) =>
+				Some(X3(Parent, Parachain(2000), GeneralKey([0, 129].to_vec()))),
 			_ => None,
 		}
 	}
@@ -147,9 +149,10 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					}
 				// Kurara CurrencyId types
 				} else if id == 2000 {
-					let kar_vec = [0, 128].to_vec();
-					if key == kar_vec {
+					if key == [0, 128].to_vec() {
 						Some(Token(TokenSymbol::KAR))
+					} else if key == [0, 129].to_vec() {
+						Some(Token(TokenSymbol::KUSD))
 					} else {
 						None
 					}
