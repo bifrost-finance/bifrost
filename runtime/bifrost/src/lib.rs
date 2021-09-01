@@ -697,6 +697,14 @@ impl TakeRevenue for ToTreasury {
 	}
 }
 
+parameter_types! {
+	pub AcalaTokenLocation: (MultiLocation, u128) = (
+		X3(Parent, Parachain(2000), GeneralKey([0,128].to_vec())),  // 128 is KAR
+		// X3(Parent, Parachain(2000), GeneralKey([0,129].to_vec())), // 129 is KUSD
+		800_000_000_000  // KAR:KSM = 100:1
+	);
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -708,7 +716,8 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
+	// type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
+	type Trader = FixedRateOfConcreteFungible<AcalaTokenLocation, ToTreasury>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
