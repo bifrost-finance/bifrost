@@ -96,18 +96,11 @@ pub struct FundInfo<Balance, LeasePeriod> {
 	status: FundStatus,
 }
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
-#[codec(dumb_trait_bound)]
-pub struct ContributionMemoInfo {
-	index: TrieIndex,
-}
-
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
 pub enum ContributionStatus<BalanceOf> {
 	Idle,
 	Refunded,
 	Unlocked,
-	Refunding,
 	Contributing(BalanceOf),
 }
 
@@ -144,7 +137,6 @@ pub mod pallet {
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
 		storage::ChildTriePrefixIterator,
-		weights::WeightToFeePolynomial,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
@@ -206,11 +198,6 @@ pub mod pallet {
 
 		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
-		type ExecuteXcmOrigin: EnsureOrigin<
-			<Self as frame_system::Config>::Origin,
-			Success = MultiLocation,
-		>;
-
 		type EnsureConfirmAsMultiSig: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		type BifrostXcmExecutor: BifrostXcmExecutor;
@@ -224,9 +211,6 @@ pub mod pallet {
 		/// Parachain Id
 		type SelfParaId: Get<u32>;
 
-		/// Weight to Fee calculator
-		type WeightToFee: WeightToFeePolynomial<Balance = BalanceOf<Self>>;
-
 		/// Xcm weight
 		#[pallet::constant]
 		type BaseXcmWeight: Get<u64>;
@@ -235,13 +219,7 @@ pub mod pallet {
 		type ContributionWeight: Get<u64>;
 
 		#[pallet::constant]
-		type WithdrawWeight: Get<u64>;
-
-		#[pallet::constant]
 		type AddProxyWeight: Get<u64>;
-
-		#[pallet::constant]
-		type RemoveProxyWeight: Get<u64>;
 
 		/// The interface to Cross-chain transfer.
 		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
@@ -312,8 +290,6 @@ pub mod pallet {
 		InvalidContributionStatus,
 		/// Contributions exceed maximum amount.
 		CapExceeded,
-		/// The origin of this call is invalid.
-		UnauthorizedAccount,
 		/// The fund has been registered.
 		FundAlreadyCreated,
 		/// Crosschain xcm failed
@@ -330,12 +306,8 @@ pub mod pallet {
 		UnRedeemableNow,
 		/// Dont have enough vsToken/vsBond to redeem
 		NotEnoughFreeAssetsToRedeem,
-		/// Dont have enough vsToken/vsBond to unlock when redeem failed
-		NotEnoughReservedAssetsToUnlockWhenRedeemFailed,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
-		/// Invalid redeem status
-		InvalidRedeemStatus,
 	}
 
 	/// Tracker for the next available fund index

@@ -39,7 +39,6 @@ use xcm::{
 	v0::{MultiLocation, NetworkId},
 	DoubleEncoded,
 };
-use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
 use xcm_support::{BifrostXcmExecutor, Weight};
 
 use crate as salp;
@@ -224,8 +223,6 @@ parameter_types! {
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 }
 
-type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
-
 pub struct EnsureConfirmAsMultiSig;
 impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	type Success = AccountId;
@@ -297,7 +294,6 @@ impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
 	type Event = Event;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;
@@ -313,11 +309,8 @@ impl salp::Config for Test {
 	type SelfParaId = SelfParaId;
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
-	type WithdrawWeight = WithdrawWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
-	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
-	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;
