@@ -46,6 +46,8 @@ use node_primitives::MessageId;
 pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
 #[allow(unused_imports)]
+use xcm::opaque::v0::prelude::XcmResult;
+#[allow(unused_imports)]
 use xcm::v0::{
 	prelude::{Parachain, Parent, X1, X2},
 	Order,
