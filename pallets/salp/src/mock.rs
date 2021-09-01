@@ -204,9 +204,7 @@ parameter_types! {
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
-	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
 	pub AddProxyWeight:u64 = 1_000_000_000 as u64;
-	pub RemoveProxyWeight:u64 = 1_000_000_000 as u64;
 	pub const SelfParaId: u32 = 2001;
 	pub PrimaryAccount: AccountId = ALICE;
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
