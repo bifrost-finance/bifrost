@@ -39,7 +39,6 @@ use xcm::{
 	v0::{MultiLocation, NetworkId},
 	DoubleEncoded,
 };
-use xcm_builder::{EnsureXcmOrigin, SignedToAccountId32};
 use xcm_support::{BifrostXcmExecutor, Weight};
 
 use crate as salp;
@@ -194,7 +193,6 @@ pub fn create_x2_parachain_multilocation(_index: u16) -> MultiLocation {
 }
 
 parameter_types! {
-	pub const SubmissionDeposit: u32 = 1;
 	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
@@ -203,13 +201,10 @@ parameter_types! {
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
-	pub WithdrawWeight:u64 = 1_000_000_000 as u64;
 	pub AddProxyWeight:u64 = 1_000_000_000 as u64;
-	pub RemoveProxyWeight:u64 = 1_000_000_000 as u64;
 	pub const SelfParaId: u32 = 2001;
 	pub PrimaryAccount: AccountId = ALICE;
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
@@ -225,8 +220,6 @@ parameter_types! {
 parameter_types! {
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 }
-
-type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, AnyNetwork>,);
 
 pub struct EnsureConfirmAsMultiSig;
 impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
@@ -298,9 +291,7 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
-	type DepositToken = NativeCurrencyId;
 	type Event = Event;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Tokens;
@@ -310,18 +301,14 @@ impl salp::Config for Test {
 	type ReleaseRatio = ReleaseRatio;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
-	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = SalpWeightInfo;
 	type SelfParaId = SelfParaId;
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
-	type WithdrawWeight = WithdrawWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
-	type WeightToFee = WeightToFee;
 	type AddProxyWeight = AddProxyWeight;
-	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;

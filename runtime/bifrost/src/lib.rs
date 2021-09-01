@@ -193,10 +193,11 @@ parameter_types! {
 
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account()]
+	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
 }
 
 impl frame_system::Config for Runtime {
@@ -212,7 +213,7 @@ impl frame_system::Config for Runtime {
 	type BlockWeights = RuntimeBlockWeights;
 	/// The aggregated dispatch type that is available for extrinsics.
 	type Call = Call;
-	type DbWeight = ();
+	type DbWeight = RocksDbWeight;
 	/// The ubiquitous event type.
 	type Event = Event;
 	/// The type for hashing blocks and tries.
@@ -842,6 +843,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
+			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
 			_ => Balance::max_value() // unsupported
 		}
 	};
@@ -945,9 +947,7 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 }
 
 parameter_types! {
-	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
 	pub const MinContribution: Balance = 1 * DOLLARS;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -957,9 +957,7 @@ parameter_types! {
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
 	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub WithdrawWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
@@ -968,11 +966,8 @@ parameter_types! {
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type WeightToFee = IdentityFee<Balance>;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
-	type DepositToken = NativeCurrencyId;
 	type Event = Event;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Currencies;
@@ -982,18 +977,15 @@ impl bifrost_salp::Config for Runtime {
 	type ReleaseRatio = ReleaseRatio;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
-	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
 	type SelfParaId = SelfParaId;
 	type ContributionWeight = ContributionWeight;
-	type WithdrawWeight = WithdrawWeight;
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
 	type AddProxyWeight = AddProxyWeight;
-	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpProxyType;
