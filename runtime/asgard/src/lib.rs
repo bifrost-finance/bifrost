@@ -94,6 +94,7 @@ use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
+use orml_xcm_support::MultiCurrencyAdapter;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
@@ -106,10 +107,10 @@ use xcm_builder::{
 	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor};
+use xcm_support::BifrostXcmAdaptor;
 // zenlink imports
 use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
@@ -758,8 +759,9 @@ pub type Barrier = (
 	BifrostXcmTransactFilter<Everything>,
 );
 
-pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
-	Tokens,
+pub type BifrostAssetTransactor = MultiCurrencyAdapter<
+	Currencies,
+	UnknownTokens,
 	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert<SelfParaChainId>>,
 	AccountId,
 	LocationToAccountId,
@@ -1265,6 +1267,10 @@ impl orml_xtokens::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 }
 
+impl orml_unknown_tokens::Config for Runtime {
+	type Event = Event;
+}
+
 // orml runtime end
 
 construct_runtime! {
@@ -1324,6 +1330,7 @@ construct_runtime! {
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
+		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,

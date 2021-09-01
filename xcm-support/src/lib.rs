@@ -26,27 +26,17 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Encode, FullCodec};
+use codec::Encode;
 pub use cumulus_primitives_core::{self, ParaId};
 pub use frame_support::{traits::Get, weights::Weight};
 pub use paste;
-use sp_runtime::traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion};
 pub use sp_std::{cell::RefCell, marker::PhantomData};
-use sp_std::{
-	cmp::{Eq, PartialEq},
-	fmt::Debug,
-	prelude::*,
-	vec,
-};
+use sp_std::{prelude::*, vec};
 pub use xcm::VersionedXcm;
 use xcm::{
-	v0::{
-		Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind, Result as XcmResult,
-		SendXcm, Xcm,
-	},
+	v0::{Error as XcmError, Junction, MultiAsset, MultiLocation, OriginKind, SendXcm, Xcm},
 	DoubleEncoded,
 };
-use xcm_executor::traits::{Convert as xcmConvert, MatchesFungible, TransactAsset};
 pub use xcm_executor::XcmExecutor;
 mod calls;
 mod traits;
@@ -55,6 +45,8 @@ use frame_support::weights::WeightToFeePolynomial;
 use node_primitives::MessageId;
 pub use node_primitives::XcmBaseWeight;
 pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
+#[allow(unused_imports)]
+use xcm::opaque::v0::prelude::XcmResult;
 #[allow(unused_imports)]
 use xcm::v0::{
 	prelude::{Parachain, Parent, X1, X2},
@@ -68,6 +60,7 @@ mod mock;
 mod tests;
 
 /// Asset transaction errors.
+#[allow(dead_code)]
 enum Error {
 	/// Failed to match fungible.
 	FailedToMatchFungible,
@@ -87,76 +80,6 @@ impl From<Error> for XcmError {
 			Error::CurrencyIdConversionFailed =>
 				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed"),
 		}
-	}
-}
-
-/// The `TransactAsset` implementation, to handle `MultiAsset` deposit/withdraw.
-///
-/// If the asset is known, deposit/withdraw will be handled by `MultiCurrency`,
-/// else by `UnknownAsset` if unknown.
-pub struct BifrostCurrencyAdapter<
-	MultiCurrency,
-	Matcher,
-	AccountId,
-	AccountIdConvert,
-	CurrencyId,
-	CurrencyIdConvert,
->(
-	PhantomData<(
-		MultiCurrency,
-		Matcher,
-		AccountId,
-		AccountIdConvert,
-		CurrencyId,
-		CurrencyIdConvert,
-	)>,
-);
-
-impl<
-		MultiCurrency: orml_traits::MultiCurrency<AccountId, CurrencyId = CurrencyId>,
-		Matcher: MatchesFungible<MultiCurrency::Balance>,
-		AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
-		AccountIdConvert: xcmConvert<MultiLocation, AccountId>,
-		CurrencyId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
-		CurrencyIdConvert: Convert<MultiAsset, Option<CurrencyId>>,
-	> TransactAsset
-	for BifrostCurrencyAdapter<
-		MultiCurrency,
-		Matcher,
-		AccountId,
-		AccountIdConvert,
-		CurrencyId,
-		CurrencyIdConvert,
-	>
-{
-	fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> XcmResult {
-		match (
-			AccountIdConvert::convert_ref(location.clone()),
-			CurrencyIdConvert::convert(asset.clone()),
-			Matcher::matches_fungible(&asset),
-		) {
-			// known asset
-			(Ok(who), Some(currency_id), Some(amount)) =>
-				MultiCurrency::deposit(currency_id, &who, amount)
-					.map_err(|e| XcmError::FailedToTransactAsset(e.into())),
-			_ => Err(XcmError::AssetNotFound),
-		}
-	}
-
-	fn withdraw_asset(
-		asset: &MultiAsset,
-		location: &MultiLocation,
-	) -> Result<xcm_executor::Assets, XcmError> {
-		let who = AccountIdConvert::convert_ref(location)
-			.map_err(|_| XcmError::from(Error::AccountIdConversionFailed))?;
-		let currency_id = CurrencyIdConvert::convert(asset.clone())
-			.ok_or_else(|| XcmError::from(Error::CurrencyIdConversionFailed))?;
-		let amount: MultiCurrency::Balance = Matcher::matches_fungible(&asset)
-			.ok_or_else(|| XcmError::from(Error::FailedToMatchFungible))?
-			.saturated_into();
-		MultiCurrency::withdraw(currency_id, &who, amount)
-			.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
-		Ok(asset.clone().into())
 	}
 }
 

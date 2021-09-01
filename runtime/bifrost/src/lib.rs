@@ -79,13 +79,14 @@ use frame_support::{
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
 	XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
+use orml_xcm_support::MultiCurrencyAdapter;
 use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -99,10 +100,10 @@ use xcm_builder::{
 	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor, Get};
+use xcm_support::{BifrostXcmAdaptor, Get};
 
 // Weights used in the runtime.
 mod weights;
@@ -670,8 +671,9 @@ pub type Barrier = (
 	BifrostXcmTransactFilter<Everything>,
 );
 
-pub type BifrostAssetTransactor = BifrostCurrencyAdapter<
-	Tokens,
+pub type BifrostAssetTransactor = MultiCurrencyAdapter<
+	Currencies,
+	UnknownTokens,
 	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvert<SelfParaChainId>>,
 	AccountId,
 	LocationToAccountId,
@@ -884,6 +886,10 @@ impl orml_xtokens::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 }
 
+impl orml_unknown_tokens::Config for Runtime {
+	type Event = Event;
+}
+
 // orml runtime end
 
 // Bifrost modules start
@@ -1062,9 +1068,10 @@ construct_runtime! {
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
 		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
+		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
