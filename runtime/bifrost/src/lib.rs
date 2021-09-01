@@ -265,6 +265,24 @@ impl pallet_utility::Config for Runtime {
 }
 
 parameter_types! {
+	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+	pub const DepositBase: Balance = deposit(1, 88);
+	// Additional storage item size of 32 bytes.
+	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type Event = Event;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
 	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
 		RuntimeBlockWeights::get().max_block;
 	pub const MaxScheduledPerBlock: u32 = 50;
@@ -1034,6 +1052,7 @@ construct_runtime! {
 		// utilities
 		Utility: pallet_utility::{Pallet, Call, Event} = 50,
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,

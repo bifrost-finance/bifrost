@@ -817,6 +817,7 @@ dependencies = [
  "pallet-elections-phragmen",
  "pallet-indices",
  "pallet-membership",
+ "pallet-multisig",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
