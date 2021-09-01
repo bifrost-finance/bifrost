@@ -194,7 +194,6 @@ pub fn create_x2_parachain_multilocation(_index: u16) -> MultiLocation {
 }
 
 parameter_types! {
-	pub const SubmissionDeposit: u32 = 1;
 	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
@@ -203,7 +202,6 @@ parameter_types! {
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const DepositTokenType: CurrencyId = CurrencyId::Token(TokenSymbol::ASG);
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
 	pub ContributionWeight:u64 = 1_000_000_000 as u64;
@@ -298,7 +296,6 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
-	type DepositToken = NativeCurrencyId;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
@@ -310,7 +307,6 @@ impl salp::Config for Test {
 	type ReleaseRatio = ReleaseRatio;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
-	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = SalpWeightInfo;

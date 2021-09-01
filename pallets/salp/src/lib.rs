@@ -80,8 +80,6 @@ impl Default for FundStatus {
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
 #[codec(dumb_trait_bound)]
 pub struct FundInfo<Balance, LeasePeriod> {
-	/// The amount of deposit placed.
-	deposit: Balance,
 	/// The total amount raised.
 	raised: Balance,
 	/// A hard-cap on the amount that may be contributed.
@@ -171,9 +169,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
 
-		/// The amount to be held on deposit by the depositor of a crowdloan.
-		type SubmissionDeposit: Get<BalanceOf<Self>>;
-
 		/// The minimum amount that may be contributed into a crowdloan. Should almost certainly be
 		/// at least ExistentialDeposit.
 		#[pallet::constant]
@@ -181,9 +176,6 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RelayChainToken: Get<CurrencyId>;
-
-		#[pallet::constant]
-		type DepositToken: Get<CurrencyId>;
 
 		/// The number of blocks over which a single period lasts.
 		#[pallet::constant]
@@ -462,6 +454,7 @@ pub mod pallet {
 
 		/// Unlock the reserved vsToken/vsBond after fund success
 		#[pallet::weight(T::WeightInfo::unlock())]
+		#[transactional]
 		pub fn unlock(
 			_origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -505,6 +498,7 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
+		#[transactional]
 		pub fn batch_unlock(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -580,12 +574,9 @@ pub mod pallet {
 				.ok_or(Error::<T>::FirstSlotTooFarInFuture)?;
 			ensure!(last_slot <= last_slot_limit, Error::<T>::LastSlotTooFarInFuture);
 
-			let deposit = T::SubmissionDeposit::get();
-
 			Funds::<T>::insert(
 				index,
 				Some(FundInfo {
-					deposit,
 					raised: Zero::zero(),
 					cap,
 					first_slot,
@@ -658,6 +649,7 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
+		#[transactional]
 		pub fn confirm_contribute(
 			origin: OriginFor<T>,
 			who: AccountIdOf<T>,
@@ -875,6 +867,7 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
+		#[transactional]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
 			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 

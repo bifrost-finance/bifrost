@@ -936,7 +936,6 @@ impl bifrost_minter_reward::Config for Runtime {
 use crate::constants::relay_fee::WeightToFee;
 
 parameter_types! {
-	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
 	pub const MinContribution: Balance = 1 * DOLLARS;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
@@ -995,7 +994,6 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee>;
-	type DepositToken = NativeCurrencyId;
 	type Event = Event;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
@@ -1007,7 +1005,6 @@ impl bifrost_salp::Config for Runtime {
 	type ReleaseRatio = ReleaseRatio;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
-	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
