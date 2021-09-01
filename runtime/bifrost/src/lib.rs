@@ -79,7 +79,7 @@ use frame_support::{
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
 	XcmBaseWeight,
 };
@@ -99,7 +99,7 @@ use xcm_builder::{
 	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit, UsingComponents,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
 use xcm_support::{BifrostCurrencyAdapter, BifrostXcmAdaptor, Get};
@@ -1062,7 +1062,7 @@ construct_runtime! {
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
 		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
-		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 70,
+		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 

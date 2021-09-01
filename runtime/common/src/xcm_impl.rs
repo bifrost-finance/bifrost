@@ -23,7 +23,7 @@ use frame_support::{
 	traits::{Contains, Get},
 	weights::Weight,
 };
-use node_primitives::{AccountId, CurrencyId, TokenSymbol, TokenInfo};
+use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::v0::Junction;
@@ -121,7 +121,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
 			Token(TokenSymbol::KAR) =>
-				Some(X3(Parent, Parachain(2000), GeneralKey([0,128].to_vec()))),
+				Some(X3(Parent, Parachain(2000), GeneralKey([0, 128].to_vec()))),
 			_ => None,
 		}
 	}
@@ -138,14 +138,14 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Token(TokenSymbol::ASG) | Native(TokenSymbol::ASG) =>  Some(Native(TokenSymbol::ASG)),
-							Token(TokenSymbol::BNC) | Native(TokenSymbol::BNC) =>  Some(Native(TokenSymbol::BNC)),
+							Native(TokenSymbol::ASG) => Some(Native(TokenSymbol::ASG)),
+							Native(TokenSymbol::BNC) => Some(Native(TokenSymbol::BNC)),
 							_ => None,
 						}
 					} else {
 						None
 					}
-					// Kurara CurrencyId types
+				// Kurara CurrencyId types
 				} else if id == 2000 {
 					let kar_vec = [0, 128].to_vec();
 					if key == kar_vec {
@@ -159,7 +159,6 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 			},
 			_ => None,
 		}
-			
 	}
 }
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
