@@ -94,8 +94,9 @@ xcm-support = { path = "../../xcm-support", default-features = false }
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
+orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
+orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
@@ -155,6 +156,7 @@ std = [
 	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-xtokens/std",
+	"orml-unknown-tokens/std",
 	"orml-xcm-support/std",
 	"bifrost-runtime-common/std",
 	"bifrost-flexible-fee/std",

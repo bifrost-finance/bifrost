@@ -114,41 +114,45 @@ fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Stable, Token};
+		use CurrencyId::{Native, Token};
 		match id {
 			Token(TokenSymbol::KSM) => Some(X1(Parent)),
 			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
 				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
-			Token(TokenSymbol::KAR) | Stable(TokenSymbol::KUSD) =>
-				Some(X3(Parent, Parachain(2000), GeneralKey(id.encode()))),
+			Token(TokenSymbol::KAR) =>
+				Some(X3(Parent, Parachain(2000), GeneralKey([0, 128].to_vec()))),
+			Token(TokenSymbol::KUSD) =>
+				Some(X3(Parent, Parachain(2000), GeneralKey([0, 129].to_vec()))),
 			_ => None,
 		}
 	}
 }
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::{Native, Stable, Token};
+		use CurrencyId::{Native, Token};
 		use TokenSymbol::*;
 		match location {
 			X1(Parent) => Some(Token(KSM)),
 			X3(Parent, Junction::Parachain(id), GeneralKey(key)) => {
-				// decode the general key
-				if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
-					// check `currency_id` is cross-chain asset
-					if ParaId::from(id) == T::get() {
+				// check `currency_id` is cross-chain asset
+				if ParaId::from(id) == T::get() {
+					// decode the general key
+					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
-								Some(currency_id),
+							Native(TokenSymbol::ASG) => Some(Native(TokenSymbol::ASG)),
+							Native(TokenSymbol::BNC) => Some(Native(TokenSymbol::BNC)),
 							_ => None,
 						}
-					// Kurara CurrencyId types
-					} else if id == 2000 {
-						match currency_id {
-							Token(TokenSymbol::KAR) | Stable(TokenSymbol::KUSD) =>
-								Some(currency_id),
-							_ => None,
-						}
+					} else {
+						None
+					}
+				// Kurara CurrencyId types
+				} else if id == 2000 {
+					if key == [0, 128].to_vec() {
+						Some(Token(TokenSymbol::KAR))
+					} else if key == [0, 129].to_vec() {
+						Some(Token(TokenSymbol::KUSD))
 					} else {
 						None
 					}
