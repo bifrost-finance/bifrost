@@ -1013,7 +1013,6 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 }
 
 parameter_types! {
-	pub const SubmissionDeposit: Balance = 100 * DOLLARS;
 	pub const MinContribution: Balance = 1 * DOLLARS;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
@@ -1025,9 +1024,7 @@ parameter_types! {
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
 	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub WithdrawWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub RemoveProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
 		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),  // alice
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),  // bob
@@ -1040,11 +1037,8 @@ parameter_types! {
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type WeightToFee = IdentityFee<Balance>;
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
-	type DepositToken = NativeCurrencyId;
 	type Event = Event;
-	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Currencies;
@@ -1054,18 +1048,15 @@ impl bifrost_salp::Config for Runtime {
 	type ReleaseRatio = ReleaseRatio;
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
-	type SubmissionDeposit = SubmissionDeposit;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
 	type SelfParaId = SelfParaId;
 	type ContributionWeight = ContributionWeight;
-	type WithdrawWeight = WithdrawWeight;
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
 	type AddProxyWeight = AddProxyWeight;
-	type RemoveProxyWeight = RemoveProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpProxyType;
