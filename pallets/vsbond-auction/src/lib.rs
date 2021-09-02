@@ -19,6 +19,13 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+//! The pallet supports the trading functions of `vsbond`.
+//!
+//! Users can create sell orders by `create_order`;
+//! Or buy the sell orders by `clinch_order`, `partial_clinch_order`.
+//!
+//! NOTE: Pallet does not support users creating buy orders by now.
+
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
@@ -50,7 +57,9 @@ pub struct OrderInfo<T: Config> {
 	supply: BalanceOf<T>,
 	/// The quantity of vsbond has not be sold
 	remain: BalanceOf<T>,
+	/// Total price of the order
 	total_price: BalanceOf<T>,
+	/// The unique id of the order
 	order_id: OrderId,
 	order_state: OrderState,
 }
@@ -185,6 +194,7 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Create a sell order to sell `vsbond`.
 		#[pallet::weight(1_000)]
 		pub fn create_order(
 			origin: OriginFor<T>,
@@ -261,6 +271,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Revoke a sell order in trade by the order creator.
 		#[pallet::weight(1_000)]
 		pub fn revoke_order(
 			origin: OriginFor<T>,
@@ -317,6 +328,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Users(non-order-creator) buy the remaining `vsbond` of a sell order.
 		#[pallet::weight(1_000)]
 		pub fn clinch_order(
 			origin: OriginFor<T>,
@@ -335,6 +347,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell order.
 		#[pallet::weight(1_000)]
 		pub fn partial_clinch_order(
 			origin: OriginFor<T>,
