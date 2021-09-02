@@ -43,8 +43,6 @@ pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
-use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -63,16 +61,13 @@ pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 ///
 /// NOTE: It's a `PATCH` for the RPC of asgard runtime.
 #[allow(non_snake_case)]
-pub fn PATCH_FOR_ASGARD_create_full<C, P>(
-	deps: FullDeps<C, P>,
-) -> Result<jsonrpc_core::IoHandler<sc_rpc_api::Metadata>, Box<dyn std::error::Error + Send + Sync>>
+pub fn create_full<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
 	C: Send + Sync + 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId, Balance>,
 	P: TransactionPool + 'static,
 {
@@ -84,9 +79,7 @@ where
 
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
 
-	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
-
 	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
 
-	Ok(io)
+	io
 }

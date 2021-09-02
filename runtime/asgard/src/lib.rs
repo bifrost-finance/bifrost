@@ -103,8 +103,8 @@ use xcm::v0::{
 	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId,
 };
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
+	FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
@@ -754,8 +754,6 @@ match_type! {
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
-	// ^^^ Parent & its unit plurality gets free execution
-	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
 	BifrostXcmTransactFilter<Everything>,
 );
 
