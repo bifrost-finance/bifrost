@@ -179,9 +179,6 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	}
 
 	let rpc_extensions_builder = {
-		let client = client.clone();
-		let transaction_pool = transaction_pool.clone();
-
 		Box::new(move |_deny_unsafe, _| -> Result<IoHandler<Metadata>, _> {
 			return Ok(RpcExtension::default());
 		})
