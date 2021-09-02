@@ -214,7 +214,6 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
-use service::collator::new_partial;
 #[cfg(feature = "with-asgard-runtime")]
 use service::collator::{asgard_runtime, AsgardExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
@@ -225,18 +224,16 @@ macro_rules! construct_async_run {
 		let runner = $cli.create_runner($cmd)?;
 			#[cfg(feature = "with-asgard-runtime")]
 			return runner.async_run(|$config| {
-				let $components = new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor, _>(
+				let $components = crate::service::collator::new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor>(
 					&$config,
-					crate::service::collator::asgard_parachain_build_import_queue,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
 			});
 			#[cfg(feature = "with-bifrost-runtime")]
 			return runner.async_run(|$config| {
-				let $components = new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor, _>(
+				let $components = crate::service::collator::new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
 					&$config,
-					crate::service::collator::bifrost_parachain_build_import_queue,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
@@ -279,16 +276,6 @@ macro_rules! with_runtime_or_err {
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
 		} else {
-			#[cfg(feature = "with-dev-runtime")]
-			#[allow(unused_imports)]
-			use service::dev::dev_runtime::{Block, RuntimeApi};
-			#[cfg(feature = "with-dev-runtime")]
-			#[allow(unused_imports)]
-			use service::dev::DevExecutor as Executor;
-			#[cfg(feature = "with-dev-runtime")]
-			$( $code )*
-
-			#[cfg(not(feature = "with-dev-runtime"))]
 			return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
 		}
 	}
@@ -356,9 +343,18 @@ pub fn run() -> Result<()> {
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
-				service::collator::start_node(config, polkadot_config, id)
-					.await
-					.map_err(Into::into)
+				with_runtime_or_err!(config.chain_spec, {
+					{
+						service::collator::start_node::<RuntimeApi, Executor>(
+							config,
+							polkadot_config,
+							id,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+					}
+				})
 			})
 		},
 		Some(Subcommand::Inspect(cmd)) => {

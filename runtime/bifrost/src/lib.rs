@@ -79,7 +79,7 @@ use frame_support::{
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
 	XcmBaseWeight,
 };
@@ -96,8 +96,8 @@ use xcm::v0::{
 	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId,
 };
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-	EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
+	FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
 	ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
@@ -667,8 +667,6 @@ match_type! {
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
-	// ^^^ Parent & its unit plurality gets free execution
-	AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
 	BifrostXcmTransactFilter<Everything>,
 );
 
@@ -1231,6 +1229,50 @@ impl_runtime_apis! {
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
+			}
+		}
+	}
+
+	impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
+		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
+			let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
+		}
+
+		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
+			let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
+			}
+		}
+
+		fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
+			let rs = Bancor::get_instant_vstoken_price(currency_id);
+			match rs {
+				Ok((nominator, denominator)) => (nominator, denominator),
+				_ => (Zero::zero(), Zero::zero()),
+			}
+		}
+
+		fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
+			let rs = Bancor::get_instant_token_price(currency_id);
+			match rs {
+				Ok((nominator, denominator)) => (nominator, denominator),
+				_ => (Zero::zero(), Zero::zero()),
+			}
+		}
+	}
+
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
+			let rs = Salp::contribution_by_fund(index, &who);
+			match rs {
+				Ok(val) => val,
+				_ => Zero::zero(),
 			}
 		}
 	}
