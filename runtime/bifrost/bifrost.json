@@ -6,6 +6,24 @@
 			"FromSiblingParaChain": 2
 		}
 	},
+	"ParachainTransactType": {
+		"_enum": {
+			"Xcm": 0,
+			"Proxy": 1
+		}
+	},
+	"ParachainTransactProxyType": {
+		"_enum": {
+			"Primary": 0,
+			"Derived": 1
+		}
+	},
+	"ParachainDerivedProxyAccountType": {
+		"_enum": {
+			"Salp": 0,
+			"Staking": 1
+		}
+	},
 	"TokenSymbol": {
 		"_enum": {
 			"ASG": 0,
@@ -15,6 +33,26 @@
 			"ETH": 5
 		}
 	},
+	"FundStatus": {
+		"_enum": [
+			"Ongoing",
+			"Retired",
+			"Success",
+			"Failed",
+			"RefundWithdrew",
+			"RedeemWithdrew",
+			"End"
+		]
+	},
+	"FundInfo": {
+		"raised": "Balance",
+		"cap": "Balance",
+		"first_slot": "LeasePeriod",
+		"last_slot": "LeasePeriod",
+		"trie_index": "TrieIndex",
+		"status": "FundStatus"
+	},
+	"MessageId": "[u8; 32]",
 	"CurrencyId": {
 		"_enum": {
 			"Native": "TokenSymbol",
@@ -28,11 +66,6 @@
 	},
 	"CurrencyIdOf": "CurrencyId",
 	"TAssetBalance": "Balance",
-	"AccountData": {
-		"free": "Balance",
-		"reserved": "Balance",
-		"frozen": "Balance"
-	},
 	"PalletBalanceOf": "Balance",
 	"BlockNumberFor": "BlockNumber",
 	"NumberOrHex": {
