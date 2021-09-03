@@ -60,16 +60,16 @@ pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "p
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 
 # Cumulus dependencies
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
-pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
+cumulus-pallet-aura-ext = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-pallet-parachain-system = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-primitives-timestamp = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-primitives-utility = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-pallet-dmp-queue = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+cumulus-pallet-xcm = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+parachain-info = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
+pallet-collator-selection = { git = "https://github.com/bifrost-finance/cumulus", branch = "polkadot-v0.9.9-without-compact-proof", default-features = false }
 
 # Polkadot dependencies
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot",branch = "release-v0.9.9", default-features = false }

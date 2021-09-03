@@ -31,7 +31,6 @@ use cumulus_client_service::{
 use cumulus_primitives_core::ParaId;
 use node_primitives::{AccountId, Balance, ParaId as BifrostParaId};
 use sc_client_api::ExecutorProvider;
-use sc_consensus_aura::ImportQueueParams;
 pub use sc_executor::NativeExecutor;
 use sc_executor::{native_executor_instance, NativeExecutionDispatch};
 use sc_network::NetworkService;
@@ -43,7 +42,6 @@ use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
 use sp_keystore::SyncCryptoStorePtr;
 use substrate_prometheus_endpoint::Registry;
-use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 use crate::RuntimeApiCollection;
 
