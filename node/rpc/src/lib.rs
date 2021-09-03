@@ -68,7 +68,7 @@ where
 	C: Send + Sync + 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId, Balance>,
+	// C::Api: SalpRuntimeApi<Block, ParaId, AccountId, Balance>,
 	P: TransactionPool + 'static,
 {
 	let FullDeps { client, .. } = deps;
@@ -79,7 +79,7 @@ where
 
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
 
-	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
+	// io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
 
 	io
 }

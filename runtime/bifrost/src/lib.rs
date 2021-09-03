@@ -122,7 +122,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 803,
+	spec_version: 804,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -924,73 +924,73 @@ pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
 	)
 }
 
-pub struct EnsureConfirmAsMultiSig;
-impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
-	type Success = AccountId;
+// pub struct EnsureConfirmAsMultiSig;
+// impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+// 	type Success = AccountId;
 
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) =>
-				if who == ConfirmMuitiSigAccount::get() {
-					Ok(who)
-				} else {
-					Err(Origin::from(Some(who)))
-				},
-			r => Err(Origin::from(r)),
-		})
-	}
+// 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+// 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+// 			RawOrigin::Signed(who) =>
+// 				if who == ConfirmMuitiSigAccount::get() {
+// 					Ok(who)
+// 				} else {
+// 					Err(Origin::from(Some(who)))
+// 				},
+// 			r => Err(Origin::from(r)),
+// 		})
+// 	}
 
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(Default::default()))
-	}
-}
+// 	#[cfg(feature = "runtime-benchmarks")]
+// 	fn successful_origin() -> Origin {
+// 		Origin::from(RawOrigin::Signed(Default::default()))
+// 	}
+// }
 
 parameter_types! {
-	pub const MinContribution: Balance = 1 * DOLLARS;
-	pub const RemoveKeysLimit: u32 = 500;
-	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
-	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
-	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
-	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
+// 	pub const MinContribution: Balance = 1 * DOLLARS;
+// 	pub const RemoveKeysLimit: u32 = 500;
+// 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
+// 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+// 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
+// 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+// 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+// 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub ConfirmMuitiSigAccount: AccountId = hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
-	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+// 	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
+// 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+// 	pub ConfirmMuitiSigAccount: AccountId = hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into();
+// 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+// 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
+// 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
-impl bifrost_salp::Config for Runtime {
-	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
-	type Event = Event;
-	type LeasePeriod = LeasePeriod;
-	type MinContribution = MinContribution;
-	type MultiCurrency = Currencies;
-	type PalletId = BifrostCrowdloanId;
-	type RelayChainToken = RelayCurrencyId;
-	type ReleaseCycle = ReleaseCycle;
-	type ReleaseRatio = ReleaseRatio;
-	type RemoveKeysLimit = RemoveKeysLimit;
-	type SlotLength = SlotLength;
-	type VSBondValidPeriod = VSBondValidPeriod;
-	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
-	type SelfParaId = SelfParaId;
-	type ContributionWeight = ContributionWeight;
-	type BaseXcmWeight = XcmWeight;
-	type EnsureConfirmAsMultiSig =
-		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
-	type AddProxyWeight = AddProxyWeight;
-	type XcmTransfer = XTokens;
-	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
-	type TransactProxyType = SalpProxyType;
-	type TransactType = SalpTransactType;
-}
+// impl bifrost_salp::Config for Runtime {
+// 	type BancorPool = Bancor;
+// 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
+// 	type Event = Event;
+// 	type LeasePeriod = LeasePeriod;
+// 	type MinContribution = MinContribution;
+// 	type MultiCurrency = Currencies;
+// 	type PalletId = BifrostCrowdloanId;
+// 	type RelayChainToken = RelayCurrencyId;
+// 	type ReleaseCycle = ReleaseCycle;
+// 	type ReleaseRatio = ReleaseRatio;
+// 	type RemoveKeysLimit = RemoveKeysLimit;
+// 	type SlotLength = SlotLength;
+// 	type VSBondValidPeriod = VSBondValidPeriod;
+// 	type XcmTransferOrigin = XcmTransferOrigin;
+// 	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
+// 	type SelfParaId = SelfParaId;
+// 	type ContributionWeight = ContributionWeight;
+// 	type BaseXcmWeight = XcmWeight;
+// 	type EnsureConfirmAsMultiSig =
+// 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+// 	type AddProxyWeight = AddProxyWeight;
+// 	type XcmTransfer = XTokens;
+// 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+// 	type TransactProxyType = SalpProxyType;
+// 	type TransactType = SalpTransactType;
+// }
 
 parameter_types! {
 	pub const InterventionPercentage: Percent = Percent::from_percent(75);
@@ -1067,7 +1067,7 @@ construct_runtime! {
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		// Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 	}
 }
@@ -1269,15 +1269,15 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
-		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
-			let rs = Salp::contribution_by_fund(index, &who);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
-	}
+	// impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
+	// 	fn get_contribution(index: ParaId, who: AccountId) -> Balance {
+	// 		let rs = Salp::contribution_by_fund(index, &who);
+	// 		match rs {
+	// 			Ok(val) => val,
+	// 			_ => Zero::zero(),
+	// 		}
+	// 	}
+	// }
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
