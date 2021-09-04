@@ -992,18 +992,18 @@ parameter_types! {
 // 	type TransactType = SalpTransactType;
 // }
 
-parameter_types! {
-	pub const InterventionPercentage: Percent = Percent::from_percent(75);
-	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
-}
+// parameter_types! {
+// 	pub const InterventionPercentage: Percent = Percent::from_percent(75);
+// 	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
+// }
 
-impl bifrost_bancor::Config for Runtime {
-	type Event = Event;
-	type InterventionPercentage = InterventionPercentage;
-	type DailyReleasePercentage = DailyReleasePercentage;
-	type MultiCurrency = Currencies;
-	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
-}
+// impl bifrost_bancor::Config for Runtime {
+// 	type Event = Event;
+// 	type InterventionPercentage = InterventionPercentage;
+// 	type DailyReleasePercentage = DailyReleasePercentage;
+// 	type MultiCurrency = Currencies;
+// 	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
+// }
 
 // Bifrost modules end
 
@@ -1068,7 +1068,7 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		// Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
-		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
+		// Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 	}
 }
 
@@ -1235,39 +1235,39 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
-		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
-			let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
+	// impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
+	// 	fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
+	// 		let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
+	// 		match rs {
+	// 			Ok(val) => val,
+	// 			_ => Zero::zero(),
+	// 		}
+	// 	}
 
-		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
-			let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
+	// 	fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
+	// 		let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
+	// 		match rs {
+	// 			Ok(val) => val,
+	// 			_ => Zero::zero(),
+	// 		}
+	// 	}
 
-		fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
-			let rs = Bancor::get_instant_vstoken_price(currency_id);
-			match rs {
-				Ok((nominator, denominator)) => (nominator, denominator),
-				_ => (Zero::zero(), Zero::zero()),
-			}
-		}
+	// 	fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
+	// 		let rs = Bancor::get_instant_vstoken_price(currency_id);
+	// 		match rs {
+	// 			Ok((nominator, denominator)) => (nominator, denominator),
+	// 			_ => (Zero::zero(), Zero::zero()),
+	// 		}
+	// 	}
 
-		fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
-			let rs = Bancor::get_instant_token_price(currency_id);
-			match rs {
-				Ok((nominator, denominator)) => (nominator, denominator),
-				_ => (Zero::zero(), Zero::zero()),
-			}
-		}
-	}
+	// 	fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
+	// 		let rs = Bancor::get_instant_token_price(currency_id);
+	// 		match rs {
+	// 			Ok((nominator, denominator)) => (nominator, denominator),
+	// 			_ => (Zero::zero(), Zero::zero()),
+	// 		}
+	// 	}
+	// }
 
 	// impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
 	// 	fn get_contribution(index: ParaId, who: AccountId) -> Balance {
