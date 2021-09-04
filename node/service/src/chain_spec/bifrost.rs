@@ -22,10 +22,10 @@ use std::{
 };
 
 use bifrost_runtime::{
-	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
-	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
-	IndicesConfig, ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, VestingConfig, WASM_BINARY,
+	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
+	CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
+	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+	VestingConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
@@ -93,12 +93,12 @@ pub fn bifrost_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
-		bancor: BancorConfig {
-			bancor_pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
-			],
-		},
+		// bancor: BancorConfig {
+		// 	bancor_pools: vec![
+		// 		(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
+		// 		(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
+		// 	],
+		// },
 	}
 }
 
