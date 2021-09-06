@@ -947,6 +947,8 @@ dependencies = [
  "serde",
  "sp-api",
  "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
  "sp-runtime",
 ]
 
@@ -954,6 +956,7 @@ dependencies = [
 name = "bifrost-salp-rpc-runtime-api"
 version = "0.8.0"
 dependencies = [
+ "node-primitives",
  "parity-scale-codec",
  "sp-api",
 ]
