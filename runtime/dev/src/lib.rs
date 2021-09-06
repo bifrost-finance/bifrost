@@ -62,7 +62,8 @@ use sp_runtime::RuntimeString;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdConversion, BlakeTwo256, Block as BlockT, NumberFor, UniqueSaturatedInto, Zero,
+		AccountIdConversion, BlakeTwo256, Block as BlockT, Convert, NumberFor, UniqueSaturatedInto,
+		Zero,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
@@ -72,15 +73,18 @@ use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
+use xcm::opaque::v0::MultiAsset;
+use xcm_builder::{FixedRateOfConcreteFungible, TakeRevenue};
 use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
+	constants::parachains,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets, BifrostXcmTransactFilter,
+		BifrostFilteredAssets, BifrostXcmTransactFilter, MultiWeightTraders,
 	},
 	SlowAdjustingFeeUpdate,
 };
@@ -110,7 +114,6 @@ use xcm_builder::{
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
 	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
-	UsingComponents,
 };
 use xcm_executor::{Config, XcmExecutor};
 use xcm_support::BifrostXcmAdaptor;
@@ -738,10 +741,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 );
 
 parameter_types! {
-	// One XCM operation is 1_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: Weight = 1_000_000;
-	// One ROC buys 1 second of weight.
-	pub const WeightPrice: (MultiLocation, u128) = (X1(Parent), BNCS);
+	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
+	pub UnitWeightCost: Weight = 200_000_000;
 }
 
 match_type! {
@@ -768,6 +769,34 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	BifrostCurrencyIdConvert<SelfParaChainId>,
 >;
 
+parameter_types! {
+	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+	// BNC:KSM = 80:1
+	pub BncPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec())), ksm_per_second().saturating_mul(80));
+	// KAR:KSM = 100:1
+	pub KarPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec())), ksm_per_second().saturating_mul(100));
+	// KUSD:KSM = 400:1
+	pub KusdPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec())), ksm_per_second().saturating_mul(400));
+}
+
+pub struct ToTreasury;
+impl TakeRevenue for ToTreasury {
+	fn take_revenue(revenue: MultiAsset) {
+		if let MultiAsset::ConcreteFungible { id, amount } = revenue {
+			if let Some(currency_id) = BifrostCurrencyIdConvert::<SelfParaChainId>::convert(id) {
+				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
+			}
+		}
+	}
+}
+
+pub type Trader = MultiWeightTraders<
+	FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<BncPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<KarPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<KusdPerSecond, ToTreasury>,
+>;
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -778,7 +807,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+	type Trader = Trader;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
