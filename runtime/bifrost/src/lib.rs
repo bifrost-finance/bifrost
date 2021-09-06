@@ -1269,7 +1269,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId,Balance> for Runtime {
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
 		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
 			let rs = Salp::contribution_by_fund(index, &who);
 			match rs {
