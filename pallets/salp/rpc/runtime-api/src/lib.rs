@@ -19,13 +19,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Codec;
+use node_primitives::Balance;
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
-	pub trait SalpRuntimeApi<ParaId,AccountId, Balance> where
+	pub trait SalpRuntimeApi<ParaId,AccountId> where
 		ParaId: Codec,
 		AccountId: Codec,
-		Balance: Codec,
 	{
 		fn get_contribution(
 			index: ParaId,

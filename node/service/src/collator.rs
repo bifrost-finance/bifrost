@@ -29,7 +29,7 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use node_primitives::{AccountId, Balance, ParaId as BifrostParaId};
+use node_primitives::{AccountId, ParaId as BifrostParaId};
 use sc_client_api::ExecutorProvider;
 pub use sc_executor::NativeExecutor;
 use sc_executor::{native_executor_instance, NativeExecutionDispatch};
@@ -210,7 +210,7 @@ where
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
-	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId, Balance>,
+	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 	BIC: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -369,7 +369,7 @@ where
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
-	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId, Balance>,
+	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	start_node_impl(

@@ -24,7 +24,8 @@ use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT};
+use sp_rpc::number::NumberOrHex;
+use sp_runtime::{generic::BlockId, traits::Block as BlockT, SaturatedConversion};
 
 pub use self::gen_client::Client as SalpClient;
 
@@ -41,7 +42,7 @@ impl<C, Block> SalpRpcWrapper<C, Block> {
 }
 
 #[rpc]
-pub trait SalpRpcApi<BlockHash, ParaId, AccountId, Balance> {
+pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 	/// rpc method for getting current contribution
 	#[rpc(name = "salp_getContribution")]
 	fn get_contribution(
@@ -49,32 +50,36 @@ pub trait SalpRpcApi<BlockHash, ParaId, AccountId, Balance> {
 		index: ParaId,
 		who: AccountId,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<Balance>;
+	) -> JsonRpcResult<NumberOrHex>;
 }
 
-impl<C, Block, ParaId, AccountId, Balance>
-	SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId, Balance> for SalpRpcWrapper<C, Block>
+impl<C, Block, ParaId, AccountId> SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
+	for SalpRpcWrapper<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId, Balance>,
+	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	ParaId: Codec,
 	AccountId: Codec,
-	Balance: Codec,
 {
 	fn get_contribution(
 		&self,
 		index: ParaId,
 		account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<Balance> {
+	) -> JsonRpcResult<NumberOrHex> {
 		let salp_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		salp_rpc_api.get_contribution(&at, index, account).map_err(|e| RpcError {
-			code: ErrorCode::InternalError,
-			message: "Failed to get salp contribution.".to_owned(),
-			data: Some(format!("{:?}", e).into()),
-		})
+		let rs = salp_rpc_api.get_contribution(&at, index, account);
+
+		match rs {
+			Ok(val) => Ok(NumberOrHex::Number(val.saturated_into())),
+			Err(e) => Err(RpcError {
+				code: ErrorCode::InternalError,
+				message: "Failed to get salp contribution.".to_owned(),
+				data: Some(format!("{:?}", e).into()),
+			}),
+		}
 	}
 }
