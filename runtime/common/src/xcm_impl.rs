@@ -19,7 +19,7 @@
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	sp_runtime::traits::{CheckedConversion, Convert},
+	sp_runtime::traits::{CheckedConversion, Convert, Zero},
 	traits::{Contains, Get},
 	weights::Weight,
 };
@@ -28,13 +28,19 @@ use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::v0::Junction;
 pub use xcm::v0::{
+	Error as XcmError,
 	Junction::{AccountId32, GeneralKey, Parachain, Parent},
 	MultiAsset,
 	MultiLocation::{self, X1, X2, X3},
 	NetworkId, Xcm,
 };
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
-use xcm_executor::traits::{FilterAssetLocation, MatchesFungible, ShouldExecute};
+use xcm_executor::{
+	traits::{FilterAssetLocation, MatchesFungible, ShouldExecute, WeightTrader},
+	Assets,
+};
+
+use crate::constants::parachains;
 
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
@@ -120,10 +126,16 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
 				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
-			Token(TokenSymbol::KAR) =>
-				Some(X3(Parent, Parachain(2000), GeneralKey([0, 128].to_vec()))),
-			Token(TokenSymbol::KUSD) =>
-				Some(X3(Parent, Parachain(2000), GeneralKey([0, 129].to_vec()))),
+			Token(TokenSymbol::KAR) => Some(X3(
+				Parent,
+				Parachain(parachains::karura::ID),
+				GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+			)),
+			Token(TokenSymbol::KUSD) => Some(X3(
+				Parent,
+				Parachain(parachains::karura::ID),
+				GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+			)),
 			_ => None,
 		}
 	}
@@ -140,18 +152,18 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG) => Some(Native(TokenSymbol::ASG)),
-							Native(TokenSymbol::BNC) => Some(Native(TokenSymbol::BNC)),
+							Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
+								Some(currency_id),
 							_ => None,
 						}
 					} else {
 						None
 					}
 				// Kurara CurrencyId types
-				} else if id == 2000 {
-					if key == [0, 128].to_vec() {
+				} else if id == parachains::karura::ID {
+					if key == parachains::karura::KAR_KEY.to_vec() {
 						Some(Token(TokenSymbol::KAR))
-					} else if key == [0, 129].to_vec() {
+					} else if key == parachains::karura::KUSD_KEY.to_vec() {
 						Some(Token(TokenSymbol::KUSD))
 					} else {
 						None
@@ -178,5 +190,87 @@ pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
 		X1(AccountId32 { network: NetworkId::Any, id: account.into() })
+	}
+}
+
+// The implementation of multiple fee trader
+pub struct MultiWeightTraders<KsmTrader, BncTrader, KarTrader, KusdTrader> {
+	ksm_trader: KsmTrader,
+	bnc_trader: BncTrader,
+	kar_trader: KarTrader,
+	kusd_trader: KusdTrader,
+}
+
+impl<
+		KsmTrader: WeightTrader,
+		BncTrader: WeightTrader,
+		KarTrader: WeightTrader,
+		KusdTrader: WeightTrader,
+	> WeightTrader for MultiWeightTraders<KsmTrader, BncTrader, KarTrader, KusdTrader>
+{
+	fn new() -> Self {
+		Self {
+			ksm_trader: KsmTrader::new(),
+			bnc_trader: BncTrader::new(),
+			kar_trader: KarTrader::new(),
+			kusd_trader: KusdTrader::new(),
+			// dummy_trader: DummyTrader::new(),
+		}
+	}
+	fn buy_weight(&mut self, weight: Weight, payment: Assets) -> Result<Assets, XcmError> {
+		if let Ok(assets) = self.ksm_trader.buy_weight(weight, payment.clone()) {
+			return Ok(assets);
+		}
+
+		if let Ok(assets) = self.bnc_trader.buy_weight(weight, payment.clone()) {
+			return Ok(assets);
+		}
+
+		if let Ok(assets) = self.kar_trader.buy_weight(weight, payment.clone()) {
+			return Ok(assets);
+		}
+
+		if let Ok(assets) = self.kusd_trader.buy_weight(weight, payment) {
+			return Ok(assets);
+		}
+
+		// if let Ok(asset) = self.dummy_trader.buy_weight(weight, payment) {
+		// 	return Ok(assets)
+		// }
+
+		Err(XcmError::TooExpensive)
+	}
+	fn refund_weight(&mut self, weight: Weight) -> MultiAsset {
+		let ksm = self.ksm_trader.refund_weight(weight);
+		match ksm {
+			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return ksm,
+			_ => {},
+		}
+
+		let bnc = self.bnc_trader.refund_weight(weight);
+		match bnc {
+			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return bnc,
+			_ => {},
+		}
+
+		let kar = self.kar_trader.refund_weight(weight);
+		match kar {
+			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return kar,
+			_ => {},
+		}
+
+		let kusd = self.kusd_trader.refund_weight(weight);
+		match kusd {
+			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return kusd,
+			_ => {},
+		}
+
+		// let dummy = self.dummy_trader.refund_weight(weight);
+		// match dummy {
+		// 	MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return dummy,
+		// 	_ => {},
+		// }
+
+		MultiAsset::None
 	}
 }

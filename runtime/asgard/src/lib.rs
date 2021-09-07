@@ -73,9 +73,10 @@ use xcm_support::Get;
 pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
+	constants::parachains,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets, BifrostXcmTransactFilter,
+		BifrostFilteredAssets, BifrostXcmTransactFilter, MultiWeightTraders,
 	},
 	SlowAdjustingFeeUpdate,
 };
@@ -739,10 +740,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 );
 
 parameter_types! {
-	// One XCM operation is 1_000_000 weight - almost certainly a conservative estimate.
-	pub UnitWeightCost: Weight = 1_000_000;
-	// One ROC buys 1 second of weight.
-	pub const WeightPrice: (MultiLocation, u128) = (X1(Parent), BNCS);
+	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer = 3_000_000_000
+	pub UnitWeightCost: Weight = 200_000_000;
 }
 
 match_type! {
@@ -769,6 +768,12 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 
 parameter_types! {
 	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+	// BNC:KSM = 80:1
+	pub BncPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec())), ksm_per_second().saturating_mul(80));
+	// KAR:KSM = 100:1
+	pub KarPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec())), ksm_per_second().saturating_mul(100));
+	// KUSD:KSM = 400:1
+	pub KusdPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec())), ksm_per_second().saturating_mul(400));
 }
 
 pub struct ToTreasury;
@@ -782,6 +787,13 @@ impl TakeRevenue for ToTreasury {
 	}
 }
 
+pub type Trader = MultiWeightTraders<
+	FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<BncPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<KarPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<KusdPerSecond, ToTreasury>,
+>;
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -792,7 +804,7 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
-	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>;
+	type Trader = Trader;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type XcmSender = XcmRouter; // Don't handle responses for now.
 }
