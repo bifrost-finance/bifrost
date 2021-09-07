@@ -22,6 +22,7 @@ use node_primitives::BlockNumber;
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 use sp_runtime::{FixedPointNumber, Perquintill};
 
+pub mod constants;
 pub mod xcm_impl;
 
 pub struct RelaychainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
