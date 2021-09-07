@@ -18,10 +18,11 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
-use sp_runtime::traits::Bounded;
+use node_primitives::ParaId;
+use sp_runtime::{traits::Bounded, SaturatedConversion};
 use sp_std::prelude::*;
 
 pub use crate::{Pallet as Salp, *};
@@ -40,75 +41,101 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 	let last_period = (7 as u32).into();
 	let para_id = id;
 
-	let caller = account("fund_creator", id, 0);
-
-	assert_ok!(<T as Config>::MultiCurrency::deposit(
-		<T as Config>::DepositToken::get(),
-		&caller,
-		T::SubmissionDeposit::get()
-	));
-
-	assert_ok!(Salp::<T>::create(
-		RawOrigin::Signed(caller).into(),
-		para_id,
-		cap,
-		first_period,
-		last_period,
-	));
+	assert_ok!(Salp::<T>::create(RawOrigin::Root.into(), para_id, cap, first_period, last_period));
 
 	para_id
 }
 
 #[allow(dead_code)]
 fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
-	let value = T::SubmissionDeposit::get();
-
+	let value = T::MinContribution::get();
+	assert_ok!(Salp::<T>::set_balance(who, value));
 	assert_ok!(Salp::<T>::contribute(RawOrigin::Signed(who.clone()).into(), index, value));
 }
 
 benchmarks! {
-	create {
-		let para_id = 1 as u32;
-		let cap = BalanceOf::<T>::max_value();
-		let first_period = 0u32.into();
-		let last_period = 3u32.into();
-
-		let caller: T::AccountId = whitelisted_caller();
-
-		<T as Config>::MultiCurrency::deposit(
-			<T as Config>::DepositToken::get(),
-			&caller,
-			T::SubmissionDeposit::get(),
-		)?;
-
-	}: _(RawOrigin::Signed(caller), para_id, cap, first_period, last_period)
-	verify {
-		assert_last_event::<T>(Event::<T>::Created(para_id).into())
-	}
-
 	contribute {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
 		let contribution = T::MinContribution::get();
-
+		assert_ok!(Salp::<T>::set_balance(&caller, contribution));
 	}: _(RawOrigin::Signed(caller.clone()), fund_index, contribution)
 	verify {
-		assert_last_event::<T>(Event::<T>::Contributing(caller, fund_index, contribution).into());
+		let fund = Salp::<T>::funds(fund_index).unwrap();
+		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
+		assert_eq!(status, ContributionStatus::Contributing(contribution));
 	}
 
-	on_finalize {
-		let end_block: T::BlockNumber = T::ReleaseCycle::get();
-		let n in 2 .. 100;
+	refund {
+		let fund_index = create_fund::<T>(1);
+		let caller: T::AccountId = whitelisted_caller();
+		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
+		let contribution = T::MinContribution::get();
+		contribute_fund::<T>(&caller,fund_index);
+		assert_ok!(Salp::<T>::confirm_contribute(
+			RawOrigin::Root.into(),
+			caller.clone(),
+			fund_index,
+			true,
+			[0; 32]
+		));
+		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
+		assert_eq!(Salp::<T>::refund_pool(), T::MinContribution::get());
+		let fund = Salp::<T>::funds(fund_index).unwrap();
+		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
+		assert_eq!(status, ContributionStatus::Idle);
+	}: _(RawOrigin::Signed(caller.clone()), fund_index)
+	verify {
+		assert_eq!(Salp::<T>::refund_pool(), 0_u32.saturated_into());
+		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
+		assert_eq!(status, ContributionStatus::Refunded);
+		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, contribution).into())
+	}
 
-		for i in 0 .. n {
-			let fund_index = create_fund::<T>(i);
-			let contributor: T::AccountId = account("contributor", i, 0);
-			let contribution = T::MinContribution::get() * (i + 1).into();
+	unlock {
+		let fund_index = create_fund::<T>(1);
+		let caller: T::AccountId = whitelisted_caller();
+		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
+		let contribution = T::MinContribution::get();
+		contribute_fund::<T>(&caller,fund_index);
+		assert_ok!(Salp::<T>::confirm_contribute(
+			RawOrigin::Root.into(),
+			caller.clone(),
+			fund_index,
+			true,
+			[0; 32]
+		));
+		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
+	}: _(RawOrigin::Root, caller.clone(),fund_index)
+	verify {
+		let fund = Salp::<T>::funds(fund_index).unwrap();
+		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
+		assert_eq!(status, ContributionStatus::Unlocked);
+	}
 
-			Salp::<T>::contribute(RawOrigin::Signed(contributor).into(), fund_index, contribution)?;
-		}
-	}: {
-		Salp::<T>::on_finalize(end_block);
+	redeem {
+		let fund_index = create_fund::<T>(1);
+		let caller: T::AccountId = whitelisted_caller();
+		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
+		let contribution = T::MinContribution::get();
+		contribute_fund::<T>(&caller,fund_index);
+		assert_ok!(Salp::<T>::confirm_contribute(
+			RawOrigin::Root.into(),
+			caller.clone(),
+			fund_index,
+			true,
+			[0; 32]
+		));
+		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::unlock(RawOrigin::Root.into(), caller.clone(), fund_index));
+		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
+		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
+	}: _(RawOrigin::Signed(caller.clone()), fund_index,contribution)
+	verify {
+		assert_eq!(Salp::<T>::redeem_pool(), 0_u32.saturated_into());
+		assert_last_event::<T>(Event::<T>::Redeemed(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 }
 

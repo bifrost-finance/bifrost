@@ -1565,6 +1565,26 @@ impl_runtime_apis! {
 	// benchmarks for asgard modules
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_support::traits::StorageInfoTrait;
+			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			let mut list = Vec::<BenchmarkList>::new();
+
+			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_bancor, Bancor);
+			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
+			list_benchmark!(list, extra, bifrost_vtoken_mint, VtokenMint);
+			list_benchmark!(list, extra, bifrost_minter_reward, MinterReward);
+			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
+
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {

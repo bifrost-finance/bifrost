@@ -227,12 +227,8 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) =>
-				if who == PrimaryAccount::get() || who == ConfirmMuitiSigAccount::get() {
-					Ok(who)
-				} else {
-					Err(Origin::from(Some(who)))
-				},
+			RawOrigin::Signed(who) => Ok(who),
+			RawOrigin::Root => Ok(Default::default()),
 			r => Err(Origin::from(r)),
 		})
 	}
@@ -317,10 +313,6 @@ impl salp::Config for Test {
 
 pub struct SalpWeightInfo;
 impl WeightInfo for SalpWeightInfo {
-	fn create() -> Weight {
-		0
-	}
-
 	fn contribute() -> Weight {
 		0
 	}
@@ -329,23 +321,11 @@ impl WeightInfo for SalpWeightInfo {
 		0
 	}
 
-	fn withdraw() -> Weight {
-		0
-	}
-
 	fn redeem() -> Weight {
 		0
 	}
 
 	fn refund() -> Weight {
-		0
-	}
-
-	fn dissolve(_n: u32) -> Weight {
-		0
-	}
-
-	fn on_initialize(_n: u32) -> Weight {
 		0
 	}
 }

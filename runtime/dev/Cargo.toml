@@ -92,7 +92,7 @@ bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-featur
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
-
+bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -183,6 +183,7 @@ std = [
 	"orml-xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
+	"bifrost-liquidity-mining/std",
 ]
 
 runtime-benchmarks = [
@@ -198,6 +199,7 @@ runtime-benchmarks = [
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-vtoken-mint/runtime-benchmarks",
 	"bifrost-minter-reward/runtime-benchmarks",
+	"bifrost-vsbond-auction/runtime-benchmarks",
 ]
 
 try-runtime = [
