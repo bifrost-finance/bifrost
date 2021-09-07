@@ -108,16 +108,20 @@ where
 		token_id: CurrencyId,
 		vstoken_amount: Balance,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<Balance> {
+	) -> JsonRpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		api.get_bancor_token_amount_out(&at, token_id, vstoken_amount)
-			.map_err(|e| RpcError {
+		let rs = api.get_bancor_token_amount_out(&at, token_id, vstoken_amount);
+
+		match rs {
+			Ok(val) => Ok(NumberOrHex::Number(val.saturated_into())),
+			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
 				message: "Failed to get bancor token amount out.".to_owned(),
 				data: Some(format!("{:?}", e).into()),
-			})
+			}),
+		}
 	}
 
 	fn get_bancor_vstoken_amount_out(
@@ -125,45 +129,56 @@ where
 		token_id: CurrencyId,
 		token_amount: Balance,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<Balance> {
+	) -> JsonRpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		api.get_bancor_vstoken_amount_out(&at, token_id, token_amount)
-			.map_err(|e| RpcError {
+		let rs = api.get_bancor_vstoken_amount_out(&at, token_id, token_amount);
+		match rs {
+			Ok(val) => Ok(NumberOrHex::Number(val.saturated_into())),
+			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
 				message: "Failed to get bancor vstoken amount out.".to_owned(),
 				data: Some(format!("{:?}", e).into()),
-			})
+			}),
+		}
 	}
 
 	fn get_instant_vstoken_price(
 		&self,
 		currency_id: CurrencyId,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<Balance> {
+	) -> JsonRpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		api.get_instant_vstoken_price(&at, currency_id).map_err(|e| RpcError {
-			code: ErrorCode::InternalError,
-			message: "Failed to get bancor instant vstoken price.".to_owned(),
-			data: Some(format!("{:?}", e).into()),
-		})
+		let rs = api.get_instant_vstoken_price(&at, currency_id);
+		match rs {
+			Ok(val) => Ok(NumberOrHex::Number(val.saturated_into())),
+			Err(e) => Err(RpcError {
+				code: ErrorCode::InternalError,
+				message: "Failed to get bancor instant vstoken price.".to_owned(),
+				data: Some(format!("{:?}", e).into()),
+			}),
+		}
 	}
 
 	fn get_instant_token_price(
 		&self,
 		currency_id: CurrencyId,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<Balance> {
+	) -> JsonRpcResult<NumberOrHex> {
 		let api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		api.get_instant_token_price(&at, currency_id).map_err(|e| RpcError {
-			code: ErrorCode::InternalError,
-			message: "Failed to get bancor instant token price.".to_owned(),
-			data: Some(format!("{:?}", e).into()),
-		})
+		let rs = api.get_instant_token_price(&at, currency_id);
+		match rs {
+			Ok(val) => Ok(NumberOrHex::Number(val.saturated_into())),
+			Err(e) => Err(RpcError {
+				code: ErrorCode::InternalError,
+				message: "Failed to get bancor instant token price.".to_owned(),
+				data: Some(format!("{:?}", e).into()),
+			}),
+		}
 	}
 }
