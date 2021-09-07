@@ -1294,6 +1294,23 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_support::traits::StorageInfoTrait;
+			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+
+			let mut list = Vec::<BenchmarkList>::new();
+
+			list_benchmark!(list, extra, bifrost_bancor, Bancor);
+			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
+			list_benchmark!(list, extra, bifrost_salp, Salp);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
@@ -1320,6 +1337,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
+			add_benchmark!(params, batches, bifrost_salp, Salp);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

@@ -46,47 +46,49 @@ use sp_std::marker::PhantomData;
 /// @todo benchmark again later
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
-	fn create() -> Weight {
-		(60_954_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
+	// Storage: Salp Funds (r:1 w:0)
+	// Storage: Tokens Accounts (r:1 w:1)
+	// Storage: Salp CurrentNonce (r:1 w:1)
+	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
+	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
+	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1
+	// w:1)
 	fn contribute() -> Weight {
-		(64_140_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-	fn unlock() -> Weight {
-		(0 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-	fn withdraw() -> Weight {
-		(64_140_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-	}
-	fn redeem() -> Weight {
-		(110_824_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
+		(122_561_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
+	// Storage: Salp Funds (r:1 w:0)
+	// Storage: Salp RefundPool (r:1 w:1)
+	// Storage: Tokens Accounts (r:4 w:4)
+	// Storage: Tokens TotalIssuance (r:2 w:2)
+	// Storage: System Account (r:1 w:0)
+	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1
+	// w:1)
 	fn refund() -> Weight {
-		(110_824_000 as Weight)
+		(139_712_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(10 as Weight))
+			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+	}
+	// Storage: Salp Funds (r:1 w:0)
+	// Storage: Tokens Accounts (r:2 w:2)
+	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1
+	// w:1)
+	fn unlock() -> Weight {
+		(99_237_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+			.saturating_add(T::DbWeight::get().writes(3 as Weight))
 	}
-	fn dissolve(k: u32) -> Weight {
-		(0 as Weight)
-			.saturating_add((45_890_000 as Weight).saturating_mul(k as Weight))
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
-			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(k as Weight)))
-			.saturating_add(T::DbWeight::get().writes(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(k as Weight)))
-	}
-	fn on_initialize(_n: u32) -> Weight {
-		(9_002_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
-			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	// Storage: Salp Funds (r:1 w:0)
+	// Storage: Salp RedeemPool (r:1 w:1)
+	// Storage: Tokens Accounts (r:4 w:4)
+	// Storage: Tokens TotalIssuance (r:2 w:2)
+	// Storage: System Account (r:1 w:0)
+	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:0
+	// w:1)
+	fn redeem() -> Weight {
+		(169_980_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(9 as Weight))
+			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
 }
