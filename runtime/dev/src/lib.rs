@@ -1074,6 +1074,28 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }
 
+parameter_types! {
+	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
+	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub const MinimumDepositOfUser: Balance = 1_000_000;
+	pub const MinimumRewardPerBlock: Balance = 1_000;
+	pub const MinimumDuration: BlockNumber = DAYS;
+	pub const MaximumApproved: u32 = 8;
+}
+
+impl bifrost_liquidity_mining::Config for Runtime {
+	type Event = Event;
+	type ControlOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbol;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumApproved = MaximumApproved;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1289,6 +1311,7 @@ construct_runtime! {
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
+		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 	}
 }
 
@@ -1543,6 +1566,25 @@ impl_runtime_apis! {
 	// benchmarks for asgard modules
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
+		fn benchmark_metadata(extra: bool) -> (
+			Vec<frame_benchmarking::BenchmarkList>,
+			Vec<frame_support::traits::StorageInfo>,
+		) {
+			use frame_support::traits::StorageInfoTrait;
+			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			let mut list = Vec::<BenchmarkList>::new();
+
+			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_bancor, Bancor);
+			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
+			list_benchmark!(list, extra, bifrost_vtoken_mint, VtokenMint);
+			list_benchmark!(list, extra, bifrost_minter_reward, MinterReward);
+			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
+
+			let storage_info = AllPalletsWithSystem::storage_info();
+
+			return (list, storage_info)
+		}
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
@@ -1572,6 +1614,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
 			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
+			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

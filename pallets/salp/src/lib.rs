@@ -28,7 +28,7 @@ pub mod migration {
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 #[cfg(test)]
-mod mock;
+pub mod mock;
 #[cfg(test)]
 mod tests;
 
@@ -40,14 +40,10 @@ pub use pallet::*;
 use sp_std::convert::TryFrom;
 
 pub trait WeightInfo {
-	fn create() -> Weight;
 	fn contribute() -> Weight;
 	fn unlock() -> Weight;
-	fn withdraw() -> Weight;
 	fn refund() -> Weight;
 	fn redeem() -> Weight;
-	fn dissolve(n: u32) -> Weight;
-	fn on_initialize(n: u32) -> Weight;
 }
 
 #[allow(type_alias_bounds)]
@@ -99,9 +95,10 @@ pub struct FundInfo<Balance, LeasePeriod> {
 #[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
 pub enum ContributionStatus<BalanceOf> {
 	Idle,
+	Contributing(BalanceOf),
 	Refunded,
 	Unlocked,
-	Contributing(BalanceOf),
+	Redeemed,
 }
 
 impl<BalanceOf> ContributionStatus<BalanceOf>
@@ -566,7 +563,7 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight(T::WeightInfo::contribute())]
+		#[pallet::weight(T::BifrostXcmExecutor::transact_weight(T::ContributionWeight::get(),0 as u32) + T::WeightInfo::contribute())]
 		#[transactional]
 		pub fn contribute(
 			origin: OriginFor<T>,
@@ -822,6 +819,7 @@ pub mod pallet {
 					value,
 				)?;
 			}
+			Self::put_contribution(fund.trie_index, &who, value, ContributionStatus::Refunded);
 			Self::deposit_event(Event::Redeemed(
 				who,
 				index,
@@ -947,9 +945,7 @@ pub mod pallet {
 					}
 				}
 			}
-			<T as Config>::WeightInfo::on_initialize(n)
-
-			// TODO: Auto unlock vsToken/vsBond?
+			T::BaseXcmWeight::get()
 		}
 	}
 
@@ -1071,6 +1067,10 @@ pub mod pallet {
 
 		fn kill_contribution(index: TrieIndex, who: &AccountIdOf<T>) {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
+		}
+
+		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
 		}
 
 		fn xcm_ump_contribute(

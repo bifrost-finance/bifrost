@@ -3,9 +3,7 @@
 # Runs all benchmarks for all pallets, for each of the runtimes specified below
 # Should be run on a reference machine to gain accurate benchmarks(currently run on bifrost builder)
 
-runtimes=(
-  asgard
-)
+runtimes=(asgard bifrost)
 
 # cargo build --locked --release
 for runtime in "${runtimes[@]}"; do

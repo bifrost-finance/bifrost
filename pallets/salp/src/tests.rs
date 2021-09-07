@@ -36,11 +36,6 @@ fn create_fund_should_work() {
 fn create_fund_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			Salp::create(Origin::root(), 3_000, 1_000, 1, SlotLength::get()),
-			DispatchError::BadOrigin,
-		);
-
-		assert_noop!(
 			Salp::create(Origin::none(), 3_000, 1_000, 1, SlotLength::get()),
 			DispatchError::BadOrigin,
 		);
@@ -95,9 +90,7 @@ fn set_fund_success_should_work() {
 fn set_fund_success_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_noop!(Salp::fund_success(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_success(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::fund_success(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	})
 }
 
@@ -137,9 +130,7 @@ fn set_fund_fail_should_work() {
 fn set_fund_fail_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_noop!(Salp::fund_fail(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_fail(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::fund_fail(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -178,9 +169,7 @@ fn set_fund_retire_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_noop!(Salp::fund_retire(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_retire(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::fund_retire(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -227,9 +216,7 @@ fn set_fund_end_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::fund_end(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::fund_end(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::fund_end(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -492,19 +479,14 @@ fn confirm_contribute_later_should_work() {
 fn contribute_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_noop!(Salp::contribute(Origin::root(), 3_000, 100), DispatchError::BadOrigin);
 		assert_noop!(Salp::contribute(Origin::none(), 3_000, 100), DispatchError::BadOrigin);
 
 		assert_noop!(
 			Salp::confirm_contribute(Origin::root(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
-			DispatchError::BadOrigin,
+			Error::<Test>::InvalidContributionStatus,
 		);
 		assert_noop!(
 			Salp::confirm_contribute(Origin::none(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
-			DispatchError::BadOrigin,
-		);
-		assert_noop!(
-			Salp::confirm_contribute(Some(BRUCE).into(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
 			DispatchError::BadOrigin,
 		);
 	});
@@ -732,9 +714,7 @@ fn withdraw_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::withdraw(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::withdraw(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::withdraw(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 
@@ -1022,9 +1002,7 @@ fn dissolve_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_end(Some(ALICE).into(), 3_000));
 
-		assert_noop!(Salp::dissolve(Origin::root(), 3_000), DispatchError::BadOrigin);
 		assert_noop!(Salp::dissolve(Origin::none(), 3_000), DispatchError::BadOrigin);
-		assert_noop!(Salp::dissolve(Some(BRUCE).into(), 3_000), DispatchError::BadOrigin);
 	});
 }
 

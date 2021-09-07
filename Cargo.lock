@@ -2245,6 +2245,7 @@ dependencies = [
  "bifrost-bancor-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining",
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
