@@ -769,7 +769,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 parameter_types! {
 	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
 	// BNC:KSM = 80:1
-	pub BncPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec())), ksm_per_second().saturating_mul(80));
+	pub BncPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(SelfParaId::get()), GeneralKey(NativeCurrencyId::get().encode())), ksm_per_second().saturating_mul(80));
 	// KAR:KSM = 100:1
 	pub KarPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec())), ksm_per_second().saturating_mul(100));
 	// KUSD:KSM = 400:1
