@@ -960,7 +960,7 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 }
 
 parameter_types! {
-	pub const MinContribution: Balance = 1 * DOLLARS;
+	pub const MinContribution: Balance = DOLLARS / 10;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
