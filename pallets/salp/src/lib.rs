@@ -37,6 +37,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use node_primitives::{TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use sp_runtime::traits::Zero;
 use sp_std::convert::TryFrom;
 
 pub trait WeightInfo {
@@ -126,14 +127,26 @@ impl<BalanceOf> Default for ContributionStatus<BalanceOf> {
 	}
 }
 
+#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+pub struct ContributionData<T: Config> {
+	contributed: BalanceOf<T>,
+	status: ContributionStatus<BalanceOf<T>>,
+}
+
+impl<T: Config> ContributionData<T> {
+	pub(crate) fn default() -> Self {
+		Self { contributed: Zero::zero(), status: Default::default() }
+	}
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	// Import various types used to declare pallet in scope.
 
 	use frame_support::{
-		pallet_prelude::{storage::child, *},
-		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
-		storage::ChildTriePrefixIterator,
+		pallet_prelude::*,
+		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Saturating, Zero},
+		storage::PrefixIterator,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
@@ -305,6 +318,8 @@ pub mod pallet {
 		NotEnoughFreeAssetsToRedeem,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
+		/// No Contribution found
+		NoContributionFound,
 	}
 
 	/// Tracker for the next available fund index
@@ -339,6 +354,17 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn redeem_pool)]
 	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn user_contribution_data)]
+	pub(crate) type FundContribution<T: Config> = StorageDoubleMap<
+		_,
+		Twox64Concat,
+		TrieIndex,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		ContributionData<T>,
+	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -488,7 +514,9 @@ pub mod pallet {
 			// Assume everyone will be refunded.
 			let mut all_unlocked = true;
 
-			for (who, (contributed, status)) in contributions {
+			for (who, contribution) in contributions {
+				let contributed = contribution.contributed;
+				let status = contribution.status;
 				if unlock_count >= T::RemoveKeysLimit::get() {
 					// Not everyone was able to be refunded this time around.
 					all_unlocked = false;
@@ -848,7 +876,8 @@ pub mod pallet {
 			// Try killing the crowdloan child trie and Assume everyone will be refunded.
 			let contributions = Self::contribution_iterator(fund.trie_index);
 			let mut all_refunded = true;
-			for (who, (balance, _)) in contributions {
+			for (who, contribution) in contributions {
+				let balance = contribution.contributed;
 				if refund_count >= T::RemoveKeysLimit::get() {
 					// Not everyone was able to be refunded this time around.
 					all_refunded = false;
@@ -954,23 +983,14 @@ pub mod pallet {
 			T::PalletId::get().into_sub_account(index)
 		}
 
-		pub(crate) fn id_from_index(index: TrieIndex) -> child::ChildInfo {
-			let mut buf = Vec::new();
-			buf.extend_from_slice(&(T::PalletId::get().0));
-			buf.extend_from_slice(&index.encode()[..]);
-			child::ChildInfo::new_default(T::Hashing::hash(&buf[..]).as_ref())
-		}
-
 		pub(crate) fn contribution(
 			index: TrieIndex,
 			who: &AccountIdOf<T>,
 		) -> (BalanceOf<T>, ContributionStatus<BalanceOf<T>>) {
-			who.using_encoded(|b| {
-				child::get_or_default::<(BalanceOf<T>, ContributionStatus<BalanceOf<T>>)>(
-					&Self::id_from_index(index),
-					b,
-				)
-			})
+			let contribution: ContributionData<T> =
+				Self::user_contribution_data(index, who.clone())
+					.unwrap_or(ContributionData::<T>::default());
+			(contribution.contributed, contribution.status)
 		}
 
 		pub fn contribution_by_fund(
@@ -984,14 +1004,25 @@ pub mod pallet {
 
 		pub(crate) fn contribution_iterator(
 			index: TrieIndex,
-		) -> ChildTriePrefixIterator<(
-			AccountIdOf<T>,
-			(BalanceOf<T>, ContributionStatus<BalanceOf<T>>),
-		)> {
-			ChildTriePrefixIterator::<_>::with_prefix_over_key::<Identity>(
-				&Self::id_from_index(index),
-				&[],
-			)
+		) -> PrefixIterator<(AccountIdOf<T>, ContributionData<T>)> {
+			FundContribution::<T>::iter_prefix(index)
+		}
+
+		fn put_contribution(
+			index: TrieIndex,
+			who: &AccountIdOf<T>,
+			contributed: BalanceOf<T>,
+			status: ContributionStatus<BalanceOf<T>>,
+		) {
+			FundContribution::<T>::insert(
+				index.clone(),
+				who.clone(),
+				ContributionData { contributed, status },
+			);
+		}
+
+		fn kill_contribution(index: TrieIndex, who: &AccountIdOf<T>) {
+			FundContribution::<T>::remove(index.clone(), who.clone())
 		}
 
 		pub(crate) fn next_trie_index() -> Result<TrieIndex, Error<T>> {
@@ -1054,21 +1085,7 @@ pub mod pallet {
 			(slot + 1).saturating_mul(T::LeasePeriod::get())
 		}
 
-		fn put_contribution(
-			index: TrieIndex,
-			who: &AccountIdOf<T>,
-			contributed: BalanceOf<T>,
-			status: ContributionStatus<BalanceOf<T>>,
-		) {
-			who.using_encoded(|b| {
-				child::put(&Self::id_from_index(index), b, &(contributed, status))
-			});
-		}
-
-		fn kill_contribution(index: TrieIndex, who: &AccountIdOf<T>) {
-			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
-		}
-
+		#[allow(dead_code)]
 		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
 		}
