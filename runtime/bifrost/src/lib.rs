@@ -567,11 +567,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type WeightToFee = IdentityFee<Balance>;
 }
 
-impl pallet_sudo::Config for Runtime {
-	type Call = Call;
-	type Event = Event;
-}
-
 // culumus runtime start
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -887,6 +882,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = X2(Parent, Parachain(ParachainInfo::get().into()));
+	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
 }
 
 impl orml_xtokens::Config for Runtime {
@@ -927,97 +923,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
 }
 
-pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
-	MultiLocation::X2(
-		Junction::Parent,
-		Junction::AccountId32 {
-			network: NetworkId::Any,
-			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
-		},
-	)
-}
-
-pub struct EnsureConfirmAsMultiSig;
-impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
-	type Success = AccountId;
-
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) =>
-				if who == ConfirmMuitiSigAccount::get() {
-					Ok(who)
-				} else {
-					Err(Origin::from(Some(who)))
-				},
-			r => Err(Origin::from(r)),
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(Default::default()))
-	}
-}
-
-parameter_types! {
-	pub const MinContribution: Balance = DOLLARS / 10;
-	pub const RemoveKeysLimit: u32 = 500;
-	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
-	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
-	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
-	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = 893125000.into();
-	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub ConfirmMuitiSigAccount: AccountId = hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
-	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
-}
-
-impl bifrost_salp::Config for Runtime {
-	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee>;
-	type Event = Event;
-	type LeasePeriod = LeasePeriod;
-	type MinContribution = MinContribution;
-	type MultiCurrency = Currencies;
-	type PalletId = BifrostCrowdloanId;
-	type RelayChainToken = RelayCurrencyId;
-	type ReleaseCycle = ReleaseCycle;
-	type ReleaseRatio = ReleaseRatio;
-	type RemoveKeysLimit = RemoveKeysLimit;
-	type SlotLength = SlotLength;
-	type VSBondValidPeriod = VSBondValidPeriod;
-	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = weights::bifrost_salp::WeightInfo<Runtime>;
-	type SelfParaId = SelfParaId;
-	type ContributionWeight = ContributionWeight;
-	type BaseXcmWeight = XcmWeight;
-	type EnsureConfirmAsMultiSig =
-		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
-	type AddProxyWeight = AddProxyWeight;
-	type XcmTransfer = XTokens;
-	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
-	type TransactProxyType = SalpProxyType;
-	type TransactType = SalpTransactType;
-}
-
-parameter_types! {
-	pub const InterventionPercentage: Percent = Percent::from_percent(75);
-	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
-}
-
-impl bifrost_bancor::Config for Runtime {
-	type Event = Event;
-	type InterventionPercentage = InterventionPercentage;
-	type DailyReleasePercentage = DailyReleasePercentage;
-	type MultiCurrency = Currencies;
-	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
-}
-
 // Bifrost modules end
 
 construct_runtime! {
@@ -1030,7 +935,6 @@ construct_runtime! {
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
@@ -1080,8 +984,6 @@ construct_runtime! {
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
-		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 	}
 }
 
@@ -1244,50 +1146,6 @@ impl_runtime_apis! {
 			match rs {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
-			}
-		}
-	}
-
-	impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
-		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
-			let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
-
-		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
-			let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
-
-		fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
-			let rs = Bancor::get_instant_vstoken_price(currency_id);
-			match rs {
-				Ok((nominator, denominator)) => (nominator, denominator),
-				_ => (Zero::zero(), Zero::zero()),
-			}
-		}
-
-		fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
-			let rs = Bancor::get_instant_token_price(currency_id);
-			match rs {
-				Ok((nominator, denominator)) => (nominator, denominator),
-				_ => (Zero::zero(), Zero::zero()),
-			}
-		}
-	}
-
-	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
-		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
-			let rs = Salp::contribution_by_fund(index, &who);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
 			}
 		}
 	}
