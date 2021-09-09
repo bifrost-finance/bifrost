@@ -1272,6 +1272,11 @@ impl orml_unknown_tokens::Config for Runtime {
 	type Event = Event;
 }
 
+impl orml_xcm::Config for Runtime {
+	type Event = Event;
+	type SovereignOrigin = MoreThanHalfCouncil;
+}
+
 // orml runtime end
 
 construct_runtime! {
@@ -1332,6 +1337,7 @@ construct_runtime! {
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
+		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
