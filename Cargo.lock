@@ -5083,7 +5083,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.8.3"
+version = "0.8.5"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
