@@ -29,10 +29,6 @@ pub mod collator;
 pub use asgard_runtime;
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
-#[cfg(feature = "with-dev-runtime")]
-pub mod dev;
-#[cfg(feature = "with-dev-runtime")]
-pub use dev::*;
 
 #[cfg(feature = "with-asgard-runtime")]
 native_executor_instance!(
@@ -49,6 +45,9 @@ native_executor_instance!(
 	bifrost_runtime::native_version,
 	frame_benchmarking::benchmarking::HostFunctions,
 );
+
+#[cfg(feature = "with-dev-runtime")]
+pub mod dev;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {

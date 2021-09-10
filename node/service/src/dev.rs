@@ -39,7 +39,7 @@ native_executor_instance!(
 );
 
 pub type Block = dev_runtime::Block;
-pub type Executor = crate::DevExecutor;
+pub type Executor = DevExecutor;
 pub type RuntimeApi = dev_runtime::RuntimeApi;
 pub type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
