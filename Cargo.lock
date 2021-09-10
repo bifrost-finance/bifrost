@@ -213,6 +213,7 @@ dependencies = [
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-unknown-tokens",
+ "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
@@ -807,6 +808,7 @@ dependencies = [
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-unknown-tokens",
+ "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
@@ -2272,6 +2274,7 @@ dependencies = [
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-unknown-tokens",
+ "orml-xcm",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
@@ -5520,6 +5523,18 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43#8d5432c3458702a7df14b374bddde43a2a20aa43"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "xcm",
 ]
 
 [[package]]

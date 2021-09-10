@@ -95,6 +95,7 @@ orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
+orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
 [build-dependencies]
@@ -155,6 +156,7 @@ std = [
 	"orml-tokens/std",
 	"orml-xtokens/std",
 	"orml-unknown-tokens/std",
+	"orml-xcm/std",
 	"orml-xcm-support/std",
 	"bifrost-runtime-common/std",
 	"bifrost-flexible-fee/std",

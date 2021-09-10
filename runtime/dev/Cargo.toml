@@ -99,6 +99,7 @@ orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
+orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
 zenlink-protocol = { version = "*", default-features = false }
@@ -180,6 +181,7 @@ std = [
 	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-xtokens/std",
+	"orml-xcm/std",
 	"orml-xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
