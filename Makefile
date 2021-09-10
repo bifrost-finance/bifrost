@@ -59,6 +59,10 @@ test-asgard:
 test-all:
 	cargo test --features "with-all-runtime"
 
+.PHONY: integration-test
+integration-test:
+	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-asgard-runtime
+
 .PHONY: clean
 clean:
 	cargo clean

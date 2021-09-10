@@ -215,9 +215,9 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 }
 
 #[cfg(feature = "with-asgard-runtime")]
-use service::collator::{asgard_runtime, AsgardExecutor};
+use service::{asgard_runtime, AsgardExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
-use service::collator::{bifrost_runtime, BifrostExecutor};
+use service::{bifrost_runtime, BifrostExecutor};
 
 macro_rules! construct_async_run {
 	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
@@ -305,11 +305,7 @@ pub fn run() -> Result<()> {
 				if config.chain_spec.is_asgard_dev() {
 					#[cfg(feature = "with-dev-runtime")]
 					{
-						return if cli.sealing.is_some() {
-							service::manual::new_full(config).map_err(Into::into)
-						} else {
-							service::dev::new_full(config).map_err(Into::into)
-						};
+						return service::dev::new_full(config).map_err(Into::into);
 					}
 				}
 

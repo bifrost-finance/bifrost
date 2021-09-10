@@ -18,6 +18,7 @@ members = [
 	"runtime/bifrost",
 	"utils/subkey",
 	"xcm-support",
+	"integration-tests",
 ]
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates

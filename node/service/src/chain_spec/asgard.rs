@@ -17,12 +17,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use asgard_runtime::{
-	constants::{currency::DOLLARS, time::DAYS},
 	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
 	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
 	TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
+use bifrost_runtime_common::constants::{currency::DOLLARS, time::DAYS};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;

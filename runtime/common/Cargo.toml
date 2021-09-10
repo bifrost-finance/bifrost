@@ -11,6 +11,7 @@ log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
 hex-literal = { version = "0.3.1", optional = true }
+smallvec = "1.6.1"
 
 # primitives
 node-primitives = { default-features = false, path = "../../node/primitives" }

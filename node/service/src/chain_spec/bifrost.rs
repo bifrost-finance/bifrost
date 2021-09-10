@@ -22,11 +22,11 @@ use std::{
 };
 
 use bifrost_runtime::{
-	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
-	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
-	IndicesConfig, ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, VestingConfig, WASM_BINARY,
+	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
+	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig,
+	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VestingConfig, WASM_BINARY,
 };
+use bifrost_runtime_common::constants::currency::DOLLARS;
 use cumulus_primitives_core::ParaId;
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};

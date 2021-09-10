@@ -31,8 +31,8 @@ use cumulus_client_service::{
 use cumulus_primitives_core::ParaId;
 use node_primitives::{AccountId, ParaId as BifrostParaId};
 use sc_client_api::ExecutorProvider;
+use sc_executor::NativeExecutionDispatch;
 pub use sc_executor::NativeExecutor;
-use sc_executor::{native_executor_instance, NativeExecutionDispatch};
 use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
@@ -66,22 +66,6 @@ type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>
 
 /// Maybe full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
-
-#[cfg(feature = "with-asgard-runtime")]
-native_executor_instance!(
-	pub AsgardExecutor,
-	asgard_runtime::api::dispatch,
-	asgard_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-
-#[cfg(feature = "with-bifrost-runtime")]
-native_executor_instance!(
-	pub BifrostExecutor,
-	bifrost_runtime::api::dispatch,
-	bifrost_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
 
 /// Starts a `ServiceBuilder` for a full service.
 ///

@@ -14,12 +14,12 @@
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// along with this program. If not, see <https://www.gnu.org/licenses/>..
 
-//! A set of constant values used in Bifrost runtime.
-
-/// Money matters.
-pub mod currency {}
-
-/// Time.
-pub mod time {}
+#![cfg(test)]
+#[cfg(feature = "with-asgard-runtime")]
+mod integration_tests;
+#[cfg(feature = "with-asgard-runtime")]
+mod kusama_cross_chain_transfer;
+#[cfg(feature = "with-asgard-runtime")]
+mod kusama_test_net;

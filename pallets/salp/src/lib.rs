@@ -1069,6 +1069,7 @@ pub mod pallet {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
 
+		#[allow(dead_code)]
 		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
 		}
