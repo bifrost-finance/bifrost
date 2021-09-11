@@ -845,9 +845,9 @@ orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * MILLIBNC,
+			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::KUSD) => 10 * MILLICENTS,
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
