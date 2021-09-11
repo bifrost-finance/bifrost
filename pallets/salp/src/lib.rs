@@ -34,7 +34,7 @@ mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, transactional};
-use node_primitives::{TokenInfo, TokenSymbol, TrieIndex};
+use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::convert::TryFrom;
@@ -91,40 +91,6 @@ pub struct FundInfo<Balance, LeasePeriod> {
 	trie_index: TrieIndex,
 	/// Fund status
 	status: FundStatus,
-}
-
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
-pub enum ContributionStatus<BalanceOf> {
-	Idle,
-	Contributing(BalanceOf),
-	Refunded,
-	Unlocked,
-	Redeemed,
-}
-
-impl<BalanceOf> ContributionStatus<BalanceOf>
-where
-	BalanceOf: frame_support::sp_runtime::traits::Zero + Clone + Copy,
-{
-	pub fn is_contributing(&self) -> bool {
-		match self {
-			Self::Contributing(_) => true,
-			_ => false,
-		}
-	}
-
-	pub fn contributing(&self) -> BalanceOf {
-		match self {
-			Self::Contributing(contributing) => *contributing,
-			_ => frame_support::sp_runtime::traits::Zero::zero(),
-		}
-	}
-}
-
-impl<BalanceOf> Default for ContributionStatus<BalanceOf> {
-	fn default() -> Self {
-		Self::Idle
-	}
 }
 
 #[frame_support::pallet]
@@ -975,10 +941,10 @@ pub mod pallet {
 		pub fn contribution_by_fund(
 			index: ParaId,
 			who: &AccountIdOf<T>,
-		) -> Result<BalanceOf<T>, Error<T>> {
+		) -> Result<(BalanceOf<T>, ContributionStatus<BalanceOf<T>>), Error<T>> {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let (contributed, _) = Self::contribution(fund.trie_index, who);
-			Ok(contributed)
+			let (contributed, status) = Self::contribution(fund.trie_index, who);
+			Ok((contributed, status))
 		}
 
 		pub(crate) fn contribution_iterator(

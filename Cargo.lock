@@ -5154,6 +5154,7 @@ name = "node-primitives"
 version = "0.8.0"
 dependencies = [
  "bstringify",
+ "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",

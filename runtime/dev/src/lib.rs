@@ -99,8 +99,8 @@ use frame_support::{
 };
 use node_primitives::{
 	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
-	XcmBaseWeight,
+	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
+	TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -1553,6 +1553,16 @@ impl_runtime_apis! {
 			asset_1: AssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+		}
+	}
+
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
+			let rs = Salp::contribution_by_fund(index, &who);
+			match rs {
+				Ok((val,status)) => (val,status.to_rpc()),
+				_ => (Zero::zero(),RpcContributionStatus::Idle),
+			}
 		}
 	}
 

@@ -28,9 +28,11 @@ use sp_runtime::{
 
 mod bridge;
 mod currency;
+mod salp;
 mod tests;
 pub mod traits;
 mod xcm;
+pub use salp::*;
 
 pub use crate::{
 	bridge::*,
