@@ -99,10 +99,7 @@ pub fn bifrost_genesis(
 		vesting: VestingConfig { vesting: vestings },
 		tokens: TokensConfig { balances: tokens },
 		bancor: BancorConfig {
-			bancor_pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
-			],
+			bancor_pools: vec![(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS)],
 		},
 	}
 }
@@ -123,9 +120,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 			]
 		})
@@ -187,13 +181,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KUSD), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::BNC), ENDOWMENT * 4_000_000),
 				(
 					x.clone(),
