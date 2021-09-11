@@ -120,7 +120,7 @@ fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Token};
+		use CurrencyId::{Native, Stable, Token};
 		match id {
 			Token(TokenSymbol::KSM) => Some(X1(Parent)),
 			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
@@ -131,7 +131,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 				Parachain(parachains::karura::ID),
 				GeneralKey(parachains::karura::KAR_KEY.to_vec()),
 			)),
-			Token(TokenSymbol::KUSD) => Some(X3(
+			Stable(TokenSymbol::KUSD) => Some(X3(
 				Parent,
 				Parachain(parachains::karura::ID),
 				GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
@@ -142,7 +142,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 }
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::{Native, Token};
+		use CurrencyId::{Native, Stable, Token};
 		use TokenSymbol::*;
 		match location {
 			X1(Parent) => Some(Token(KSM)),
@@ -164,7 +164,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					if key == parachains::karura::KAR_KEY.to_vec() {
 						Some(Token(TokenSymbol::KAR))
 					} else if key == parachains::karura::KUSD_KEY.to_vec() {
-						Some(Token(TokenSymbol::KUSD))
+						Some(Stable(TokenSymbol::KUSD))
 					} else {
 						None
 					}
