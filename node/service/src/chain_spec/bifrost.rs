@@ -112,12 +112,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
 	];
-	let balances = endowed_accounts
-		.iter()
-		.chain(faucet_accounts().iter())
-		.cloned()
-		.map(|x| (x, ENDOWMENT))
-		.collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
@@ -125,7 +120,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
@@ -182,12 +176,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
 		                       * with whitelistted_caller */
 	];
-	let balances = endowed_accounts
-		.iter()
-		.chain(faucet_accounts().iter())
-		.cloned()
-		.map(|x| (x, ENDOWMENT))
-		.collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
@@ -195,7 +184,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
-		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
@@ -367,24 +355,4 @@ fn config_from_json_files<T: DeserializeOwned>(dir: PathBuf) -> Result<Vec<T>, S
 	}
 
 	Ok(configs)
-}
-
-pub fn faucet_accounts() -> Vec<AccountId> {
-	vec![
-		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(), /* asgard sudo account */
-		hex!["a2d57b8e781327bd2853b36e6f290bd8beeaa850971c9b0789ec4969f8beb01b"].into(), /* bifrost-faucet */
-		hex!["a272fa6e2282767b61a299e81023d44ef583c640fef99b0bafe216399775cd17"].into(),
-		hex!["56f6e7bb0826cd128672ad3a03016533834123c319adc635c6db595c6f72272e"].into(),
-		hex!["7e9005c247601a0d0e967f68b03f6e39e402a735ec65c20e4965c6d94a22e42f"].into(),
-		hex!["f2449dfbb431a5f9e8dc7468e5f3521baff4c0125edcda746f38df5295d5fb28"].into(),
-		hex!["aaa565b52ea12bf3c8d7abb79411976bccd8054c5581922acc0165ad88640f09"].into(),
-		hex!["8afadc065940f22f73b745aab694b1b20cafea3d4e52adad844f581614fbdd00"].into(),
-		hex!["0831325e2b4953f247db9df3f6452becbf23d8f7f806c0396ad853cb3c284d06"].into(),
-		hex!["7ea84934a575487fb02c44e01f4488c2f242cdbf48052630780dcd8ac567950c"].into(),
-		hex!["ee05492a82cb982392aad78f7e6f6fff56eaee4988fd9961ebb84e177dd6526d"].into(), /* bifrost-faucet */
-		hex!["7435653321694ee115e8cea8c8e117c0b6703b6fb91298b6df5adeef7679a46f"].into(), /* danny testing account */
-		hex!["263c78393f33b23cd23f3211726b2316e950910749d20c1552ea6972091a645e"].into(), /* jianbo testing account */
-		hex!["803feefeab8e5c81c3d268038b6c494d3018714fc8c5d08cf027111fd8114b06"].into(), /* tieqiao testing account */
-		hex!["8898ffd2cb04fb751655ede7bc0081b6b6ebe13cd0bdee5bbb9273e6dcc9b91c"].into(), /* tyrone testing account */
-	]
 }
