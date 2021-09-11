@@ -1065,7 +1065,7 @@ construct_runtime! {
 		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
-		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>} = 71,
+		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
