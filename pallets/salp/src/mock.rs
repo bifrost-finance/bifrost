@@ -304,6 +304,7 @@ impl salp::Config for Test {
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
+	type EnsureConfirmAsGovernance = EnsureConfirmAsMultiSig;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
@@ -326,6 +327,10 @@ impl WeightInfo for SalpWeightInfo {
 	}
 
 	fn refund() -> Weight {
+		0
+	}
+
+	fn batch_unlock(_k: u32) -> Weight {
 		0
 	}
 }

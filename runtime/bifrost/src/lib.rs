@@ -65,11 +65,13 @@ pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
 	constants::parachains,
+	create_x2_multilocation,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter, MultiWeightTraders,
 	},
-	SlowAdjustingFeeUpdate,
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
+	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use codec::Encode;
 use constants::{currency::*, time::*};
@@ -335,7 +337,6 @@ parameter_types! {
 	pub const CouncilMaxMembers: u32 = 100;
 }
 
-type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type Event = Event;
@@ -353,7 +354,6 @@ parameter_types! {
 	pub const TechnicalMaxMembers: u32 = 100;
 }
 
-type TechnicalCollective = pallet_collective::Instance2;
 impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type Event = Event;
@@ -364,12 +364,6 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type Proposal = Call;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
-
-type MoreThanHalfCouncil = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
->;
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type AddOrigin = MoreThanHalfCouncil;
@@ -932,16 +926,6 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
 }
 
-pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
-	MultiLocation::X2(
-		Junction::Parent,
-		Junction::AccountId32 {
-			network: NetworkId::Any,
-			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
-		},
-	)
-}
-
 pub struct EnsureConfirmAsMultiSig;
 impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	type Success = AccountId;
@@ -977,7 +961,7 @@ parameter_types! {
 	pub ContributionWeight:XcmBaseWeight = 893125000.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(Utility::derivative_account_id(ParachainInfo::get().into_account(), ParachainDerivedProxyAccountType::Salp as u16));
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
@@ -1003,6 +987,8 @@ impl bifrost_salp::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
