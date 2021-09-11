@@ -33,6 +33,13 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false  }
+pallet-scheduler  = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9", default-features = false }
@@ -82,6 +89,14 @@ std = [
 	"sp-transaction-pool/std",
 	"sp-arithmetic/std",
 	"parachain-info/std",
+	"pallet-collective/std",
+	"pallet-democracy/std",
+	"pallet-multisig/std",
+	"pallet-membership/std",
+	"pallet-utility/std",
+	"pallet-treasury/std",
+	"pallet-scheduler/std",
+	"pallet-transaction-payment/std",
 	"cumulus-pallet-dmp-queue/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-pallet-xcmp-queue/std",
@@ -99,5 +114,4 @@ std = [
 	"xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
-	"pallet-transaction-payment/std"
 ]

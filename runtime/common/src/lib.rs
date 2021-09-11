@@ -18,9 +18,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::{parameter_types, sp_runtime::traits::BlockNumberProvider};
-use node_primitives::BlockNumber;
+use frame_system::{EnsureOneOf, EnsureRoot};
+use node_primitives::{AccountId, BlockNumber};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+use sp_core::u32_trait::{_1, _2};
 use sp_runtime::{FixedPointNumber, Perquintill};
+use xcm::v0::{Junction, MultiLocation, NetworkId};
 
 pub mod constants;
 pub mod xcm_impl;
@@ -54,3 +57,27 @@ parameter_types! {
 
 pub type SlowAdjustingFeeUpdate<R> =
 	TargetedFeeAdjustment<R, TargetBlockFullness, AdjustmentVariable, MinimumMultiplier>;
+
+pub type CouncilCollective = pallet_collective::Instance1;
+
+pub type TechnicalCollective = pallet_collective::Instance2;
+
+pub type MoreThanHalfCouncil = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
+>;
+
+// Technical Committee Council
+pub type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
+	AccountId,
+	EnsureRoot<AccountId>,
+	pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
+>;
+
+pub fn create_x2_multilocation(account: AccountId) -> MultiLocation {
+	MultiLocation::X2(
+		Junction::Parent,
+		Junction::AccountId32 { network: NetworkId::Any, id: account.into() },
+	)
+}
