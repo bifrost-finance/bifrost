@@ -104,4 +104,13 @@ impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(13 as Weight))
 			.saturating_add(T::DbWeight::get().writes(11 as Weight))
 	}
+
+	fn batch_unlock(k: u32) -> Weight {
+		(0 as Weight)
+			.saturating_add((45_890_000 as Weight).saturating_mul(k as Weight))
+			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+			.saturating_add(T::DbWeight::get().reads((2 as Weight).saturating_mul(k as Weight)))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes((2 as Weight).saturating_mul(k as Weight)))
+	}
 }

@@ -74,11 +74,12 @@ pub mod constants;
 use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
 use bifrost_runtime_common::{
 	constants::parachains,
+	create_x2_multilocation,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter, MultiWeightTraders,
 	},
-	SlowAdjustingFeeUpdate,
+	EnsureRootOrAllTechnicalCommittee, SlowAdjustingFeeUpdate,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
@@ -100,9 +101,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{
-	BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId,
-};
+use xcm::v0::{BodyId, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
 	FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
@@ -990,16 +989,6 @@ impl bifrost_minter_reward::Config for Runtime {
 	type WeightInfo = weights::bifrost_minter_reward::WeightInfo<Runtime>;
 }
 
-pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
-	MultiLocation::X2(
-		Junction::Parent,
-		Junction::AccountId32 {
-			network: NetworkId::Any,
-			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
-		},
-	)
-}
-
 pub struct EnsureConfirmAsMultiSig;
 impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	type Success = AccountId;
@@ -1040,7 +1029,7 @@ parameter_types! {
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),  // bob
 		hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"].into(),  // charlie
 	],2);
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(Utility::derivative_account_id(ParachainInfo::get().into_account(), ParachainDerivedProxyAccountType::Salp as u16));
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
@@ -1066,6 +1055,8 @@ impl bifrost_salp::Config for Runtime {
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
