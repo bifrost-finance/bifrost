@@ -31,7 +31,7 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Everything, InstanceFilter, IsInVec, LockIdentifier, Randomness},
+	traits::{Contains, Everything, InstanceFilter, IsInVec, LockIdentifier, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -71,7 +71,10 @@ use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
+use bifrost_flexible_fee::{
+	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
+	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
+};
 use bifrost_runtime_common::{
 	constants::parachains,
 	create_x2_multilocation,
@@ -89,7 +92,7 @@ use frame_support::{
 	traits::{EnsureOrigin, OnRuntimeUpgrade},
 };
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
 	XcmBaseWeight,
 };
@@ -952,8 +955,44 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 }
 
+// Aggregate name getter to get fee names if the call needs to pay extra fees.
+// If any call need to pay extra fees, it should be added as an item here.
+// Used together with AggregateExtraFeeFilter below.
+pub struct FeeNameGetter;
+impl NameGetter<Call> for FeeNameGetter {
+	fn get_name(c: &Call) -> ExtraFeeName {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => ExtraFeeName::SalpContribute,
+			_ => ExtraFeeName::NoExtraFee,
+		}
+	}
+}
+
+// Aggregate filter to filter if the call needs to pay extra fees
+// If any call need to pay extra fees, it should be added as an item here.
+pub struct AggregateExtraFeeFilter;
+impl Contains<Call> for AggregateExtraFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			_ => false,
+		}
+	}
+}
+
+pub struct ContributeFeeFilter;
+impl Contains<Call> for ContributeFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			_ => false,
+		}
+	}
+}
+
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + (2^24 as u64).into();
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
@@ -969,6 +1008,14 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
+	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
+	type MiscFeeHandler = MiscFeeHandler<
+		Runtime,
+		RelayCurrencyId,
+		WeightToFee,
+		SalpWeightHolder,
+		ContributeFeeFilter,
+	>;
 }
 
 parameter_types! {

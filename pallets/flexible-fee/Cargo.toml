@@ -16,6 +16,7 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 node-primitives = { path = "../../node/primitives", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
+impl-trait-for-tuples = "0.2.1"
 
 [dev-dependencies]
 orml-tokens = { version = "0.4.1-dev" }
