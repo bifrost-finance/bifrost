@@ -39,14 +39,6 @@ use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::convert::TryFrom;
 
-pub trait WeightInfo {
-	fn contribute() -> Weight;
-	fn unlock() -> Weight;
-	fn batch_unlock(k: u32) -> Weight;
-	fn refund() -> Weight;
-	fn redeem() -> Weight;
-}
-
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -1139,5 +1131,36 @@ pub mod pallet {
 				3 * T::BaseXcmWeight::get(),
 			)
 		}
+	}
+}
+
+pub trait WeightInfo {
+	fn contribute() -> Weight;
+	fn unlock() -> Weight;
+	fn batch_unlock(k: u32) -> Weight;
+	fn refund() -> Weight;
+	fn redeem() -> Weight;
+}
+
+// For backwards compatibility and tests
+impl WeightInfo for () {
+	fn contribute() -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn unlock() -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn batch_unlock(_k: u32) -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn refund() -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn redeem() -> Weight {
+		50_000_000 as Weight
 	}
 }

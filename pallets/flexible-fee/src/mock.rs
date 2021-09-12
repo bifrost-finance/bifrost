@@ -20,7 +20,6 @@
 
 use std::convert::TryInto;
 
-use bifrost_salp::WeightInfo as SalpWeightInfo;
 // pub use polkadot_parachain::primitives::Id;
 pub use cumulus_primitives_core::ParaId;
 #[cfg(feature = "runtime-benchmarks")]
@@ -537,25 +536,6 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 	}
 }
 
-pub struct MockSalpWeightInfo;
-impl SalpWeightInfo for MockSalpWeightInfo {
-	fn contribute() -> Weight {
-		0
-	}
-
-	fn unlock() -> Weight {
-		0
-	}
-
-	fn redeem() -> Weight {
-		0
-	}
-
-	fn refund() -> Weight {
-		0
-	}
-}
-
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();
 	type BifrostXcmExecutor = MockXcmExecutor;
@@ -571,11 +551,12 @@ impl bifrost_salp::Config for Test {
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
 	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = MockSalpWeightInfo;
+	type WeightInfo = ();
 	type SelfParaId = SelfParaId;
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
+	type EnsureConfirmAsGovernance = EnsureConfirmAsMultiSig;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
