@@ -20,34 +20,52 @@
 
 use std::convert::TryInto;
 
+use bifrost_salp::WeightInfo as SalpWeightInfo;
 // pub use polkadot_parachain::primitives::Id;
 pub use cumulus_primitives_core::ParaId;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,
-	weights::{IdentityFee, WeightToFeeCoefficients, WeightToFeePolynomial},
+	sp_runtime::{DispatchError, DispatchResult},
+	sp_std::marker::PhantomData,
+	traits::{Contains, EnsureOrigin},
+	weights::{IdentityFee, Weight, WeightToFeeCoefficients, WeightToFeePolynomial},
 	PalletId,
 };
 use frame_system as system;
-use node_primitives::{CurrencyId, TokenSymbol};
+use frame_system::RawOrigin;
+use node_primitives::{
+	CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType, TokenSymbol,
+	TransferOriginType, XcmBaseWeight,
+};
+use orml_traits::{MultiCurrency, XcmTransfer};
 use smallvec::smallvec;
+use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
+	generic,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
-	AccountId32, Perbill,
+	AccountId32, Perbill, SaturatedConversion,
 };
 use sp_std::cell::RefCell;
+use xcm::{
+	opaque::v0::MultiAsset,
+	v0::{prelude::XcmError, Junction, MultiLocation},
+	DoubleEncoded,
+};
+use xcm_support::BifrostXcmExecutor;
 use zenlink_protocol::{LocalAssetHandler, ZenlinkMultiAssets};
 
 use super::*;
 use crate as flexible_fee;
 // use node_primitives::Balance;
 use crate::fee_dealer::FixedCurrencyFeeRate;
+use crate::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
 
 pub type AccountId = AccountId32;
-pub type BlockNumber = u64;
+pub type BlockNumber = u32;
 pub type Amount = i128;
 
 pub const TREASURY_ACCOUNT: AccountId32 = AccountId32::new([9u8; 32]);
@@ -70,11 +88,12 @@ frame_support::construct_runtime!(
 		FlexibleFee: flexible_fee::{Pallet, Call, Storage,Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 }
 
 impl system::Config for Test {
@@ -83,14 +102,14 @@ impl system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
-	type BlockNumber = u64;
+	type BlockNumber = u32;
 	type BlockWeights = ();
 	type Call = Call;
 	type DbWeight = ();
 	type Event = Event;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type Header = Header;
+	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	type Index = u64;
 	// needs to be u128 against u64, otherwise the account address will be half cut.
 	type Lookup = IdentityLookup<Self::AccountId>;
@@ -105,12 +124,12 @@ impl system::Config for Test {
 }
 
 thread_local! {
-	static WEIGHT_TO_FEE: RefCell<u128> = RefCell::new(1);
+	static WEIGHT_TO_FEE: RefCell<u64> = RefCell::new(1);
 }
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
-	type Balance = u128;
+	type Balance = u64;
 
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
 		smallvec![frame_support::weights::WeightToFeeCoefficient {
@@ -171,11 +190,47 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 }
 
+// Aggregate name getter to get fee names if the call needs to pay extra fees.
+// If any call need to pay extra fees, it should be added as an item here.
+// Used together with AggregateExtraFeeFilter below.
+pub struct FeeNameGetter;
+impl NameGetter<Call> for FeeNameGetter {
+	fn get_name(c: &Call) -> ExtraFeeName {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => ExtraFeeName::SalpContribute,
+			_ => ExtraFeeName::NoExtraFee,
+		}
+	}
+}
+
+// Aggregate filter to filter if the call needs to pay extra fees
+// If any call need to pay extra fees, it should be added as an item here.
+pub struct AggregateExtraFeeFilter;
+impl Contains<Call> for AggregateExtraFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			_ => false,
+		}
+	}
+}
+
+pub struct ContributeFeeFilter;
+impl Contains<Call> for ContributeFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			_ => false,
+		}
+	}
+}
+
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT + ContributionWeight::get()) + (2^24 as u64).into();
 }
 
 impl crate::Config for Test {
@@ -191,6 +246,14 @@ impl crate::Config for Test {
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = ();
 	type WeightInfo = ();
+	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
+	type MiscFeeHandler = MiscFeeHandler<
+		Test,
+		AlternativeFeeCurrencyId,
+		WeightToFee,
+		SalpWeightHolder,
+		ContributeFeeFilter,
+	>;
 }
 
 parameter_types! {
@@ -339,3 +402,179 @@ impl ExtBuilder {
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
 }
+
+//************** Salp mock start *****************
+
+// To control the result returned by `MockXcmExecutor`
+pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
+
+// Mock XcmExecutor
+pub struct MockXcmExecutor;
+
+impl BifrostXcmExecutor for MockXcmExecutor {
+	fn transact_weight(_: u64, _: u32) -> u64 {
+		return 0;
+	}
+
+	fn transact_id(_data: &[u8]) -> MessageId {
+		return [0; 32];
+	}
+
+	fn ump_transact(
+		_origin: MultiLocation,
+		_call: DoubleEncoded<()>,
+		_weight: u64,
+		_relayer: bool,
+		_nonce: u32,
+	) -> Result<[u8; 32], XcmError> {
+		let result = unsafe { MOCK_XCM_RESULT.0 };
+
+		match result {
+			true => Ok([0; 32]),
+			false => Err(XcmError::Undefined),
+		}
+	}
+
+	fn ump_transacts(
+		_origin: MultiLocation,
+		_call: Vec<DoubleEncoded<()>>,
+		_weight: u64,
+		_relayer: bool,
+	) -> Result<MessageId, XcmError> {
+		let result = unsafe { MOCK_XCM_RESULT.0 };
+
+		match result {
+			true => Ok([0; 32]),
+			false => Err(xcm::v0::Error::Undefined),
+		}
+	}
+
+	fn ump_transfer_asset(
+		_origin: MultiLocation,
+		_dest: MultiLocation,
+		_amount: u128,
+		_relay: bool,
+		_nonce: u32,
+	) -> Result<MessageId, XcmError> {
+		let result = unsafe { MOCK_XCM_RESULT.1 };
+
+		match result {
+			true => Ok([0; 32]),
+			false => Err(xcm::v0::Error::Undefined),
+		}
+	}
+}
+
+pub const ALICE: AccountId = AccountId::new([0u8; 32]);
+
+parameter_types! {
+	pub const MinContribution: Balance = 10;
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const RemoveKeysLimit: u32 = 50;
+	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const LeasePeriod: BlockNumber = 8u32 as BlockNumber;
+	pub const VSBondValidPeriod: BlockNumber = 8u32 as BlockNumber;
+	pub const ReleaseCycle: BlockNumber = 8u32 as BlockNumber;
+	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
+	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
+	pub ContributionWeight:u64 = 1_000_000_000 as u64;
+	pub AddProxyWeight:u64 = 1_000_000_000 as u64;
+	pub PrimaryAccount: AccountId = ALICE;
+	pub ConfirmMuitiSigAccount: AccountId = ALICE;
+	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
+	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+}
+
+pub const XCM_WEIGHT: u64 = 1_000_000_000;
+
+pub struct EnsureConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) => Ok(who),
+			RawOrigin::Root => Ok(Default::default()),
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(ALICE))
+	}
+}
+
+pub struct MockXTokens;
+
+impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
+	fn transfer(
+		_who: AccountId,
+		_currency_id: CurrencyId,
+		_amount: Balance,
+		_dest: MultiLocation,
+		_dest_weight: Weight,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn transfer_multi_asset(
+		_who: AccountId,
+		_asset: MultiAsset,
+		_dest: MultiLocation,
+		_dest_weight: Weight,
+	) -> DispatchResult {
+		Ok(())
+	}
+}
+
+pub struct MockSalpWeightInfo;
+impl SalpWeightInfo for MockSalpWeightInfo {
+	fn contribute() -> Weight {
+		0
+	}
+
+	fn unlock() -> Weight {
+		0
+	}
+
+	fn redeem() -> Weight {
+		0
+	}
+
+	fn refund() -> Weight {
+		0
+	}
+}
+
+impl bifrost_salp::Config for Test {
+	type BancorPool = ();
+	type BifrostXcmExecutor = MockXcmExecutor;
+	type Event = Event;
+	type LeasePeriod = LeasePeriod;
+	type MinContribution = MinContribution;
+	type MultiCurrency = Tokens;
+	type PalletId = BifrostCrowdloanId;
+	type RelayChainToken = RelayCurrencyId;
+	type ReleaseCycle = ReleaseCycle;
+	type ReleaseRatio = ReleaseRatio;
+	type RemoveKeysLimit = RemoveKeysLimit;
+	type SlotLength = SlotLength;
+	type VSBondValidPeriod = VSBondValidPeriod;
+	type XcmTransferOrigin = XcmTransferOrigin;
+	type WeightInfo = MockSalpWeightInfo;
+	type SelfParaId = SelfParaId;
+	type BaseXcmWeight = BaseXcmWeight;
+	type ContributionWeight = ContributionWeight;
+	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
+	type AddProxyWeight = AddProxyWeight;
+	type XcmTransfer = MockXTokens;
+	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
+	type TransactProxyType = SalpTransactProxyType;
+	type TransactType = SalpTransactType;
+}
+
+//************** Salp mock end *****************

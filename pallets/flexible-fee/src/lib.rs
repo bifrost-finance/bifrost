@@ -237,7 +237,6 @@ where
 			};
 		// if the user donsn't enough BNC but has enough KSM
 		} else {
-			// deduct fee currency and increase native currency amount
 			// This withdraw operation allows death. So it will succeed given the remaining amount
 			// less than the existential deposit.
 			let fee_currency_id = T::AlternativeFeeCurrencyId::get();
