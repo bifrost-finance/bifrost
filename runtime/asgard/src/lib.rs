@@ -992,7 +992,7 @@ impl Contains<Call> for ContributeFeeFilter {
 
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + (2^24 as u64).into();
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + u64::pow(2, 24).into();
 }
 
 impl bifrost_flexible_fee::Config for Runtime {

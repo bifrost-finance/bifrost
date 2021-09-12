@@ -30,7 +30,10 @@ use frame_support::{
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
 	traits::{Contains, EnsureOrigin},
-	weights::{IdentityFee, Weight, WeightToFeeCoefficients, WeightToFeePolynomial},
+	weights::{
+		constants::ExtrinsicBaseWeight, IdentityFee, Weight, WeightToFeeCoefficients,
+		WeightToFeePolynomial,
+	},
 	PalletId,
 };
 use frame_system as system;
@@ -61,8 +64,10 @@ use zenlink_protocol::{LocalAssetHandler, ZenlinkMultiAssets};
 use super::*;
 use crate as flexible_fee;
 // use node_primitives::Balance;
-use crate::fee_dealer::FixedCurrencyFeeRate;
-use crate::misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter};
+use crate::{
+	fee_dealer::FixedCurrencyFeeRate,
+	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
+};
 
 pub type AccountId = AccountId32;
 pub type BlockNumber = u32;
@@ -129,14 +134,15 @@ thread_local! {
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
-	type Balance = u64;
-
+	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+		let p = 1_000_000_000_000 / 30_000; // RELAY_CENTS
+		let q = 10 * Balance::from(ExtrinsicBaseWeight::get()); // ExtrinsicBaseWeight = 125 * 1_000_000_000_000 / 1000 / 1000 = 125_000_000
 		smallvec![frame_support::weights::WeightToFeeCoefficient {
 			degree: 1,
-			coeff_frac: Perbill::zero(),
-			coeff_integer: WEIGHT_TO_FEE.with(|v| *v.borrow()),
 			negative: false,
+			coeff_frac: Perbill::from_rational(p % q, q),
+			coeff_integer: p / q,
 		}]
 	}
 }
@@ -230,7 +236,7 @@ parameter_types! {
 	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT + ContributionWeight::get()) + (2^24 as u64).into();
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT + ContributionWeight::get()) + u64::pow(2, 24).into();
 }
 
 impl crate::Config for Test {
