@@ -80,8 +80,6 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 
 # Bifrost
-bifrost-bancor = { path = "../../pallets/bancor", default-features = false }
-bifrost-bancor-runtime-api = { path = "../../pallets/bancor/rpc/runtime-api", default-features = false }
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
@@ -163,8 +161,6 @@ std = [
 	"bifrost-runtime-common/std",
 	"bifrost-flexible-fee/std",
 	"bifrost-flexible-fee-rpc-runtime-api/std",
-	"bifrost-bancor/std",
-	"bifrost-bancor-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
 ]
@@ -189,7 +185,6 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
-	"bifrost-bancor/runtime-benchmarks",
 ]
 
 try-runtime = [
