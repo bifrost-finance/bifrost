@@ -109,7 +109,7 @@ impl vsbond_auction::Config for Test {
 	type Event = Event;
 	type InvoicingCurrency = InvoicingCurrency;
 	type MaximumOrderInTrade = MaximumOrderInTrade;
-	type MinimumSupply = MinimumSupply;
+	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = orml_tokens::Pallet<Self>;
 	type WeightInfo = ();
 }

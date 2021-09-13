@@ -86,7 +86,7 @@ fn create_order_under_minimum_supply_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 0, 0),
-			Error::<Test>::NotEnoughSupply
+			Error::<Test>::NotEnoughAmount
 		);
 	});
 }
@@ -357,7 +357,10 @@ fn clinch_order_without_enough_token_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 200));
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50));
-		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 0), Error::<Test>::CantPayThePrice);
+		assert_noop!(
+			Auction::clinch_order(Some(BRUCE).into(), 0),
+			Error::<Test>::DontHaveEnoughToPay
+		);
 	});
 }
 
