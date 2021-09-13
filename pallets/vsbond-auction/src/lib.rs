@@ -63,7 +63,6 @@ pub struct OrderInfo<T: Config> {
 	total_price: BalanceOf<T>,
 	/// The unique id of the order
 	order_id: OrderId,
-	order_state: OrderState,
 	order_type: OrderType,
 }
 
@@ -87,7 +86,6 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 			.field(&self.amount)
 			.field(&self.unit_price())
 			.field(&self.order_id)
-			.field(&self.order_state)
 			.finish()
 	}
 }
@@ -96,13 +94,6 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 pub enum OrderType {
 	Sell,
 	Buy,
-}
-
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
-pub enum OrderState {
-	InTrade,
-	Revoked,
-	Clinchd,
 }
 
 type OrderId = u64;
@@ -275,7 +266,6 @@ pub mod pallet {
 				remain: amount,
 				total_price,
 				order_id,
-				order_state: OrderState::InTrade,
 				order_type,
 			};
 
@@ -311,12 +301,6 @@ pub mod pallet {
 
 			// Check OrderInfo
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
-
-			// Check OrderState
-			ensure!(
-				order_info.order_state == OrderState::InTrade,
-				Error::<T>::ForbidRevokeOrderNotInTrade
-			);
 
 			// Check OrderOwner
 			ensure!(order_info.owner == from, Error::<T>::ForbidRevokeOrderWithoutOwnership);
@@ -360,12 +344,6 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
 
-			// Check OrderState
-			ensure!(
-				order_info.order_state == OrderState::InTrade,
-				Error::<T>::ForbidClinchOrderNotInTrade
-			);
-
 			Self::partial_clinch_order(origin, order_id, order_info.remain)?;
 
 			Ok(().into())
@@ -388,12 +366,6 @@ pub mod pallet {
 
 			// Check OrderInfo
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
-
-			// Check OrderState
-			ensure!(
-				order_info.order_state == OrderState::InTrade,
-				Error::<T>::ForbidClinchOrderNotInTrade
-			);
 
 			// Check OrderOwner
 			ensure!(order_info.owner != opponent, Error::<T>::ForbidClinchOrderWithinOwnership);
@@ -418,7 +390,7 @@ pub mod pallet {
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
-				OrderInfo { remain: Zero::zero(), order_state: OrderState::Clinchd, ..order_info }
+				OrderInfo { remain: Zero::zero(), ..order_info }
 			} else {
 				OrderInfo {
 					remain: order_info.remain.saturating_sub(quantity_clinchd),
@@ -448,17 +420,16 @@ pub mod pallet {
 			)?;
 
 			// Change the OrderInfo in Storage
-			match new_order_info.order_state {
-				OrderState::InTrade =>
-					TotalOrderInfos::<T>::insert(order_id, new_order_info.clone()),
-				OrderState::Revoked => return Err(Error::<T>::Unexpected.into()),
-				OrderState::Clinchd => TotalOrderInfos::<T>::remove(order_id),
-			};
-			Self::try_to_remove_order_id(
-				new_order_info.owner.clone(),
-				order_info.order_type,
-				order_id,
-			);
+			if new_order_info.remain == Zero::zero() {
+				TotalOrderInfos::<T>::remove(order_id);
+				Self::try_to_remove_order_id(
+					new_order_info.owner.clone(),
+					order_info.order_type,
+					order_id,
+				);
+			} else {
+				TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
+			}
 
 			Self::deposit_event(Event::<T>::OrderClinchd(
 				order_id,
@@ -498,7 +469,9 @@ pub mod pallet {
 		/// Get the price(round up) needed to pay.
 		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: FixedU128) -> BalanceOf<T> {
 			let quantity: u128 = quantity.saturated_into();
-			let total_price = (unit_price * quantity.into()).into_inner() / FixedU128::accuracy();
+
+			let total_price = (unit_price.saturating_mul(quantity.into())).floor().into_inner() /
+				FixedU128::accuracy();
 
 			BalanceOf::<T>::saturated_from(total_price)
 		}
