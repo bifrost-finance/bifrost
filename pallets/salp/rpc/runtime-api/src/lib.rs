@@ -19,7 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Codec;
-use node_primitives::Balance;
+use node_primitives::{Balance, RpcContributionStatus};
 use sp_api::decl_runtime_apis;
 
 decl_runtime_apis! {
@@ -30,6 +30,6 @@ decl_runtime_apis! {
 		fn get_contribution(
 			index: ParaId,
 			who: AccountId
-		) -> Balance;
+		) -> (Balance,RpcContributionStatus);
 	}
 }

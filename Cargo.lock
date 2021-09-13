@@ -2264,6 +2264,7 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
@@ -5160,6 +5161,7 @@ name = "node-primitives"
 version = "0.8.0"
 dependencies = [
  "bstringify",
+ "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
