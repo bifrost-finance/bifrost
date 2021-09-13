@@ -24,8 +24,8 @@ use std::{
 use bifrost_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
-	TokensConfig, VestingConfig, WASM_BINARY,
+	ParachainInfoConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig,
+	VestingConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
@@ -50,7 +50,6 @@ const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 pub fn bifrost_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
-	root_key: AccountId,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
@@ -73,7 +72,6 @@ pub fn bifrost_genesis(
 		technical_membership: Default::default(),
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
-		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
@@ -128,7 +126,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
 		)],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		balances,
 		vestings,
 		id,
@@ -198,7 +195,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			),
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
-		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		balances,
 		vestings,
 		id,
@@ -266,12 +262,6 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		),
 	];
 
-	let root_key: AccountId = hex![
-		// cjAZA391BNi2S1Je7PNGHiX4UoJh3SbknQSDQ7qh3g4Aa9H
-		"2c64a40ec236d0a0823065791946f6254c4577c6110f512614bd6ece1a3fa22b"
-	]
-	.into();
-
 	let exe_dir = {
 		let mut exe_dir = std::env::current_exe().unwrap();
 		exe_dir.pop();
@@ -311,7 +301,6 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
 		invulnerables,
-		root_key,
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
