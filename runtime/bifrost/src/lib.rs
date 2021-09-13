@@ -87,8 +87,8 @@ use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 use node_primitives::{
 	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
-	XcmBaseWeight,
+	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
+	TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -1321,11 +1321,11 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
-		fn get_contribution(index: ParaId, who: AccountId) -> Balance {
+		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
 			let rs = Salp::contribution_by_fund(index, &who);
 			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
+				Ok((val,status)) => (val,status.to_rpc()),
+				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
 		}
 	}
