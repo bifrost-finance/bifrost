@@ -448,7 +448,12 @@ pub mod pallet {
 			)?;
 
 			// Change the OrderInfo in Storage
-			TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
+			match new_order_info.order_state {
+				OrderState::InTrade =>
+					TotalOrderInfos::<T>::insert(order_id, new_order_info.clone()),
+				OrderState::Revoked => return Err(Error::<T>::Unexpected.into()),
+				OrderState::Clinchd => TotalOrderInfos::<T>::remove(order_id),
+			};
 			Self::try_to_remove_order_id(
 				new_order_info.owner.clone(),
 				order_info.order_type,
