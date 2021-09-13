@@ -101,7 +101,7 @@ use frame_support::{
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
 use node_primitives::{
-	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
 	TransferOriginType, XcmBaseWeight,
 };
