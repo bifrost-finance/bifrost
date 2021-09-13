@@ -528,7 +528,7 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight(T::BifrostXcmExecutor::transact_weight(T::ContributionWeight::get(),0 as u32) + T::WeightInfo::contribute())]
+		#[pallet::weight(T::WeightInfo::contribute())]
 		#[transactional]
 		pub fn contribute(
 			origin: OriginFor<T>,

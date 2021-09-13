@@ -98,7 +98,7 @@ use frame_support::{
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
+	Amount, CurrencyId, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
 	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
 	TransferOriginType, XcmBaseWeight,
 };
