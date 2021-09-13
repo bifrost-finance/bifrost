@@ -171,6 +171,6 @@ pub trait BancorHandler<Balance> {
 
 impl<Balance> BancorHandler<Balance> for () {
 	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
-		unimplemented!()
+		Ok(())
 	}
 }
