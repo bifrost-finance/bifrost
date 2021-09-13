@@ -28,14 +28,16 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
+	sp_runtime::{
+		traits::{SaturatedConversion, Saturating, Zero},
+		FixedPointNumber, FixedU128,
+	},
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use sp_std::{cmp::min, convert::TryFrom};
-use substrate_fixed::{traits::FromFixed, types::U64F64};
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -66,11 +68,14 @@ pub struct OrderInfo<T: Config> {
 }
 
 impl<T: Config> OrderInfo<T> {
-	pub fn unit_price(&self) -> U64F64 {
-		let supply: u128 = self.amount.saturated_into();
+	pub fn unit_price(&self) -> FixedU128 {
+		let amount: u128 = self.amount.saturated_into();
 		let total_price: u128 = self.total_price.saturated_into();
 
-		U64F64::from_num(total_price) / supply
+		match amount {
+			0 => 0.into(),
+			_ => FixedU128::from((total_price, amount)),
+		}
 	}
 }
 
@@ -152,7 +157,6 @@ pub mod pallet {
 		ForbidClinchOrderNotInTrade,
 		ForbidClinchOrderWithinOwnership,
 		ExceedMaximumOrderInTrade,
-		Overflow,
 		Unexpected,
 	}
 
@@ -281,7 +285,8 @@ pub mod pallet {
 			// Insert OrderInfo to Storage
 			TotalOrderInfos::<T>::insert(order_id, order_info.clone());
 			UserOrderIds::<T>::try_append(owner.clone(), order_type, order_id)
-				.map_err(|_| Error::<T>::Unexpected).map_err(|_| Error::<T>::Unexpected)?;
+				.map_err(|_| Error::<T>::Unexpected)
+				.map_err(|_| Error::<T>::Unexpected)?;
 
 			Self::deposit_event(Event::OrderCreated(
 				order_id,
@@ -486,9 +491,9 @@ pub mod pallet {
 		}
 
 		/// Get the price(round up) needed to pay.
-		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: U64F64) -> BalanceOf<T> {
+		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: FixedU128) -> BalanceOf<T> {
 			let quantity: u128 = quantity.saturated_into();
-			let total_price = u128::from_fixed((unit_price * quantity).ceil());
+			let total_price = (unit_price * quantity.into()).into_inner() / FixedU128::accuracy();
 
 			BalanceOf::<T>::saturated_from(total_price)
 		}
