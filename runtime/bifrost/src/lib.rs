@@ -85,9 +85,9 @@ use frame_support::{
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 pub use node_primitives::{
-	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
-	TransferOriginType, XcmBaseWeight,
+	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
+	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
+	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;

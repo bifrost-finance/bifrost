@@ -91,9 +91,9 @@ use frame_support::{
 	traits::{EnsureOrigin, OnRuntimeUpgrade},
 };
 pub use node_primitives::{
-	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
-	TransferOriginType, XcmBaseWeight,
+	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
+	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
+	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
