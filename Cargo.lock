@@ -829,7 +829,6 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
- "pallet-sudo",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-transaction-payment",
@@ -5109,7 +5108,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.8.3"
+version = "0.9.0"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
