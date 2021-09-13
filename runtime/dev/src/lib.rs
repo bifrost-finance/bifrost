@@ -31,7 +31,7 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Everything, InstanceFilter, IsInVec, LockIdentifier, Randomness},
+	traits::{Contains, Everything, InstanceFilter, IsInVec, LockIdentifier, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -79,13 +79,18 @@ use xcm_support::Get;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_flexible_fee::fee_dealer::{FeeDealer, FixedCurrencyFeeRate};
+use bifrost_flexible_fee::{
+	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
+	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
+};
 use bifrost_runtime_common::{
 	constants::parachains,
+	create_x2_multilocation,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter, MultiWeightTraders,
 	},
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -96,9 +101,9 @@ use frame_support::{
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
 use node_primitives::{
-	Amount, CurrencyId, Moment, Nonce, ParachainDerivedProxyAccountType,
-	ParachainTransactProxyType, ParachainTransactType, TokenSymbol, TransferOriginType,
-	XcmBaseWeight,
+	Amount, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId, ParachainDerivedProxyAccountType,
+	ParachainTransactProxyType, ParachainTransactType, RpcContributionStatus, TokenSymbol,
+	TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -108,7 +113,7 @@ use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
-use xcm::v0::{BodyId, Junction, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
+use xcm::v0::{BodyId, Junction::*, MultiLocation, MultiLocation::*, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
 	EnsureXcmOrigin, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
@@ -420,7 +425,6 @@ parameter_types! {
 	pub const CouncilMaxMembers: u32 = 100;
 }
 
-type CouncilCollective = pallet_collective::Instance1;
 impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type Event = Event;
@@ -483,12 +487,6 @@ impl pallet_collective::Config<TechnicalCollective> for Runtime {
 	type Proposal = Call;
 	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
 }
-
-type MoreThanHalfCouncil = EnsureOneOf<
-	AccountId,
-	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
->;
 
 impl pallet_membership::Config<pallet_membership::Instance1> for Runtime {
 	type AddOrigin = MoreThanHalfCouncil;
@@ -927,8 +925,44 @@ impl orml_tokens::Config for Runtime {
 	type WeightInfo = ();
 }
 
+// Aggregate name getter to get fee names if the call needs to pay extra fees.
+// If any call need to pay extra fees, it should be added as an item here.
+// Used together with AggregateExtraFeeFilter below.
+pub struct FeeNameGetter;
+impl NameGetter<Call> for FeeNameGetter {
+	fn get_name(c: &Call) -> ExtraFeeName {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => ExtraFeeName::SalpContribute,
+			_ => ExtraFeeName::NoExtraFee,
+		}
+	}
+}
+
+// Aggregate filter to filter if the call needs to pay extra fees
+// If any call need to pay extra fees, it should be added as an item here.
+pub struct AggregateExtraFeeFilter;
+impl Contains<Call> for AggregateExtraFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			_ => false,
+		}
+	}
+}
+
+pub struct ContributeFeeFilter;
+impl Contains<Call> for ContributeFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			_ => false,
+		}
+	}
+}
+
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + u64::pow(2, 24).into();
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
@@ -944,6 +978,14 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type AltFeeCurrencyExchangeRate = AltFeeCurrencyExchangeRate;
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
+	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
+	type MiscFeeHandler = MiscFeeHandler<
+		Runtime,
+		RelayCurrencyId,
+		WeightToFee,
+		SalpWeightHolder,
+		ContributeFeeFilter,
+	>;
 }
 
 parameter_types! {
@@ -966,38 +1008,6 @@ impl bifrost_minter_reward::Config for Runtime {
 
 use crate::constants::relay_fee::WeightToFee;
 
-parameter_types! {
-	pub const MinContribution: Balance = 1 * DOLLARS;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
-	pub const RemoveKeysLimit: u32 = 500;
-	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
-	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
-	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
-	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub ConfirmMuitiSigAccount: AccountId = hex![
-		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
-	]
-	.into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_parachain_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
-}
-
-pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
-	MultiLocation::X2(
-		Junction::Parent,
-		Junction::AccountId32 {
-			network: NetworkId::Any,
-			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
-		},
-	)
-}
-
 pub struct EnsureConfirmAsMultiSig;
 impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	type Success = AccountId;
@@ -1016,8 +1026,30 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
+		Origin::from(RawOrigin::Signed(Default::default()))
 	}
+}
+
+parameter_types! {
+	pub const MinContribution: Balance = 1 * DOLLARS;
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const RemoveKeysLimit: u32 = 500;
+	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
+	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
+	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
+	pub const ReleaseRatio: Percent = Percent::from_percent(50);
+	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
+	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
+	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
+	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub ConfirmMuitiSigAccount: AccountId = hex![
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+	]
+	.into();
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(Utility::derivative_account_id(ParachainInfo::get().into_account(), ParachainDerivedProxyAccountType::Salp as u16));
+	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 }
 
 impl bifrost_salp::Config for Runtime {
@@ -1040,6 +1072,8 @@ impl bifrost_salp::Config for Runtime {
 	type ContributionWeight = ContributionWeight;
 	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = XTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
@@ -1566,6 +1600,16 @@ impl_runtime_apis! {
 			asset_1: AssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+		}
+	}
+
+	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
+			let rs = Salp::contribution_by_fund(index, &who);
+			match rs {
+				Ok((val,status)) => (val,status.to_rpc()),
+				_ => (Zero::zero(),RpcContributionStatus::Idle),
+			}
 		}
 	}
 

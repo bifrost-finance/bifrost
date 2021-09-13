@@ -22,6 +22,7 @@ pub use bifrost_salp_rpc_runtime_api::{self as runtime_api, SalpRuntimeApi};
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
+use node_primitives::RpcContributionStatus;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
@@ -50,7 +51,7 @@ pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 		index: ParaId,
 		who: AccountId,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<NumberOrHex>;
+	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
 }
 
 impl<C, Block, ParaId, AccountId> SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
@@ -67,14 +68,14 @@ where
 		index: ParaId,
 		account: AccountId,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<NumberOrHex> {
+	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)> {
 		let salp_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
 		let rs = salp_rpc_api.get_contribution(&at, index, account);
 
 		match rs {
-			Ok(val) => Ok(NumberOrHex::Number(val.saturated_into())),
+			Ok((val, status)) => Ok((NumberOrHex::Number(val.saturated_into()), status)),
 			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
 				message: "Failed to get salp contribution.".to_owned(),

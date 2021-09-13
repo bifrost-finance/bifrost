@@ -34,17 +34,10 @@ mod tests;
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 use frame_support::{pallet_prelude::*, transactional};
-use node_primitives::{TokenInfo, TokenSymbol, TrieIndex};
+use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::convert::TryFrom;
-
-pub trait WeightInfo {
-	fn contribute() -> Weight;
-	fn unlock() -> Weight;
-	fn refund() -> Weight;
-	fn redeem() -> Weight;
-}
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -90,40 +83,6 @@ pub struct FundInfo<Balance, LeasePeriod> {
 	trie_index: TrieIndex,
 	/// Fund status
 	status: FundStatus,
-}
-
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, Copy)]
-pub enum ContributionStatus<BalanceOf> {
-	Idle,
-	Contributing(BalanceOf),
-	Refunded,
-	Unlocked,
-	Redeemed,
-}
-
-impl<BalanceOf> ContributionStatus<BalanceOf>
-where
-	BalanceOf: frame_support::sp_runtime::traits::Zero + Clone + Copy,
-{
-	pub fn is_contributing(&self) -> bool {
-		match self {
-			Self::Contributing(_) => true,
-			_ => false,
-		}
-	}
-
-	pub fn contributing(&self) -> BalanceOf {
-		match self {
-			Self::Contributing(contributing) => *contributing,
-			_ => frame_support::sp_runtime::traits::Zero::zero(),
-		}
-	}
-}
-
-impl<BalanceOf> Default for ContributionStatus<BalanceOf> {
-	fn default() -> Self {
-		Self::Idle
-	}
 }
 
 #[frame_support::pallet]
@@ -196,6 +155,8 @@ pub mod pallet {
 		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
 		type EnsureConfirmAsMultiSig: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+
+		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		type BifrostXcmExecutor: BifrostXcmExecutor;
 
@@ -351,7 +312,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
@@ -368,7 +329,7 @@ pub mod pallet {
 		Pays::No
 		))]
 		pub fn fund_fail(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -389,7 +350,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Success, Error::<T>::InvalidFundStatus);
@@ -406,7 +367,7 @@ pub mod pallet {
 		Pays::No
 		))]
 		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -462,17 +423,13 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
+		#[pallet::weight(T::WeightInfo::batch_unlock(T::RemoveKeysLimit::get()))]
 		#[transactional]
 		pub fn batch_unlock(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
@@ -532,7 +489,7 @@ pub mod pallet {
 			#[pallet::compact] first_slot: LeasePeriod,
 			#[pallet::compact] last_slot: LeasePeriod,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			ensure!(!Funds::<T>::contains_key(index), Error::<T>::FundAlreadyCreated);
 
@@ -563,7 +520,7 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight(T::BifrostXcmExecutor::transact_weight(T::ContributionWeight::get(),0 as u32) + T::WeightInfo::contribute())]
+		#[pallet::weight(T::WeightInfo::contribute())]
 		#[transactional]
 		pub fn contribute(
 			origin: OriginFor<T>,
@@ -701,7 +658,7 @@ pub mod pallet {
 		))]
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin.clone())?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can = fund.status == FundStatus::Failed || fund.status == FundStatus::Retired;
@@ -839,7 +796,7 @@ pub mod pallet {
 		))]
 		#[transactional]
 		pub fn dissolve(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::End, Error::<T>::InvalidFundStatus);
@@ -876,7 +833,7 @@ pub mod pallet {
 		))]
 		#[transactional]
 		pub fn add_proxy(origin: OriginFor<T>, delegate: AccountIdOf<T>) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			Self::xcm_ump_add_proxy(delegate.clone()).map_err(|_| Error::<T>::XcmFailed)?;
 
@@ -894,7 +851,7 @@ pub mod pallet {
 		))]
 		#[transactional]
 		pub fn remove_proxy(origin: OriginFor<T>, delegate: AccountIdOf<T>) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			Self::xcm_ump_remove_proxy(delegate.clone()).map_err(|_| Error::<T>::XcmFailed)?;
 
@@ -976,10 +933,10 @@ pub mod pallet {
 		pub fn contribution_by_fund(
 			index: ParaId,
 			who: &AccountIdOf<T>,
-		) -> Result<BalanceOf<T>, Error<T>> {
+		) -> Result<(BalanceOf<T>, ContributionStatus<BalanceOf<T>>), Error<T>> {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let (contributed, _) = Self::contribution(fund.trie_index, who);
-			Ok(contributed)
+			let (contributed, status) = Self::contribution(fund.trie_index, who);
+			Ok((contributed, status))
 		}
 
 		pub(crate) fn contribution_iterator(
@@ -1140,5 +1097,36 @@ pub mod pallet {
 				3 * T::BaseXcmWeight::get(),
 			)
 		}
+	}
+}
+
+pub trait WeightInfo {
+	fn contribute() -> Weight;
+	fn unlock() -> Weight;
+	fn batch_unlock(k: u32) -> Weight;
+	fn refund() -> Weight;
+	fn redeem() -> Weight;
+}
+
+// For backwards compatibility and tests
+impl WeightInfo for () {
+	fn contribute() -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn unlock() -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn batch_unlock(_k: u32) -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn refund() -> Weight {
+		50_000_000 as Weight
+	}
+
+	fn redeem() -> Weight {
+		50_000_000 as Weight
 	}
 }

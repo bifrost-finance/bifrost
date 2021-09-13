@@ -22,12 +22,14 @@ use std::{
 };
 
 use bifrost_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
-	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig,
-	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, VestingConfig, WASM_BINARY,
+	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
+	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
+	IndicesConfig, ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig,
+	TechnicalCommitteeConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::constants::currency::DOLLARS;
 use cumulus_primitives_core::ParaId;
+use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
@@ -45,12 +47,15 @@ const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 /// Specialized `ChainSpec` for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
+const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+
 pub fn bifrost_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
 	root_key: AccountId,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
+	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -93,19 +98,34 @@ pub fn bifrost_genesis(
 		aura_ext: Default::default(),
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
+		tokens: TokensConfig { balances: tokens },
 		bancor: BancorConfig {
-			bancor_pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
-			],
+			bancor_pools: vec![(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS)],
 		},
 	}
 }
 
 fn development_config_genesis(id: ParaId) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> =
-		vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+	let endowed_accounts = vec![
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
+		whitelisted_caller(), // Benchmarking whitelist_account
+	];
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect();
+	let vestings = endowed_accounts
+		.iter()
+		.cloned()
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.collect();
+	let tokens = endowed_accounts
+		.iter()
+		.flat_map(|x| {
+			vec![
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+			]
+		})
+		.collect();
 
 	bifrost_genesis(
 		vec![(
@@ -113,13 +133,10 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 			get_from_seed::<AuraId>("Alice"),
 		)],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect(),
-		endowed_accounts
-			.iter()
-			.cloned()
-			.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
-			.collect(),
+		balances,
+		vestings,
 		id,
+		tokens,
 	)
 }
 
@@ -138,11 +155,44 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 }
 
 fn local_config_genesis(id: ParaId) -> GenesisConfig {
-	let endowed_accounts: Vec<AccountId> = vec![
+	let endowed_accounts = vec![
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		get_account_id_from_seed::<sr25519::Public>("Bob"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie"),
+		get_account_id_from_seed::<sr25519::Public>("Dave"),
+		get_account_id_from_seed::<sr25519::Public>("Eve"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
+		get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+		whitelisted_caller(), // Benchmarking whitelist_account
+		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
+		                       * with whitelistted_caller */
 	];
-	const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect();
+	let vestings = endowed_accounts
+		.iter()
+		.cloned()
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.collect();
+	let tokens = endowed_accounts
+		.iter()
+		.flat_map(|x| {
+			vec![
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
+				(
+					x.clone(),
+					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
+					ENDOWMENT * 4_000_000,
+				),
+			]
+		})
+		.collect();
 
 	bifrost_genesis(
 		vec![
@@ -153,13 +203,10 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
-		endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect(),
-		endowed_accounts
-			.iter()
-			.cloned()
-			.map(|x| (x, 0u32, 100u32, ENDOWMENT / 4))
-			.collect(),
+		balances,
+		vestings,
 		id,
+		tokens,
 	)
 }
 
@@ -272,6 +319,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
+		vec![],
 	)
 }
 

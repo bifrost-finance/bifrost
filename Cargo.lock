@@ -690,16 +690,19 @@ dependencies = [
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
+ "bifrost-salp",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "impl-trait-for-tuples",
  "node-primitives",
  "orml-currencies",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "pallet-balances",
  "pallet-transaction-payment",
+ "pallet-xcm",
  "parity-scale-codec",
  "smallvec 1.6.1",
  "sp-arithmetic",
@@ -707,6 +710,9 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-support",
  "zenlink-protocol",
 ]
 
@@ -880,7 +886,14 @@ dependencies = [
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "pallet-collator-selection",
+ "pallet-collective",
+ "pallet-democracy",
+ "pallet-membership",
+ "pallet-multisig",
+ "pallet-scheduler",
  "pallet-transaction-payment",
+ "pallet-treasury",
+ "pallet-utility",
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
@@ -2252,6 +2265,7 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
@@ -5227,6 +5241,7 @@ name = "node-primitives"
 version = "0.8.0"
 dependencies = [
  "bstringify",
+ "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
