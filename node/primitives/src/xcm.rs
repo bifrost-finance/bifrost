@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use core::ops::{Add, Mul};
+
 use codec::{Decode, Encode};
 use sp_std::prelude::*;
 
@@ -29,6 +31,12 @@ pub enum TransferOriginType {
 
 pub struct XcmBaseWeight(u64);
 
+impl XcmBaseWeight {
+	pub fn new(x: u64) -> Self {
+		XcmBaseWeight(x)
+	}
+}
+
 impl From<u64> for XcmBaseWeight {
 	fn from(u: u64) -> Self {
 		XcmBaseWeight(u)
@@ -38,6 +46,21 @@ impl From<u64> for XcmBaseWeight {
 impl From<XcmBaseWeight> for u64 {
 	fn from(x: XcmBaseWeight) -> Self {
 		x.0.into()
+	}
+}
+
+impl Add for XcmBaseWeight {
+	type Output = Self;
+	fn add(self, other: Self) -> Self::Output {
+		(self.0 + other.0).into()
+	}
+}
+
+impl Mul<u64> for XcmBaseWeight {
+	type Output = Self;
+
+	fn mul(self, rhs: u64) -> Self {
+		XcmBaseWeight::new(self.0 * rhs)
 	}
 }
 

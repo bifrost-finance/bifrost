@@ -436,3 +436,41 @@ fn correct_and_deposit_fee_should_work_v2() {
 		);
 	});
 }
+
+#[test]
+fn deduct_salp_fee_should_work() {
+	new_test_ext().execute_with(|| {
+		// deposit some money for Charlie
+		assert_ok!(Currencies::deposit(CURRENCY_ID_0, &CHARLIE, 200)); // Native token
+		assert_ok!(Currencies::deposit(CURRENCY_ID_4, &CHARLIE, 200_000_000)); // Token KSM
+
+		// prepare call variable
+		let para_id = 2001;
+		let value = 1_000_000_000_000;
+
+		let call = Call::Salp(bifrost_salp::Call::contribute(para_id, value));
+
+		// prepare info variable
+		let extra = ();
+		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
+		let info = xt.get_dispatch_info();
+
+		// 99 inclusion fee and a tip of 8
+		assert_ok!(FlexibleFee::withdraw_fee(&CHARLIE, &call, &info, 107, 8));
+
+		assert_eq!(<Test as crate::Config>::Currency::free_balance(&CHARLIE), 93);
+		// fee is: 133780717
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_4, &CHARLIE),
+			66219283
+		);
+		// treasury account has the fee
+		assert_eq!(
+			<Test as crate::Config>::MultiCurrency::free_balance(
+				CURRENCY_ID_4,
+				&<Test as crate::Config>::TreasuryAccount::get()
+			),
+			133780717
+		);
+	});
+}

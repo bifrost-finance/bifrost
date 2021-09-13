@@ -20,6 +20,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_core::{Decode, Encode, RuntimeDebug};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
@@ -125,3 +126,9 @@ pub type LeasePeriod = BlockNumber;
 
 /// Index used for the child trie
 pub type TrieIndex = u32;
+
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+pub enum ExtraFeeName {
+	SalpContribute,
+	NoExtraFee,
+}
