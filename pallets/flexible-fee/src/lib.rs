@@ -31,7 +31,7 @@ use frame_support::{
 	},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, ExtraFeeName, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use pallet_transaction_payment::OnChargeTransaction;
@@ -44,11 +44,15 @@ use sp_std::{vec, vec::Vec};
 pub use weights::WeightInfo;
 use zenlink_protocol::{AssetBalance, AssetId, ExportZenlink};
 
-use crate::fee_dealer::FeeDealer;
+use crate::{
+	fee_dealer::FeeDealer,
+	misc_fees::{FeeDeductor, FeeGetter},
+};
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod fee_dealer;
+pub mod misc_fees;
 mod mock;
 mod tests;
 mod weights;
@@ -75,6 +79,16 @@ pub mod pallet {
 		type OnUnbalanced: OnUnbalanced<NegativeImbalanceOf<Self>>;
 		type DexOperator: ExportZenlink<Self::AccountId>;
 		type FeeDealer: FeeDealer<Self::AccountId, PalletBalanceOf<Self>, CurrencyIdOf<Self>>;
+		/// Filter if this transaction needs to be deducted extra fee besides basic transaction fee,
+		/// and get the name of the fee
+		type ExtraFeeMatcher: FeeGetter<CallOf<Self>>;
+		/// In charge of deducting extra fees
+		type MiscFeeHandler: FeeDeductor<
+			Self::AccountId,
+			CurrencyIdOf<Self>,
+			PalletBalanceOf<Self>,
+			CallOf<Self>,
+		>;
 
 		#[pallet::constant]
 		type TreasuryAccount: Get<Self::AccountId>;
@@ -101,6 +115,7 @@ pub mod pallet {
 	pub type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<
 		<T as frame_system::Config>::AccountId,
 	>>::PositiveImbalance;
+	pub type CallOf<T> = <T as frame_system::Config>::Call;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -110,6 +125,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		FlexibleFeeExchanged(CurrencyIdOf<T>, u128), // token and amount
 		FixedRateFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>),
+		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>),
 	}
 
 	#[pallet::type_value]
@@ -187,7 +203,7 @@ where
 	/// Note: The `fee` already includes the `tip`.
 	fn withdraw_fee(
 		who: &T::AccountId,
-		_call: &T::Call,
+		call: &T::Call,
 		_info: &DispatchInfoOf<T::Call>,
 		fee: Self::Balance,
 		tip: Self::Balance,
@@ -207,16 +223,20 @@ where
 		let (fee_sign, fee_amount) = T::FeeDealer::ensure_can_charge_fee(who, fee, withdraw_reason)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
+		let rs;
 		// if the user has enough BNC for fee
 		if fee_sign == false {
-			match T::Currency::withdraw(who, fee, withdraw_reason, ExistenceRequirement::AllowDeath)
-			{
+			rs = match T::Currency::withdraw(
+				who,
+				fee,
+				withdraw_reason,
+				ExistenceRequirement::AllowDeath,
+			) {
 				Ok(imbalance) => Ok(Some(imbalance)),
 				Err(_msg) => Err(InvalidTransaction::Payment.into()),
-			}
+			};
 		// if the user donsn't enough BNC but has enough KSM
 		} else {
-			// deduct fee currency and increase native currency amount
 			// This withdraw operation allows death. So it will succeed given the remaining amount
 			// less than the existential deposit.
 			let fee_currency_id = T::AlternativeFeeCurrencyId::get();
@@ -231,8 +251,25 @@ where
 			// need to return 0 value of imbalance type
 			// this value will be used to see post dispatch refund in BNC
 			// if charge less than actual payment, no refund will be paid
-			Ok(Some(NegativeImbalanceOf::<T>::zero()))
+			rs = Ok(Some(NegativeImbalanceOf::<T>::zero()));
 		}
+
+		// See if the this Call needs to pay extra fee
+		let (fee_name, if_extra_fee) = T::ExtraFeeMatcher::get_fee_info(call.clone());
+		if if_extra_fee {
+			// We define 77 as the error of extra fee deduction failure.
+			let (extra_fee_currency, extra_fee_amount) =
+				T::MiscFeeHandler::deduct_fee(who, &T::TreasuryAccount::get(), call).map_err(
+					|_| TransactionValidityError::Invalid(InvalidTransaction::Custom(77u8)),
+				)?;
+			Self::deposit_event(Event::ExtraFeeDeducted(
+				fee_name,
+				extra_fee_currency,
+				extra_fee_amount,
+			));
+		}
+
+		rs
 	}
 
 	/// Hand the fee and the tip over to the `[OnUnbalanced]` implementation.
