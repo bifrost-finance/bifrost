@@ -214,6 +214,8 @@ pub mod pallet {
 		Refunded(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// redeem to account. [who, fund_index, first_slot, last_slot, value]
 		Redeemed(AccountIdOf<T>, ParaId, LeasePeriod, LeasePeriod, BalanceOf<T>),
+		/// Fund is edited. [fund_index]
+		Edited(ParaId),
 		/// Fund is dissolved. [fund_index]
 		Dissolved(ParaId),
 		/// The vsToken/vsBond was be unlocked. [who, fund_index, value]
@@ -379,6 +381,47 @@ pub mod pallet {
 			let fund_new = FundInfo { status: FundStatus::End, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
 
+			Ok(())
+		}
+
+		/// Edit the configuration for an in-progress crowdloan.
+		///
+		/// Can only be called by Root origin.
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn edit(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] cap: BalanceOf<T>,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
+			fund_status: Option<FundStatus>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			let status = match fund_status {
+				None => fund.status,
+				Some(status) => status,
+			};
+
+			Funds::<T>::insert(
+				index,
+				Some(FundInfo {
+					cap,
+					first_slot,
+					last_slot,
+					status,
+					raised: fund.raised,
+					trie_index: fund.trie_index,
+				}),
+			);
+
+			Self::deposit_event(Event::<T>::Edited(index));
 			Ok(())
 		}
 
