@@ -1364,3 +1364,33 @@ fn batch_unlock_should_work() {
 		assert_ok!(Salp::batch_unlock(Some(ALICE).into(), 3_000));
 	})
 }
+
+#[test]
+fn edit_fund_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 3_000, 100));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			3_000,
+			true,
+			CONTRIBUTON_INDEX
+		));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::edit(Some(ALICE).into(), 3_000, 1_000, 2, SlotLength::get() + 1, None));
+		let mut fund = Salp::funds(3_000).unwrap();
+		assert_eq!(fund.first_slot, 2);
+		assert_eq!(fund.status, FundStatus::Failed);
+		assert_ok!(Salp::edit(
+			Some(ALICE).into(),
+			3_000,
+			1_000,
+			2,
+			SlotLength::get() + 1,
+			Some(FundStatus::Ongoing),
+		));
+		fund = Salp::funds(3_000).unwrap();
+		assert_eq!(fund.status, FundStatus::Ongoing);
+	})
+}
