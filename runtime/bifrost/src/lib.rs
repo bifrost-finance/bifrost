@@ -126,7 +126,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 803,
+	spec_version: 900,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -559,11 +559,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
-}
-
-impl pallet_sudo::Config for Runtime {
-	type Call = Call;
-	type Event = Event;
 }
 
 // culumus runtime start
@@ -1012,7 +1007,7 @@ parameter_types! {
 }
 
 impl bifrost_salp::Config for Runtime {
-	type BancorPool = Bancor;
+	type BancorPool = ();
 	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
@@ -1041,19 +1036,6 @@ impl bifrost_salp::Config for Runtime {
 	type TransactType = SalpTransactType;
 }
 
-parameter_types! {
-	pub const InterventionPercentage: Percent = Percent::from_percent(75);
-	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
-}
-
-impl bifrost_bancor::Config for Runtime {
-	type Event = Event;
-	type InterventionPercentage = InterventionPercentage;
-	type DailyReleasePercentage = DailyReleasePercentage;
-	type MultiCurrency = Currencies;
-	type WeightInfo = weights::bifrost_bancor::WeightInfo<Runtime>;
-}
-
 // Bifrost modules end
 
 construct_runtime! {
@@ -1066,7 +1048,6 @@ construct_runtime! {
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
-		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
@@ -1118,7 +1099,6 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
-		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 	}
 }
 
@@ -1278,40 +1258,6 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_bancor_runtime_api::BancorRuntimeApi<Block, CurrencyId, Balance> for Runtime {
-		fn get_bancor_token_amount_out(token_id: CurrencyId, vstoken_amount: Balance) -> Balance {
-			let rs = Bancor::calculate_price_for_token(token_id, vstoken_amount);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
-
-		fn get_bancor_vstoken_amount_out(token_id: CurrencyId, token_amount: Balance) -> Balance {
-			let rs = Bancor::calculate_price_for_vstoken(token_id, token_amount);
-			match rs {
-				Ok(val) => val,
-				_ => Zero::zero(),
-			}
-		}
-
-		fn get_instant_vstoken_price(currency_id: CurrencyId) -> (Balance, Balance) {
-			let rs = Bancor::get_instant_vstoken_price(currency_id);
-			match rs {
-				Ok((nominator, denominator)) => (nominator, denominator),
-				_ => (Zero::zero(), Zero::zero()),
-			}
-		}
-
-		fn get_instant_token_price(currency_id: CurrencyId) -> (Balance, Balance) {
-			let rs = Bancor::get_instant_token_price(currency_id);
-			match rs {
-				Ok((nominator, denominator)) => (nominator, denominator),
-				_ => (Zero::zero(), Zero::zero()),
-			}
-		}
-	}
-
 	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
 		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
 			let rs = Salp::contribution_by_fund(index, &who);
@@ -1333,7 +1279,6 @@ impl_runtime_apis! {
 
 			let mut list = Vec::<BenchmarkList>::new();
 
-			list_benchmark!(list, extra, bifrost_bancor, Bancor);
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_salp, Salp);
 
