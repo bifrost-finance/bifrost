@@ -770,7 +770,7 @@ pub mod pallet {
 			Self::put_contribution(
 				fund.trie_index,
 				&who,
-				contributed,
+				Zero::zero(),
 				ContributionStatus::Refunded,
 			);
 
@@ -791,10 +791,18 @@ pub mod pallet {
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
+
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			ensure!(
+				status == ContributionStatus::Idle ||
+					status == ContributionStatus::Unlocked ||
+					status == ContributionStatus::Redeemed,
+				Error::<T>::InvalidContributionStatus
+			);
+
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 			let cur_block = <frame_system::Pallet<T>>::block_number();
 			ensure!(!Self::is_expired(cur_block, fund.last_slot), Error::<T>::VSBondExpired);
-			ensure!(Self::can_redeem(cur_block, fund.last_slot), Error::<T>::UnRedeemableNow);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
@@ -817,7 +825,13 @@ pub mod pallet {
 					value,
 				)?;
 			}
-			Self::put_contribution(fund.trie_index, &who, value, ContributionStatus::Redeemed);
+			let contributed_new = contributed.saturating_sub(value);
+			Self::put_contribution(
+				fund.trie_index,
+				&who,
+				contributed_new,
+				ContributionStatus::Redeemed,
+			);
 			Self::deposit_event(Event::Redeemed(
 				who,
 				index,
