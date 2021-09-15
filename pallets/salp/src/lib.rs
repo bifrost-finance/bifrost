@@ -92,6 +92,7 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::{storage::child, *},
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
+		sp_std::convert::TryInto,
 		storage::ChildTriePrefixIterator,
 		PalletId,
 	};
@@ -297,6 +298,11 @@ pub mod pallet {
 		Option<FundInfo<BalanceOf<T>, LeasePeriod>>,
 		ValueQuery,
 	>;
+
+	/// The balance can be redeemed to users.
+	#[pallet::storage]
+	#[pallet::getter(fn redeem_pool)]
+	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -710,6 +716,7 @@ pub mod pallet {
 			if fund.status == FundStatus::Retired {
 				let fund_new = FundInfo { status: FundStatus::RedeemWithdrew, ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
+				RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
 			} else if fund.status == FundStatus::Failed {
 				let fund_new = FundInfo { status: FundStatus::RefundWithdrew, ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
@@ -784,11 +791,16 @@ pub mod pallet {
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
+			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
+			let cur_block = <frame_system::Pallet<T>>::block_number();
+			ensure!(!Self::is_expired(cur_block, fund.last_slot), Error::<T>::VSBondExpired);
+			ensure!(Self::can_redeem(cur_block, fund.last_slot), Error::<T>::UnRedeemableNow);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
 			fund.raised = fund.raised.saturating_sub(value);
+			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
 			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
@@ -909,12 +921,58 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+			// Release x% KSM/DOT from redeem-pool to bancor-pool per cycle
+			if n != 0 && (n % T::ReleaseCycle::get()) == 0 {
+				if let Ok(rp_balance) = TryInto::<u128>::try_into(Self::redeem_pool()) {
+					// Calculate the release amount
+					let release_amount = T::ReleaseRatio::get() * rp_balance;
+
+					// Must be ok
+					if let Ok(release_amount) = TryInto::<BalanceOf<T>>::try_into(release_amount) {
+						// Increase the balance of bancor-pool by release-amount
+						if let Ok(()) =
+							T::BancorPool::add_token(T::RelayChainToken::get(), release_amount)
+						{
+							RedeemPool::<T>::set(
+								Self::redeem_pool().saturating_sub(release_amount),
+							);
+						}
+					} else {
+						log::warn!("Overflow: The balance of redeem-pool exceeds u128.");
+					}
+				}
+			}
 			T::DbWeight::get().reads(1)
 		}
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// Check if the vsBond is `past` the redeemable date
+		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
+			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
+
+			block >= block_end_redeem
+		}
+
+		/// Check if the vsBond is `in` the redeemable date
+		pub(crate) fn can_redeem(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
+			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
+			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
+
+			block >= block_begin_redeem && block < block_end_redeem
+		}
+
+		#[allow(unused)]
+		pub(crate) fn block_start_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
+			slot.saturating_mul(T::LeasePeriod::get())
+		}
+
+		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
+			(slot + 1).saturating_mul(T::LeasePeriod::get())
+		}
+
 		pub fn fund_account_id(index: ParaId) -> T::AccountId {
 			T::PalletId::get().into_sub_account(index)
 		}
