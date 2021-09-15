@@ -273,9 +273,9 @@ impl pallet_utility::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub const DepositBase: Balance = deposit(1, 88);
+	pub const DepositBase: Balance = deposit(0, 0);
 	// Additional storage item size of 32 bytes.
-	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const DepositFactor: Balance = deposit(0, 0);
 	pub const MaxSignatories: u16 = 100;
 }
 
