@@ -61,6 +61,8 @@ pub struct OrderInfo<T: Config> {
 	remain: BalanceOf<T>,
 	/// Total price of the order
 	total_price: BalanceOf<T>,
+	/// Helper to calculate the remain to unreserve
+	remain_price: BalanceOf<T>,
 	/// The unique id of the order
 	order_id: OrderId,
 	order_type: OrderType,
@@ -265,6 +267,7 @@ pub mod pallet {
 				amount,
 				remain: amount,
 				total_price,
+				remain_price: total_price,
 				order_id,
 				order_type,
 			};
@@ -308,7 +311,7 @@ pub mod pallet {
 			let (token_unreserve, amount_unreserve) = match order_info.order_type {
 				OrderType::Buy => (
 					T::InvoicingCurrency::get(),
-					Self::price_to_pay(order_info.remain, order_info.unit_price()),
+					order_info.remain_price,
 				),
 				OrderType::Sell => (order_info.vsbond, order_info.remain),
 			};
@@ -390,10 +393,15 @@ pub mod pallet {
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
-				OrderInfo { remain: Zero::zero(), ..order_info }
+				OrderInfo {
+					remain: Zero::zero(),
+					remain_price: order_info.remain_price.saturating_sub(price_to_pay),
+					..order_info
+				}
 			} else {
 				OrderInfo {
 					remain: order_info.remain.saturating_sub(quantity_clinchd),
+					remain_price: order_info.remain_price.saturating_sub(price_to_pay),
 					..order_info
 				}
 			};
@@ -427,6 +435,14 @@ pub mod pallet {
 					order_info.order_type,
 					order_id,
 				);
+
+				if new_order_info.order_type == OrderType::Buy {
+					T::MultiCurrency::unreserve(
+						token_owner,
+						&new_order_info.owner,
+						new_order_info.remain_price,
+					);
+				}
 			} else {
 				TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
 			}
