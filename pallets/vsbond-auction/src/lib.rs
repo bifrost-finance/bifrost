@@ -309,10 +309,7 @@ pub mod pallet {
 			ensure!(order_info.owner == from, Error::<T>::ForbidRevokeOrderWithoutOwnership);
 
 			let (token_unreserve, amount_unreserve) = match order_info.order_type {
-				OrderType::Buy => (
-					T::InvoicingCurrency::get(),
-					order_info.remain_price,
-				),
+				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
 				OrderType::Sell => (order_info.vsbond, order_info.remain),
 			};
 
