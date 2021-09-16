@@ -479,82 +479,62 @@ fn partial_clinch_buy_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
 	});
 }
-//
-// #[test]
-// fn partial_clinch_order_not_exist_should_fail() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
-// 		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 1), Error::<Test>::NotFindOrderInfo);
-// 		assert_noop!(
-// 			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
-// 			Error::<Test>::NotFindOrderInfo
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn clinch_order_by_origin_illegal_should_fail() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
-// 		assert_noop!(
-// 			Auction::clinch_order(Some(ALICE).into(), 0),
-// 			Error::<Test>::ForbidClinchOrderWithinOwnership
-// 		);
-// 		assert_noop!(
-// 			Auction::partial_clinch_order(Some(ALICE).into(), 0, 50),
-// 			Error::<Test>::ForbidClinchOrderWithinOwnership
-// 		);
-//
-// 		assert_noop!(
-// 			Auction::partial_clinch_order(Origin::root(), 0, 50),
-// 			DispatchError::BadOrigin,
-// 		);
-// 		assert_noop!(
-// 			Auction::partial_clinch_order(Origin::none(), 0, 50),
-// 			DispatchError::BadOrigin,
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn clinch_order_not_in_trade_should_fail() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
-// 		assert_ok!(Auction::revoke_order(Some(ALICE).into(), 0));
-// 		assert_noop!(
-// 			Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50),
-// 			Error::<Test>::ForbidClinchOrderNotInTrade
-// 		);
-//
-// 		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100));
-// 		assert_ok!(Auction::clinch_order(Some(BRUCE).into(), 1));
-// 		assert_noop!(
-// 			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
-// 			Error::<Test>::ForbidClinchOrderNotInTrade
-// 		);
-// 	});
-// }
-//
-// #[test]
-// fn clinch_order_without_enough_token_should_fail() {
-// 	new_test_ext().execute_with(|| {
-// 		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 200));
-// 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50));
-// 		assert_noop!(
-// 			Auction::clinch_order(Some(BRUCE).into(), 0),
-// 			Error::<Test>::DontHaveEnoughToPay
-// 		);
-// 	});
-// }
-//
-// // Test Utilities
-// #[test]
-// fn check_price_to_pay() {
-// 	let unit_price: U64F64 = 0.333f64.to_fixed();
-// 	let quantities: [BalanceOf<Test>; 4] = [3, 33, 333, 3333];
-// 	let price_to_pays: [BalanceOf<Test>; 4] = [1, 11, 111, 1110];
-//
-// 	for (quantity, price_to_pay) in quantities.iter().zip(price_to_pays.iter()) {
-// 		assert_eq!(Auction::price_to_pay(*quantity, unit_price), *price_to_pay);
-// 	}
-// }
+
+#[test]
+fn partial_clinch_order_not_exist_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_noop!(Auction::clinch_order(Some(BRUCE).into(), 1), Error::<Test>::NotFindOrderInfo);
+		assert_noop!(
+			Auction::partial_clinch_order(Some(BRUCE).into(), 1, 50),
+			Error::<Test>::NotFindOrderInfo
+		);
+	});
+}
+
+#[test]
+fn clinch_order_by_origin_illegal_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 100, OrderType::Sell));
+		assert_noop!(
+			Auction::clinch_order(Some(ALICE).into(), 0),
+			Error::<Test>::ForbidClinchOrderWithinOwnership
+		);
+		assert_noop!(
+			Auction::partial_clinch_order(Some(ALICE).into(), 0, 50),
+			Error::<Test>::ForbidClinchOrderWithinOwnership
+		);
+
+		assert_noop!(
+			Auction::partial_clinch_order(Origin::root(), 0, 50),
+			DispatchError::BadOrigin,
+		);
+		assert_noop!(
+			Auction::partial_clinch_order(Origin::none(), 0, 50),
+			DispatchError::BadOrigin,
+		);
+	});
+}
+
+#[test]
+fn clinch_order_without_enough_token_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(Some(ALICE).into(), 3000, 13, 20, 100, 200, OrderType::Sell));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 50));
+		assert_noop!(
+			Auction::clinch_order(Some(BRUCE).into(), 0),
+			Error::<Test>::DontHaveEnoughToPay
+		);
+	});
+}
+
+// Test Utilities
+#[test]
+fn check_price_to_pay() {
+	let unit_price: FixedU128 = FixedU128::from((33, 100));
+	let quantities: [BalanceOf<Test>; 4] = [3, 33, 333, 3333];
+	let price_to_pays: [BalanceOf<Test>; 4] = [0, 10, 109, 1099];
+
+	for (quantity, price_to_pay) in quantities.iter().zip(price_to_pays.iter()) {
+		assert_eq!(Auction::price_to_pay(*quantity, unit_price), *price_to_pay);
+	}
+}
