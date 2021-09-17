@@ -1103,7 +1103,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type Event = Event;
 	type InvoicingCurrency = RelayCurrencyId;
 	type MaximumOrderInTrade = MaximumOrderInTrade;
-	type MinimumSupply = MinimumSupply;
+	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = Currencies;
 	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }

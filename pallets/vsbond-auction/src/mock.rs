@@ -109,7 +109,7 @@ impl vsbond_auction::Config for Test {
 	type Event = Event;
 	type InvoicingCurrency = InvoicingCurrency;
 	type MaximumOrderInTrade = MaximumOrderInTrade;
-	type MinimumSupply = MinimumSupply;
+	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = orml_tokens::Pallet<Self>;
 	type WeightInfo = ();
 }
@@ -146,5 +146,5 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 pub(crate) const ALICE: AccountId = 1;
 pub(crate) const BRUCE: AccountId = 2;
-pub(crate) const TOKEN: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub(crate) const TOKEN: CurrencyId = InvoicingCurrency::get();
 pub(crate) const VSBOND: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20);
