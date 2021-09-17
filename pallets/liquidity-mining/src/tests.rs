@@ -318,7 +318,7 @@ fn approve_pool_should_work() {
 		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
 
 		let pool = LM::pool(0).unwrap();
-		assert_eq!(pool.state, PoolState::Approved);
+		assert_eq!(pool.state, PoolState::Charged);
 
 		assert!(LM::approved_pids().contains(&0));
 	});
@@ -406,7 +406,7 @@ fn approve_pool_exceed_maximum_should_fail() {
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				MaximumApproved::get() as u128,
 			),
-			Error::<T>::ExceedMaximumApproved
+			Error::<T>::ExceedMaximumCharged
 		);
 
 		assert!(!LM::approved_pids().contains(&(MaximumApproved::get() as u128)));

@@ -107,11 +107,11 @@ impl<T: Config> PoolInfo<T> {
 		self
 	}
 
-	/// Trying to change the state from `PoolState::Approved` to `PoolState::Ongoing`
+	/// Trying to change the state from `PoolState::Charged` to `PoolState::Ongoing`
 	///
 	/// __NOTE__: Only called in the `Hook`
 	pub(crate) fn try_startup(mut self, n: BlockNumberFor<T>) -> Self {
-		if self.state == PoolState::Approved {
+		if self.state == PoolState::Charged {
 			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
 				self.block_startup = Some(n);
 				self.state = PoolState::Ongoing;
@@ -211,7 +211,7 @@ pub enum PoolType {
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum PoolState {
 	UnCharged,
-	Approved,
+	Charged,
 	Ongoing,
 	Retired,
 	Dead,
@@ -361,7 +361,7 @@ pub mod pallet {
 
 		/// The number of liquidity-pool approved should be less than the value
 		#[pallet::constant]
-		type MaximumApproved: Get<u32>;
+		type MaximumCharged: Get<u32>;
 
 		/// ModuleID for creating sub account
 		#[pallet::constant]
@@ -381,8 +381,8 @@ pub mod pallet {
 		DuplicateReward,
 		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
 		ExceedMaximumDeposit,
-		/// When the number of pool-approved exceeds the `MaximumApproved`
-		ExceedMaximumApproved,
+		/// When the number of pool-approved exceeds the `MaximumCharged`
+		ExceedMaximumCharged,
 		/// Not enough balance to deposit
 		NotEnoughToDeposit,
 		/// Not enough balance of reward to unreserve
@@ -411,7 +411,7 @@ pub mod pallet {
 		/// The liquidity-pool has been approved
 		///
 		/// [pool_id, pool_type, trading_pair, investor]
-		PoolApproved(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
+		PoolCharged(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
 		/// The liquidity-pool has been started up
 		///
 		/// [pool_id, pool_type, trading_pair]
@@ -450,7 +450,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn approved_pids)]
-	pub(crate) type ApprovedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+	pub(crate) type ChargedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool)]
@@ -568,7 +568,7 @@ pub mod pallet {
 			let investor = ensure_signed(origin)?;
 
 			let num = Self::approved_pids().len() as u32;
-			ensure!(num < T::MaximumApproved::get(), Error::<T>::ExceedMaximumApproved);
+			ensure!(num < T::MaximumCharged::get(), Error::<T>::ExceedMaximumCharged);
 
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
@@ -583,16 +583,16 @@ pub mod pallet {
 				T::MultiCurrency::transfer(*token, &investor, &pool.keeper, reward.total)?;
 			}
 
-			ApprovedPoolIds::<T>::mutate(|pids| pids.insert(pid));
+			ChargedPoolIds::<T>::mutate(|pids| pids.insert(pid));
 
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
 			let pool_approved =
-				PoolInfo { state: PoolState::Approved, investor: Some(investor.clone()), ..pool };
+				PoolInfo { state: PoolState::Charged, investor: Some(investor.clone()), ..pool };
 			TotalPoolInfos::<T>::insert(pid, pool_approved);
 
-			Self::deposit_event(Event::PoolApproved(pid, r#type, trading_pair, investor));
+			Self::deposit_event(Event::PoolCharged(pid, r#type, trading_pair, investor));
 
 			Ok(().into())
 		}
@@ -624,7 +624,7 @@ pub mod pallet {
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire();
 
 			ensure!(
-				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
+				pool.state == PoolState::Charged || pool.state == PoolState::Ongoing,
 				Error::<T>::InvalidPoolState
 			);
 
@@ -655,7 +655,7 @@ pub mod pallet {
 		///
 		/// The conditions to deposit:
 		/// - User should deposit enough(greater than `T::MinimumDeposit`) token to liquidity-pool;
-		/// - The liquidity-pool should be in special state: `Approved`, `Ongoing`;
+		/// - The liquidity-pool should be in special state: `Charged`, `Ongoing`;
 		#[transactional]
 		#[pallet::weight(1_000)]
 		pub fn deposit(
@@ -669,7 +669,7 @@ pub mod pallet {
 				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire().try_update();
 
 			ensure!(
-				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
+				pool.state == PoolState::Charged || pool.state == PoolState::Ongoing,
 				Error::<T>::InvalidPoolState
 			);
 
@@ -1030,7 +1030,7 @@ pub mod pallet {
 					pool = pool.try_startup(n);
 
 					if pool.state == PoolState::Ongoing {
-						ApprovedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
+						ChargedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
 						TotalPoolInfos::<T>::insert(pid, pool);
 					}
 				}

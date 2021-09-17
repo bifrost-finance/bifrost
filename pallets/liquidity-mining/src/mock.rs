@@ -176,7 +176,7 @@ impl lm::Config for T {
 	type MinimumDepositOfUser = MinimumDeposit;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
-	type MaximumApproved = MaximumApproved;
+	type MaximumCharged = MaximumApproved;
 }
 
 pub(crate) fn new_test_ext() -> TestExternalities {
