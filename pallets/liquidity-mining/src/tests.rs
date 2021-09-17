@@ -312,7 +312,7 @@ fn approve_pool_should_work() {
 		));
 
 		let pool = LM::pool(0).unwrap();
-		assert_eq!(pool.state, PoolState::UnderAudit);
+		assert_eq!(pool.state, PoolState::UnCharged);
 
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::approve_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
@@ -428,7 +428,7 @@ fn kill_pool_should_work() {
 		));
 
 		let pool = LM::pool(0).unwrap();
-		assert_eq!(pool.state, PoolState::UnderAudit);
+		assert_eq!(pool.state, PoolState::UnCharged);
 
 		let per_block = REWARD_AMOUNT / DAYS as Balance;
 		let reserved = per_block * DAYS as Balance;
