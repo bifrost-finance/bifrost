@@ -54,6 +54,8 @@ pub fn bifrost_genesis(
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
+	council: Vec<AccountId>,
+	technical_committee: Vec<AccountId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -63,9 +65,9 @@ pub fn bifrost_genesis(
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: DemocracyConfig::default(),
-		council: CouncilConfig { members: vec![], phantom: Default::default() },
+		council: CouncilConfig { members: council, phantom: Default::default() },
 		technical_committee: TechnicalCommitteeConfig {
-			members: vec![],
+			members: technical_committee,
 			phantom: Default::default(),
 		},
 		council_membership: Default::default(),
@@ -121,6 +123,9 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		})
 		.collect();
 
+	let council = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+
 	bifrost_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -130,6 +135,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
+		council,
+		technical_committee,
 	)
 }
 
@@ -187,6 +194,9 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		})
 		.collect();
 
+	let council = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+
 	bifrost_genesis(
 		vec![
 			(
@@ -199,6 +209,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
+		council,
+		technical_committee,
 	)
 }
 
@@ -304,7 +316,9 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
-		vec![],
+		vec![], // tokens
+		vec![], // council
+		vec![], // technical committee
 	)
 }
 
