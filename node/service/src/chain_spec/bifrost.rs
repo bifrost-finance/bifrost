@@ -24,7 +24,7 @@ use std::{
 use bifrost_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig,
-	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
+	SessionConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
 	WASM_BINARY,
 };
 use bifrost_runtime_common::constants::currency::DOLLARS;
