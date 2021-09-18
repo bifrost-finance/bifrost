@@ -844,6 +844,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
+			&CurrencyId::Token(TokenSymbol::ZLK) => MICROBNC,
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,

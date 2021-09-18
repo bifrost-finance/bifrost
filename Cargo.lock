@@ -1003,7 +1003,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
- "substrate-fixed",
 ]
 
 [[package]]
@@ -10957,15 +10956,6 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
 dependencies = [
  "platforms",
-]
-
-[[package]]
-name = "substrate-fixed"
-version = "0.5.6"
-source = "git+https://github.com/encointer/substrate-fixed#b33d186888c60f38adafcfc0ec3a21aab263aef1"
-dependencies = [
- "parity-scale-codec",
- "typenum",
 ]
 
 [[package]]
