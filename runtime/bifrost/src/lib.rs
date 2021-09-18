@@ -1044,7 +1044,7 @@ parameter_types! {
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = DAYS;
-	pub const MaximumCharged: u32 = 8;
+	pub const MaximumCharged: u32 = 32;
 }
 
 impl bifrost_liquidity_mining::Config for Runtime {
