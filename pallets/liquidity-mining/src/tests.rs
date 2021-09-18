@@ -138,8 +138,8 @@ fn increase_pid_when_create_pool_should_work() {
 			assert_ok!(LM::create_pool(
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-				(REWARD_1, REWARD_AMOUNT / NUM),
-				vec![(REWARD_2, REWARD_AMOUNT / NUM)],
+				(REWARD_1, REWARD_AMOUNT / NUM as Balance),
+				vec![(REWARD_2, REWARD_AMOUNT / NUM as Balance)],
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -396,7 +396,7 @@ fn charge_with_wrong_state_should_fail() {
 #[test]
 fn charge_exceed_maximum_should_fail() {
 	new_test_ext().execute_with(|| {
-		for i in 0..MaximumApproved::get() as u128 {
+		for i in 0..MaximumApproved::get() {
 			assert_ok!(LM::create_pool(
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
@@ -425,11 +425,11 @@ fn charge_exceed_maximum_should_fail() {
 		));
 
 		assert_noop!(
-			LM::charge(Some(INVESTOR).into(), MaximumApproved::get() as u128,),
+			LM::charge(Some(INVESTOR).into(), MaximumApproved::get()),
 			Error::<T>::ExceedMaximumCharged
 		);
 
-		assert!(!LM::charged_pids().contains(&(MaximumApproved::get() as u128)));
+		assert!(!LM::charged_pids().contains(&(MaximumApproved::get())));
 	});
 }
 
