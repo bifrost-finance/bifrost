@@ -29,7 +29,6 @@ use frame_support::{
 		cmp::{max, min},
 		collections::{btree_map::BTreeMap, btree_set::BTreeSet},
 		convert::TryFrom,
-		vec::Vec,
 	},
 	traits::EnsureOrigin,
 	transactional, PalletId,
@@ -357,6 +356,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumCharged: Get<u32>;
 
+		/// The number of option rewards should be less than the value
+		#[pallet::constant]
+		type MaximumOptionRewards: Get<u32>;
+
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -471,7 +474,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -506,7 +509,7 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -535,7 +538,7 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -911,7 +914,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			r#type: PoolType,
 			duration: BlockNumberFor<T>,
 			min_deposit_to_start: BalanceOf<T>,
