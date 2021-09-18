@@ -306,7 +306,7 @@ fn create_pool_with_duplicate_reward_should_fail() {
 }
 
 #[test]
-fn charge_pool_should_work() {
+fn charge_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
@@ -352,7 +352,7 @@ fn charge_pool_should_work() {
 }
 
 #[test]
-fn charge_pool_with_wrong_origin_should_fail() {
+fn charge_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
@@ -373,6 +373,7 @@ fn charge_pool_with_wrong_origin_should_fail() {
 		assert_noop!(LM::charge(Origin::none(), 0), DispatchError::BadOrigin);
 	});
 }
+
 #[test]
 fn charge_with_wrong_state_should_fail() {
 	new_test_ext().execute_with(|| {
@@ -429,6 +430,29 @@ fn charge_exceed_maximum_should_fail() {
 		);
 
 		assert!(!LM::charged_pids().contains(&(MaximumApproved::get() as u128)));
+	});
+}
+
+#[test]
+fn charge_without_enough_balance_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)],
+			PoolType::Farming,
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		let pool = LM::pool(0).unwrap();
+		assert_eq!(pool.state, PoolState::UnCharged);
+		assert!(pool.investor.is_none());
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_noop!(LM::charge(Some(BEGGAR).into(), 0), orml_tokens::Error::<T>::BalanceTooLow);
 	});
 }
 

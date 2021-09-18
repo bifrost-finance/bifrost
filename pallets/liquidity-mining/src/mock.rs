@@ -233,3 +233,4 @@ pub(crate) const TC_MEMBER_1: AccountId = AccountId::new([3u8; 32]);
 pub(crate) const TC_MEMBER_2: AccountId = AccountId::new([4u8; 32]);
 pub(crate) const TC_MEMBER_3: AccountId = AccountId::new([5u8; 32]);
 pub(crate) const RICHER: AccountId = AccountId::new([6u8; 32]);
+pub(crate) const BEGGAR: AccountId = AccountId::new([7u8; 32]);
