@@ -332,7 +332,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Origin for anyone able to create/approve/kill the liquidity-pool.
+		/// Origin for anyone able to create/kill/force_retire the liquidity-pool.
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -359,7 +359,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinimumDuration: Get<BlockNumberFor<Self>>;
 
-		/// The number of liquidity-pool approved should be less than the value
+		/// The number of liquidity-pool charged should be less than the value
 		#[pallet::constant]
 		type MaximumCharged: Get<u32>;
 
@@ -381,7 +381,7 @@ pub mod pallet {
 		DuplicateReward,
 		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
 		ExceedMaximumDeposit,
-		/// When the number of pool-approved exceeds the `MaximumCharged`
+		/// When the number of pool-charged exceeds the `MaximumCharged`
 		ExceedMaximumCharged,
 		/// Not enough balance to deposit
 		NotEnoughToDeposit,
@@ -408,7 +408,7 @@ pub mod pallet {
 		///
 		/// [pool_id, pool_type, trading_pair, keeper]
 		PoolCreated(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
-		/// The liquidity-pool has been approved
+		/// The liquidity-pool has been charged
 		///
 		/// [pool_id, pool_type, trading_pair, investor]
 		PoolCharged(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
@@ -449,7 +449,7 @@ pub mod pallet {
 	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn approved_pids)]
+	#[pallet::getter(fn charged_pids)]
 	pub(crate) type ChargedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
 
 	#[pallet::storage]
@@ -567,7 +567,7 @@ pub mod pallet {
 		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let investor = ensure_signed(origin)?;
 
-			let num = Self::approved_pids().len() as u32;
+			let num = Self::charged_pids().len() as u32;
 			ensure!(num < T::MaximumCharged::get(), Error::<T>::ExceedMaximumCharged);
 
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
@@ -588,9 +588,9 @@ pub mod pallet {
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			let pool_approved =
+			let pool_charged =
 				PoolInfo { state: PoolState::Charged, investor: Some(investor.clone()), ..pool };
-			TotalPoolInfos::<T>::insert(pid, pool_approved);
+			TotalPoolInfos::<T>::insert(pid, pool_charged);
 
 			Self::deposit_event(Event::PoolCharged(pid, r#type, trading_pair, investor));
 
@@ -1025,7 +1025,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(n: BlockNumberFor<T>) {
 			// Check whether pool-activated is meet the startup condition
-			for pid in Self::approved_pids() {
+			for pid in Self::charged_pids() {
 				if let Some(mut pool) = Self::pool(pid) {
 					pool = pool.try_startup(n);
 
