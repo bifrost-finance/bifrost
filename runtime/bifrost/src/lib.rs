@@ -203,7 +203,11 @@ parameter_types! {
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
+	vec![
+		TreasuryPalletId::get().into_account(),
+		BifrostCrowdloanId::get().into_account(),
+		LiquidityMiningPalletId::get().into_account(),
+	]
 }
 
 impl frame_system::Config for Runtime {
