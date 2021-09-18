@@ -25,7 +25,6 @@ use sp_core::u32_trait::{_1, _2};
 use sp_runtime::{FixedPointNumber, Perquintill};
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 
-pub mod constants;
 pub mod xcm_impl;
 
 pub struct RelaychainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);

@@ -22,12 +22,12 @@ use std::{
 };
 
 use bifrost_runtime::{
+	constants::{currency::DOLLARS, time::DAYS},
 	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig,
 	SessionConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
 	WASM_BINARY,
 };
-use bifrost_runtime_common::constants::currency::DOLLARS;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
