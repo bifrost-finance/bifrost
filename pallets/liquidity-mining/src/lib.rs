@@ -22,7 +22,7 @@
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{SaturatedConversion, Saturating, Zero},
+		traits::{AccountIdConversion, SaturatedConversion, Saturating, Zero},
 		FixedPointNumber, FixedU128,
 	},
 	sp_std::{
@@ -31,7 +31,8 @@ use frame_support::{
 		convert::TryFrom,
 		vec::Vec,
 	},
-	traits::{BalanceStatus, EnsureOrigin},
+	traits::EnsureOrigin,
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
@@ -49,8 +50,10 @@ const DEPOSIT_ID: LockIdentifier = *b"deposit ";
 pub struct PoolInfo<T: Config> {
 	/// Id of the liquidity-pool
 	pool_id: PoolId,
-	/// The creator of the liquidity-pool
-	creator: AccountIdOf<T>,
+	/// The keeper of the liquidity-pool
+	keeper: AccountIdOf<T>,
+	/// The man who charges the rewards to the pool
+	investor: Option<AccountIdOf<T>>,
 	/// The trading-pair supported by the liquidity-pool
 	trading_pair: (CurrencyId, CurrencyId),
 	/// The length of time the liquidity-pool releases rewards
@@ -104,11 +107,11 @@ impl<T: Config> PoolInfo<T> {
 		self
 	}
 
-	/// Trying to change the state from `PoolState::Approved` to `PoolState::Ongoing`
+	/// Trying to change the state from `PoolState::Charged` to `PoolState::Ongoing`
 	///
 	/// __NOTE__: Only called in the `Hook`
 	pub(crate) fn try_startup(mut self, n: BlockNumberFor<T>) -> Self {
-		if self.state == PoolState::Approved {
+		if self.state == PoolState::Charged {
 			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
 				self.block_startup = Some(n);
 				self.state = PoolState::Ongoing;
@@ -179,15 +182,11 @@ impl<T: Config> PoolInfo<T> {
 		}
 
 		for (rtoken, amount) in to_rewards.iter() {
-			let remain = T::MultiCurrency::repatriate_reserved(
-				*rtoken,
-				&self.creator,
-				&user,
-				*amount,
-				BalanceStatus::Free,
-			)?;
+			T::MultiCurrency::ensure_can_withdraw(*rtoken, &self.keeper, *amount)?;
+		}
 
-			ensure!(remain == Zero::zero(), Error::<T>::Unexpected);
+		for (rtoken, amount) in to_rewards.iter() {
+			T::MultiCurrency::transfer(*rtoken, &self.keeper, &user, *amount)?;
 		}
 
 		Pallet::<T>::deposit_event(Event::UserClaimed(
@@ -211,8 +210,8 @@ pub enum PoolType {
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum PoolState {
-	UnderAudit,
-	Approved,
+	UnCharged,
+	Charged,
 	Ongoing,
 	Retired,
 	Dead,
@@ -333,7 +332,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-		/// Origin for anyone able to create/approve/kill the liquidity-pool.
+		/// Origin for anyone able to create/kill/force_retire the liquidity-pool.
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
@@ -360,9 +359,13 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinimumDuration: Get<BlockNumberFor<Self>>;
 
-		/// The number of liquidity-pool approved should be less than the value
+		/// The number of liquidity-pool charged should be less than the value
 		#[pallet::constant]
-		type MaximumApproved: Get<u32>;
+		type MaximumCharged: Get<u32>;
+
+		/// ModuleID for creating sub account
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::error]
@@ -373,14 +376,13 @@ pub mod pallet {
 		InvalidDepositLimit,
 		InvalidPoolId,
 		InvalidPoolState,
-		InvalidPoolOwner,
-		InvalidPooltype,
+		InvalidPoolType,
 		/// Find duplicate reward when creating the liquidity-pool
 		DuplicateReward,
 		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
 		ExceedMaximumDeposit,
-		/// When the number of pool-approved exceeds the `MaximumApproved`
-		ExceedMaximumApproved,
+		/// When the number of pool-charged exceeds the `MaximumCharged`
+		ExceedMaximumCharged,
 		/// Not enough balance to deposit
 		NotEnoughToDeposit,
 		/// Not enough balance of reward to unreserve
@@ -393,6 +395,8 @@ pub mod pallet {
 		TooLowDepositInPoolToRedeem,
 		/// The interval between two claims is short
 		TooShortBetweenTwoClaim,
+		/// The pool has been charged
+		PoolChargedAlready,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
 	}
@@ -402,12 +406,12 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// The liquidity-pool has been created
 		///
-		/// [pool_id, pool_type, trading_pair, creator]
+		/// [pool_id, pool_type, trading_pair, keeper]
 		PoolCreated(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
-		/// The liquidity-pool has been approved
+		/// The liquidity-pool has been charged
 		///
-		/// [pool_id, pool_type, trading_pair]
-		PoolApproved(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		/// [pool_id, pool_type, trading_pair, investor]
+		PoolCharged(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
 		/// The liquidity-pool has been started up
 		///
 		/// [pool_id, pool_type, trading_pair]
@@ -445,8 +449,8 @@ pub mod pallet {
 	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn approved_pids)]
-	pub(crate) type ApprovedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
+	#[pallet::getter(fn charged_pids)]
+	pub(crate) type ChargedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool)]
@@ -560,44 +564,46 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn approve_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
-			let _ = T::ControlOrigin::ensure_origin(origin)?;
+		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+			let investor = ensure_signed(origin)?;
 
-			let num = Self::approved_pids().len() as u32;
-			ensure!(num < T::MaximumApproved::get(), Error::<T>::ExceedMaximumApproved);
+			let num = Self::charged_pids().len() as u32;
+			ensure!(num < T::MaximumCharged::get(), Error::<T>::ExceedMaximumCharged);
 
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
-			ensure!(pool.state == PoolState::UnderAudit, Error::<T>::InvalidPoolState);
+			ensure!(pool.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
+			ensure!(pool.investor.is_none(), Error::<T>::PoolChargedAlready);
 
-			ApprovedPoolIds::<T>::mutate(|pids| pids.insert(pid));
+			for (token, reward) in pool.rewards.iter() {
+				T::MultiCurrency::ensure_can_withdraw(*token, &investor, reward.total)?;
+			}
+
+			for (token, reward) in pool.rewards.iter() {
+				T::MultiCurrency::transfer(*token, &investor, &pool.keeper, reward.total)?;
+			}
+
+			ChargedPoolIds::<T>::mutate(|pids| pids.insert(pid));
 
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			let pool_approved = PoolInfo { state: PoolState::Approved, ..pool };
-			TotalPoolInfos::<T>::insert(pid, pool_approved);
+			let pool_charged =
+				PoolInfo { state: PoolState::Charged, investor: Some(investor.clone()), ..pool };
+			TotalPoolInfos::<T>::insert(pid, pool_charged);
 
-			Self::deposit_event(Event::PoolApproved(pid, r#type, trading_pair));
+			Self::deposit_event(Event::PoolCharged(pid, r#type, trading_pair, investor));
 
 			Ok(().into())
 		}
 
 		#[pallet::weight(1_000)]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
-			let signed = ensure_signed(origin)?;
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?;
 
-			ensure!(signed == pool.creator, Error::<T>::InvalidPoolOwner);
-
-			ensure!(pool.state == PoolState::UnderAudit, Error::<T>::InvalidPoolState);
-
-			for (token, reward) in pool.rewards.iter() {
-				let total = reward.total;
-				let remain = T::MultiCurrency::unreserve(*token, &signed, total);
-				ensure!(remain == Zero::zero(), Error::<T>::FailOnUnReserve);
-			}
+			ensure!(pool.state == PoolState::UnCharged, Error::<T>::InvalidPoolState);
 
 			let pool_killed = PoolInfo { state: PoolState::Dead, ..pool };
 			TotalPoolInfos::<T>::remove(pid);
@@ -618,7 +624,7 @@ pub mod pallet {
 			let pool: PoolInfo<T> = Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire();
 
 			ensure!(
-				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
+				pool.state == PoolState::Charged || pool.state == PoolState::Ongoing,
 				Error::<T>::InvalidPoolState
 			);
 
@@ -649,7 +655,8 @@ pub mod pallet {
 		///
 		/// The conditions to deposit:
 		/// - User should deposit enough(greater than `T::MinimumDeposit`) token to liquidity-pool;
-		/// - The liquidity-pool should be in special state: `Approved`, `Ongoing`;
+		/// - The liquidity-pool should be in special state: `Charged`, `Ongoing`;
+		#[transactional]
 		#[pallet::weight(1_000)]
 		pub fn deposit(
 			origin: OriginFor<T>,
@@ -662,7 +669,7 @@ pub mod pallet {
 				Self::pool(pid).ok_or(Error::<T>::InvalidPoolId)?.try_retire().try_update();
 
 			ensure!(
-				pool.state == PoolState::Approved || pool.state == PoolState::Ongoing,
+				pool.state == PoolState::Charged || pool.state == PoolState::Ongoing,
 				Error::<T>::InvalidPoolState
 			);
 
@@ -746,7 +753,7 @@ pub mod pallet {
 		/// The extrinsic will:
 		/// - Try to retire the liquidity-pool which has reached the end of life.
 		/// - Try to settle the rewards when the liquidity-pool in `Ongoing`.
-		/// - Try to unreserve the remaining rewards to the pool creator when the deposit in the
+		/// - Try to unreserve the remaining rewards to the pool investor when the deposit in the
 		///   liquidity-pool is clear.
 		/// - Try to delete the liquidity-pool in which the deposit becomes zero.
 		/// - Try to delete the deposit-data in which the deposit becomes zero.
@@ -754,6 +761,7 @@ pub mod pallet {
 		/// The condition to redeem:
 		/// - User should have some deposit in the liquidity-pool;
 		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
+		#[transactional]
 		#[pallet::weight(1_000)]
 		pub fn redeem(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
@@ -816,12 +824,10 @@ pub mod pallet {
 			pool.deposit = left_in_pool;
 
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
+				let investor = pool.investor.clone().ok_or(Error::<T>::Unexpected)?;
 				for (rtoken, reward) in pool.rewards.iter() {
 					let remain = reward.total - reward.claimed;
-					ensure!(
-						T::MultiCurrency::unreserve(*rtoken, &pool.creator, remain) == Zero::zero(),
-						Error::<T>::Unexpected
-					);
+					T::MultiCurrency::transfer(*rtoken, &pool.keeper, &investor, remain)?;
 				}
 
 				pool.state = PoolState::Dead;
@@ -848,6 +854,7 @@ pub mod pallet {
 		/// Help someone to redeem the deposit whose deposited in a liquidity-pool.
 		///
 		/// NOTE: The liquidity-pool should be in retired state.
+		#[transactional]
 		#[pallet::weight(1_000)]
 		pub fn volunteer_to_redeem(
 			_origin: OriginFor<T>,
@@ -882,6 +889,7 @@ pub mod pallet {
 		/// The conditions to claim:
 		/// - User should have enough token deposited in the liquidity-pool;
 		/// - The liquidity-pool should be in special states: `Ongoing`;
+		#[transactional]
 		#[pallet::weight(1_000)]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
@@ -915,7 +923,7 @@ pub mod pallet {
 			min_deposit_to_start: BalanceOf<T>,
 			after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResult {
-			let creator = ensure_signed(origin)?;
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			// Check the trading-pair
 			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
@@ -945,16 +953,13 @@ pub mod pallet {
 				rewards.insert(token, reward);
 			}
 
-			// Reserve rewards
-			for (token, reward) in rewards.iter() {
-				T::MultiCurrency::reserve(*token, &creator, reward.total)?;
-			}
-
 			// Construct the PoolInfo
 			let pool_id = Self::next_pool_id();
+			let keeper: AccountIdOf<T> = T::PalletId::get().into_sub_account(pool_id);
 			let mining_pool = PoolInfo {
 				pool_id,
-				creator: creator.clone(),
+				keeper: keeper.clone(),
+				investor: None,
 				trading_pair,
 				duration,
 				r#type,
@@ -966,14 +971,14 @@ pub mod pallet {
 
 				rewards,
 				update_b: Zero::zero(),
-				state: PoolState::UnderAudit,
+				state: PoolState::UnCharged,
 				block_startup: None,
 				block_retired: None,
 			};
 
 			TotalPoolInfos::<T>::insert(pool_id, mining_pool);
 
-			Self::deposit_event(Event::PoolCreated(pool_id, r#type, trading_pair, creator));
+			Self::deposit_event(Event::PoolCreated(pool_id, r#type, trading_pair, keeper));
 
 			Ok(().into())
 		}
@@ -1020,12 +1025,12 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_finalize(n: BlockNumberFor<T>) {
 			// Check whether pool-activated is meet the startup condition
-			for pid in Self::approved_pids() {
+			for pid in Self::charged_pids() {
 				if let Some(mut pool) = Self::pool(pid) {
 					pool = pool.try_startup(n);
 
 					if pool.state == PoolState::Ongoing {
-						ApprovedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
+						ChargedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
 						TotalPoolInfos::<T>::insert(pid, pool);
 					}
 				}

@@ -24,6 +24,7 @@ use frame_support::{
 		traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 		BuildStorage, MultiSignature,
 	},
+	PalletId,
 };
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -165,6 +166,7 @@ parameter_types! {
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = MINUTES;
 	pub const MaximumApproved: u32 = 4;
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
 }
 
 impl lm::Config for T {
@@ -176,15 +178,16 @@ impl lm::Config for T {
 	type MinimumDepositOfUser = MinimumDeposit;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
-	type MaximumApproved = MaximumApproved;
+	type MaximumCharged = MaximumApproved;
+	type PalletId = LiquidityMiningPalletId;
 }
 
 pub(crate) fn new_test_ext() -> TestExternalities {
 	GenesisConfig {
 		tokens: orml_tokens::GenesisConfig::<T> {
 			balances: vec![
-				(CREATOR, REWARD_1, REWARD_AMOUNT),
-				(CREATOR, REWARD_2, REWARD_AMOUNT),
+				(INVESTOR, REWARD_1, REWARD_AMOUNT),
+				(INVESTOR, REWARD_2, REWARD_AMOUNT),
 				(USER_1, FARMING_DEPOSIT_1, DEPOSIT_AMOUNT),
 				(USER_1, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
 				(USER_2, FARMING_DEPOSIT_1, DEPOSIT_AMOUNT),
@@ -223,10 +226,11 @@ pub(crate) const REWARD_1: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub(crate) const REWARD_2: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 pub(crate) const REWARD_AMOUNT: Balance = UNIT;
 
-pub(crate) const CREATOR: AccountId = AccountId::new([0u8; 32]);
+pub(crate) const INVESTOR: AccountId = AccountId::new([0u8; 32]);
 pub(crate) const USER_1: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const USER_2: AccountId = AccountId::new([2u8; 32]);
 pub(crate) const TC_MEMBER_1: AccountId = AccountId::new([3u8; 32]);
 pub(crate) const TC_MEMBER_2: AccountId = AccountId::new([4u8; 32]);
 pub(crate) const TC_MEMBER_3: AccountId = AccountId::new([5u8; 32]);
 pub(crate) const RICHER: AccountId = AccountId::new([6u8; 32]);
+pub(crate) const BEGGAR: AccountId = AccountId::new([7u8; 32]);
