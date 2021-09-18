@@ -1049,6 +1049,7 @@ parameter_types! {
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = HOURS;
+	pub const MaximumOptionRewards: u32 = 7;
 	pub const MaximumCharged: u32 = 32;
 }
 
@@ -1063,6 +1064,7 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
 	type MaximumCharged = MaximumCharged;
+	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
 }
 
