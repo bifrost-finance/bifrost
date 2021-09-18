@@ -189,9 +189,9 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 
-zenlink-protocol = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module", branch = "polkadot-v0.9.9" }
-zenlink-protocol-rpc = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module", branch = "polkadot-v0.9.9" }
-zenlink-protocol-runtime-api = { git = "ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module", branch = "polkadot-v0.9.9" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "bifrost" }
+zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "bifrost" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", branch = "bifrost" }
 
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8d5432c3458702a7df14b374bddde43a2a20aa43" }
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "8d5432c3458702a7df14b374bddde43a2a20aa43" }
