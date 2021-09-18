@@ -199,6 +199,7 @@ parameter_types! {
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
@@ -1037,6 +1038,29 @@ impl bifrost_salp::Config for Runtime {
 	type TransactType = SalpTransactType;
 }
 
+parameter_types! {
+	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
+	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub const MinimumDepositOfUser: Balance = 1_000_000;
+	pub const MinimumRewardPerBlock: Balance = 1_000;
+	pub const MinimumDuration: BlockNumber = DAYS;
+	pub const MaximumCharged: u32 = 32;
+}
+
+impl bifrost_liquidity_mining::Config for Runtime {
+	type Event = Event;
+	type ControlOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbol;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumCharged = MaximumCharged;
+	type PalletId = LiquidityMiningPalletId;
+}
+
 // Bifrost modules end
 
 construct_runtime! {
@@ -1100,6 +1124,7 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 	}
 }
 
