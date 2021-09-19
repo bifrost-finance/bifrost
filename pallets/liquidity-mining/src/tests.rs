@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::convert::TryInto;
+
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
@@ -46,7 +48,7 @@ fn create_farming_pool_should_work() {
 			13,
 			20,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
 			0
@@ -73,7 +75,7 @@ fn create_mining_pool_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
 			0
@@ -104,7 +106,7 @@ fn create_mining_pool_with_wrong_currency_should_fail() {
 					CurrencyId::VSToken(RelayChainTokenSymbol::get()),
 				),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				DAYS,
 				1_000 * UNIT,
 				0,
@@ -120,7 +122,7 @@ fn create_mining_pool_with_wrong_currency_should_fail() {
 					CurrencyId::VSToken(RelayChainTokenSymbol::get()),
 				),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				DAYS,
 				1_000 * UNIT,
 				0,
@@ -138,8 +140,8 @@ fn increase_pid_when_create_pool_should_work() {
 			assert_ok!(LM::create_pool(
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-				(REWARD_1, REWARD_AMOUNT / NUM),
-				vec![(REWARD_2, REWARD_AMOUNT / NUM)],
+				(REWARD_1, REWARD_AMOUNT / NUM as Balance),
+				vec![(REWARD_2, REWARD_AMOUNT / NUM as Balance)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -159,7 +161,7 @@ fn create_pool_with_wrong_origin_should_fail() {
 				Origin::root(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -173,7 +175,7 @@ fn create_pool_with_wrong_origin_should_fail() {
 				Origin::none(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -187,7 +189,7 @@ fn create_pool_with_wrong_origin_should_fail() {
 				Some(INVESTOR).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -206,7 +208,7 @@ fn create_pool_with_duplicate_trading_pair_should_fail() {
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_1),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -225,7 +227,7 @@ fn create_pool_with_too_small_duration_should_fail() {
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				MinimumDuration::get() - 1,
 				1_000 * UNIT,
@@ -244,7 +246,7 @@ fn create_pool_with_wrong_condition_should_fail() {
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				MinimumDeposit::get() - 1,
@@ -258,7 +260,7 @@ fn create_pool_with_wrong_condition_should_fail() {
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				DAYS,
 				MaximumDepositInPool::get() + 1,
@@ -277,7 +279,7 @@ fn create_pool_with_too_small_per_block_should_fail() {
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)],
+				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				PoolType::Farming,
 				(REWARD_AMOUNT + 1) as BlockNumber,
 				1_000 * UNIT,
@@ -295,7 +297,7 @@ fn create_pool_with_duplicate_reward_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_1, REWARD_AMOUNT)],
+			vec![(REWARD_1, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -312,7 +314,7 @@ fn charge_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -358,7 +360,7 @@ fn charge_with_wrong_origin_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -381,7 +383,7 @@ fn charge_with_wrong_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -396,12 +398,14 @@ fn charge_with_wrong_state_should_fail() {
 #[test]
 fn charge_exceed_maximum_should_fail() {
 	new_test_ext().execute_with(|| {
-		for i in 0..MaximumApproved::get() as u128 {
+		for i in 0..MaximumApproved::get() {
 			assert_ok!(LM::create_pool(
 				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128),
-				vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)],
+				vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)]
+					.try_into()
+					.unwrap(),
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
@@ -417,7 +421,9 @@ fn charge_exceed_maximum_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128),
-			vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)],
+			vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)]
+				.try_into()
+				.unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -425,11 +431,11 @@ fn charge_exceed_maximum_should_fail() {
 		));
 
 		assert_noop!(
-			LM::charge(Some(INVESTOR).into(), MaximumApproved::get() as u128,),
+			LM::charge(Some(INVESTOR).into(), MaximumApproved::get()),
 			Error::<T>::ExceedMaximumCharged
 		);
 
-		assert!(!LM::charged_pids().contains(&(MaximumApproved::get() as u128)));
+		assert!(!LM::charged_pids().contains(&(MaximumApproved::get())));
 	});
 }
 
@@ -440,7 +446,7 @@ fn charge_without_enough_balance_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -463,7 +469,7 @@ fn kill_pool_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -486,7 +492,7 @@ fn kill_pool_with_wrong_origin_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -506,7 +512,7 @@ fn kill_pool_with_wrong_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
@@ -529,7 +535,7 @@ fn deposit_to_mining_pool_charged_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
 			0
@@ -563,7 +569,7 @@ fn deposit_to_farming_pool_charged_should_work() {
 			13,
 			20,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
 			0
@@ -600,7 +606,7 @@ fn startup_pool_meet_conditions_should_auto_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -629,7 +635,7 @@ fn deposit_to_pool_ongoing_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -665,7 +671,7 @@ fn deposit_to_pool_ongoing_with_init_deposit_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -716,7 +722,7 @@ fn double_deposit_to_pool_ongoing_in_diff_block_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -770,7 +776,7 @@ fn double_deposit_to_pool_ongoing_in_same_block_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -816,7 +822,7 @@ fn deposit_with_wrong_pid_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -838,7 +844,7 @@ fn deposit_with_wrong_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -866,7 +872,7 @@ fn deposit_too_little_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -891,7 +897,7 @@ fn deposit_with_wrong_origin_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -914,7 +920,7 @@ fn deposit_exceed_the_limit_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -938,7 +944,7 @@ fn redeem_from_pool_ongoing_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1001,7 +1007,7 @@ fn redeem_from_pool_retired_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1072,7 +1078,7 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1178,7 +1184,7 @@ fn redeem_with_wrong_pid_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1202,7 +1208,7 @@ fn redeem_with_wrong_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1225,7 +1231,7 @@ fn redeem_without_deposit_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1252,7 +1258,7 @@ fn redeem_all_deposit_from_pool_ongoing_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1281,7 +1287,7 @@ fn volunteer_to_redeem_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1337,7 +1343,7 @@ fn volunteer_to_redeem_with_wrong_pid_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1361,7 +1367,7 @@ fn volunteer_to_redeem_with_wrong_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1398,7 +1404,7 @@ fn claim_from_pool_ongoing_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1449,7 +1455,7 @@ fn claim_from_pool_retired_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1474,7 +1480,7 @@ fn claim_with_wrong_pid_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1499,7 +1505,7 @@ fn claim_with_wrong_origin_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1525,7 +1531,7 @@ fn claim_with_wrong_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1554,7 +1560,7 @@ fn claim_without_deposit_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1579,7 +1585,7 @@ fn double_claim_in_same_block_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1604,7 +1610,7 @@ fn force_retire_pool_charged_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1670,7 +1676,7 @@ fn force_retire_pool_charged_with_no_deposit_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1697,7 +1703,7 @@ fn force_retire_pool_ongoing_should_work() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1776,7 +1782,7 @@ fn force_retire_pool_with_wrong_origin_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1798,7 +1804,7 @@ fn force_retire_pool_with_wrong_pool_state_should_fail() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
@@ -1831,7 +1837,7 @@ fn create_eb_farming_pool_should_work() {
 			13,
 			20,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
 			0
@@ -1859,7 +1865,7 @@ fn deposit_to_eb_farming_should_work() {
 			13,
 			20,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -1910,7 +1916,7 @@ fn redeem_from_eb_farming_should_work() {
 			13,
 			20,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -1978,7 +1984,7 @@ fn claim_from_eb_farming_should_work() {
 			13,
 			20,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
 			0
@@ -2044,7 +2050,7 @@ fn simple_integration_test() {
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			MINING_TRADING_PAIR,
 			(REWARD_1, REWARD_AMOUNT),
-			vec![(REWARD_2, REWARD_AMOUNT)],
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
 			0
