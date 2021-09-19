@@ -203,7 +203,11 @@ parameter_types! {
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
+	vec![
+		TreasuryPalletId::get().into_account(),
+		BifrostCrowdloanId::get().into_account(),
+		LiquidityMiningPalletId::get().into_account(),
+	]
 }
 
 impl frame_system::Config for Runtime {
@@ -1044,14 +1048,15 @@ parameter_types! {
 	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
-	pub const MinimumDuration: BlockNumber = DAYS;
+	pub const MinimumDuration: BlockNumber = HOURS;
+	pub const MaximumOptionRewards: u32 = 7;
 	pub const MaximumCharged: u32 = 32;
 }
 
 impl bifrost_liquidity_mining::Config for Runtime {
 	type Event = Event;
 	type ControlOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
 	type MultiCurrency = Currencies;
 	type RelayChainTokenSymbol = RelayChainTokenSymbol;
 	type MaximumDepositInPool = MaximumDepositInPool;
@@ -1059,6 +1064,7 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
 	type MaximumCharged = MaximumCharged;
+	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
 }
 

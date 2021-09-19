@@ -44,7 +44,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-const DEPOSIT_ID: LockIdentifier = *b"deposit ";
+const DEPOSIT_ID: LockIdentifier = *b"lm/depos";
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct PoolInfo<T: Config> {
@@ -93,7 +93,7 @@ impl<T: Config> PoolInfo<T> {
 		if let Some(block_startup) = self.block_startup {
 			let block_retired = match self.block_retired {
 				Some(block_retired) => block_retired,
-				None => self.duration + block_startup,
+				None => self.duration.saturating_add(block_startup),
 			};
 			let n = min(frame_system::Pallet::<T>::block_number(), block_retired);
 
@@ -133,16 +133,10 @@ impl<T: Config> PoolInfo<T> {
 			let n = frame_system::Pallet::<T>::block_number();
 
 			if let Some(block_startup) = self.block_startup {
-				let block_retired = block_startup + self.duration;
+				let block_retired = block_startup.saturating_add(self.duration);
 				if n >= block_retired {
 					self.state = PoolState::Retired;
 					self.block_retired = Some(block_retired);
-
-					Pallet::<T>::deposit_event(Event::PoolRetired(
-						self.pool_id,
-						self.r#type,
-						self.trading_pair,
-					));
 				}
 			}
 		}
@@ -167,7 +161,7 @@ impl<T: Config> PoolInfo<T> {
 
 					let user_deposit: u128 = deposit_data.deposit.saturated_into();
 					let amount = BalanceOf::<T>::saturated_from(
-						(v_new - v_old).saturating_mul_int(user_deposit),
+						v_new.saturating_sub(v_old).saturating_mul_int(user_deposit),
 					);
 
 					// Update the claimed of the reward
@@ -263,7 +257,7 @@ impl<T: Config> RewardData<T> {
 			let duration: u128 = duration.saturated_into();
 
 			let per_block = total / duration;
-			let total = per_block * duration;
+			let total = per_block.saturating_mul(duration);
 
 			(BalanceOf::<T>::saturated_from(per_block), BalanceOf::<T>::saturated_from(total))
 		};
@@ -294,9 +288,9 @@ impl<T: Config> RewardData<T> {
 		let pbpd = self.per_block_per_deposited(deposit);
 
 		let b_prev = max(block_last_updated, block_startup);
-		let b_past: u128 = (n - b_prev).saturated_into();
+		let b_past: u128 = n.saturating_sub(b_prev).saturated_into();
 
-		let gain_avg_new = self.gain_avg + pbpd * b_past.into();
+		let gain_avg_new = self.gain_avg.saturating_add(pbpd.saturating_mul(b_past.into()));
 
 		self.gain_avg = gain_avg_new;
 	}
@@ -320,7 +314,7 @@ type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-type PoolId = u128;
+type PoolId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -362,6 +356,10 @@ pub mod pallet {
 		/// The number of liquidity-pool charged should be less than the value
 		#[pallet::constant]
 		type MaximumCharged: Get<u32>;
+
+		/// The number of option rewards should be less than the value
+		#[pallet::constant]
+		type MaximumOptionRewards: Get<u32>;
 
 		/// ModuleID for creating sub account
 		#[pallet::constant]
@@ -420,10 +418,10 @@ pub mod pallet {
 		///
 		/// [pool_id, pool_type, trading_pair]
 		PoolKilled(PoolId, PoolType, (CurrencyId, CurrencyId)),
-		/// The liquidity-pool has been retired
+		/// The liquidity-pool has been retired forcefully
 		///
 		/// [pool_id, pool_type, trading_pair]
-		PoolRetired(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		PoolRetiredForcefully(PoolId, PoolType, (CurrencyId, CurrencyId)),
 		/// User has deposited some trading-pair to a liquidity-pool
 		///
 		/// [pool_id, pool_type, trading_pair, amount_deposited, user]
@@ -446,7 +444,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool_id)]
-	pub(crate) type NextOrderId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
+	pub(crate) type NextPoolId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn charged_pids)]
@@ -477,7 +475,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -512,7 +510,7 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -541,7 +539,7 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
@@ -642,7 +640,7 @@ pub mod pallet {
 				TotalPoolInfos::<T>::insert(pid, pool_retired);
 			}
 
-			Self::deposit_event(Event::PoolRetired(pid, r#type, trading_pair));
+			Self::deposit_event(Event::PoolRetiredForcefully(pid, r#type, trading_pair));
 
 			Ok(().into())
 		}
@@ -789,9 +787,9 @@ pub mod pallet {
 			};
 
 			let try_redeemed = deposit_data.deposit;
-			let left_in_pool = max(pool.deposit - try_redeemed, minimum_in_pool);
-			let can_redeemed = pool.deposit - left_in_pool;
-			let left_in_user = deposit_data.deposit - can_redeemed;
+			let left_in_pool = max(pool.deposit.saturating_sub(try_redeemed), minimum_in_pool);
+			let can_redeemed = pool.deposit.saturating_sub(left_in_pool);
+			let left_in_user = deposit_data.deposit.saturating_sub(can_redeemed);
 
 			ensure!(can_redeemed != Zero::zero(), Error::<T>::TooLowDepositInPoolToRedeem);
 
@@ -826,7 +824,7 @@ pub mod pallet {
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
 				let investor = pool.investor.clone().ok_or(Error::<T>::Unexpected)?;
 				for (rtoken, reward) in pool.rewards.iter() {
-					let remain = reward.total - reward.claimed;
+					let remain = reward.total.saturating_sub(reward.claimed);
 					T::MultiCurrency::transfer(*rtoken, &pool.keeper, &investor, remain)?;
 				}
 
@@ -917,7 +915,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
-			option_rewards: Vec<(CurrencyId, BalanceOf<T>)>,
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
 			r#type: PoolType,
 			duration: BlockNumberFor<T>,
 			min_deposit_to_start: BalanceOf<T>,
@@ -985,7 +983,7 @@ pub mod pallet {
 
 		pub(crate) fn next_pool_id() -> PoolId {
 			let next_pool_id = Self::pool_id();
-			NextOrderId::<T>::mutate(|current| *current += 1);
+			NextPoolId::<T>::mutate(|current| *current = current.saturating_add(1));
 			next_pool_id
 		}
 
