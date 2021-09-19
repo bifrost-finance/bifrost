@@ -786,6 +786,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining",
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
