@@ -19,8 +19,8 @@
 pub use codec::Encode;
 pub use cumulus_pallet_dmp_queue;
 pub use cumulus_pallet_xcmp_queue;
-pub use cumulus_primitives_core::{self, ParaId};
-use frame_support::{sp_io, traits::GenesisBuild};
+pub use cumulus_primitives_core::{self, ParaId as cumulusParaId};
+use frame_support::{sp_io, sp_runtime::traits::AccountIdConversion, traits::GenesisBuild};
 pub use frame_support::{traits::Get, weights::Weight};
 pub use paste;
 pub use polkadot_runtime_parachains::{dmp, ump};
@@ -289,9 +289,15 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
-	pallet_balances::GenesisConfig::<Runtime> { balances: vec![(ALICE, INITIAL_BALANCE)] }
-		.assimilate_storage(&mut t)
-		.unwrap();
+	pallet_balances::GenesisConfig::<Runtime> {
+		balances: vec![
+			(ALICE, INITIAL_BALANCE),
+			(cumulusParaId::from(1).into_account(), 1000 * INITIAL_BALANCE),
+			(cumulusParaId::from(2).into_account(), 1000 * INITIAL_BALANCE),
+		],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));

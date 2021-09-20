@@ -130,7 +130,7 @@ mod tests {
 				Xcm::WithdrawAsset {
 					assets: vec![MultiAsset::ConcreteFungible {
 						id: MultiLocation::Null,
-						amount: 0
+						amount: 200 * INITIAL_BALANCE,
 					}],
 					effects: vec![Order::BuyExecution {
 						fees: MultiAsset::All,
