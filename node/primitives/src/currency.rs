@@ -266,6 +266,7 @@ create_currency_id! {
 		KSM("Kusama", 12) = 4,
 		ETH("Ethereum", 18) = 5,
 		KAR("Karura", 12) = 6,
+		ZLK("Zenlink Network Token", 18) = 7,
 	}
 }
 

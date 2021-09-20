@@ -127,9 +127,8 @@ docker-compose up -d --build
 ### Create `bifrost-fullnode` directory, generate `node-key` and get `bifrost.json`
 
 ```sh
-mkdir -p ~/bifrost-fullnode/network
-subkey generate-node-key --file ~/bifrost-fullnode/network/node-key
-wget -O ~/bifrost-fullnode/bifrost.json https://github.com/bifrost-finance/bifrost/releases/download/bifrost-v0.8.0/bifrost.json
+mkdir -p ~/node-key
+subkey generate-node-key --file ~/node-key/bifrost.key
 ```
 
 ### Start the node with docker
@@ -138,16 +137,16 @@ Replace your-fullnode-name
 ```sh
 docker pull bifrostnetwork/bifrost:v0.8.3
 docker run -d \
--v ~/bifrost-fullnode:/bifrost \
+-v ~/node-key:/node-key \
 -p 9944:9944 \
 -p 9933:9933 \
 -p 30333:30333 \
 -p 9615:9615 \
 bifrostnetwork/bifrost:v0.8.3 \
   --name your-fullnode-name \
-  --base-path "/bifrost" \
-  --node-key-file "/bifrost/network/node-key" \
-  --chain "/bifrost/bifrost.json" \
+  --base-path "/data" \
+  --node-key-file "/node-key/bifrost.key" \
+  --chain "/spec/bifrost.json" \
   --parachain-id 2001 \
   --pruning=archive \
   --prometheus-external \

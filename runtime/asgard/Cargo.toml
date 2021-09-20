@@ -179,6 +179,7 @@ std = [
 	"bifrost-salp-rpc-runtime-api/std",
 	"bifrost-vsbond-auction/std",
 	"bifrost-vtoken-mint/std",
+	"bifrost-liquidity-mining/std",
 	"xcm-support/std",
 	"orml-currencies/std",
 	"orml-traits/std",
