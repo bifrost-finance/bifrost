@@ -1115,6 +1115,8 @@ parameter_types! {
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = DAYS;
 	pub const MaximumApproved: u32 = 8;
+	pub const MaximumOptionRewards: u32 = 7;
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
 }
 
 impl bifrost_liquidity_mining::Config for Runtime {
@@ -1127,7 +1129,9 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MinimumDepositOfUser = MinimumDepositOfUser;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
 	type MinimumDuration = MinimumDuration;
-	type MaximumApproved = MaximumApproved;
+	type MaximumCharged = MaximumApproved;
+	type MaximumOptionRewards = MaximumOptionRewards;
+	type PalletId = LiquidityMiningPalletId;
 }
 
 // bifrost runtime end

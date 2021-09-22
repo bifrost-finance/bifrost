@@ -23,35 +23,39 @@ RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2021-06-17
 
 WORKDIR /app
 COPY . /app
-RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-RUN --mount=type=ssh export PATH="$PATH:$HOME/.cargo/bin" && \
+RUN export PATH="$PATH:$HOME/.cargo/bin" && \
 	make build-all-release
 
 # ===== SECOND STAGE ======
 
 FROM ubuntu:20.04
-WORKDIR /bifrost
 
 RUN rm -rf /usr/share  && \
   rm -rf /usr/lib/python* && \
   useradd -m -u 1000 -U -s /bin/sh -d /bifrost bifrost && \
-  mkdir -p /bifrost/.local/data && \
   chown -R bifrost:bifrost /bifrost && \
-  ln -s /bifrost/.local/data /data
+  mkdir -p /bifrost/.local/share && \
+  mkdir /data && \
+  chown -R bifrost:bifrost /data && \
+  ln -s /data /bifrost/.local/share/bifrost && \
+  mkdir /spec && \
+  chown -R bifrost:bifrost /spec && \
+  ln -s /spec /bifrost/.local/share/spec
 
+USER bifrost
 COPY --from=builder /app/target/release/bifrost /usr/local/bin
-COPY ./node/service/res/asgard.json /bifrost
-COPY ./node/service/res/bifrost.json /bifrost
+COPY ./node/service/res/asgard.json /spec
+COPY ./node/service/res/bifrost.json /spec
 
 # checks
 RUN ldd /usr/local/bin/bifrost && \
   /usr/local/bin/bifrost --version
 
-
 USER bifrost
 EXPOSE 30333 9933 9944
 
 VOLUME ["/data"]
+VOLUME ["/spec"]
 
 ENTRYPOINT ["/usr/local/bin/bifrost"]

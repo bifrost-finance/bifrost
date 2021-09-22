@@ -23,9 +23,9 @@ use std::{
 
 use bifrost_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
-	CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig,
-	VestingConfig, WASM_BINARY,
+	CollatorSelectionConfig, CouncilConfig, CouncilMembershipConfig, DemocracyConfig,
+	GenesisConfig, IndicesConfig, ParachainInfoConfig, SessionConfig, SystemConfig,
+	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
@@ -54,8 +54,8 @@ pub fn bifrost_genesis(
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
-	council: Vec<AccountId>,
-	technical_committee: Vec<AccountId>,
+	council_membership: Vec<AccountId>,
+	technical_committee_membership: Vec<AccountId>,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -65,13 +65,19 @@ pub fn bifrost_genesis(
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
 		democracy: DemocracyConfig::default(),
-		council: CouncilConfig { members: council, phantom: Default::default() },
-		technical_committee: TechnicalCommitteeConfig {
-			members: technical_committee,
+		council_membership: CouncilMembershipConfig {
+			members: council_membership,
 			phantom: Default::default(),
 		},
-		council_membership: Default::default(),
-		technical_membership: Default::default(),
+		technical_membership: TechnicalMembershipConfig {
+			members: technical_committee_membership,
+			phantom: Default::default(),
+		},
+		council: CouncilConfig { members: vec![], phantom: Default::default() },
+		technical_committee: TechnicalCommitteeConfig {
+			members: vec![],
+			phantom: Default::default(),
+		},
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
 		parachain_info: ParachainInfoConfig { parachain_id: id },
@@ -123,8 +129,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		})
 		.collect();
 
-	let council = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 
 	bifrost_genesis(
 		vec![(
@@ -135,8 +141,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
-		council,
-		technical_committee,
+		council_membership,
+		technical_committee_membership,
 	)
 }
 
@@ -194,8 +200,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		})
 		.collect();
 
-	let council = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
-	let technical_committee = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 
 	bifrost_genesis(
 		vec![
@@ -209,8 +215,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		vestings,
 		id,
 		tokens,
-		council,
-		technical_committee,
+		council_membership,
+		technical_committee_membership,
 	)
 }
 
@@ -317,8 +323,8 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
 		vec![], // tokens
-		vec![], // council
-		vec![], // technical committee
+		vec![], // council membership
+		vec![], // technical committee membership
 	)
 }
 

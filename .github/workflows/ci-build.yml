@@ -1,0 +1,45 @@
+name: ci-build
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    if: "!contains(github.event.commits[0].message, '[skip ci]')"
+    runs-on: self-hosted
+    steps:
+      - name: Check to latest commit
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2021-06-17
+          components: rustfmt
+          target: wasm32-unknown-unknown
+          default: true
+      - name: Check All
+        run: make check-all
+      - name: Test All
+        run: |
+          make test-all
+      - name: Inform buddies online
+        uses: 8398a7/action-slack@v3
+        if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+        with:
+          status: ${{ job.status }}
+          fields: repo,author,eventName,workflow,ref,commit
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PULLREQUEST_WEBHOOK_URL }}
