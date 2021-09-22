@@ -790,7 +790,7 @@ pub mod pallet {
 			ensure_signed(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Failed, Error::<T>::InvalidFundStatus);
+			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
 
 			let mut refund_count = 0u32;
 			let contributions = Self::contribution_iterator(fund.trie_index);
@@ -803,7 +803,7 @@ pub mod pallet {
 					all_refunded = false;
 					break;
 				}
-				if status != ContributionStatus::Refunded {
+				if status == ContributionStatus::Idle {
 					#[allow(non_snake_case)]
 					let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 					fund.raised = fund.raised.saturating_sub(contributed);
@@ -866,15 +866,15 @@ pub mod pallet {
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
-			fund.raised = fund.raised.saturating_sub(value);
-			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
-
 			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 			T::MultiCurrency::withdraw(vsToken, &who, value)?;
 			T::MultiCurrency::withdraw(vsBond, &who, value)?;
+
+			fund.raised = fund.raised.saturating_sub(value);
+			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
 			if T::TransactType::get() == ParachainTransactType::Xcm {
 				T::MultiCurrency::transfer(
