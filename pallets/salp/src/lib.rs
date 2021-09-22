@@ -211,8 +211,10 @@ pub mod pallet {
 		ContributeFailed(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(ParaId, BalanceOf<T>),
-		/// redeem to account. [who, fund_index,value]
+		/// refund to account. [who, fund_index,value]
 		Refunded(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		/// all refund
+		AllRefunded(ParaId),
 		/// redeem to account. [who, fund_index, first_slot, last_slot, value]
 		Redeemed(AccountIdOf<T>, ParaId, LeasePeriod, LeasePeriod, BalanceOf<T>),
 		/// Fund is edited. [fund_index]
@@ -770,11 +772,68 @@ pub mod pallet {
 			Self::put_contribution(
 				fund.trie_index,
 				&who,
-				contributed,
+				Zero::zero(),
 				ContributionStatus::Refunded,
 			);
 
 			Self::deposit_event(Event::Refunded(who, index, contributed));
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::refund())]
+		#[transactional]
+		pub fn batch_refund(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
+
+			let mut refund_count = 0u32;
+			let contributions = Self::contribution_iterator(fund.trie_index);
+			// Assume everyone will be refunded.
+			let mut all_refunded = true;
+
+			for (who, (contributed, status)) in contributions {
+				if refund_count >= T::RemoveKeysLimit::get() {
+					// Not everyone was able to be refunded this time around.
+					all_refunded = false;
+					break;
+				}
+				if status == ContributionStatus::Idle {
+					#[allow(non_snake_case)]
+					let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+					fund.raised = fund.raised.saturating_sub(contributed);
+
+					let balance = T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
+					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
+					let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
+					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
+
+					if T::TransactType::get() == ParachainTransactType::Xcm {
+						T::MultiCurrency::transfer(
+							T::RelayChainToken::get(),
+							&Self::fund_account_id(index),
+							&who,
+							contributed,
+						)?;
+					}
+					Self::put_contribution(
+						fund.trie_index,
+						&who,
+						Zero::zero(),
+						ContributionStatus::Refunded,
+					);
+					refund_count += 1;
+				}
+			}
+
+			if all_refunded {
+				Self::deposit_event(Event::<T>::AllRefunded(index));
+			}
 
 			Ok(())
 		}
@@ -791,16 +850,21 @@ pub mod pallet {
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
+
+			let (contributed, status) = Self::contribution(fund.trie_index, &who);
+			ensure!(
+				status == ContributionStatus::Idle ||
+					status == ContributionStatus::Unlocked ||
+					status == ContributionStatus::Redeemed,
+				Error::<T>::InvalidContributionStatus
+			);
+
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 			let cur_block = <frame_system::Pallet<T>>::block_number();
 			ensure!(!Self::is_expired(cur_block, fund.last_slot), Error::<T>::VSBondExpired);
-			ensure!(Self::can_redeem(cur_block, fund.last_slot), Error::<T>::UnRedeemableNow);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-
-			fund.raised = fund.raised.saturating_sub(value);
-			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
 			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
@@ -808,6 +872,9 @@ pub mod pallet {
 				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
 			T::MultiCurrency::withdraw(vsToken, &who, value)?;
 			T::MultiCurrency::withdraw(vsBond, &who, value)?;
+
+			fund.raised = fund.raised.saturating_sub(value);
+			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
 			if T::TransactType::get() == ParachainTransactType::Xcm {
 				T::MultiCurrency::transfer(
@@ -817,7 +884,13 @@ pub mod pallet {
 					value,
 				)?;
 			}
-			Self::put_contribution(fund.trie_index, &who, value, ContributionStatus::Redeemed);
+			let contributed_new = contributed.saturating_sub(value);
+			Self::put_contribution(
+				fund.trie_index,
+				&who,
+				contributed_new,
+				ContributionStatus::Redeemed,
+			);
 			Self::deposit_event(Event::Redeemed(
 				who,
 				index,
@@ -957,6 +1030,7 @@ pub mod pallet {
 		}
 
 		/// Check if the vsBond is `in` the redeemable date
+		#[allow(dead_code)]
 		pub(crate) fn can_redeem(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
 			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
 			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());

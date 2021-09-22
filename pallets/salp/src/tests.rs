@@ -751,7 +751,7 @@ fn refund_should_work() {
 
 		let fund = Salp::funds(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
-		assert_eq!(contributed, 100);
+		assert_eq!(contributed, 0);
 		assert_eq!(status, ContributionStatus::Refunded);
 
 		#[allow(non_snake_case)]
@@ -786,7 +786,7 @@ fn refund_when_xcm_error_should_work() {
 
 		let fund = Salp::funds(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
-		assert_eq!(contributed, 100);
+		assert_eq!(contributed, 0);
 		assert_eq!(status, ContributionStatus::Refunded);
 
 		#[allow(non_snake_case)]
@@ -815,10 +815,7 @@ fn double_refund_when_one_of_xcm_error_should_work() {
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
-		assert_noop!(
-			Salp::refund(Some(BRUCE).into(), 3_000),
-			Error::<Test>::InvalidContributionStatus
-		);
+		assert_noop!(Salp::refund(Some(BRUCE).into(), 3_000), Error::<Test>::ZeroContribution);
 	});
 }
 
