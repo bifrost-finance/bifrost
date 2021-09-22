@@ -648,7 +648,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "node-primitives",
- "num-bigint 0.4.0",
+ "num-bigint 0.4.2",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
  "parity-scale-codec",
@@ -786,6 +786,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining",
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
@@ -1004,7 +1005,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
- "substrate-fixed",
 ]
 
 [[package]]
@@ -5188,7 +5188,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
@@ -5388,9 +5388,9 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e0d047c1062aa51e256408c560894e5251f08925980e53cf1aa5bd00eec6512"
+checksum = "74e768dff5fb39a41b3bcd30bb25cf989706c90d028d1ad71971987aa309d535"
 dependencies = [
  "autocfg",
  "num-integer",
@@ -11192,15 +11192,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "substrate-fixed"
-version = "0.5.6"
-source = "git+https://github.com/encointer/substrate-fixed#b33d186888c60f38adafcfc0ec3a21aab263aef1"
-dependencies = [
- "parity-scale-codec",
- "typenum",
-]
-
-[[package]]
 name = "substrate-frame-rpc-system"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
@@ -12742,7 +12733,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -12764,7 +12755,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -12781,7 +12772,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+ssh://git@github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
+source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

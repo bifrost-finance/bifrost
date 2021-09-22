@@ -85,6 +85,7 @@ bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
+bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 
 # orml
@@ -161,6 +162,7 @@ std = [
 	"bifrost-flexible-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
+	"bifrost-liquidity-mining/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

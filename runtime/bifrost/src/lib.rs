@@ -126,7 +126,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 900,
+	spec_version: 901,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -198,10 +198,15 @@ parameter_types! {
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
+	vec![
+		TreasuryPalletId::get().into_account(),
+		BifrostCrowdloanId::get().into_account(),
+		LiquidityMiningPalletId::get().into_account(),
+	]
 }
 
 impl frame_system::Config for Runtime {
@@ -843,6 +848,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
@@ -1036,6 +1042,31 @@ impl bifrost_salp::Config for Runtime {
 	type TransactType = SalpTransactType;
 }
 
+parameter_types! {
+	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
+	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub const MinimumDepositOfUser: Balance = 1_000_000;
+	pub const MinimumRewardPerBlock: Balance = 1_000;
+	pub const MinimumDuration: BlockNumber = HOURS;
+	pub const MaximumOptionRewards: u32 = 7;
+	pub const MaximumCharged: u32 = 32;
+}
+
+impl bifrost_liquidity_mining::Config for Runtime {
+	type Event = Event;
+	type ControlOrigin =
+		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbol;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumCharged = MaximumCharged;
+	type MaximumOptionRewards = MaximumOptionRewards;
+	type PalletId = LiquidityMiningPalletId;
+}
+
 // Bifrost modules end
 
 construct_runtime! {
@@ -1099,6 +1130,7 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 	}
 }
 

@@ -28,14 +28,16 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::{SaturatedConversion, Saturating, Zero},
+	sp_runtime::{
+		traits::{SaturatedConversion, Saturating, Zero},
+		FixedPointNumber, FixedU128,
+	},
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
-use sp_std::{cmp::min, collections::btree_set::BTreeSet, convert::TryFrom};
-use substrate_fixed::{traits::FromFixed, types::U64F64};
+use sp_std::{cmp::min, convert::TryFrom};
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -53,23 +55,28 @@ pub struct OrderInfo<T: Config> {
 	owner: AccountIdOf<T>,
 	/// The vsbond type of the order to sell
 	vsbond: CurrencyId,
-	/// The quantity of vsbond to sell
-	supply: BalanceOf<T>,
-	/// The quantity of vsbond has not be sold
+	/// The quantity of vsbond to sell or buy
+	amount: BalanceOf<T>,
+	/// The quantity of vsbond has not be sold or took
 	remain: BalanceOf<T>,
 	/// Total price of the order
 	total_price: BalanceOf<T>,
+	/// Helper to calculate the remain to unreserve
+	remain_price: BalanceOf<T>,
 	/// The unique id of the order
 	order_id: OrderId,
-	order_state: OrderState,
+	order_type: OrderType,
 }
 
 impl<T: Config> OrderInfo<T> {
-	pub fn unit_price(&self) -> U64F64 {
-		let supply: u128 = self.supply.saturated_into();
+	pub fn unit_price(&self) -> FixedU128 {
+		let amount: u128 = self.amount.saturated_into();
 		let total_price: u128 = self.total_price.saturated_into();
 
-		U64F64::from_num(total_price) / supply
+		match amount {
+			0 => 0.into(),
+			_ => FixedU128::from((total_price, amount)),
+		}
 	}
 }
 
@@ -78,19 +85,17 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 		f.debug_tuple("")
 			.field(&self.owner)
 			.field(&self.vsbond)
-			.field(&self.supply)
+			.field(&self.amount)
 			.field(&self.unit_price())
 			.field(&self.order_id)
-			.field(&self.order_state)
 			.finish()
 	}
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
-enum OrderState {
-	InTrade,
-	Revoked,
-	Clinchd,
+pub enum OrderType {
+	Sell,
+	Buy,
 }
 
 type OrderId = u64;
@@ -122,9 +127,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaximumOrderInTrade: Get<u32>;
 
-		/// The sale quantity needs to be greater than `MinimumSupply` to create an order
+		/// The sale or buy quantity needs to be greater than `MinimumSupply` to create an order
 		#[pallet::constant]
-		type MinimumSupply: Get<BalanceOf<Self>>;
+		type MinimumAmount: Get<BalanceOf<Self>>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
@@ -135,17 +140,16 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotEnoughSupply,
+		NotEnoughAmount,
 		NotFindOrderInfo,
 		NotEnoughBalanceToUnreserve,
 		NotEnoughBalanceToReserve,
-		CantPayThePrice,
+		DontHaveEnoughToPay,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
 		ForbidClinchOrderNotInTrade,
 		ForbidClinchOrderWithinOwnership,
 		ExceedMaximumOrderInTrade,
-		Overflow,
 		Unexpected,
 	}
 
@@ -154,85 +158,104 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// The order has been created.
 		///
-		/// [order_id, order_info]
-		OrderCreated(OrderId, OrderInfo<T>),
+		/// [order_id, order_type, order_creator, vsbond_type, vsbond_amount, total_price]
+		OrderCreated(OrderId, OrderType, AccountIdOf<T>, CurrencyId, BalanceOf<T>, BalanceOf<T>),
 		/// The order has been revoked.
 		///
-		/// [order_id_revoked, order_owner]
-		OrderRevoked(OrderId, AccountIdOf<T>),
+		/// [order_id, order_type, order_creator, vsbond_type, vsbond_amount, vsbond_remain,
+		/// total_price]
+		OrderRevoked(
+			OrderId,
+			OrderType,
+			AccountIdOf<T>,
+			CurrencyId,
+			BalanceOf<T>,
+			BalanceOf<T>,
+			BalanceOf<T>,
+		),
 		/// The order has been clinched.
 		///
-		/// [order_id_clinched, order_owner, order_buyer, quantity]
-		OrderClinchd(OrderId, AccountIdOf<T>, AccountIdOf<T>, BalanceOf<T>),
+		/// [order_id, order_type, order_creator, order_opponent, vsbond_type,
+		/// vsbond_amount_clinched, vsbond_amount, vsbond_remain, total_price]
+		OrderClinchd(
+			OrderId,
+			OrderType,
+			AccountIdOf<T>,
+			AccountIdOf<T>,
+			CurrencyId,
+			BalanceOf<T>,
+			BalanceOf<T>,
+			BalanceOf<T>,
+			BalanceOf<T>,
+		),
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_id)]
 	pub(crate) type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
 
+	// Just store order ids that be in-trade.
 	#[pallet::storage]
-	#[pallet::getter(fn in_trade_order_ids)]
-	pub(crate) type InTradeOrderIds<T: Config> =
-		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn revoked_order_ids)]
-	pub(crate) type RevokedOrderIds<T: Config> =
-		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn clinchd_order_ids)]
-	pub(crate) type ClinchdOrderIds<T: Config> =
-		StorageMap<_, Twox64Concat, AccountIdOf<T>, BTreeSet<OrderId>>;
+	#[pallet::getter(fn user_order_ids)]
+	pub(crate) type UserOrderIds<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		AccountIdOf<T>,
+		Blake2_128Concat,
+		OrderType,
+		BoundedVec<OrderId, T::MaximumOrderInTrade>,
+		ValueQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_info)]
-	pub(crate) type TotalOrderInfos<T: Config> = StorageMap<_, Twox64Concat, OrderId, OrderInfo<T>>;
+	pub(crate) type TotalOrderInfos<T: Config> =
+		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<T>>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Create a sell order to sell `vsbond`.
+		/// Create a sell order or buy order to sell `vsbond`.
 		#[pallet::weight(1_000)]
 		pub fn create_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] first_slot: LeasePeriodOf<T>,
 			#[pallet::compact] last_slot: LeasePeriodOf<T>,
-			#[pallet::compact] supply: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 			#[pallet::compact] total_price: BalanceOf<T>,
+			order_type: OrderType,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
 
-			// Check supply
-			ensure!(supply > T::MinimumSupply::get(), Error::<T>::NotEnoughSupply);
+			// Check amount
+			ensure!(amount > T::MinimumAmount::get(), Error::<T>::NotEnoughAmount);
 
 			let currency_id_u64: u64 = T::InvoicingCurrency::get().currency_id();
-			let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
-			let currency_tokensymbol =
-				TokenSymbol::try_from(tokensymbo_bit).map_err(|_| Error::<T>::Unexpected)?;
+			let token_symbol_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
+			let currency_token_symbol =
+				TokenSymbol::try_from(token_symbol_bit).map_err(|_| Error::<T>::Unexpected)?;
 
 			// Construct vsbond
-			let vsbond = CurrencyId::VSBond(currency_tokensymbol, index, first_slot, last_slot);
+			let vsbond = CurrencyId::VSBond(currency_token_symbol, index, first_slot, last_slot);
 
-			// Check the balance of vsbond
+			// Check the balance
+			let (token_reserved, amount_reserved) = match order_type {
+				OrderType::Buy => (T::InvoicingCurrency::get(), total_price),
+				OrderType::Sell => (vsbond, amount),
+			};
+
 			ensure!(
-				T::MultiCurrency::can_reserve(vsbond, &owner, supply),
+				T::MultiCurrency::can_reserve(token_reserved, &owner, amount_reserved),
 				Error::<T>::NotEnoughBalanceToReserve
 			);
 
-			let order_in_trade_amount = {
-				if let Some(sets) = Self::in_trade_order_ids(&owner) {
-					sets.len() as u32
-				} else {
-					0
-				}
-			};
+			let order_ids_len = Self::user_order_ids(&owner, order_type).len();
 			ensure!(
-				order_in_trade_amount < T::MaximumOrderInTrade::get(),
+				order_ids_len < T::MaximumOrderInTrade::get() as usize,
 				Error::<T>::ExceedMaximumOrderInTrade,
 			);
 
@@ -241,37 +264,36 @@ pub mod pallet {
 			let order_info = OrderInfo::<T> {
 				owner: owner.clone(),
 				vsbond,
-				supply,
-				remain: supply,
+				amount,
+				remain: amount,
 				total_price,
+				remain_price: total_price,
 				order_id,
-				order_state: OrderState::InTrade,
+				order_type,
 			};
 
-			// Reserve the balance of vsbond_type
-			T::MultiCurrency::reserve(vsbond, &owner, supply)?;
+			// Reserve the balance.
+			T::MultiCurrency::reserve(token_reserved, &owner, amount_reserved)?;
 
 			// Insert OrderInfo to Storage
 			TotalOrderInfos::<T>::insert(order_id, order_info.clone());
+			UserOrderIds::<T>::try_append(owner.clone(), order_type, order_id)
+				.map_err(|_| Error::<T>::Unexpected)
+				.map_err(|_| Error::<T>::Unexpected)?;
 
-			// Add order_id to the order_ids in-trade of account
-			if !InTradeOrderIds::<T>::contains_key(&owner) {
-				InTradeOrderIds::<T>::insert(owner.clone(), BTreeSet::<OrderId>::new());
-			}
-			InTradeOrderIds::<T>::try_mutate(owner.clone(), |list| match list {
-				Some(list) => {
-					list.insert(order_id);
-					Ok(())
-				},
-				None => Err(Error::<T>::Unexpected),
-			})?;
-
-			Self::deposit_event(Event::OrderCreated(order_id, order_info));
+			Self::deposit_event(Event::OrderCreated(
+				order_id,
+				order_type,
+				owner,
+				vsbond,
+				amount,
+				total_price,
+			));
 
 			Ok(().into())
 		}
 
-		/// Revoke a sell order in trade by the order creator.
+		/// Revoke a sell or buy order in trade by the order creator.
 		#[pallet::weight(1_000)]
 		pub fn revoke_order(
 			origin: OriginFor<T>,
@@ -283,47 +305,33 @@ pub mod pallet {
 			// Check OrderInfo
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
 
-			// Check OrderState
-			ensure!(
-				order_info.order_state == OrderState::InTrade,
-				Error::<T>::ForbidRevokeOrderNotInTrade
-			);
-
 			// Check OrderOwner
 			ensure!(order_info.owner == from, Error::<T>::ForbidRevokeOrderWithoutOwnership);
 
-			// Unreserve the vsbond
+			let (token_unreserve, amount_unreserve) = match order_info.order_type {
+				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
+				OrderType::Sell => (order_info.vsbond, order_info.remain),
+			};
+
+			// To unreserve
 			let reserved_balance =
-				T::MultiCurrency::reserved_balance(order_info.vsbond, &order_info.owner);
-			ensure!(reserved_balance >= order_info.remain, Error::<T>::NotEnoughBalanceToUnreserve);
-			T::MultiCurrency::unreserve(order_info.vsbond, &order_info.owner, order_info.remain);
+				T::MultiCurrency::reserved_balance(token_unreserve, &order_info.owner);
+			ensure!(reserved_balance >= amount_unreserve, Error::<T>::NotEnoughBalanceToUnreserve);
+			T::MultiCurrency::unreserve(token_unreserve, &order_info.owner, amount_unreserve);
 
 			// Revoke order
-			TotalOrderInfos::<T>::insert(
+			TotalOrderInfos::<T>::remove(order_id);
+			Self::try_to_remove_order_id(order_info.owner.clone(), order_info.order_type, order_id);
+
+			Self::deposit_event(Event::OrderRevoked(
 				order_id,
-				OrderInfo { order_state: OrderState::Revoked, ..order_info },
-			);
-
-			// Move order_id from `InTrade` to `Revoked`.
-			InTradeOrderIds::<T>::try_mutate(from.clone(), |list| match list {
-				Some(list) => {
-					list.remove(&order_id);
-					Ok(())
-				},
-				None => Err(Error::<T>::Unexpected),
-			})?;
-			if !RevokedOrderIds::<T>::contains_key(&from) {
-				RevokedOrderIds::<T>::insert(from.clone(), BTreeSet::<OrderId>::new());
-			}
-			RevokedOrderIds::<T>::try_mutate(from.clone(), |list| match list {
-				Some(list) => {
-					list.insert(order_id);
-					Ok(())
-				},
-				None => Err(Error::<T>::Unexpected),
-			})?;
-
-			Self::deposit_event(Event::OrderRevoked(order_id, from));
+				order_info.order_type,
+				order_info.owner,
+				order_info.vsbond,
+				order_info.amount,
+				order_info.remain,
+				order_info.total_price,
+			));
 
 			Ok(().into())
 		}
@@ -336,18 +344,12 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
 
-			// Check OrderState
-			ensure!(
-				order_info.order_state == OrderState::InTrade,
-				Error::<T>::ForbidClinchOrderNotInTrade
-			);
-
 			Self::partial_clinch_order(origin, order_id, order_info.remain)?;
 
 			Ok(().into())
 		}
 
-		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell order.
+		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell or buy order.
 		#[pallet::weight(1_000)]
 		pub fn partial_clinch_order(
 			origin: OriginFor<T>,
@@ -360,105 +362,98 @@ pub mod pallet {
 			}
 
 			// Check origin
-			let buyer = ensure_signed(origin)?;
+			let opponent = ensure_signed(origin)?;
 
 			// Check OrderInfo
 			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
 
-			// Check OrderState
-			ensure!(
-				order_info.order_state == OrderState::InTrade,
-				Error::<T>::ForbidClinchOrderNotInTrade
-			);
-
 			// Check OrderOwner
-			ensure!(order_info.owner != buyer, Error::<T>::ForbidClinchOrderWithinOwnership);
+			ensure!(order_info.owner != opponent, Error::<T>::ForbidClinchOrderWithinOwnership);
 
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
 			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price());
 
-			// Check the balance of buyer
-			T::MultiCurrency::ensure_can_withdraw(
-				T::InvoicingCurrency::get(),
-				&buyer,
-				price_to_pay,
-			)
-			.map_err(|_| Error::<T>::CantPayThePrice)?;
+			let (token_owner, amount_owner, token_opponent, amount_opponent) = match order_info
+				.order_type
+			{
+				OrderType::Buy =>
+					(T::InvoicingCurrency::get(), price_to_pay, order_info.vsbond, quantity_clinchd),
+				OrderType::Sell =>
+					(order_info.vsbond, quantity_clinchd, T::InvoicingCurrency::get(), price_to_pay),
+			};
+
+			// Check the balance of opponent
+			T::MultiCurrency::ensure_can_withdraw(token_opponent, &opponent, amount_opponent)
+				.map_err(|_| Error::<T>::DontHaveEnoughToPay)?;
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
-				OrderInfo { remain: Zero::zero(), order_state: OrderState::Clinchd, ..order_info }
+				OrderInfo {
+					remain: Zero::zero(),
+					remain_price: order_info.remain_price.saturating_sub(price_to_pay),
+					..order_info
+				}
 			} else {
 				OrderInfo {
 					remain: order_info.remain.saturating_sub(quantity_clinchd),
+					remain_price: order_info.remain_price.saturating_sub(price_to_pay),
 					..order_info
 				}
 			};
 
-			// Unreserve the balance of vsbond to transfer
+			// Unreserve the balance
 			let reserved_balance =
-				T::MultiCurrency::reserved_balance(new_order_info.vsbond, &new_order_info.owner);
-			ensure!(reserved_balance >= quantity_clinchd, Error::<T>::NotEnoughBalanceToUnreserve);
-			T::MultiCurrency::unreserve(
-				new_order_info.vsbond,
-				&new_order_info.owner,
-				quantity_clinchd,
-			);
+				T::MultiCurrency::reserved_balance(token_owner, &new_order_info.owner);
+			ensure!(reserved_balance >= amount_owner, Error::<T>::NotEnoughBalanceToUnreserve);
+			T::MultiCurrency::unreserve(token_owner, &new_order_info.owner, amount_owner);
 
-			// Exchange: Transfer vsbond from owner to buyer
+			// Exchange: Transfer assets to opponent
 			T::MultiCurrency::transfer(
-				new_order_info.vsbond,
+				token_owner,
 				&new_order_info.owner,
-				&buyer,
-				quantity_clinchd,
+				&opponent,
+				amount_owner,
 			)?;
-			// Exchange: Transfer token from buyer to owner
+			// Exchange: Transfer assets to owner
 			T::MultiCurrency::transfer(
-				T::InvoicingCurrency::get(),
-				&buyer,
+				token_opponent,
+				&opponent,
 				&new_order_info.owner,
-				price_to_pay,
+				amount_opponent,
 			)?;
 
-			// Move order_id from InTrade to Clinchd if meets condition
-			if new_order_info.order_state == OrderState::Clinchd {
-				InTradeOrderIds::<T>::try_mutate(
+			// Change the OrderInfo in Storage
+			if new_order_info.remain == Zero::zero() {
+				TotalOrderInfos::<T>::remove(order_id);
+				Self::try_to_remove_order_id(
 					new_order_info.owner.clone(),
-					|list| match list {
-						Some(list) => {
-							list.remove(&order_id);
-							Ok(())
-						},
-						None => Err(Error::<T>::Unexpected),
-					},
-				)?;
-				if !ClinchdOrderIds::<T>::contains_key(&new_order_info.owner) {
-					ClinchdOrderIds::<T>::insert(
-						new_order_info.owner.clone(),
-						BTreeSet::<OrderId>::new(),
+					order_info.order_type,
+					order_id,
+				);
+
+				if new_order_info.order_type == OrderType::Buy {
+					T::MultiCurrency::unreserve(
+						token_owner,
+						&new_order_info.owner,
+						new_order_info.remain_price,
 					);
 				}
-				ClinchdOrderIds::<T>::try_mutate(
-					new_order_info.owner.clone(),
-					|list| match list {
-						Some(list) => {
-							list.insert(order_id);
-							Ok(())
-						},
-						None => Err(Error::<T>::Unexpected),
-					},
-				)?;
+			} else {
+				TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
 			}
-			// Change the OrderInfo in Storage
-			TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
 
 			Self::deposit_event(Event::<T>::OrderClinchd(
 				order_id,
+				new_order_info.order_type,
 				new_order_info.owner,
-				buyer,
+				opponent,
+				new_order_info.vsbond,
 				quantity_clinchd,
+				new_order_info.amount,
+				new_order_info.remain,
+				new_order_info.total_price,
 			));
 
 			Ok(().into())
@@ -472,10 +467,24 @@ pub mod pallet {
 			next_order_id
 		}
 
+		pub(crate) fn try_to_remove_order_id(
+			account: AccountIdOf<T>,
+			order_type: OrderType,
+			order_id: OrderId,
+		) {
+			UserOrderIds::<T>::mutate(account, order_type, |order_ids| {
+				if let Some(position) = order_ids.iter().position(|&r| r == order_id) {
+					order_ids.remove(position);
+				}
+			});
+		}
+
 		/// Get the price(round up) needed to pay.
-		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: U64F64) -> BalanceOf<T> {
+		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: FixedU128) -> BalanceOf<T> {
 			let quantity: u128 = quantity.saturated_into();
-			let total_price = u128::from_fixed((unit_price * quantity).ceil());
+
+			let total_price = (unit_price.saturating_mul(quantity.into())).floor().into_inner() /
+				FixedU128::accuracy();
 
 			BalanceOf::<T>::saturated_from(total_price)
 		}
