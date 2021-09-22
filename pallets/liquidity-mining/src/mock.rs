@@ -48,7 +48,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
-		TechnicalCommittee: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Collective: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		LM: lm::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -201,7 +201,7 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 				(RICHER, MINING_DEPOSIT, 1_000_000_000_000 * UNIT),
 			],
 		},
-		technical_committee: pallet_collective::GenesisConfig {
+		collective: pallet_collective::GenesisConfig {
 			members: vec![TC_MEMBER_1, TC_MEMBER_2, TC_MEMBER_3],
 			phantom: Default::default(),
 		},

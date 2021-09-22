@@ -20,39 +20,39 @@
 #![allow(unused_imports)]
 
 use frame_support::{
-    traits::Get,
-    weights::{constants::RocksDbWeight, Weight},
-    sp_std::marker::PhantomData,
+	sp_std::marker::PhantomData,
+	traits::Get,
+	weights::{constants::RocksDbWeight, Weight},
 };
 
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
-    fn charge() -> Weight;
-    fn deposit() -> Weight;
-    fn redeem() -> Weight;
-    fn volunteer_to_redeem() -> Weight;
-    fn claim() -> Weight;
+	fn charge() -> Weight;
+	fn deposit() -> Weight;
+	fn redeem() -> Weight;
+	fn volunteer_to_redeem() -> Weight;
+	fn claim() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-    fn charge() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn charge() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn deposit() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn deposit() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn redeem() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn redeem() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn volunteer_to_redeem() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn volunteer_to_redeem() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn claim() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn claim() -> Weight {
+		(50_000_000 as Weight)
+	}
 }

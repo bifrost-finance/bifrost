@@ -42,7 +42,7 @@ pub use pallet::*;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 #[cfg(test)]
-pub mod mock;
+mod mock;
 #[cfg(test)]
 mod tests;
 pub mod weights;
@@ -490,6 +490,8 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
 			// Order the trading_pair
 			let (token1, token2) = trading_pair;
 
@@ -500,7 +502,6 @@ pub mod pallet {
 			let trading_pair = if id1 <= id2 { (token1, token2) } else { (token2, token1) };
 
 			Self::create_pool(
-				origin,
 				trading_pair,
 				main_reward,
 				option_rewards,
@@ -529,11 +530,12 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
 			#[allow(non_snake_case)]
 			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
 
 			Self::create_pool(
-				origin,
 				trading_pair,
 				main_reward,
 				option_rewards,
@@ -562,11 +564,12 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
 			#[allow(non_snake_case)]
 			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
 
 			Self::create_pool(
-				origin,
 				trading_pair,
 				main_reward,
 				option_rewards,
@@ -938,7 +941,6 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub(crate) fn create_pool(
-			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
 			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
@@ -947,8 +949,6 @@ pub mod pallet {
 			min_deposit_to_start: BalanceOf<T>,
 			after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResult {
-			let _ = T::ControlOrigin::ensure_origin(origin)?;
-
 			// Check the trading-pair
 			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
 
