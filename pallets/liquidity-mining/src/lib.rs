@@ -477,7 +477,11 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create_mining_pool(
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
@@ -510,7 +514,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -539,7 +547,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create_eb_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -602,7 +614,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -622,7 +638,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
