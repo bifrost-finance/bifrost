@@ -27,7 +27,7 @@ use frame_support::{
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use orml_traits::MultiReservableCurrency;
 
-use crate::{mock::*, Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos};
+use crate::{mock::{Test as T, *}, Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos};
 
 fn run_to_block(n: BlockNumber) {
 	while System::block_number() < n {

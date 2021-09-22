@@ -39,14 +39,13 @@ use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo,
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
-mod mock;
+pub mod mock;
 #[cfg(test)]
 mod tests;
 pub mod weights;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
 
 const DEPOSIT_ID: LockIdentifier = *b"lm/depos";
 
