@@ -201,8 +201,11 @@ impl<T: Config> PoolInfo<T> {
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum PoolType {
+	/// Only `LpToken` can deposit into the pool
 	Mining,
+	/// Only `vsToken` + `vsBond` can deposit into the pool
 	Farming,
+	/// Only `vsToken(reserved)` + `vsBond(reserved)` can deposit into the pool
 	EBFarming,
 }
 
