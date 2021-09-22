@@ -19,22 +19,35 @@
 #![warn(unused_extern_crates)]
 
 //! Service implementation. Specialized wrapper over substrate service.
-
-// use sc_service::{TFullBackend, TFullClient};
-
 pub use client::*;
 pub use collator::*;
+use sc_executor::native_executor_instance;
 pub mod chain_spec;
 mod client;
 pub mod collator;
+#[cfg(feature = "with-asgard-runtime")]
+pub use asgard_runtime;
+#[cfg(feature = "with-bifrost-runtime")]
+pub use bifrost_runtime;
+
+#[cfg(feature = "with-asgard-runtime")]
+native_executor_instance!(
+	pub AsgardExecutor,
+	asgard_runtime::api::dispatch,
+	asgard_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
+#[cfg(feature = "with-bifrost-runtime")]
+native_executor_instance!(
+	pub BifrostExecutor,
+	bifrost_runtime::api::dispatch,
+	bifrost_runtime::native_version,
+	frame_benchmarking::benchmarking::HostFunctions,
+);
+
 #[cfg(feature = "with-dev-runtime")]
 pub mod dev;
-#[cfg(feature = "with-dev-runtime")]
-pub mod manual;
-#[cfg(feature = "with-dev-runtime")]
-pub use dev::*;
-#[cfg(feature = "with-dev-runtime")]
-pub use manual::*;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {
