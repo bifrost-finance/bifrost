@@ -74,6 +74,7 @@ async-trait = { version = "0.1.48" }
 log = '0.4'
 
 # Runtimes
+bifrost-runtime-common = { path = "../../runtime/common"}
 asgard-runtime = { path = "../../runtime/asgard", optional = true }
 bifrost-runtime = { path = "../../runtime/bifrost", optional = true }
 dev-runtime = { path = "../../runtime/dev", optional = true }

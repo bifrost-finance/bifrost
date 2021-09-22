@@ -18,7 +18,11 @@
 
 use std::sync::Arc;
 
+#[cfg(feature = "with-asgard-runtime")]
+pub use asgard_runtime;
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+#[cfg(feature = "with-bifrost-runtime")]
+pub use bifrost_runtime;
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
@@ -29,10 +33,11 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use node_primitives::{AccountId, ParaId as BifrostParaId};
+pub use node_primitives::{AccountId, Block, BlockNumber, Hash, Header, ParaId as BifrostParaId};
 use sc_client_api::ExecutorProvider;
+use sc_consensus::LongestChain;
+use sc_executor::NativeExecutionDispatch;
 pub use sc_executor::NativeExecutor;
-use sc_executor::{native_executor_instance, NativeExecutionDispatch};
 use sc_network::NetworkService;
 use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
@@ -41,22 +46,11 @@ use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
 use sp_keystore::SyncCryptoStorePtr;
+use sp_runtime::traits::BlakeTwo256;
+use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
 
 use crate::RuntimeApiCollection;
-
-type BlockNumber = u32;
-type Header = sp_runtime::generic::Header<BlockNumber, sp_runtime::traits::BlakeTwo256>;
-pub type Block = sp_runtime::generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
-type Hash = sp_core::H256;
-
-#[cfg(feature = "with-asgard-runtime")]
-pub use asgard_runtime;
-#[cfg(feature = "with-bifrost-runtime")]
-pub use bifrost_runtime;
-use sc_consensus::LongestChain;
-use sp_runtime::traits::BlakeTwo256;
-use sp_trie::PrefixedMemoryDB;
 
 /// Full backend.
 type FullBackend = TFullBackend<Block>;
@@ -66,22 +60,6 @@ type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>
 
 /// Maybe full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
-
-#[cfg(feature = "with-asgard-runtime")]
-native_executor_instance!(
-	pub AsgardExecutor,
-	asgard_runtime::api::dispatch,
-	asgard_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
-
-#[cfg(feature = "with-bifrost-runtime")]
-native_executor_instance!(
-	pub BifrostExecutor,
-	bifrost_runtime::api::dispatch,
-	bifrost_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
