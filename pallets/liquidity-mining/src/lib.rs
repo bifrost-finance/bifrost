@@ -43,6 +43,10 @@ pub use pallet::*;
 mod mock;
 #[cfg(test)]
 mod tests;
+pub mod weights;
+
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 const DEPOSIT_ID: LockIdentifier = *b"lm/depos";
 
