@@ -34,7 +34,8 @@ benchmarks! {
 		let last_slot = 20u32;
 		let supply = BalanceOf::<T>::unique_saturated_from(10u128);
 		let total_price = BalanceOf::<T>::unique_saturated_from(30u128);
-	}: _(RawOrigin::Signed(caller), index, first_slot, last_slot, supply, total_price)
+		let order_type = OrderType::Sell;
+	}: _(RawOrigin::Signed(caller), index, first_slot, last_slot, supply, total_price, order_type)
 
 	revoke_order {
 		let caller: T::AccountId = whitelisted_caller();
@@ -43,8 +44,9 @@ benchmarks! {
 		let last_slot = 20u32;
 		let supply = BalanceOf::<T>::unique_saturated_from(10u128);
 		let total_price = BalanceOf::<T>::unique_saturated_from(30u128);
+		let order_type = OrderType::Sell;
 
-		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(caller.clone())), index, first_slot, last_slot, supply, total_price)?;
+		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(caller.clone())), index, first_slot, last_slot, supply, total_price, order_type)?;
 	}: _(RawOrigin::Signed(caller),0u64)
 
 	clinch_order {
@@ -55,8 +57,9 @@ benchmarks! {
 		let supply = BalanceOf::<T>::unique_saturated_from(10u128);
 		let total_price = BalanceOf::<T>::unique_saturated_from(30u128);
 		let order_owner = account("bechmarking_account_1", 0, 0);
+		let order_type = OrderType::Sell;
 
-		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(order_owner)), index, first_slot, last_slot, supply, total_price)?;
+		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(order_owner)), index, first_slot, last_slot, supply, total_price, order_type)?;
 	}: _(RawOrigin::Signed(caller),0u64)
 
 	partial_clinch_order {
@@ -67,8 +70,9 @@ benchmarks! {
 		let supply = BalanceOf::<T>::unique_saturated_from(10u128);
 		let total_price = BalanceOf::<T>::unique_saturated_from(30u128);
 		let order_owner = account("bechmarking_account_1", 0, 0);
+		let order_type = OrderType::Sell;
 
-		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(order_owner)), index, first_slot, last_slot, supply, total_price)?;
+		VSBondAuction::<T>::create_order(<T as frame_system::Config>::Origin::from(RawOrigin::Signed(order_owner)), index, first_slot, last_slot, supply, total_price, order_type)?;
 	}: _(RawOrigin::Signed(caller),0u64, BalanceOf::<T>::unique_saturated_from(5u128))
 
 }
