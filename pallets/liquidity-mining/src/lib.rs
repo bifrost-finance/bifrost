@@ -47,6 +47,8 @@ mod mock;
 mod tests;
 pub mod weights;
 
+pub use weights::*;
+
 const DEPOSIT_ID: LockIdentifier = *b"lm/depos";
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
@@ -370,6 +372,8 @@ pub mod pallet {
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::error]
@@ -582,7 +586,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let investor = ensure_signed(origin)?;
 
@@ -684,7 +688,7 @@ pub mod pallet {
 		/// - User should deposit enough(greater than `T::MinimumDeposit`) token to liquidity-pool;
 		/// - The liquidity-pool should be in special state: `Charged`, `Ongoing`;
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
 			origin: OriginFor<T>,
 			pid: PoolId,
@@ -789,7 +793,7 @@ pub mod pallet {
 		/// - User should have some deposit in the liquidity-pool;
 		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
@@ -882,7 +886,7 @@ pub mod pallet {
 		///
 		/// NOTE: The liquidity-pool should be in retired state.
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::volunteer_to_redeem())]
 		pub fn volunteer_to_redeem(
 			_origin: OriginFor<T>,
 			pid: PoolId,
@@ -917,7 +921,7 @@ pub mod pallet {
 		/// - User should have enough token deposited in the liquidity-pool;
 		/// - The liquidity-pool should be in special states: `Ongoing`;
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
