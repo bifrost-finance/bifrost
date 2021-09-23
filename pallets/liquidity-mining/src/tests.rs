@@ -24,10 +24,14 @@ use frame_support::{
 	sp_runtime::{FixedPointNumber, FixedU128},
 	traits::Hooks,
 };
+use frame_system::pallet_prelude::OriginFor;
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use orml_traits::MultiReservableCurrency;
 
-use crate::{mock::*, Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos};
+use crate::{
+	mock::{Test as T, *},
+	Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos,
+};
 
 fn run_to_block(n: BlockNumber) {
 	while System::block_number() < n {
@@ -138,7 +142,6 @@ fn increase_pid_when_create_pool_should_work() {
 		const NUM: PoolId = 8;
 		for pid in 0..NUM {
 			assert_ok!(LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT / NUM as Balance),
 				vec![(REWARD_2, REWARD_AMOUNT / NUM as Balance)].try_into().unwrap(),
@@ -156,47 +159,53 @@ fn increase_pid_when_create_pool_should_work() {
 #[test]
 fn create_pool_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_noop!(
-			LM::create_pool(
-				Origin::root(),
-				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
-				PoolType::Farming,
-				DAYS,
-				1_000 * UNIT,
-				0
-			),
-			DispatchError::BadOrigin,
-		);
+		let wrong_origins: [OriginFor<Test>; 3] =
+			[Origin::root(), Origin::none(), Some(INVESTOR).into()];
 
-		assert_noop!(
-			LM::create_pool(
-				Origin::none(),
-				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
-				PoolType::Farming,
-				DAYS,
-				1_000 * UNIT,
-				0
-			),
-			DispatchError::BadOrigin,
-		);
+		for wrong_origin in wrong_origins {
+			assert_noop!(
+				LM::create_mining_pool(
+					wrong_origin.clone(),
+					MINING_TRADING_PAIR,
+					(REWARD_1, REWARD_AMOUNT),
+					vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+					DAYS,
+					1_000 * UNIT,
+					0
+				),
+				DispatchError::BadOrigin,
+			);
 
-		assert_noop!(
-			LM::create_pool(
-				Some(INVESTOR).into(),
-				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-				(REWARD_1, REWARD_AMOUNT),
-				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
-				PoolType::Farming,
-				DAYS,
-				1_000 * UNIT,
-				0
-			),
-			DispatchError::BadOrigin,
-		);
+			assert_noop!(
+				LM::create_farming_pool(
+					wrong_origin.clone(),
+					2001,
+					13,
+					20,
+					(REWARD_1, REWARD_AMOUNT),
+					vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+					DAYS,
+					1_000 * UNIT,
+					0
+				),
+				DispatchError::BadOrigin
+			);
+
+			assert_noop!(
+				LM::create_eb_farming_pool(
+					wrong_origin.clone(),
+					2001,
+					13,
+					20,
+					(REWARD_1, REWARD_AMOUNT),
+					vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+					DAYS,
+					1_000 * UNIT,
+					0
+				),
+				DispatchError::BadOrigin
+			);
+		}
 	});
 }
 
@@ -205,7 +214,6 @@ fn create_pool_with_duplicate_trading_pair_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_1),
 				(REWARD_1, REWARD_AMOUNT),
 				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -224,7 +232,6 @@ fn create_pool_with_too_small_duration_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
 				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -243,7 +250,6 @@ fn create_pool_with_wrong_condition_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
 				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -257,7 +263,6 @@ fn create_pool_with_wrong_condition_should_fail() {
 
 		assert_noop!(
 			LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
 				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -276,7 +281,6 @@ fn create_pool_with_too_small_per_block_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
 			LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT),
 				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -294,7 +298,6 @@ fn create_pool_with_too_small_per_block_should_fail() {
 fn create_pool_with_duplicate_reward_should_fail() {
 	new_test_ext().execute_with(|| {
 		let result = LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_1, REWARD_AMOUNT)].try_into().unwrap(),
@@ -311,7 +314,6 @@ fn create_pool_with_duplicate_reward_should_fail() {
 fn charge_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -357,7 +359,6 @@ fn charge_should_work() {
 fn charge_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -380,7 +381,6 @@ fn charge_with_wrong_origin_should_fail() {
 fn charge_with_wrong_state_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -400,7 +400,6 @@ fn charge_exceed_maximum_should_fail() {
 	new_test_ext().execute_with(|| {
 		for i in 0..MaximumApproved::get() {
 			assert_ok!(LM::create_pool(
-				pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 				(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 				(REWARD_1, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128),
 				vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)]
@@ -418,7 +417,6 @@ fn charge_exceed_maximum_should_fail() {
 		}
 
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128),
 			vec![(REWARD_2, REWARD_AMOUNT / (MaximumApproved::get() + 1) as u128)]
@@ -443,7 +441,6 @@ fn charge_exceed_maximum_should_fail() {
 fn charge_without_enough_balance_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -466,7 +463,6 @@ fn charge_without_enough_balance_should_fail() {
 fn kill_pool_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -489,7 +485,6 @@ fn kill_pool_should_work() {
 fn kill_pool_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
@@ -509,7 +504,6 @@ fn kill_pool_with_wrong_origin_should_fail() {
 fn kill_pool_with_wrong_state_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_pool(
-			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
 			(REWARD_1, REWARD_AMOUNT),
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),

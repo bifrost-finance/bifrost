@@ -1314,6 +1314,7 @@ impl_runtime_apis! {
 
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1346,6 +1347,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
+			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

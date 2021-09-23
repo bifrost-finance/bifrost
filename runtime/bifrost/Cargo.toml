@@ -185,6 +185,7 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
+	"bifrost-liquidity-mining/runtime-benchmarks",
 ]
 
 try-runtime = [
