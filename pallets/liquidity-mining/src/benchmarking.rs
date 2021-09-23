@@ -21,9 +21,9 @@
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{assert_ok, sp_runtime::sp_std::convert::TryInto, sp_std::prelude::*};
 use frame_system::RawOrigin;
+use node_primitives::Balance;
 
 use crate::{Pallet as LM, *};
-use node_primitives::Balance;
 
 const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
