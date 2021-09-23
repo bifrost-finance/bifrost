@@ -178,7 +178,6 @@ pub struct CallFilter;
 impl Contains<Call> for CallFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
-			Call::Balances(_) => false,
 			Call::Vesting(_) => false,
 			Call::Tokens(_) => false,
 			Call::PhragmenElection(_) => false,
