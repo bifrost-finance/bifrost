@@ -120,10 +120,10 @@ fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Stable, Token};
+		use CurrencyId::{Native, Stable, Token, VSToken};
 		match id {
 			Token(TokenSymbol::KSM) => Some(X1(Parent)),
-			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
+			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) | VSToken(TokenSymbol::KSM) =>
 				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
 			Token(TokenSymbol::KAR) => Some(X3(
@@ -142,7 +142,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 }
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
-		use CurrencyId::{Native, Stable, Token};
+		use CurrencyId::{Native, Stable, Token, VSToken};
 		use TokenSymbol::*;
 		match location {
 			X1(Parent) => Some(Token(KSM)),
@@ -152,8 +152,9 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) =>
-								Some(currency_id),
+							Native(TokenSymbol::ASG) |
+							Native(TokenSymbol::BNC) |
+							VSToken(TokenSymbol::KSM) => Some(currency_id),
 							_ => None,
 						}
 					} else {
@@ -194,11 +195,12 @@ impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 }
 
 // The implementation of multiple fee trader
-pub struct MultiWeightTraders<KsmTrader, BncTrader, KarTrader, KusdTrader> {
+pub struct MultiWeightTraders<KsmTrader, BncTrader, KarTrader, KusdTrader, VsksmTrader> {
 	ksm_trader: KsmTrader,
 	bnc_trader: BncTrader,
 	kar_trader: KarTrader,
 	kusd_trader: KusdTrader,
+	vsksm_trader: VsksmTrader,
 }
 
 impl<
@@ -206,7 +208,8 @@ impl<
 		BncTrader: WeightTrader,
 		KarTrader: WeightTrader,
 		KusdTrader: WeightTrader,
-	> WeightTrader for MultiWeightTraders<KsmTrader, BncTrader, KarTrader, KusdTrader>
+		VsksmTrader: WeightTrader,
+	> WeightTrader for MultiWeightTraders<KsmTrader, BncTrader, KarTrader, KusdTrader, VsksmTrader>
 {
 	fn new() -> Self {
 		Self {
@@ -214,6 +217,7 @@ impl<
 			bnc_trader: BncTrader::new(),
 			kar_trader: KarTrader::new(),
 			kusd_trader: KusdTrader::new(),
+			vsksm_trader: VsksmTrader::new(),
 			// dummy_trader: DummyTrader::new(),
 		}
 	}
@@ -230,7 +234,11 @@ impl<
 			return Ok(assets);
 		}
 
-		if let Ok(assets) = self.kusd_trader.buy_weight(weight, payment) {
+		if let Ok(assets) = self.kusd_trader.buy_weight(weight, payment.clone()) {
+			return Ok(assets);
+		}
+
+		if let Ok(assets) = self.vsksm_trader.buy_weight(weight, payment) {
 			return Ok(assets);
 		}
 
@@ -262,6 +270,12 @@ impl<
 		let kusd = self.kusd_trader.refund_weight(weight);
 		match kusd {
 			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return kusd,
+			_ => {},
+		}
+
+		let vsksm = self.kusd_trader.refund_weight(weight);
+		match vsksm {
+			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return vsksm,
 			_ => {},
 		}
 
