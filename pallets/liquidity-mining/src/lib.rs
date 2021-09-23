@@ -39,10 +39,13 @@ use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo,
 use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
+pub mod weights;
 
 const DEPOSIT_ID: LockIdentifier = *b"lm/depos";
 
@@ -197,8 +200,11 @@ impl<T: Config> PoolInfo<T> {
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
 pub enum PoolType {
+	/// Only `LpToken` can deposit into the pool
 	Mining,
+	/// Only `vsToken` + `vsBond` can deposit into the pool
 	Farming,
+	/// Only `vsToken(reserved)` + `vsBond(reserved)` can deposit into the pool
 	EBFarming,
 }
 
@@ -470,7 +476,11 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create_mining_pool(
 			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
@@ -480,6 +490,8 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
 			// Order the trading_pair
 			let (token1, token2) = trading_pair;
 
@@ -490,7 +502,6 @@ pub mod pallet {
 			let trading_pair = if id1 <= id2 { (token1, token2) } else { (token2, token1) };
 
 			Self::create_pool(
-				origin,
 				trading_pair,
 				main_reward,
 				option_rewards,
@@ -503,7 +514,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -515,11 +530,12 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
 			#[allow(non_snake_case)]
 			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
 
 			Self::create_pool(
-				origin,
 				trading_pair,
 				main_reward,
 				option_rewards,
@@ -532,7 +548,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn create_eb_farming_pool(
 			origin: OriginFor<T>,
 			index: ParaId,
@@ -544,11 +564,12 @@ pub mod pallet {
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
 			#[allow(non_snake_case)]
 			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
 
 			Self::create_pool(
-				origin,
 				trading_pair,
 				main_reward,
 				option_rewards,
@@ -595,7 +616,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -615,7 +640,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(1_000)]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -912,7 +941,6 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		pub(crate) fn create_pool(
-			origin: OriginFor<T>,
 			trading_pair: (CurrencyId, CurrencyId),
 			main_reward: (CurrencyId, BalanceOf<T>),
 			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T>), T::MaximumOptionRewards>,
@@ -921,8 +949,6 @@ pub mod pallet {
 			min_deposit_to_start: BalanceOf<T>,
 			after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResult {
-			let _ = T::ControlOrigin::ensure_origin(origin)?;
-
 			// Check the trading-pair
 			ensure!(trading_pair.0 != trading_pair.1, Error::<T>::InvalidTradingPair);
 

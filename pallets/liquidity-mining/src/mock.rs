@@ -32,14 +32,14 @@ use sp_core::H256;
 use crate as lm;
 
 pub(crate) type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-pub(crate) type Block = frame_system::mocking::MockBlock<T>;
+pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
 pub(crate) type BlockNumber = u32;
 pub(crate) type Index = u32;
 pub(crate) type Signature = MultiSignature;
-pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<T>;
+pub(crate) type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 
 construct_runtime!(
-	pub enum T where
+	pub enum Test where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
@@ -48,7 +48,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
-		TechnicalCommittee: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Collective: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		LM: lm::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -64,7 +64,7 @@ parameter_types! {
 		frame_system::limits::BlockWeights::simple_max(1024);
 }
 
-impl frame_system::Config for T {
+impl frame_system::Config for Test {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	type AccountId = AccountId;
 	type BaseCallFilter = frame_support::traits::Everything;
@@ -99,7 +99,7 @@ parameter_types! {
 	pub const MaxReserves: u32 = 999_999;
 }
 
-impl pallet_balances::Config for T {
+impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
@@ -110,12 +110,12 @@ impl pallet_balances::Config for T {
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = pallet_balances::weights::SubstrateWeight<T>;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
 }
 
-pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<T, Balances, Amount, BlockNumber>;
+pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, BlockNumber>;
 
-impl orml_currencies::Config for T {
+impl orml_currencies::Config for Test {
 	type Event = Event;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
@@ -129,7 +129,7 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
-impl orml_tokens::Config for T {
+impl orml_tokens::Config for Test {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
@@ -148,7 +148,7 @@ parameter_types! {
 }
 
 type TechnicalCollective = pallet_collective::Instance1;
-impl pallet_collective::Config<TechnicalCollective> for T {
+impl pallet_collective::Config<TechnicalCollective> for Test {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type Event = Event;
 	type MaxMembers = TechnicalMaxMembers;
@@ -156,7 +156,7 @@ impl pallet_collective::Config<TechnicalCollective> for T {
 	type MotionDuration = TechnicalMotionDuration;
 	type Origin = Origin;
 	type Proposal = Call;
-	type WeightInfo = pallet_collective::weights::SubstrateWeight<T>;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Test>;
 }
 
 parameter_types! {
@@ -170,7 +170,7 @@ parameter_types! {
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
 }
 
-impl lm::Config for T {
+impl lm::Config for Test {
 	type Event = Event;
 	type ControlOrigin = pallet_collective::EnsureMember<AccountId, TechnicalCollective>;
 	type MultiCurrency = Tokens;
@@ -186,7 +186,7 @@ impl lm::Config for T {
 
 pub(crate) fn new_test_ext() -> TestExternalities {
 	GenesisConfig {
-		tokens: orml_tokens::GenesisConfig::<T> {
+		tokens: orml_tokens::GenesisConfig::<Test> {
 			balances: vec![
 				(INVESTOR, REWARD_1, REWARD_AMOUNT),
 				(INVESTOR, REWARD_2, REWARD_AMOUNT),
@@ -201,7 +201,7 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 				(RICHER, MINING_DEPOSIT, 1_000_000_000_000 * UNIT),
 			],
 		},
-		technical_committee: pallet_collective::GenesisConfig {
+		collective: pallet_collective::GenesisConfig {
 			members: vec![TC_MEMBER_1, TC_MEMBER_2, TC_MEMBER_3],
 			phantom: Default::default(),
 		},
