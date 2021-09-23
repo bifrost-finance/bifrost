@@ -1132,6 +1132,7 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MaximumCharged = MaximumApproved;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
+	type WeightInfo = ();
 }
 
 // bifrost runtime end

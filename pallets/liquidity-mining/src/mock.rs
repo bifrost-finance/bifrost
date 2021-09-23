@@ -182,6 +182,7 @@ impl lm::Config for Test {
 	type MaximumCharged = MaximumApproved;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
+	type WeightInfo = ();
 }
 
 pub(crate) fn new_test_ext() -> TestExternalities {
