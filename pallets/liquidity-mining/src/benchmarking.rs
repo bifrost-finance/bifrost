@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
-use frame_support::{assert_ok, sp_runtime::sp_std::convert::TryInto};
+use frame_support::{assert_ok, sp_runtime::sp_std::convert::TryInto, sp_std::prelude::*};
 use frame_system::RawOrigin;
 
 use crate::{Pallet as LM, *};
