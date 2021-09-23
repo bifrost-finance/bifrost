@@ -178,6 +178,37 @@ pub struct CallFilter;
 impl Contains<Call> for CallFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
+			// calls allowed
+			// vstoken transfer
+			Call::Currencies(orml_currencies::Call::transfer(
+				_,
+				CurrencyId::VSToken(TokenSymbol::KSM),
+				_,
+			)) => true,
+			Call::Tokens(orml_tokens::Call::transfer(
+				_,
+				CurrencyId::VSToken(TokenSymbol::KSM),
+				_,
+			)) => true,
+			Call::Tokens(orml_tokens::Call::transfer_all(
+				_,
+				CurrencyId::VSToken(TokenSymbol::KSM),
+				_,
+			)) => true,
+			Call::Tokens(orml_tokens::Call::transfer_keep_alive(
+				_,
+				CurrencyId::VSToken(TokenSymbol::KSM),
+				_,
+			)) => true,
+
+			// vsbond transfer
+			Call::Currencies(orml_currencies::Call::transfer(_, CurrencyId::VSBond(..), _)) => true,
+			Call::Tokens(orml_tokens::Call::transfer(_, CurrencyId::VSBond(..), _)) => true,
+			Call::Tokens(orml_tokens::Call::transfer_all(_, CurrencyId::VSBond(..), _)) => true,
+			Call::Tokens(orml_tokens::Call::transfer_keep_alive(_, CurrencyId::VSBond(..), _)) =>
+				true,
+
+			// call banned
 			Call::Balances(_) => false,
 			Call::Vesting(_) => false,
 			Call::Tokens(_) => false,
