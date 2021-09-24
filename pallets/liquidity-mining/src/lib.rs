@@ -783,7 +783,7 @@ pub mod pallet {
 		///
 		/// The extrinsic will:
 		/// - Try to retire the liquidity-pool which has reached the end of life.
-		/// - Try to settle the rewards when the liquidity-pool in `Ongoing`.
+		/// - Try to settle the rewards.
 		/// - Try to unreserve the remaining rewards to the pool investor when the deposit in the
 		///   liquidity-pool is clear.
 		/// - Try to delete the liquidity-pool in which the deposit becomes zero.
@@ -792,9 +792,16 @@ pub mod pallet {
 		/// The condition to redeem:
 		/// - User should have some deposit in the liquidity-pool;
 		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
+		///
+		/// NOTE: All deposit will be redeemed when the pool is being retired, no matter the `value`
+		/// is.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::redeem())]
-		pub fn redeem(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+		pub fn redeem(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			value: Option<BalanceOf<T>>,
+		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
 			let mut pool: PoolInfo<T> =
@@ -816,10 +823,16 @@ pub mod pallet {
 			let minimum_in_pool = match pool.state {
 				PoolState::Ongoing => T::MinimumDepositOfUser::get(),
 				PoolState::Retired => Zero::zero(),
-				_ => return Err(Error::<T>::InvalidPoolState.into()),
+				_ => return Err(Error::<T>::Unexpected.into()),
 			};
 
-			let try_redeemed = deposit_data.deposit;
+			let try_redeemed = match pool.state {
+				PoolState::Ongoing =>
+					min(value.unwrap_or(deposit_data.deposit), deposit_data.deposit),
+				PoolState::Retired => deposit_data.deposit,
+				_ => return Err(Error::<T>::Unexpected.into()),
+			};
+
 			let left_in_pool = max(pool.deposit.saturating_sub(try_redeemed), minimum_in_pool);
 			let can_redeemed = pool.deposit.saturating_sub(left_in_pool);
 			let left_in_user = deposit_data.deposit.saturating_sub(can_redeemed);
@@ -907,7 +920,7 @@ pub mod pallet {
 				},
 			};
 
-			Self::redeem(origin, pid)?;
+			Self::redeem(origin, pid, None)?;
 
 			Ok(().into())
 		}
