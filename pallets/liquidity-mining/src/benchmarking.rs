@@ -122,7 +122,7 @@ benchmarks! {
 		// Run to block
 		run_to_block::<T>(duration);
 
-	}: _(RawOrigin::Signed(caller.clone()), 0)
+	}: _(RawOrigin::Signed(caller.clone()), 0, None)
 	verify {
 		let pool = LM::<T>::pool(0);
 		let deposit_data = LM::<T>::user_deposit_data(0, caller.clone());
