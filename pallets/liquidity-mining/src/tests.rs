@@ -967,7 +967,7 @@ fn redeem_from_pool_ongoing_should_work() {
 		let redeemed = DEPOSIT_AMOUNT / 2;
 		let deposit_left = DEPOSIT_AMOUNT - redeemed;
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, Some(redeemed)));
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, redeemed));
 
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, deposit_left);
@@ -980,7 +980,7 @@ fn redeem_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 		assert_eq!(LM::user_deposit_data(0, USER_1).unwrap().deposit, deposit_left);
 
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, Some(redeemed)));
+		assert_ok!(LM::redeem(Some(USER_2).into(), 0, redeemed));
 
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).frozen, deposit_left);
@@ -1000,7 +1000,7 @@ fn redeem_from_pool_ongoing_should_work() {
 		let pbpd = FixedU128::from((per_block, 2 * deposit_left));
 		let rewarded = (pbpd * (100 * deposit_left).into()).into_inner() / FixedU128::accuracy();
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
 
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
@@ -1013,7 +1013,7 @@ fn redeem_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 		assert!(LM::user_deposit_data(0, USER_1).is_none());
 
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, Some(Balance::MAX)));
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
 
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).frozen, MinimumDeposit::get());
@@ -1062,8 +1062,8 @@ fn redeem_from_pool_retired_should_work() {
 		let rewarded =
 			(pbpd * (DAYS as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
 
-		let whatever: Balance = 13;
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, Some(whatever)));
+		let minimum: Balance = 1;
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, minimum));
 
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
@@ -1076,7 +1076,7 @@ fn redeem_from_pool_retired_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 		assert!(LM::user_deposit_data(0, USER_1).is_none());
 
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
 
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).frozen, 0);
@@ -1136,7 +1136,7 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		let redeemed = DEPOSIT_AMOUNT / 2;
 		let deposit_left = DEPOSIT_AMOUNT - redeemed;
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, Some(redeemed)));
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, redeemed));
 
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, deposit_left);
@@ -1149,7 +1149,7 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 		assert_eq!(LM::user_deposit_data(0, USER_1).unwrap().deposit, deposit_left);
 
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
 
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_2, MINING_DEPOSIT).frozen, 0);
@@ -1170,8 +1170,8 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 		let new_rewarded = (pbpd * ((DAYS - 100) as Balance * deposit_left).into()).into_inner() /
 			FixedU128::accuracy();
 
-		let whatever: Balance = 13;
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, Some(whatever)));
+		let minimum: Balance = 1;
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, minimum));
 
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, DEPOSIT_AMOUNT);
 		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
@@ -1204,8 +1204,8 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 #[test]
 fn redeem_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
-		assert_noop!(LM::redeem(Origin::root(), 0, None), DispatchError::BadOrigin);
-		assert_noop!(LM::redeem(Origin::none(), 0, None), DispatchError::BadOrigin);
+		assert_noop!(LM::redeem_all(Origin::root(), 0), DispatchError::BadOrigin);
+		assert_noop!(LM::redeem_all(Origin::none(), 0), DispatchError::BadOrigin);
 	});
 }
 
@@ -1229,7 +1229,7 @@ fn redeem_with_wrong_pid_should_fail() {
 
 		run_to_block(100);
 
-		assert_noop!(LM::redeem(Some(USER_1).into(), 1, None), Error::<T>::InvalidPoolId);
+		assert_noop!(LM::redeem_all(Some(USER_1).into(), 1), Error::<T>::InvalidPoolId);
 	});
 }
 
@@ -1246,13 +1246,13 @@ fn redeem_with_wrong_state_should_fail() {
 			0
 		));
 
-		assert_noop!(LM::redeem(Some(USER_1).into(), 0, None), Error::<T>::InvalidPoolState);
+		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
 
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
 
-		assert_noop!(LM::redeem(Some(USER_1).into(), 0, None), Error::<T>::InvalidPoolState);
+		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
 	});
 }
 
@@ -1269,7 +1269,7 @@ fn redeem_without_deposit_should_fail() {
 			0
 		));
 
-		assert_noop!(LM::redeem(Some(USER_1).into(), 0, None), Error::<T>::InvalidPoolState);
+		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
 
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
@@ -1278,8 +1278,8 @@ fn redeem_without_deposit_should_fail() {
 
 		run_to_block(100);
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
-		assert_noop!(LM::redeem(Some(USER_1).into(), 0, None), Error::<T>::NoDepositOfUser);
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::NoDepositOfUser);
 	});
 }
 
@@ -1296,7 +1296,7 @@ fn redeem_all_deposit_from_pool_ongoing_should_fail() {
 			0
 		));
 
-		assert_noop!(LM::redeem(Some(USER_1).into(), 0, None), Error::<T>::InvalidPoolState);
+		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
 
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
@@ -1304,9 +1304,36 @@ fn redeem_all_deposit_from_pool_ongoing_should_fail() {
 
 		run_to_block(100);
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
-		let result = LM::redeem(Some(USER_1).into(), 0, None);
-		assert_noop!(result, Error::<T>::TooLowDepositInPoolToRedeem);
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+		let result = LM::redeem_all(Some(USER_1).into(), 0);
+		assert_noop!(result, Error::<T>::TooLowToRedeem);
+	});
+}
+
+#[test]
+fn redeem_some_more_than_user_can_redeem_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+
+		run_to_block(100);
+
+		assert_noop!(
+			LM::redeem(Some(USER_1).into(), 0, UNIT - MinimumDeposit::get() + 1),
+			Error::<T>::TooLowToRedeem
+		);
 	});
 }
 
@@ -1663,8 +1690,8 @@ fn force_retire_pool_charged_should_work() {
 
 		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
 		assert_noop!(LM::claim(Some(USER_2).into(), 0), Error::<T>::InvalidPoolState);
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
 
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
@@ -1762,8 +1789,8 @@ fn force_retire_pool_ongoing_should_work() {
 
 		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
 		assert_noop!(LM::claim(Some(USER_2).into(), 0), Error::<T>::InvalidPoolState);
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
 
 		let pbpd_1 = FixedU128::from((PER_BLOCK, UNIT));
 		let reward_step_1 = (pbpd_1 * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
@@ -1970,7 +1997,7 @@ fn redeem_from_eb_farming_should_work() {
 
 		run_to_block(100);
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
 
 		let pbpd = FixedU128::from((PER_BLOCK, DEPOSIT_AMOUNT));
 		let reward_to_user_1 =
@@ -1987,7 +2014,7 @@ fn redeem_from_eb_farming_should_work() {
 
 		run_to_block(DAYS);
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
 
 		let reward_to_user_2 = (pbpd * ((DAYS - 100) as Balance * DEPOSIT_AMOUNT).into())
 			.into_inner() /
@@ -2055,7 +2082,7 @@ fn claim_from_eb_farming_should_work() {
 
 		let result = LM::claim(Some(USER_1).into(), 0);
 		assert_noop!(result, Error::<T>::InvalidPoolState);
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
 
 		let reward_to_user_2 = (pbpd * ((DAYS - 100) as Balance * DEPOSIT_AMOUNT).into())
 			.into_inner() /
@@ -2149,8 +2176,8 @@ fn simple_integration_test() {
 
 		run_to_block(DAYS);
 
-		assert_ok!(LM::redeem(Some(USER_1).into(), 0, None));
-		assert_ok!(LM::redeem(Some(USER_2).into(), 0, None));
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
 
 		let reward_step_3 =
 			(pbpd_2 * ((DAYS - 200) as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
