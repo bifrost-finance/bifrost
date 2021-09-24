@@ -30,6 +30,7 @@ pub trait WeightInfo {
 	fn charge() -> Weight;
 	fn deposit() -> Weight;
 	fn redeem() -> Weight;
+	fn redeem_all() -> Weight;
 	fn volunteer_to_redeem() -> Weight;
 	fn claim() -> Weight;
 }
@@ -45,6 +46,10 @@ impl WeightInfo for () {
 	}
 
 	fn redeem() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn redeem_all() -> Weight {
 		(50_000_000 as Weight)
 	}
 

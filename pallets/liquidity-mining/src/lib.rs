@@ -820,7 +820,7 @@ pub mod pallet {
 		/// - User should have some deposit in the liquidity-pool;
 		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::redeem_all())]
 		pub fn redeem_all(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 

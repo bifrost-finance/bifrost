@@ -49,15 +49,15 @@ benchmarks! {
 
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
-		let reward_amount: BalanceOf<T> = UNIT.saturated_into();
+		let amount: BalanceOf<T> = UNIT.saturated_into();
 
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &caller, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &caller, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &caller, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &caller, amount));
 
 		assert_ok!(LM::<T>::create_pool(
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-			(REWARD_1, reward_amount),
-			vec![(REWARD_2, reward_amount)].try_into().unwrap(),
+			(REWARD_1, amount),
+			vec![(REWARD_2, amount)].try_into().unwrap(),
 			PoolType::Farming,
 			duration,
 			min_deposit_to_start,
@@ -68,20 +68,20 @@ benchmarks! {
 	deposit {
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
-		let reward_amount: BalanceOf<T> = UNIT.saturated_into();
+		let amount: BalanceOf<T> = UNIT.saturated_into();
 
 		let investor: T::AccountId = account("lm", 0, 0);
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, amount));
 
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, amount));
 
 		assert_ok!(LM::<T>::create_pool(
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-			(REWARD_1, reward_amount),
-			vec![(REWARD_2, reward_amount)].try_into().unwrap(),
+			(REWARD_1, amount),
+			vec![(REWARD_2, amount)].try_into().unwrap(),
 			PoolType::Farming,
 			duration,
 			min_deposit_to_start,
@@ -95,20 +95,20 @@ benchmarks! {
 	redeem {
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
-		let reward_amount: BalanceOf<T> = UNIT.saturated_into();
+		let amount: BalanceOf<T> = UNIT.saturated_into();
 
 		let investor: T::AccountId = account("lm", 0, 0);
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, amount));
 
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, amount));
 
 		assert_ok!(LM::<T>::create_pool(
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-			(REWARD_1, reward_amount),
-			vec![(REWARD_2, reward_amount)].try_into().unwrap(),
+			(REWARD_1, amount),
+			vec![(REWARD_2, amount)].try_into().unwrap(),
 			PoolType::Farming,
 			duration,
 			min_deposit_to_start,
@@ -117,12 +117,50 @@ benchmarks! {
 
 		assert_ok!(LM::<T>::charge(RawOrigin::Signed(investor).into(), 0));
 
-		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, reward_amount));
+		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, amount));
 
 		// Run to block
 		run_to_block::<T>(duration);
 
-	}: _(RawOrigin::Signed(caller.clone()), 0, None)
+	}: _(RawOrigin::Signed(caller.clone()), 0, amount)
+	verify {
+		let pool = LM::<T>::pool(0);
+		let deposit_data = LM::<T>::user_deposit_data(0, caller.clone());
+		assert!(pool.is_none());
+		assert!(deposit_data.is_none());
+	}
+
+	redeem_all {
+		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
+		let min_deposit_to_start = T::MinimumDepositOfUser::get();
+		let amount: BalanceOf<T> = UNIT.saturated_into();
+
+		let investor: T::AccountId = account("lm", 0, 0);
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, amount));
+
+		let caller: T::AccountId = whitelisted_caller();
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, amount));
+
+		assert_ok!(LM::<T>::create_pool(
+			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
+			(REWARD_1, amount),
+			vec![(REWARD_2, amount)].try_into().unwrap(),
+			PoolType::Farming,
+			duration,
+			min_deposit_to_start,
+			0u128.saturated_into()
+		));
+
+		assert_ok!(LM::<T>::charge(RawOrigin::Signed(investor).into(), 0));
+
+		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, amount));
+
+		// Run to block
+		run_to_block::<T>(duration);
+
+	}: _(RawOrigin::Signed(caller.clone()), 0)
 	verify {
 		let pool = LM::<T>::pool(0);
 		let deposit_data = LM::<T>::user_deposit_data(0, caller.clone());
@@ -133,20 +171,20 @@ benchmarks! {
 	volunteer_to_redeem {
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
-		let reward_amount: BalanceOf<T> = UNIT.saturated_into();
+		let amount: BalanceOf<T> = UNIT.saturated_into();
 
 		let investor: T::AccountId = account("lm", 0, 0);
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, amount));
 
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, amount));
 
 		assert_ok!(LM::<T>::create_pool(
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-			(REWARD_1, reward_amount),
-			vec![(REWARD_2, reward_amount)].try_into().unwrap(),
+			(REWARD_1, amount),
+			vec![(REWARD_2, amount)].try_into().unwrap(),
 			PoolType::Farming,
 			duration,
 			min_deposit_to_start,
@@ -155,7 +193,7 @@ benchmarks! {
 
 		assert_ok!(LM::<T>::charge(RawOrigin::Signed(investor).into(), 0));
 
-		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, reward_amount));
+		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, amount));
 
 		// Run to block
 		run_to_block::<T>(duration);
@@ -173,20 +211,20 @@ benchmarks! {
 	claim {
 		let duration = T::MinimumDuration::get().saturating_add(1u128.saturated_into());
 		let min_deposit_to_start = T::MinimumDepositOfUser::get();
-		let reward_amount: BalanceOf<T> = UNIT.saturated_into();
+		let amount: BalanceOf<T> = UNIT.saturated_into();
 
 		let investor: T::AccountId = account("lm", 0, 0);
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_1, &investor, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(REWARD_2, &investor, amount));
 
 		let caller: T::AccountId = whitelisted_caller();
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, reward_amount));
-		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, reward_amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_1, &caller, amount));
+		assert_ok!(<T as Config>::MultiCurrency::deposit(FARMING_DEPOSIT_2, &caller, amount));
 
 		assert_ok!(LM::<T>::create_pool(
 			(FARMING_DEPOSIT_1, FARMING_DEPOSIT_2),
-			(REWARD_1, reward_amount),
-			vec![(REWARD_2, reward_amount)].try_into().unwrap(),
+			(REWARD_1, amount),
+			vec![(REWARD_2, amount)].try_into().unwrap(),
 			PoolType::Farming,
 			duration,
 			min_deposit_to_start,
@@ -195,7 +233,7 @@ benchmarks! {
 
 		assert_ok!(LM::<T>::charge(RawOrigin::Signed(investor).into(), 0));
 
-		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, reward_amount));
+		assert_ok!(LM::<T>::deposit(RawOrigin::Signed(caller.clone()).into(), 0, amount));
 
 		// Run to block
 		run_to_block::<T>(1u128.saturated_into());
