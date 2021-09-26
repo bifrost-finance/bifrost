@@ -135,14 +135,14 @@ subkey generate-node-key --file ~/node-key/bifrost.key
 
 Replace your-fullnode-name
 ```sh
-docker pull bifrostnetwork/bifrost:v0.8.3
+docker pull bifrostnetwork/bifrost:latest
 docker run -d \
 -v ~/node-key:/node-key \
 -p 9944:9944 \
 -p 9933:9933 \
 -p 30333:30333 \
 -p 9615:9615 \
-bifrostnetwork/bifrost:v0.8.3 \
+bifrostnetwork/bifrost:latest \
   --name your-fullnode-name \
   --base-path "/data" \
   --node-key-file "/node-key/bifrost.key" \
