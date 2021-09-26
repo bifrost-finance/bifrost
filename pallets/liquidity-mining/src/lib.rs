@@ -36,7 +36,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
-use orml_traits::{LockIdentifier, MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -48,8 +48,6 @@ mod tests;
 pub mod weights;
 
 pub use weights::*;
-
-const DEPOSIT_ID: LockIdentifier = *b"lm/depos";
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq)]
 pub struct PoolInfo<T: Config> {
@@ -391,6 +389,8 @@ pub mod pallet {
 		ExceedMaximumCharged,
 		/// Not enough balance to deposit
 		NotEnoughToDeposit,
+		/// Not enough balance to redeem(VERY SCARY ERR)
+		NotEnoughToRedeem,
 		/// Not enough balance of reward to unreserve
 		FailOnUnReserve,
 		/// Not enough deposit of the user in the liquidity-pool
@@ -717,31 +717,16 @@ pub mod pallet {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
 
-					T::MultiCurrency::ensure_can_withdraw(lpt, &user, value)
+					T::MultiCurrency::transfer(lpt, &user, &pool.keeper, value)
 						.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
-
-					T::MultiCurrency::extend_lock(DEPOSIT_ID, lpt, &user, deposit_data.deposit)?;
 				},
 				PoolType::Farming => {
 					let (token_a, token_b) = pool.trading_pair;
 
-					T::MultiCurrency::ensure_can_withdraw(token_a, &user, value)
+					T::MultiCurrency::transfer(token_a, &user, &pool.keeper, value)
 						.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
-					T::MultiCurrency::ensure_can_withdraw(token_b, &user, value)
+					T::MultiCurrency::transfer(token_b, &user, &pool.keeper, value)
 						.map_err(|_e| Error::<T>::NotEnoughToDeposit)?;
-
-					T::MultiCurrency::extend_lock(
-						DEPOSIT_ID,
-						token_a,
-						&user,
-						deposit_data.deposit,
-					)?;
-					T::MultiCurrency::extend_lock(
-						DEPOSIT_ID,
-						token_b,
-						&user,
-						deposit_data.deposit,
-					)?;
 				},
 				PoolType::EBFarming => {
 					let (token_a, token_b) = pool.trading_pair;
@@ -996,36 +981,26 @@ pub mod pallet {
 				Error::<T>::TooLowToRedeem
 			);
 
-			let left_in_pool = pool.deposit.saturating_sub(try_redeem);
-			let left_in_user = deposit_data.deposit.saturating_sub(try_redeem);
+			pool.deposit = pool.deposit.saturating_sub(try_redeem);
+			deposit_data.deposit = deposit_data.deposit.saturating_sub(try_redeem);
 
 			// To unlock the deposit
 			match pool.r#type {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
-					match left_in_user.saturated_into() {
-						0u128 => T::MultiCurrency::remove_lock(DEPOSIT_ID, lpt, &user)?,
-						_ => T::MultiCurrency::set_lock(DEPOSIT_ID, lpt, &user, left_in_user)?,
-					}
+					T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
+						.map_err(|_e| Error::<T>::NotEnoughToRedeem)?;
 				},
 				PoolType::Farming => {
 					let (token_a, token_b) = pool.trading_pair;
-					match left_in_user.saturated_into() {
-						0u128 => {
-							T::MultiCurrency::remove_lock(DEPOSIT_ID, token_a, &user)?;
-							T::MultiCurrency::remove_lock(DEPOSIT_ID, token_b, &user)?;
-						},
-						_ => {
-							T::MultiCurrency::set_lock(DEPOSIT_ID, token_a, &user, left_in_user)?;
-							T::MultiCurrency::set_lock(DEPOSIT_ID, token_b, &user, left_in_user)?;
-						},
-					}
+
+					T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
+						.map_err(|_e| Error::<T>::NotEnoughToRedeem)?;
+					T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
+						.map_err(|_e| Error::<T>::NotEnoughToRedeem)?;
 				},
 				PoolType::EBFarming => {},
 			};
-
-			deposit_data.deposit = left_in_user;
-			pool.deposit = left_in_pool;
 
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
 				let investor = pool.investor.clone().ok_or(Error::<T>::Unexpected)?;
