@@ -18,7 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use node_primitives::ParaId;
@@ -110,6 +110,31 @@ benchmarks! {
 		let fund = Salp::<T>::funds(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
 		assert_eq!(status, ContributionStatus::Unlocked);
+	}
+
+	batch_unlock {
+		let k in 1 .. T::RemoveKeysLimit::get();
+		let fund_index = create_fund::<T>(1);
+		let contribution = T::MinContribution::get();
+		let mut caller: T::AccountId = whitelisted_caller();
+		for i in 0 .. k {
+			caller = account("contributor", i, 0);
+			contribute_fund::<T>(&caller,fund_index);
+			Salp::<T>::confirm_contribute(
+				RawOrigin::Root.into(),
+				caller.clone(),
+				fund_index,
+				true,
+				[0; 32]
+			);
+		}
+		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
+	}: _(RawOrigin::Signed(caller.clone()), fund_index)
+	verify {
+		let fund = Salp::<T>::funds(fund_index).unwrap();
+		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
+		assert_eq!(status, ContributionStatus::Unlocked);
+		assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
 	}
 
 	redeem {
