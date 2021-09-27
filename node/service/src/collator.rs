@@ -21,6 +21,7 @@ use std::sync::Arc;
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
@@ -33,6 +34,7 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
+use node_primitives::PoolId;
 pub use node_primitives::{AccountId, Block, BlockNumber, Hash, Header, ParaId as BifrostParaId};
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
@@ -189,6 +191,7 @@ where
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
+	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
 	Executor: NativeExecutionDispatch + 'static,
 	BIC: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -348,6 +351,7 @@ where
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
+	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	start_node_impl(

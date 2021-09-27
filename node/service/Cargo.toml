@@ -90,7 +90,7 @@ zenlink-protocol-runtime-api = "*"
 # Bifrost rpc
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
-
+bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api" }
 
 [features]
 default = [ "std" ]

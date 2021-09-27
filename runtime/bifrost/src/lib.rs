@@ -87,7 +87,7 @@ use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 pub use node_primitives::{
 	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
-	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
+	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType, PoolId,
 	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
@@ -1330,6 +1330,12 @@ impl_runtime_apis! {
 				Ok((val,status)) => (val,status.to_rpc()),
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
+		}
+	}
+
+	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
+		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
 		}
 	}
 
