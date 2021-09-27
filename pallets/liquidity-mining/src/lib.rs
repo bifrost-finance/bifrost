@@ -1053,6 +1053,35 @@ pub mod pallet {
 			Ok(CurrencyId::LPToken(sym1, discr1, sym2, discr2))
 		}
 
+		pub fn rewards(
+			who: AccountIdOf<T>,
+			pid: PoolId,
+		) -> Result<Vec<(CurrencyId, BalanceOf<T>)>, ()> {
+			let pool: PoolInfo<T> = Self::pool(pid).ok_or(())?.try_retire().try_update();
+			let deposit_data: DepositData<T> =
+				Self::user_deposit_data(pid, who.clone()).ok_or(())?;
+
+			let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T>)>::new();
+
+			if let Some(_block_startup) = pool.block_startup {
+				for (rtoken, reward) in pool.rewards.iter() {
+					let v_new = reward.gain_avg;
+					if let Some(gain_avg) = deposit_data.gain_avgs.get(rtoken) {
+						let v_old = *gain_avg;
+
+						let user_deposit: u128 = deposit_data.deposit.saturated_into();
+						let amount = BalanceOf::<T>::saturated_from(
+							v_new.saturating_sub(v_old).saturating_mul_int(user_deposit),
+						);
+
+						to_rewards.push((*rtoken, amount));
+					}
+				}
+			}
+
+			Ok(to_rewards)
+		}
+
 		#[allow(non_snake_case)]
 		pub(crate) fn vsAssets(
 			index: ParaId,
