@@ -24,11 +24,13 @@ use sp_api::decl_runtime_apis;
 use sp_std::vec::Vec;
 
 decl_runtime_apis! {
-	pub trait LiquidityMiningRuntimeApi<AccountId> where
+	pub trait LiquidityMiningRuntimeApi<AccountId, PoolId> where
 		AccountId: Codec,
+		PoolId: Codec,
 	{
 		fn get_rewards(
-			who: AccountId
+			who: AccountId,
+			pid: PoolId,
 		) -> Vec<(CurrencyId, Balance)>;
 	}
 }

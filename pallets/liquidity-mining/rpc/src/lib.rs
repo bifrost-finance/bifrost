@@ -25,18 +25,19 @@ use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
 use node_primitives::{Balance, CurrencyId};
-use sp_api::{ProvideRuntimeApi};
+use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
 use sp_runtime::{generic::BlockId, traits::Block as BlockT, SaturatedConversion};
 
 #[rpc]
-pub trait LiquidityMiningRpcApi<BlockHash, AccountId> {
+pub trait LiquidityMiningRpcApi<BlockHash, AccountId, PoolId> {
 	/// rpc method for getting current rewards
 	#[rpc(name = "liquidityMining_getRewards")]
 	fn get_rewards(
 		&self,
 		who: AccountId,
+		pid: PoolId,
 		at: Option<BlockHash>,
 	) -> JsonRpcResult<Vec<(CurrencyId, NumberOrHex)>>;
 }
@@ -53,23 +54,25 @@ impl<C, Block> LiquidityMiningRpcWrapper<C, Block> {
 	}
 }
 
-impl<C, Block, AccountId> LiquidityMiningRpcApi<<Block as BlockT>::Hash, AccountId>
+impl<C, Block, AccountId, PoolId> LiquidityMiningRpcApi<<Block as BlockT>::Hash, AccountId, PoolId>
 	for LiquidityMiningRpcWrapper<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: LiquidityMiningRuntimeApi<Block, AccountId>,
+	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
 	AccountId: Codec,
+	PoolId: Codec,
 {
 	fn get_rewards(
 		&self,
 		who: AccountId,
+		pid: PoolId,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> JsonRpcResult<Vec<(CurrencyId, NumberOrHex)>> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_rewards(&at, who);
+		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_rewards(&at, who, pid);
 
 		match rs {
 			Ok(rewards) => Ok(rewards
