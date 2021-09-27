@@ -1333,6 +1333,12 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId> for Runtime {
+		fn get_rewards(who: AccountId) -> Vec<(CurrencyId, Balance)> {
+			vec![(CurrencyId::Token(TokenSymbol::KSM), Zero::zero())]
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (

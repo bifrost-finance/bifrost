@@ -24,6 +24,7 @@ use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
+use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
 };
@@ -189,6 +190,7 @@ where
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
+	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 	BIC: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -348,6 +350,7 @@ where
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
+	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	start_node_impl(

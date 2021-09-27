@@ -35,6 +35,8 @@ use std::sync::Arc;
 
 use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpcApi, LiquidityMiningRpcWrapper};
+use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use node_primitives::{AccountId, Balance, Block, ParaId};
@@ -69,6 +71,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: LiquidityMiningRuntimeApi<Block, AccountId>,
 	P: TransactionPool + 'static,
 {
 	let FullDeps { client, .. } = deps;
@@ -80,6 +83,10 @@ where
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
 
 	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
+
+	io.extend_with(LiquidityMiningRpcApi::to_delegate(LiquidityMiningRpcWrapper::new(
+		client.clone(),
+	)));
 
 	io
 }
