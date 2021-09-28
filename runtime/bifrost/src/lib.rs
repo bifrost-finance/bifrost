@@ -89,6 +89,7 @@ pub use node_primitives::{
 	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
 	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType, PoolId,
 	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	traits::CheckSubAccount,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -237,7 +238,6 @@ pub fn get_all_pallet_accounts() -> Vec<AccountId> {
 	vec![
 		TreasuryPalletId::get().into_account(),
 		BifrostCrowdloanId::get().into_account(),
-		LiquidityMiningPalletId::get().into_account(),
 	]
 }
 
@@ -892,7 +892,8 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		get_all_pallet_accounts().contains(a)
+		get_all_pallet_accounts().contains(a) ||
+			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 

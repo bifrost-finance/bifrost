@@ -20,8 +20,11 @@
 
 #![allow(clippy::unnecessary_cast)]
 
-use codec::FullCodec;
-use frame_support::{dispatch::DispatchError, sp_runtime::TokenError};
+use codec::{Decode, Encode, FullCodec};
+use frame_support::{
+	dispatch::DispatchError,
+	sp_runtime::{traits::AccountIdConversion, TokenError, TypeId},
+};
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
 	DispatchResult,
@@ -173,5 +176,22 @@ pub trait BancorHandler<Balance> {
 impl<Balance> BancorHandler<Balance> for () {
 	fn add_token(_currency_id: super::CurrencyId, _amount: Balance) -> DispatchResult {
 		DispatchResult::from(DispatchError::Token(TokenError::NoFunds))
+	}
+}
+
+pub trait CheckSubAccount<T: Encode + Decode + Default> {
+	fn check_sub_account<S: Decode>(&self, account: &T) -> bool;
+}
+
+impl<T, Id> CheckSubAccount<T> for Id
+where
+	T: Encode + Decode + Default,
+	Id: Encode + Decode + TypeId + AccountIdConversion<T> + Eq,
+{
+	fn check_sub_account<S: Decode>(&self, account: &T) -> bool {
+		match Id::try_from_sub_account::<S>(account) {
+			Some((id, _)) => id.eq(self),
+			None => false,
+		}
 	}
 }
