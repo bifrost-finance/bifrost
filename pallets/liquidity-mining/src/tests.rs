@@ -2298,3 +2298,90 @@ fn simple_integration_test() {
 		assert!(LM::user_deposit_data(0, USER_2).is_none());
 	});
 }
+
+#[test]
+fn fuck_bug() {
+	new_test_ext().execute_with(|| {
+		const ALICE: AccountId = AccountId::new([0u8; 32]);
+		const BOB: AccountId = AccountId::new([1u8; 32]);
+		const CHARLIE: AccountId = AccountId::new([2u8; 32]);
+
+		const INIT_AMOUNT: Balance = 1_000_000_000 * UNIT;
+
+		const REWARD_TOKEN: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+		const REWARD_AMOUNT: Balance = 10 * UNIT;
+
+		const DEPOSIT_TOKEN_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
+		const DEPOSIT_TOKEN_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
+
+		assert_ok!(Tokens::set_balance(Origin::root(), ALICE, REWARD_TOKEN, INIT_AMOUNT, 0));
+		assert_ok!(Tokens::set_balance(Origin::root(), BOB, DEPOSIT_TOKEN_1, 0, INIT_AMOUNT));
+		assert_ok!(Tokens::set_balance(Origin::root(), BOB, DEPOSIT_TOKEN_2, 0, INIT_AMOUNT));
+		assert_ok!(Tokens::set_balance(Origin::root(), CHARLIE, DEPOSIT_TOKEN_1, 0, INIT_AMOUNT));
+		assert_ok!(Tokens::set_balance(Origin::root(), CHARLIE, DEPOSIT_TOKEN_2, 0, INIT_AMOUNT));
+
+		run_to_block(134);
+
+		assert_ok!(LM::create_eb_farming_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			2001,
+			13,
+			20,
+			(REWARD_TOKEN, REWARD_AMOUNT),
+			vec![].try_into().unwrap(),
+			23,
+			UNIT,
+			0
+		));
+
+		run_to_block(135);
+
+		assert_ok!(LM::charge(Some(ALICE).into(), 0));
+
+		run_to_block(138);
+
+		assert_ok!(LM::deposit(Some(BOB).into(), 0, 13 * UNIT));
+
+		run_to_block(140);
+
+		assert_ok!(LM::deposit(Some(CHARLIE).into(), 0, 187 * UNIT));
+
+		run_to_block(179);
+
+		assert_ok!(LM::redeem_all(Some(BOB).into(), 0));
+		assert_ok!(LM::redeem_all(Some(CHARLIE).into(), 0));
+
+		assert!(LM::pool(200).is_none());
+
+		assert_ok!(LM::create_eb_farming_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			2001,
+			13,
+			20,
+			(REWARD_TOKEN, REWARD_AMOUNT),
+			vec![].try_into().unwrap(),
+			23,
+			UNIT,
+			0
+		));
+
+		run_to_block(235);
+
+		assert_ok!(LM::charge(Some(ALICE).into(), 1));
+
+		run_to_block(250);
+
+		assert_ok!(LM::deposit(Some(BOB).into(), 1, 23 * UNIT));
+
+		run_to_block(265);
+
+		assert_ok!(LM::deposit(Some(CHARLIE).into(), 1, 167 * UNIT));
+
+		run_to_block(280);
+
+		assert_ok!(LM::redeem_all(Some(BOB).into(), 1));
+		assert_ok!(LM::redeem_all(Some(CHARLIE).into(), 1));
+
+		assert!(LM::pool(1).is_none());
+	});
+}
