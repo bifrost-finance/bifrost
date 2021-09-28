@@ -740,7 +740,6 @@ impl Config for XcmConfig {
 	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
 	type IsTeleporter = BifrostFilteredAssets;
-	// <- should be enough to allow teleportation of ROC
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
@@ -1154,6 +1153,7 @@ construct_runtime! {
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
 		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
+		// Third party modules
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
