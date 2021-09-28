@@ -93,7 +93,7 @@ use frame_support::{
 };
 pub use node_primitives::{
 	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
-	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
+	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType, PoolId,
 	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
@@ -770,6 +770,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 
 parameter_types! {
 	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+	pub VsksmPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(SelfParaId::get()), GeneralKey(CurrencyId::VSToken(TokenSymbol::KSM).encode())), ksm_per_second());
 	// BNC:KSM = 80:1
 	pub BncPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(SelfParaId::get()), GeneralKey(NativeCurrencyId::get().encode())), ksm_per_second().saturating_mul(80));
 	// KAR:KSM = 100:1
@@ -791,6 +792,7 @@ impl TakeRevenue for ToTreasury {
 
 pub type Trader = MultiWeightTraders<
 	FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<VsksmPerSecond, ToTreasury>,
 	FixedRateOfConcreteFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfConcreteFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfConcreteFungible<KusdPerSecond, ToTreasury>,
@@ -1622,6 +1624,12 @@ impl_runtime_apis! {
 				Ok((val,status)) => (val,status.to_rpc()),
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
+		}
+	}
+
+	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
+		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
 		}
 	}
 

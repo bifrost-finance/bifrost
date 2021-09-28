@@ -86,9 +86,10 @@ use frame_support::{
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 pub use node_primitives::{
-	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
-	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
-	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
+	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
+	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
+	ParachainTransactType, PoolId, RpcContributionStatus, TokenSymbol, TransferOriginType,
+	XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -234,11 +235,7 @@ parameter_types! {
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![
-		TreasuryPalletId::get().into_account(),
-		BifrostCrowdloanId::get().into_account(),
-		LiquidityMiningPalletId::get().into_account(),
-	]
+	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
 }
 
 impl frame_system::Config for Runtime {
@@ -708,6 +705,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 
 parameter_types! {
 	pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), ksm_per_second());
+	pub VsksmPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(SelfParaId::get()), GeneralKey(CurrencyId::VSToken(TokenSymbol::KSM).encode())), ksm_per_second());
 	// BNC:KSM = 80:1
 	pub BncPerSecond: (MultiLocation, u128) = (X3(Parent, Parachain(SelfParaId::get()), GeneralKey(NativeCurrencyId::get().encode())), ksm_per_second().saturating_mul(80));
 	// KAR:KSM = 100:1
@@ -729,6 +727,7 @@ impl TakeRevenue for ToTreasury {
 
 pub type Trader = MultiWeightTraders<
 	FixedRateOfConcreteFungible<KsmPerSecond, ToTreasury>,
+	FixedRateOfConcreteFungible<VsksmPerSecond, ToTreasury>,
 	FixedRateOfConcreteFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfConcreteFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfConcreteFungible<KusdPerSecond, ToTreasury>,
@@ -892,7 +891,8 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		get_all_pallet_accounts().contains(a)
+		get_all_pallet_accounts().contains(a) ||
+			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1339,6 +1339,12 @@ impl_runtime_apis! {
 				Ok((val,status)) => (val,status.to_rpc()),
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
+		}
+	}
+
+	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
+		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
+			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
 		}
 	}
 

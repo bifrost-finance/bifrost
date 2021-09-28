@@ -185,6 +185,7 @@ dependencies = [
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-liquidity-mining",
+ "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
@@ -762,6 +763,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-liquidity-mining-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-liquidity-mining-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
+name = "bifrost-liquidity-mining-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
+ "sp-std 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
+]
+
+[[package]]
 name = "bifrost-minter-reward"
 version = "0.8.0"
 dependencies = [
@@ -789,6 +818,7 @@ dependencies = [
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-liquidity-mining",
+ "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
@@ -5288,6 +5318,8 @@ version = "0.8.0"
 dependencies = [
  "bifrost-flexible-fee-rpc",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining-rpc-api",
+ "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-salp-rpc-api",
  "bifrost-salp-rpc-runtime-api",
  "jsonrpc-core",
@@ -5310,6 +5342,7 @@ dependencies = [
  "async-io",
  "async-trait",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-runtime",
  "bifrost-runtime-common",
  "bifrost-salp-rpc-runtime-api",
