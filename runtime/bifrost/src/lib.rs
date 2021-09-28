@@ -86,10 +86,10 @@ use frame_support::{
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
 pub use node_primitives::{
-	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
-	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType, PoolId,
-	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
-	traits::CheckSubAccount,
+	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
+	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
+	ParachainTransactType, PoolId, RpcContributionStatus, TokenSymbol, TransferOriginType,
+	XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -235,10 +235,7 @@ parameter_types! {
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![
-		TreasuryPalletId::get().into_account(),
-		BifrostCrowdloanId::get().into_account(),
-	]
+	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
 }
 
 impl frame_system::Config for Runtime {
