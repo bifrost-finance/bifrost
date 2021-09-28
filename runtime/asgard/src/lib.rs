@@ -1165,6 +1165,14 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl bifrost_token_issuer::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1390,6 +1398,7 @@ construct_runtime! {
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
+		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 	}
 }
 

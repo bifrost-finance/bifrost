@@ -1100,6 +1100,14 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type WeightInfo = weights::bifrost_liquidity_mining::WeightInfo<Runtime>;
 }
 
+impl bifrost_token_issuer::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 construct_runtime! {
@@ -1164,6 +1172,7 @@ construct_runtime! {
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
+		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 	}
 }
 

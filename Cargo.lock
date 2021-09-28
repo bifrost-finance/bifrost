@@ -189,6 +189,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-token-issuer",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
@@ -791,6 +792,7 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-rpc-runtime-api",
+ "bifrost-token-issuer",
  "bifrost-vesting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
@@ -974,6 +976,24 @@ dependencies = [
  "node-primitives",
  "parity-scale-codec",
  "sp-api",
+]
+
+[[package]]
+name = "bifrost-token-issuer"
+version = "0.8.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
+ "pallet-balances",
+ "pallet-collective",
+ "parity-scale-codec",
+ "sp-core 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]

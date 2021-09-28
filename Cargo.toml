@@ -14,6 +14,7 @@ members = [
 	"pallets/vsbond-auction",
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
+	"pallets/token-issuer",
 	"runtime/asgard",
 	"runtime/bifrost",
 	"utils/subkey",
