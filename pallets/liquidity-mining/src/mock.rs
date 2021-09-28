@@ -24,12 +24,14 @@ use frame_support::{
 		traits::{BlakeTwo256, IdentifyAccount, IdentityLookup, Verify},
 		BuildStorage, MultiSignature,
 	},
+	traits::Contains,
 	PalletId,
 };
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{traits::CheckSubAccount, Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 
 use crate as lm;
+use crate::PoolId;
 
 pub(crate) type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -125,8 +127,21 @@ impl orml_currencies::Config for Test {
 
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		0
+		1_000_000
 	};
+}
+
+parameter_types! {
+	pub BifrostTreasuryFakeAccount: AccountId = AccountId::new([155u8;32]);
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		*a == BifrostTreasuryFakeAccount::get() ||
+			*a == INVESTOR ||
+			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+	}
 }
 
 impl orml_tokens::Config for Test {
@@ -136,9 +151,9 @@ impl orml_tokens::Config for Test {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
-	type OnDust = ();
+	type OnDust = orml_tokens::TransferDust<Test, BifrostTreasuryFakeAccount>;
 	type WeightInfo = ();
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = DustRemovalWhitelist;
 }
 
 parameter_types! {
