@@ -93,6 +93,7 @@ bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", de
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = false }
+bifrost-token-issuer= { path = "../../pallets/token-issuer", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 
@@ -182,6 +183,7 @@ std = [
 	"bifrost-vtoken-mint/std",
 	"bifrost-liquidity-mining/std",
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
+	"bifrost-token-issuer/std",
 	"xcm-support/std",
 	"orml-currencies/std",
 	"orml-traits/std",
