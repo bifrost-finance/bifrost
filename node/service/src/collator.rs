@@ -20,8 +20,10 @@ use std::sync::Arc;
 
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
-use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
+#[cfg(feature = "with-asgard-runtime")]
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
+use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
@@ -51,6 +53,7 @@ use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
+
 
 use crate::RuntimeApiCollection;
 
@@ -192,6 +195,7 @@ where
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 	BIC: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -352,6 +356,7 @@ where
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	start_node_impl(

@@ -39,6 +39,8 @@ use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpcApi, LiquidityMiningRpc
 use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
+use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 use node_primitives::{AccountId, Balance, Block, ParaId, PoolId};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
 pub use sc_rpc_api::DenyUnsafe;
@@ -72,6 +74,7 @@ where
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,	
 	P: TransactionPool + 'static,
 {
 	let FullDeps { client, .. } = deps;
@@ -84,9 +87,9 @@ where
 
 	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
 
-	io.extend_with(LiquidityMiningRpcApi::to_delegate(LiquidityMiningRpcWrapper::new(
-		client.clone(),
-	)));
+	io.extend_with(LiquidityMiningRpcApi::to_delegate(LiquidityMiningRpcWrapper::new(client.clone())));
+
+	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
 	io
 }
