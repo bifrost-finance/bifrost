@@ -27,10 +27,7 @@ use alloc::vec::Vec;
 
 use frame_support::{ensure, pallet_prelude::*, transactional};
 use frame_system::{pallet_prelude::*, WeightInfo};
-use orml_traits::{
-	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
-	MultiReservableCurrency,
-};
+use orml_traits::MultiCurrency;
 
 mod mock;
 mod tests;
@@ -52,11 +49,8 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-		type MultiCurrency: TransferAll<Self::AccountId>
-			+ MultiCurrencyExtended<Self::AccountId>
-			+ MultiLockableCurrency<Self::AccountId>
-			+ MultiReservableCurrency<Self::AccountId>;
+		/// Currecny operation handler
+		type MultiCurrency: MultiCurrency<AccountIdOf<Self>>;
 
 		/// The only origin that can edit token issuer list
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
@@ -256,18 +250,18 @@ pub mod pallet {
 			currency_id: CurrencyIdOf<T>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
-			let issuer = ensure_signed(origin)?;
+			let transferrer = ensure_signed(origin)?;
 
 			let transfer_whitelist =
 				Self::get_transfer_whitelist(currency_id).ok_or(Error::<T>::NotAllowed)?;
-			ensure!(transfer_whitelist.contains(&issuer), Error::<T>::NotAllowed);
+			ensure!(transfer_whitelist.contains(&transferrer), Error::<T>::NotAllowed);
 
-			let balance = T::MultiCurrency::free_balance(currency_id, &issuer);
+			let balance = T::MultiCurrency::free_balance(currency_id, &transferrer);
 			ensure!(balance >= amount, Error::<T>::NotEnoughBalance);
 
-			T::MultiCurrency::transfer(currency_id, &issuer, &dest, amount)?;
+			T::MultiCurrency::transfer(currency_id, &transferrer, &dest, amount)?;
 
-			Self::deposit_event(Event::Transferred(issuer, dest, currency_id, amount));
+			Self::deposit_event(Event::Transferred(transferrer, dest, currency_id, amount));
 			Ok(())
 		}
 	}
