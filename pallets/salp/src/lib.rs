@@ -94,6 +94,7 @@ pub mod pallet {
 		sp_runtime::traits::{AccountIdConversion, CheckedAdd, Hash, Saturating, Zero},
 		sp_std::convert::TryInto,
 		storage::ChildTriePrefixIterator,
+		traits::Randomness,
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
@@ -112,6 +113,8 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		type RandomnessSource: Randomness<Self::Hash, Self::BlockNumber>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be
 		/// ```ModuleId(*b"py/cfund")```
@@ -1100,12 +1103,12 @@ pub mod pallet {
 
 		pub(crate) fn next_nonce_index(index: ParaId) -> Result<Nonce, Error<T>> {
 			CurrentNonce::<T>::try_mutate(index, |ni| {
-				*ni = ni.saturating_add(1);
-				if *ni == u32::MAX {
-					Ok(0)
-				} else {
-					Ok(*ni - 1)
-				}
+				*ni = ni.overflowing_add(1).0;
+				let random_result = T::RandomnessSource::random(&ni.encode());
+				let random_hash = random_result.0;
+				let result = <T::BlockNumber>::decode(&mut random_hash.as_ref())
+					.expect("secure hashes should always be bigger than the block number; qed");
+				Ok(result)
 			})
 		}
 

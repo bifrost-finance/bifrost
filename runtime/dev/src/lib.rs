@@ -100,7 +100,7 @@ use frame_support::{
 	sp_runtime::KeyTypeId,
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
-use node_primitives::{
+pub use node_primitives::{
 	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
 	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
 	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
@@ -1081,6 +1081,7 @@ impl bifrost_salp::Config for Runtime {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
+	type RandomnessSource = RandomnessCollectiveFlip;
 }
 
 parameter_types! {

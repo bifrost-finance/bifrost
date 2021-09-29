@@ -12,9 +12,11 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 frame-benchmarking = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false, optional = true }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false  }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
@@ -45,12 +47,14 @@ std = [
 	"frame-system/std",
 	"sp-std/std",
 	"sp-io/std",
+	"sp-core/std",
 	"sp-runtime/std",
 	"sp-arithmetic/std",
 	"orml-traits/std",
 	"xcm/std",
 	"xcm-support/std",
 	"polkadot-parachain/std",
+	"pallet-randomness-collective-flip/std",
 ]
 
 runtime-benchmarks = [

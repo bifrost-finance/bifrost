@@ -94,7 +94,7 @@ impl<
 	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>
 {
 	fn transact_weight(weight: u64, nonce: u32) -> u64 {
-		return weight + 4 * BaseXcmWeight::get() + nonce as u64;
+		return weight + 3 * BaseXcmWeight::get() + nonce as u64;
 	}
 
 	fn transact_id(data: &[u8]) -> MessageId {
@@ -115,7 +115,7 @@ impl<
 			}],
 			effects: vec![Order::BuyExecution {
 				fees: MultiAsset::All,
-				weight: weight + 2 * BaseXcmWeight::get() + nonce as u64,
+				weight: weight + 1 * BaseXcmWeight::get() + nonce as u64,
 				debt: 2 * BaseXcmWeight::get(),
 				halt_on_error: true,
 				xcm: vec![Xcm::Transact {

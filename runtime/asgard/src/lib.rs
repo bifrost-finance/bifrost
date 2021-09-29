@@ -1171,6 +1171,7 @@ impl bifrost_salp::Config for Runtime {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpProxyType;
 	type TransactType = SalpTransactType;
+	type RandomnessSource = RandomnessCollectiveFlip;
 }
 
 parameter_types! {

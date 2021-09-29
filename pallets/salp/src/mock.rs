@@ -63,6 +63,7 @@ construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
+		CollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -284,6 +285,8 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 	}
 }
 
+impl pallet_randomness_collective_flip::Config for Test {}
+
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
@@ -310,6 +313,7 @@ impl salp::Config for Test {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
+	type RandomnessSource = CollectiveFlip;
 }
 
 pub struct SalpWeightInfo;
@@ -411,7 +415,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
-	t.into()
+	let mut ext = sp_io::TestExternalities::from(t);
+	ext.execute_with(|| System::set_block_number(1));
+
+	ext
 }
 
 // These time units are defined in number of blocks.
