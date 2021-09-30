@@ -92,6 +92,7 @@ frame_support::construct_runtime!(
 		FlexibleFee: flexible_fee::{Pallet, Call, Storage,Event<T>},
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
+		CollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage},
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>},
 	}
 );
@@ -536,6 +537,8 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 	}
 }
 
+impl pallet_randomness_collective_flip::Config for Test {}
+
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();
 	type BifrostXcmExecutor = MockXcmExecutor;
@@ -562,6 +565,7 @@ impl bifrost_salp::Config for Test {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
+	type RandomnessSource = CollectiveFlip;
 }
 
 //************** Salp mock end *****************
