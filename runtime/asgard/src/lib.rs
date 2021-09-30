@@ -195,6 +195,7 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
+	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"lighten#");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
@@ -1273,6 +1274,15 @@ impl bifrost_token_issuer::Config for Runtime {
 	type WeightInfo = weights::bifrost_token_issuer::WeightInfo<Runtime>;
 }
 
+impl bifrost_lightening_redeem::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type PalletId = LighteningRedeemPalletId;
+	type WeightInfo = ();
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1451,6 +1461,7 @@ construct_runtime! {
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
+		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 	}
 }
 

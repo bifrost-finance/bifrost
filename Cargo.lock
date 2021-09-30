@@ -165,6 +165,7 @@ dependencies = [
  "bifrost-bancor-runtime-api",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
+ "bifrost-lightening-redeem",
  "bifrost-liquidity-mining",
  "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-minter-reward",
@@ -724,6 +725,26 @@ dependencies = [
  "node-primitives",
  "parity-scale-codec",
  "sp-api",
+]
+
+[[package]]
+name = "bifrost-lightening-redeem"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=8d5432c3458702a7df14b374bddde43a2a20aa43)",
+ "pallet-collective",
+ "parity-scale-codec",
+ "serde",
+ "sp-arithmetic",
+ "sp-core 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
+ "sp-io",
+ "sp-runtime",
+ "sp-std 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
 ]
 
 [[package]]
