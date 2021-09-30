@@ -106,7 +106,7 @@ pub mod pallet {
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;
 	use xcm::v0::{prelude::XcmError, MultiLocation};
-	use xcm_support::*;
+	use xcm_support::{kusama::RelaychainCall, *};
 
 	use super::*;
 
@@ -1155,11 +1155,12 @@ pub mod pallet {
 			value: BalanceOf<T>,
 			nonce: Nonce,
 		) -> Result<MessageId, XcmError> {
-			let contribute_call = CrowdloanContributeCall::CrowdloanContribute(
-				ContributeCall::Contribute(Contribution { index, value, signature: None }),
-			)
-			.encode()
-			.into();
+			let contribute_call =
+				RelaychainCall::Crowdloan::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
+					ContributeCall::Contribute(Contribution { index, value, signature: None }),
+				)
+				.encode()
+				.into();
 
 			T::BifrostXcmExecutor::ump_transact(
 				MultiLocation::Null,
@@ -1171,11 +1172,13 @@ pub mod pallet {
 		}
 
 		fn xcm_ump_add_proxy(delegate: AccountIdOf<T>) -> Result<MessageId, XcmError> {
-			let call = ProxyAddCall::ProxyAdd(AddProxyCall::Add(AddProxy {
-				delegate,
-				proxy_type: ProxyType::Any,
-				delay: T::BlockNumber::zero(),
-			}))
+			let call = RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
+				ProxyCall::Add(AddProxy {
+					delegate,
+					proxy_type: ProxyType::Any,
+					delay: T::BlockNumber::zero(),
+				}),
+			)
 			.encode()
 			.into();
 
@@ -1189,11 +1192,13 @@ pub mod pallet {
 		}
 
 		fn xcm_ump_remove_proxy(delegate: AccountIdOf<T>) -> Result<MessageId, XcmError> {
-			let call = ProxyRemoveCall::ProxyRemove(RemoveProxyCall::Remove(RemoveProxy {
-				delegate,
-				proxy_type: ProxyType::Any,
-				delay: T::BlockNumber::zero(),
-			}))
+			let call = RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
+				ProxyCall::Remove(RemoveProxy {
+					delegate,
+					proxy_type: ProxyType::Any,
+					delay: T::BlockNumber::zero(),
+				}),
+			)
 			.encode()
 			.into();
 
