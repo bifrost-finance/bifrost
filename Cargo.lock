@@ -12789,7 +12789,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=f3896378457a4f7b562d3e0aff26697828c90189#f3896378457a4f7b562d3e0aff26697828c90189"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -12811,7 +12811,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=f3896378457a4f7b562d3e0aff26697828c90189#f3896378457a4f7b562d3e0aff26697828c90189"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -12828,7 +12828,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/bifrost-finance/Zenlink-DEX-Module?branch=polkadot-v0.9.9#a8b31443ab36a5ae6f00517813327832220aa664"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=f3896378457a4f7b562d3e0aff26697828c90189#f3896378457a4f7b562d3e0aff26697828c90189"
 dependencies = [
  "parity-scale-codec",
  "sp-api",

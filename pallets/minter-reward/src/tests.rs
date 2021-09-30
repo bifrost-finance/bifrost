@@ -75,6 +75,12 @@ fn minter_reward_should_work() {
 
 		let deadline: BlockNumberFor<Runtime> = <frame_system::Pallet<Runtime>>::block_number() +
 			<Runtime as frame_system::Config>::BlockNumber::from(100u32);
+
+		assert_ok!(ZenlinkProtocol::create_pair(Origin::root(), ausd_asset_id, dot_asset_id));
+		assert_ok!(ZenlinkProtocol::create_pair(Origin::root(), ausd_asset_id, vdot_asset_id));
+		assert_ok!(ZenlinkProtocol::create_pair(Origin::root(), ausd_asset_id, ksm_asset_id));
+		assert_ok!(ZenlinkProtocol::create_pair(Origin::root(), ausd_asset_id, vksm_asset_id));
+
 		assert_ok!(ZenlinkProtocol::add_liquidity(
 			Origin::signed(ALICE),
 			ausd_asset_id,
