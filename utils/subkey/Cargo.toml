@@ -12,13 +12,13 @@ name = "subkey"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
 futures = "0.1.29"
 hex = "0.4.2"
 jsonrpc-core-client = { version = "15.1", features = ["http"] }
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
-sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
 structopt = "0.3.14"
 tokio = "0.1.22"
 

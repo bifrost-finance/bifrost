@@ -22,37 +22,37 @@ log = "0.4.8"
 structopt = { version = "0.3.8", optional = true }
 
 # primitives
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
 
 # client dependencies
-sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
-sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
-sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true }
+sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
 
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
 node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
-frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true  }
-frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
-node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
+sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true  }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true }
+node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true }
 
 # Cumulus dependencies
-cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.9" }
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.10" }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.10" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.10" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.9" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9", optional = true }
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", optional = true }
 
 [features]
 default = [ "wasmtime", "cli" ]

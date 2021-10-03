@@ -24,16 +24,10 @@ use frame_support::{
 	weights::Weight,
 };
 use node_primitives::{AccountId, CurrencyId, TokenSymbol};
+use orml_traits::location::Reserve;
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
-use xcm::v0::Junction;
-pub use xcm::v0::{
-	Error as XcmError,
-	Junction::{AccountId32, GeneralKey, Parachain, Parent},
-	MultiAsset,
-	MultiLocation::{self, X1, X2, X3},
-	NetworkId, Xcm,
-};
+use xcm::latest::prelude::*;
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
 use xcm_executor::{
 	traits::{FilterAssetLocation, MatchesFungible, ShouldExecute, WeightTrader},
@@ -54,8 +48,8 @@ where
 	Amount: TryFrom<u128>,
 {
 	fn matches_fungible(a: &MultiAsset) -> Option<Amount> {
-		if let MultiAsset::ConcreteFungible { id, amount } = a {
-			if CurrencyIdConvert::convert(id.clone()).is_some() {
+		if let (Fungible(ref amount), Concrete(ref location)) = (&a.fun, &a.id) {
+			if CurrencyIdConvert::convert(location.clone()).is_some() {
 				return CheckedConversion::checked_from(*amount);
 			}
 		}
@@ -96,25 +90,19 @@ pub struct BifrostFilterAsset;
 
 impl FilterAssetLocation for BifrostFilterAsset {
 	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		match asset {
-			MultiAsset::ConcreteFungible { .. } => match origin {
-				X1(Junction::Plurality { .. }) => true,
-				X1(Junction::AccountId32 { .. }) => true,
-				X1(Junction::Parent { .. }) => true,
-				X1(Junction::Parachain { .. }) => true,
-				X2(Junction::Parachain { .. }, _) => true,
-				X2(Junction::Parent { .. }, _) => true,
-				_ => false,
-			},
-			_ => false,
+		if let Some(ref reserve) = asset.reserve() {
+			if reserve == origin {
+				return true;
+			}
 		}
+		false
 	}
 }
 
 pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
-	X3(Parent, Parachain(para_id.into()), GeneralKey(id.encode()))
+	MultiLocation::new(1, X2(Parachain(para_id.into()), GeneralKey(id.encode())))
 }
 
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
@@ -122,46 +110,54 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
 		use CurrencyId::{Native, Stable, Token, VSToken};
 		match id {
-			Token(TokenSymbol::KSM) => Some(X1(Parent)),
-			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) | VSToken(TokenSymbol::KSM) =>
-				Some(native_currency_location(id, T::get())),
+			Token(TokenSymbol::KSM) => Some(MultiLocation::parent()),
+			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) | VSToken(TokenSymbol::KSM) => {
+				Some(native_currency_location(id, T::get()))
+			}
 			// Karura currencyId types
-			Token(TokenSymbol::KAR) => Some(X3(
-				Parent,
-				Parachain(parachains::karura::ID),
-				GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+			Token(TokenSymbol::KAR) => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::karura::ID),
+					GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+				),
 			)),
-			Stable(TokenSymbol::KUSD) => Some(X3(
-				Parent,
-				Parachain(parachains::karura::ID),
-				GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+			Stable(TokenSymbol::KUSD) => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::karura::ID),
+					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+				),
 			)),
 			_ => None,
 		}
 	}
 }
+
 impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(location: MultiLocation) -> Option<CurrencyId> {
 		use CurrencyId::{Native, Stable, Token, VSToken};
 		use TokenSymbol::*;
+
+		if location == MultiLocation::parent() {
+			return Some(Token(KSM));
+		}
 		match location {
-			X1(Parent) => Some(Token(KSM)),
-			X3(Parent, Junction::Parachain(id), GeneralKey(key)) => {
-				// check `currency_id` is cross-chain asset
-				if ParaId::from(id) == T::get() {
+			MultiLocation { parents, interior } if parents == 1 => match interior {
+				X2(Parachain(id), GeneralKey(key)) if ParaId::from(id) == T::get() => {
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG) |
-							Native(TokenSymbol::BNC) |
-							VSToken(TokenSymbol::KSM) => Some(currency_id),
+							Native(TokenSymbol::ASG)
+							| Native(TokenSymbol::BNC)
+							| VSToken(TokenSymbol::KSM) => Some(currency_id),
 							_ => None,
 						}
 					} else {
 						None
 					}
-				// Kurara CurrencyId types
-				} else if id == parachains::karura::ID {
+				}
+				X2(Parachain(id), GeneralKey(key)) if id == parachains::karura::ID => {
 					if key == parachains::karura::KAR_KEY.to_vec() {
 						Some(Token(TokenSymbol::KAR))
 					} else if key == parachains::karura::KUSD_KEY.to_vec() {
@@ -169,9 +165,8 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					} else {
 						None
 					}
-				} else {
-					None
 				}
+				_ => None,
 			},
 			_ => None,
 		}
@@ -179,7 +174,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 }
 impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
 	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset::ConcreteFungible { id, amount: _ } = asset {
+		if let MultiAsset { id: Concrete(id), fun: Fungible(_) } = asset {
 			Self::convert(id)
 		} else {
 			None
@@ -190,7 +185,7 @@ impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrency
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: NetworkId::Any, id: account.into() })
+		MultiLocation::new(0, X1(AccountId32 { network: NetworkId::Any, id: account.into() }))
 	}
 }
 
@@ -248,43 +243,37 @@ impl<
 
 		Err(XcmError::TooExpensive)
 	}
-	fn refund_weight(&mut self, weight: Weight) -> MultiAsset {
-		let ksm = self.ksm_trader.refund_weight(weight);
-		match ksm {
-			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return ksm,
-			_ => {},
+
+	fn refund_weight(&mut self, weight: Weight) -> Option<MultiAsset> {
+		if weight.is_zero() {
+			None
+		} else {
+			let ksm = self.ksm_trader.refund_weight(weight);
+			if ksm.is_some() {
+				return ksm;
+			}
+
+			let bnc = self.bnc_trader.refund_weight(weight);
+			if bnc.is_some() {
+				return bnc;
+			}
+
+			let kar = self.kar_trader.refund_weight(weight);
+			if kar.is_some() {
+				return kar;
+			}
+
+			let kusd = self.kusd_trader.refund_weight(weight);
+			if kusd.is_some() {
+				return kusd;
+			}
+
+			let vsksm = self.kusd_trader.refund_weight(weight);
+			if vsksm.is_some() {
+				return vsksm;
+			}
+
+			None
 		}
-
-		let bnc = self.bnc_trader.refund_weight(weight);
-		match bnc {
-			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return bnc,
-			_ => {},
-		}
-
-		let kar = self.kar_trader.refund_weight(weight);
-		match kar {
-			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return kar,
-			_ => {},
-		}
-
-		let kusd = self.kusd_trader.refund_weight(weight);
-		match kusd {
-			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return kusd,
-			_ => {},
-		}
-
-		let vsksm = self.kusd_trader.refund_weight(weight);
-		match vsksm {
-			MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return vsksm,
-			_ => {},
-		}
-
-		// let dummy = self.dummy_trader.refund_weight(weight);
-		// match dummy {
-		// 	MultiAsset::ConcreteFungible { amount, .. } if !amount.is_zero() => return dummy,
-		// 	_ => {},
-		// }
-
-		MultiAsset::None
 	}
 }

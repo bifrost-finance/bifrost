@@ -20,10 +20,7 @@ use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::weights::Weight;
 use node_primitives::MessageId;
 use sp_std::vec::Vec;
-use xcm::{
-	v0::{prelude::XcmError, MultiLocation},
-	DoubleEncoded,
-};
+use xcm::{latest::prelude::*, DoubleEncoded};
 
 pub trait HandleUmpMessage {
 	fn handle_ump_message(from: CumulusParaId, msg: &[u8], max_weight: Weight);
