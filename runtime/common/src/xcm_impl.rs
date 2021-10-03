@@ -111,9 +111,8 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 		use CurrencyId::{Native, Stable, Token, VSToken};
 		match id {
 			Token(TokenSymbol::KSM) => Some(MultiLocation::parent()),
-			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) | VSToken(TokenSymbol::KSM) => {
-				Some(native_currency_location(id, T::get()))
-			}
+			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) | VSToken(TokenSymbol::KSM) =>
+				Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
 			Token(TokenSymbol::KAR) => Some(MultiLocation::new(
 				1,
@@ -148,15 +147,15 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					// decode the general key
 					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
 						match currency_id {
-							Native(TokenSymbol::ASG)
-							| Native(TokenSymbol::BNC)
-							| VSToken(TokenSymbol::KSM) => Some(currency_id),
+							Native(TokenSymbol::ASG) |
+							Native(TokenSymbol::BNC) |
+							VSToken(TokenSymbol::KSM) => Some(currency_id),
 							_ => None,
 						}
 					} else {
 						None
 					}
-				}
+				},
 				X2(Parachain(id), GeneralKey(key)) if id == parachains::karura::ID => {
 					if key == parachains::karura::KAR_KEY.to_vec() {
 						Some(Token(TokenSymbol::KAR))
@@ -165,7 +164,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					} else {
 						None
 					}
-				}
+				},
 				_ => None,
 			},
 			_ => None,

@@ -379,8 +379,8 @@ pub mod pallet {
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
-				fund.status == FundStatus::RefundWithdrew
-					|| fund.status == FundStatus::RedeemWithdrew,
+				fund.status == FundStatus::RefundWithdrew ||
+					fund.status == FundStatus::RedeemWithdrew,
 				Error::<T>::InvalidFundStatus
 			);
 
@@ -442,10 +442,10 @@ pub mod pallet {
 		) -> DispatchResult {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
-				fund.status == FundStatus::Success
-					|| fund.status == FundStatus::Retired
-					|| fund.status == FundStatus::RedeemWithdrew
-					|| fund.status == FundStatus::End,
+				fund.status == FundStatus::Success ||
+					fund.status == FundStatus::Retired ||
+					fund.status == FundStatus::RedeemWithdrew ||
+					fund.status == FundStatus::End,
 				Error::<T>::InvalidFundStatus
 			);
 
@@ -483,10 +483,10 @@ pub mod pallet {
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(
-				fund.status == FundStatus::Success
-					|| fund.status == FundStatus::Retired
-					|| fund.status == FundStatus::RedeemWithdrew
-					|| fund.status == FundStatus::End,
+				fund.status == FundStatus::Success ||
+					fund.status == FundStatus::Retired ||
+					fund.status == FundStatus::RedeemWithdrew ||
+					fund.status == FundStatus::End,
 				Error::<T>::InvalidFundStatus
 			);
 
@@ -589,9 +589,9 @@ pub mod pallet {
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(
-				status == ContributionStatus::Idle
-					|| status == ContributionStatus::Refunded
-					|| status == ContributionStatus::Redeemed,
+				status == ContributionStatus::Idle ||
+					status == ContributionStatus::Refunded ||
+					status == ContributionStatus::Redeemed,
 				Error::<T>::InvalidContributionStatus
 			);
 
@@ -638,9 +638,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let can_confirm = fund.status == FundStatus::Ongoing
-				|| fund.status == FundStatus::Failed
-				|| fund.status == FundStatus::Success;
+			let can_confirm = fund.status == FundStatus::Ongoing ||
+				fund.status == FundStatus::Failed ||
+				fund.status == FundStatus::Success;
 			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
@@ -853,9 +853,9 @@ pub mod pallet {
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(
-				status == ContributionStatus::Idle
-					|| status == ContributionStatus::Unlocked
-					|| status == ContributionStatus::Redeemed,
+				status == ContributionStatus::Idle ||
+					status == ContributionStatus::Unlocked ||
+					status == ContributionStatus::Redeemed,
 				Error::<T>::InvalidContributionStatus
 			);
 

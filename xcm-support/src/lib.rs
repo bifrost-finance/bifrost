@@ -65,15 +65,12 @@ enum Error {
 impl From<Error> for XcmError {
 	fn from(e: Error) -> Self {
 		match e {
-			Error::FailedToMatchFungible => {
-				XcmError::FailedToTransactAsset("FailedToMatchFungible")
-			}
-			Error::AccountIdConversionFailed => {
-				XcmError::FailedToTransactAsset("AccountIdConversionFailed")
-			}
-			Error::CurrencyIdConversionFailed => {
-				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed")
-			}
+			Error::FailedToMatchFungible =>
+				XcmError::FailedToTransactAsset("FailedToMatchFungible"),
+			Error::AccountIdConversionFailed =>
+				XcmError::FailedToTransactAsset("AccountIdConversionFailed"),
+			Error::CurrencyIdConversionFailed =>
+				XcmError::FailedToTransactAsset("CurrencyIdConversionFailed"),
 		}
 	}
 }

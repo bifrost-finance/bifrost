@@ -346,15 +346,15 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..)
-					| Call::Council(..) | Call::TechnicalCommittee(..)
-					| Call::PhragmenElection(..)
-					| Call::Treasury(..) | Call::Bounties(..)
-					| Call::Tips(..) | Call::Utility(..)
+				Call::Democracy(..) |
+					Call::Council(..) | Call::TechnicalCommittee(..) |
+					Call::PhragmenElection(..) |
+					Call::Treasury(..) | Call::Bounties(..) |
+					Call::Tips(..) | Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
-			}
+			},
 		}
 	}
 
@@ -986,8 +986,8 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		get_all_pallet_accounts().contains(a)
-			|| LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+		get_all_pallet_accounts().contains(a) ||
+			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1136,13 +1136,12 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) => {
+			RawOrigin::Signed(who) =>
 				if who == ConfirmMuitiSigAccount::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
-				}
-			}
+				},
 			r => Err(Origin::from(r)),
 		})
 	}
