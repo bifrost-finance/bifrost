@@ -52,13 +52,9 @@ use sp_runtime::{
 	AccountId32, Perbill, SaturatedConversion,
 };
 use sp_std::cell::RefCell;
-use xcm::{
-	opaque::v0::MultiAsset,
-	v0::{prelude::XcmError, Junction, MultiLocation},
-	DoubleEncoded,
-};
+use xcm::{latest::prelude::*, DoubleEncoded};
 use xcm_support::BifrostXcmExecutor;
-use zenlink_protocol::{LocalAssetHandler, ZenlinkMultiAssets};
+use zenlink_protocol::{AssetId as ZenlinkAssetId, LocalAssetHandler, ZenlinkMultiAssets};
 
 use super::*;
 use crate as flexible_fee;
@@ -302,17 +298,17 @@ impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
 where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
-	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
 		Local::free_balance(currency_id, &who).saturated_into()
 	}
 
-	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap();
 		Local::total_issuance(currency_id).saturated_into()
 	}
 
-	fn local_is_exists(asset_id: AssetId) -> bool {
+	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
 		let rs: Result<CurrencyId, _> = asset_id.try_into();
 		match rs {
 			Ok(_) => true,
@@ -321,7 +317,7 @@ where
 	}
 
 	fn local_transfer(
-		asset_id: AssetId,
+		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		target: &AccountId,
 		amount: AssetBalance,
@@ -333,7 +329,7 @@ where
 	}
 
 	fn local_deposit(
-		asset_id: AssetId,
+		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
@@ -343,7 +339,7 @@ where
 	}
 
 	fn local_withdraw(
-		asset_id: AssetId,
+		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
@@ -450,7 +446,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(xcm::v0::Error::Undefined),
+			false => Err(XcmError::Undefined),
 		}
 	}
 
@@ -465,7 +461,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(xcm::v0::Error::Undefined),
+			false => Err(XcmError::Undefined),
 		}
 	}
 }
@@ -487,7 +483,7 @@ parameter_types! {
 	pub AddProxyWeight:u64 = 1_000_000_000 as u64;
 	pub PrimaryAccount: AccountId = ALICE;
 	pub ConfirmMuitiSigAccount: AccountId = ALICE;
-	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::parent();
 	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
