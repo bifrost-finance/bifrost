@@ -337,15 +337,15 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..)
-					| Call::Council(..) | Call::TechnicalCommittee(..)
-					| Call::Elections(..)
-					| Call::Treasury(..) | Call::Bounties(..)
-					| Call::Tips(..) | Call::Utility(..)
+				Call::Democracy(..) |
+					Call::Council(..) | Call::TechnicalCommittee(..) |
+					Call::Elections(..) | Call::Treasury(..) |
+					Call::Bounties(..) | Call::Tips(..) |
+					Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement(..)))
-			}
+			},
 		}
 	}
 
@@ -1042,13 +1042,12 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) => {
+			RawOrigin::Signed(who) =>
 				if who == ConfirmMuitiSigAccount::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
-				}
-			}
+				},
 			r => Err(Origin::from(r)),
 		})
 	}
