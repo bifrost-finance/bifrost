@@ -938,6 +938,7 @@ name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
  "bifrost-bancor",
+ "bifrost-runtime-common",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
