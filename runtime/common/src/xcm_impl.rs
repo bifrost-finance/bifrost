@@ -184,7 +184,7 @@ impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrency
 pub struct BifrostAccountIdToMultiLocation;
 impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
 	fn convert(account: AccountId) -> MultiLocation {
-		MultiLocation::new(0, X1(AccountId32 { network: NetworkId::Any, id: account.into() }))
+		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
 	}
 }
 

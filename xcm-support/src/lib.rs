@@ -36,9 +36,10 @@ use xcm::{latest::prelude::*, DoubleEncoded};
 mod calls;
 mod traits;
 pub use calls::*;
-use frame_support::weights::WeightToFeePolynomial;
-use node_primitives::MessageId;
+use cumulus_primitives_core::ParaId;
+use frame_support::{sp_runtime::traits::AccountIdConversion, weights::WeightToFeePolynomial};
 pub use node_primitives::XcmBaseWeight;
+use node_primitives::{AccountId, MessageId};
 pub use traits::BifrostXcmExecutor;
 
 /// Asset transaction errors.
@@ -65,18 +66,19 @@ impl From<Error> for XcmError {
 	}
 }
 
-pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>(
-	PhantomData<(XcmSender, BaseXcmWeight, WeightToFee)>,
+pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId>(
+	PhantomData<(XcmSender, BaseXcmWeight, WeightToFee, SelfParaId)>,
 );
 
 impl<
 		XcmSender: SendXcm,
 		BaseXcmWeight: Get<u64>,
 		WeightToFee: WeightToFeePolynomial<Balance = u128>,
-	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>
+		SelfParaId: Get<u32>,
+	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId>
 {
 	fn transact_weight(weight: u64, nonce: u32) -> u64 {
-		return weight + 3 * BaseXcmWeight::get() + nonce as u64;
+		return weight + 4 * BaseXcmWeight::get() + nonce as u64;
 	}
 
 	fn transact_id(data: &[u8]) -> MessageId {
@@ -90,26 +92,37 @@ impl<
 		relay: bool,
 		nonce: u32,
 	) -> Result<MessageId, XcmError> {
+		let SovereignAccount: AccountId = ParaId::from(SelfParaId::get()).into_account();
+
+		let asset: MultiAsset = MultiAsset {
+			id: Concrete(MultiLocation::here()),
+			fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, nonce))),
+		};
+
 		let mut message = Xcm::WithdrawAsset {
-			assets: vec![MultiAsset {
-				id: Concrete(MultiLocation::here()),
-				fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, nonce))),
-			}]
-			.into(),
-			effects: vec![Order::BuyExecution {
-				fees: MultiAsset {
-					id: Concrete(MultiLocation::here()),
-					fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, nonce))),
+			assets: MultiAssets::from(asset.clone()),
+			effects: vec![
+				BuyExecution {
+					fees: asset,
+					weight: weight + 1 * BaseXcmWeight::get() + nonce as u64,
+					debt: 3 * BaseXcmWeight::get(),
+					halt_on_error: true,
+					instructions: vec![Xcm::Transact {
+						origin_type: OriginKind::SovereignAccount,
+						require_weight_at_most: 100_000_000_000,
+						call,
+					}],
 				},
-				weight: weight + 1 * BaseXcmWeight::get() + nonce as u64,
-				debt: 2 * BaseXcmWeight::get(),
-				halt_on_error: true,
-				instructions: vec![Xcm::Transact {
-					origin_type: OriginKind::SovereignAccount,
-					require_weight_at_most: u64::MAX,
-					call,
-				}],
-			}],
+				DepositAsset {
+					assets: All.into(),
+					max_assets: u32::max_value(),
+					beneficiary: X1(Junction::AccountId32 {
+						network: NetworkId::Any,
+						id: SovereignAccount.into(),
+					})
+					.into(),
+				},
+			],
 		};
 
 		if relay {

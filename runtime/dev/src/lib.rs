@@ -99,7 +99,7 @@ use frame_support::{
 	sp_runtime::KeyTypeId,
 	traits::{EnsureOrigin, KeyOwnerProofSystem},
 };
-use node_primitives::{
+pub use node_primitives::{
 	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
 	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType,
 	RpcContributionStatus, TokenSymbol, TransferOriginType, XcmBaseWeight,
@@ -1082,7 +1082,7 @@ parameter_types! {
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee, SelfParaId>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;

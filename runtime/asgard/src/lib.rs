@@ -1176,7 +1176,8 @@ parameter_types! {
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>>;
+	type BifrostXcmExecutor =
+		BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>, SelfParaId>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
