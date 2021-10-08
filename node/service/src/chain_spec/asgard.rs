@@ -148,9 +148,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 			]
 		})
@@ -218,17 +215,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.flat_map(|x| {
 			vec![
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
-				(
-					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
-					ENDOWMENT * 4_000_000,
-				),
+				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
 			]
 		})
 		.collect();
