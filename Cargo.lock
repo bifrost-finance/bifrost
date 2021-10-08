@@ -12650,31 +12650,16 @@ dependencies = [
 name = "xcm-support"
 version = "0.8.0"
 dependencies = [
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
  "frame-support",
  "frame-system",
  "node-primitives",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=37e42936c41dbdbaf0117c628c9eab0e06044844)",
- "pallet-balances",
- "pallet-xcm",
- "parachain-info",
  "parity-scale-codec",
  "paste",
- "polkadot-parachain",
- "polkadot-primitives",
- "polkadot-runtime-parachains",
  "smallvec 1.7.0",
- "sp-core",
  "sp-io",
  "sp-runtime",
  "sp-std",
  "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]

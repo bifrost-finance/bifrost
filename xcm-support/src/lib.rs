@@ -27,29 +27,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Encode;
-pub use cumulus_primitives_core::{self, ParaId};
 pub use frame_support::{traits::Get, weights::Weight};
 pub use paste;
 pub use sp_std::{cell::RefCell, marker::PhantomData};
 use sp_std::{prelude::*, vec};
 pub use xcm::VersionedXcm;
 use xcm::{latest::prelude::*, DoubleEncoded};
-pub use xcm_executor::XcmExecutor;
 mod calls;
 mod traits;
 pub use calls::*;
 use frame_support::weights::WeightToFeePolynomial;
 use node_primitives::MessageId;
 pub use node_primitives::XcmBaseWeight;
-pub use traits::{BifrostXcmExecutor, HandleDmpMessage, HandleUmpMessage, HandleXcmpMessage};
-#[allow(unused_imports)]
-use xcm::opaque::v0::prelude::XcmResult;
-#[allow(unused_imports)]
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
+pub use traits::BifrostXcmExecutor;
 
 /// Asset transaction errors.
 #[allow(dead_code)]
@@ -86,7 +76,7 @@ impl<
 	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee>
 {
 	fn transact_weight(weight: u64, nonce: u32) -> u64 {
-		return weight + 4 * BaseXcmWeight::get() + nonce as u64;
+		return weight + 3 * BaseXcmWeight::get() + nonce as u64;
 	}
 
 	fn transact_id(data: &[u8]) -> MessageId {
@@ -111,7 +101,7 @@ impl<
 					id: Concrete(MultiLocation::here()),
 					fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, nonce))),
 				},
-				weight: weight + 2 * BaseXcmWeight::get() + nonce as u64,
+				weight: weight + 1 * BaseXcmWeight::get() + nonce as u64,
 				debt: 2 * BaseXcmWeight::get(),
 				halt_on_error: true,
 				instructions: vec![Xcm::Transact {
@@ -134,54 +124,6 @@ impl<
 		let id = sp_io::hashing::blake2_256(&data[..]);
 
 		XcmSender::send_xcm(MultiLocation::parent(), message).map_err(|_e| XcmError::Undefined)?;
-
-		Ok(id)
-	}
-
-	fn ump_transacts(
-		origin: MultiLocation,
-		calls: Vec<DoubleEncoded<()>>,
-		weight: u64,
-		relay: bool,
-	) -> Result<MessageId, XcmError> {
-		let transacts = calls
-			.iter()
-			.map(|call| Xcm::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: u64::MAX,
-				call: call.clone(),
-			})
-			.collect();
-		let mut message = Xcm::WithdrawAsset {
-			assets: vec![MultiAsset {
-				id: Concrete(MultiLocation::here()),
-				fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, 0))),
-			}]
-			.into(),
-			effects: vec![Order::BuyExecution {
-				fees: MultiAsset {
-					id: Concrete(MultiLocation::here()),
-					fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, 0))),
-				},
-				weight: weight + 4 * BaseXcmWeight::get(),
-				debt: 2 * BaseXcmWeight::get(),
-				halt_on_error: true,
-				instructions: transacts,
-			}],
-		};
-
-		if relay {
-			message = Xcm::<()>::RelayedFrom {
-				who: origin.interior().clone(),
-				message: Box::new(message),
-			};
-		}
-
-		let data = VersionedXcm::<()>::from(message.clone()).encode();
-
-		let id = Self::transact_id(&data);
-
-		XcmSender::send_xcm(MultiLocation::parent(), message)?;
 
 		Ok(id)
 	}

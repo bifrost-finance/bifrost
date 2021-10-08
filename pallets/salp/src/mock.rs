@@ -352,20 +352,6 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 		}
 	}
 
-	fn ump_transacts(
-		_origin: MultiLocation,
-		_call: Vec<DoubleEncoded<()>>,
-		_weight: u64,
-		_relayer: bool,
-	) -> Result<MessageId, XcmError> {
-		let result = unsafe { MOCK_XCM_RESULT.0 };
-
-		match result {
-			true => Ok([0; 32]),
-			false => Err(XcmError::Undefined),
-		}
-	}
-
 	fn ump_transfer_asset(
 		_origin: MultiLocation,
 		_dest: MultiLocation,

@@ -18,16 +18,33 @@
 
 use codec::{Decode, Encode};
 use node_primitives::ParaId;
-use sp_runtime::MultiSignature;
+use sp_runtime::{MultiSignature, RuntimeDebug};
 use sp_std::vec::Vec;
 
-#[derive(Encode, Decode)]
-pub enum CrowdloanContributeCall<BalanceOf> {
-	#[codec(index = 73)]
-	CrowdloanContribute(ContributeCall<BalanceOf>),
+pub mod kusama {
+
+	pub use crate::calls::*;
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelaychainCall<BalanceOf, AccountIdOf, BlockNumberOf> {
+		#[codec(index = 73)]
+		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
+		#[codec(index = 30)]
+		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
+	}
 }
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum ContributeCall<BalanceOf, AccountIdOf> {
+	#[codec(index = 1)]
+	Contribute(Contribution<BalanceOf>),
+	#[codec(index = 2)]
+	Withdraw(Withdraw<AccountIdOf>),
+	#[codec(index = 6)]
+	AddMemo(AddMemo),
+}
+
+#[derive(PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Contribution<BalanceOf> {
 	#[codec(compact)]
 	pub index: ParaId,
@@ -36,50 +53,20 @@ pub struct Contribution<BalanceOf> {
 	pub signature: Option<MultiSignature>,
 }
 
-#[derive(Encode, Decode)]
-pub enum ContributeCall<BalanceOf> {
-	#[codec(index = 1)]
-	Contribute(Contribution<BalanceOf>),
-}
-
-#[derive(Encode, Decode)]
-pub enum CrowdloanWithdrawCall<AccountIdOf> {
-	#[codec(index = 73)]
-	CrowdloanWithdraw(WithdrawCall<AccountIdOf>),
-}
-
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct Withdraw<AccountIdOf> {
 	pub who: AccountIdOf,
 	#[codec(compact)]
 	pub index: ParaId,
 }
 
-#[derive(Encode, Decode)]
-pub enum WithdrawCall<AccountIdOf> {
-	#[codec(index = 2)]
-	Withdraw(Withdraw<AccountIdOf>),
-}
-
-#[derive(Encode, Decode)]
-pub enum CrowdloanAddMemoCall {
-	#[codec(index = 73)]
-	CrowdloanAddMemo(AddMemoCall),
-}
-
-#[derive(Encode, Decode)]
-pub enum AddMemoCall {
-	#[codec(index = 6)]
-	AddMemo(AddMemo),
-}
-
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct AddMemo {
 	pub index: ParaId,
 	pub memo: Vec<u8>,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
 pub enum ProxyType {
 	Any,
 	NonTransfer,
@@ -89,74 +76,24 @@ pub enum ProxyType {
 	CancelProxy,
 }
 
-#[derive(Encode, Decode)]
-pub enum ProxyAddCall<BalanceOf, BlockNumberOf> {
-	#[codec(index = 30)]
-	ProxyAdd(AddProxyCall<BalanceOf, BlockNumberOf>),
-}
-
-#[derive(Encode, Decode)]
-pub enum AddProxyCall<AccountIdOf, BlockNumberOf> {
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum ProxyCall<AccountIdOf, BlockNumberOf> {
 	#[codec(index = 1)]
 	Add(AddProxy<AccountIdOf, BlockNumberOf>),
+	#[codec(index = 2)]
+	Remove(RemoveProxy<AccountIdOf, BlockNumberOf>),
 }
 
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct AddProxy<AccountIdOf, BlockNumberOf> {
 	pub delegate: AccountIdOf,
 	pub proxy_type: ProxyType,
 	pub delay: BlockNumberOf,
 }
 
-#[derive(Encode, Decode)]
-pub enum ProxyRemoveCall<BalanceOf, BlockNumberOf> {
-	#[codec(index = 30)]
-	ProxyRemove(RemoveProxyCall<BalanceOf, BlockNumberOf>),
-}
-
-#[derive(Encode, Decode)]
-pub enum RemoveProxyCall<AccountIdOf, BlockNumberOf> {
-	#[codec(index = 1)]
-	Remove(RemoveProxy<AccountIdOf, BlockNumberOf>),
-}
-
-#[derive(Debug, PartialEq, Encode, Decode)]
+#[derive(PartialEq, Encode, Decode, RuntimeDebug)]
 pub struct RemoveProxy<AccountIdOf, BlockNumberOf> {
 	pub delegate: AccountIdOf,
 	pub proxy_type: ProxyType,
 	pub delay: BlockNumberOf,
-}
-
-#[derive(Encode, Decode)]
-pub enum UtilityBatchCall {
-	#[codec(index = 24)]
-	UtilityBatch(BatchCall),
-}
-
-#[derive(Encode, Decode)]
-pub enum BatchCall {
-	#[codec(index = 0)]
-	Batch(BatchCalls),
-}
-
-#[derive(Debug, PartialEq, Encode, Decode)]
-pub struct BatchCalls {
-	pub calls: Vec<Vec<u8>>,
-}
-
-#[derive(Encode, Decode)]
-pub enum SystemRemarkCall {
-	#[codec(index = 0)]
-	SystemRemark(RemarkCall),
-}
-
-#[derive(Encode, Decode)]
-pub enum RemarkCall {
-	#[codec(index = 9)]
-	Remark(RemarkWithEvent),
-}
-
-#[derive(Debug, PartialEq, Encode, Decode)]
-pub struct RemarkWithEvent {
-	pub remark: Vec<u8>,
 }

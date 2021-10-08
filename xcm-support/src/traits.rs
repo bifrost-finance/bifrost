@@ -16,28 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::weights::Weight;
 use node_primitives::MessageId;
-use sp_std::vec::Vec;
 use xcm::{latest::prelude::*, DoubleEncoded};
-
-pub trait HandleUmpMessage {
-	fn handle_ump_message(from: CumulusParaId, msg: &[u8], max_weight: Weight);
-}
-
-pub trait HandleDmpMessage {
-	fn handle_dmp_message(at_relay_block: u32, msg: Vec<u8>, max_weight: Weight);
-}
-
-pub trait HandleXcmpMessage {
-	fn handle_xcmp_message(
-		from: CumulusParaId,
-		at_relay_block: u32,
-		msg: &[u8],
-		max_weight: Weight,
-	);
-}
 
 /// Bifrost Xcm Executor
 pub trait BifrostXcmExecutor {
@@ -51,13 +31,6 @@ pub trait BifrostXcmExecutor {
 		weight: u64,
 		relay: bool,
 		nonce: u32,
-	) -> Result<MessageId, XcmError>;
-
-	fn ump_transacts(
-		origin: MultiLocation,
-		calls: Vec<DoubleEncoded<()>>,
-		weight: u64,
-		relay: bool,
 	) -> Result<MessageId, XcmError>;
 
 	fn ump_transfer_asset(
