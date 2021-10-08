@@ -99,6 +99,9 @@ orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
+zenlink-protocol = { version = "*", default-features = false }
+zenlink-protocol-runtime-api = { version = "*", default-features = false }
+
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 
@@ -167,6 +170,8 @@ std = [
 	"bifrost-liquidity-mining/std",
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
+	"zenlink-protocol/std",
+	"zenlink-protocol-runtime-api/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

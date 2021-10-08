@@ -26,6 +26,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use core::convert::TryInto;
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -49,12 +51,12 @@ use sp_core::{
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, Zero},
+	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
 };
 pub use sp_runtime::{Perbill, Permill};
-use sp_std::prelude::*;
+use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -110,7 +112,11 @@ use xcm_builder::{
 };
 use xcm_executor::{Config, XcmExecutor};
 use xcm_support::{BifrostXcmAdaptor, Get};
-
+// zenlink imports
+use zenlink_protocol::{
+	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
+	ZenlinkMultiAssets,
+};
 // Weights used in the runtime.
 mod weights;
 
@@ -983,7 +989,7 @@ parameter_types! {
 
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
-	type DexOperator = ();
+	type DexOperator = ZenlinkProtocol;
 	// type FeeDealer = FlexibleFee;
 	type FeeDealer = FixedCurrencyFeeRate<Runtime>;
 	type Event = Event;
@@ -1109,6 +1115,110 @@ impl bifrost_token_issuer::Config for Runtime {
 
 // Bifrost modules end
 
+// zenlink runtime start
+parameter_types! {
+	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
+	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
+
+	// xcm
+	pub const AnyNetwork: NetworkId = NetworkId::Any;
+	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
+		// Bifrost local and live, 0.01 BNC
+		(make_x2_location(2001), 10_000_000_000),
+		// Phala local and live, 1 PHA
+		(make_x2_location(2004), 1_000_000_000_000),
+		// Plasm local and live, 0.0000000000001 SDN
+		(make_x2_location(2007), 1_000_000),
+		// Sherpax live, 0 KSX
+		(make_x2_location(2013), 0),
+
+		// Zenlink local 1 for test
+		(make_x2_location(200), 1_000_000),
+		// Zenlink local 2 for test
+		(make_x2_location(300), 1_000_000),
+	];
+}
+
+impl zenlink_protocol::Config for Runtime {
+	type Conversion = ZenlinkLocationToAccountId;
+	type Event = Event;
+	type MultiAssetsHandler = MultiAssets;
+	type PalletId = ZenlinkPalletId;
+	type SelfParaId = SelfParaId;
+	type TargetChains = ZenlinkRegistedParaChains;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
+type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
+
+pub type ZenlinkLocationToAccountId = (
+	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
+	SiblingParachainConvertsVia<Sibling, AccountId>,
+	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
+	AccountId32Aliases<AnyNetwork, AccountId>,
+);
+
+// Below is the implementation of tokens manipulation functions other than native token.
+pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
+
+impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
+where
+	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
+{
+	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::free_balance(currency_id, &who).saturated_into()
+	}
+
+	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::total_issuance(currency_id).saturated_into()
+	}
+
+	fn local_is_exists(asset_id: AssetId) -> bool {
+		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
+		match currency_id {
+			Ok(_) => true,
+			Err(_) => false,
+		}
+	}
+
+	fn local_transfer(
+		asset_id: AssetId,
+		origin: &AccountId,
+		target: &AccountId,
+		amount: AssetBalance,
+	) -> DispatchResult {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::transfer(currency_id, &origin, &target, amount.unique_saturated_into())?;
+
+		Ok(())
+	}
+
+	fn local_deposit(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::deposit(currency_id, &origin, amount.unique_saturated_into())?;
+		return Ok(amount);
+	}
+
+	fn local_withdraw(
+		asset_id: AssetId,
+		origin: &AccountId,
+		amount: AssetBalance,
+	) -> Result<AssetBalance, DispatchError> {
+		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
+		Local::withdraw(currency_id, &origin, amount.unique_saturated_into())?;
+
+		Ok(amount)
+	}
+}
+
+// zenlink runtime end
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -1167,6 +1277,7 @@ construct_runtime! {
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
@@ -1329,6 +1440,62 @@ impl_runtime_apis! {
 				Ok(val) => val,
 				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
 			}
+		}
+	}
+
+	// zenlink runtime outer apis
+	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
+
+		fn get_balance(
+			asset_id: AssetId,
+			owner: AccountId
+		) -> AssetBalance {
+			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
+		}
+
+		fn get_sovereigns_info(
+			asset_id: AssetId
+		) -> Vec<(u32, AccountId, AssetBalance)> {
+			ZenlinkProtocol::get_sovereigns_info(&asset_id)
+		}
+
+		fn get_pair_by_asset_id(
+			asset_0: AssetId,
+			asset_1: AssetId
+		) -> Option<PairInfo<AccountId, AssetBalance>> {
+			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
+		}
+
+		fn get_amount_in_price(
+			supply: AssetBalance,
+			path: Vec<AssetId>
+		) -> AssetBalance {
+			ZenlinkProtocol::desired_in_amount(supply, path)
+		}
+
+		fn get_amount_out_price(
+			supply: AssetBalance,
+			path: Vec<AssetId>
+		) -> AssetBalance {
+			ZenlinkProtocol::supply_out_amount(supply, path)
+		}
+
+		fn get_estimate_lptoken(
+			token_0: AssetId,
+			token_1: AssetId,
+			amount_0_desired: AssetBalance,
+			amount_1_desired: AssetBalance,
+			amount_0_min: AssetBalance,
+			amount_1_min: AssetBalance,
+		) -> AssetBalance{
+			ZenlinkProtocol::get_estimate_lptoken(
+				token_0,
+				token_1,
+				amount_0_desired,
+				amount_1_desired,
+				amount_0_min,
+				amount_1_min
+			)
 		}
 	}
 
