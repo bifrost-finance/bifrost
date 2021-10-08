@@ -114,8 +114,8 @@ use xcm_executor::{Config, XcmExecutor};
 use xcm_support::{BifrostXcmAdaptor, Get};
 // zenlink imports
 use zenlink_protocol::{
-	make_x2_location, AssetBalance, AssetId, LocalAssetHandler, MultiAssetsHandler, PairInfo,
-	ZenlinkMultiAssets,
+	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler,
+	MultiAssetsHandler, PairInfo, ZenlinkMultiAssets,
 };
 // Weights used in the runtime.
 mod weights;
@@ -1195,17 +1195,17 @@ impl<Local, AccountId> LocalAssetHandler<AccountId> for LocalAssetAdaptor<Local>
 where
 	Local: MultiCurrency<AccountId, CurrencyId = CurrencyId>,
 {
-	fn local_balance_of(asset_id: AssetId, who: &AccountId) -> AssetBalance {
+	fn local_balance_of(asset_id: ZenlinkAssetId, who: &AccountId) -> AssetBalance {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::free_balance(currency_id, &who).saturated_into()
 	}
 
-	fn local_total_supply(asset_id: AssetId) -> AssetBalance {
+	fn local_total_supply(asset_id: ZenlinkAssetId) -> AssetBalance {
 		let currency_id: CurrencyId = asset_id.try_into().unwrap_or_default();
 		Local::total_issuance(currency_id).saturated_into()
 	}
 
-	fn local_is_exists(asset_id: AssetId) -> bool {
+	fn local_is_exists(asset_id: ZenlinkAssetId) -> bool {
 		let currency_id: Result<CurrencyId, ()> = asset_id.try_into();
 		match currency_id {
 			Ok(_) => true,
@@ -1214,7 +1214,7 @@ where
 	}
 
 	fn local_transfer(
-		asset_id: AssetId,
+		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		target: &AccountId,
 		amount: AssetBalance,
@@ -1226,7 +1226,7 @@ where
 	}
 
 	fn local_deposit(
-		asset_id: AssetId,
+		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
@@ -1236,7 +1236,7 @@ where
 	}
 
 	fn local_withdraw(
-		asset_id: AssetId,
+		asset_id: ZenlinkAssetId,
 		origin: &AccountId,
 		amount: AssetBalance,
 	) -> Result<AssetBalance, DispatchError> {
@@ -1477,42 +1477,42 @@ impl_runtime_apis! {
 	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
 
 		fn get_balance(
-			asset_id: AssetId,
+			asset_id: ZenlinkAssetId,
 			owner: AccountId
 		) -> AssetBalance {
 			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
 		}
 
 		fn get_sovereigns_info(
-			asset_id: AssetId
+			asset_id: ZenlinkAssetId
 		) -> Vec<(u32, AccountId, AssetBalance)> {
 			ZenlinkProtocol::get_sovereigns_info(&asset_id)
 		}
 
 		fn get_pair_by_asset_id(
-			asset_0: AssetId,
-			asset_1: AssetId
+			asset_0: ZenlinkAssetId,
+			asset_1: ZenlinkAssetId
 		) -> Option<PairInfo<AccountId, AssetBalance>> {
 			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
 		}
 
 		fn get_amount_in_price(
 			supply: AssetBalance,
-			path: Vec<AssetId>
+			path: Vec<ZenlinkAssetId>
 		) -> AssetBalance {
 			ZenlinkProtocol::desired_in_amount(supply, path)
 		}
 
 		fn get_amount_out_price(
 			supply: AssetBalance,
-			path: Vec<AssetId>
+			path: Vec<ZenlinkAssetId>
 		) -> AssetBalance {
 			ZenlinkProtocol::supply_out_amount(supply, path)
 		}
 
 		fn get_estimate_lptoken(
-			token_0: AssetId,
-			token_1: AssetId,
+			token_0: ZenlinkAssetId,
+			token_1: ZenlinkAssetId,
 			amount_0_desired: AssetBalance,
 			amount_1_desired: AssetBalance,
 			amount_0_min: AssetBalance,
