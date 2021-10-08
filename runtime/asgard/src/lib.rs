@@ -1213,8 +1213,7 @@ parameter_types! {
 
 impl bifrost_liquidity_mining::Config for Runtime {
 	type Event = Event;
-	type ControlOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+	type ControlOrigin = MoreThanHalfCouncil;
 	type MultiCurrency = Currencies;
 	type RelayChainTokenSymbol = RelayChainTokenSymbol;
 	type MaximumDepositInPool = MaximumDepositInPool;
