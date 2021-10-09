@@ -183,7 +183,12 @@ impl<T: Config> PoolInfo<T> {
 		}
 
 		for (rtoken, amount) in to_rewards.iter() {
-			T::MultiCurrency::transfer(*rtoken, &self.keeper, &user, *amount)?;
+			let ed = T::MultiCurrency::minimum_balance(*rtoken);
+			let total = T::MultiCurrency::total_balance(*rtoken, &user).saturating_add(*amount);
+
+			if total >= ed {
+				T::MultiCurrency::transfer(*rtoken, &self.keeper, &user, *amount)?;
+			}
 		}
 
 		Pallet::<T>::deposit_event(Event::UserClaimed(
