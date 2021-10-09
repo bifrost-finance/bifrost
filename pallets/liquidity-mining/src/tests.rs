@@ -2163,6 +2163,53 @@ fn claim_from_eb_farming_should_work() {
 }
 
 #[test]
+fn discard_reward_lower_than_ed_should_work() {
+	new_test_ext().execute_with(|| {
+		const PER_BLOCK: Balance = REWARD_AMOUNT / DAYS as Balance;
+		const HALF_ED_PER_BLOCK: Balance = ExistentialDeposit::get() / 2;
+
+		assert_ok!(LM::create_eb_farming_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			2001,
+			13,
+			20,
+			(REWARD_1, HALF_ED_PER_BLOCK * DAYS as Balance),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1_000_000,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		assert_ok!(Tokens::reserve(FARMING_DEPOSIT_1, &USER_1, DEPOSIT_AMOUNT));
+		assert_ok!(Tokens::reserve(FARMING_DEPOSIT_2, &USER_1, DEPOSIT_AMOUNT));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, DEPOSIT_AMOUNT));
+
+		// The action will discard the reward of `reward_1`.
+		run_to_block(1);
+		assert_ok!(LM::claim(Some(USER_1).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, PER_BLOCK);
+
+		run_to_block(3);
+		assert_ok!(LM::claim(Some(USER_1).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, 2 * HALF_ED_PER_BLOCK);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, 3 * PER_BLOCK);
+
+		run_to_block(4);
+		assert_ok!(LM::claim(Some(USER_1).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, 3 * HALF_ED_PER_BLOCK);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, 4 * PER_BLOCK);
+	});
+}
+
+#[test]
 fn simple_integration_test() {
 	new_test_ext().execute_with(|| {
 		const PER_BLOCK: Balance = REWARD_AMOUNT / DAYS as Balance;
