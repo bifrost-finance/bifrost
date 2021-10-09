@@ -212,9 +212,8 @@ impl Contains<Call> for CallFilter {
 			Call::Currencies(orml_currencies::Call::transfer(_, CurrencyId::VSBond(..), _)) => true,
 			Call::Tokens(orml_tokens::Call::transfer(_, CurrencyId::VSBond(..), _)) => true,
 			Call::Tokens(orml_tokens::Call::transfer_all(_, CurrencyId::VSBond(..), _)) => true,
-			Call::Tokens(orml_tokens::Call::transfer_keep_alive(_, CurrencyId::VSBond(..), _)) => {
-				true
-			}
+			Call::Tokens(orml_tokens::Call::transfer_keep_alive(_, CurrencyId::VSBond(..), _)) =>
+				true,
 
 			// call banned
 			Call::Balances(_) => false,
@@ -927,8 +926,8 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		get_all_pallet_accounts().contains(a)
-			|| LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+		get_all_pallet_accounts().contains(a) ||
+			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1047,13 +1046,12 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) => {
+			RawOrigin::Signed(who) =>
 				if who == ConfirmMuitiSigAccount::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
-				}
-			}
+				},
 			r => Err(Origin::from(r)),
 		})
 	}
