@@ -45,6 +45,8 @@ pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -72,6 +74,7 @@ where
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	P: TransactionPool + 'static,
 {
 	let FullDeps { client, .. } = deps;
@@ -87,6 +90,8 @@ where
 	io.extend_with(LiquidityMiningRpcApi::to_delegate(LiquidityMiningRpcWrapper::new(
 		client.clone(),
 	)));
+
+	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
 	io
 }

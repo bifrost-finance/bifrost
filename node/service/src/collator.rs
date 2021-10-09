@@ -51,6 +51,7 @@ use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
+use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
 use crate::RuntimeApiCollection;
 
@@ -192,6 +193,7 @@ where
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 	BIC: FnOnce(
 		Arc<TFullClient<Block, RuntimeApi, Executor>>,
@@ -352,6 +354,7 @@ where
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
+	RuntimeApi::RuntimeApi: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	Executor: NativeExecutionDispatch + 'static,
 {
 	start_node_impl(
