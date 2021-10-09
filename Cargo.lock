@@ -874,6 +874,8 @@ dependencies = [
  "xcm-builder",
  "xcm-executor",
  "xcm-support",
+ "zenlink-protocol",
+ "zenlink-protocol-runtime-api",
 ]
 
 [[package]]
