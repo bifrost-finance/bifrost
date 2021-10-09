@@ -2188,6 +2188,8 @@ fn discard_reward_lower_than_ed_should_work() {
 
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, DEPOSIT_AMOUNT));
 
+		let keeper = LM::pool(0).unwrap().keeper;
+
 		// The action will discard the reward of `reward_1`.
 		run_to_block(1);
 		assert_ok!(LM::claim(Some(USER_1).into(), 0));
@@ -2206,6 +2208,21 @@ fn discard_reward_lower_than_ed_should_work() {
 
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, 3 * HALF_ED_PER_BLOCK);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, 4 * PER_BLOCK);
+
+		run_to_block(DAYS);
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+
+		let reward_1 = (DAYS - 1) as Balance * HALF_ED_PER_BLOCK;
+		let reward_2 = DAYS as Balance * PER_BLOCK;
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, reward_1);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, reward_2);
+
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_1).free, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_2).free, 0);
+
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).free, REWARD_AMOUNT - reward_1);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).free, REWARD_AMOUNT - reward_2);
 	});
 }
 
