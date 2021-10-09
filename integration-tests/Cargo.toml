@@ -121,7 +121,6 @@ cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumul
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
-
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", branch = "polkadot-v0.9.10" }
 
 node-service = { path = "../node/service", features = ["with-all-runtime"] }

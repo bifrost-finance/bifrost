@@ -92,7 +92,7 @@ impl<
 		relay: bool,
 		nonce: u32,
 	) -> Result<MessageId, XcmError> {
-		let SovereignAccount: AccountId = ParaId::from(SelfParaId::get()).into_account();
+		let sovereign_account: AccountId = ParaId::from(SelfParaId::get()).into_account();
 
 		let asset: MultiAsset = MultiAsset {
 			id: Concrete(MultiLocation::here()),
@@ -118,7 +118,7 @@ impl<
 					max_assets: u32::max_value(),
 					beneficiary: X1(Junction::AccountId32 {
 						network: NetworkId::Any,
-						id: SovereignAccount.into(),
+						id: sovereign_account.into(),
 					})
 					.into(),
 				},
