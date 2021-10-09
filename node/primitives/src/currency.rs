@@ -24,7 +24,7 @@ use codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_runtime::RuntimeDebug;
 use sp_std::{
-	convert::{Into, TryFrom, TryInto},
+	convert::{TryFrom, TryInto},
 	prelude::*,
 };
 use zenlink_protocol::{AssetId, LOCAL, NATIVE};

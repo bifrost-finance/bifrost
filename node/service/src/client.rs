@@ -171,7 +171,7 @@ pub enum Client {
 	#[cfg(feature = "with-bifrost-runtime")]
 	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
 	#[cfg(feature = "with-dev-runtime")]
-	AsgardDev(Arc<FullClient<dev_runtime::RuntimeApi, crate::DevExecutor>>),
+	AsgardDev(Arc<FullClient<dev_runtime::RuntimeApi, crate::dev::DevExecutor>>),
 }
 
 impl ClientHandle for Client {
