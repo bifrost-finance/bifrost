@@ -996,6 +996,7 @@ dependencies = [
 name = "bifrost-token-issuer"
 version = "0.8.0"
 dependencies = [
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "node-primitives",

@@ -1262,7 +1262,7 @@ impl bifrost_token_issuer::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type WeightInfo = ();
+	type WeightInfo = weights::bifrost_token_issuer::WeightInfo<Runtime>;
 }
 
 // bifrost runtime end
@@ -1725,6 +1725,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_vtoken_mint, VtokenMint);
 			list_benchmark!(list, extra, bifrost_minter_reward, MinterReward);
 			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
+			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1761,7 +1762,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
 			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
 			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
-
+			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

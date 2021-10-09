@@ -26,20 +26,22 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use frame_support::{ensure, pallet_prelude::*, transactional};
-use frame_system::{pallet_prelude::*, WeightInfo};
+use frame_system::pallet_prelude::*;
+use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
+pub use weights::WeightInfo;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 mod mock;
 mod tests;
+mod weights;
 
 pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 	<T as frame_system::Config>::AccountId,
 >>::Balance;
-type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-	<T as frame_system::Config>::AccountId,
->>::CurrencyId;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
 #[frame_support::pallet]
@@ -50,7 +52,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// Currecny operation handler
-		type MultiCurrency: MultiCurrency<AccountIdOf<Self>>;
+		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		/// The only origin that can edit token issuer list
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
@@ -70,34 +72,33 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::metadata(BalanceOf<T> = "Balance", CurrencyIdOf<T> = "CurrencyId")]
+	#[pallet::metadata(BalanceOf<T> = "Balance")]
 	#[pallet::generate_deposit(pub(crate) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Successful added a new account to the issue whitelist. \[account, currency_id]\
-		AddedToIssueList(T::AccountId, CurrencyIdOf<T>),
+		AddedToIssueList(T::AccountId, CurrencyId),
 		/// Successful remove an account from the issue whitelist. \[account, currency_id]\
-		RemovedFromIssueList(T::AccountId, CurrencyIdOf<T>),
+		RemovedFromIssueList(T::AccountId, CurrencyId),
 		/// Successful added a new account to the transfer whitelist. \[account, currency_id]\
-		AddedToTransferList(T::AccountId, CurrencyIdOf<T>),
+		AddedToTransferList(T::AccountId, CurrencyId),
 		/// Successful remove an account from the transfer whitelist. \[account, currency_id]\
-		RemovedFromTransferList(T::AccountId, CurrencyIdOf<T>),
+		RemovedFromTransferList(T::AccountId, CurrencyId),
 		/// Token issue success, \[currency_id, dest, amount\]
-		Issued(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		Issued(T::AccountId, CurrencyId, BalanceOf<T>),
 		/// Token transferred success, \[origin, dest, currency_id, amount\]
-		Transferred(T::AccountId, T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),
+		Transferred(T::AccountId, T::AccountId, CurrencyId, BalanceOf<T>),
 	}
 
 	/// Accounts in the whitelist can issue the corresponding Currency.
 	#[pallet::storage]
 	#[pallet::getter(fn get_issue_whitelist)]
-	pub type IssueWhiteList<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, Vec<AccountIdOf<T>>>;
+	pub type IssueWhiteList<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
 
 	/// Accounts in the whitelist can transfer the corresponding Currency.
 	#[pallet::storage]
 	#[pallet::getter(fn get_transfer_whitelist)]
 	pub type TransferWhiteList<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, Vec<AccountIdOf<T>>>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -107,11 +108,11 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::add_to_issue_whitelist())]
 		#[transactional]
 		pub fn add_to_issue_whitelist(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			account: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -135,11 +136,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::remove_from_issue_whitelist())]
 		#[transactional]
 		pub fn remove_from_issue_whitelist(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			account: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -158,11 +159,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::add_to_transfer_whitelist())]
 		#[transactional]
 		pub fn add_to_transfer_whitelist(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			account: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -189,11 +190,11 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::remove_from_transfer_whitelist())]
 		#[transactional]
 		pub fn remove_from_transfer_whitelist(
 			origin: OriginFor<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			account: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -218,12 +219,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::issue())]
 		#[transactional]
 		pub fn issue(
 			origin: OriginFor<T>,
 			dest: AccountIdOf<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let issuer = ensure_signed(origin)?;
@@ -242,12 +243,12 @@ pub mod pallet {
 		///
 		/// The dispatch origin for this call must be `Root` by the
 		/// transactor.
-		#[pallet::weight(1000)]
+		#[pallet::weight(T::WeightInfo::transfer())]
 		#[transactional]
 		pub fn transfer(
 			origin: OriginFor<T>,
 			dest: AccountIdOf<T>,
-			currency_id: CurrencyIdOf<T>,
+			currency_id: CurrencyId,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let transferrer = ensure_signed(origin)?;

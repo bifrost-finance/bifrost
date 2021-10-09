@@ -23,6 +23,7 @@
 pub mod bifrost_flexible_fee;
 pub mod bifrost_liquidity_mining;
 pub mod bifrost_salp;
+pub mod bifrost_token_issuer;
 pub mod frame_system;
 pub mod orml_tokens;
 pub mod pallet_balances;

@@ -23,40 +23,38 @@ use frame_support::{
 	traits::Get,
 	weights::{constants::RocksDbWeight, Weight},
 };
-use sp_std::marker::PhantomData;
-
 
 pub trait WeightInfo {
-    fn add_to_issue_whitelist() -> Weight;
-    fn remove_from_issue_whitelist() -> Weight;
-    fn add_to_transfer_whitelist() -> Weight;
-    fn remove_from_transfer_whitelist() -> Weight;
-    fn issue() -> Weight;
-    fn transfer() -> Weight;
+	fn add_to_issue_whitelist() -> Weight;
+	fn remove_from_issue_whitelist() -> Weight;
+	fn add_to_transfer_whitelist() -> Weight;
+	fn remove_from_transfer_whitelist() -> Weight;
+	fn issue() -> Weight;
+	fn transfer() -> Weight;
 }
 
 impl WeightInfo for () {
-    fn add_to_issue_whitelist() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn add_to_issue_whitelist() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn remove_from_issue_whitelist() -> Weight {
-        (50_000_000 as Weight)
-    }
-    
-    fn add_to_transfer_whitelist() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn remove_from_issue_whitelist() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn remove_from_transfer_whitelist() -> Weight {
-        (50_000_000 as Weight)
-    }
-    
-    fn issue() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn add_to_transfer_whitelist() -> Weight {
+		(50_000_000 as Weight)
+	}
 
-    fn transfer() -> Weight {
-        (50_000_000 as Weight)
-    }
+	fn remove_from_transfer_whitelist() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn issue() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn transfer() -> Weight {
+		(50_000_000 as Weight)
+	}
 }
