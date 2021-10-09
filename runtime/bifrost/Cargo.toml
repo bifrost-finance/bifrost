@@ -195,6 +195,7 @@ runtime-benchmarks = [
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-liquidity-mining/runtime-benchmarks",
+	"bifrost-token-issuer/runtime-benchmarks",
 ]
 
 try-runtime = [
