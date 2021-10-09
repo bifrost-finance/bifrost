@@ -167,13 +167,19 @@ impl<T: Config> PoolInfo<T> {
 						v_new.saturating_sub(v_old).saturating_mul_int(user_deposit),
 					);
 
-					// Update the claimed of the reward
-					reward.claimed = reward.claimed.saturating_add(amount);
 					// Sync the gain_avg between `DepositData` and `RewardData`
 					deposit_data.gain_avgs.insert(*rtoken, v_new);
 					deposit_data.update_b = self.update_b;
 
-					to_rewards.push((*rtoken, amount));
+					let ed = T::MultiCurrency::minimum_balance(*rtoken);
+					let total =
+						T::MultiCurrency::total_balance(*rtoken, &user).saturating_add(amount);
+
+					if total >= ed {
+						// Update the claimed of the reward
+						reward.claimed = reward.claimed.saturating_add(amount);
+						to_rewards.push((*rtoken, amount));
+					}
 				}
 			}
 		}
