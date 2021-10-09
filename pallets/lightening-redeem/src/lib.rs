@@ -30,8 +30,8 @@ mod mock;
 mod tests;
 pub mod weights;
 
-// #[cfg(feature = "runtime-benchmarks")]
-// mod benchmarking;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 
 pub use pallet::*;
 
@@ -134,7 +134,7 @@ pub mod pallet {
 			if (n <= end) & (n > start) {
 				if (n - start) % BLOCKS_PER_DAY.into() == Zero::zero() {
 					let ksm = CurrencyId::Token(TokenSymbol::KSM);
-					let pool_account: AccountIdOf<T> = T::PalletId::get().into_sub_account(0);
+					let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
 					let releae_per_day = Self::get_token_release_per_round();
 					let total_amount = Self::get_pool_amount().saturating_add(releae_per_day);
 
@@ -160,7 +160,7 @@ pub mod pallet {
 			let token_balance = T::MultiCurrency::free_balance(ksm_id, &adder);
 			ensure!(token_balance >= token_amount, Error::<T>::NotEnoughBalance);
 
-			let pool_account: AccountIdOf<T> = T::PalletId::get().into_sub_account(0);
+			let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
 			T::MultiCurrency::transfer(ksm_id, &adder, &pool_account, token_amount)?;
 
 			Self::deposit_event(Event::KSMAdded(adder, token_amount));
@@ -196,7 +196,7 @@ pub mod pallet {
 			ensure!(vsbond_balance >= amount_needed, Error::<T>::NotEnoughBalance);
 
 			// Make changes to account token balances
-			let pool_account: AccountIdOf<T> = T::PalletId::get().into_sub_account(0);
+			let pool_account: AccountIdOf<T> = T::PalletId::get().into_account();
 			T::MultiCurrency::ensure_can_withdraw(ksm, &pool_account, token_amount)?;
 			PoolAmount::<T>::mutate(|amt| *amt = amt.saturating_sub(token_amount));
 

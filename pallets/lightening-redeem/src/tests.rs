@@ -122,7 +122,7 @@ fn add_ksm_to_pool_should_work() {
 		assert_ok!(LighteningRedeem::add_ksm_to_pool(Origin::signed(ALICE), 80));
 		assert_eq!(Tokens::free_balance(KSM, &ALICE), 20);
 
-		let pool_account = <Runtime as crate::Config>::PalletId::get().into_sub_account(0);
+		let pool_account = <Runtime as crate::Config>::PalletId::get().into_account();
 		assert_eq!(Tokens::free_balance(KSM, &pool_account), 80);
 	});
 }
@@ -149,7 +149,7 @@ fn exchange_for_ksm_should_work() {
 			Error::<Runtime>::NotEnoughBalance
 		);
 
-		let pool_account = <Runtime as crate::Config>::PalletId::get().into_sub_account(0);
+		let pool_account = <Runtime as crate::Config>::PalletId::get().into_account();
 
 		// Before doing exchange
 		assert_eq!(Tokens::free_balance(vsKSM, &BOB), 100);

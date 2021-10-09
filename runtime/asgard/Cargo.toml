@@ -213,6 +213,7 @@ runtime-benchmarks = [
 	"bifrost-minter-reward/runtime-benchmarks",
 	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
+	"bifrost-lightening-redeem/runtime-benchmarks",
 ]
 
 try-runtime = [
