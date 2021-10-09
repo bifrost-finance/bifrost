@@ -77,7 +77,6 @@ use bifrost_flexible_fee::{
 };
 use bifrost_runtime_common::{
 	constants::parachains,
-	create_x2_multilocation,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter,
@@ -1152,6 +1151,16 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	}
 }
 
+pub fn create_x2_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::new(
+		1,
+		X1(AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		}),
+	)
+}
+
 parameter_types! {
 	pub const MinContribution: Balance = DOLLARS / 10;
 	pub const RemoveKeysLimit: u32 = 500;
@@ -1169,15 +1178,14 @@ parameter_types! {
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),  // bob
 		hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"].into(),  // charlie
 	],2);
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(Utility::derivative_account_id(ParachainInfo::get().into_account(), ParachainDerivedProxyAccountType::Salp as u16));
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor =
-		BifrostXcmAdaptor<XcmRouter, XcmWeight, IdentityFee<Balance>, SelfParaId>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee, SelfParaId>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;

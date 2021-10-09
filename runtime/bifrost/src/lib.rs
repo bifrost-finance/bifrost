@@ -70,7 +70,6 @@ use bifrost_flexible_fee::{
 };
 use bifrost_runtime_common::{
 	constants::parachains,
-	create_x2_multilocation,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets, BifrostXcmTransactFilter,
@@ -766,6 +765,16 @@ pub type Trader = (
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 );
 
+pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::new(
+		1,
+		X1(AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		}),
+	)
+}
+
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetTransactor = BifrostAssetTransactor;
@@ -1062,6 +1071,16 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 	}
 }
 
+pub fn create_x2_multilocation(index: u16) -> MultiLocation {
+	MultiLocation::new(
+		1,
+		X1(AccountId32 {
+			network: NetworkId::Any,
+			id: Utility::derivative_account_id(ParachainInfo::get().into_account(), index).into(),
+		}),
+	)
+}
+
 parameter_types! {
 	pub const MinContribution: Balance = DOLLARS / 10;
 	pub const RemoveKeysLimit: u32 = 500;
@@ -1075,7 +1094,7 @@ parameter_types! {
 	pub ContributionWeight:XcmBaseWeight = 893125000.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(Utility::derivative_account_id(ParachainInfo::get().into_account(), ParachainDerivedProxyAccountType::Salp as u16));
+	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 }
