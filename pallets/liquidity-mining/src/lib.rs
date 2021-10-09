@@ -202,6 +202,18 @@ impl<T: Config> PoolInfo<T> {
 
 		Ok(().into())
 	}
+
+	/// Try to return back the remain of reward from keeper to investor
+	pub(crate) fn try_withdraw_remain(&self) -> DispatchResult {
+		let investor = self.investor.clone().ok_or(Error::<T>::Unexpected)?;
+
+		for (rtoken, reward) in self.rewards.iter() {
+			let remain = reward.total.saturating_sub(reward.claimed);
+			T::MultiCurrency::transfer(*rtoken, &self.keeper, &investor, remain)?;
+		}
+
+		Ok(().into())
+	}
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
@@ -660,15 +672,20 @@ pub mod pallet {
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			if pool.deposit == Zero::zero() {
-				TotalPoolInfos::<T>::remove(pid);
-			} else {
-				let pool_retired = PoolInfo {
-					state: PoolState::Retired,
-					block_retired: Some(frame_system::Pallet::<T>::block_number()),
-					..pool
-				};
-				TotalPoolInfos::<T>::insert(pid, pool_retired);
+			match pool.state {
+				PoolState::Charged if pool.deposit == Zero::zero() => {
+					pool.try_withdraw_remain()?;
+					TotalPoolInfos::<T>::remove(pid);
+				},
+				PoolState::Charged | PoolState::Ongoing => {
+					let pool_retired = PoolInfo {
+						state: PoolState::Retired,
+						block_retired: Some(frame_system::Pallet::<T>::block_number()),
+						..pool
+					};
+					TotalPoolInfos::<T>::insert(pid, pool_retired);
+				},
+				_ => {},
 			}
 
 			Self::deposit_event(Event::PoolRetiredForcefully(pid, r#type, trading_pair));
@@ -1009,12 +1026,7 @@ pub mod pallet {
 			};
 
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
-				let investor = pool.investor.clone().ok_or(Error::<T>::Unexpected)?;
-				for (rtoken, reward) in pool.rewards.iter() {
-					let remain = reward.total.saturating_sub(reward.claimed);
-					T::MultiCurrency::transfer(*rtoken, &pool.keeper, &investor, remain)?;
-				}
-
+				pool.try_withdraw_remain()?;
 				pool.state = PoolState::Dead;
 			}
 
