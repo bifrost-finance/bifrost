@@ -1791,7 +1791,7 @@ fn force_retire_pool_charged_should_work() {
 }
 
 #[test]
-fn force_retire_pool_charged_with_no_deposit_should_work() {
+fn force_retire_pool_charged_without_deposit_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(LM::create_mining_pool(
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
@@ -1806,10 +1806,26 @@ fn force_retire_pool_charged_with_no_deposit_should_work() {
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
+		let keeper = LM::pool(0).unwrap().keeper;
+
 		assert_ok!(LM::force_retire_pool(
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			0
 		));
+
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_1).free, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_2).free, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_2).reserved, 0);
+
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).free, REWARD_AMOUNT);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).free, REWARD_AMOUNT);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).reserved, 0);
 
 		assert!(LM::pool(0).is_none());
 	});
