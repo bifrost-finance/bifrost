@@ -15,6 +15,7 @@ members = [
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
 	"pallets/token-issuer",
+	"pallets/lightening-redeem",
 	"runtime/asgard",
 	"runtime/bifrost",
 	"utils/subkey",

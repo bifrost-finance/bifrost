@@ -1,0 +1,47 @@
+[package]
+name = "bifrost-lightening-redeem"
+version = "0.8.0"
+authors = ["Herry Ho <herry.heyi@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.124", optional = true }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false  }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "frame-system/std",
+    "frame-support/std",
+    "sp-runtime/std",
+    "sp-arithmetic/std",
+    "serde/std",
+    "orml-traits/std",
+    "orml-tokens/std",
+    "node-primitives/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-std/std",
+    "pallet-collective/std",
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+]
