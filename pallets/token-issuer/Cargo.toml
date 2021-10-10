@@ -28,13 +28,14 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"orml-traits/std",
-	"sp-core/std",
 	"sp-runtime/std",
 	"sp-io/std",
 	"pallet-collective/std",
 	"orml-tokens/std",
 	"orml-currencies/std",
-	"pallet-balances/std"
+	"pallet-balances/std",
+	"pallet-balances/std",
+	"sp-core/std"
 ]
 
 runtime-benchmarks = [
