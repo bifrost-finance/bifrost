@@ -195,7 +195,7 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
-	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"lighten#");
+	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
