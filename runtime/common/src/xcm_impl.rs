@@ -19,7 +19,7 @@
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	sp_runtime::traits::{CheckedConversion, Convert, Zero},
+	sp_runtime::traits::{CheckedConversion, Convert},
 	traits::{Contains, Get},
 	weights::Weight,
 };
@@ -29,10 +29,7 @@ use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::latest::prelude::*;
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
-use xcm_executor::{
-	traits::{FilterAssetLocation, MatchesFungible, ShouldExecute, WeightTrader},
-	Assets,
-};
+use xcm_executor::traits::{FilterAssetLocation, MatchesFungible, ShouldExecute};
 
 use crate::constants::parachains;
 

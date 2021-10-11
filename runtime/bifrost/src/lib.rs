@@ -184,43 +184,56 @@ pub struct CallFilter;
 impl Contains<Call> for CallFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
-			// calls allowed
-			// vstoken transfer
+			// call banned
+
+			// BNC transfer
+			Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
 			Call::Currencies(orml_currencies::Call::transfer(
 				_,
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::Native(TokenSymbol::BNC),
 				_,
-			)) => true,
+			)) => false,
 			Call::Tokens(orml_tokens::Call::transfer(
 				_,
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::Native(TokenSymbol::BNC),
 				_,
-			)) => true,
+			)) => false,
 			Call::Tokens(orml_tokens::Call::transfer_all(
 				_,
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::Native(TokenSymbol::BNC),
 				_,
-			)) => true,
+			)) => false,
 			Call::Tokens(orml_tokens::Call::transfer_keep_alive(
 				_,
-				CurrencyId::VSToken(TokenSymbol::KSM),
+				CurrencyId::Native(TokenSymbol::BNC),
 				_,
-			)) => true,
+			)) => false,
 
-			// vsbond transfer
-			Call::Currencies(orml_currencies::Call::transfer(_, CurrencyId::VSBond(..), _)) => true,
-			Call::Tokens(orml_tokens::Call::transfer(_, CurrencyId::VSBond(..), _)) => true,
-			Call::Tokens(orml_tokens::Call::transfer_all(_, CurrencyId::VSBond(..), _)) => true,
-			Call::Tokens(orml_tokens::Call::transfer_keep_alive(_, CurrencyId::VSBond(..), _)) =>
-				true,
+			// ZLK transfer
+			Call::Currencies(orml_currencies::Call::transfer(
+				_,
+				CurrencyId::Token(TokenSymbol::ZLK),
+				_,
+			)) => false,
+			Call::Tokens(orml_tokens::Call::transfer(
+				_,
+				CurrencyId::Token(TokenSymbol::ZLK),
+				_,
+			)) => false,
+			Call::Tokens(orml_tokens::Call::transfer_all(
+				_,
+				CurrencyId::Token(TokenSymbol::ZLK),
+				_,
+			)) => false,
+			Call::Tokens(orml_tokens::Call::transfer_keep_alive(
+				_,
+				CurrencyId::Token(TokenSymbol::ZLK),
+				_,
+			)) => false,
 
-			// call banned
 			Call::Balances(_) => false,
 			Call::Vesting(_) => false,
-			Call::Tokens(_) => false,
 			Call::PhragmenElection(_) => false,
-			Call::Currencies(_) => false,
-			// Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
 			_ => true,
 		}
 	}
