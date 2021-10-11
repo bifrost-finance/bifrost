@@ -304,6 +304,24 @@ impl From<TokenSymbol> for CurrencyId {
 }
 
 impl CurrencyId {
+	#[allow(non_snake_case)]
+	pub const fn vsAssets(
+		symbol: TokenSymbol,
+		index: ParaId,
+		first_slot: LeasePeriod,
+		last_slot: LeasePeriod,
+	) -> (Self, Self) {
+		let vsbond_origin = CurrencyId::VSBond(symbol, index, first_slot, last_slot);
+
+		let vsbond_fixed = match vsbond_origin {
+			Self::VSBond(TokenSymbol::KSM, 2001, 13, 20) =>
+				Self::VSBond(TokenSymbol::BNC, 2001, 13, 20),
+			_ => vsbond_origin,
+		};
+
+		(Self::VSToken(symbol), vsbond_fixed)
+	}
+
 	pub fn to_token(&self) -> Result<Self, ()> {
 		match self {
 			Self::VToken(symbol) => Ok(Self::Token(symbol.clone())),
