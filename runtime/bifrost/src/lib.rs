@@ -133,7 +133,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 902,
+	spec_version: 903,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -186,29 +186,6 @@ impl Contains<Call> for CallFilter {
 		match *c {
 			// call banned
 
-			// BNC transfer
-			Call::Currencies(orml_currencies::Call::transfer_native_currency(..)) => false,
-			Call::Currencies(orml_currencies::Call::transfer(
-				_,
-				CurrencyId::Native(TokenSymbol::BNC),
-				_,
-			)) => false,
-			Call::Tokens(orml_tokens::Call::transfer(
-				_,
-				CurrencyId::Native(TokenSymbol::BNC),
-				_,
-			)) => false,
-			Call::Tokens(orml_tokens::Call::transfer_all(
-				_,
-				CurrencyId::Native(TokenSymbol::BNC),
-				_,
-			)) => false,
-			Call::Tokens(orml_tokens::Call::transfer_keep_alive(
-				_,
-				CurrencyId::Native(TokenSymbol::BNC),
-				_,
-			)) => false,
-
 			// ZLK transfer
 			Call::Currencies(orml_currencies::Call::transfer(
 				_,
@@ -231,8 +208,6 @@ impl Contains<Call> for CallFilter {
 				_,
 			)) => false,
 
-			Call::Balances(_) => false,
-			Call::Vesting(_) => false,
 			Call::PhragmenElection(_) => false,
 			_ => true,
 		}
@@ -253,7 +228,11 @@ parameter_types! {
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account(), BifrostCrowdloanId::get().into_account()]
+	vec![
+		TreasuryPalletId::get().into_account(),
+		BifrostCrowdloanId::get().into_account(),
+		LiquidityMiningPalletId::get().into_account(),
+	]
 }
 
 impl frame_system::Config for Runtime {
