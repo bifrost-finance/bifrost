@@ -128,6 +128,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, VSBOND, 100),
 			(BRUCE, TOKEN, 100),
 			(BRUCE, VSBOND, 100),
+			(ALICE, SPECIAL_VSBOND, 100),
+			(BRUCE, SPECIAL_VSBOND, 100),
 			#[cfg(feature = "runtime-benchmarks")]
 			(whitelist_caller.clone(), TOKEN, 100_000_000_000_000),
 			#[cfg(feature = "runtime-benchmarks")]
@@ -148,3 +150,4 @@ pub(crate) const ALICE: AccountId = 1;
 pub(crate) const BRUCE: AccountId = 2;
 pub(crate) const TOKEN: CurrencyId = InvoicingCurrency::get();
 pub(crate) const VSBOND: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20);
+pub(crate) const SPECIAL_VSBOND: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
