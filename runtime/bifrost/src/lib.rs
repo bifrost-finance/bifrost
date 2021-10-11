@@ -696,7 +696,7 @@ match_type! {
 pub type Barrier = (
 	TakeWeightCredit,
 	AllowTopLevelPaidExecutionFrom<Everything>,
-	BifrostXcmTransactFilter<ParentOrParentsExecutivePlurality>,
+	BifrostXcmTransactFilter<Everything>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
