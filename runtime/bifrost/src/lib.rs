@@ -1140,6 +1140,7 @@ impl bifrost_salp::Config for Runtime {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpProxyType;
 	type TransactType = SalpTransactType;
+	type RelayNetwork = RelayNetwork;
 }
 
 parameter_types! {
