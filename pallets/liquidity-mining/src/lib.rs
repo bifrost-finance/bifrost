@@ -209,7 +209,16 @@ impl<T: Config> PoolInfo<T> {
 
 		for (rtoken, reward) in self.rewards.iter() {
 			let remain = reward.total.saturating_sub(reward.claimed);
-			T::MultiCurrency::transfer(*rtoken, &self.keeper, &investor, remain)?;
+			let can_send =
+				T::MultiCurrency::ensure_can_withdraw(*rtoken, &self.keeper, remain).is_ok();
+
+			let ed = T::MultiCurrency::minimum_balance(*rtoken);
+			let total = T::MultiCurrency::total_balance(*rtoken, &investor).saturating_add(remain);
+			let can_get = total >= ed;
+
+			if can_send && can_get {
+				T::MultiCurrency::transfer(*rtoken, &self.keeper, &investor, remain)?;
+			}
 		}
 
 		Ok(().into())
