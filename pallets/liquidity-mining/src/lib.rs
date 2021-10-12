@@ -359,15 +359,15 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelayChainTokenSymbol: Get<TokenSymbol>;
 
-		/// The amount deposited into a liquidity-pool should be less than the value
+		/// The deposit of a liquidity-pool should be less than the value
 		#[pallet::constant]
 		type MaximumDepositInPool: Get<BalanceOf<Self>>;
 
-		/// The amount deposited by a user to a liquidity-pool should be greater than the value
+		/// The amount which be deposited to a liquidity-pool should be greater than the value
 		#[pallet::constant]
 		type MinimumDepositOfUser: Get<BalanceOf<Self>>;
 
-		/// The amount of token to reward per block should be greater than the value
+		/// The amount of reward which will be released per block should be greater than the value
 		#[pallet::constant]
 		type MinimumRewardPerBlock: Get<BalanceOf<Self>>;
 
@@ -375,11 +375,11 @@ pub mod pallet {
 		#[pallet::constant]
 		type MinimumDuration: Get<BlockNumberFor<Self>>;
 
-		/// The number of liquidity-pool charged should be less than the value
+		/// The count of liquidity-pool charged should be less than the value
 		#[pallet::constant]
 		type MaximumCharged: Get<u32>;
 
-		/// The number of option rewards should be less than the value
+		/// The count of option rewards should be less than the value
 		#[pallet::constant]
 		type MaximumOptionRewards: Get<u32>;
 
@@ -399,27 +399,25 @@ pub mod pallet {
 		InvalidPoolId,
 		InvalidPoolState,
 		InvalidPoolType,
-		/// Find duplicate reward when creating the liquidity-pool
+		/// Find duplicate rewards when creating the liquidity-pool
 		DuplicateReward,
-		/// When the amount deposited in a liquidity-pool exceeds the `MaximumDepositInPool`
+		/// The deposit of a liquidity-pool exceeded the `MaximumDepositInPool`
 		ExceedMaximumDeposit,
-		/// When the number of pool-charged exceeds the `MaximumCharged`
+		/// The number of pool which be charged exceeded the `MaximumCharged`
 		ExceedMaximumCharged,
-		/// Not enough balance to deposit
+		/// User doesn't have enough balance of which be deposited to pool
 		NotEnoughToDeposit,
-		/// Not enough balance to redeem(VERY SCARY ERR)
+		/// Keeper doesn't have enough balance to be redeemed by the user(VERY SCARY ERR)
 		NotEnoughToRedeem,
-		/// Not enough balance of reward to unreserve
-		FailOnUnReserve,
-		/// Not enough deposit of the user in the liquidity-pool
+		/// User has nothing be deposited to the pool
 		NoDepositOfUser,
-		/// Too low balance to deposit
+		/// The balance which was tried to deposit to the pool less than `MinimumDepositOfUser`
 		TooLowToDeposit,
-		/// User doesnt have enough deposit to redeem
+		/// User doesn't have such amount deposit can be redeemed from the pool
 		TooLowToRedeem,
-		/// The interval between two claims is short
+		/// Duplicate claim actions were at same block height
 		TooShortBetweenTwoClaim,
-		/// The pool has been charged
+		/// The pool has been charged already
 		PoolChargedAlready,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
