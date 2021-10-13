@@ -473,6 +473,7 @@ parameter_types! {
 	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 }
 
 pub const XCM_WEIGHT: u64 = 1_000_000_000;
@@ -544,6 +545,7 @@ impl bifrost_salp::Config for Test {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
+	type RelayNetwork = RelayNetwork;
 }
 
 //************** Salp mock end *****************
