@@ -1116,10 +1116,7 @@ pub mod pallet {
 			let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
 			let token_symbol = TokenSymbol::try_from(tokensymbo_bit).unwrap_or(TokenSymbol::KSM);
 
-			let vsToken = CurrencyId::VSToken(token_symbol);
-			let vsBond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);
-
-			(vsToken, vsBond)
+			CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot)
 		}
 
 		fn put_contribution(

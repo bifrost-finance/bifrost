@@ -240,7 +240,8 @@ pub mod pallet {
 				TokenSymbol::try_from(token_symbol_bit).map_err(|_| Error::<T>::Unexpected)?;
 
 			// Construct vsbond
-			let vsbond = CurrencyId::VSBond(currency_token_symbol, index, first_slot, last_slot);
+			let (_, vsbond) =
+				CurrencyId::vsAssets(currency_token_symbol, index, first_slot, last_slot);
 
 			// Check the balance
 			let (token_reserved, amount_reserved) = match order_type {
