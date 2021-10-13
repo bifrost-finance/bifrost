@@ -172,6 +172,7 @@ std = [
 	"bifrost-token-issuer/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
+	"xcm-support/std"
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

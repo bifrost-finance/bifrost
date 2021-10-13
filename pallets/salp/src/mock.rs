@@ -205,6 +205,7 @@ parameter_types! {
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(0);
 	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
+	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 }
 
 parameter_types! {
@@ -296,6 +297,7 @@ impl salp::Config for Test {
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
+	type RelayNetwork = RelayNetwork;
 }
 
 pub struct SalpWeightInfo;

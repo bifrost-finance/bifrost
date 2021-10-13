@@ -17,9 +17,23 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use codec::{Decode, Encode};
+use frame_support::{sp_runtime::MultiSignature, RuntimeDebug};
 use node_primitives::ParaId;
-use sp_runtime::{MultiSignature, RuntimeDebug};
 use sp_std::vec::Vec;
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum UtilityCall<RelayChainCall> {
+	#[codec(index = 1)]
+	AsDerivative(u16, RelayChainCall),
+	#[codec(index = 2)]
+	BatchAll(Vec<RelayChainCall>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum StakingCall {
+	#[codec(index = 3)]
+	WithdrawUnbonded(u32),
+}
 
 pub mod kusama {
 
@@ -30,6 +44,19 @@ pub mod kusama {
 		#[codec(index = 73)]
 		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
 		#[codec(index = 30)]
+		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
+	}
+}
+
+pub mod polkadot {
+
+	pub use crate::calls::*;
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelaychainCall<BalanceOf, AccountIdOf, BlockNumberOf> {
+		#[codec(index = 73)]
+		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
+		#[codec(index = 29)]
 		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
 	}
 }
