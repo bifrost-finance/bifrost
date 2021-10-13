@@ -602,9 +602,9 @@ pub mod pallet {
 
 		/// Transfer the rewards which are used to distribute to depositors to a liquidity-pool.
 		///
-		/// _NOTE_: The extrinsic is only applied to the liquidity-pool at `PoolState::UnCharged`.
-		/// 		When the extrinsic was executed successfully, the liquidity-pool would be at
-		/// `PoolState::Charged`.
+		/// _NOTE_: The extrinsic is only applied to the liquidity-pool at `PoolState::UnCharged`;
+		/// 	When the extrinsic was executed successfully, the liquidity-pool would be at
+		/// 	`PoolState::Charged`.
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let investor = ensure_signed(origin)?;
@@ -669,6 +669,7 @@ pub mod pallet {
 		/// __NOTE__:
 		/// 1. If the pool is at `PoolState::Charged` but doesn't have any deposit, the data about
 		/// 	the pool would be deleted and the rewards charged would be returned back.
+		///
 		/// 2. If the pool is at `PoolState::Charged` and has some deposit, or `PoolState::Ongoing`,
 		/// 	the field `block_retired` of the pool would be set to the current block height.
 		#[pallet::weight((
@@ -799,10 +800,13 @@ pub mod pallet {
 		/// __NOTE__:
 		/// 0. If the pool is at `PoolState::Ongoing`, the caller may not redeem successfully
 		/// because of 	the `reward algorithm`, which requires `pool-ongoing` must have deposit more
-		/// than `T::MinimumDeposit`. 1. If the pool is at `PoolState::Retired`, the extrinsic will
-		/// redeem all deposits owned by 	the caller, whatever the `value` is.
+		/// than `T::MinimumDeposit`.
+		///
+		/// 1. If the pool is at `PoolState::Retired`, the extrinsic will redeem all deposits
+		/// owned by the caller, whatever the `value` is.
+		///
 		/// 2. If the pool is at `PoolState::Retired` and the deposit in the pool will become zero
-		/// after 	calling the extrinsic, the remaining rewards left in the pool will be returned
+		/// after calling the extrinsic, the remaining rewards left in the pool will be returned
 		/// back to the charger.
 		///
 		/// The condition to redeem:
@@ -831,9 +835,11 @@ pub mod pallet {
 		/// __NOTE__:
 		/// 0. If the pool is at `PoolState::Ongoing`, the caller may not redeem successfully
 		/// because of 	the `reward algorithm`, which requires `pool-ongoing` must have deposit more
-		/// than `T::MinimumDeposit`. 1. If the pool is at `PoolState::Retired` and the deposit in
-		/// the pool will become zero after 	calling the extrinsic, the remaining rewards left in the
-		/// pool will be returned back to the charger.
+		/// than `T::MinimumDeposit`.
+		///
+		/// 1. If the pool is at `PoolState::Retired` and the deposit in the pool will become zero
+		/// after calling the extrinsic, the remaining rewards left in the pool will be
+		/// returned back to the charger.
 		///
 		/// The condition to redeem:
 		/// - There is enough deposit owned by the caller in the pool.
@@ -850,8 +856,10 @@ pub mod pallet {
 		/// aaaaaaah, such a grateful!!
 		///
 		/// If the `account` is `Option::None`, the extrinsic will give "freedom" for a lucky man
-		/// randomly; If the `account` is specific and a depositor of the pool indeed, who will be
-		/// given "freedom" by the extrinsic.
+		/// randomly;
+		///
+		/// If the `account` is specific and a depositor of the pool indeed, who will be given
+		/// "freedom" by the extrinsic.
 		///
 		/// The condition to redeem:
 		/// - The pool is at `PoolState::Retired`.
