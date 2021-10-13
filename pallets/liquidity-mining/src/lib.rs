@@ -426,35 +426,35 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// The liquidity-pool has been created
+		/// The liquidity-pool was created
 		///
 		/// [pool_id, pool_type, trading_pair, keeper]
 		PoolCreated(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
-		/// The liquidity-pool has been charged
+		/// The liquidity-pool was charged
 		///
 		/// [pool_id, pool_type, trading_pair, investor]
 		PoolCharged(PoolId, PoolType, (CurrencyId, CurrencyId), AccountIdOf<T>),
-		/// The liquidity-pool has been started up
+		/// The liquidity-pool was started up
 		///
 		/// [pool_id, pool_type, trading_pair]
 		PoolStarted(PoolId, PoolType, (CurrencyId, CurrencyId)),
-		/// The liquidity-pool has been killed
+		/// The liquidity-pool was killed
 		///
 		/// [pool_id, pool_type, trading_pair]
 		PoolKilled(PoolId, PoolType, (CurrencyId, CurrencyId)),
-		/// The liquidity-pool has been retired forcefully
+		/// The liquidity-pool was retired forcefully
 		///
 		/// [pool_id, pool_type, trading_pair]
 		PoolRetiredForcefully(PoolId, PoolType, (CurrencyId, CurrencyId)),
-		/// User has deposited some trading-pair to a liquidity-pool
+		/// User deposited tokens to a liquidity-pool
 		///
 		/// [pool_id, pool_type, trading_pair, amount_deposited, user]
 		UserDeposited(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T>, AccountIdOf<T>),
-		/// User has been redeemed some trading-pair from a liquidity-pool
+		/// User redeemed tokens from a liquidity-mining
 		///
 		/// [pool_id, pool_type, trading_pair, amount_redeemed, user]
 		UserRedeemed(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T>, AccountIdOf<T>),
-		/// User has been claimed the rewards from a liquidity-pool
+		/// User withdrew the rewards whose deserved from a liquidity-pool
 		///
 		/// [pool_id, pool_type, trading_pair, rewards, user]
 		UserClaimed(
@@ -494,6 +494,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// Create a liquidity-pool which type is `PoolType::Mining`, Only accepts `lpToken` as
+		/// deposit.
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -530,6 +532,8 @@ pub mod pallet {
 			)
 		}
 
+		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts free `vsToken`
+		/// and free `vsBond` as deposit.
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -562,6 +566,8 @@ pub mod pallet {
 			)
 		}
 
+		/// Create a liquidity-pool which type is `PoolType::Farming`, Only accepts reserved
+		/// `vsToken` and reserved `vsBond` as deposit.
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -594,6 +600,11 @@ pub mod pallet {
 			)
 		}
 
+		/// Transfer the rewards which are used to distribute to depositors to a liquidity-pool.
+		///
+		/// _NOTE_: The extrinsic is only applied to the liquidity-pool at `PoolState::UnCharged`.
+		/// 		When the extrinsic was executed successfully, the liquidity-pool would be at
+		/// `PoolState::Charged`.
 		#[pallet::weight(T::WeightInfo::charge())]
 		pub fn charge(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let investor = ensure_signed(origin)?;
@@ -628,6 +639,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Kill a liquidity-pool at `PoolState::Uncharged`.
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -652,6 +664,13 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Make a liquidity-pool be at `PoolState::Retired` forcefully.
+		///
+		/// __NOTE__:
+		/// 1. If the pool is at `PoolState::Charged` but doesn't have any deposit, the data about
+		/// 	the pool would be deleted and the rewards charged would be returned back.
+		/// 2. If the pool is at `PoolState::Charged` and has some deposit, or `PoolState::Ongoing`,
+		/// 	the field `block_retired` of the pool would be set to the current block height.
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -691,15 +710,14 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// User deposits some token to a liquidity-pool.
+		/// Caller deposits some token to a liquidity-pool.
 		///
-		/// The extrinsic will:
-		/// - Try to retire the liquidity-pool which has reached the end of life.
-		/// - Try to settle the rewards when the liquidity-pool in `Ongoing`.
+		/// __NOTE__: The unclaimed rewards of caller will be withdrawn automatically if there has.
 		///
 		/// The conditions to deposit:
-		/// - User should deposit enough(greater than `T::MinimumDeposit`) token to liquidity-pool;
-		/// - The liquidity-pool should be in special state: `Charged`, `Ongoing`;
+		/// - The deposit caller was contributed to the pool should be bigger than
+		///   `T::MinimumDeposit`;
+		/// - The pool is at `PoolState::Charged` or `PoolState::Ongoing`;
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(
@@ -774,25 +792,22 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// User redeems some deposit from a liquidity-pool.
-		/// The deposit in the liquidity-pool should be greater than `T::MinimumDeposit` when the
-		/// liquidity-pool is on `Ongoing` state; So user may not be able to redeem completely
-		/// until the liquidity-pool is on `Retire` state.
+		/// Caller redeems some deposit owned by self from a pool.
 		///
-		/// The extrinsic will:
-		/// - Try to retire the liquidity-pool which has reached the end of life.
-		/// - Try to settle the rewards.
-		/// - Try to unreserve the remaining rewards to the pool investor when the deposit in the
-		///   liquidity-pool is clear.
-		/// - Try to delete the liquidity-pool in which the deposit becomes zero.
-		/// - Try to delete the deposit-data in which the deposit becomes zero.
+		/// __NOTE__: The unclaimed rewards of caller will be withdrawn automatically if there has.
+		///
+		/// __NOTE__:
+		/// 0. If the pool is at `PoolState::Ongoing`, the caller may not redeem successfully
+		/// because of 	the `reward algorithm`, which requires `pool-ongoing` must have deposit more
+		/// than `T::MinimumDeposit`. 1. If the pool is at `PoolState::Retired`, the extrinsic will
+		/// redeem all deposits owned by 	the caller, whatever the `value` is.
+		/// 2. If the pool is at `PoolState::Retired` and the deposit in the pool will become zero
+		/// after 	calling the extrinsic, the remaining rewards left in the pool will be returned
+		/// back to the charger.
 		///
 		/// The condition to redeem:
-		/// - User should have some deposit in the liquidity-pool;
-		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
-		///
-		/// NOTE: All deposit will be redeemed when the pool is being `Retired`, no matter the
-		/// `value` is.
+		/// - There is enough deposit owned by the caller in the pool.
+		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::redeem())]
 		pub fn redeem(
@@ -809,22 +824,20 @@ pub mod pallet {
 			Self::redeem_inner(user, pid, Some(value))
 		}
 
-		/// User redeems all deposit from a liquidity-pool.
-		/// The deposit in the liquidity-pool should be greater than `T::MinimumDeposit` when the
-		/// liquidity-pool is on `Ongoing` state; So user may not be able to redeem completely
-		/// until the liquidity-pool is on `Retire` state.
+		/// Caller redeems all deposit owned by self from a pool.
 		///
-		/// The extrinsic will:
-		/// - Try to retire the liquidity-pool which has reached the end of life.
-		/// - Try to settle the rewards.
-		/// - Try to unreserve the remaining rewards to the pool investor when the deposit in the
-		///   liquidity-pool is clear.
-		/// - Try to delete the liquidity-pool in which the deposit becomes zero.
-		/// - Try to delete the deposit-data in which the deposit becomes zero.
+		/// __NOTE__: The unclaimed rewards of caller will be withdrawn automatically if there has.
+		///
+		/// __NOTE__:
+		/// 0. If the pool is at `PoolState::Ongoing`, the caller may not redeem successfully
+		/// because of 	the `reward algorithm`, which requires `pool-ongoing` must have deposit more
+		/// than `T::MinimumDeposit`. 1. If the pool is at `PoolState::Retired` and the deposit in
+		/// the pool will become zero after 	calling the extrinsic, the remaining rewards left in the
+		/// pool will be returned back to the charger.
 		///
 		/// The condition to redeem:
-		/// - User should have some deposit in the liquidity-pool;
-		/// - The liquidity-pool should be in special state: `Ongoing`, `Retired`;
+		/// - There is enough deposit owned by the caller in the pool.
+		/// - The pool is at `PoolState::Ongoing` or `PoolState::Retired`.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::redeem_all())]
 		pub fn redeem_all(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
@@ -833,9 +846,15 @@ pub mod pallet {
 			Self::redeem_inner(user, pid, None)
 		}
 
-		/// Help someone to redeem the deposit whose deposited in a liquidity-pool.
+		/// A selfless man intimately helps depositors of the pool to redeem their deposit,
+		/// aaaaaaah, such a grateful!!
 		///
-		/// NOTE: The liquidity-pool should be in retired state.
+		/// If the `account` is `Option::None`, the extrinsic will give "freedom" for a lucky man
+		/// randomly; If the `account` is specific and a depositor of the pool indeed, who will be
+		/// given "freedom" by the extrinsic.
+		///
+		/// The condition to redeem:
+		/// - The pool is at `PoolState::Retired`.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::volunteer_to_redeem())]
 		pub fn volunteer_to_redeem(
@@ -861,14 +880,13 @@ pub mod pallet {
 			Self::redeem_inner(user, pid, None)
 		}
 
-		/// User claims the rewards from a liquidity-pool.
+		/// Caller withdraw the unclaimed rewards owned by self from a pool.
 		///
-		/// The extrinsic will:
-		/// - Try to retire the liquidity-pool which has reached the end of life.
+		/// __NOTE__: The extrinsic will retire the pool, which is reached the end of life.
 		///
 		/// The conditions to claim:
-		/// - User should have enough token deposited in the liquidity-pool;
-		/// - The liquidity-pool should be in special states: `Ongoing`;
+		/// - There is enough deposit owned by the caller in the pool.
+		/// - The pool is at `PoolState::Ongoing`.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::claim())]
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
