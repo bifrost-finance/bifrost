@@ -209,7 +209,16 @@ impl<T: Config> PoolInfo<T> {
 
 		for (rtoken, reward) in self.rewards.iter() {
 			let remain = reward.total.saturating_sub(reward.claimed);
-			T::MultiCurrency::transfer(*rtoken, &self.keeper, &investor, remain)?;
+			let can_send =
+				T::MultiCurrency::ensure_can_withdraw(*rtoken, &self.keeper, remain).is_ok();
+
+			let ed = T::MultiCurrency::minimum_balance(*rtoken);
+			let total = T::MultiCurrency::total_balance(*rtoken, &investor).saturating_add(remain);
+			let can_get = total >= ed;
+
+			if can_send && can_get {
+				T::MultiCurrency::transfer(*rtoken, &self.keeper, &investor, remain)?;
+			}
 		}
 
 		Ok(().into())
@@ -551,7 +560,8 @@ pub mod pallet {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			#[allow(non_snake_case)]
-			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
+			let trading_pair =
+				CurrencyId::vsAssets(T::RelayChainTokenSymbol::get(), index, first_slot, last_slot);
 
 			Self::create_pool(
 				trading_pair,
@@ -583,7 +593,8 @@ pub mod pallet {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			#[allow(non_snake_case)]
-			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
+			let trading_pair =
+				CurrencyId::vsAssets(T::RelayChainTokenSymbol::get(), index, first_slot, last_slot);
 
 			Self::create_pool(
 				trading_pair,
@@ -1098,20 +1109,6 @@ pub mod pallet {
 			}
 
 			Ok(to_rewards)
-		}
-
-		#[allow(non_snake_case)]
-		pub(crate) fn vsAssets(
-			index: ParaId,
-			first_slot: LeasePeriod,
-			last_slot: LeasePeriod,
-		) -> (CurrencyId, CurrencyId) {
-			let token_symbol = T::RelayChainTokenSymbol::get();
-
-			let vsToken = CurrencyId::VSToken(token_symbol);
-			let vsBond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);
-
-			(vsToken, vsBond)
 		}
 	}
 

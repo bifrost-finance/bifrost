@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
-use node_primitives::ContributionStatus;
+use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{mock::*, Error, FundStatus};
@@ -1044,6 +1044,72 @@ fn redeem_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
 
 		assert_ok!(Salp::redeem(Some(CATHI).into(), 3_000, 50));
+
+		assert_eq!(Tokens::accounts(CATHI, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(CATHI, vsToken).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, vsToken).reserved, 0);
+		assert_eq!(Tokens::accounts(CATHI, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(CATHI, vsBond).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, vsBond).reserved, 0);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).free, INIT_BALANCE + 50);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(CATHI, RelayCurrencyId::get()).reserved, 0);
+	});
+}
+
+#[test]
+fn redeem_with_speical_vsbond_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 2001, 1_000, 13, 20));
+		assert_ok!(Salp::contribute(Some(BRUCE).into(), 2001, 100));
+		assert_ok!(Salp::confirm_contribute(
+			Some(ALICE).into(),
+			BRUCE,
+			2001,
+			true,
+			CONTRIBUTON_INDEX
+		));
+
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 100);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
+
+		assert_eq!(Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).free, 100);
+		assert_eq!(Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(
+			Tokens::accounts(Salp::fund_account_id(2001), RelayCurrencyId::get()).reserved,
+			0
+		);
+
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 2001));
+		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 2001));
+
+		// Mock the BlockNumber
+		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
+		System::set_block_number(block_begin_redeem);
+
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 2001));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 2001));
+
+		#[allow(non_snake_case)]
+		let (vsToken, vsBond) = Salp::vsAssets(2001, 13, 20);
+
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vsToken, &BRUCE, &CATHI, 50));
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::transfer(vsBond, &BRUCE, &CATHI, 50));
+
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 2001, 50));
+
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE - 50);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).reserved, 0);
+
+		assert_ok!(Salp::redeem(Some(CATHI).into(), 2001, 50));
 
 		assert_eq!(Tokens::accounts(CATHI, vsToken).free, 0);
 		assert_eq!(Tokens::accounts(CATHI, vsToken).frozen, 0);
