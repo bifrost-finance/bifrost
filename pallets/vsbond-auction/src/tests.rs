@@ -459,6 +459,7 @@ fn partial_clinch_sell_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
 	});
 }
+
 #[test]
 fn partial_clinch_buy_order_should_work() {
 	new_test_ext().execute_with(|| {
@@ -582,6 +583,132 @@ fn clinch_order_without_enough_token_should_fail() {
 			Auction::clinch_order(Some(BRUCE).into(), 0),
 			Error::<Test>::DontHaveEnoughToPay
 		);
+	});
+}
+
+#[test]
+fn handle_special_vsbond_sell_order_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(
+			Some(ALICE).into(),
+			2001,
+			13,
+			20,
+			100,
+			33,
+			OrderType::Sell
+		));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
+
+		assert_eq!(Auction::order_id(), 1);
+
+		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Sell);
+		assert_eq!(user_sell_order_ids.len(), 1);
+
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.remain, 67);
+
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 67);
+
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 110);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 133);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 90);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
+
+		let user_sell_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		assert_eq!(user_sell_order_ids.len(), 0);
+
+		assert!(Auction::order_info(0).is_none());
+
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 132);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 200);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 68);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+	});
+}
+
+#[test]
+fn handle_special_vsbond_buy_order_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(
+			Some(ALICE).into(),
+			2001,
+			13,
+			20,
+			100,
+			33,
+			OrderType::Buy
+		));
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 33));
+
+		assert_eq!(Auction::order_id(), 1);
+
+		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		assert_eq!(user_buy_order_ids.len(), 1);
+
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.remain, 67);
+
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 133);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 67);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 23);
+
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 67);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 110);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+
+		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
+
+		let user_buy_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
+		assert_eq!(user_buy_order_ids.len(), 0);
+
+		assert!(Auction::order_info(0).is_none());
+
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 200);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 68);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 132);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
 	});
 }
 

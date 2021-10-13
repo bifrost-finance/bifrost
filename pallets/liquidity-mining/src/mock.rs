@@ -238,7 +238,7 @@ pub(crate) const MINING_TRADING_PAIR: (CurrencyId, CurrencyId) =
 pub(crate) const MINING_DEPOSIT: CurrencyId =
 	CurrencyId::LPToken(TokenSymbol::DOT, 2u8, TokenSymbol::KSM, 2u8);
 pub(crate) const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
-pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
+pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
 pub(crate) const DEPOSIT_AMOUNT: Balance = UNIT;
 pub(crate) const REWARD_1: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub(crate) const REWARD_2: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);

@@ -2392,7 +2392,7 @@ fn fuck_bug() {
 		const REWARD_AMOUNT: Balance = 10 * UNIT;
 
 		const DEPOSIT_TOKEN_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
-		const DEPOSIT_TOKEN_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 2001, 13, 20);
+		const DEPOSIT_TOKEN_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
 
 		assert_ok!(Tokens::set_balance(Origin::root(), ALICE, REWARD_TOKEN, INIT_AMOUNT, 0));
 		assert_ok!(Tokens::set_balance(Origin::root(), BOB, DEPOSIT_TOKEN_1, 0, INIT_AMOUNT));

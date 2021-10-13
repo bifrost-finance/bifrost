@@ -560,7 +560,8 @@ pub mod pallet {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			#[allow(non_snake_case)]
-			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
+			let trading_pair =
+				CurrencyId::vsAssets(T::RelayChainTokenSymbol::get(), index, first_slot, last_slot);
 
 			Self::create_pool(
 				trading_pair,
@@ -592,7 +593,8 @@ pub mod pallet {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			#[allow(non_snake_case)]
-			let trading_pair = Self::vsAssets(index, first_slot, last_slot);
+			let trading_pair =
+				CurrencyId::vsAssets(T::RelayChainTokenSymbol::get(), index, first_slot, last_slot);
 
 			Self::create_pool(
 				trading_pair,
@@ -1107,20 +1109,6 @@ pub mod pallet {
 			}
 
 			Ok(to_rewards)
-		}
-
-		#[allow(non_snake_case)]
-		pub(crate) fn vsAssets(
-			index: ParaId,
-			first_slot: LeasePeriod,
-			last_slot: LeasePeriod,
-		) -> (CurrencyId, CurrencyId) {
-			let token_symbol = T::RelayChainTokenSymbol::get();
-
-			let vsToken = CurrencyId::VSToken(token_symbol);
-			let vsBond = CurrencyId::VSBond(token_symbol, index, first_slot, last_slot);
-
-			(vsToken, vsBond)
 		}
 	}
 
