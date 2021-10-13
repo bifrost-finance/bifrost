@@ -227,14 +227,6 @@ parameter_types! {
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 }
 
-pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![
-		TreasuryPalletId::get().into_account(),
-		BifrostCrowdloanId::get().into_account(),
-		LiquidityMiningPalletId::get().into_account(),
-	]
-}
-
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The identifier used to distinguish between accounts.
@@ -927,7 +919,8 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		get_all_pallet_accounts().contains(a) ||
+		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
 			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
