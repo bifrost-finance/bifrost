@@ -38,6 +38,23 @@ use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::convert::TryFrom;
+use xcm_support::*;
+
+macro_rules! use_relay {
+    ({ $( $code:tt )* }) => {
+        if T::RelayNetwork::get() == NetworkId::Polkadot {
+            use polkadot::RelaychainCall;
+
+			$( $code )*
+        } else if T::RelayNetwork::get() == NetworkId::Kusama {
+            use kusama::RelaychainCall;
+
+			$( $code )*
+        } else {
+            unreachable!()
+        }
+    }
+}
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -105,7 +122,6 @@ pub mod pallet {
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;
 	use xcm::latest::prelude::*;
-	use xcm_support::{kusama::RelaychainCall, *};
 
 	use super::*;
 
@@ -192,6 +208,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type TransactType: Get<ParachainTransactType>;
+
+		#[pallet::constant]
+		type RelayNetwork: Get<NetworkId>;
 	}
 
 	#[pallet::pallet]
@@ -1145,60 +1164,68 @@ pub mod pallet {
 			value: BalanceOf<T>,
 			nonce: Nonce,
 		) -> Result<MessageId, XcmError> {
-			let contribute_call =
-				RelaychainCall::Crowdloan::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-					ContributeCall::Contribute(Contribution { index, value, signature: None }),
-				)
-				.encode()
-				.into();
+			use_relay!({
+				let contribute_call =
+					RelaychainCall::Crowdloan::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
+						ContributeCall::Contribute(Contribution { index, value, signature: None }),
+					)
+					.encode()
+					.into();
 
-			T::BifrostXcmExecutor::ump_transact(
-				MultiLocation::here(),
-				contribute_call,
-				T::ContributionWeight::get(),
-				false,
-				nonce,
-			)
+				T::BifrostXcmExecutor::ump_transact(
+					MultiLocation::here(),
+					contribute_call,
+					T::ContributionWeight::get(),
+					false,
+					nonce,
+				)
+			})
 		}
 
 		fn xcm_ump_add_proxy(delegate: AccountIdOf<T>) -> Result<MessageId, XcmError> {
-			let call = RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-				ProxyCall::Add(AddProxy {
-					delegate,
-					proxy_type: ProxyType::Any,
-					delay: T::BlockNumber::zero(),
-				}),
-			)
-			.encode()
-			.into();
+			use_relay!({
+				let call =
+					RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
+						ProxyCall::Add(AddProxy {
+							delegate,
+							proxy_type: ProxyType::Any,
+							delay: T::BlockNumber::zero(),
+						}),
+					)
+					.encode()
+					.into();
 
-			T::BifrostXcmExecutor::ump_transact(
-				MultiLocation::here(),
-				call,
-				T::AddProxyWeight::get(),
-				false,
-				0,
-			)
+				T::BifrostXcmExecutor::ump_transact(
+					MultiLocation::here(),
+					call,
+					T::AddProxyWeight::get(),
+					false,
+					0,
+				)
+			})
 		}
 
 		fn xcm_ump_remove_proxy(delegate: AccountIdOf<T>) -> Result<MessageId, XcmError> {
-			let call = RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-				ProxyCall::Remove(RemoveProxy {
-					delegate,
-					proxy_type: ProxyType::Any,
-					delay: T::BlockNumber::zero(),
-				}),
-			)
-			.encode()
-			.into();
+			use_relay!({
+				let call =
+					RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
+						ProxyCall::Remove(RemoveProxy {
+							delegate,
+							proxy_type: ProxyType::Any,
+							delay: T::BlockNumber::zero(),
+						}),
+					)
+					.encode()
+					.into();
 
-			T::BifrostXcmExecutor::ump_transact(
-				MultiLocation::here(),
-				call,
-				T::AddProxyWeight::get(),
-				false,
-				0,
-			)
+				T::BifrostXcmExecutor::ump_transact(
+					MultiLocation::here(),
+					call,
+					T::AddProxyWeight::get(),
+					false,
+					0,
+				)
+			})
 		}
 
 		fn xcm_ump_transfer(who: AccountIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
