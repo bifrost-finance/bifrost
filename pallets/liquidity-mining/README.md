@@ -52,23 +52,25 @@ Meanwhile, users are permitted to do `deposit`/`redeem`/`claim` operations on th
 
 ### Terminology
 
-- __PER_BLOCK__: 矿池每个区块释放的奖励数量;
-    - 假设矿池总奖励数量(`total`)为10_000, 寿命(`duration`)为100区块, 那么`per_block = total/duration = 100`;
-- __RDB(REWARD_PER_DEPOSIT_PER_BLOCK)__: 1单位的质押每区块可以获得奖励的数量;
-    - 假设矿池`PER_BLOCK = 100`, 当前矿池中质押(`deposit`)数量为100, 那么`RDB = per_block / deposit = 1`;
-- __RD(REWARD_PER_DEPOSIT)__: 1单位质押从矿池启动开始到现在, 可以获得奖励的数量;
-    - 假设矿池`RDB = 1`且在20个区块内不变, 那么区块0时, `RD = 0`, 区块5时, `RD = 5`, 区块10时, `RD = 10`, ..依此类推;
+- __PER_BLOCK__: The amount of reward releases per block;
+  - If the `total` reward is 10_000, `duration` is 100 block, then `per_block = total/duration = 100`;
+- __RDB(REWARD_PER_DEPOSIT_PER_BLOCK)__: reward gain per unit deposit per block;
+    - If `per_block` is 100, the `deposit` of pool is 100, then `RDB = per_block / deposit = 1`;
+- __RD(REWARD_PER_DEPOSIT)__: reward gain per unit deposit from the start of pool to now;
+    - If `RDB` is 1 and will be no change in 20 blocks, then `RD = 0` when the block is 0,
+  `RD = 5` when the block is 5 and so on..;
 
 ### Example
 
-假设当前区块高度为0, 已经创建了一个矿池A, 设计总奖励为10_000单位, 矿池寿命为100区块, 且该矿池已被充值(`Charged`);
+Let the chain block height is 0, and the pool A has been created and charged, the `total` reward is 10_000,
+the `duration` is 100 blocks;
 
-1. 当块高为0时, 储户`Alice`质押(`deposit`)100单位的通证到矿池A;
-2. 当块高为10时, 储户`Bob`质押(`deposit`)100个单位的通证到矿池A;
-3. 当块高为15时, 储户`Alice`对矿池A进行`claim`操作, 领取了未结算的奖励;
-4. 当块高为20时, 储户`Alice`对矿池A进行`redeem`操作, 赎回所有质押的通证, 并领取了未结算的奖励;
+1. When the block is 0, `Alice`, the user, deposits 100 tokens to pool A;
+2. When the block is 10, `Bob`, the user, deposits 100 tokens to pool A;
+3. When the block is 15, `Alice` claims from pool A, withdraw the deserved reward;
+4. When the block is 20, `Alice` redeems  all tokens from pool A, withdraw the deserved reward;
 
-那么, `BLOCK`, `RDB`, `RD`, `RD_ALICE`, `RD_BOB`, `REWARD_ALICE`, `REWARD_BOB`之间的关系如下表所示:
+Then, the relationships of `BLOCK`, `RDB`, `RD`, `RD_ALICE`, `RD_BOB`, `REWARD_ALICE`, `REWARD_BOB` look like the following table:
 
 | BLOCK | RDB | RD   | RD_ALICE | RD_BOB | REWARD_ALICE | REWARD_BOB |
 | ----- | --- | ---- | -------- | ------ | ------------ | ---------- |
@@ -99,8 +101,10 @@ Meanwhile, users are permitted to do `deposit`/`redeem`/`claim` operations on th
 | ..    | .   | ..   | .......  | ..     | ....         | ....       |
 | 100   | 1   | 95   | none     | 10     | none         | 8500       |
 
-__当块高100时, 矿池终结, 那么总计发放奖励为: 1250(alice claims) + 250(alice redeem) + 8500(bob owns) = 10_000__.
+When the chain block height is 100, pool A will be `Retired,` the amount of reward be given to the users is equal to:
+
+__reward_given = 1250(alice claims) + 250(alice redeem) + 8500(bob owns) = 10_000__
 
 __NOTE__:
-- `RD_ALICE`, `RD_BOB`指的是对应用户最近一次操作(`deposit`/`redeem`/`claim`)矿池A时, 矿池A的`RD`的数量;
-- `REWARD_ALICE`, `REWARD_BOB`指的是对应用户应获得的奖励;
+- `RD_ALICE`, `RD_BOB`: refers to the value of `RD` of pool A when the users do `deposit`/`redeem`/`claim` operations on it;
+- `REWARD_ALICE`, `REWARD_BOB`: refers the deserved reward of the user;
