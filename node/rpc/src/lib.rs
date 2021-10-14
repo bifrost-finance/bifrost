@@ -39,12 +39,15 @@ use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpcApi, LiquidityMiningRpc
 use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
-use node_primitives::{AccountId, Balance, Block, ParaId, PoolId};
+use node_primitives::{AccountId, Balance, Block, Nonce, ParaId, PoolId};
 use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
-pub use sc_rpc_api::DenyUnsafe;
+use sc_client_api::AuxStore;
+use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
+use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use substrate_frame_rpc_system::{FullSystem, SystemApi};
 use zenlink_protocol_rpc::{ZenlinkProtocol, ZenlinkProtocolApi};
 use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
 
@@ -67,20 +70,26 @@ pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 #[allow(non_snake_case)]
 pub fn create_full<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
-	C: ProvideRuntimeApi<Block>,
-	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError>,
-	C: Send + Sync + 'static,
+	C: ProvideRuntimeApi<Block>
+		+ HeaderBackend<Block>
+		+ AuxStore
+		+ HeaderMetadata<Block, Error = BlockChainError>
+		+ Send
+		+ Sync
+		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: FeeRuntimeApi<Block, AccountId>,
 	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
 	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
 	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
-	P: TransactionPool + 'static,
+	C::Api: BlockBuilder<Block>,
+	P: TransactionPool + Sync + Send + 'static,
 {
-	let FullDeps { client, .. } = deps;
+	let mut io = jsonrpc_core::IoHandler::default();
+	let FullDeps { client, pool, deny_unsafe } = deps;
 
-	let mut io = RpcExtension::default();
-
+	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
 
 	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));

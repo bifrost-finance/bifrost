@@ -35,7 +35,9 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::ParaId;
 use node_primitives::PoolId;
-pub use node_primitives::{AccountId, Block, BlockNumber, Hash, Header, ParaId as BifrostParaId};
+pub use node_primitives::{
+	AccountId, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId,
+};
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_executor::NativeExecutionDispatch;
@@ -190,6 +192,7 @@ where
 	RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+	RuntimeApi::RuntimeApi: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	RuntimeApi::RuntimeApi: FeeRuntimeApi<Block, AccountId>,
 	RuntimeApi::RuntimeApi: SalpRuntimeApi<Block, BifrostParaId, AccountId>,
 	RuntimeApi::RuntimeApi: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
