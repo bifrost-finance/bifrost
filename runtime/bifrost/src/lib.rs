@@ -225,6 +225,7 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
+	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
 
 impl frame_system::Config for Runtime {
@@ -921,7 +922,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
-			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
+				.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1148,6 +1150,15 @@ impl bifrost_token_issuer::Config for Runtime {
 	type WeightInfo = weights::bifrost_token_issuer::WeightInfo<Runtime>;
 }
 
+impl bifrost_lightening_redeem::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type PalletId = LighteningRedeemPalletId;
+	type WeightInfo = weights::bifrost_lightening_redeem::WeightInfo<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1319,6 +1330,7 @@ construct_runtime! {
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
+		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 	}
 }
 
@@ -1565,6 +1577,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_salp, Salp);
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
+			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1599,6 +1612,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_salp, Salp);
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
+			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

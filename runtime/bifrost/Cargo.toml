@@ -88,6 +88,7 @@ pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", 
 bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
+bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 
 # orml
@@ -170,6 +171,7 @@ std = [
 	"bifrost-liquidity-mining/std",
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
+	"bifrost-lightening-redeem/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"xcm-support/std"
@@ -197,6 +199,7 @@ runtime-benchmarks = [
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-liquidity-mining/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
+	"bifrost-lightening-redeem/runtime-benchmarks",
 ]
 
 try-runtime = [
