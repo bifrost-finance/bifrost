@@ -922,7 +922,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
-      AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get()).eq(a) ||
 			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
