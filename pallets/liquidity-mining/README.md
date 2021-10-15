@@ -30,8 +30,7 @@ In the graph above:
     do `deposit` operation on the pool;
     1.  Want to delete the pool?, Call `force_retire_pool` to retire the pool which is at `Charged`;
 
-3.  The moment the pool at `Charged` state meets the condition set when created, will transforms to `Ongoing`;
-    Meanwhile, users are permitted to do `deposit`/`redeem`/`claim` operations on the pool;
+3.  The moment the pool at `Charged` state meets the condition set when created, will transforms to `Ongoing`; Meanwhile, users are permitted to do `deposit`/`redeem`/`claim` operations on the pool;
 4.  The pool will transform to `Retired` when it reaches the end of life, at the time, users are only permitted to do
     `redeem` operation on the pool;
     1.  Want to retire the ongoing-pool in advance? Call `force_retire_pool` to transform the state of it to `Retired` forcefully;
@@ -42,9 +41,11 @@ In the graph above:
 
 1.  When the pool is at `Charge` or `Ongoing` state, users are permitted to `deposit` tokens to it to participate in mining;
     1.  **NOTE**: When the pool is at `Ongoing` state, the user will take the deserved rewards when deposit everytime;
+
 2.  When the pool is at `Ongoing` state, users are permitted to do:
     1.  claim: withdraw the rewards but not redeem the tokens from the pool;
     2.  redeem\_\*: redeem some(`redeem`) or all(`redeem_all`) tokens and withdraw the deserved rewards from the pool;
+
 3.  When the pool is at `Retired` state, 储户只能进行赎回(`redeem_*`)操作, 赎回所有质押的通证以及奖励;
 
 ## The Pools
