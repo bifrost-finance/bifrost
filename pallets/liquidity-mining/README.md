@@ -16,23 +16,26 @@ can be set by `Config::ControlOrigin`.
 ![flow](./img/liquidity-mining-flow@2x.png)
 
 In the graph above:
- 1.  `council`, the authorized account, who are permitted to do operations such as `create_*_pool`/`kill_pool`/`force_retire_pool`;
- 2.  `user` is the general account who are permitted to mining in a pool;
- 3.  The blue box with ellipse corner refers to extrinsic of the pallet, the DB graph refers to the liquidity-pool;
+1.  `council`, the authorized account, who are permitted to do operations such as `create_*_pool`/`kill_pool`/`force_retire_pool`;
+2.  `user` is the general account who are permitted to mining in a pool;
+3.  The blue box with ellipse corner refers to extrinsic of the pallet, the DB graph refers to the liquidity-pool;
 
 ### General Flow(The Pool)
 
 1.  The authorized account calls `create_*_pool` to create a liquidity-pool, which is at `Uncharged` state initially, 
     must be charged before users are permitted to do mining operations.
     1.  Want to delete the pool? Call `kill_pool` to kill the pool which is at `Uncharged` state, then recreate a new one;
+
 2.  Someone charges the pool has created above, which state will transform to `Charged`; Meanwhile, users are permitted to 
     do `deposit` operation on the pool;
     1.  Want to delete the pool?, Call `force_retire_pool` to retire the pool which is at `Charged`;
+
 3.  The moment the pool at `Charged` state meets the condition set when created, will transforms to `Ongoing`;
     Meanwhile, users are permitted to do `deposit`/`redeem`/`claim` operations on the pool;
 4.  The pool will transform to `Retired` when it reaches the end of life, at the time, users are only permitted to do
     `redeem` operation on the pool;
     1.  Want to retire the ongoing-pool in advance? Call `force_retire_pool` to transform the state of it to `Retired` forcefully;
+
 5.  The pool will be deleted automatically when the deposit of it becomes zero;
 
 ### General Flow(The User)
@@ -56,10 +59,12 @@ In the graph above:
 
 -   **PER_BLOCK**: The amount of reward releases per block;
     -   If the `total` reward is 10_000, `duration` is 100 block, then `per_block = total/duration = 100`;
+
 -   **RDB(REWARD_PER_DEPOSIT_PER_BLOCK)**: reward gain per unit deposit per block;
     -   If `per_block` is 100, the `deposit` of pool is 100, then `RDB = per_block / deposit = 1`;
+
 -   **RD(REWARD_PER_DEPOSIT)**: reward gain per unit deposit from the start of pool to now;
-    -   If `RDB` is 1 and will be no change in 20 blocks, then `RD = 0` when the block is 0, `RD = 5` when the block is 5 and so on..;
+    -   If `RDB` is 1 and will be no change in 20 blocks, then `RD = 0` when the block is 0, `RD = 5` when the block is and so on..;
 
 ### Example
 
