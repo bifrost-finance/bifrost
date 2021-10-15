@@ -1,6 +1,6 @@
 # Liquidity-Mining Pallet
 
-Read this in other languages: English | [简体中文](./README_zh-CN.md)
+Read this in other languages: English | [简体中文](./README-CN.md)
 
 The functionalities the pallet provides:
 

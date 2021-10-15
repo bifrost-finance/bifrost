@@ -1,4 +1,4 @@
-# Liquidity-Mining Pallet
+# 流动性挖矿模块
 
 使用其他语言阅读：[English](./README.md) | 简体中文
 
