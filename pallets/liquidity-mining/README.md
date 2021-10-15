@@ -31,6 +31,7 @@ In the graph above:
     1.  Want to delete the pool?, Call `force_retire_pool` to retire the pool which is at `Charged`;
 
 3.  The moment the pool at `Charged` state meets the condition set when created, will transforms to `Ongoing`; Meanwhile, users are permitted to do `deposit`/`redeem`/`claim` operations on the pool;
+
 4.  The pool will transform to `Retired` when it reaches the end of life, at the time, users are only permitted to do
     `redeem` operation on the pool;
     1.  Want to retire the ongoing-pool in advance? Call `force_retire_pool` to transform the state of it to `Retired` forcefully;
