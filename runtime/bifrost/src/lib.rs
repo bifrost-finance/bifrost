@@ -706,11 +706,7 @@ match_type! {
 	};
 }
 
-pub type Barrier = (
-	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<Everything>,
-	BifrostXcmTransactFilter<Everything>,
-);
+pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
