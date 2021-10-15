@@ -1,4 +1,4 @@
-# 流动性挖矿模块
+# Liquidity-Mining Pallet
 
 使用其他语言阅读：[English](./README.md) | 简体中文
 
@@ -17,9 +17,9 @@
 
 在图中:
 
-1. `council`即为授权账户(`Config::ControlOrigin`), 拥有`创建矿池(create_*_pool)`/`终结矿池(kill_pool)`/`强停矿池(force_retire_pool)`的权限;
-2. `user`指一般账户, 可以参与挖矿;
-3. 蓝色椭圆框指`模块函数`, 圆形指`参与者`, 数据库图形指`矿池`;
+1.  `council`即为授权账户(`Config::ControlOrigin`), 拥有`创建矿池(create_*_pool)`/`终结矿池(kill_pool)`/`强停矿池(force_retire_pool)`的权限;
+2.  `user`指一般账户, 可以参与挖矿;
+3.  蓝色椭圆框指`模块函数`, 圆形指`参与者`, 数据库图形指`矿池`;
 
 ### 一般流程描述(矿池端)
 
@@ -30,6 +30,7 @@
     1.  若此时想要删除矿池, 可以强停(`force_retire_pool`)处于`Charged`状态的矿池(充值的资金会退回给参与者);
 
 3.  当处于`Charged`的矿池满足条件(在创建矿池时设置的), 会自动转变状态为`Ongoing`, 此时矿池接受储户的赎回(`redeem`)/领取(`claim`)操作;
+
 4.  当处于`Ongoing`的矿池到生命尽头, 会自动转变状态为`Retired`, 此时矿池只接受储户的赎回(`redeem`)操作;
     1.  若要提前`retire`掉处于`Ongoing`的矿池, 可以调用强停(`force_retire_pool`)操作, 矿池状态转换为`Retired`;
 
