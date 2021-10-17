@@ -30,14 +30,14 @@ use crate::Pallet as Bancor;
 
 benchmarks! {
 	add_token_to_pool {
-		let currency_id = CurrencyId::Token(TokenSymbol::DOT);
+		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let caller: T::AccountId = whitelisted_caller();
 		let token_amount = BalanceOf::<T>::unique_saturated_from(10u32 as u128);
 	}: _(RawOrigin::Signed(caller), currency_id, token_amount)
 
 	exchange_for_token {
 		let caller: T::AccountId = whitelisted_caller();
-		let currency_id = CurrencyId::Token(TokenSymbol::DOT);
+		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let vstoken_amount = BalanceOf::<T>::unique_saturated_from(1u128);
 		let token_out_min =  BalanceOf::<T>::unique_saturated_from(0u128);
 
@@ -53,7 +53,7 @@ benchmarks! {
 
 	exchange_for_vstoken {
 		let caller: T::AccountId = whitelisted_caller();
-		let currency_id = CurrencyId::Token(TokenSymbol::DOT);
+		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let token_amount = BalanceOf::<T>::unique_saturated_from(100u128);
 		let vstoken_out_min =  BalanceOf::<T>::unique_saturated_from(0u128);
 
@@ -65,7 +65,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller), currency_id, token_amount, vstoken_out_min)
 
 	on_initialize {
-		let currency_id = CurrencyId::Token(TokenSymbol::DOT);
+		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let caller: T::AccountId = whitelisted_caller();
 		let token_amount = BalanceOf::<T>::unique_saturated_from(7200 as u128);
 
