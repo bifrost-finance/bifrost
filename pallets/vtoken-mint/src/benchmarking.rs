@@ -29,31 +29,31 @@ use crate::Pallet as VtokenMint;
 
 benchmarks! {
 	set_token_staking_lock_period {
-		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let token_id = CurrencyId::Token(TokenSymbol::KSM);
 		let locking_blocks = T::BlockNumber::from(100u32);
 	}: _(RawOrigin::Root, token_id, locking_blocks)
 
 	set_vtoken_pool {
-		let currency_id = CurrencyId::Token(TokenSymbol::DOT);
+		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 		let new_token_pool = BalanceOf::<T>::unique_saturated_from(10u32 as u128);
 		let new_vtoken_pool = BalanceOf::<T>::unique_saturated_from(20u32 as u128);
 	}: _(RawOrigin::Root, currency_id, new_token_pool, new_vtoken_pool)
 
 	mint {
-		VtokenMint::<T>::expand_mint_pool(CurrencyId::Token(TokenSymbol::DOT), BalanceOf::<T>::unique_saturated_from(100u32 as u128))?;
-		VtokenMint::<T>::expand_mint_pool(CurrencyId::VToken(TokenSymbol::DOT), BalanceOf::<T>::unique_saturated_from(200u32 as u128))?;
+		VtokenMint::<T>::expand_mint_pool(CurrencyId::Token(TokenSymbol::KSM), BalanceOf::<T>::unique_saturated_from(100u32 as u128))?;
+		VtokenMint::<T>::expand_mint_pool(CurrencyId::VToken(TokenSymbol::KSM), BalanceOf::<T>::unique_saturated_from(200u32 as u128))?;
 
 		let caller: T::AccountId = whitelisted_caller();
-		let vtoken_id = CurrencyId::VToken(TokenSymbol::DOT);
+		let vtoken_id = CurrencyId::VToken(TokenSymbol::KSM);
 		let token_amount = BalanceOf::<T>::unique_saturated_from(10u32 as u128);
 	}: _(RawOrigin::Signed(caller), vtoken_id, token_amount)
 
 	redeem {
-		VtokenMint::<T>::expand_mint_pool(CurrencyId::Token(TokenSymbol::DOT), BalanceOf::<T>::unique_saturated_from(100u32 as u128))?;
-		VtokenMint::<T>::expand_mint_pool(CurrencyId::VToken(TokenSymbol::DOT), BalanceOf::<T>::unique_saturated_from(200u32 as u128))?;
+		VtokenMint::<T>::expand_mint_pool(CurrencyId::Token(TokenSymbol::KSM), BalanceOf::<T>::unique_saturated_from(100u32 as u128))?;
+		VtokenMint::<T>::expand_mint_pool(CurrencyId::VToken(TokenSymbol::KSM), BalanceOf::<T>::unique_saturated_from(200u32 as u128))?;
 
 		let caller: T::AccountId = whitelisted_caller();
-		let token_id = CurrencyId::Token(TokenSymbol::DOT);
+		let token_id = CurrencyId::Token(TokenSymbol::KSM);
 		let vtoken_amount = BalanceOf::<T>::unique_saturated_from(10u32 as u128);
 	}: _(RawOrigin::Signed(caller), token_id, vtoken_amount)
 
