@@ -1572,8 +1572,12 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
-		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
-			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
+		fn get_rewards(who: AccountId, pid: PoolId, pallet_instance: u32) -> Vec<(CurrencyId, Balance)> {
+			match pallet_instance {
+				1 => LiquidityMining::rewards(who, pid).unwrap_or(Vec::new()),
+				2 => LiquidityMiningDOT::rewards(who, pid).unwrap_or(Vec::new()),
+				_ => Vec::new()
+			}
 		}
 	}
 
