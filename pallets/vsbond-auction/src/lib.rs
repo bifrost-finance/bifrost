@@ -50,26 +50,26 @@ pub mod weights;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
-pub struct OrderInfo<T: Config> {
+#[derive(Encode, Decode, Eq, PartialEq, TypeInfo)]
+pub struct OrderInfo<T: Config<I>, I: 'static = ()> {
 	/// The owner of the order
 	owner: AccountIdOf<T>,
 	/// The vsbond type of the order to sell
 	vsbond: CurrencyId,
 	/// The quantity of vsbond to sell or buy
-	amount: BalanceOf<T>,
+	amount: BalanceOf<T, I>,
 	/// The quantity of vsbond has not be sold or took
-	remain: BalanceOf<T>,
+	remain: BalanceOf<T, I>,
 	/// Total price of the order
-	total_price: BalanceOf<T>,
+	total_price: BalanceOf<T, I>,
 	/// Helper to calculate the remain to unreserve
-	remain_price: BalanceOf<T>,
+	remain_price: BalanceOf<T, I>,
 	/// The unique id of the order
 	order_id: OrderId,
 	order_type: OrderType,
 }
 
-impl<T: Config> OrderInfo<T> {
+impl<T: Config<I>, I: 'static> OrderInfo<T, I> {
 	pub fn unit_price(&self) -> FixedU128 {
 		let amount: u128 = self.amount.saturated_into();
 		let total_price: u128 = self.total_price.saturated_into();
@@ -81,7 +81,22 @@ impl<T: Config> OrderInfo<T> {
 	}
 }
 
-impl<T: Config> core::fmt::Debug for OrderInfo<T> {
+impl<T: Config<I>, I: 'static> Clone for OrderInfo<T, I> {
+	fn clone(&self) -> Self {
+		Self {
+			owner: self.owner.clone(),
+			vsbond: self.vsbond,
+			amount: self.amount,
+			remain: self.remain,
+			total_price: self.total_price,
+			remain_price: self.remain_price,
+			order_id: self.order_id,
+			order_type: self.order_type,
+		}
+	}
+}
+
+impl<T: Config<I>, I: 'static> core::fmt::Debug for OrderInfo<T, I> {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		f.debug_tuple("")
 			.field(&self.owner)
@@ -106,8 +121,8 @@ type ParaId = u32;
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
 
 #[allow(type_alias_bounds)]
-type BalanceOf<T: Config> =
-	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+type BalanceOf<T: Config<I>, I: 'static = ()> =
+	<<T as Config<I>>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
 #[allow(type_alias_bounds)]
 type LeasePeriodOf<T: Config> = <T as frame_system::Config>::BlockNumber;
@@ -117,8 +132,8 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+	pub trait Config<I: 'static = ()>: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
+		type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The currency type that buyer to pay
 		#[pallet::constant]
@@ -130,7 +145,7 @@ pub mod pallet {
 
 		/// The sale or buy quantity needs to be greater than `MinimumSupply` to create an order
 		#[pallet::constant]
-		type MinimumAmount: Get<BalanceOf<Self>>;
+		type MinimumAmount: Get<BalanceOf<Self, I>>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>
 			+ MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
@@ -140,7 +155,7 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {
+	pub enum Error<T, I = ()> {
 		NotEnoughAmount,
 		NotFindOrderInfo,
 		NotEnoughBalanceToUnreserve,
@@ -156,11 +171,18 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
-	pub enum Event<T: Config> {
+	pub enum Event<T: Config<I>, I: 'static = ()> {
 		/// The order has been created.
 		///
 		/// [order_id, order_type, order_creator, vsbond_type, vsbond_amount, total_price]
-		OrderCreated(OrderId, OrderType, AccountIdOf<T>, CurrencyId, BalanceOf<T>, BalanceOf<T>),
+		OrderCreated(
+			OrderId,
+			OrderType,
+			AccountIdOf<T>,
+			CurrencyId,
+			BalanceOf<T, I>,
+			BalanceOf<T, I>,
+		),
 		/// The order has been revoked.
 		///
 		/// [order_id, order_type, order_creator, vsbond_type, vsbond_amount, vsbond_remain,
@@ -170,9 +192,9 @@ pub mod pallet {
 			OrderType,
 			AccountIdOf<T>,
 			CurrencyId,
-			BalanceOf<T>,
-			BalanceOf<T>,
-			BalanceOf<T>,
+			BalanceOf<T, I>,
+			BalanceOf<T, I>,
+			BalanceOf<T, I>,
 		),
 		/// The order has been clinched.
 		///
@@ -184,21 +206,22 @@ pub mod pallet {
 			AccountIdOf<T>,
 			AccountIdOf<T>,
 			CurrencyId,
-			BalanceOf<T>,
-			BalanceOf<T>,
-			BalanceOf<T>,
-			BalanceOf<T>,
+			BalanceOf<T, I>,
+			BalanceOf<T, I>,
+			BalanceOf<T, I>,
+			BalanceOf<T, I>,
 		),
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_id)]
-	pub(crate) type NextOrderId<T: Config> = StorageValue<_, OrderId, ValueQuery>;
+	pub(crate) type NextOrderId<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, OrderId, ValueQuery>;
 
 	// Just store order ids that be in-trade.
 	#[pallet::storage]
 	#[pallet::getter(fn user_order_ids)]
-	pub(crate) type UserOrderIds<T: Config> = StorageDoubleMap<
+	pub(crate) type UserOrderIds<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		AccountIdOf<T>,
@@ -210,14 +233,14 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_info)]
-	pub(crate) type TotalOrderInfos<T: Config> =
-		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<T>>;
+	pub(crate) type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
+		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<T, I>>;
 
 	#[pallet::pallet]
-	pub struct Pallet<T>(PhantomData<T>);
+	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Create a sell order or buy order to sell `vsbond`.
 		#[pallet::weight(1_000)]
 		pub fn create_order(
@@ -225,20 +248,20 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] first_slot: LeasePeriodOf<T>,
 			#[pallet::compact] last_slot: LeasePeriodOf<T>,
-			#[pallet::compact] amount: BalanceOf<T>,
-			#[pallet::compact] total_price: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T, I>,
+			#[pallet::compact] total_price: BalanceOf<T, I>,
 			order_type: OrderType,
 		) -> DispatchResultWithPostInfo {
 			// Check origin
 			let owner = ensure_signed(origin)?;
 
 			// Check amount
-			ensure!(amount > T::MinimumAmount::get(), Error::<T>::NotEnoughAmount);
+			ensure!(amount > T::MinimumAmount::get(), Error::<T, I>::NotEnoughAmount);
 
 			let currency_id_u64: u64 = T::InvoicingCurrency::get().currency_id();
 			let token_symbol_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
 			let currency_token_symbol =
-				TokenSymbol::try_from(token_symbol_bit).map_err(|_| Error::<T>::Unexpected)?;
+				TokenSymbol::try_from(token_symbol_bit).map_err(|_| Error::<T, I>::Unexpected)?;
 
 			// Construct vsbond
 			let (_, vsbond) =
@@ -252,18 +275,18 @@ pub mod pallet {
 
 			ensure!(
 				T::MultiCurrency::can_reserve(token_reserved, &owner, amount_reserved),
-				Error::<T>::NotEnoughBalanceToReserve
+				Error::<T, I>::NotEnoughBalanceToReserve
 			);
 
 			let order_ids_len = Self::user_order_ids(&owner, order_type).len();
 			ensure!(
 				order_ids_len < T::MaximumOrderInTrade::get() as usize,
-				Error::<T>::ExceedMaximumOrderInTrade,
+				Error::<T, I>::ExceedMaximumOrderInTrade,
 			);
 
 			// Create OrderInfo
 			let order_id = Self::next_order_id();
-			let order_info = OrderInfo::<T> {
+			let order_info = OrderInfo::<T, I> {
 				owner: owner.clone(),
 				vsbond,
 				amount,
@@ -278,10 +301,10 @@ pub mod pallet {
 			T::MultiCurrency::reserve(token_reserved, &owner, amount_reserved)?;
 
 			// Insert OrderInfo to Storage
-			TotalOrderInfos::<T>::insert(order_id, order_info.clone());
-			UserOrderIds::<T>::try_append(owner.clone(), order_type, order_id)
-				.map_err(|_| Error::<T>::Unexpected)
-				.map_err(|_| Error::<T>::Unexpected)?;
+			TotalOrderInfos::<T, I>::insert(order_id, order_info);
+			UserOrderIds::<T, I>::try_append(owner.clone(), order_type, order_id)
+				.map_err(|_| Error::<T, I>::Unexpected)
+				.map_err(|_| Error::<T, I>::Unexpected)?;
 
 			Self::deposit_event(Event::OrderCreated(
 				order_id,
@@ -305,10 +328,10 @@ pub mod pallet {
 			let from = ensure_signed(origin)?;
 
 			// Check OrderInfo
-			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
+			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			// Check OrderOwner
-			ensure!(order_info.owner == from, Error::<T>::ForbidRevokeOrderWithoutOwnership);
+			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
 
 			let (token_unreserve, amount_unreserve) = match order_info.order_type {
 				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
@@ -318,11 +341,14 @@ pub mod pallet {
 			// To unreserve
 			let reserved_balance =
 				T::MultiCurrency::reserved_balance(token_unreserve, &order_info.owner);
-			ensure!(reserved_balance >= amount_unreserve, Error::<T>::NotEnoughBalanceToUnreserve);
+			ensure!(
+				reserved_balance >= amount_unreserve,
+				Error::<T, I>::NotEnoughBalanceToUnreserve
+			);
 			T::MultiCurrency::unreserve(token_unreserve, &order_info.owner, amount_unreserve);
 
 			// Revoke order
-			TotalOrderInfos::<T>::remove(order_id);
+			TotalOrderInfos::<T, I>::remove(order_id);
 			Self::try_to_remove_order_id(order_info.owner.clone(), order_info.order_type, order_id);
 
 			Self::deposit_event(Event::OrderRevoked(
@@ -344,7 +370,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
 		) -> DispatchResultWithPostInfo {
-			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
+			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			Self::partial_clinch_order(origin, order_id, order_info.remain)?;
 
@@ -356,7 +382,7 @@ pub mod pallet {
 		pub fn partial_clinch_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
-			#[pallet::compact] quantity: BalanceOf<T>,
+			#[pallet::compact] quantity: BalanceOf<T, I>,
 		) -> DispatchResultWithPostInfo {
 			// Check Zero
 			if quantity.is_zero() {
@@ -367,10 +393,10 @@ pub mod pallet {
 			let opponent = ensure_signed(origin)?;
 
 			// Check OrderInfo
-			let order_info = Self::order_info(order_id).ok_or(Error::<T>::NotFindOrderInfo)?;
+			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			// Check OrderOwner
-			ensure!(order_info.owner != opponent, Error::<T>::ForbidClinchOrderWithinOwnership);
+			ensure!(order_info.owner != opponent, Error::<T, I>::ForbidClinchOrderWithinOwnership);
 
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
@@ -388,7 +414,7 @@ pub mod pallet {
 
 			// Check the balance of opponent
 			T::MultiCurrency::ensure_can_withdraw(token_opponent, &opponent, amount_opponent)
-				.map_err(|_| Error::<T>::DontHaveEnoughToPay)?;
+				.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
 
 			// Get the new OrderInfo
 			let new_order_info = if quantity_clinchd == order_info.remain {
@@ -408,7 +434,7 @@ pub mod pallet {
 			// Unreserve the balance
 			let reserved_balance =
 				T::MultiCurrency::reserved_balance(token_owner, &new_order_info.owner);
-			ensure!(reserved_balance >= amount_owner, Error::<T>::NotEnoughBalanceToUnreserve);
+			ensure!(reserved_balance >= amount_owner, Error::<T, I>::NotEnoughBalanceToUnreserve);
 			T::MultiCurrency::unreserve(token_owner, &new_order_info.owner, amount_owner);
 
 			// Exchange: Transfer assets to opponent
@@ -428,7 +454,7 @@ pub mod pallet {
 
 			// Change the OrderInfo in Storage
 			if new_order_info.remain == Zero::zero() {
-				TotalOrderInfos::<T>::remove(order_id);
+				TotalOrderInfos::<T, I>::remove(order_id);
 				Self::try_to_remove_order_id(
 					new_order_info.owner.clone(),
 					order_info.order_type,
@@ -443,10 +469,10 @@ pub mod pallet {
 					);
 				}
 			} else {
-				TotalOrderInfos::<T>::insert(order_id, new_order_info.clone());
+				TotalOrderInfos::<T, I>::insert(order_id, new_order_info.clone());
 			}
 
-			Self::deposit_event(Event::<T>::OrderClinchd(
+			Self::deposit_event(Event::<T, I>::OrderClinchd(
 				order_id,
 				new_order_info.order_type,
 				new_order_info.owner,
@@ -462,10 +488,10 @@ pub mod pallet {
 		}
 	}
 
-	impl<T: Config> Pallet<T> {
+	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		pub(crate) fn next_order_id() -> OrderId {
 			let next_order_id = Self::order_id();
-			NextOrderId::<T>::mutate(|current| *current += 1);
+			NextOrderId::<T, I>::mutate(|current| *current += 1);
 			next_order_id
 		}
 
@@ -474,7 +500,7 @@ pub mod pallet {
 			order_type: OrderType,
 			order_id: OrderId,
 		) {
-			UserOrderIds::<T>::mutate(account, order_type, |order_ids| {
+			UserOrderIds::<T, I>::mutate(account, order_type, |order_ids| {
 				if let Some(position) = order_ids.iter().position(|&r| r == order_id) {
 					order_ids.remove(position);
 				}
@@ -482,13 +508,16 @@ pub mod pallet {
 		}
 
 		/// Get the price(round up) needed to pay.
-		pub(crate) fn price_to_pay(quantity: BalanceOf<T>, unit_price: FixedU128) -> BalanceOf<T> {
+		pub(crate) fn price_to_pay(
+			quantity: BalanceOf<T, I>,
+			unit_price: FixedU128,
+		) -> BalanceOf<T, I> {
 			let quantity: u128 = quantity.saturated_into();
 
 			let total_price = (unit_price.saturating_mul(quantity.into())).floor().into_inner() /
 				FixedU128::accuracy();
 
-			BalanceOf::<T>::saturated_from(total_price)
+			BalanceOf::<T, I>::saturated_from(total_price)
 		}
 	}
 }
