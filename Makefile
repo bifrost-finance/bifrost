@@ -95,6 +95,18 @@ test-benchmarking:
 run-benchmarking:
 	./scripts/run_all_benches.sh
 
+.PHONY: build-asgard-release-with-bench
+build-asgard-release-with-bench: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-asgard-runtime,runtime-benchmarks" --release
+
+.PHONY: build-bifrost-release-with-bench
+build-bifrost-release-with-bench: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-bifrost-runtime,runtime-benchmarks" --release
+
+.PHONY: build-all-release-with-bench
+build-all-release-with-bench: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
+
 # Deploy
 .PHONY: deploy-asgard-local
 deploy-asgard-local:
