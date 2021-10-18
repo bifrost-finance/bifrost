@@ -31,6 +31,7 @@ decl_runtime_apis! {
 		fn get_rewards(
 			who: AccountId,
 			pid: PoolId,
+			pallet_instance: u32,
 		) -> Vec<(CurrencyId, Balance)>;
 	}
 }
