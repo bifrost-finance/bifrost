@@ -16,23 +16,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+#![cfg_attr(not(feature = "std"), no_std)]
 
-//! A list of the different weight modules for our runtime.
+use codec::Codec;
+use node_primitives::{Balance, RpcContributionStatus};
+use sp_api::decl_runtime_apis;
 
-pub mod bifrost_flexible_fee;
-pub mod bifrost_lightening_redeem;
-pub mod bifrost_liquidity_mining;
-pub mod bifrost_salp;
-pub mod bifrost_salp_lite;
-pub mod bifrost_token_issuer;
-pub mod frame_system;
-pub mod orml_tokens;
-pub mod pallet_balances;
-pub mod pallet_bounties;
-pub mod pallet_indices;
-pub mod pallet_scheduler;
-pub mod pallet_timestamp;
-pub mod pallet_treasury;
-pub mod pallet_utility;
-pub mod pallet_vesting;
+decl_runtime_apis! {
+	pub trait SalpRuntimeApi<ParaId,AccountId> where
+		ParaId: Codec,
+		AccountId: Codec,
+	{
+		fn get_contribution(
+			index: ParaId,
+			who: AccountId
+		) -> (Balance,RpcContributionStatus);
+	}
+}
