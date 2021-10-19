@@ -190,10 +190,10 @@ zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", r
 zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "89264233141bad3114d7bae6f81ab637a8827ff6" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "89264233141bad3114d7bae6f81ab637a8827ff6" }
 
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
-orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
-orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "b89b1f98fcf0f5c341fbef1d12bfd869a2f2a9fe" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
+orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
+orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "dc96605342de9971c27699561723a6de6e2614c2" }
