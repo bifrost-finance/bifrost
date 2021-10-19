@@ -20,8 +20,7 @@ use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
 	sp_runtime::traits::{CheckedConversion, Convert},
-	traits::{Contains, Get},
-	weights::Weight,
+	traits::Get,
 };
 use node_primitives::{AccountId, CurrencyId, TokenSymbol};
 use orml_traits::location::Reserve;
@@ -29,7 +28,7 @@ use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::latest::prelude::*;
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
-use xcm_executor::traits::{FilterAssetLocation, MatchesFungible, ShouldExecute};
+use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
 
 use crate::constants::parachains;
 
@@ -63,24 +62,6 @@ pub type BifrostLocationConvert = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<NetworkId, AccountId>,
 );
-
-/// Bifrost Xcm Transact Filter
-pub struct BifrostXcmTransactFilter<T>(PhantomData<T>);
-
-impl<T: Contains<MultiLocation>> ShouldExecute for BifrostXcmTransactFilter<T> {
-	fn should_execute<Call>(
-		_origin: &MultiLocation,
-		_top_level: bool,
-		message: &Xcm<Call>,
-		_shallow_weight: Weight,
-		_weight_credit: &mut Weight,
-	) -> Result<(), ()> {
-		match message {
-			Xcm::Transact { origin_type: _, require_weight_at_most: _, call: _ } => Ok(()),
-			_ => Err(()),
-		}
-	}
-}
 
 /// Bifrost Filtered Assets
 pub struct BifrostFilterAsset;

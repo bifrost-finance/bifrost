@@ -23,6 +23,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{traits::BancorHandler, CurrencyId, CurrencyIdExt};
 use num_bigint::BigUint;
 use orml_traits::MultiCurrency;
+use scale_info::TypeInfo;
 use sp_arithmetic::per_things::{PerThing, Perbill, Percent};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero},
@@ -46,7 +47,7 @@ const BILLION: u128 = 1_000_000_000;
 // These time units are defined in number of blocks.
 const BLOCKS_PER_DAY: u32 = 60 / 12 * 60 * 24;
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug, TypeInfo)]
 pub struct BancorPool<Balance> {
 	currency_id: CurrencyId,      // ksm, dot, etc.
 	token_pool: Balance,          // token supply of the pool

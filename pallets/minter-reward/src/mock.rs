@@ -26,7 +26,11 @@ use std::convert::TryInto;
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
-use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{
+	parameter_types,
+	traits::{GenesisBuild, Nothing},
+	PalletId,
+};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 use sp_core::H256;
@@ -143,7 +147,7 @@ impl orml_tokens::Config for Runtime {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();
@@ -174,6 +178,7 @@ impl zenlink_protocol::Config for Runtime {
 	type SelfParaId = SelfParaId;
 	type TargetChains = ();
 	type XcmExecutor = ();
+	type WeightInfo = ();
 }
 
 type MultiAssets =

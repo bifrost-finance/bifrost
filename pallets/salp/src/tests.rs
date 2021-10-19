@@ -19,7 +19,7 @@
 // Ensure we're `no_std` when compiling for Wasm.
 
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus as BS};
-use node_primitives::{ContributionStatus, CurrencyId, TokenSymbol};
+use node_primitives::ContributionStatus;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{mock::*, Error, FundStatus};

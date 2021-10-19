@@ -35,6 +35,7 @@ use orml_traits::{
 	currency::TransferAll, MultiCurrency, MultiCurrencyExtended, MultiLockableCurrency,
 	MultiReservableCurrency,
 };
+use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32Bit, MaybeSerializeDeserialize, Member, One, Saturating, Zero},
 	DispatchError, Permill,
@@ -148,7 +149,7 @@ decl_error! {
 }
 
 /// struct for matched order in service
-#[derive(Default, Clone, Eq, PartialEq, Debug, Encode, Decode)]
+#[derive(Default, Clone, Eq, PartialEq, Debug, Encode, Decode, TypeInfo)]
 pub struct BiddingOrderUnit<AccountId, CurrencyId, BlockNumber, Balance> {
 	/// bidder id
 	bidder_id: AccountId,

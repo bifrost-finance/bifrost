@@ -166,7 +166,6 @@ pub mod pallet {
 	pub(crate) type CurrentCycle<T: Config> = StorageValue<_, u8, ValueQuery>;
 
 	#[pallet::event]
-	#[pallet::metadata(BalanceOf<T> = "Balance", CurrencyIdOf<T> = "CurrencyId")]
 	pub enum Event<T: Config> {}
 
 	#[pallet::pallet]

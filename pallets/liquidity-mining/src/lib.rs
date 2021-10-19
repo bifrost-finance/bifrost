@@ -38,6 +38,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
 pub use pallet::*;
+use scale_info::TypeInfo;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
@@ -49,7 +50,7 @@ pub mod weights;
 
 pub use weights::*;
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 pub struct PoolInfo<T: Config> {
 	/// Id of the liquidity-pool
 	pool_id: PoolId,
@@ -225,7 +226,7 @@ impl<T: Config> PoolInfo<T> {
 	}
 }
 
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
 pub enum PoolType {
 	/// Only `LpToken` can deposit into the pool
 	Mining,
@@ -235,7 +236,7 @@ pub enum PoolType {
 	EBFarming,
 }
 
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
 pub enum PoolState {
 	UnCharged,
 	Charged,
@@ -244,7 +245,7 @@ pub enum PoolState {
 	Dead,
 }
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 pub struct DepositData<T: Config> {
 	/// The amount of trading-pair deposited in the liquidity-pool
 	deposit: BalanceOf<T>,
@@ -269,7 +270,7 @@ impl<T: Config> DepositData<T> {
 	}
 }
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 pub struct RewardData<T: Config> {
 	/// The total amount of token to reward
 	total: BalanceOf<T>,
@@ -354,7 +355,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + TypeInfo {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Origin for anyone able to create/kill/force_retire the liquidity-pool.
