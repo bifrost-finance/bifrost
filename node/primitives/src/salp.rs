@@ -25,6 +25,7 @@ pub enum ContributionStatus<BalanceOf> {
 	Refunded,
 	Unlocked,
 	Redeemed,
+	MigratedIdle,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Copy, RuntimeDebug)]
@@ -35,6 +36,7 @@ pub enum RpcContributionStatus {
 	Refunded,
 	Unlocked,
 	Redeemed,
+	MigratedIdle,
 }
 
 impl<BalanceOf> ContributionStatus<BalanceOf>
@@ -62,6 +64,7 @@ where
 			Self::Refunded => RpcContributionStatus::Refunded,
 			Self::Unlocked => RpcContributionStatus::Unlocked,
 			Self::Redeemed => RpcContributionStatus::Redeemed,
+			Self::MigratedIdle => RpcContributionStatus::MigratedIdle,
 		};
 		rpc_status
 	}
