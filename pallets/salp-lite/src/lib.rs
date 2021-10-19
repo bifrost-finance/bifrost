@@ -39,23 +39,6 @@ use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_std::convert::TryFrom;
-use xcm_support::*;
-
-macro_rules! use_relay {
-    ({ $( $code:tt )* }) => {
-        if T::RelayNetwork::get() == NetworkId::Polkadot {
-            use polkadot::RelaychainCall;
-
-			$( $code )*
-        } else if T::RelayNetwork::get() == NetworkId::Kusama {
-            use kusama::RelaychainCall;
-
-			$( $code )*
-        } else {
-            unreachable!()
-        }
-    }
-}
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -115,14 +98,10 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{
-		BancorHandler, CurrencyId, LeasePeriod, MessageId, Nonce, ParaId,
-		ParachainTransactProxyType, ParachainTransactType, TransferOriginType,
-	};
-	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
+	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, ParaId};
+	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;
-	use xcm::latest::prelude::*;
 
 	use super::*;
 
@@ -147,21 +126,16 @@ pub mod pallet {
 		#[pallet::constant]
 		type LeasePeriod: Get<BlockNumberFor<Self>>;
 
-		#[pallet::constant]
-		type VSBondValidPeriod: Get<BlockNumberFor<Self>>;
-
 		/// The time interval from 1:1 redeem-pool to bancor-pool to release.
 		#[pallet::constant]
 		type ReleaseCycle: Get<BlockNumberFor<Self>>;
 
 		/// The release ratio from the 1:1 redeem-pool to the bancor-pool per cycle.
-		///
-		/// **NOTE: THE RELEASE RATIO MUST BE IN [0, 1].**
 		#[pallet::constant]
 		type ReleaseRatio: Get<Percent>;
 
 		#[pallet::constant]
-		type RemoveKeysLimit: Get<u32>;
+		type BatchKeysLimit: Get<u32>;
 
 		#[pallet::constant]
 		type SlotLength: Get<LeasePeriod>;
@@ -176,42 +150,8 @@ pub mod pallet {
 
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
-		type BifrostXcmExecutor: BifrostXcmExecutor;
-
-		#[pallet::constant]
-		type XcmTransferOrigin: Get<TransferOriginType>;
-
 		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
-
-		/// Parachain Id
-		type SelfParaId: Get<u32>;
-
-		/// Xcm weight
-		#[pallet::constant]
-		type BaseXcmWeight: Get<u64>;
-
-		#[pallet::constant]
-		type ContributionWeight: Get<u64>;
-
-		#[pallet::constant]
-		type AddProxyWeight: Get<u64>;
-
-		/// The interface to Cross-chain transfer.
-		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
-
-		/// The sovereign sub-account for where the staking currencies are sent to.
-		#[pallet::constant]
-		type SovereignSubAccountLocation: Get<MultiLocation>;
-
-		#[pallet::constant]
-		type TransactProxyType: Get<ParachainTransactProxyType>;
-
-		#[pallet::constant]
-		type TransactType: Get<ParachainTransactType>;
-
-		#[pallet::constant]
-		type RelayNetwork: Get<NetworkId>;
 	}
 
 	#[pallet::pallet]
@@ -223,18 +163,12 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Create a new crowdloaning campaign. [fund_index]
 		Created(ParaId),
-		/// Contributing to a crowd sale. [who, fund_index, amount]
-		Contributing(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
 		/// Contributed to a crowd sale. [who, fund_index, amount]
-		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
-		/// Fail on contribute to crowd sale. [who, fund_index, amount]
-		ContributeFailed(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
+		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(ParaId, BalanceOf<T>),
 		/// refund to account. [who, fund_index,value]
 		Refunded(AccountIdOf<T>, ParaId, BalanceOf<T>),
-		/// all refund
-		AllRefunded(ParaId),
 		/// redeem to account. [who, fund_index, first_slot, last_slot, value]
 		Redeemed(AccountIdOf<T>, ParaId, LeasePeriod, LeasePeriod, BalanceOf<T>),
 		/// Fund is edited. [fund_index]
@@ -249,11 +183,8 @@ pub mod pallet {
 		Success(ParaId),
 		Retired(ParaId),
 		End(ParaId),
-		/// Proxy
-		ProxyAdded(AccountIdOf<T>),
-		ProxyRemoved(AccountIdOf<T>),
-		/// Mint
-		Minted(AccountIdOf<T>, BalanceOf<T>),
+		/// vsAssets migrated
+		AllMigrated(ParaId),
 	}
 
 	#[pallet::error]
@@ -264,6 +195,8 @@ pub mod pallet {
 		LastSlotBeforeFirstSlot,
 		/// The last slot cannot be more then 3 slots after the first slot.
 		LastSlotTooFarInFuture,
+		/// Migrate slot must be greater than first slot
+		MigrateSlotBeforeFirstSlot,
 		/// There was an overflow.
 		Overflow,
 		/// The contribution was below the minimum, `MinContribution`.
@@ -280,18 +213,12 @@ pub mod pallet {
 		CapExceeded,
 		/// The fund has been registered.
 		FundAlreadyCreated,
-		/// Crosschain xcm failed
-		XcmFailed,
 		/// Don't have enough vsToken/vsBond to refund
 		NotEnoughReservedAssetsToRefund,
 		/// Don't have enough token to refund by users
 		NotEnoughBalanceInRefundPool,
 		/// Don't have enough vsToken/vsBond to unlock
 		NotEnoughBalanceToUnlock,
-		/// The vsBond is expired now
-		VSBondExpired,
-		/// The vsBond cannot be redeemed by now
-		UnRedeemableNow,
 		/// Dont have enough vsToken/vsBond to redeem
 		NotEnoughFreeAssetsToRedeem,
 		/// Don't have enough token to redeem by users
@@ -302,13 +229,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn current_trie_index)]
 	pub(super) type CurrentTrieIndex<T: Config> = StorageValue<_, TrieIndex, ValueQuery>;
-
-	/// Tracker for the next nonce index
-	#[pallet::storage]
-	#[pallet::getter(fn current_nonce)]
-
-	pub(super) type CurrentNonce<T: Config> =
-		StorageMap<_, Blake2_128Concat, ParaId, Nonce, ValueQuery>;
 
 	/// Info on all of the funds.
 	#[pallet::storage]
@@ -453,6 +373,63 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
+		#[pallet::weight(T::WeightInfo::batch_unlock(T::BatchKeysLimit::get()))]
+		#[transactional]
+		pub fn batch_migrate(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+		) -> DispatchResult {
+			ensure_signed(origin)?;
+
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(
+				fund.status == FundStatus::Failed || fund.status == FundStatus::RefundWithdrew,
+				Error::<T>::InvalidFundStatus
+			);
+
+			ensure!(first_slot > fund.first_slot, Error::<T>::MigrateSlotBeforeFirstSlot);
+
+			let mut migrate_count = 0u32;
+			let contributions = Self::contribution_iterator(fund.trie_index);
+			let mut all_migrated = true;
+
+			for (who, (contributed, status)) in contributions {
+				if migrate_count >= T::BatchKeysLimit::get() {
+					// Not everyone was able to be refunded this time around.
+					all_migrated = false;
+					break;
+				}
+				if status != ContributionStatus::MigratedIdle {
+					#[allow(non_snake_case)]
+					let (_, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+
+					let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
+					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
+
+					let (_, vs_bond_new) = Self::vsAssets(index, first_slot, last_slot);
+					T::MultiCurrency::deposit(vs_bond_new, &who, contributed)?;
+					T::MultiCurrency::reserve(vs_bond_new, &who, contributed)?;
+
+					Self::put_contribution(
+						fund.trie_index,
+						&who,
+						contributed,
+						ContributionStatus::MigratedIdle,
+					);
+					migrate_count += 1;
+				}
+			}
+
+			if all_migrated {
+				Self::deposit_event(Event::<T>::AllMigrated(index));
+			}
+
+			Ok(())
+		}
+
+		/// Unlock the reserved vsToken/vsBond after fund success
 		#[pallet::weight(T::WeightInfo::unlock())]
 		#[transactional]
 		pub fn unlock(
@@ -493,7 +470,7 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight(T::WeightInfo::batch_unlock(T::RemoveKeysLimit::get()))]
+		#[pallet::weight(T::WeightInfo::batch_unlock(T::BatchKeysLimit::get()))]
 		#[transactional]
 		pub fn batch_unlock(
 			origin: OriginFor<T>,
@@ -516,7 +493,7 @@ pub mod pallet {
 			let mut all_unlocked = true;
 
 			for (who, (contributed, status)) in contributions {
-				if unlock_count >= T::RemoveKeysLimit::get() {
+				if unlock_count >= T::BatchKeysLimit::get() {
 					// Not everyone was able to be refunded this time around.
 					all_unlocked = false;
 					break;
@@ -590,14 +567,19 @@ pub mod pallet {
 		/// Contribute to a crowd sale. This will transfer some balance over to fund a parachain
 		/// slot. It will be withdrawable in two instances: the parachain becomes retired; or the
 		/// slot is unable to be purchased and the timeout expires.
-		#[pallet::weight(T::WeightInfo::contribute())]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		#[transactional]
-		pub fn contribute(
+		pub fn issue(
 			origin: OriginFor<T>,
+			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
-			let who = ensure_signed(origin.clone())?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin.clone())?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
@@ -609,111 +591,31 @@ pub mod pallet {
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(
-				status == ContributionStatus::Idle ||
-					status == ContributionStatus::Refunded ||
-					status == ContributionStatus::Redeemed,
+				status == ContributionStatus::Idle || status == ContributionStatus::MigratedIdle,
 				Error::<T>::InvalidContributionStatus
 			);
 
-			if T::TransactType::get() == ParachainTransactType::Xcm {
-				T::MultiCurrency::reserve(T::RelayChainToken::get(), &who, value)?;
-			}
+			let (vs_token, vs_bond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
+			// Issue reserved vsToken/vsBond to contributor
+			T::MultiCurrency::deposit(vs_token, &who, value)?;
+			T::MultiCurrency::reserve(vs_token, &who, value)?;
+			T::MultiCurrency::deposit(vs_bond, &who, value)?;
+			T::MultiCurrency::reserve(vs_bond, &who, value)?;
+
+			// Update the raised of fund
+			let fund_new = FundInfo { raised: fund.raised.saturating_add(value), ..fund };
+			Funds::<T>::insert(index, Some(fund_new));
+
+			// Update the contribution of who
+			let contributed_new = contributed.saturating_add(value);
 			Self::put_contribution(
 				fund.trie_index,
 				&who,
-				contributed,
-				ContributionStatus::Contributing(value),
+				contributed_new,
+				ContributionStatus::Idle,
 			);
-
-			let nonce = Self::next_nonce_index(index)?;
-			let message_id: MessageId;
-
-			if T::TransactType::get() == ParachainTransactType::Xcm {
-				message_id = Self::xcm_ump_contribute(origin, index, value, nonce)
-					.map_err(|_e| Error::<T>::XcmFailed)?;
-			} else {
-				message_id = sp_io::hashing::blake2_256(&nonce.encode());
-				if T::TransactProxyType::get() == ParachainTransactProxyType::Derived {
-					Self::xcm_ump_transfer(who.clone(), value)?;
-				}
-			}
-			Self::deposit_event(Event::Contributing(who.clone(), index, value.clone(), message_id));
-			Ok(())
-		}
-
-		/// Confirm contribute
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
-		#[transactional]
-		pub fn confirm_contribute(
-			origin: OriginFor<T>,
-			who: AccountIdOf<T>,
-			#[pallet::compact] index: ParaId,
-			is_success: bool,
-			message_id: MessageId,
-		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			let can_confirm = fund.status == FundStatus::Ongoing ||
-				fund.status == FundStatus::Failed ||
-				fund.status == FundStatus::Success;
-			ensure!(can_confirm, Error::<T>::InvalidFundStatus);
-
-			let (contributed, status) = Self::contribution(fund.trie_index, &who);
-			ensure!(status.is_contributing(), Error::<T>::InvalidContributionStatus);
-			let contributing = status.contributing();
-
-			#[allow(non_snake_case)]
-			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-
-			if is_success {
-				// Issue reserved vsToken/vsBond to contributor
-				T::MultiCurrency::deposit(vsToken, &who, contributing)?;
-				T::MultiCurrency::reserve(vsToken, &who, contributing)?;
-				T::MultiCurrency::deposit(vsBond, &who, contributing)?;
-				T::MultiCurrency::reserve(vsBond, &who, contributing)?;
-
-				// Update the raised of fund
-				let fund_new =
-					FundInfo { raised: fund.raised.saturating_add(contributing), ..fund };
-				Funds::<T>::insert(index, Some(fund_new));
-
-				if T::TransactType::get() == ParachainTransactType::Xcm {
-					T::MultiCurrency::unreserve(T::RelayChainToken::get(), &who, contributing);
-					T::MultiCurrency::transfer(
-						T::RelayChainToken::get(),
-						&who,
-						&Self::fund_account_id(index),
-						contributing,
-					)?;
-				}
-
-				// Update the contribution of who
-				let contributed_new = contributed.saturating_add(contributing);
-				Self::put_contribution(
-					fund.trie_index,
-					&who,
-					contributed_new,
-					ContributionStatus::Idle,
-				);
-				Self::deposit_event(Event::Contributed(who, index, contributing, message_id));
-			} else {
-				// Update the contribution of who
-				Self::put_contribution(
-					fund.trie_index,
-					&who,
-					contributed,
-					ContributionStatus::Idle,
-				);
-				if T::TransactType::get() == ParachainTransactType::Xcm {
-					T::MultiCurrency::unreserve(T::RelayChainToken::get(), &who, contributing);
-				}
-				Self::deposit_event(Event::ContributeFailed(who, index, contributing, message_id));
-			}
+			Self::deposit_event(Event::Contributed(who, index, value));
 
 			Ok(())
 		}
@@ -755,7 +657,10 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Failed || fund.status == FundStatus::RefundWithdrew,
+				Error::<T>::InvalidFundStatus
+			);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(contributed > Zero::zero(), Error::<T>::ZeroContribution);
@@ -781,79 +686,9 @@ pub mod pallet {
 			let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
 			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
 
-			if T::TransactType::get() == ParachainTransactType::Xcm {
-				T::MultiCurrency::transfer(
-					T::RelayChainToken::get(),
-					&Self::fund_account_id(index),
-					&who,
-					contributed,
-				)?;
-			}
-			Self::put_contribution(
-				fund.trie_index,
-				&who,
-				Zero::zero(),
-				ContributionStatus::Refunded,
-			);
+			Self::kill_contribution(fund.trie_index, &who);
 
 			Self::deposit_event(Event::Refunded(who, index, contributed));
-
-			Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::refund())]
-		#[transactional]
-		pub fn batch_refund(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
-			ensure_signed(origin)?;
-
-			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
-
-			let mut refund_count = 0u32;
-			let contributions = Self::contribution_iterator(fund.trie_index);
-			// Assume everyone will be refunded.
-			let mut all_refunded = true;
-
-			for (who, (contributed, status)) in contributions {
-				if refund_count >= T::RemoveKeysLimit::get() {
-					// Not everyone was able to be refunded this time around.
-					all_refunded = false;
-					break;
-				}
-				if status == ContributionStatus::Idle {
-					#[allow(non_snake_case)]
-					let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-					fund.raised = fund.raised.saturating_sub(contributed);
-
-					let balance = T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
-					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
-					let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
-					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
-
-					if T::TransactType::get() == ParachainTransactType::Xcm {
-						T::MultiCurrency::transfer(
-							T::RelayChainToken::get(),
-							&Self::fund_account_id(index),
-							&who,
-							contributed,
-						)?;
-					}
-					Self::put_contribution(
-						fund.trie_index,
-						&who,
-						Zero::zero(),
-						ContributionStatus::Refunded,
-					);
-					refund_count += 1;
-				}
-			}
-
-			if all_refunded {
-				Self::deposit_event(Event::<T>::AllRefunded(index));
-			}
 
 			Ok(())
 		}
@@ -880,8 +715,6 @@ pub mod pallet {
 			);
 
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
-			let cur_block = <frame_system::Pallet<T>>::block_number();
-			ensure!(!Self::is_expired(cur_block, fund.last_slot), Error::<T>::VSBondExpired);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
@@ -896,14 +729,6 @@ pub mod pallet {
 			fund.raised = fund.raised.saturating_sub(value);
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
 
-			if T::TransactType::get() == ParachainTransactType::Xcm {
-				T::MultiCurrency::transfer(
-					T::RelayChainToken::get(),
-					&Self::fund_account_id(index),
-					&who,
-					value,
-				)?;
-			}
 			let contributed_new = contributed.saturating_sub(value);
 			Self::put_contribution(
 				fund.trie_index,
@@ -940,7 +765,7 @@ pub mod pallet {
 			let contributions = Self::contribution_iterator(fund.trie_index);
 			let mut all_refunded = true;
 			for (who, (balance, _)) in contributions {
-				if refund_count >= T::RemoveKeysLimit::get() {
+				if refund_count >= T::BatchKeysLimit::get() {
 					// Not everyone was able to be refunded this time around.
 					all_refunded = false;
 					break;
@@ -954,59 +779,6 @@ pub mod pallet {
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
-
-			Ok(())
-		}
-
-		/// Add proxy for parachain account
-		/// - `delegate`: The delegate proxy account
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
-		#[transactional]
-		pub fn add_proxy(origin: OriginFor<T>, delegate: AccountIdOf<T>) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
-
-			Self::xcm_ump_add_proxy(delegate.clone()).map_err(|_| Error::<T>::XcmFailed)?;
-
-			Self::deposit_event(Event::ProxyAdded(delegate));
-
-			Ok(())
-		}
-
-		/// Add proxy for parachain account
-		/// - `delegate`: The delegate proxy account
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
-		#[transactional]
-		pub fn remove_proxy(origin: OriginFor<T>, delegate: AccountIdOf<T>) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
-
-			Self::xcm_ump_remove_proxy(delegate.clone()).map_err(|_| Error::<T>::XcmFailed)?;
-
-			Self::deposit_event(Event::ProxyRemoved(delegate));
-
-			Ok(())
-		}
-
-		/// transfer to parachain salp account
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
-		#[transactional]
-		pub fn mint(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
-			let who = ensure_signed(origin)?;
-
-			Self::xcm_ump_transfer(who.clone(), amount.clone())?;
-
-			Self::deposit_event(Event::<T>::Minted(who, amount));
 
 			Ok(())
 		}
@@ -1041,32 +813,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
-		/// Check if the vsBond is `past` the redeemable date
-		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
-			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
-
-			block >= block_end_redeem
-		}
-
-		/// Check if the vsBond is `in` the redeemable date
-		#[allow(dead_code)]
-		pub(crate) fn can_redeem(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
-			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
-			let block_end_redeem = block_begin_redeem.saturating_add(T::VSBondValidPeriod::get());
-
-			block >= block_begin_redeem && block < block_end_redeem
-		}
-
-		#[allow(unused)]
-		pub(crate) fn block_start_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			slot.saturating_mul(T::LeasePeriod::get())
-		}
-
-		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			(slot + 1).saturating_mul(T::LeasePeriod::get())
-		}
-
 		pub fn fund_account_id(index: ParaId) -> T::AccountId {
 			T::PalletId::get().into_sub_account(index)
 		}
@@ -1118,13 +864,6 @@ pub mod pallet {
 			})
 		}
 
-		pub(crate) fn next_nonce_index(index: ParaId) -> Result<Nonce, Error<T>> {
-			CurrentNonce::<T>::try_mutate(index, |ni| {
-				*ni = ni.overflowing_add(1).0;
-				Ok(*ni)
-			})
-		}
-
 		#[allow(non_snake_case)]
 		pub(crate) fn vsAssets(
 			index: ParaId,
@@ -1132,10 +871,8 @@ pub mod pallet {
 			last_slot: LeasePeriod,
 		) -> (CurrencyId, CurrencyId) {
 			let currency_id_u64: u64 = T::RelayChainToken::get().currency_id();
-			// todo some refact required
 			let tokensymbo_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
-			let token_symbol = TokenSymbol::try_from(tokensymbo_bit).unwrap_or(TokenSymbol::KSM);
-
+			let token_symbol = TokenSymbol::try_from(tokensymbo_bit).unwrap_or(TokenSymbol::DOT);
 			CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot)
 		}
 
@@ -1152,91 +889,6 @@ pub mod pallet {
 
 		fn kill_contribution(index: TrieIndex, who: &AccountIdOf<T>) {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
-		}
-
-		#[allow(dead_code)]
-		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
-			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
-		}
-
-		fn xcm_ump_contribute(
-			_origin: OriginFor<T>,
-			index: ParaId,
-			value: BalanceOf<T>,
-			nonce: Nonce,
-		) -> Result<MessageId, XcmError> {
-			use_relay!({
-				let contribute_call =
-					RelaychainCall::Crowdloan::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-						ContributeCall::Contribute(Contribution { index, value, signature: None }),
-					)
-					.encode()
-					.into();
-
-				T::BifrostXcmExecutor::ump_transact(
-					MultiLocation::here(),
-					contribute_call,
-					T::ContributionWeight::get(),
-					false,
-					nonce,
-				)
-			})
-		}
-
-		fn xcm_ump_add_proxy(delegate: AccountIdOf<T>) -> Result<MessageId, XcmError> {
-			use_relay!({
-				let call =
-					RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-						ProxyCall::Add(AddProxy {
-							delegate,
-							proxy_type: ProxyType::Any,
-							delay: T::BlockNumber::zero(),
-						}),
-					)
-					.encode()
-					.into();
-
-				T::BifrostXcmExecutor::ump_transact(
-					MultiLocation::here(),
-					call,
-					T::AddProxyWeight::get(),
-					false,
-					0,
-				)
-			})
-		}
-
-		fn xcm_ump_remove_proxy(delegate: AccountIdOf<T>) -> Result<MessageId, XcmError> {
-			use_relay!({
-				let call =
-					RelaychainCall::Proxy::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-						ProxyCall::Remove(RemoveProxy {
-							delegate,
-							proxy_type: ProxyType::Any,
-							delay: T::BlockNumber::zero(),
-						}),
-					)
-					.encode()
-					.into();
-
-				T::BifrostXcmExecutor::ump_transact(
-					MultiLocation::here(),
-					call,
-					T::AddProxyWeight::get(),
-					false,
-					0,
-				)
-			})
-		}
-
-		fn xcm_ump_transfer(who: AccountIdOf<T>, amount: BalanceOf<T>) -> DispatchResult {
-			T::XcmTransfer::transfer(
-				who.clone(),
-				T::RelayChainToken::get(),
-				amount,
-				T::SovereignSubAccountLocation::get(),
-				3 * T::BaseXcmWeight::get(),
-			)
 		}
 	}
 }

@@ -85,6 +85,8 @@ bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 bifrost-salp = { path = "../../pallets/salp", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api", default-features = false }
+bifrost-salp-lite = { path = "../../pallets/salp-lite", default-features = false }
+bifrost-salp-lite-rpc-runtime-api = { path = "../../pallets/salp-lite/rpc/runtime-api", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
@@ -170,6 +172,8 @@ std = [
 	"bifrost-flexible-fee-rpc-runtime-api/std",
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
+	"bifrost-salp-lite/std",
+	"bifrost-salp-lite-rpc-runtime-api/std",
 	"bifrost-liquidity-mining/std",
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",

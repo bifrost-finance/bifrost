@@ -189,6 +189,7 @@ parameter_types! {
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
+	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 parameter_types! {
@@ -1242,6 +1243,25 @@ impl bifrost_salp::Config for Runtime {
 	type RelayNetwork = RelayNetwork;
 }
 
+impl bifrost_salp_lite::Config for Runtime {
+	type BancorPool = ();
+	type Event = Event;
+	type LeasePeriod = LeasePeriod;
+	type MinContribution = MinContribution;
+	type MultiCurrency = Currencies;
+	type PalletId = BifrostCrowdloanId;
+	type RelayChainToken = PolkadotCurrencyId;
+	type ReleaseCycle = ReleaseCycle;
+	type ReleaseRatio = ReleaseRatio;
+	type BatchKeysLimit = RemoveKeysLimit;
+	type SlotLength = SlotLength;
+	type WeightInfo = weights::bifrost_salp_lite::WeightInfo<Runtime>;
+	type EnsureConfirmAsMultiSig =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+	type EnsureConfirmAsGovernance =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+}
+
 parameter_types! {
 	pub const InterventionPercentage: Percent = Percent::from_percent(75);
 	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
@@ -1491,6 +1511,7 @@ construct_runtime! {
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
+		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
 	}
 }
 
