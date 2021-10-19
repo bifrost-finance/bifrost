@@ -26,21 +26,21 @@
 //!
 //! NOTE: Pallet does not support users creating buy orders by now.
 
+use core::fmt::Debug;
+
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{SaturatedConversion, Saturating, Zero},
+		traits::{AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero},
 		FixedPointNumber, FixedU128,
 	},
 };
-use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_std::{cmp::min, convert::TryFrom};
-use core::fmt::Debug;
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -56,7 +56,7 @@ mod benchmarking;
 pub struct OrderInfo<AccountIdOf, BalanceOf>
 where
 	AccountIdOf: Debug,
-	BalanceOf: Debug + AtLeast32BitUnsigned
+	BalanceOf: Debug + AtLeast32BitUnsigned,
 {
 	/// The owner of the order
 	owner: AccountIdOf,
@@ -78,7 +78,7 @@ where
 impl<AccountIdOf, BalanceOf> OrderInfo<AccountIdOf, BalanceOf>
 where
 	AccountIdOf: Debug,
-	BalanceOf: Debug + AtLeast32BitUnsigned + Copy
+	BalanceOf: Debug + AtLeast32BitUnsigned + Copy,
 {
 	pub fn unit_price(&self) -> FixedU128 {
 		let amount: u128 = self.amount.saturated_into();
@@ -115,7 +115,9 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config<I: 'static = ()>: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
+	pub trait Config<I: 'static = ()>:
+		frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo
+	{
 		type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The currency type that buyer to pay
