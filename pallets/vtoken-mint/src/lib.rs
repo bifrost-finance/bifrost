@@ -110,7 +110,6 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, CurrencyIdOf<T>, T::BlockNumber, ValueQuery>;
 
 	#[pallet::event]
-	#[pallet::metadata(BalanceOf<T> = "Balance", CurrencyIdOf<T> = "CurrencyId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Minted(T::AccountId, CurrencyIdOf<T>, BalanceOf<T>),

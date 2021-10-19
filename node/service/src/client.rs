@@ -20,12 +20,13 @@
 
 use std::sync::Arc;
 
-use consensus_common::BlockStatus;
 use node_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
-use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator, UsageProvider};
+use sc_client_api::{AuxStore, Backend as BackendT, BlockchainEvents, KeyIterator, UsageProvider};
+use sc_executor::NativeElseWasmExecutor;
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
 use sp_consensus as consensus_common;
+use sp_consensus::BlockStatus;
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
 	traits::{BlakeTwo256, Block as BlockT},
@@ -33,16 +34,24 @@ use sp_runtime::{
 };
 use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
 
+use crate::{FullBackend, FullClient};
+// pub type FullBackend = sc_service::TFullBackend<Block>;
+
+// pub type FullClient<RuntimeApi, ExecutorDispatch> = sc_service::TFullClient<Block, RuntimeApi,
+// NativeElseWasmExecutor<ExecutorDispatch>>;
+
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::ApiExt<Block>
+	// + ParachainHost<Block>
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+	+ pallet_transaction_payment_rpc::TransactionPaymentApi<Block, Balance>
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
+	// + sp_authority_discovery::AuthorityDiscoveryApi<Block>
 	+ cumulus_primitives_core::CollectCollationInfo<Block>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
@@ -53,21 +62,18 @@ impl<Api> RuntimeApiCollection for Api
 where
 	Api: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 		+ sp_api::ApiExt<Block>
+		// + ParachainHost<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+		+ pallet_transaction_payment_rpc::TransactionPaymentApi<Block, Balance>
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>,
+	// + sp_authority_discovery::AuthorityDiscoveryApi<Block>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
-
-use sc_service::{TFullBackend, TFullClient};
-
-type FullBackend = TFullBackend<Block>;
-type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
 
 /// Trait that abstracts over all available client implementations.
 ///
@@ -80,6 +86,8 @@ pub trait AbstractClient<Block, Backend>:
 	+ ProvideRuntimeApi<Block>
 	+ HeaderBackend<Block>
 	+ CallApiAt<Block, StateBackend = Backend::State>
+	+ AuxStore
+	+ UsageProvider<Block>
 where
 	Block: BlockT,
 	Backend: BackendT<Block>,
@@ -96,6 +104,8 @@ where
 	Client: BlockchainEvents<Block>
 		+ ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
+		+ AuxStore
+		+ UsageProvider<Block>
 		+ Sized
 		+ Send
 		+ Sync
@@ -123,7 +133,7 @@ pub trait ExecuteWithClient {
 	fn execute_with_client<Client, Api, Backend>(self, client: Arc<Client>) -> Self::Output
 	where
 		<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
-		Backend: sc_client_api::Backend<Block>,
+		Backend: sc_client_api::Backend<Block> + 'static,
 		Backend::State: sp_api::StateBackend<BlakeTwo256>,
 		Api: crate::RuntimeApiCollection<StateBackend = Backend::State>,
 		Client: AbstractClient<Block, Backend, Api = Api> + 'static;

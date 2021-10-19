@@ -22,7 +22,7 @@
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{GenesisBuild, OnFinalize, OnInitialize},
+	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
 };
 pub use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -105,7 +105,7 @@ impl orml_tokens::Config for Test {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;

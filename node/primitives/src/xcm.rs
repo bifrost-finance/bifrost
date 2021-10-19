@@ -19,10 +19,11 @@
 use core::ops::{Add, Mul};
 
 use codec::{Decode, Encode};
+use scale_info::TypeInfo;
 use sp_std::prelude::*;
 
 /// The type used to represent the xcmp transfer direction
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
 pub enum TransferOriginType {
 	FromSelf = 0,
 	FromRelayChain = 1,
@@ -65,14 +66,14 @@ impl Mul<u64> for XcmBaseWeight {
 }
 
 /// represent the transact type
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
 pub enum ParachainTransactType {
 	Xcm = 0,
 	Proxy = 1,
 }
 
 /// represent the proxy type
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, TypeInfo)]
 pub enum ParachainTransactProxyType {
 	Primary = 0,
 	Derived = 1,

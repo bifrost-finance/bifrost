@@ -28,7 +28,7 @@ use frame_support::{
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, EnsureOrigin},
+	traits::{Contains, EnsureOrigin, Nothing},
 	weights::{
 		constants::ExtrinsicBaseWeight, IdentityFee, Weight, WeightToFeeCoefficients,
 		WeightToFeePolynomial,
@@ -144,11 +144,13 @@ impl WeightToFeePolynomial for WeightToFee {
 
 parameter_types! {
 	pub const TransactionByteFee: Balance = 1;
+	pub const OperationalFeeMultiplier: u8 = 5;
 }
 
 impl pallet_transaction_payment::Config for Test {
 	type FeeMultiplierUpdate = ();
 	type OnChargeTransaction = FlexibleFee;
+	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type TransactionByteFee = TransactionByteFee;
 	type WeightToFee = IdentityFee<Balance>;
 }
@@ -183,7 +185,7 @@ impl orml_tokens::Config for Test {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
@@ -198,7 +200,7 @@ pub struct FeeNameGetter;
 impl NameGetter<Call> for FeeNameGetter {
 	fn get_name(c: &Call) -> ExtraFeeName {
 		match *c {
-			Call::Salp(bifrost_salp::Call::contribute(..)) => ExtraFeeName::SalpContribute,
+			Call::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeName::SalpContribute,
 			_ => ExtraFeeName::NoExtraFee,
 		}
 	}
@@ -210,7 +212,7 @@ pub struct AggregateExtraFeeFilter;
 impl Contains<Call> for AggregateExtraFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
-			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
 			_ => false,
 		}
 	}
@@ -220,7 +222,7 @@ pub struct ContributeFeeFilter;
 impl Contains<Call> for ContributeFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
-			Call::Salp(bifrost_salp::Call::contribute(..)) => true,
+			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
 			_ => false,
 		}
 	}
@@ -287,6 +289,7 @@ impl zenlink_protocol::Config for Test {
 	type TargetChains = ();
 	type XcmExecutor = ();
 	type Conversion = ();
+	type WeightInfo = ();
 }
 
 type MultiAssets = ZenlinkMultiAssets<ZenlinkProtocol, Balances, LocalAssetAdaptor<Currencies>>;
@@ -432,7 +435,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(XcmError::Undefined),
+			false => Err(XcmError::Unimplemented),
 		}
 	}
 
@@ -447,7 +450,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(XcmError::Undefined),
+			false => Err(XcmError::Unimplemented),
 		}
 	}
 }

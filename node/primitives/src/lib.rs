@@ -129,7 +129,9 @@ pub type LeasePeriod = BlockNumber;
 /// Index used for the child trie
 pub type TrieIndex = u32;
 
-#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord)]
+#[derive(
+	Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, PartialOrd, Ord, scale_info::TypeInfo,
+)]
 pub enum ExtraFeeName {
 	SalpContribute,
 	NoExtraFee,

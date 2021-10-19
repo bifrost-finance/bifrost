@@ -19,32 +19,44 @@
 #![warn(unused_extern_crates)]
 
 //! Service implementation. Specialized wrapper over substrate service.
-pub use client::*;
 pub use collator::*;
-use sc_executor::native_executor_instance;
 pub mod chain_spec;
-mod client;
 pub mod collator;
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
+use node_rpc as rpc;
 
 #[cfg(feature = "with-asgard-runtime")]
-native_executor_instance!(
-	pub AsgardExecutor,
-	asgard_runtime::api::dispatch,
-	asgard_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+pub struct AsgardExecutor;
+#[cfg(feature = "with-asgard-runtime")]
+impl sc_executor::NativeExecutionDispatch for AsgardExecutor {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		asgard_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		asgard_runtime::native_version()
+	}
+}
 
 #[cfg(feature = "with-bifrost-runtime")]
-native_executor_instance!(
-	pub BifrostExecutor,
-	bifrost_runtime::api::dispatch,
-	bifrost_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+pub struct BifrostExecutor;
+#[cfg(feature = "with-bifrost-runtime")]
+impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		bifrost_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		bifrost_runtime::native_version()
+	}
+}
 
 #[cfg(feature = "with-dev-runtime")]
 pub mod dev;

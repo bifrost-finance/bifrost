@@ -224,16 +224,18 @@ macro_rules! construct_async_run {
 		let runner = $cli.create_runner($cmd)?;
 			#[cfg(feature = "with-asgard-runtime")]
 			return runner.async_run(|$config| {
-				let $components = crate::service::collator::new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor>(
+				let $components = crate::service::collator::new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor, _>(
 					&$config,
+					crate::service::collator::parachain_build_import_queue,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
 			});
 			#[cfg(feature = "with-bifrost-runtime")]
 			return runner.async_run(|$config| {
-				let $components = crate::service::collator::new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
+				let $components = crate::service::collator::new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor, _>(
 					&$config,
+					crate::service::collator::parachain_build_import_queue,
 				)?;
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
@@ -329,9 +331,9 @@ pub fn run() -> Result<()> {
 					generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
-				let task_executor = config.task_executor.clone();
+				let tokio_handle = config.tokio_handle.clone();
 				let polkadot_config =
-					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
+					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
 						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				info!("Parachain id: {:?}", id);
@@ -418,7 +420,7 @@ pub fn run() -> Result<()> {
 				let polkadot_config = SubstrateCli::create_configuration(
 					&polkadot_cli,
 					&polkadot_cli,
-					config.task_executor.clone(),
+					config.tokio_handle.clone(),
 				)
 				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
@@ -486,7 +488,7 @@ pub fn run() -> Result<()> {
 				return runner.async_run(|config| {
 					let registry = config.prometheus_config.as_ref().map(|cfg| &cfg.registry);
 					let task_manager =
-						sc_service::TaskManager::new(config.task_executor.clone(), registry)
+						sc_service::TaskManager::new(config.tokio_handle.clone(), registry)
 							.map_err(|e| {
 								sc_cli::Error::Service(sc_service::Error::Prometheus(e))
 							})?;
@@ -585,16 +587,8 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_ws_max_connections()
 	}
 
-	fn rpc_http_threads(&self) -> Result<Option<usize>> {
-		self.base.base.rpc_http_threads()
-	}
-
 	fn rpc_cors(&self, is_dev: bool) -> Result<Option<Vec<String>>> {
 		self.base.base.rpc_cors(is_dev)
-	}
-
-	fn telemetry_external_transport(&self) -> Result<Option<sc_service::config::ExtTransport>> {
-		self.base.base.telemetry_external_transport()
 	}
 
 	fn default_heap_pages(&self) -> Result<Option<u64>> {

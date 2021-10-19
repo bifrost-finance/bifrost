@@ -37,6 +37,7 @@ use frame_support::{pallet_prelude::*, transactional};
 use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
+use scale_info::TypeInfo;
 use sp_std::convert::TryFrom;
 use xcm_support::*;
 
@@ -63,7 +64,7 @@ pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub enum FundStatus {
 	Ongoing,
 	Retired,
@@ -83,7 +84,7 @@ impl Default for FundStatus {
 /// Information on a funding effort for a pre-existing parachain. We assume that the parachain
 /// ID is known as it's used for the key of the storage item for which this is the value
 /// (`Funds`).
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 #[codec(dumb_trait_bound)]
 pub struct FundInfo<Balance, LeasePeriod> {
 	/// The total amount raised.
