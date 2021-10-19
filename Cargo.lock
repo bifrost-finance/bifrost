@@ -162,6 +162,8 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-lite",
+ "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-token-issuer",
  "bifrost-vesting",
@@ -820,6 +822,8 @@ dependencies = [
  "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-lite",
+ "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-token-issuer",
  "bifrost-vesting",
@@ -983,6 +987,40 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-support",
+]
+
+[[package]]
+name = "bifrost-salp-lite"
+version = "0.8.0"
+dependencies = [
+ "bifrost-bancor",
+ "bifrost-runtime",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=37e42936c41dbdbaf0117c628c9eab0e06044844)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=37e42936c41dbdbaf0117c628c9eab0e06044844)",
+ "pallet-balances",
+ "pallet-multisig",
+ "parity-scale-codec",
+ "smallvec 1.7.0",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bifrost-salp-lite-rpc-runtime-api"
+version = "0.8.0"
+dependencies = [
+ "node-primitives",
+ "parity-scale-codec",
+ "sp-api",
 ]
 
 [[package]]
@@ -2322,6 +2360,8 @@ dependencies = [
  "bifrost-minter-reward",
  "bifrost-runtime-common",
  "bifrost-salp",
+ "bifrost-salp-lite",
+ "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-vesting",
  "bifrost-vsbond-auction",

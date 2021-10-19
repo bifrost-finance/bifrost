@@ -1,0 +1,51 @@
+[package]
+name = "bifrost-salp-lite"
+version = "0.8.0"
+authors = ["Ron Yang <yrong1997@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+log = { version = "0.4.14", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+frame-benchmarking = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false, optional = true }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false  }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+
+[dev-dependencies]
+pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10"}
+smallvec = "1.6.1"
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+orml-tokens = "0.4.1-dev"
+orml-currencies = "0.4.1-dev"
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.10" }
+bifrost-bancor = { path = "../../pallets/bancor" }
+bifrost-runtime = { path = "../../runtime/bifrost" }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"log/std",
+	"node-primitives/std",
+	"frame-support/std",
+	"frame-system/std",
+	"sp-std/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-arithmetic/std",
+	"orml-traits/std",
+]
+
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"sp-runtime/runtime-benchmarks",
+	"frame-system/runtime-benchmarks",
+]
