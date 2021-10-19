@@ -37,6 +37,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
+use scale_info::TypeInfo;
 use sp_std::{cmp::min, convert::TryFrom};
 pub use weights::WeightInfo;
 
@@ -49,7 +50,7 @@ pub mod weights;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[derive(Encode, Decode, Clone, Eq, PartialEq)]
+#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
 pub struct OrderInfo<T: Config> {
 	/// The owner of the order
 	owner: AccountIdOf<T>,
@@ -92,7 +93,7 @@ impl<T: Config> core::fmt::Debug for OrderInfo<T> {
 	}
 }
 
-#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
 pub enum OrderType {
 	Sell,
 	Buy,
@@ -116,7 +117,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
+	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The currency type that buyer to pay

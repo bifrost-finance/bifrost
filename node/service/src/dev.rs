@@ -31,12 +31,19 @@ use sc_service::{error::Error as ServiceError, Configuration, PartialComponents,
 use sc_telemetry::TelemetryWorker;
 
 #[cfg(feature = "with-dev-runtime")]
-native_executor_instance!(
-	pub DevExecutor,
-	dev_runtime::api::dispatch,
-	dev_runtime::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+pub struct DevRuntimeExecutor;
+#[cfg(feature = "with-dev-runtime")]
+impl sc_executor::NativeExecutionDispatch for DevRuntimeExecutor {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		dev_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		dev_runtime::native_version()
+	}
+}
 
 pub type Block = dev_runtime::Block;
 pub type Executor = DevExecutor;

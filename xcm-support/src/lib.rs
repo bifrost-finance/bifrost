@@ -86,10 +86,10 @@ impl<
 	}
 
 	fn ump_transact(
-		origin: MultiLocation,
+		_origin: MultiLocation,
 		call: DoubleEncoded<()>,
 		weight: u64,
-		relay: bool,
+		_relay: bool,
 		nonce: u32,
 	) -> Result<MessageId, XcmError> {
 		let sovereign_account: AccountId = ParaId::from(SelfParaId::get()).into_account();
@@ -99,80 +99,51 @@ impl<
 			fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, nonce))),
 		};
 
-		let mut message = Xcm::WithdrawAsset {
-			assets: MultiAssets::from(asset.clone()),
-			effects: vec![
-				BuyExecution {
-					fees: asset,
-					weight: weight + 1 * BaseXcmWeight::get() + nonce as u64,
-					debt: 3 * BaseXcmWeight::get(),
-					halt_on_error: true,
-					instructions: vec![Xcm::Transact {
-						origin_type: OriginKind::SovereignAccount,
-						require_weight_at_most: 100_000_000_000,
-						call,
-					}],
-				},
-				DepositAsset {
-					assets: All.into(),
-					max_assets: u32::max_value(),
-					beneficiary: X1(Junction::AccountId32 {
-						network: NetworkId::Any,
-						id: sovereign_account.into(),
-					})
-					.into(),
-				},
-			],
-		};
-
-		if relay {
-			message = Xcm::<()>::RelayedFrom {
-				who: origin.interior().clone(),
-				message: Box::new(message.clone()),
-			};
-		}
+		let message = Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution {
+				fees: asset,
+				weight_limit: Some(weight + 1 * BaseXcmWeight::get() + nonce as u64).into(),
+			},
+			Instruction::Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: 100_000_000_000,
+				call,
+			},
+			DepositAsset {
+				assets: All.into(),
+				max_assets: u32::max_value(),
+				beneficiary: X1(Junction::AccountId32 {
+					network: NetworkId::Any,
+					id: sovereign_account.into(),
+				})
+				.into(),
+			},
+		]);
 
 		let data = VersionedXcm::<()>::from(message.clone()).encode();
 
 		let id = sp_io::hashing::blake2_256(&data[..]);
 
-		XcmSender::send_xcm(MultiLocation::parent(), message).map_err(|_e| XcmError::Undefined)?;
+		XcmSender::send_xcm(MultiLocation::parent(), message)
+			.map_err(|_e| XcmError::Unimplemented)?;
 
 		Ok(id)
 	}
 
 	fn ump_transfer_asset(
-		origin: MultiLocation,
+		_origin: MultiLocation,
 		dest: MultiLocation,
 		amount: u128,
-		relay: bool,
+		_relay: bool,
 		nonce: u32,
 	) -> Result<MessageId, XcmError> {
-		let mut message = Xcm::WithdrawAsset {
-			assets: vec![MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(amount) }]
-				.into(),
-			effects: vec![
-				Order::BuyExecution {
-					fees: MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(amount) },
-					weight: nonce as u64,
-					debt: 3 * BaseXcmWeight::get(),
-					halt_on_error: false,
-					instructions: vec![],
-				},
-				DepositAsset {
-					assets: Wild(WildMultiAsset::All),
-					max_assets: 1,
-					beneficiary: dest,
-				},
-			],
-		};
-
-		if relay {
-			message = Xcm::<()>::RelayedFrom {
-				who: origin.interior().clone(),
-				message: Box::new(message),
-			};
-		}
+		let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungible(amount) };
+		let message = Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Some(nonce as u64).into() },
+			DepositAsset { assets: Wild(WildMultiAsset::All), max_assets: 1, beneficiary: dest },
+		]);
 
 		let data = VersionedXcm::<()>::from(message.clone()).encode();
 

@@ -86,7 +86,7 @@ use bifrost_runtime_common::{
 	constants::parachains,
 	xcm_impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets, BifrostXcmTransactFilter,
+		BifrostFilteredAssets,
 	},
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate,
@@ -749,11 +749,7 @@ match_type! {
 	};
 }
 
-pub type Barrier = (
-	TakeWeightCredit,
-	AllowTopLevelPaidExecutionFrom<Everything>,
-	BifrostXcmTransactFilter<ParentOrParentsExecutivePlurality>,
-);
+pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,

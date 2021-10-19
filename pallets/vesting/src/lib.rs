@@ -59,6 +59,7 @@ use frame_support::{
 };
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::*};
 pub use pallet::*;
+use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{
 		AtLeast32BitUnsigned, Convert, MaybeSerializeDeserialize, Saturating, StaticLookup, Zero,
@@ -76,7 +77,7 @@ type MaxLocksOf<T> =
 const VESTING_ID: LockIdentifier = *b"vesting ";
 
 /// Struct to encode the vesting schedule of an individual account.
-#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, RuntimeDebug, TypeInfo)]
 pub struct VestingInfo<Balance, BlockNumber> {
 	/// Locked amount at genesis.
 	pub locked: Balance,
@@ -188,7 +189,6 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	#[pallet::metadata(T::AccountId = "AccountId", BalanceOf<T> = "Balance")]
 	pub enum Event<T: Config> {
 		/// The amount vested has been updated. This could indicate more funds are available. The
 		/// balance given is the amount which is left unvested (and thus locked).
@@ -475,12 +475,22 @@ where
 		Ok(())
 	}
 
+	// Ensure we can call `add_vesting_schedule` without error. This should always
+	// be called prior to `add_vesting_schedule`.
+	fn can_add_vesting_schedule(
+		_who: &T::AccountId,
+		_locked: BalanceOf<T>,
+		_per_block: BalanceOf<T>,
+		_starting_block: T::BlockNumber,
+	) -> DispatchResult {
+		Ok(())
+	}
+
 	/// Remove a vesting schedule for a given account.
-	fn remove_vesting_schedule(who: &T::AccountId) {
+	fn remove_vesting_schedule(who: &T::AccountId, _schedule_index: u32) -> DispatchResult {
 		Vesting::<T>::remove(who);
 		// it can't fail, but even if somehow it did, we don't really care.
-		let res = Self::update_lock(who.clone());
-		debug_assert!(res.is_ok());
+		Self::update_lock(who.clone())
 	}
 }
 
