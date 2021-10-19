@@ -127,7 +127,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
+	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be
