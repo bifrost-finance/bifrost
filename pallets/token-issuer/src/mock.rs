@@ -19,7 +19,10 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
-use frame_support::{parameter_types, traits::GenesisBuild};
+use frame_support::{
+	parameter_types,
+	traits::{GenesisBuild, Nothing},
+};
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::{
 	u32_trait::{_2, _3},
@@ -57,7 +60,7 @@ frame_support::construct_runtime!(
 		Tokens: orml_tokens::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
-		Council: pallet_collective::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>}
 	}
 );
@@ -136,7 +139,7 @@ impl orml_tokens::Config for Runtime {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();
@@ -150,7 +153,8 @@ parameter_types! {
 	pub const CouncilMaxMembers: u32 = 100;
 }
 
-impl pallet_collective::Config for Runtime {
+type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for Runtime {
 	type DefaultVote = pallet_collective::PrimeDefaultVote;
 	type Event = Event;
 	type MaxMembers = CouncilMaxMembers;
@@ -164,7 +168,8 @@ impl pallet_collective::Config for Runtime {
 impl bifrost_token_issuer::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
-	type ControlOrigin = pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId>;
+	type ControlOrigin =
+		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
 	type WeightInfo = ();
 }
 
@@ -218,14 +223,6 @@ impl ExtBuilder {
 				.into_iter()
 				.filter(|(_, currency_id, _)| *currency_id != BNC)
 				.collect::<Vec<_>>(),
-		}
-		.assimilate_storage(&mut t)
-		.unwrap();
-
-		// add ALICE, BOB, CHARLIE as the council member
-		pallet_collective::GenesisConfig::<Runtime> {
-			members: vec![ALICE, BOB, CHARLIE],
-			phantom: Default::default(),
 		}
 		.assimilate_storage(&mut t)
 		.unwrap();

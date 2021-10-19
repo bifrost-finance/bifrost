@@ -21,7 +21,7 @@
 // use super::*;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{Everything, OnFinalize, OnInitialize},
+	traits::{Everything, Nothing, OnFinalize, OnInitialize},
 };
 use node_primitives::{CurrencyId, TokenSymbol};
 use sp_core::H256;
@@ -124,7 +124,7 @@ impl orml_tokens::Config for Test {
 	type Amount = i128;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = ();

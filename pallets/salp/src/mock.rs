@@ -20,7 +20,7 @@
 use bifrost_runtime::create_x2_multilocation;
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{EnsureOrigin, GenesisBuild},
+	traits::{EnsureOrigin, GenesisBuild, Nothing},
 	weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
 	PalletId,
 };
@@ -151,7 +151,7 @@ impl orml_tokens::Config for Test {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
@@ -349,7 +349,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(XcmError::Undefined),
+			false => Err(XcmError::Unimplemented),
 		}
 	}
 
@@ -364,7 +364,7 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(XcmError::Undefined),
+			false => Err(XcmError::Unimplemented),
 		}
 	}
 }

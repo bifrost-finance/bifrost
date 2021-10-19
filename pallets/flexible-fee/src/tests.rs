@@ -215,8 +215,9 @@ fn withdraw_fee_should_work() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call =
-			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+			asset_order_list_vec: Some(asset_order_list_vec),
+		});
 
 		// prepare info variable
 		let extra = ();
@@ -238,8 +239,9 @@ fn correct_and_deposit_fee_should_work() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call =
-			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+			asset_order_list_vec: Some(asset_order_list_vec),
+		});
 		// prepare info variable
 		let extra = ();
 		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
@@ -350,8 +352,9 @@ fn withdraw_fee_should_work_v2() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call =
-			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+			asset_order_list_vec: Some(asset_order_list_vec),
+		});
 
 		// prepare info variable
 		let extra = ();
@@ -388,8 +391,9 @@ fn correct_and_deposit_fee_should_work_v2() {
 		// prepare call variable
 		let asset_order_list_vec: Vec<CurrencyId> =
 			vec![CURRENCY_ID_0, CURRENCY_ID_1, CURRENCY_ID_2, CURRENCY_ID_3, CURRENCY_ID_4];
-		let call =
-			Call::FlexibleFee(crate::Call::set_user_fee_charge_order(Some(asset_order_list_vec)));
+		let call = Call::FlexibleFee(crate::Call::set_user_fee_charge_order {
+			asset_order_list_vec: Some(asset_order_list_vec),
+		});
 		// prepare info variable
 		let extra = ();
 		let xt = TestXt::new(call.clone(), Some((0u64, extra)));
@@ -448,7 +452,7 @@ fn deduct_salp_fee_should_work() {
 		let para_id = 2001;
 		let value = 1_000_000_000_000;
 
-		let call = Call::Salp(bifrost_salp::Call::contribute(para_id, value));
+		let call = Call::Salp(bifrost_salp::Call::contribute { index: para_id, value });
 
 		// prepare info variable
 		let extra = ();

@@ -18,7 +18,10 @@
 
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, whitelisted_caller};
-use frame_support::{construct_runtime, parameter_types, traits::GenesisBuild};
+use frame_support::{
+	construct_runtime, parameter_types,
+	traits::{GenesisBuild, Nothing},
+};
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
@@ -91,7 +94,7 @@ impl orml_tokens::Config for Test {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = ();
+	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;

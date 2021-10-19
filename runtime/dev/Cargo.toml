@@ -8,6 +8,7 @@ build = "build.rs"
 [dependencies]
 # third-party dependencies
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "max-encoded-len"] }
+scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
@@ -114,6 +115,7 @@ default = ["std"]
 with-tracing = [ "frame-executive/with-tracing" ]
 std = [
 	"codec/std",
+	"scale-info/std",
 	"log/std",
 	"frame-benchmarking/std",
 	"frame-try-runtime/std",

@@ -1,5 +1,6 @@
 [workspace]
 members = [
+	"integration-tests",
 	"node/cli",
 	"node/inspect",
 	"node/primitives",
@@ -18,9 +19,7 @@ members = [
 	"pallets/vtoken-mint/rpc",
 	"runtime/asgard",
 	"runtime/bifrost",
-	"utils/subkey",
 	"xcm-support",
-	"integration-tests",
 ]
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
