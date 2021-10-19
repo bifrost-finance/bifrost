@@ -33,12 +33,14 @@ use frame_support::{
 		FixedPointNumber, FixedU128,
 	},
 };
+use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_std::{cmp::min, convert::TryFrom};
+use core::fmt::Debug;
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -50,26 +52,34 @@ pub mod weights;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-#[derive(Encode, Decode, Eq, PartialEq, TypeInfo)]
-pub struct OrderInfo<T: Config<I>, I: 'static = ()> {
+#[derive(Encode, Decode, Clone, Eq, PartialEq, Debug, TypeInfo)]
+pub struct OrderInfo<AccountIdOf, BalanceOf>
+where
+	AccountIdOf: Debug,
+	BalanceOf: Debug + AtLeast32BitUnsigned
+{
 	/// The owner of the order
-	owner: AccountIdOf<T>,
+	owner: AccountIdOf,
 	/// The vsbond type of the order to sell
 	vsbond: CurrencyId,
 	/// The quantity of vsbond to sell or buy
-	amount: BalanceOf<T, I>,
+	amount: BalanceOf,
 	/// The quantity of vsbond has not be sold or took
-	remain: BalanceOf<T, I>,
+	remain: BalanceOf,
 	/// Total price of the order
-	total_price: BalanceOf<T, I>,
+	total_price: BalanceOf,
 	/// Helper to calculate the remain to unreserve
-	remain_price: BalanceOf<T, I>,
+	remain_price: BalanceOf,
 	/// The unique id of the order
 	order_id: OrderId,
 	order_type: OrderType,
 }
 
-impl<T: Config<I>, I: 'static> OrderInfo<T, I> {
+impl<AccountIdOf, BalanceOf> OrderInfo<AccountIdOf, BalanceOf>
+where
+	AccountIdOf: Debug,
+	BalanceOf: Debug + AtLeast32BitUnsigned + Copy
+{
 	pub fn unit_price(&self) -> FixedU128 {
 		let amount: u128 = self.amount.saturated_into();
 		let total_price: u128 = self.total_price.saturated_into();
@@ -78,33 +88,6 @@ impl<T: Config<I>, I: 'static> OrderInfo<T, I> {
 			0 => 0.into(),
 			_ => FixedU128::from((total_price, amount)),
 		}
-	}
-}
-
-impl<T: Config<I>, I: 'static> Clone for OrderInfo<T, I> {
-	fn clone(&self) -> Self {
-		Self {
-			owner: self.owner.clone(),
-			vsbond: self.vsbond,
-			amount: self.amount,
-			remain: self.remain,
-			total_price: self.total_price,
-			remain_price: self.remain_price,
-			order_id: self.order_id,
-			order_type: self.order_type,
-		}
-	}
-}
-
-impl<T: Config<I>, I: 'static> core::fmt::Debug for OrderInfo<T, I> {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		f.debug_tuple("")
-			.field(&self.owner)
-			.field(&self.vsbond)
-			.field(&self.amount)
-			.field(&self.unit_price())
-			.field(&self.order_id)
-			.finish()
 	}
 }
 
@@ -234,7 +217,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn order_info)]
 	pub(crate) type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<T, I>>;
+		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<AccountIdOf<T>, BalanceOf<T, I>>>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -286,7 +269,7 @@ pub mod pallet {
 
 			// Create OrderInfo
 			let order_id = Self::next_order_id();
-			let order_info = OrderInfo::<T, I> {
+			let order_info = OrderInfo::<AccountIdOf<T>, BalanceOf<T, I>> {
 				owner: owner.clone(),
 				vsbond,
 				amount,
