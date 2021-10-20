@@ -22,7 +22,9 @@
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, SaturatedConversion, Saturating, Zero},
+		traits::{
+			AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero,
+		},
 		FixedPointNumber, FixedU128,
 	},
 	sp_std::{
@@ -51,17 +53,22 @@ pub mod weights;
 pub use weights::*;
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
-pub struct PoolInfo<T: Config<I>, I: 'static = ()> {
+pub struct PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>
+where
+	AccountIdOf: Clone,
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+	BlockNumberOf: AtLeast32BitUnsigned + Copy,
+{
 	/// Id of the liquidity-pool
 	pool_id: PoolId,
 	/// The keeper of the liquidity-pool
-	keeper: AccountIdOf<T>,
+	keeper: AccountIdOf,
 	/// The man who charges the rewards to the pool
-	investor: Option<AccountIdOf<T>>,
+	investor: Option<AccountIdOf>,
 	/// The trading-pair supported by the liquidity-pool
 	trading_pair: (CurrencyId, CurrencyId),
 	/// The length of time the liquidity-pool releases rewards
-	duration: BlockNumberFor<T>,
+	duration: BlockNumberOf,
 	/// The liquidity-pool type
 	r#type: PoolType,
 
@@ -69,30 +76,38 @@ pub struct PoolInfo<T: Config<I>, I: 'static = ()> {
 	///
 	/// When starts the liquidity-pool, the amount deposited in the liquidity-pool
 	/// should be greater than the value.
-	min_deposit_to_start: BalanceOf<T, I>,
+	min_deposit_to_start: BalanceOf,
 	/// The Second Condition
 	///
 	/// When starts the liquidity-pool, the current block should be greater than the value.
-	after_block_to_start: BlockNumberFor<T>,
+	after_block_to_start: BlockNumberOf,
 
 	/// The total amount deposited in the liquidity-pool
-	deposit: BalanceOf<T, I>,
+	deposit: BalanceOf,
 
 	/// The reward infos about the liquidity-pool
-	rewards: BTreeMap<CurrencyId, RewardData<T, I>>,
+	rewards: BTreeMap<CurrencyId, RewardData<BalanceOf>>,
 	/// The block of the last update of the rewards
-	update_b: BlockNumberFor<T>,
+	update_b: BlockNumberOf,
 	/// The liquidity-pool state
 	state: PoolState,
 	/// The block number when the liquidity-pool startup
-	block_startup: Option<BlockNumberFor<T>>,
+	block_startup: Option<BlockNumberOf>,
 	/// The block number when the liquidity-pool retired
-	block_retired: Option<BlockNumberFor<T>>,
+	block_retired: Option<BlockNumberOf>,
 }
 
-impl<T: Config<I>, I: 'static> PoolInfo<T, I> {
+impl<AccountIdOf, BalanceOf, BlockNumberOf> PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>
+where
+	AccountIdOf: Clone,
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+	BlockNumberOf: AtLeast32BitUnsigned + Copy,
+{
 	/// Trying to update the rewards
-	pub(crate) fn try_update(mut self) -> Self {
+	pub(crate) fn try_update<T: Config<I>, I: 'static>(mut self) -> Self
+	where
+		T: frame_system::Config<BlockNumber = BlockNumberOf>,
+	{
 		// When pool in `PoolState::Ongoing` or `PoolState::Retired`
 		if let Some(block_startup) = self.block_startup {
 			let block_retired = match self.block_retired {
@@ -114,7 +129,7 @@ impl<T: Config<I>, I: 'static> PoolInfo<T, I> {
 	/// Trying to change the state from `PoolState::Charged` to `PoolState::Ongoing`
 	///
 	/// __NOTE__: Only called in the `Hook`
-	pub(crate) fn try_startup(mut self, n: BlockNumberFor<T>) -> Self {
+	pub(crate) fn try_startup<T: Config<I>, I: 'static>(mut self, n: BlockNumberOf) -> Self {
 		if self.state == PoolState::Charged {
 			if n >= self.after_block_to_start && self.deposit >= self.min_deposit_to_start {
 				self.block_startup = Some(n);
@@ -132,7 +147,10 @@ impl<T: Config<I>, I: 'static> PoolInfo<T, I> {
 	}
 
 	/// Trying to change the state from `PoolState::Ongoing` to `PoolState::Retired`
-	pub(crate) fn try_retire(mut self) -> Self {
+	pub(crate) fn try_retire<T: Config<I>, I: 'static>(mut self) -> Self
+	where
+		T: frame_system::Config<BlockNumber = BlockNumberOf>,
+	{
 		if self.state == PoolState::Ongoing {
 			let n = frame_system::Pallet::<T>::block_number();
 
@@ -149,12 +167,16 @@ impl<T: Config<I>, I: 'static> PoolInfo<T, I> {
 	}
 
 	/// Trying account & transfer the rewards to user
-	pub(crate) fn try_settle_and_transfer(
+	pub(crate) fn try_settle_and_transfer<T: Config<I>, I: 'static>(
 		&mut self,
-		deposit_data: &mut DepositData<T, I>,
-		user: AccountIdOf<T>,
-	) -> Result<(), DispatchError> {
-		let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T, I>)>::new();
+		deposit_data: &mut DepositData<BalanceOf, BlockNumberOf>,
+		user: AccountIdOf,
+	) -> Result<(), DispatchError>
+	where
+		T: frame_system::Config<AccountId = AccountIdOf>,
+		T::MultiCurrency: MultiCurrency<AccountIdOf, Balance = BalanceOf, CurrencyId = CurrencyId>,
+	{
+		let mut to_rewards = Vec::<(CurrencyId, BalanceOf)>::new();
 
 		// The pool was startup before.
 		if let Some(_block_startup) = self.block_startup {
@@ -164,7 +186,7 @@ impl<T: Config<I>, I: 'static> PoolInfo<T, I> {
 					let v_old = *gain_avg;
 
 					let user_deposit: u128 = deposit_data.deposit.saturated_into();
-					let amount = BalanceOf::<T, I>::saturated_from(
+					let amount = BalanceOf::saturated_from(
 						v_new.saturating_sub(v_old).saturating_mul_int(user_deposit),
 					);
 
@@ -205,7 +227,10 @@ impl<T: Config<I>, I: 'static> PoolInfo<T, I> {
 	}
 
 	/// Try to return back the remain of reward from keeper to investor
-	pub(crate) fn try_withdraw_remain(&self) -> DispatchResult {
+	pub(crate) fn try_withdraw_remain<T: Config<I>, I: 'static>(&self) -> DispatchResult
+	where
+		T::MultiCurrency: MultiCurrency<AccountIdOf, Balance = BalanceOf, CurrencyId = CurrencyId>,
+	{
 		let investor = self.investor.clone().ok_or(Error::<T, I>::Unexpected)?;
 
 		for (rtoken, reward) in self.rewards.iter() {
@@ -246,20 +271,30 @@ pub enum PoolState {
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
-pub struct DepositData<T: Config<I>, I: 'static = ()> {
+pub struct DepositData<BalanceOf, BlockNumberOf>
+where
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+	BlockNumberOf: AtLeast32BitUnsigned + Copy,
+{
 	/// The amount of trading-pair deposited in the liquidity-pool
-	deposit: BalanceOf<T, I>,
+	deposit: BalanceOf,
 	/// The average gain in pico by 1 pico deposited from the startup of the liquidity-pool,
 	/// updated when the `DepositData`'s owner deposits/redeems/claims from the liquidity-pool.
 	///
 	/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the liquidity-pool
 	/// - Arg1: The block number updated lastest
 	gain_avgs: BTreeMap<CurrencyId, FixedU128>,
-	update_b: BlockNumberFor<T>,
+	update_b: BlockNumberOf,
 }
 
-impl<T: Config<I>, I: 'static> DepositData<T, I> {
-	pub(crate) fn from_pool(pool: &PoolInfo<T, I>) -> Self {
+impl<BalanceOf, BlockNumberOf> DepositData<BalanceOf, BlockNumberOf>
+where
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+	BlockNumberOf: AtLeast32BitUnsigned + Copy,
+{
+	pub(crate) fn from_pool<AccountIdOf: Clone>(
+		pool: &PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>,
+	) -> Self {
 		let mut gain_avgs = BTreeMap::<CurrencyId, FixedU128>::new();
 
 		for (rtoken, reward) in pool.rewards.iter() {
@@ -271,21 +306,34 @@ impl<T: Config<I>, I: 'static> DepositData<T, I> {
 }
 
 #[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
-pub struct RewardData<T: Config<I>, I: 'static = ()> {
+pub struct RewardData<BalanceOf>
+where
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+{
 	/// The total amount of token to reward
-	total: BalanceOf<T, I>,
+	total: BalanceOf,
 	/// The amount of token to reward per block
-	per_block: BalanceOf<T, I>,
+	per_block: BalanceOf,
 
 	/// The amount of token was already rewarded
-	claimed: BalanceOf<T, I>,
+	claimed: BalanceOf,
 	/// The average gain in pico by 1 pico deposited from the startup of the liquidity-pool,
 	/// updated when anyone deposits to / redeems from / claims from the liquidity-pool.
 	gain_avg: FixedU128,
 }
 
-impl<T: Config<I>, I: 'static> RewardData<T, I> {
-	fn new(total: BalanceOf<T, I>, duration: BlockNumberFor<T>) -> Result<Self, DispatchError> {
+impl<BalanceOf> RewardData<BalanceOf>
+where
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+{
+	fn new<T: Config<I>, I: 'static, BlockNumberOf>(
+		total: BalanceOf,
+		duration: BlockNumberOf,
+	) -> Result<Self, DispatchError>
+	where
+		BlockNumberOf: AtLeast32BitUnsigned + Copy,
+		T::MinimumRewardPerBlock: Get<BalanceOf>,
+	{
 		let total: u128 = total.saturated_into();
 		let (per_block, total) = {
 			let duration: u128 = duration.saturated_into();
@@ -293,7 +341,7 @@ impl<T: Config<I>, I: 'static> RewardData<T, I> {
 			let per_block = total / duration;
 			let total = per_block.saturating_mul(duration);
 
-			(BalanceOf::<T, I>::saturated_from(per_block), BalanceOf::<T, I>::saturated_from(total))
+			(BalanceOf::saturated_from(per_block), BalanceOf::saturated_from(total))
 		};
 
 		ensure!(per_block > T::MinimumRewardPerBlock::get(), Error::<T, I>::InvalidRewardPerBlock);
@@ -301,7 +349,7 @@ impl<T: Config<I>, I: 'static> RewardData<T, I> {
 		Ok(RewardData { total, per_block, claimed: Zero::zero(), gain_avg: 0.into() })
 	}
 
-	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf<T, I>) -> FixedU128 {
+	pub(crate) fn per_block_per_deposited(&self, deposited: BalanceOf) -> FixedU128 {
 		let per_block: u128 = self.per_block.saturated_into();
 		let deposit: u128 = deposited.saturated_into();
 
@@ -312,13 +360,15 @@ impl<T: Config<I>, I: 'static> RewardData<T, I> {
 	}
 
 	/// Trying to update the gain_avg
-	pub(crate) fn update(
+	pub(crate) fn update<BlockNumberOf>(
 		&mut self,
-		deposit: BalanceOf<T, I>,
-		block_startup: BlockNumberFor<T>,
-		block_last_updated: BlockNumberFor<T>,
-		n: BlockNumberFor<T>,
-	) {
+		deposit: BalanceOf,
+		block_startup: BlockNumberOf,
+		block_last_updated: BlockNumberOf,
+		n: BlockNumberOf,
+	) where
+		BlockNumberOf: AtLeast32BitUnsigned + Copy,
+	{
 		let pbpd = self.per_block_per_deposited(deposit);
 
 		let b_prev = max(block_last_updated, block_startup);
@@ -330,13 +380,16 @@ impl<T: Config<I>, I: 'static> RewardData<T, I> {
 	}
 }
 
-impl<T: Config<I>, I: 'static> core::fmt::Debug for RewardData<T, I> {
+impl<BalanceOf> core::fmt::Debug for RewardData<BalanceOf>
+where
+	BalanceOf: AtLeast32BitUnsigned + Copy,
+{
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		f.debug_tuple("")
-			.field(&self.total)
-			.field(&self.per_block)
-			.field(&self.claimed)
-			.field(&self.gain_avg)
+			// .field(&self.total)
+			// .field(&self.per_block)
+			// .field(&self.claimed)
+			// .field(&self.gain_avg)
 			.finish()
 	}
 }
@@ -492,8 +545,12 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool)]
-	pub(crate) type TotalPoolInfos<T: Config<I>, I: 'static = ()> =
-		StorageMap<_, Twox64Concat, PoolId, PoolInfo<T, I>>;
+	pub(crate) type TotalPoolInfos<T: Config<I>, I: 'static = ()> = StorageMap<
+		_,
+		Twox64Concat,
+		PoolId,
+		PoolInfo<AccountIdOf<T>, BalanceOf<T, I>, BlockNumberFor<T>>,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_deposit_data)]
@@ -503,7 +560,7 @@ pub mod pallet {
 		PoolId,
 		Blake2_128Concat,
 		AccountIdOf<T>,
-		DepositData<T, I>,
+		DepositData<BalanceOf<T, I>, BlockNumberFor<T>>,
 	>;
 
 	#[pallet::pallet]
@@ -631,7 +688,7 @@ pub mod pallet {
 			let num = Self::charged_pids().len() as u32;
 			ensure!(num < T::MaximumCharged::get(), Error::<T, I>::ExceedMaximumCharged);
 
-			let pool: PoolInfo<T, I> = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+			let pool = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
 
 			ensure!(pool.state == PoolState::UnCharged, Error::<T, I>::InvalidPoolState);
 			ensure!(pool.investor.is_none(), Error::<T, I>::PoolChargedAlready);
@@ -667,7 +724,7 @@ pub mod pallet {
 		pub fn kill_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
-			let pool: PoolInfo<T, I> = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+			let pool = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
 
 			ensure!(pool.state == PoolState::UnCharged, Error::<T, I>::InvalidPoolState);
 
@@ -699,8 +756,7 @@ pub mod pallet {
 		pub fn force_retire_pool(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
-			let pool: PoolInfo<T, I> =
-				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire();
+			let pool = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire::<T, I>();
 
 			ensure!(
 				pool.state == PoolState::Charged || pool.state == PoolState::Ongoing,
@@ -716,7 +772,7 @@ pub mod pallet {
 
 			match pool.state {
 				PoolState::Charged if pool.deposit == Zero::zero() => {
-					pool.try_withdraw_remain()?;
+					pool.try_withdraw_remain::<T, I>()?;
 					TotalPoolInfos::<T, I>::remove(pid);
 				},
 				PoolState::Charged | PoolState::Ongoing => {
@@ -752,8 +808,10 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let mut pool: PoolInfo<T, I> =
-				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire().try_update();
+			let mut pool = Self::pool(pid)
+				.ok_or(Error::<T, I>::InvalidPoolId)?
+				.try_retire::<T, I>()
+				.try_update::<T, I>();
 
 			ensure!(
 				pool.state == PoolState::Charged || pool.state == PoolState::Ongoing,
@@ -762,11 +820,11 @@ pub mod pallet {
 
 			ensure!(value >= T::MinimumDepositOfUser::get(), Error::<T, I>::TooLowToDeposit);
 
-			let mut deposit_data: DepositData<T, I> = Self::user_deposit_data(pid, user.clone())
-				.unwrap_or(DepositData::<T, I>::from_pool(&pool));
+			let mut deposit_data = Self::user_deposit_data(pid, user.clone())
+				.unwrap_or(DepositData::<BalanceOf<T, I>, BlockNumberFor<T>>::from_pool(&pool));
 
 			if pool.state == PoolState::Ongoing && pool.update_b != deposit_data.update_b {
-				pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
+				pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
 			}
 
 			deposit_data.deposit = deposit_data.deposit.saturating_add(value);
@@ -894,8 +952,7 @@ pub mod pallet {
 			pid: PoolId,
 			account: Option<AccountIdOf<T>>,
 		) -> DispatchResultWithPostInfo {
-			let pool: PoolInfo<T, I> =
-				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire();
+			let pool = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire::<T, I>();
 
 			ensure!(pool.state == PoolState::Retired, Error::<T, I>::InvalidPoolState);
 
@@ -925,16 +982,18 @@ pub mod pallet {
 		pub fn claim(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let mut pool: PoolInfo<T, I> =
-				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire().try_update();
+			let mut pool = Self::pool(pid)
+				.ok_or(Error::<T, I>::InvalidPoolId)?
+				.try_retire::<T, I>()
+				.try_update::<T, I>();
 
 			ensure!(pool.state == PoolState::Ongoing, Error::<T, I>::InvalidPoolState);
 
-			let mut deposit_data: DepositData<T, I> =
+			let mut deposit_data =
 				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T, I>::NoDepositOfUser)?;
 
 			ensure!(pool.update_b != deposit_data.update_b, Error::<T, I>::TooShortBetweenTwoClaim);
-			pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
+			pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
 
 			TotalPoolInfos::<T, I>::insert(pid, pool);
 			TotalDepositData::<T, I>::insert(pid, user, deposit_data);
@@ -972,11 +1031,11 @@ pub mod pallet {
 			// Check & Construct the rewards
 			let raw_rewards: Vec<(CurrencyId, BalanceOf<T, I>)> =
 				option_rewards.into_iter().chain(Some(main_reward).into_iter()).collect();
-			let mut rewards: BTreeMap<CurrencyId, RewardData<T, I>> = BTreeMap::new();
+			let mut rewards: BTreeMap<CurrencyId, RewardData<BalanceOf<T, I>>> = BTreeMap::new();
 			for (token, total) in raw_rewards.into_iter() {
 				ensure!(!rewards.contains_key(&token), Error::<T, I>::DuplicateReward);
 
-				let reward = RewardData::new(total, duration)?;
+				let reward = RewardData::new::<T, I, BlockNumberFor<T>>(total, duration)?;
 
 				rewards.insert(token, reward);
 			}
@@ -1016,19 +1075,21 @@ pub mod pallet {
 			pid: PoolId,
 			value: Option<BalanceOf<T, I>>,
 		) -> DispatchResultWithPostInfo {
-			let mut pool: PoolInfo<T, I> =
-				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?.try_retire().try_update();
+			let mut pool = Self::pool(pid)
+				.ok_or(Error::<T, I>::InvalidPoolId)?
+				.try_retire::<T, I>()
+				.try_update::<T, I>();
 
 			ensure!(
 				pool.state == PoolState::Ongoing || pool.state == PoolState::Retired,
 				Error::<T, I>::InvalidPoolState
 			);
 
-			let mut deposit_data: DepositData<T, I> =
+			let mut deposit_data =
 				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T, I>::NoDepositOfUser)?;
 
 			if pool.update_b != deposit_data.update_b {
-				pool.try_settle_and_transfer(&mut deposit_data, user.clone())?;
+				pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
 			}
 
 			// Keep minimum deposit in pool when the pool is ongoing.
@@ -1075,7 +1136,7 @@ pub mod pallet {
 			};
 
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
-				pool.try_withdraw_remain()?;
+				pool.try_withdraw_remain::<T, I>()?;
 				pool.state = PoolState::Dead;
 			}
 
@@ -1124,9 +1185,8 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			pid: PoolId,
 		) -> Result<Vec<(CurrencyId, BalanceOf<T, I>)>, ()> {
-			let pool: PoolInfo<T, I> = Self::pool(pid).ok_or(())?.try_retire().try_update();
-			let deposit_data: DepositData<T, I> =
-				Self::user_deposit_data(pid, who.clone()).ok_or(())?;
+			let pool = Self::pool(pid).ok_or(())?.try_retire::<T, I>().try_update::<T, I>();
+			let deposit_data = Self::user_deposit_data(pid, who.clone()).ok_or(())?;
 
 			let mut to_rewards = Vec::<(CurrencyId, BalanceOf<T, I>)>::new();
 
@@ -1156,7 +1216,7 @@ pub mod pallet {
 			// Check whether pool-activated is meet the startup condition
 			for pid in Self::charged_pids() {
 				if let Some(mut pool) = Self::pool(pid) {
-					pool = pool.try_startup(n);
+					pool = pool.try_startup::<T, I>(n);
 
 					if pool.state == PoolState::Ongoing {
 						ChargedPoolIds::<T, I>::mutate(|pids| pids.remove(&pid));
