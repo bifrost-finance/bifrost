@@ -931,43 +931,11 @@ fn batch_unlock_should_work() {
 }
 
 #[test]
-fn edit_fund_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
-		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::edit(Some(ALICE).into(), 3_000, 1_000, 2, SlotLength::get() + 1, None));
-		let mut fund = Salp::funds(3_000).unwrap();
-		assert_eq!(fund.first_slot, 2);
-		assert_eq!(fund.status, FundStatus::Failed);
-		assert_ok!(Salp::edit(
-			Some(ALICE).into(),
-			3_000,
-			1_000,
-			2,
-			SlotLength::get() + 1,
-			Some(FundStatus::Ongoing),
-		));
-		fund = Salp::funds(3_000).unwrap();
-		assert_eq!(fund.status, FundStatus::Ongoing);
-	})
-}
-
-#[test]
 fn batch_migrate_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
-
-		#[allow(non_snake_case)]
-		let (_, vsBond) = Salp::vsAssets(3000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 100);
-		assert_ok!(Salp::batch_migrate(Some(ALICE).into(), 3_000, 2, SlotLength::get() + 1));
-		let (_, vs_bond) = Salp::vsAssets(3000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
-		let (_, vs_bond_new) = Salp::vsAssets(3000, 2, SlotLength::get() + 1);
-		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).reserved, 100);
 
 		assert_ok!(Salp::edit(
 			Some(ALICE).into(),
@@ -977,8 +945,24 @@ fn batch_migrate_should_work() {
 			SlotLength::get() + 1,
 			Some(FundStatus::Ongoing)
 		));
+		let to_migrate_fund = Salp::to_migrate_funds(3_000).unwrap();
+		assert_eq!(to_migrate_fund.first_slot, 2);
+
+		let (_, vs_bond) = Salp::vsAssets(3000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 100);
+
+		assert_ok!(Salp::batch_migrate(Some(ALICE).into(), 3_000));
+
+		let migrated = Salp::to_migrate_funds(3_000);
+		assert!(migrated.is_none());
+
 		let fund = Salp::funds(3_000).unwrap();
-		assert_eq!(fund.first_slot, 2);
 		assert_eq!(fund.status, FundStatus::Ongoing);
+		assert_eq!(fund.first_slot, 2);
+
+		let (_, vs_bond) = Salp::vsAssets(3000, 1, SlotLength::get());
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
+		let (_, vs_bond_new) = Salp::vsAssets(3000, 2, SlotLength::get() + 1);
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).reserved, 100);
 	})
 }
