@@ -115,9 +115,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config<I: 'static = ()>:
-		frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo
-	{
+	pub trait Config<I: 'static = ()>: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self, I>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The currency type that buyer to pay
