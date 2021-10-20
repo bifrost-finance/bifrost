@@ -24,8 +24,7 @@ use futures::StreamExt;
 use jsonrpc_core::IoHandler;
 use node_rpc::{self, RpcExtension};
 use sc_consensus::LongestChain;
-use sc_executor::native_executor_instance;
-pub use sc_executor::NativeExecutor;
+use sc_executor::NativeElseWasmExecutor;
 use sc_rpc::Metadata;
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, TaskManager};
 use sc_telemetry::TelemetryWorker;
@@ -46,9 +45,9 @@ impl sc_executor::NativeExecutionDispatch for DevRuntimeExecutor {
 }
 
 pub type Block = dev_runtime::Block;
-pub type Executor = DevExecutor;
+pub type Executor = DevRuntimeExecutor;
 pub type RuntimeApi = dev_runtime::RuntimeApi;
-pub type FullClient = sc_service::TFullClient<Block, RuntimeApi, Executor>;
+pub type FullClient = sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
 pub type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -89,10 +88,17 @@ pub fn new_partial(
 		})
 		.transpose()?;
 
+	let executor = NativeElseWasmExecutor::<Executor>::new(
+		config.wasm_method,
+		config.default_heap_pages,
+		config.max_runtime_instances,
+	);
+
 	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
+		sc_service::new_full_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
 			&config,
 			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+			executor,
 		)?;
 
 	let client = Arc::new(client);
