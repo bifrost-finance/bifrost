@@ -839,7 +839,7 @@ impl Config for XcmConfig {
 	type Barrier = Barrier;
 	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
-	type IsTeleporter = BifrostFilteredAssets;
+	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = PolkadotXcm;
