@@ -133,7 +133,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 903,
+	spec_version: 906,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -921,8 +921,10 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
+			&CurrencyId::VSToken(TokenSymbol::DOT) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
+			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 10 * MILLICENTS,
 			&CurrencyId::LPToken(..) => 10 * MILLICENTS,
 			_ => Balance::max_value() // unsupported
 		}
