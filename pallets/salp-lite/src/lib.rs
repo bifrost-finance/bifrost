@@ -373,7 +373,11 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight(T::WeightInfo::batch_unlock(T::BatchKeysLimit::get()))]
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
 		#[transactional]
 		pub fn batch_migrate(
 			origin: OriginFor<T>,
@@ -381,7 +385,7 @@ pub mod pallet {
 			first_slot: LeasePeriod,
 			last_slot: LeasePeriod,
 		) -> DispatchResult {
-			ensure_signed(origin)?;
+			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(

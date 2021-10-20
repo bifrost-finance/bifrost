@@ -763,20 +763,20 @@ pub fn create_x2_parachain_multilocation(index: u16) -> MultiLocation {
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
-	type AssetClaims = (); // don't claim for now
+	type AssetClaims = PolkadotXcm;
 	type AssetTransactor = BifrostAssetTransactor;
-	type AssetTrap = (); // don't trap for now
+	type AssetTrap = PolkadotXcm;
 	type Barrier = Barrier;
 	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
 	type IsTeleporter = BifrostFilteredAssets;
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type ResponseHandler = ();
+	type ResponseHandler = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
 	type Trader = Trader;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type XcmSender = XcmRouter; // Don't handle responses for now.
+	type XcmSender = XcmRouter;
 }
 
 /// No local origins on this chain are allowed to dispatch XCM sends/executions.
@@ -1092,7 +1092,7 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = 893125000.into();
+	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
