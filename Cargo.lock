@@ -12116,7 +12116,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=89264233141bad3114d7bae6f81ab637a8827ff6#89264233141bad3114d7bae6f81ab637a8827ff6"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e8904712e9315130e83bb0ddcc3a3b7e5142c273#e8904712e9315130e83bb0ddcc3a3b7e5142c273"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -12139,7 +12139,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=89264233141bad3114d7bae6f81ab637a8827ff6#89264233141bad3114d7bae6f81ab637a8827ff6"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e8904712e9315130e83bb0ddcc3a3b7e5142c273#e8904712e9315130e83bb0ddcc3a3b7e5142c273"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -12156,7 +12156,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=89264233141bad3114d7bae6f81ab637a8827ff6#89264233141bad3114d7bae6f81ab637a8827ff6"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e8904712e9315130e83bb0ddcc3a3b7e5142c273#e8904712e9315130e83bb0ddcc3a3b7e5142c273"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
