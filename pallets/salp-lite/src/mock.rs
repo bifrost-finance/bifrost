@@ -24,7 +24,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::RawOrigin;
-use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
+use node_primitives::{Amount, Balance, CurrencyId, MessageId, TokenSymbol};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
@@ -298,3 +298,5 @@ pub(crate) const BRUCE: AccountId = AccountId::new([1u8; 32]);
 pub(crate) const CATHI: AccountId = AccountId::new([2u8; 32]);
 
 pub(crate) const INIT_BALANCE: Balance = 100_000;
+
+pub(crate) const CONTRIBUTON_INDEX: MessageId = [0; 32];
