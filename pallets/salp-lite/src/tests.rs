@@ -247,7 +247,7 @@ fn set_fund_end_with_wrong_fund_status_should_fail() {
 fn unlock_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX,));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
@@ -267,7 +267,7 @@ fn unlock_should_work() {
 fn unlock_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX,));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 
 		assert_noop!(
@@ -281,7 +281,7 @@ fn unlock_with_wrong_fund_status_should_fail() {
 fn unlock_when_already_unlocked_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX,));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
@@ -296,7 +296,7 @@ fn unlock_when_already_unlocked_should_fail() {
 fn unlock_without_enough_reserved_vsassets_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 
 		// ABSOLUTELY NOT HAPPEN AT NORMAL PROCESS!
@@ -322,7 +322,7 @@ fn unlock_without_enough_reserved_vsassets_should_fail() {
 fn contribute_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 
 		let fund = Salp::funds(3_000).unwrap();
 		let (contributed, status) = Salp::contribution(fund.trie_index, &BRUCE);
@@ -345,8 +345,8 @@ fn contribute_should_work() {
 fn double_contribute_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 
 		// Check the contribution
 		let fund = Salp::funds(3_000).unwrap();
@@ -370,7 +370,7 @@ fn double_contribute_should_work() {
 fn confirm_contribute_later_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 
 		let fund = Salp::funds(3_000).unwrap();
@@ -395,7 +395,13 @@ fn contribute_with_low_contribution_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
-			Salp::issue(Some(ALICE).into(), BRUCE, 3_000, MinContribution::get() - 1),
+			Salp::issue(
+				Some(ALICE).into(),
+				BRUCE,
+				3_000,
+				MinContribution::get() - 1,
+				CONTRIBUTON_INDEX
+			),
 			Error::<Test>::ContributionTooSmall
 		);
 	});
@@ -406,7 +412,7 @@ fn contribute_with_wrong_para_id_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
-			Salp::issue(Some(ALICE).into(), BRUCE, 4_000, 100),
+			Salp::issue(Some(ALICE).into(), BRUCE, 4_000, 100, CONTRIBUTON_INDEX),
 			Error::<Test>::InvalidParaId
 		);
 	});
@@ -418,7 +424,7 @@ fn contribute_with_wrong_fund_status_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000,));
 		assert_noop!(
-			Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100),
+			Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX),
 			Error::<Test>::InvalidFundStatus
 		);
 	});
@@ -429,7 +435,7 @@ fn contribute_exceed_cap_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_noop!(
-			Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 1_001),
+			Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 1_001, CONTRIBUTON_INDEX),
 			Error::<Test>::CapExceeded
 		);
 	});
@@ -444,7 +450,7 @@ fn contribute_with_when_ump_wrong_should_fail() {
 fn withdraw_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -453,7 +459,7 @@ fn withdraw_should_work() {
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 4_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 4_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 4_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
 
@@ -466,7 +472,7 @@ fn withdraw_should_work() {
 fn double_withdraw_same_fund_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
@@ -476,7 +482,7 @@ fn double_withdraw_same_fund_should_fail() {
 		assert_eq!(fund.status, FundStatus::RedeemWithdrew);
 
 		assert_ok!(Salp::create(Some(ALICE).into(), 4_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 4_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 4_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 4_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 4_000));
 		assert_noop!(Salp::withdraw(Some(ALICE).into(), 4_000), Error::<Test>::InvalidFundStatus);
@@ -527,7 +533,7 @@ fn withdraw_with_when_ump_wrong_should_fail() {
 fn refund_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000));
@@ -552,7 +558,7 @@ fn refund_should_work() {
 fn refund_without_enough_vsassets_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
@@ -583,7 +589,7 @@ fn refund_with_zero_contribution_should_fail() {
 fn refund_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
@@ -639,7 +645,7 @@ fn dissolve_should_work() {
 		for i in 0..contribute_account_num {
 			let ract = AccountId::new([(i as u8); 32]);
 			assert_ok!(Tokens::deposit(RelayCurrencyId::get(), &ract, 10));
-			assert_ok!(Salp::issue(Some(ALICE).into(), ract.clone(), 3_000, 10));
+			assert_ok!(Salp::issue(Some(ALICE).into(), ract.clone(), 3_000, 10, CONTRIBUTON_INDEX));
 		}
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
@@ -697,7 +703,7 @@ fn dissolve_with_wrong_fund_status_should_fail() {
 fn redeem_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
@@ -739,7 +745,7 @@ fn redeem_should_work() {
 fn redeem_with_speical_vsbond_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 2001, 1_000, 13, 20));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 2001, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 2001, 100, CONTRIBUTON_INDEX));
 
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 2001));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 2001));
@@ -781,7 +787,7 @@ fn redeem_with_speical_vsbond_should_work() {
 fn redeem_with_wrong_origin_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
@@ -801,7 +807,7 @@ fn redeem_with_wrong_origin_should_fail() {
 fn redeem_with_not_redeemable_vsbond_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
@@ -825,7 +831,7 @@ fn redeem_with_not_redeemable_vsbond_should_fail() {
 fn redeem_without_enough_vsassets_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
@@ -858,7 +864,7 @@ fn redeem_without_enough_vsassets_should_fail() {
 fn redeem_without_enough_balance_in_pool_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
@@ -897,7 +903,7 @@ fn release_from_redeem_to_bancor_should_work() {
 
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
@@ -924,7 +930,7 @@ fn check_next_trie_index() {
 fn batch_unlock_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::batch_unlock(Some(ALICE).into(), 3_000));
 	})
@@ -934,7 +940,7 @@ fn batch_unlock_should_work() {
 fn batch_migrate_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 
 		assert_ok!(Salp::edit(

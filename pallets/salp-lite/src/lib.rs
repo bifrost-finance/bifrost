@@ -98,7 +98,7 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, ParaId};
+	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, ParaId};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
 	use sp_std::prelude::*;
@@ -164,7 +164,7 @@ pub mod pallet {
 		/// Create a new crowdloaning campaign. [fund_index]
 		Created(ParaId),
 		/// Contributed to a crowd sale. [who, fund_index, amount]
-		Contributed(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		Issued(AccountIdOf<T>, ParaId, BalanceOf<T>, MessageId),
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(ParaId, BalanceOf<T>),
 		/// refund to account. [who, fund_index,value]
@@ -596,6 +596,7 @@ pub mod pallet {
 			who: AccountIdOf<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] value: BalanceOf<T>,
+			message_id: MessageId,
 		) -> DispatchResult {
 			T::EnsureConfirmAsMultiSig::ensure_origin(origin.clone())?;
 
@@ -633,7 +634,7 @@ pub mod pallet {
 				contributed_new,
 				ContributionStatus::Idle,
 			);
-			Self::deposit_event(Event::Contributed(who, index, value));
+			Self::deposit_event(Event::Issued(who, index, value, message_id));
 
 			Ok(())
 		}
