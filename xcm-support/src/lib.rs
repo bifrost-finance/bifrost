@@ -112,7 +112,7 @@ impl<
 			},
 			DepositAsset {
 				assets: All.into(),
-				max_assets: u32::max_value(),
+				max_assets: 1,
 				beneficiary: X1(Junction::AccountId32 {
 					network: NetworkId::Any,
 					id: sovereign_account.into(),

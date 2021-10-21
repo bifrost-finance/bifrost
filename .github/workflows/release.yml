@@ -1,0 +1,50 @@
+name: Release
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'release bifrost'
+        required: true
+
+jobs:
+  build-release:
+    name: Build binary
+    runs-on: self-hosted
+    steps:
+      - name: Set tag from input
+        run: |
+          echo "Tag: ${{ github.event.inputs.tag }}"
+          echo "TAG=${{ github.event.inputs.tag }}" >> "$GITHUB_ENV"
+
+      - name: Set Tag from release
+        if: ${{ github.event.release.tag_name }}
+        run: |
+          echo "TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
+
+      - name: Check to latest commit
+        uses: actions/checkout@v2
+
+      - name: Build bifrost
+        run: |
+          .maintain/publish-release.sh
+
+      - name: Upload deploy
+        uses: actions/upload-artifact@v2
+        with:
+          name: bifrost-artifact-${{ github.sha }}
+          path: |
+            ./resources/bifrost-wasm.tar.bz2
+            ./resources/bifrost-x86_64-linux-gnu.tar.bz2
+
+      - uses: 8398a7/action-slack@v3
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          fields: repo,author,eventName,workflow,ref,commit
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_INCOMING_WEBHOOK_URL }}
+
+
