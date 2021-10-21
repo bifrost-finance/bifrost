@@ -1,3 +1,8 @@
+PARA_ID        := 2001
+DOCKER_TAG     := latest
+CHAIN		   := bifrost-local
+SURI           := //Alice
+
 .PHONY: init
 init:
 	git config core.hooksPath .githooks
@@ -33,15 +38,15 @@ build-all-release: copy-genesis-config-release
 
 .PHONY: check-asgard
 check-asgard:
-	cargo check -p node-cli --locked --features "with-asgard-runtime"
+	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-asgard-runtime"
 
 .PHONY: check-bifrost
 check-bifrost:
-	cargo check -p node-cli --locked --features "with-bifrost-runtime"
+	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-bifrost-runtime"
 
 .PHONY: check-all
 check-all: format
-	cargo check -p node-cli --locked --features "with-all-runtime"
+	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
 
 .PHONY: check-tests
 check-tests:
@@ -49,15 +54,15 @@ check-tests:
 
 .PHONY: test-bifrost
 test-bifrost:
-	cargo test --features "with-bifrost-runtime"
+	SKIP_WASM_BUILD= cargo test --features "with-bifrost-runtime"
 
 .PHONY: test-asgard
 test-asgard:
-	cargo test --features "with-asgard-runtime"
+	SKIP_WASM_BUILD= cargo test --features "with-asgard-runtime"
 
 .PHONY: test-all
 test-all:
-	cargo test --features "with-all-runtime"
+	SKIP_WASM_BUILD= cargo test --features "with-all-runtime"
 
 .PHONY: integration-test
 integration-test:
@@ -129,3 +134,18 @@ try-bifrost-runtime-upgrade:
 .PHONY: try-asgard-runtime-upgrade
 try-asgard-runtime-upgrade:
 	./scripts/try-runtime.sh asgard
+
+.PHONY: resources
+resources:
+	./target/release/bifrost export-genesis-state --chain $(CHAIN) --parachain-id $(PARA_ID) > ./resources/para-$(PARA_ID)-genesis
+	./target/release/bifrost export-genesis-wasm --chain $(CHAIN) > ./resources/para-$(PARA_ID).wasm
+	./target/release/bifrost build-spec --chain $(CHAIN) --disable-default-bootnode --raw > ./resources/$(CHAIN)-raw.json
+
+.PHONY: keystore
+keystore:
+	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type aura
+	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type gran
+
+.PHONY: production-release
+production-release:
+	.maintain/publish-release.sh
