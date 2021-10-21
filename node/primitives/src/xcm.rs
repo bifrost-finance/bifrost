@@ -85,6 +85,3 @@ pub enum ParachainDerivedProxyAccountType {
 	Salp = 0,
 	Staking = 1,
 }
-
-/// Xcm Message Id
-pub type MessageId = [u8; 32];

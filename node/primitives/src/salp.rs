@@ -75,3 +75,5 @@ impl<BalanceOf> Default for ContributionStatus<BalanceOf> {
 		Self::Idle
 	}
 }
+
+pub type MessageId = [u8; 32];
