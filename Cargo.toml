@@ -25,6 +25,14 @@ members = [
 	"xcm-support",
 ]
 
+resolver = "2"
+
+[profile.dev]
+split-debuginfo = "unpacked"
+
+[profile.release]
+panic = "unwind"
+
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of
 # their debug info might be missing) or to require to be frequently recompiled. We compile these
@@ -83,10 +91,6 @@ wasmi = { opt-level = 3 }
 x25519-dalek = { opt-level = 3 }
 yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
-
-[profile.release]
-panic = "unwind"
-incremental = true
 
 [patch.crates-io]
 node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11" }
