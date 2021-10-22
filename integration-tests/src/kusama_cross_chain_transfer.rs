@@ -36,7 +36,6 @@ fn transfer_from_relay_chain() {
 			)),
 			Box::new(VersionedMultiAssets::V1((Here, DOLLARS).into())),
 			0,
-			600_000_000
 		));
 	});
 
