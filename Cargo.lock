@@ -865,6 +865,7 @@ dependencies = [
  "pallet-indices",
  "pallet-membership",
  "pallet-multisig",
+ "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
