@@ -896,7 +896,7 @@ impl cumulus_pallet_xcm::Config for Runtime {
 impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ChannelInfo = ParachainSystem;
 	type Event = Event;
-	type VersionWrapper = PolkadotXcm;
+	type VersionWrapper = ();
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
