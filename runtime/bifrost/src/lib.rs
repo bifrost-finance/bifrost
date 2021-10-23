@@ -1079,7 +1079,7 @@ parameter_types! {
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
 	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = 893125000.into();
+	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
