@@ -19,6 +19,7 @@ members = [
 	"pallets/vsbond-auction",
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
+	"pallets/call-switchgear",
 	"runtime/asgard",
 	"runtime/bifrost",
 	"xcm-support",

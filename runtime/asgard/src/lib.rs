@@ -1334,6 +1334,13 @@ impl bifrost_lightening_redeem::Config for Runtime {
 	type WeightInfo = weights::bifrost_lightening_redeem::WeightInfo<Runtime>;
 }
 
+impl bifrost_call_switchgear::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_call_switchgear::WeightInfo<Runtime>;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1515,6 +1522,7 @@ construct_runtime! {
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 	}
 }
 
@@ -1804,7 +1812,8 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_minter_reward, MinterReward);
 			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
--			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
+			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
+			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1843,7 +1852,8 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
 			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
--			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
+			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
+			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
