@@ -909,11 +909,15 @@ pub mod pallet {
 		fn kill_contribution(index: TrieIndex, who: &AccountIdOf<T>) {
 			who.using_encoded(|b| child::kill(&Self::id_from_index(index), b));
 		}
+
+		#[allow(dead_code)]
+		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
+			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
+		}
 	}
 }
 
 pub trait WeightInfo {
-	fn contribute() -> Weight;
 	fn unlock() -> Weight;
 	fn batch_unlock(k: u32) -> Weight;
 	fn refund() -> Weight;
@@ -922,10 +926,6 @@ pub trait WeightInfo {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn contribute() -> Weight {
-		50_000_000 as Weight
-	}
-
 	fn unlock() -> Weight {
 		50_000_000 as Weight
 	}

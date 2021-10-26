@@ -1605,9 +1605,10 @@ impl_runtime_apis! {
 
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
-			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
+-			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1640,9 +1641,10 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
+			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
-			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
+-			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

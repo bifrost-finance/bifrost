@@ -1796,13 +1796,14 @@ impl_runtime_apis! {
 			let mut list = Vec::<BenchmarkList>::new();
 
 			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_bancor, Bancor);
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_vtoken_mint, VtokenMint);
 			list_benchmark!(list, extra, bifrost_minter_reward, MinterReward);
 			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
-			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
+-			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1834,13 +1835,14 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
+			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_bancor, Bancor);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
 			add_benchmark!(params, batches, bifrost_minter_reward, MinterReward);
 			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
-			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
+-			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

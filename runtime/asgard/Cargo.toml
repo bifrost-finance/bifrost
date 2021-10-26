@@ -59,6 +59,7 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
+pallet-society = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.11", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.11" }
@@ -151,6 +152,7 @@ std = [
 	"pallet-session/std",
 	"pallet-vesting/std",
 	"pallet-utility/std",
+	"pallet-society/std",
 	"sp-arithmetic/std",
 	"sp-api/std",
 	"sp-block-builder/std",
@@ -212,14 +214,14 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"pallet-society/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
+	"bifrost-salp-lite/runtime-benchmarks",
 	"bifrost-bancor/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-vtoken-mint/runtime-benchmarks",
 	"bifrost-minter-reward/runtime-benchmarks",
 	"bifrost-vsbond-auction/runtime-benchmarks",
-	"bifrost-token-issuer/runtime-benchmarks",
-	"bifrost-lightening-redeem/runtime-benchmarks",
 ]
 
 try-runtime = [

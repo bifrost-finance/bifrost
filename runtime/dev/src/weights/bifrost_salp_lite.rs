@@ -47,18 +47,6 @@ use sp_std::marker::PhantomData;
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_salp_lite::WeightInfo for WeightInfo<T> {
 	// Storage: Salp Funds (r:1 w:0)
-	// Storage: Tokens Accounts (r:1 w:1)
-	// Storage: Salp CurrentNonce (r:1 w:1)
-	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
-	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
-	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1
-	// w:1)
-	fn contribute() -> Weight {
-		(122_561_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(6 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
-	}
-	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Salp RefundPool (r:1 w:1)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: Tokens TotalIssuance (r:2 w:2)

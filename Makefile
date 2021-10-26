@@ -93,7 +93,7 @@ test-benchmarking:
 
 .PHONY: run-benchmarking
 run-benchmarking:
-	./scripts/run_all_benches.sh
+	cargo run --release --features=runtime-benchmarks --features=with-bifrost-runtime -- benchmark --chain=bifrost-local --steps=50 --repeat=20 '--pallet=*' '--extrinsic=*' --execution=wasm --wasm-execution=compiled --heap-pages=4096 --header=./HEADER-GPL3 --output=./runtime/bifrost/src/weights/
 
 # Deploy
 .PHONY: deploy-asgard-local
