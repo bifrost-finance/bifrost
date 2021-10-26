@@ -1600,12 +1600,23 @@ impl_runtime_apis! {
 		) {
 			use frame_support::traits::StorageInfoTrait;
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use frame_system_benchmarking::Pallet as SystemBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 
+			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+			list_benchmark!(list, extra, pallet_balances, Balances);
+			list_benchmark!(list, extra, pallet_bounties, Bounties);
+			list_benchmark!(list, extra, pallet_indices, Indices);
+			list_benchmark!(list, extra, pallet_scheduler, Scheduler);
+			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
+			list_benchmark!(list, extra, pallet_treasury, Treasury);
+			list_benchmark!(list, extra, pallet_utility, Utility);
+			list_benchmark!(list, extra, pallet_vesting, Vesting);
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_salp, Salp);
 			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
+			// list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 -			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
@@ -1629,7 +1640,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 
-			// Adding the pallet you will perform thee benchmarking
+			// Adding the pallet you will perform the benchmarking
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);
