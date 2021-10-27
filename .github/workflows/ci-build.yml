@@ -30,11 +30,11 @@ jobs:
           components: rustfmt
           target: wasm32-unknown-unknown
           default: true
-      - name: Check All
-        run: make check-all
-      - name: Test All
-        run: |
-          make test-all
+      # - name: Check All
+      #   run: make check-all
+      # - name: Test All
+      #   run: |
+      #     make test-all
       - name: Generate All WeightInfo Files
         run: make generate-all-weights
       - name: Inform buddies online
