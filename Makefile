@@ -93,15 +93,15 @@ test-benchmarking:
 
 .PHONY: generate-bifrost-weights
 generate-bifrost-weights:
-	sh ./scripts/generate-weights.sh bifrost
+	bash ./scripts/generate-weights.sh bifrost
 
 .PHONY: generate-asgard-weights
 generate-asgard-weights:
-	sh ./scripts/generate-weights.sh asgard
+	bash ./scripts/generate-weights.sh asgard
 
 .PHONY: generate-all-weights
 generate-all-weights:
-	sh ./scripts/generate-weights.sh asgard bifrost
+	bash ./scripts/generate-weights.sh asgard bifrost
 
 .PHONY: build-asgard-release-with-bench
 build-asgard-release-with-bench: copy-genesis-config-release
