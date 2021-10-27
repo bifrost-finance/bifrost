@@ -37,11 +37,11 @@ jobs:
       #     make test-all
       - name: Generate All WeightInfo Files
         run: make generate-all-weights
-      - name: Inform buddies online
-        uses: 8398a7/action-slack@v3
-        if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-        with:
-          status: ${{ job.status }}
-          fields: repo,author,eventName,workflow,ref,commit
+      # - name: Inform buddies online
+      #   uses: 8398a7/action-slack@v3
+      #   if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
+      #   with:
+      #     status: ${{ job.status }}
+      #     fields: repo,author,eventName,workflow,ref,commit
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PULLREQUEST_WEBHOOK_URL }}
