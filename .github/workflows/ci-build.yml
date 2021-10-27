@@ -35,6 +35,8 @@ jobs:
       - name: Test All
         run: |
           make test-all
+      - name: Generate All WeightInfo Files
+        run: make generate-all-weights
       - name: Inform buddies online
         uses: 8398a7/action-slack@v3
         if: always() && (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
