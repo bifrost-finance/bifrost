@@ -99,6 +99,10 @@ generate-bifrost-weights:
 generate-asgard-weights:
 	sh ./scripts/generate-weights.sh asgard
 
+.PHONY: generate-all-weights
+generate-all-weights:
+	sh ./scripts/generate-weights.sh asgard bifrost
+
 .PHONY: build-asgard-release-with-bench
 build-asgard-release-with-bench: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-asgard-runtime,runtime-benchmarks" --release
