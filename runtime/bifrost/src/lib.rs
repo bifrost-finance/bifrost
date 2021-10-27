@@ -1639,7 +1639,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
-			
+
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
 			// add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
