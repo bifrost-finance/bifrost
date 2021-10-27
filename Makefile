@@ -91,9 +91,13 @@ format:
 test-benchmarking:
 	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
 
-.PHONY: run-benchmarking
-run-benchmarking:
-	./scripts/run_all_benches.sh
+.PHONY: generate-bifrost-weights
+generate-bifrost-weights:
+	sh ./scripts/generate-weights.sh bifrost
+
+.PHONY: generate-asgard-weights
+generate-asgard-weights:
+	sh ./scripts/generate-weights.sh asgard
 
 .PHONY: build-asgard-release-with-bench
 build-asgard-release-with-bench: copy-genesis-config-release
