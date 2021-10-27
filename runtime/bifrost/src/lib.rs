@@ -1600,7 +1600,6 @@ impl_runtime_apis! {
 		) {
 			use frame_support::traits::StorageInfoTrait;
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
-			use frame_system_benchmarking::Pallet as SystemBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
 
