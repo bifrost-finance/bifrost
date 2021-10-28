@@ -133,7 +133,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 906,
+	spec_version: 907,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1375,8 +1375,203 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	CustomOnRuntimeUpgrade,
+	(
+		CouncilMembershipStoragePrefixMigration,
+		TechnicalMembershipStoragePrefixMigration,
+		CouncilStoragePrefixMigration,
+		TechnicalCommitteeStoragePrefixMigration,
+		MigrateTipsPalletPrefix,
+		BountiesPrefixMigration,
+	),
 >;
+
+const COUNCIL_MEMBERSHIP_OLD_PREFIX: &str = "Instance1Membership";
+/// Migrate from `Instance1Membership` to the new pallet prefix `CouncilMembership`
+pub struct CouncilMembershipStoragePrefixMigration;
+
+impl OnRuntimeUpgrade for CouncilMembershipStoragePrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<CouncilMembership>()
+			.expect("CouncilMembership is part of runtime, so it has a name; qed");
+		pallet_membership::migrations::v4::migrate::<Runtime, CouncilMembership, _>(
+			COUNCIL_MEMBERSHIP_OLD_PREFIX,
+			name,
+		)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<CouncilMembership>()
+			.expect("CouncilMembership is part of runtime, so it has a name; qed");
+		pallet_membership::migrations::v4::pre_migrate::<CouncilMembership, _>(
+			COUNCIL_MEMBERSHIP_OLD_PREFIX,
+			name,
+		);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<CouncilMembership>()
+			.expect("CouncilMembership is part of runtime, so it has a name; qed");
+		pallet_membership::migrations::v4::post_migrate::<CouncilMembership, _>(
+			COUNCIL_MEMBERSHIP_OLD_PREFIX,
+			name,
+		);
+		Ok(())
+	}
+}
+
+const TECHNICAL_MEMBERSHIP_OLD_PREFIX: &str = "Instance2Membership";
+/// Migrate from `Instance2Membership` to the new pallet prefix `TechnicalMembership`
+pub struct TechnicalMembershipStoragePrefixMigration;
+
+impl OnRuntimeUpgrade for TechnicalMembershipStoragePrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<TechnicalMembership>()
+			.expect("TechnicalMembership is part of runtime, so it has a name; qed");
+		pallet_membership::migrations::v4::migrate::<Runtime, TechnicalMembership, _>(
+			TECHNICAL_MEMBERSHIP_OLD_PREFIX,
+			name,
+		)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<TechnicalMembership>()
+			.expect("TechnicalMembership is part of runtime, so it has a name; qed");
+		pallet_membership::migrations::v4::pre_migrate::<TechnicalMembership, _>(
+			TECHNICAL_MEMBERSHIP_OLD_PREFIX,
+			name,
+		);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<TechnicalMembership>()
+			.expect("TechnicalMembership is part of runtime, so it has a name; qed");
+		pallet_membership::migrations::v4::post_migrate::<TechnicalMembership, _>(
+			TECHNICAL_MEMBERSHIP_OLD_PREFIX,
+			name,
+		);
+		Ok(())
+	}
+}
+
+const COUNCIL_OLD_PREFIX: &str = "Instance1Collective";
+/// Migrate from `Instance1Collective` to the new pallet prefix `Council`
+pub struct CouncilStoragePrefixMigration;
+
+impl OnRuntimeUpgrade for CouncilStoragePrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		pallet_collective::migrations::v4::migrate::<Runtime, Council, _>(COUNCIL_OLD_PREFIX)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		pallet_collective::migrations::v4::pre_migrate::<Council, _>(COUNCIL_OLD_PREFIX);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		pallet_collective::migrations::v4::post_migrate::<Council, _>(COUNCIL_OLD_PREFIX);
+		Ok(())
+	}
+}
+
+const TECHNICAL_COMMITTEE_OLD_PREFIX: &str = "Instance2Collective";
+/// Migrate from `Instance2Collective` to the new pallet prefix `TechnicalCommittee`
+pub struct TechnicalCommitteeStoragePrefixMigration;
+
+impl OnRuntimeUpgrade for TechnicalCommitteeStoragePrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		pallet_collective::migrations::v4::migrate::<Runtime, TechnicalCommittee, _>(
+			TECHNICAL_COMMITTEE_OLD_PREFIX,
+		)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		pallet_collective::migrations::v4::pre_migrate::<TechnicalCommittee, _>(
+			TECHNICAL_COMMITTEE_OLD_PREFIX,
+		);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		pallet_collective::migrations::v4::post_migrate::<TechnicalCommittee, _>(
+			TECHNICAL_COMMITTEE_OLD_PREFIX,
+		);
+		Ok(())
+	}
+}
+
+const TIPS_OLD_PREFIX: &str = "Treasury";
+/// Migrate pallet-tips from `Treasury` to the new pallet prefix `Tips`
+pub struct MigrateTipsPalletPrefix;
+
+impl OnRuntimeUpgrade for MigrateTipsPalletPrefix {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		pallet_tips::migrations::v4::migrate::<Runtime, Tips, _>(TIPS_OLD_PREFIX)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		pallet_tips::migrations::v4::pre_migrate::<Runtime, Tips, _>(TIPS_OLD_PREFIX);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		pallet_tips::migrations::v4::post_migrate::<Runtime, Tips, _>(TIPS_OLD_PREFIX);
+		Ok(())
+	}
+}
+
+const BOUNTIES_OLD_PREFIX: &str = "Treasury";
+/// Migrate from 'Treasury' to the new prefix 'Bounties'
+pub struct BountiesPrefixMigration;
+
+impl OnRuntimeUpgrade for BountiesPrefixMigration {
+	fn on_runtime_upgrade() -> frame_support::weights::Weight {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<Bounties>()
+			.expect("Bounties is part of runtime, so it has a name; qed");
+		pallet_bounties::migrations::v4::migrate::<Runtime, Bounties, _>(BOUNTIES_OLD_PREFIX, name)
+	}
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<Bounties>()
+			.expect("Bounties is part of runtime, so it has a name; qed");
+		pallet_bounties::migrations::v4::pre_migration::<Runtime, Bounties, _>(
+			BOUNTIES_OLD_PREFIX,
+			name,
+		);
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		use frame_support::traits::PalletInfo;
+		let name = <Runtime as frame_system::Config>::PalletInfo::name::<Bounties>()
+			.expect("Bounties is part of runtime, so it has a name; qed");
+		pallet_bounties::migrations::v4::post_migration::<Runtime, Bounties, _>(
+			BOUNTIES_OLD_PREFIX,
+			name,
+		);
+		Ok(())
+	}
+}
 
 impl_runtime_apis! {
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -1628,10 +1823,13 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "try-runtime")]
 	impl frame_try_runtime::TryRuntime<Block> for Runtime {
-		fn on_runtime_upgrade() -> Result<(Weight, Weight), sp_runtime::RuntimeString> {
+		fn on_runtime_upgrade() -> (Weight, Weight) {
 			log::info!("try-runtime::on_runtime_upgrade bifrost.");
-			let weight = Executive::try_runtime_upgrade()?;
-			Ok((weight, RuntimeBlockWeights::get().max_block))
+			let weight = Executive::try_runtime_upgrade().unwrap();
+			(weight, RuntimeBlockWeights::get().max_block)
+		}
+		fn execute_block_no_check(block: Block) -> Weight {
+			Executive::execute_block_no_check(block)
 		}
 	}
 }
