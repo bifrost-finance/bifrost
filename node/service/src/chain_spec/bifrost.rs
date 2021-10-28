@@ -197,6 +197,11 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
 					ENDOWMENT * 4_000_000,
 				),
+				(
+					x.clone(),
+					CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20),
+					ENDOWMENT * 4_000_000,
+				),
 			]
 		})
 		.collect();
