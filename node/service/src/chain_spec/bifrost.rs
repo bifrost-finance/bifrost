@@ -125,6 +125,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT * 10_000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT),
 			]
 		})
 		.collect();
