@@ -19,9 +19,6 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.11", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.11", default-features = false }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.11", default-features = false }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.11", default-features = false }
 
 [dev-dependencies]
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.11"  }
@@ -53,13 +50,10 @@ std = [
 	"orml-traits/std",
 	"xcm/std",
 	"xcm-support/std",
-	"polkadot-parachain/std",
 ]
 
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"sp-runtime/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"xcm-builder/runtime-benchmarks",
-	"pallet-xcm/runtime-benchmarks",
 ]
