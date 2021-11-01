@@ -29,6 +29,8 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	fn switchoff_transaction() -> Weight;
 	fn switchon_transaction() -> Weight;
+	fn disable_transfers() -> Weight;
+	fn enable_transfers() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -38,6 +40,14 @@ impl WeightInfo for () {
 	}
 
 	fn switchon_transaction() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn disable_transfers() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn enable_transfers() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

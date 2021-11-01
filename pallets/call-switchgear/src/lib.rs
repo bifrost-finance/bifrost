@@ -28,6 +28,7 @@ use frame_support::{
 	transactional,
 };
 use frame_system::pallet_prelude::*;
+use node_primitives::CurrencyId;
 use sp_runtime::DispatchResult;
 use sp_std::prelude::*;
 
@@ -71,12 +72,19 @@ pub mod pallet {
 		TransactionSwitchedoff(Vec<u8>, Vec<u8>),
 		/// Switch on transaction . \[pallet_name, function_name\]
 		TransactionSwitchedOn(Vec<u8>, Vec<u8>),
+		TransferAccountDisabled(CurrencyId),
+		TransferAccountEnabled(CurrencyId),
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_switchoff_transactions)]
 	pub type SwitchedOffTransactions<T: Config> =
 		StorageMap<_, Twox64Concat, (Vec<u8>, Vec<u8>), (), OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_disabled_tranfer_accounts)]
+	pub type DisabledTransfers<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyId, (), OptionQuery>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -132,6 +140,33 @@ pub mod pallet {
 			};
 			Ok(())
 		}
+
+		// #[pallet::weight(T::WeightInfo::disable_transfers())]
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn disable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
+			T::UpdateOrigin::ensure_origin(origin)?;
+
+			DisabledTransfers::<T>::mutate_exists(currency_id, |item| {
+				if item.is_none() {
+					*item = Some(());
+					Self::deposit_event(Event::TransferAccountDisabled(currency_id));
+				}
+			});
+			Ok(())
+		}
+
+		// #[pallet::weight(T::WeightInfo::enable_transfers())]
+		#[pallet::weight(10000)]
+		#[transactional]
+		pub fn enable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
+			T::UpdateOrigin::ensure_origin(origin)?;
+
+			if DisabledTransfers::<T>::take(currency_id).is_some() {
+				Self::deposit_event(Event::TransferAccountEnabled(currency_id));
+			};
+			Ok(())
+		}
 	}
 }
 
@@ -146,5 +181,12 @@ where
 			pallet_name.as_bytes(),
 			function_name.as_bytes(),
 		))
+	}
+}
+
+pub struct DisableTransfersFilter<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> Contains<CurrencyId> for DisableTransfersFilter<T> {
+	fn contains(currency_id: &CurrencyId) -> bool {
+		DisabledTransfers::<T>::contains_key(currency_id)
 	}
 }

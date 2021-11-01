@@ -181,7 +181,6 @@ std = [
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
 	"bifrost-lightening-redeem/std",
-	"bifrost-call-switchgear/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"xcm-support/std"
@@ -208,18 +207,11 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
-<<<<<<< HEAD
 	"bifrost-salp-lite/runtime-benchmarks",
-=======
-#	"bifrost-salp-lite/runtime-benchmarks",
->>>>>>> :sparkles: ($RUNTIME) Supple the benchmark settings that missing on Bifrost
 	"bifrost-liquidity-mining/runtime-benchmarks",
-<<<<<<< HEAD
-=======
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
->>>>>>> add-call-switchgear pallet
 ]
 
 try-runtime = [

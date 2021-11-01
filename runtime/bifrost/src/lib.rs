@@ -182,35 +182,83 @@ parameter_types! {
 
 pub struct CallFilter;
 impl Contains<Call> for CallFilter {
-	fn contains(c: &Call) -> bool {
-		match *c {
-			// call banned
-
-			// ZLK transfer
-			Call::Currencies(orml_currencies::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) => false,
-			Call::Tokens(orml_tokens::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) => false,
-			Call::Tokens(orml_tokens::Call::transfer_all {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				keep_alive: _,
-			}) => false,
-			Call::Tokens(orml_tokens::Call::transfer_keep_alive {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) => false,
-
-			Call::PhragmenElection(_) => false,
-			_ => true,
+	fn contains(call: &Call) -> bool {
+		let is_core_call =
+			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
+		if is_core_call {
+			// always allow core call
+			return true;
 		}
+
+		let is_switched_off =
+			bifrost_call_switchgear::SwitchOffTransactionFilter::<Runtime>::contains(call);
+		if is_switched_off {
+			// no switched off call
+			return false;
+		}
+
+		// disable transfer
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
+		if is_transfer {
+			let is_disabled = match *call {
+				// orml-currencies module
+				Call::Currencies(orml_currencies::Call::transfer {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Currencies(orml_currencies::Call::transfer_native_currency {
+					dest: _,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				// orml-tokens module
+				Call::Tokens(orml_tokens::Call::transfer { dest: _, currency_id, amount: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&currency_id,
+					),
+				Call::Tokens(orml_tokens::Call::transfer_all {
+					dest: _,
+					currency_id,
+					keep_alive: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Tokens(orml_tokens::Call::transfer_keep_alive {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				// Balances module
+				Call::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				Call::Balances(pallet_balances::Call::transfer_keep_alive {
+					dest: _,
+					value: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				_ => false,
+			};
+
+			if is_disabled {
+				// no switched off call
+				return false;
+			}
+		}
+
+		true
 	}
 }
 

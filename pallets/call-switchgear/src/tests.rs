@@ -140,7 +140,7 @@ fn switchon_transaction_transaction_should_work() {
 }
 
 #[test]
-fn paused_transaction_filter_work() {
+fn switchoff_transaction_filter_work() {
 	ExtBuilder::default().build().execute_with(|| {
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
@@ -168,5 +168,16 @@ fn paused_transaction_filter_work() {
 		));
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(BALANCE_TRANSFER));
 		assert!(!SwitchOffTransactionFilter::<Runtime>::contains(TOKENS_TRANSFER));
+	});
+}
+
+#[test]
+fn disable_transfers_filter_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
+		assert_ok!(CallSwitchgear::disable_transfers(Origin::signed(1), KSM));
+		assert!(DisableTransfersFilter::<Runtime>::contains(&KSM));
+		assert_ok!(CallSwitchgear::enable_transfers(Origin::signed(1), KSM));
+		assert!(!DisableTransfersFilter::<Runtime>::contains(&KSM));
 	});
 }
