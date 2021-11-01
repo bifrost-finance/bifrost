@@ -218,6 +218,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
 				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
 				(
 					x.clone(),
 					CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20),
