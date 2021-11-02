@@ -42,7 +42,7 @@ fn transfer_from_relay_chain() {
 	Bifrost::execute_with(|| {
 		assert_eq!(
 			Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-			999_952_000_000
+			999_936_000_000
 		);
 	});
 }
@@ -58,11 +58,11 @@ fn transfer_to_relay_chain() {
 				1,
 				X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any })
 			)),
-			3_000_000_000
+			4_000_000_000
 		));
 	});
 
 	KusamaNet::execute_with(|| {
-		assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999_920_000_005);
+		assert_eq!(kusama_runtime::Balances::free_balance(&AccountId::from(BOB)), 999_893_333_340);
 	});
 }

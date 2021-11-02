@@ -107,9 +107,10 @@ use sp_runtime::traits::ConvertInto;
 use static_assertions::const_assert;
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
-	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
+	FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser, ParentIsDefault,
+	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
 	TakeWeightCredit,
 };
@@ -184,6 +185,88 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 6;
 }
 
+pub struct CallFilter;
+impl Contains<Call> for CallFilter {
+	fn contains(call: &Call) -> bool {
+		let is_core_call =
+			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
+		if is_core_call {
+			// always allow core call
+			return true;
+		}
+
+		let is_switched_off =
+			bifrost_call_switchgear::SwitchOffTransactionFilter::<Runtime>::contains(call);
+		if is_switched_off {
+			// no switched off call
+			return false;
+		}
+
+		// disable transfer
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
+		if is_transfer {
+			let is_disabled = match *call {
+				// orml-currencies module
+				Call::Currencies(orml_currencies::Call::transfer {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Currencies(orml_currencies::Call::transfer_native_currency {
+					dest: _,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				// orml-tokens module
+				Call::Tokens(orml_tokens::Call::transfer { dest: _, currency_id, amount: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&currency_id,
+					),
+				Call::Tokens(orml_tokens::Call::transfer_all {
+					dest: _,
+					currency_id,
+					keep_alive: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Tokens(orml_tokens::Call::transfer_keep_alive {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				// Balances module
+				Call::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				Call::Balances(pallet_balances::Call::transfer_keep_alive {
+					dest: _,
+					value: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				_ => false,
+			};
+
+			if is_disabled {
+				// no switched off call
+				return false;
+			}
+		}
+
+		true
+	}
+}
+
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
@@ -211,7 +294,7 @@ impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
-	type BaseCallFilter = Everything;
+	type BaseCallFilter = CallFilter;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = RuntimeBlockLength;
@@ -275,24 +358,6 @@ impl pallet_utility::Config for Runtime {
 }
 
 parameter_types! {
-	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub const DepositBase: Balance = deposit(1, 88);
-	// Additional storage item size of 32 bytes.
-	pub const DepositFactor: Balance = deposit(0, 32);
-	pub const MaxSignatories: u16 = 100;
-}
-
-impl pallet_multisig::Config for Runtime {
-	type Call = Call;
-	type Currency = Balances;
-	type DepositBase = DepositBase;
-	type DepositFactor = DepositFactor;
-	type Event = Event;
-	type MaxSignatories = MaxSignatories;
-	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
 	// One storage item; key size 32, value size 8; .
 	pub const ProxyDepositBase: Balance = deposit(1, 8);
 	// Additional storage item size of 33 bytes.
@@ -322,6 +387,7 @@ pub enum ProxyType {
 	NonTransfer = 1,
 	Governance = 2,
 	CancelProxy = 3,
+	IdentityJudgement = 4,
 }
 
 impl Default for ProxyType {
@@ -371,6 +437,10 @@ impl InstanceFilter<Call> for ProxyType {
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
 			},
+			ProxyType::IdentityJudgement => matches!(
+				c,
+				Call::Identity(pallet_identity::Call::provide_judgement { .. }) | Call::Utility(..)
+			),
 		}
 	}
 
@@ -415,6 +485,49 @@ impl pallet_scheduler::Config for Runtime {
 	type PalletsOrigin = OriginCaller;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type WeightInfo = pallet_scheduler::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
+	pub const DepositBase: Balance = deposit(1, 88);
+	// Additional storage item size of 32 bytes.
+	pub const DepositFactor: Balance = deposit(0, 32);
+	pub const MaxSignatories: u16 = 100;
+}
+
+impl pallet_multisig::Config for Runtime {
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type Event = Event;
+	type MaxSignatories = MaxSignatories;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	// Minimum 4 CENTS/byte
+	pub const BasicDeposit: Balance = deposit(1, 258);
+	pub const FieldDeposit: Balance = deposit(0, 66);
+	pub const SubAccountDeposit: Balance = deposit(1, 53);
+	pub const MaxSubAccounts: u32 = 100;
+	pub const MaxAdditionalFields: u32 = 100;
+	pub const MaxRegistrars: u32 = 20;
+}
+
+impl pallet_identity::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type BasicDeposit = BasicDeposit;
+	type FieldDeposit = FieldDeposit;
+	type SubAccountDeposit = SubAccountDeposit;
+	type MaxSubAccounts = MaxSubAccounts;
+	type MaxAdditionalFields = MaxAdditionalFields;
+	type MaxRegistrars = MaxRegistrars;
+	type Slashed = Treasury;
+	type ForceOrigin = MoreThanHalfCouncil;
+	type RegistrarOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -774,7 +887,12 @@ match_type! {
 	};
 }
 
-pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
+pub type Barrier = (
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	AllowKnownQueryResponses<PolkadotXcm>,
+	AllowSubscriptionsFrom<Everything>,
+);
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
@@ -867,7 +985,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, AnyNetwo
 /// queues.
 pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
@@ -1000,6 +1118,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
+			&CurrencyId::Token(TokenSymbol::DOT) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSToken(TokenSymbol::DOT) => 10 * MILLICENTS,
@@ -1333,6 +1452,13 @@ impl bifrost_lightening_redeem::Config for Runtime {
 	type WeightInfo = weights::bifrost_lightening_redeem::WeightInfo<Runtime>;
 }
 
+impl bifrost_call_switchgear::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_call_switchgear::WeightInfo<Runtime>;
+}
+
 // bifrost runtime end
 
 // zenlink runtime start
@@ -1476,7 +1602,7 @@ construct_runtime! {
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 41,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
@@ -1485,6 +1611,7 @@ construct_runtime! {
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
 		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 52,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 54,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
@@ -1514,6 +1641,7 @@ construct_runtime! {
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 	}
 }
 
@@ -1796,6 +1924,7 @@ impl_runtime_apis! {
 			let mut list = Vec::<BenchmarkList>::new();
 
 			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_bancor, Bancor);
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_vtoken_mint, VtokenMint);
@@ -1803,6 +1932,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
+			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1834,6 +1964,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
+			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_bancor, Bancor);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
@@ -1841,6 +1972,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
+			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
@@ -1873,8 +2005,8 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	#[cfg(feature = "try-runtime")]
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Asgard `on_runtime_upgrade`...");
-
-		RuntimeBlockWeights::get().max_block
+		let _ = PolkadotXcm::force_default_xcm_version(Origin::root(), Some(2));
+		RocksDbWeight::get().writes(1);
 	}
 }
 

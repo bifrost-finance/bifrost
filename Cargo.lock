@@ -154,6 +154,7 @@ version = "0.8.0"
 dependencies = [
  "bifrost-bancor",
  "bifrost-bancor-runtime-api",
+ "bifrost-call-switchgear",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",
@@ -201,6 +202,7 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-elections-phragmen",
+ "pallet-identity",
  "pallet-indices",
  "pallet-membership",
  "pallet-multisig",
@@ -208,6 +210,7 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-society",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-tips",
@@ -665,6 +668,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-call-switchgear"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=7969776ff70f1d361daae72f3e3cecfdc3e9342d)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=7969776ff70f1d361daae72f3e3cecfdc3e9342d)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
@@ -815,6 +839,7 @@ dependencies = [
 name = "bifrost-runtime"
 version = "0.8.0"
 dependencies = [
+ "bifrost-call-switchgear",
  "bifrost-flexible-fee",
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-lightening-redeem",
@@ -860,12 +885,15 @@ dependencies = [
  "pallet-collective",
  "pallet-democracy",
  "pallet-elections-phragmen",
+ "pallet-identity",
  "pallet-indices",
  "pallet-membership",
  "pallet-multisig",
+ "pallet-proxy",
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
+ "pallet-society",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-transaction-payment",
@@ -976,7 +1004,6 @@ dependencies = [
  "pallet-multisig",
  "pallet-xcm",
  "parity-scale-codec",
- "polkadot-parachain",
  "scale-info",
  "smallvec",
  "sp-arithmetic",

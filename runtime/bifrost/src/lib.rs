@@ -31,12 +31,12 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Contains, Everything, IsInVec, Nothing, Randomness},
+	traits::{Contains, Everything, InstanceFilter, IsInVec, Nothing, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
 	},
-	PalletId, StorageValue,
+	PalletId, RuntimeDebug, StorageValue,
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
@@ -77,7 +77,7 @@ use bifrost_runtime_common::{
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
-use codec::Encode;
+use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
@@ -103,9 +103,10 @@ use sp_arithmetic::Percent;
 use sp_runtime::traits::ConvertInto;
 use xcm::latest::prelude::*;
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
-	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
-	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
+	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
+	FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser, ParentIsDefault,
+	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
 	TakeWeightCredit,
 };
@@ -182,35 +183,83 @@ parameter_types! {
 
 pub struct CallFilter;
 impl Contains<Call> for CallFilter {
-	fn contains(c: &Call) -> bool {
-		match *c {
-			// call banned
-
-			// ZLK transfer
-			Call::Currencies(orml_currencies::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) => false,
-			Call::Tokens(orml_tokens::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) => false,
-			Call::Tokens(orml_tokens::Call::transfer_all {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				keep_alive: _,
-			}) => false,
-			Call::Tokens(orml_tokens::Call::transfer_keep_alive {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) => false,
-
-			Call::PhragmenElection(_) => false,
-			_ => true,
+	fn contains(call: &Call) -> bool {
+		let is_core_call =
+			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
+		if is_core_call {
+			// always allow core call
+			return true;
 		}
+
+		let is_switched_off =
+			bifrost_call_switchgear::SwitchOffTransactionFilter::<Runtime>::contains(call);
+		if is_switched_off {
+			// no switched off call
+			return false;
+		}
+
+		// disable transfer
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
+		if is_transfer {
+			let is_disabled = match *call {
+				// orml-currencies module
+				Call::Currencies(orml_currencies::Call::transfer {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Currencies(orml_currencies::Call::transfer_native_currency {
+					dest: _,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				// orml-tokens module
+				Call::Tokens(orml_tokens::Call::transfer { dest: _, currency_id, amount: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&currency_id,
+					),
+				Call::Tokens(orml_tokens::Call::transfer_all {
+					dest: _,
+					currency_id,
+					keep_alive: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Tokens(orml_tokens::Call::transfer_keep_alive {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				// Balances module
+				Call::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				Call::Balances(pallet_balances::Call::transfer_keep_alive {
+					dest: _,
+					value: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				_ => false,
+			};
+
+			if is_disabled {
+				// no switched off call
+				return false;
+			}
+		}
+
+		true
 	}
 }
 
@@ -297,6 +346,136 @@ impl pallet_utility::Config for Runtime {
 }
 
 parameter_types! {
+	// One storage item; key size 32, value size 8; .
+	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	// Additional storage item size of 33 bytes.
+	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub const MaxProxies: u16 = 32;
+	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+	pub const MaxPending: u16 = 32;
+}
+
+/// The type used to represent the kinds of proxying allowed.
+#[derive(
+	Copy,
+	Clone,
+	Eq,
+	PartialEq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	RuntimeDebug,
+	MaxEncodedLen,
+	scale_info::TypeInfo,
+)]
+pub enum ProxyType {
+	Any = 0,
+	NonTransfer = 1,
+	Governance = 2,
+	CancelProxy = 3,
+	IdentityJudgement = 4,
+}
+
+impl Default for ProxyType {
+	fn default() -> Self {
+		Self::Any
+	}
+}
+impl InstanceFilter<Call> for ProxyType {
+	fn filter(&self, c: &Call) -> bool {
+		match self {
+			ProxyType::Any => true,
+			ProxyType::NonTransfer => matches!(
+				c,
+				Call::System(..) |
+				Call::Scheduler(..) |
+				Call::Timestamp(..) |
+				Call::Indices(pallet_indices::Call::claim{..}) |
+				Call::Indices(pallet_indices::Call::free{..}) |
+				Call::Indices(pallet_indices::Call::freeze{..}) |
+				// Specifically omitting Indices `transfer`, `force_transfer`
+				// Specifically omitting the entire Balances pallet
+				Call::Authorship(..) |
+				Call::Session(..) |
+				Call::Democracy(..) |
+				Call::Council(..) |
+				Call::TechnicalCommittee(..) |
+				Call::PhragmenElection(..) |
+				Call::TechnicalMembership(..) |
+				Call::Treasury(..) |
+				Call::Bounties(..) |
+				Call::Tips(..) |
+				Call::Vesting(pallet_vesting::Call::vest{..}) |
+				Call::Vesting(pallet_vesting::Call::vest_other{..}) |
+				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
+				Call::Utility(..) |
+				Call::Proxy(..) |
+				Call::Multisig(..)
+			),
+			ProxyType::Governance => matches!(
+				c,
+				Call::Democracy(..) |
+					Call::Council(..) | Call::TechnicalCommittee(..) |
+					Call::PhragmenElection(..) |
+					Call::Treasury(..) | Call::Bounties(..) |
+					Call::Tips(..) | Call::Utility(..)
+			),
+			ProxyType::CancelProxy => {
+				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
+			},
+			ProxyType::IdentityJudgement => matches!(
+				c,
+				Call::Identity(pallet_identity::Call::provide_judgement { .. }) | Call::Utility(..)
+			),
+		}
+	}
+
+	fn is_superset(&self, o: &Self) -> bool {
+		match (self, o) {
+			(x, y) if x == y => true,
+			(ProxyType::Any, _) => true,
+			(_, ProxyType::Any) => false,
+			(ProxyType::NonTransfer, _) => true,
+			_ => false,
+		}
+	}
+}
+
+impl pallet_proxy::Config for Runtime {
+	type AnnouncementDepositBase = AnnouncementDepositBase;
+	type AnnouncementDepositFactor = AnnouncementDepositFactor;
+	type Call = Call;
+	type CallHasher = BlakeTwo256;
+	type Currency = Balances;
+	type Event = Event;
+	type MaxPending = MaxPending;
+	type MaxProxies = MaxProxies;
+	type ProxyDepositBase = ProxyDepositBase;
+	type ProxyDepositFactor = ProxyDepositFactor;
+	type ProxyType = ProxyType;
+	type WeightInfo = pallet_proxy::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
+		RuntimeBlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 50;
+}
+
+impl pallet_scheduler::Config for Runtime {
+	type Call = Call;
+	type Event = Event;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type ScheduleOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
+}
+
+parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
 	pub const DepositBase: Balance = deposit(1, 88);
 	// Additional storage item size of 32 bytes.
@@ -315,20 +494,28 @@ impl pallet_multisig::Config for Runtime {
 }
 
 parameter_types! {
-	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(80) *
-		RuntimeBlockWeights::get().max_block;
-	pub const MaxScheduledPerBlock: u32 = 50;
+	// Minimum 4 CENTS/byte
+	pub const BasicDeposit: Balance = deposit(1, 258);
+	pub const FieldDeposit: Balance = deposit(0, 66);
+	pub const SubAccountDeposit: Balance = deposit(1, 53);
+	pub const MaxSubAccounts: u32 = 100;
+	pub const MaxAdditionalFields: u32 = 100;
+	pub const MaxRegistrars: u32 = 20;
 }
 
-impl pallet_scheduler::Config for Runtime {
-	type Call = Call;
+impl pallet_identity::Config for Runtime {
 	type Event = Event;
-	type MaxScheduledPerBlock = MaxScheduledPerBlock;
-	type MaximumWeight = MaximumSchedulerWeight;
-	type Origin = Origin;
-	type PalletsOrigin = OriginCaller;
-	type ScheduleOrigin = EnsureRoot<AccountId>;
-	type WeightInfo = weights::pallet_scheduler::WeightInfo<Runtime>;
+	type Currency = Balances;
+	type BasicDeposit = BasicDeposit;
+	type FieldDeposit = FieldDeposit;
+	type SubAccountDeposit = SubAccountDeposit;
+	type MaxSubAccounts = MaxSubAccounts;
+	type MaxAdditionalFields = MaxAdditionalFields;
+	type MaxRegistrars = MaxRegistrars;
+	type Slashed = Treasury;
+	type ForceOrigin = MoreThanHalfCouncil;
+	type RegistrarOrigin = MoreThanHalfCouncil;
+	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -683,7 +870,12 @@ match_type! {
 	};
 }
 
-pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
+pub type Barrier = (
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	AllowKnownQueryResponses<PolkadotXcm>,
+	AllowSubscriptionsFrom<Everything>,
+);
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	Currencies,
@@ -776,7 +968,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNet
 /// queues.
 pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
@@ -909,6 +1101,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
+			&CurrencyId::Token(TokenSymbol::DOT) => 10 * MILLICENTS,
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
 			&CurrencyId::VSToken(TokenSymbol::DOT) => 10 * MILLICENTS,
@@ -1182,6 +1375,13 @@ impl bifrost_lightening_redeem::Config for Runtime {
 	type WeightInfo = weights::bifrost_lightening_redeem::WeightInfo<Runtime>;
 }
 
+impl bifrost_call_switchgear::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_call_switchgear::WeightInfo<Runtime>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1324,14 +1524,16 @@ construct_runtime! {
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 41,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
 		// utilities
 		Utility: pallet_utility::{Pallet, Call, Event} = 50,
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 52,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 54,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
@@ -1356,6 +1558,7 @@ construct_runtime! {
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 	}
 }
 
@@ -1609,6 +1812,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
+			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1646,6 +1850,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
+			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
@@ -1677,7 +1882,8 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	#[cfg(feature = "try-runtime")]
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Bifrost `on_runtime_upgrade`...");
-		RuntimeBlockWeights::get().max_block
+		let _ = PolkadotXcm::force_default_xcm_version(Origin::root(), Some(2));
+		RocksDbWeight::get().writes(1)
 	}
 }
 

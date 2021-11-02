@@ -21,6 +21,7 @@
 //! A list of the different weight modules for our runtime.
 
 pub mod bifrost_bancor;
+pub mod bifrost_call_switchgear;
 pub mod bifrost_flexible_fee;
 pub mod bifrost_lightening_redeem;
 pub mod bifrost_minter_reward;

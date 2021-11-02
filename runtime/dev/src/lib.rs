@@ -1740,6 +1740,7 @@ impl_runtime_apis! {
 			let mut list = Vec::<BenchmarkList>::new();
 
 			list_benchmark!(list, extra, bifrost_salp, Salp);
+			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_bancor, Bancor);
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_vtoken_mint, VtokenMint);
@@ -1775,6 +1776,7 @@ impl_runtime_apis! {
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
+			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_bancor, Bancor);
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vtoken_mint, VtokenMint);
