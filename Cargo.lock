@@ -976,7 +976,6 @@ dependencies = [
  "pallet-multisig",
  "pallet-xcm",
  "parity-scale-codec",
- "polkadot-parachain",
  "scale-info",
  "smallvec",
  "sp-arithmetic",

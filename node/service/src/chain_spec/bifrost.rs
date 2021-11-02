@@ -24,8 +24,9 @@ use std::{
 use bifrost_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, CouncilConfig, CouncilMembershipConfig, DemocracyConfig,
-	GenesisConfig, IndicesConfig, ParachainInfoConfig, SessionConfig, SystemConfig,
-	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig, SessionConfig,
+	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
@@ -104,6 +105,7 @@ pub fn bifrost_genesis(
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
 		tokens: TokensConfig { balances: tokens },
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 	}
 }
 
