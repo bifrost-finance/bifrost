@@ -120,7 +120,7 @@ benchmarks! {
 		for i in 0 .. k {
 			caller = account("contributor", i, 0);
 			contribute_fund::<T>(&caller,fund_index);
-			Salp::<T>::confirm_contribute(
+			let _ = Salp::<T>::confirm_contribute(
 				RawOrigin::Root.into(),
 				caller.clone(),
 				fund_index,

@@ -32,41 +32,41 @@ benchmarks! {
 		let origin = T::ControlOrigin::successful_origin();
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let call = Call::<T>::add_to_issue_whitelist(currency_id, account);
+		let call = Call::<T>::add_to_issue_whitelist { currency_id, account };
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_from_issue_whitelist {
 		let origin = T::ControlOrigin::successful_origin();
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let add_call = Call::<T>::add_to_issue_whitelist(currency_id, account.clone());
+		let add_call = Call::<T>::add_to_issue_whitelist { currency_id, account: account.clone() };
 		add_call.dispatch_bypass_filter(origin.clone())?;
 
-		let remove_call = Call::<T>::remove_from_issue_whitelist(currency_id, account);
+		let remove_call = Call::<T>::remove_from_issue_whitelist { currency_id, account };
 	}: {remove_call.dispatch_bypass_filter(origin)?}
 
 	add_to_transfer_whitelist {
 		let origin = T::ControlOrigin::successful_origin();
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let call = Call::<T>::add_to_transfer_whitelist(currency_id, account);
+		let call = Call::<T>::add_to_transfer_whitelist { currency_id, account };
 	}: {call.dispatch_bypass_filter(origin)?}
 
 	remove_from_transfer_whitelist {
 		let origin = T::ControlOrigin::successful_origin();
 		let account: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let add_call = Call::<T>::add_to_transfer_whitelist(currency_id, account.clone());
+		let add_call = Call::<T>::add_to_transfer_whitelist { currency_id, account: account.clone() };
 		add_call.dispatch_bypass_filter(origin.clone())?;
 
-		let remove_call = Call::<T>::remove_from_transfer_whitelist(currency_id, account);
+		let remove_call = Call::<T>::remove_from_transfer_whitelist { currency_id, account };
 	}: {remove_call.dispatch_bypass_filter(origin)?}
 
 	issue {
 		let origin = T::ControlOrigin::successful_origin();
 		let caller: T::AccountId = whitelisted_caller();
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let add_call = Call::<T>::add_to_issue_whitelist(currency_id.clone(), caller.clone());
+		let add_call = Call::<T>::add_to_issue_whitelist { currency_id: currency_id.clone(), account: caller.clone() };
 		add_call.dispatch_bypass_filter(origin.clone())?;
 
 		let original_balance = T::MultiCurrency::free_balance(currency_id.clone(), &caller);
@@ -82,7 +82,7 @@ benchmarks! {
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
 
 		// add caller to the transfer whitelist
-		let add_transfer_call = Call::<T>::add_to_transfer_whitelist(currency_id.clone(), caller.clone());
+		let add_transfer_call = Call::<T>::add_to_transfer_whitelist { currency_id: currency_id.clone(), account: caller.clone() };
 		add_transfer_call.dispatch_bypass_filter(origin.clone())?;
 
 		// transfer some ksm from caller account to receiver account

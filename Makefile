@@ -91,9 +91,29 @@ format:
 test-benchmarking:
 	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
 
-.PHONY: run-benchmarking
-run-benchmarking:
-	./scripts/run_all_benches.sh
+.PHONY: generate-bifrost-weights
+generate-bifrost-weights:
+	bash ./scripts/generate-weights.sh bifrost
+
+.PHONY: generate-asgard-weights
+generate-asgard-weights:
+	bash ./scripts/generate-weights.sh asgard
+
+.PHONY: generate-all-weights
+generate-all-weights:
+	bash ./scripts/generate-weights.sh asgard bifrost
+
+.PHONY: build-asgard-release-with-bench
+build-asgard-release-with-bench: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-asgard-runtime,runtime-benchmarks" --release
+
+.PHONY: build-bifrost-release-with-bench
+build-bifrost-release-with-bench: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-bifrost-runtime,runtime-benchmarks" --release
+
+.PHONY: build-all-release-with-bench
+build-all-release-with-bench: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
 
 # Deploy
 .PHONY: deploy-asgard-local

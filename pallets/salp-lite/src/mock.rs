@@ -247,10 +247,6 @@ impl salp::Config for Test {
 
 pub struct SalpWeightInfo;
 impl WeightInfo for SalpWeightInfo {
-	fn contribute() -> Weight {
-		0
-	}
-
 	fn unlock() -> Weight {
 		0
 	}
