@@ -1808,7 +1808,6 @@ impl_runtime_apis! {
 
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_salp, Salp);
-			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			// list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
@@ -1847,7 +1846,7 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
-			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
+			// add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
