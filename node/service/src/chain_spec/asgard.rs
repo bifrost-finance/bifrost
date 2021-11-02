@@ -20,8 +20,8 @@ use asgard_runtime::{
 	constants::{currency::DOLLARS, time::DAYS},
 	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
-	ParachainInfoConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
-	TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
+	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SudoConfig, SystemConfig,
+	TechnicalCommitteeConfig, TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
@@ -123,6 +123,7 @@ pub fn asgard_genesis(
 				(CurrencyId::Token(TokenSymbol::KSM), 7 * DAYS),
 			],
 		},
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 	}
 }
 
