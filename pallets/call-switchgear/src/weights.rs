@@ -16,24 +16,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
+#![allow(unused_parens)]
+#![allow(unused_imports)]
 
-//! A list of the different weight modules for our runtime.
+use frame_support::{
+	traits::Get,
+	weights::{constants::RocksDbWeight, Weight},
+};
+use sp_std::marker::PhantomData;
 
-pub mod bifrost_call_switchgear;
-pub mod bifrost_flexible_fee;
-pub mod bifrost_lightening_redeem;
-pub mod bifrost_liquidity_mining;
-pub mod bifrost_salp;
-pub mod bifrost_salp_lite;
-pub mod bifrost_token_issuer;
-pub mod frame_system;
-pub mod orml_tokens;
-pub mod pallet_balances;
-pub mod pallet_bounties;
-pub mod pallet_indices;
-pub mod pallet_scheduler;
-pub mod pallet_timestamp;
-pub mod pallet_treasury;
-pub mod pallet_utility;
-pub mod pallet_vesting;
+/// Weight functions needed for the pallet.
+pub trait WeightInfo {
+	fn switchoff_transaction() -> Weight;
+	fn switchon_transaction() -> Weight;
+	fn disable_transfers() -> Weight;
+	fn enable_transfers() -> Weight;
+}
+
+// For backwards compatibility and tests
+impl WeightInfo for () {
+	fn switchoff_transaction() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn switchon_transaction() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn disable_transfers() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn enable_transfers() -> Weight {
+		(50_000_000 as Weight)
+	}
+}

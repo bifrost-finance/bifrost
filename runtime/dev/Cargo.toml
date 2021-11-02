@@ -205,6 +205,7 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
+	"bifrost-salp-lite/runtime-benchmarks",
 	"bifrost-bancor/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-vtoken-mint/runtime-benchmarks",
