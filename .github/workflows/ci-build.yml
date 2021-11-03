@@ -43,26 +43,26 @@ jobs:
           fields: repo,author,eventName,workflow,ref,commit
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_PULLREQUEST_WEBHOOK_URL }}
-  bench:
-    if: "!contains(github.event.commits[0].message, '[skip ci]')"
-    runs-on: [self-hosted, bench]
-    steps:
-      - name: Check to latest commit
-        uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly-2021-09-12
-          components: rustfmt
-          target: wasm32-unknown-unknown
-          default: true
-      - name: Generate WeightInfo Files
-        run: make generate-all-weights
-      - name: Commit Automatically
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: 🤖 ($WEIGHT) Generate weightInfo files automatically
-#          file_pattern: runtime/**/*.rs
+#   bench:
+#     if: "!contains(github.event.commits[0].message, '[skip ci]')"
+#     runs-on: [self-hosted, bench]
+#     steps:
+#       - name: Check to latest commit
+#         uses: actions/checkout@v2
+#         with:
+#           submodules: recursive
+#       - name: Install toolchain
+#         uses: actions-rs/toolchain@v1
+#         with:
+#           profile: minimal
+#           toolchain: nightly-2021-09-12
+#           components: rustfmt
+#           target: wasm32-unknown-unknown
+#           default: true
+#       - name: Generate WeightInfo Files
+#         run: make generate-all-weights
+#       - name: Commit Automatically
+#         uses: stefanzweifel/git-auto-commit-action@v4
+#         with:
+#           commit_message: 🤖 ($WEIGHT) Generate weightInfo files automatically
+# #          file_pattern: runtime/**/*.rs
