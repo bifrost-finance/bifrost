@@ -147,6 +147,10 @@ build-bifrost-wasm:
 build-asgard-wasm:
 	.maintain/build-wasm.sh asgard
 
+.PHONY: check-try-runtime
+check-try-runtime:
+	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
+
 .PHONY: try-bifrost-runtime-upgrade
 try-bifrost-runtime-upgrade:
 	./scripts/try-runtime.sh bifrost
