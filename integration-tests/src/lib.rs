@@ -20,6 +20,8 @@
 #[cfg(feature = "with-asgard-runtime")]
 mod integration_tests;
 #[cfg(feature = "with-asgard-runtime")]
+mod kusama_cross_chain_transact;
+#[cfg(feature = "with-asgard-runtime")]
 mod kusama_cross_chain_transfer;
 #[cfg(feature = "with-asgard-runtime")]
 mod kusama_test_net;
