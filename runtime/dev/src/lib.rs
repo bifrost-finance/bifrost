@@ -140,8 +140,8 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("asgard-dev"),
-	impl_name: create_runtime_str!("asgard-dev"),
+	spec_name: create_runtime_str!("bifrost-dev"),
+	impl_name: create_runtime_str!("bifrost-dev"),
 	authoring_version: 1,
 	spec_version: 1001,
 	impl_version: 0,
@@ -191,10 +191,17 @@ parameter_types! {
 }
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+}
+
+parameter_types! {
+	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
+	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
 
 impl frame_system::Config for Runtime {
@@ -596,7 +603,6 @@ parameter_types! {
 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(2);
-	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
@@ -1094,7 +1100,6 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 
 parameter_types! {
 	pub const MinContribution: Balance = 1 * DOLLARS;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1198,7 +1203,6 @@ parameter_types! {
 	pub const MinimumDuration: BlockNumber = DAYS;
 	pub const MaximumApproved: u32 = 8;
 	pub const MaximumOptionRewards: u32 = 7;
-	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
 }
 
 impl bifrost_liquidity_mining::Config for Runtime {
@@ -1215,6 +1219,30 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
 	type WeightInfo = ();
+}
+
+impl bifrost_token_issuer::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_token_issuer::WeightInfo<Runtime>;
+}
+
+impl bifrost_lightening_redeem::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type PalletId = LighteningRedeemPalletId;
+	type WeightInfo = weights::bifrost_lightening_redeem::WeightInfo<Runtime>;
+}
+
+impl bifrost_call_switchgear::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_call_switchgear::WeightInfo<Runtime>;
 }
 
 // bifrost runtime end
@@ -1426,12 +1454,12 @@ construct_runtime! {
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 
 		// Third party modules
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 61,
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
 
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
@@ -1441,7 +1469,10 @@ construct_runtime! {
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
+		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
+		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 	}
 }
 

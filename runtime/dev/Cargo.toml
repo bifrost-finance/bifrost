@@ -97,6 +97,9 @@ bifrost-vtoken-mint = { path = "../../pallets/vtoken-mint", default-features = f
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
+bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
+bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
+bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
@@ -172,6 +175,14 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"polkadot-runtime-parachains/std",
+	"orml-currencies/std",
+	"orml-traits/std",
+	"orml-tokens/std",
+	"orml-xtokens/std",
+	"orml-xcm/std",
+	"orml-xcm-support/std",
+	"zenlink-protocol/std",
+	"zenlink-protocol-runtime-api/std",
 	"bifrost-bancor/std",
 	"bifrost-bancor-runtime-api/std",
 	"bifrost-flexible-fee/std",
@@ -184,16 +195,11 @@ std = [
 	"bifrost-salp-lite-rpc-runtime-api/std",
 	"bifrost-vsbond-auction/std",
 	"bifrost-vtoken-mint/std",
+	"bifrost-token-issuer/std",
+	"bifrost-lightening-redeem/std",
 	"xcm-support/std",
-	"orml-currencies/std",
-	"orml-traits/std",
-	"orml-tokens/std",
-	"orml-xtokens/std",
-	"orml-xcm/std",
-	"orml-xcm-support/std",
-	"zenlink-protocol/std",
-	"zenlink-protocol-runtime-api/std",
 	"bifrost-liquidity-mining/std",
+	"bifrost-call-switchgear/std",
 ]
 
 runtime-benchmarks = [
