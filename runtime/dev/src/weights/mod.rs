@@ -21,10 +21,13 @@
 //! A list of the different weight modules for our runtime.
 
 pub mod bifrost_bancor;
+pub mod bifrost_call_switchgear;
 pub mod bifrost_flexible_fee;
+pub mod bifrost_lightening_redeem;
 pub mod bifrost_minter_reward;
 pub mod bifrost_salp;
 pub mod bifrost_salp_lite;
+pub mod bifrost_token_issuer;
 pub mod bifrost_vsbond_auction;
 pub mod bifrost_vtoken_mint;
 pub mod pallet_vesting;
