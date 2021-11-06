@@ -6,7 +6,7 @@ authors = ["Bifrost Developers"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false }
 paste = "1.0.5"
 smallvec = "1.6.1"
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
