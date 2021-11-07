@@ -18,36 +18,22 @@
 
 use std::sync::Arc;
 
+use asgard_runtime::AuraId;
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
-pub use dev_runtime;
 use futures::StreamExt;
-use jsonrpc_core::IoHandler;
-use node_rpc::{self, RpcExtension};
 use sc_consensus::LongestChain;
 use sc_executor::NativeElseWasmExecutor;
-use sc_rpc::Metadata;
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, TaskManager};
 use sc_telemetry::TelemetryWorker;
+use sp_api::ConstructRuntimeApi;
+use sp_runtime::traits::BlakeTwo256;
+use sp_trie::PrefixedMemoryDB;
 
-#[cfg(feature = "with-dev-runtime")]
-pub struct DevRuntimeExecutor;
-#[cfg(feature = "with-dev-runtime")]
-impl sc_executor::NativeExecutionDispatch for DevRuntimeExecutor {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		dev_runtime::api::dispatch(method, data)
-	}
-
-	fn native_version() -> sc_executor::NativeVersion {
-		dev_runtime::native_version()
-	}
-}
-
-pub type Block = dev_runtime::Block;
-pub type Executor = DevRuntimeExecutor;
-pub type RuntimeApi = dev_runtime::RuntimeApi;
-pub type FullClient = sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
+pub type Block = node_primitives::Block;
+pub type Executor = crate::AsgardExecutor;
+pub type RuntimeApi = crate::asgard_runtime::RuntimeApi;
+pub type FullClient<RuntimeApi, ExecutorDispatch> =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
 pub type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -64,19 +50,28 @@ pub fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInhe
 /// Use this function if you don't actually need the full service, but just the partial in order to
 /// be able to perform chain operations.
 #[allow(clippy::type_complexity)]
-pub fn new_partial(
+pub fn new_partial<RuntimeApi, Executor>(
 	config: &Configuration,
 ) -> Result<
 	PartialComponents<
-		FullClient,
+		FullClient<RuntimeApi, Executor>,
 		FullBackend,
 		FullSelectChain,
-		sc_consensus::DefaultImportQueue<Block, FullClient>,
-		sc_transaction_pool::FullPool<Block, FullClient>,
+		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
 		(),
 	>,
 	ServiceError,
-> {
+>
+where
+	RuntimeApi:
+		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
+	RuntimeApi::RuntimeApi: crate::RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>,
+	>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
+{
 	let telemetry = config
 		.telemetry_endpoints
 		.clone()
@@ -144,7 +139,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		select_chain,
 		transaction_pool,
 		other: (),
-	} = new_partial(&config)?;
+	} = new_partial::<RuntimeApi, Executor>(&config)?;
 
 	let (network, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -212,12 +207,20 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	}
 
 	let rpc_extensions_builder = {
-		Box::new(move |_deny_unsafe, _| -> Result<IoHandler<Metadata>, _> {
-			return Ok(RpcExtension::default());
+		let client = client.clone();
+		let transaction_pool = transaction_pool.clone();
+		Box::new(move |deny_unsafe, _| {
+			let deps = crate::rpc::FullDeps {
+				client: client.clone(),
+				pool: transaction_pool.clone(),
+				deny_unsafe,
+			};
+
+			Ok(crate::rpc::create_asgard_rpc(deps))
 		})
 	};
 
-	let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		network,
 		client,
 		keystore: keystore_container.sync_keystore(),

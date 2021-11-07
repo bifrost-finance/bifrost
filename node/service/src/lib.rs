@@ -27,6 +27,10 @@ pub use asgard_runtime;
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
 use node_rpc as rpc;
+mod client;
+pub use client::RuntimeApiCollection;
+use sc_executor::NativeElseWasmExecutor;
+use sc_service::TFullBackend;
 
 #[cfg(feature = "with-asgard-runtime")]
 pub struct AsgardExecutor;
@@ -58,8 +62,13 @@ impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
 	}
 }
 
-#[cfg(feature = "with-dev-runtime")]
+#[cfg(feature = "with-asgard-runtime")]
 pub mod dev;
+
+pub type FullBackend = TFullBackend<Block>;
+
+pub type FullClient<RuntimeApi, ExecutorDispatch> =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {
@@ -70,7 +79,7 @@ pub trait IdentifyVariant {
 	fn is_bifrost(&self) -> bool;
 
 	/// Returns if this is a configuration for the `Dev` network.
-	fn is_asgard_dev(&self) -> bool;
+	fn is_dev(&self) -> bool;
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
@@ -82,8 +91,8 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 		self.id().starts_with("bifrost") || self.id().starts_with("bnc")
 	}
 
-	fn is_asgard_dev(&self) -> bool {
-		self.id().starts_with("asgard-dev") || self.id().starts_with("dev")
+	fn is_dev(&self) -> bool {
+		self.id().starts_with("dev")
 	}
 }
 
@@ -91,5 +100,4 @@ pub const BIFROST_RUNTIME_NOT_AVAILABLE: &str =
 	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.";
 pub const ASGARD_RUNTIME_NOT_AVAILABLE: &str =
 	"Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.";
-pub const DEV_RUNTIME_NOT_AVAILABLE: &str =
-	"Dev runtime is not available. Please compile the node with `--features with-dev-runtime` to enable it.";
+pub const UNKNOWN_RUNTIME: &str = "Unknown runtime";

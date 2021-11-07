@@ -73,8 +73,8 @@ fn load_spec(
 		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-dev-runtime")]
-		"dev" => Box::new(service::chain_spec::dev::development_config(para_id)?),
+		#[cfg(feature = "with-asgard-runtime")]
+		"dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
@@ -91,13 +91,6 @@ fn load_spec(
 				}
 				#[cfg(not(feature = "with-bifrost-runtime"))]
 				return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
-			} else if path.to_str().map(|s| s.contains("asgard-dev")) == Some(true) {
-				#[cfg(feature = "with-dev-runtime")]
-				{
-					Box::new(service::chain_spec::dev::ChainSpec::from_json_file(path)?)
-				}
-				#[cfg(not(feature = "with-dev-runtime"))]
-				return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				return Err("Unknown runtime is not available.".into());
 			}
@@ -141,7 +134,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if spec.is_asgard() {
+		if spec.is_asgard() || spec.is_dev() {
 			#[cfg(feature = "with-asgard-runtime")]
 			{
 				&service::collator::asgard_runtime::VERSION
@@ -156,12 +149,7 @@ impl SubstrateCli for Cli {
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
 		} else {
-			#[cfg(feature = "with-dev-runtime")]
-			{
-				&service::dev::dev_runtime::VERSION
-			}
-			#[cfg(not(feature = "with-dev-runtime"))]
-			panic!("{}", service::DEV_RUNTIME_NOT_AVAILABLE);
+			panic!("{}", "unknown runtime!");
 		}
 	}
 }
@@ -240,14 +228,6 @@ macro_rules! construct_async_run {
 				let task_manager = $components.task_manager;
 				{ $( $code )* }.map(|v| (v, task_manager))
 			});
-			#[cfg(feature = "with-dev-runtime")]
-			return runner.async_run(|$config| {
-				let $components = crate::service::dev::new_partial(
-					&$config,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			});
 	}}
 }
 
@@ -265,7 +245,7 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_asgard() {
+		} else if $chain_spec.is_asgard() || $chain_spec.is_dev() {
 			#[cfg(feature = "with-asgard-runtime")]
 			#[allow(unused_imports)]
 			use asgard_runtime::{Block, RuntimeApi};
@@ -277,8 +257,9 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-		} else {
-			return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
+		}
+		else {
+			return Err(service::UNKNOWN_RUNTIME.into());
 		}
 	}
 }
@@ -304,8 +285,8 @@ pub fn run() -> Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
-				if config.chain_spec.is_asgard_dev() {
-					#[cfg(feature = "with-dev-runtime")]
+				if config.chain_spec.is_dev() {
+					#[cfg(feature = "with-asgard-runtime")]
 					{
 						return service::dev::new_full(config).map_err(Into::into);
 					}

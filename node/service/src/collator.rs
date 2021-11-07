@@ -20,11 +20,8 @@ use std::sync::Arc;
 
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
-use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
 #[cfg(feature = "with-bifrost-runtime")]
 pub use bifrost_runtime;
-use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;
 use cumulus_client_consensus_aura::{
 	build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
 };
@@ -34,7 +31,6 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use node_primitives::PoolId;
 pub use node_primitives::{
 	AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId,
 };
@@ -49,7 +45,8 @@ use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use substrate_prometheus_endpoint::Registry;
-use zenlink_protocol_runtime_api::ZenlinkProtocolApi as ZenlinkProtocolRuntimeApi;
+
+use crate::IdentifyVariant;
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
@@ -81,14 +78,10 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>,
+	RuntimeApi::RuntimeApi: crate::RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<crate::FullBackend, Block>,
+	>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIQ: FnOnce(
@@ -185,21 +178,10 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ FeeRuntimeApi<Block, AccountId>
-		+ LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
-		+ SalpRuntimeApi<Block, BifrostParaId, AccountId>
-		+ ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	RuntimeApi::RuntimeApi: crate::RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<crate::FullBackend, Block>,
+	>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	RB: Fn(
@@ -279,6 +261,8 @@ where
 			warp_sync: None,
 		})?;
 
+	let is_bifrost = parachain_config.chain_spec.is_bifrost();
+
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let transaction_pool = transaction_pool.clone();
@@ -289,8 +273,12 @@ where
 				pool: transaction_pool.clone(),
 				deny_unsafe,
 			};
-
-			Ok(crate::rpc::create_full(deps))
+			let rpc = if is_bifrost {
+				crate::rpc::create_bifrost_rpc(deps)
+			} else {
+				crate::rpc::create_asgard_rpc(deps)
+			};
+			Ok(rpc)
 		})
 	};
 
@@ -378,15 +366,10 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>,
+	RuntimeApi::RuntimeApi: crate::RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<crate::FullBackend, Block>,
+	>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
@@ -436,22 +419,10 @@ where
 		+ Send
 		+ Sync
 		+ 'static,
-	RuntimeApi::RuntimeApi: sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
-		+ sp_api::Metadata<Block>
-		+ sp_session::SessionKeys<Block>
-		+ sp_api::ApiExt<
-			Block,
-			StateBackend = sc_client_api::StateBackendFor<TFullBackend<Block>, Block>,
-		> + sp_offchain::OffchainWorkerApi<Block>
-		+ sp_block_builder::BlockBuilder<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>
-		+ sp_consensus_aura::AuraApi<Block, AuraId>
-		+ pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>
-		+ substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>
-		+ FeeRuntimeApi<Block, AccountId>
-		+ LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
-		+ SalpRuntimeApi<Block, BifrostParaId, AccountId>
-		+ ZenlinkProtocolRuntimeApi<Block, AccountId>,
+	RuntimeApi::RuntimeApi: crate::RuntimeApiCollection<
+		StateBackend = sc_client_api::StateBackendFor<crate::FullBackend, Block>,
+	>,
+	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	sc_client_api::StateBackendFor<TFullBackend<Block>, Block>: sp_api::StateBackend<BlakeTwo256>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
