@@ -1456,7 +1456,7 @@ impl orml_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 parameter_types! {

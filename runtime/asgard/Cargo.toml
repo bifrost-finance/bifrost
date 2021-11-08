@@ -112,6 +112,7 @@ orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+orml-benchmarking = { version = "0.4.1-dev", default-features = false, optional = true }
 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
@@ -206,6 +207,7 @@ std = [
 	"orml-unknown-tokens/std",
 	"orml-xcm/std",
 	"orml-xcm-support/std",
+	"orml-benchmarking/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 ]
@@ -229,6 +231,7 @@ runtime-benchmarks = [
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
+	"orml-benchmarking"
 ]
 
 try-runtime = [
