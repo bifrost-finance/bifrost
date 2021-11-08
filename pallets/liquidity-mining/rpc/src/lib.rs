@@ -28,7 +28,7 @@ use node_primitives::{Balance, CurrencyId};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT, SaturatedConversion};
+use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 #[rpc]
 pub trait LiquidityMiningRpcApi<BlockHash, AccountId, PoolId> {
@@ -77,7 +77,7 @@ where
 		match rs {
 			Ok(rewards) => Ok(rewards
 				.into_iter()
-				.map(|(token, amount)| (token, NumberOrHex::Number(amount.saturated_into())))
+				.map(|(token, amount)| (token, NumberOrHex::Hex(amount.into())))
 				.collect()),
 			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
