@@ -1062,7 +1062,7 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 // Aggregate name getter to get fee names if the call needs to pay extra fees.

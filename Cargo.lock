@@ -5430,7 +5430,7 @@ dependencies = [
 [[package]]
 name = "orml-benchmarking"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=7969776ff70f1d361daae72f3e3cecfdc3e9342d#7969776ff70f1d361daae72f3e3cecfdc3e9342d"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?rev=5ba42f532b72d71a28aaa18421855de003b9ca71#5ba42f532b72d71a28aaa18421855de003b9ca71"
 dependencies = [
  "frame-benchmarking",
  "frame-support",

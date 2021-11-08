@@ -1152,7 +1152,7 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1936,6 +1936,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
 			orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
+			orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1979,6 +1980,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
 
 			orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
+			orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

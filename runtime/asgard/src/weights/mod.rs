@@ -31,4 +31,5 @@ pub mod bifrost_token_issuer;
 pub mod bifrost_vsbond_auction;
 pub mod bifrost_vtoken_mint;
 pub mod orml_currencies;
+pub mod orml_tokens;
 pub mod pallet_vesting;

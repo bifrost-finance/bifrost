@@ -1,6 +1,6 @@
-// This file is part of Acala.
+// This file is part of Bifrost.
 
-// Copyright (C) 2020-2021 Acala Foundation.
+// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,88 +16,90 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use super::utils::{lookup_of_account, set_balance as update_balance};
-use crate::{dollar, AccountId, Balance, CurrencyId, GetStableCurrencyId, Runtime, Tokens};
-
-use sp_std::prelude::*;
+#![cfg(feature = "runtime-benchmarks")]
 
 use frame_benchmarking::{account, whitelisted_caller};
+use frame_support::assert_ok;
 use frame_system::RawOrigin;
-
 use orml_benchmarking::runtime_benchmarks;
-use orml_traits::MultiCurrency;
+use orml_traits::MultiCurrencyExtended;
+use sp_runtime::{
+	traits::{StaticLookup, UniqueSaturatedInto},
+	SaturatedConversion,
+};
+use sp_std::prelude::*;
+
+use crate::{
+	AccountId, Amount, Balance, Currencies, CurrencyId, ExistentialDeposit, Runtime,
+	StableCurrencyId, TokenSymbol,
+};
 
 const SEED: u32 = 0;
+const STABLECOIN: CurrencyId = StableCurrencyId::get();
 
-const STABLECOIN: CurrencyId = GetStableCurrencyId::get();
+pub fn update_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) {
+	assert_ok!(<Currencies as MultiCurrencyExtended<_>>::update_balance(
+		currency_id,
+		who,
+		balance.saturated_into()
+	));
+}
 
 runtime_benchmarks! {
 	{ Runtime, orml_tokens }
 
 	transfer {
-		let amount: Balance = dollar(STABLECOIN);
-
+		let amount: Balance = 1_000_000_000_000u128;
 		let from: AccountId = whitelisted_caller();
 		update_balance(STABLECOIN, &from, amount);
 
 		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to.clone());
+		let to_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(to.clone());
 	}: _(RawOrigin::Signed(from), to_lookup, STABLECOIN, amount)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(STABLECOIN, &to), amount);
-	}
 
 	transfer_all {
-		let amount: Balance = dollar(STABLECOIN);
+		let amount: Balance = 1_000_000_000_000u128;
 
 		let from: AccountId = whitelisted_caller();
 		update_balance(STABLECOIN, &from, amount);
 
 		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to);
+		let to_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(to.clone());
 	}: _(RawOrigin::Signed(from.clone()), to_lookup, STABLECOIN, false)
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(STABLECOIN, &from), 0);
-	}
 
 	transfer_keep_alive {
+		let balance: Balance = 1_000_000_000_000u128;
 		let from: AccountId = whitelisted_caller();
-		update_balance(STABLECOIN, &from, 2 * dollar(STABLECOIN));
+		update_balance(STABLECOIN, &from, balance * 2);
 
 		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to.clone());
-	}: _(RawOrigin::Signed(from), to_lookup, STABLECOIN, dollar(STABLECOIN))
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(STABLECOIN, &to), dollar(STABLECOIN));
-	}
+		let to_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(to.clone());
+	}: _(RawOrigin::Signed(from), to_lookup, STABLECOIN, balance)
 
 	force_transfer {
+		let balance: Balance = 1_000_000_000_000u128;
 		let from: AccountId = account("from", 0, SEED);
-		let from_lookup = lookup_of_account(from.clone());
-		update_balance(STABLECOIN, &from, 2 * dollar(STABLECOIN));
+		let from_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(from.clone());
+		update_balance(STABLECOIN, &from, 2 * balance);
 
 		let to: AccountId = account("to", 0, SEED);
-		let to_lookup = lookup_of_account(to.clone());
-	}: _(RawOrigin::Root, from_lookup, to_lookup, STABLECOIN, dollar(STABLECOIN))
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(STABLECOIN, &to), dollar(STABLECOIN));
-	}
+		let to_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(to.clone());
+	}: _(RawOrigin::Root, from_lookup, to_lookup, STABLECOIN, balance)
 
 	set_balance {
+		let balance: Balance = 1_000_000_000_000u128;
 		let who: AccountId = account("who", 0, SEED);
-		let who_lookup = lookup_of_account(who.clone());
+		let who_lookup = <Runtime as frame_system::Config>::Lookup::unlookup(who.clone());
 
-	}: _(RawOrigin::Root, who_lookup, STABLECOIN, dollar(STABLECOIN), dollar(STABLECOIN))
-	verify {
-		assert_eq!(<Tokens as MultiCurrency<_>>::total_balance(STABLECOIN, &who), 2 * dollar(STABLECOIN));
-	}
+	}: _(RawOrigin::Root, who_lookup, STABLECOIN, balance, balance)
 }
 
 #[cfg(test)]
 mod tests {
+	use orml_benchmarking::impl_benchmark_test_suite;
+
 	use super::*;
 	use crate::benchmarking::utils::tests::new_test_ext;
-	use orml_benchmarking::impl_benchmark_test_suite;
 
 	impl_benchmark_test_suite!(new_test_ext(),);
 }
