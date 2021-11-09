@@ -1062,7 +1062,7 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 // Aggregate name getter to get fee names if the call needs to pay extra fees.
@@ -1456,7 +1456,7 @@ impl orml_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 parameter_types! {

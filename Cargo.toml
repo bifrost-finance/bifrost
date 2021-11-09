@@ -204,3 +204,4 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
+orml-benchmarking = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
