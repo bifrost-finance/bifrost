@@ -1278,6 +1278,7 @@ parameter_types! {
 	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	pub ConfirmSalpLiteConfirmAsMultiSig: AccountId = hex!["8bd7184f3c25082d1c6042685815a17bae2c2f853300b94ed58cfde8fca7a416"].into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
@@ -1314,6 +1315,28 @@ impl bifrost_salp::Config for Runtime {
 	type RelayNetwork = RelayNetwork;
 }
 
+pub struct EnsureSalpLiteConfirmAsMultiSig;
+impl EnsureOrigin<Origin> for EnsureSalpLiteConfirmAsMultiSig {
+	type Success = AccountId;
+
+	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
+		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
+			RawOrigin::Signed(who) =>
+				if who == ConfirmSalpLiteConfirmAsMultiSig::get() {
+					Ok(who)
+				} else {
+					Err(Origin::from(Some(who)))
+				},
+			r => Err(Origin::from(r)),
+		})
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn successful_origin() -> Origin {
+		Origin::from(RawOrigin::Signed(Default::default()))
+	}
+}
+
 impl bifrost_salp_lite::Config for Runtime {
 	type BancorPool = ();
 	type Event = Event;
@@ -1328,7 +1351,7 @@ impl bifrost_salp_lite::Config for Runtime {
 	type SlotLength = SlotLength;
 	type WeightInfo = weights::bifrost_salp_lite::WeightInfo<Runtime>;
 	type EnsureConfirmAsMultiSig =
-		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureConfirmAsMultiSig>;
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureSalpLiteConfirmAsMultiSig>;
 	type EnsureConfirmAsGovernance =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
