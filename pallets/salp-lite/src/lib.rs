@@ -456,16 +456,8 @@ pub mod pallet {
 			#[pallet::compact] index: ParaId,
 		) -> DispatchResult {
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Success ||
-					fund.status == FundStatus::Retired ||
-					fund.status == FundStatus::RedeemWithdrew ||
-					fund.status == FundStatus::End,
-				Error::<T>::InvalidFundStatus
-			);
 
-			let (contributed, status) = Self::contribution(fund.trie_index, &who);
-			ensure!(status == ContributionStatus::Idle, Error::<T>::InvalidContributionStatus);
+			let (contributed, _) = Self::contribution(fund.trie_index, &who);
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
@@ -497,13 +489,6 @@ pub mod pallet {
 			ensure_signed(origin)?;
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Success ||
-					fund.status == FundStatus::Retired ||
-					fund.status == FundStatus::RedeemWithdrew ||
-					fund.status == FundStatus::End,
-				Error::<T>::InvalidFundStatus
-			);
 
 			let mut unlock_count = 0u32;
 			let contributions = Self::contribution_iterator(fund.trie_index);
@@ -519,10 +504,8 @@ pub mod pallet {
 				if status != ContributionStatus::Unlocked {
 					#[allow(non_snake_case)]
 					let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-					let balance = T::MultiCurrency::unreserve(vsToken, &who, contributed);
-					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
-					let balance = T::MultiCurrency::unreserve(vsBond, &who, contributed);
-					ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
+					T::MultiCurrency::unreserve(vsToken, &who, contributed);
+					T::MultiCurrency::unreserve(vsBond, &who, contributed);
 
 					Self::put_contribution(
 						fund.trie_index,
@@ -676,10 +659,6 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Failed || fund.status == FundStatus::RefundWithdrew,
-				Error::<T>::InvalidFundStatus
-			);
 
 			let (contributed, status) = Self::contribution(fund.trie_index, &who);
 			ensure!(contributed > Zero::zero(), Error::<T>::ZeroContribution);
@@ -689,21 +668,11 @@ pub mod pallet {
 
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-			ensure!(
-				T::MultiCurrency::reserved_balance(vsToken, &who) >= contributed,
-				Error::<T>::NotEnoughReservedAssetsToRefund
-			);
-			ensure!(
-				T::MultiCurrency::reserved_balance(vsBond, &who) >= contributed,
-				Error::<T>::NotEnoughReservedAssetsToRefund
-			);
 
 			fund.raised = fund.raised.saturating_sub(contributed);
 
-			let balance = T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
-			let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughReservedAssetsToRefund);
+			T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
+			T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
 
 			Self::kill_contribution(fund.trie_index, &who);
 
@@ -722,32 +691,35 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::RefundWithdrew ||
+					fund.status == FundStatus::RedeemWithdrew,
+				Error::<T>::InvalidFundStatus
+			);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 
-			let (contributed, status) = Self::contribution(fund.trie_index, &who);
-			ensure!(
-				status == ContributionStatus::Idle ||
-					status == ContributionStatus::Unlocked ||
-					status == ContributionStatus::Redeemed,
-				Error::<T>::InvalidContributionStatus
-			);
-
-			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
-
+			let (contributed, _) = Self::contribution(fund.trie_index, &who);
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
-			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
-				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
-				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
-			T::MultiCurrency::withdraw(vsToken, &who, value)?;
-			T::MultiCurrency::withdraw(vsBond, &who, value)?;
+			if fund.status == FundStatus::RedeemWithdrew {
+				ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
+				T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
+					.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+				T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
+					.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			}
+
+			if fund.status == FundStatus::RedeemWithdrew {
+				T::MultiCurrency::withdraw(vsToken, &who, value)?;
+				T::MultiCurrency::withdraw(vsBond, &who, value)?;
+				RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
+			} else if fund.status == FundStatus::RefundWithdrew {
+				T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
+				T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
+			}
 
 			fund.raised = fund.raised.saturating_sub(value);
-			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
-
 			let contributed_new = contributed.saturating_sub(value);
 			Self::put_contribution(
 				fund.trie_index,
