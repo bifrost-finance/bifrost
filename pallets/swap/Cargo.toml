@@ -5,7 +5,7 @@ authors = ["Liebi Technologies <bifrost@liebi.com>"]
 edition = "2018"
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = ["derive"] }
 fixed-point = { package = "substrate-fixed", git = "https://github.com/encointer/substrate-fixed", default-features = false }
 frame-support = { version = "3.0.0", default-features = false }
 frame-system = { version = "3.0.0", default-features = false }
