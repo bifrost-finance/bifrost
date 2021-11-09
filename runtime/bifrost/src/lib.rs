@@ -842,10 +842,10 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// foreign chains who want to have a local sovereign account on this chain which they control.
 	SovereignSignedViaLocation<LocationToAccountId, Origin>,
 	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-	// recognised.
+	// recognized.
 	RelayChainAsNative<RelayChainOrigin, Origin>,
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-	// recognised.
+	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
 	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
 	// transaction from the Root origin.
@@ -961,7 +961,7 @@ impl Config for XcmConfig {
 	type XcmSender = XcmRouter;
 }
 
-/// No local origins on this chain are allowed to dispatch XCM sends/executions.
+/// Local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
@@ -979,7 +979,7 @@ impl pallet_xcm::Config for Runtime {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = XcmRouter;
@@ -1009,13 +1009,11 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
 }
 
 impl pallet_session::Config for Runtime {
-	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 	type Event = Event;
 	type Keys = SessionKeys;
 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
