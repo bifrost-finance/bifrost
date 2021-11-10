@@ -31,21 +31,21 @@ use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 pub use self::gen_client::Client as SalpClient;
 
 #[derive(Clone, Debug)]
-pub struct SalpRpcWrapper<C, Block> {
+pub struct SalpLiteRpcWrapper<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> SalpRpcWrapper<C, Block> {
+impl<C, Block> SalpLiteRpcWrapper<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
 }
 
 #[rpc]
-pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
+pub trait SalpLiteRpcApi<BlockHash, ParaId, AccountId> {
 	/// rpc method for getting current contribution
-	#[rpc(name = "salp_getContribution")]
+	#[rpc(name = "salplite_getContribution")]
 	fn get_contribution(
 		&self,
 		index: ParaId,
@@ -54,8 +54,8 @@ pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
 }
 
-impl<C, Block, ParaId, AccountId> SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
-	for SalpRpcWrapper<C, Block>
+impl<C, Block, ParaId, AccountId> SalpLiteRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
+	for SalpLiteRpcWrapper<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,

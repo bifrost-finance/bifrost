@@ -37,9 +37,7 @@ use bifrost_flexible_fee_rpc::{FeeRpcApi, FlexibleFeeStruct};
 use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use bifrost_liquidity_mining_rpc_api::{LiquidityMiningRpcApi, LiquidityMiningRpcWrapper};
 use bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi;
-use bifrost_salp_lite_rpc_api::{
-	SalpRpcApi as SalpLiteRpcApi, SalpRpcWrapper as SalpLiteRpcWrapper,
-};
+use bifrost_salp_lite_rpc_api::{SalpLiteRpcApi, SalpLiteRpcWrapper};
 use bifrost_salp_lite_rpc_runtime_api::SalpLiteRuntimeApi;
 use bifrost_salp_rpc_api::{SalpRpcApi, SalpRpcWrapper};
 use bifrost_salp_rpc_runtime_api::SalpRuntimeApi;

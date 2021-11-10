@@ -1341,9 +1341,9 @@ impl bifrost_salp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const PolkaMinContribution: Balance = 5 * DOLLARS;
+	pub const PolkaMinContribution: Balance = 5 * 10_000_000_000;
 	pub const PolkaLeasePeriod: BlockNumber = POLKA_LEASE_PERIOD;
-	pub ConfirmSalpLiteConfirmAsMultiSig: AccountId = hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
+	pub PolkaConfirmAsMultiSig: AccountId = hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
 }
 
 pub struct EnsureSalpLiteConfirmAsMultiSig;
@@ -1353,7 +1353,7 @@ impl EnsureOrigin<Origin> for EnsureSalpLiteConfirmAsMultiSig {
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
 			RawOrigin::Signed(who) =>
-				if who == ConfirmSalpLiteConfirmAsMultiSig::get() {
+				if who == PolkaConfirmAsMultiSig::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
