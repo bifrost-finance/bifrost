@@ -184,6 +184,32 @@ parameter_types! {
 pub struct CallFilter;
 impl Contains<Call> for CallFilter {
 	fn contains(call: &Call) -> bool {
+		// temporarily ban ZLK transfer and PhragmenElection
+		let is_temporarily_banned = matches!(
+			call,
+			Call::Currencies(orml_currencies::Call::transfer {
+				dest: _,
+				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
+				amount: _,
+			}) | Call::Tokens(orml_tokens::Call::transfer {
+				dest: _,
+				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
+				amount: _,
+			}) | Call::Tokens(orml_tokens::Call::transfer_all {
+				dest: _,
+				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
+				keep_alive: _,
+			}) | Call::Tokens(orml_tokens::Call::transfer_keep_alive {
+				dest: _,
+				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
+				amount: _,
+			}) | Call::PhragmenElection(_)
+		);
+
+		if is_temporarily_banned {
+			return false;
+		}
+
 		let is_core_call =
 			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
 		if is_core_call {
