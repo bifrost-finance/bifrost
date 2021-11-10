@@ -1053,6 +1053,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-salp-lite-rpc-api"
+version = "0.8.0"
+dependencies = [
+ "bifrost-salp-lite-rpc-runtime-api",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "node-primitives",
+ "parity-scale-codec",
+ "serde",
+ "sp-api",
+ "sp-blockchain",
+ "sp-core",
+ "sp-rpc",
+ "sp-runtime",
+]
+
+[[package]]
 name = "bifrost-salp-lite-rpc-runtime-api"
 version = "0.8.0"
 dependencies = [
@@ -5070,6 +5088,8 @@ dependencies = [
  "bifrost-flexible-fee-rpc-runtime-api",
  "bifrost-liquidity-mining-rpc-api",
  "bifrost-liquidity-mining-rpc-runtime-api",
+ "bifrost-salp-lite-rpc-api",
+ "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-api",
  "bifrost-salp-rpc-runtime-api",
  "jsonrpc-core",
@@ -5098,6 +5118,7 @@ dependencies = [
  "bifrost-liquidity-mining-rpc-runtime-api",
  "bifrost-runtime",
  "bifrost-runtime-common",
+ "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-runtime-api",
  "bs58 0.3.1",
  "cumulus-client-consensus-aura",

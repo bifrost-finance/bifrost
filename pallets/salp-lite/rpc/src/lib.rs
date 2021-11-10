@@ -18,7 +18,7 @@
 
 use std::{marker::PhantomData, sync::Arc};
 
-pub use bifrost_salp_rpc_runtime_api::{self as runtime_api, SalpRuntimeApi};
+pub use bifrost_salp_lite_rpc_runtime_api::{self as runtime_api, SalpLiteRuntimeApi};
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
@@ -26,26 +26,26 @@ use node_primitives::RpcContributionStatus;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT, SaturatedConversion};
+use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 pub use self::gen_client::Client as SalpClient;
 
 #[derive(Clone, Debug)]
-pub struct SalpRpcWrapper<C, Block> {
+pub struct SalpLiteRpcWrapper<C, Block> {
 	client: Arc<C>,
 	_marker: PhantomData<Block>,
 }
 
-impl<C, Block> SalpRpcWrapper<C, Block> {
+impl<C, Block> SalpLiteRpcWrapper<C, Block> {
 	pub fn new(client: Arc<C>) -> Self {
 		Self { client, _marker: PhantomData }
 	}
 }
 
 #[rpc]
-pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
+pub trait SalpLiteRpcApi<BlockHash, ParaId, AccountId> {
 	/// rpc method for getting current contribution
-	#[rpc(name = "salp_getContribution")]
+	#[rpc(name = "salplite_getContribution")]
 	fn get_contribution(
 		&self,
 		index: ParaId,
@@ -54,12 +54,12 @@ pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
 }
 
-impl<C, Block, ParaId, AccountId> SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
-	for SalpRpcWrapper<C, Block>
+impl<C, Block, ParaId, AccountId> SalpLiteRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
+	for SalpLiteRpcWrapper<C, Block>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
+	C::Api: SalpLiteRuntimeApi<Block, ParaId, AccountId>,
 	ParaId: Codec,
 	AccountId: Codec,
 {

@@ -111,6 +111,7 @@ pub mod time {
 	pub const WEEKS: BlockNumber = DAYS * 7;
 
 	// The `LeasePeriod` defination from `polkadot`.
+	pub const POLKA_LEASE_PERIOD: BlockNumber = 12 * WEEKS;
 	pub const KUSAMA_LEASE_PERIOD: BlockNumber = 6 * WEEKS;
 	pub const ROCOCO_LEASE_PERIOD: BlockNumber = 1 * DAYS;
 	pub const WESTEND_LEASE_PERIOD: BlockNumber = 28 * DAYS;
