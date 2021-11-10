@@ -21,6 +21,7 @@ use frame_support::{parameter_types, sp_runtime::traits::BlockNumberProvider};
 use frame_system::{EnsureOneOf, EnsureRoot};
 use node_primitives::{AccountId, BlockNumber};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::u32_trait::{_1, _2};
 use sp_runtime::{FixedPointNumber, Perquintill};
 
