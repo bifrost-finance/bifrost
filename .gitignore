@@ -16,3 +16,4 @@ output
 deploy
 snapshot.bin
 *.wasm
+data
