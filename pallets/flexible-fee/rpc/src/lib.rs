@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{marker::PhantomData, sync::Arc};
+use std::{convert::TryInto, marker::PhantomData, sync::Arc};
 
 pub use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
 use codec::{Codec, Decode};
@@ -124,8 +124,19 @@ where
 
 		let rs = api.get_fee_token_and_amount(&at, who, total_inclusion_fee);
 
+		let try_into_rpc_balance = |value: Balance| {
+			value.try_into().map_err(|_| RpcError {
+				code: ErrorCode::InvalidParams,
+				message: format!("{} doesn't fit in NumberOrHex representation", value),
+				data: None,
+			})
+		};
+
 		match rs {
-			Ok((id, val)) => Ok((id, NumberOrHex::Hex(val.into()))),
+			Ok((id, val)) => match try_into_rpc_balance(val) {
+				Ok(value) => Ok((id, value)),
+				Err(e) => Err(e),
+			},
 			Err(e) => Err(RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to query fee token and amount.".into(),
