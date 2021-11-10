@@ -16,12 +16,5 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(test)]
-#[cfg(feature = "with-asgard-runtime")]
-mod integration_tests;
-#[cfg(feature = "with-asgard-runtime")]
-mod kusama_cross_chain_transact;
-#[cfg(feature = "with-asgard-runtime")]
-mod kusama_cross_chain_transfer;
-#[cfg(feature = "with-asgard-runtime")]
-mod kusama_test_net;
+pub mod currencies;
+pub mod tokens;

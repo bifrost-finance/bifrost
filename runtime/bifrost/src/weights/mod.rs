@@ -28,6 +28,7 @@ pub mod bifrost_salp;
 pub mod bifrost_salp_lite;
 pub mod bifrost_token_issuer;
 pub mod frame_system;
+pub mod orml_currencies;
 pub mod orml_tokens;
 pub mod pallet_balances;
 pub mod pallet_bounties;

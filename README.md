@@ -66,7 +66,7 @@ make try-bifrost-runtime-upgrade
 ## Run development chain
 
 ```bash
-RUST_LOG=debug cargo run -p node-cli --locked --features "with-dev-runtime" -- --tmp --dev 
+make run-dev
 ```
 
 ## Run local testnet with polkadot-launch
@@ -83,7 +83,7 @@ cd -
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.11
+git checkout release-v0.9.12
 cargo build --release
 cd -
 ```

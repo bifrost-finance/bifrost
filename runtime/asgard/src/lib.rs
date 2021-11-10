@@ -31,7 +31,7 @@ use core::convert::TryInto;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
-	traits::{Contains, Everything, InstanceFilter, IsInVec, LockIdentifier, Randomness},
+	traits::{Contains, Everything, InstanceFilter, IsInVec, LockIdentifier, Nothing, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -122,6 +122,7 @@ use zenlink_protocol::{
 	MultiAssetsHandler, PairInfo, ZenlinkMultiAssets,
 };
 
+mod benchmarking;
 mod weights;
 
 pub type SessionHandlers = ();
@@ -859,10 +860,10 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// foreign chains who want to have a local sovereign account on this chain which they control.
 	SovereignSignedViaLocation<LocationToAccountId, Origin>,
 	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-	// recognised.
+	// recognized.
 	RelayChainAsNative<RelayChainOrigin, Origin>,
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-	// recognised.
+	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
 	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
 	// transaction from the Root origin.
@@ -968,7 +969,7 @@ impl Config for XcmConfig {
 	type Barrier = Barrier;
 	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
-	type IsTeleporter = BifrostFilteredAssets;
+	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = PolkadotXcm;
@@ -978,7 +979,7 @@ impl Config for XcmConfig {
 	type XcmSender = XcmRouter;
 }
 
-/// No local origins on this chain are allowed to dispatch XCM sends/executions.
+/// Local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, AnyNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
@@ -1026,13 +1027,11 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
 	pub const Period: u32 = 6 * HOURS;
 	pub const Offset: u32 = 0;
 }
 
 impl pallet_session::Config for Runtime {
-	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 	type Event = Event;
 	type Keys = SessionKeys;
 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
@@ -1108,7 +1107,7 @@ impl orml_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -1153,7 +1152,7 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1921,6 +1920,8 @@ impl_runtime_apis! {
 		) {
 			use frame_support::traits::StorageInfoTrait;
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use orml_benchmarking::list_benchmark as orml_list_benchmark;
+
 			let mut list = Vec::<BenchmarkList>::new();
 
 			list_benchmark!(list, extra, bifrost_salp, Salp);
@@ -1934,6 +1935,9 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
+			orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
+			orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
+
 			let storage_info = AllPalletsWithSystem::storage_info();
 
 			return (list, storage_info)
@@ -1943,6 +1947,7 @@ impl_runtime_apis! {
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, RuntimeString> {
 			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
+			use orml_benchmarking::{add_benchmark as orml_add_benchmark};
 
 			let whitelist: Vec<TrackedStorageKey> = vec![
 				// Block Number
@@ -1973,6 +1978,9 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
+
+			orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
+			orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

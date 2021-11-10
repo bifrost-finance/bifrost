@@ -140,8 +140,8 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("asgard-dev"),
-	impl_name: create_runtime_str!("asgard-dev"),
+	spec_name: create_runtime_str!("bifrost-dev"),
+	impl_name: create_runtime_str!("bifrost-dev"),
 	authoring_version: 1,
 	spec_version: 1001,
 	impl_version: 0,
@@ -190,18 +190,107 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 6;
 }
 
+pub struct CallFilter;
+impl Contains<Call> for CallFilter {
+	fn contains(call: &Call) -> bool {
+		let is_core_call =
+			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
+		if is_core_call {
+			// always allow core call
+			return true;
+		}
+
+		let is_switched_off =
+			bifrost_call_switchgear::SwitchOffTransactionFilter::<Runtime>::contains(call);
+		if is_switched_off {
+			// no switched off call
+			return false;
+		}
+
+		// disable transfer
+		let is_transfer = matches!(call, Call::Currencies(_) | Call::Tokens(_) | Call::Balances(_));
+		if is_transfer {
+			let is_disabled = match *call {
+				// orml-currencies module
+				Call::Currencies(orml_currencies::Call::transfer {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Currencies(orml_currencies::Call::transfer_native_currency {
+					dest: _,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				// orml-tokens module
+				Call::Tokens(orml_tokens::Call::transfer { dest: _, currency_id, amount: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&currency_id,
+					),
+				Call::Tokens(orml_tokens::Call::transfer_all {
+					dest: _,
+					currency_id,
+					keep_alive: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				Call::Tokens(orml_tokens::Call::transfer_keep_alive {
+					dest: _,
+					currency_id,
+					amount: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&currency_id,
+				),
+				// Balances module
+				Call::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				Call::Balances(pallet_balances::Call::transfer_keep_alive {
+					dest: _,
+					value: _,
+				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+					&NativeCurrencyId::get(),
+				),
+				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) =>
+					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
+						&NativeCurrencyId::get(),
+					),
+				_ => false,
+			};
+
+			if is_disabled {
+				// no switched off call
+				return false;
+			}
+		}
+
+		true
+	}
+}
+
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
+	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const StableCurrencyId: CurrencyId = CurrencyId::Stable(TokenSymbol::KUSD);
 	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
+}
+
+parameter_types! {
+	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
+	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
+	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
 
 impl frame_system::Config for Runtime {
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
-	type BaseCallFilter = frame_support::traits::Everything;
+	type BaseCallFilter = CallFilter;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = RuntimeBlockLength;
@@ -596,7 +685,6 @@ parameter_types! {
 	pub const ProposalBondMinimum: Balance = 50 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(2);
-	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
@@ -736,10 +824,10 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// foreign chains who want to have a local sovereign account on this chain which they control.
 	SovereignSignedViaLocation<LocationToAccountId, Origin>,
 	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-	// recognised.
+	// recognized.
 	RelayChainAsNative<RelayChainOrigin, Origin>,
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-	// recognised.
+	// recognized.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
 	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
 	// transaction from the Root origin.
@@ -840,7 +928,7 @@ impl Config for XcmConfig {
 	type Barrier = Barrier;
 	type Call = Call;
 	type IsReserve = BifrostFilteredAssets;
-	type IsTeleporter = BifrostFilteredAssets;
+	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type ResponseHandler = ();
@@ -974,7 +1062,7 @@ impl orml_tokens::Config for Runtime {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = orml_tokens::TransferDust<Runtime, BifrostTreasuryAccount>;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_tokens::WeightInfo<Runtime>;
 }
 
 // Aggregate name getter to get fee names if the call needs to pay extra fees.
@@ -1094,7 +1182,6 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 
 parameter_types! {
 	pub const MinContribution: Balance = 1 * DOLLARS;
-	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1198,7 +1285,6 @@ parameter_types! {
 	pub const MinimumDuration: BlockNumber = DAYS;
 	pub const MaximumApproved: u32 = 8;
 	pub const MaximumOptionRewards: u32 = 7;
-	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"mining##");
 }
 
 impl bifrost_liquidity_mining::Config for Runtime {
@@ -1215,6 +1301,30 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
 	type WeightInfo = ();
+}
+
+impl bifrost_token_issuer::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_token_issuer::WeightInfo<Runtime>;
+}
+
+impl bifrost_lightening_redeem::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Tokens;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type PalletId = LighteningRedeemPalletId;
+	type WeightInfo = weights::bifrost_lightening_redeem::WeightInfo<Runtime>;
+}
+
+impl bifrost_call_switchgear::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = weights::bifrost_call_switchgear::WeightInfo<Runtime>;
 }
 
 // bifrost runtime end
@@ -1346,7 +1456,7 @@ impl orml_currencies::Config for Runtime {
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
 	type NativeCurrency = BifrostToken;
-	type WeightInfo = ();
+	type WeightInfo = weights::orml_currencies::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -1426,12 +1536,12 @@ construct_runtime! {
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 
 		// Third party modules
-		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 61,
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>} = 71,
 		Currencies: orml_currencies::{Pallet, Call, Event<T>} = 72,
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
+		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
 
 		// Bifrost modules
 		VtokenMint: bifrost_vtoken_mint::{Pallet, Call, Storage, Event<T>, Config<T>} = 101,
@@ -1441,7 +1551,10 @@ construct_runtime! {
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
+		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
+		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 	}
 }
 
