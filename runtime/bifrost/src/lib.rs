@@ -184,6 +184,13 @@ parameter_types! {
 pub struct CallFilter;
 impl Contains<Call> for CallFilter {
 	fn contains(call: &Call) -> bool {
+		let is_core_call =
+			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
+		if is_core_call {
+			// always allow core call
+			return true;
+		}
+
 		// temporarily ban ZLK transfer and PhragmenElection
 		let is_temporarily_banned = matches!(
 			call,
@@ -208,13 +215,6 @@ impl Contains<Call> for CallFilter {
 
 		if is_temporarily_banned {
 			return false;
-		}
-
-		let is_core_call =
-			matches!(call, Call::System(_) | Call::Timestamp(_) | Call::ParachainSystem(_));
-		if is_core_call {
-			// always allow core call
-			return true;
 		}
 
 		let is_switched_off =
@@ -1121,17 +1121,17 @@ impl orml_currencies::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * MILLIBNC,
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * MILLIBNC,   // 0.01 BNC
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,
+			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,  // 0.0001 KSM
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::DOT) => 10 * MILLICENTS,
+			&CurrencyId::Token(TokenSymbol::DOT) => 100_000_000,  // DOT has a decimals of 10e10, 0.01 DOT
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
-			&CurrencyId::VSToken(TokenSymbol::DOT) => 10 * MILLICENTS,
+			&CurrencyId::VSToken(TokenSymbol::DOT) => 100_000_000,
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
-			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 10 * MILLICENTS,
+			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 100_000_000,
 			&CurrencyId::LPToken(..) => 10 * MILLICENTS,
 			_ => Balance::max_value() // unsupported
 		}
