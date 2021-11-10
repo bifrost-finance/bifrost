@@ -20,12 +20,12 @@
 
 use std::sync::Arc;
 
-use node_primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
+use node_primitives::{
+	AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
+};
 use sc_client_api::{AuxStore, Backend as BackendT, BlockchainEvents, KeyIterator, UsageProvider};
-use sc_executor::NativeElseWasmExecutor;
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
-use sp_consensus as consensus_common;
 use sp_consensus::BlockStatus;
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
@@ -35,24 +35,22 @@ use sp_runtime::{
 use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
 
 use crate::{FullBackend, FullClient};
-// pub type FullBackend = sc_service::TFullBackend<Block>;
-
-// pub type FullClient<RuntimeApi, ExecutorDispatch> = sc_service::TFullClient<Block, RuntimeApi,
-// NativeElseWasmExecutor<ExecutorDispatch>>;
 
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
 	+ sp_api::ApiExt<Block>
-	// + ParachainHost<Block>
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-	+ pallet_transaction_payment_rpc::TransactionPaymentApi<Block, Balance>
+	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
-	// + sp_authority_discovery::AuthorityDiscoveryApi<Block>
 	+ cumulus_primitives_core::CollectCollationInfo<Block>
+	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
+	+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
+	+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
+	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
@@ -65,12 +63,18 @@ where
 		// + ParachainHost<Block>
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
-		+ pallet_transaction_payment_rpc::TransactionPaymentApi<Block, Balance>
+		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
-		+ cumulus_primitives_core::CollectCollationInfo<Block>,
-	// + sp_authority_discovery::AuthorityDiscoveryApi<Block>,
+		+ cumulus_primitives_core::CollectCollationInfo<Block>
+		+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
+		+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<
+			Block,
+			AccountId,
+			PoolId,
+		> + bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
+		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
 }
@@ -165,8 +169,6 @@ macro_rules! with_client {
 			Self::Asgard($client) => { $( $code )* },
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost($client) => { $( $code )* },
-			#[cfg(feature = "with-dev-runtime")]
-			Self::AsgardDev($client) => { $( $code )* },
 		}
 	}
 }
@@ -177,11 +179,11 @@ macro_rules! with_client {
 #[derive(Clone)]
 pub enum Client {
 	#[cfg(feature = "with-asgard-runtime")]
+	#[allow(dead_code)]
 	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, crate::AsgardExecutor>>),
 	#[cfg(feature = "with-bifrost-runtime")]
+	#[allow(dead_code)]
 	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
-	#[cfg(feature = "with-dev-runtime")]
-	AsgardDev(Arc<FullClient<dev_runtime::RuntimeApi, crate::dev::DevExecutor>>),
 }
 
 impl ClientHandle for Client {

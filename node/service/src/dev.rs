@@ -16,38 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
-
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
-pub use dev_runtime;
 use futures::StreamExt;
-use jsonrpc_core::IoHandler;
-use node_rpc::{self, RpcExtension};
-use sc_consensus::LongestChain;
 use sc_executor::NativeElseWasmExecutor;
-use sc_rpc::Metadata;
-use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, TaskManager};
-use sc_telemetry::TelemetryWorker;
+use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
 
-#[cfg(feature = "with-dev-runtime")]
-pub struct DevRuntimeExecutor;
-#[cfg(feature = "with-dev-runtime")]
-impl sc_executor::NativeExecutionDispatch for DevRuntimeExecutor {
-	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
-
-	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		dev_runtime::api::dispatch(method, data)
-	}
-
-	fn native_version() -> sc_executor::NativeVersion {
-		dev_runtime::native_version()
-	}
-}
-
-pub type Block = dev_runtime::Block;
-pub type Executor = DevRuntimeExecutor;
-pub type RuntimeApi = dev_runtime::RuntimeApi;
-pub type FullClient = sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>;
+pub type Block = node_primitives::Block;
+pub type Executor = crate::AsgardExecutor;
+pub type RuntimeApi = crate::asgard_runtime::RuntimeApi;
+pub type FullClient<RuntimeApi, ExecutorDispatch> =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
 pub type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
@@ -59,92 +37,19 @@ pub fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInhe
 	}
 }
 
-/// Builds the PartialComponents for a parachain or development service
-///
-/// Use this function if you don't actually need the full service, but just the partial in order to
-/// be able to perform chain operations.
-#[allow(clippy::type_complexity)]
-pub fn new_partial(
-	config: &Configuration,
-) -> Result<
-	PartialComponents<
-		FullClient,
-		FullBackend,
-		FullSelectChain,
-		sc_consensus::DefaultImportQueue<Block, FullClient>,
-		sc_transaction_pool::FullPool<Block, FullClient>,
-		(),
-	>,
-	ServiceError,
-> {
-	let telemetry = config
-		.telemetry_endpoints
-		.clone()
-		.filter(|x| !x.is_empty())
-		.map(|endpoints| -> Result<_, sc_telemetry::Error> {
-			let worker = TelemetryWorker::new(16)?;
-			let telemetry = worker.handle().new_telemetry(endpoints);
-			Ok((worker, telemetry))
-		})
-		.transpose()?;
-
-	let executor = NativeElseWasmExecutor::<Executor>::new(
-		config.wasm_method,
-		config.default_heap_pages,
-		config.max_runtime_instances,
-	);
-
-	let (client, backend, keystore_container, task_manager) =
-		sc_service::new_full_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
-			&config,
-			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
-			executor,
-		)?;
-
-	let client = Arc::new(client);
-
-	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
-		config.transaction_pool.clone(),
-		config.role.is_authority().into(),
-		config.prometheus_registry(),
-		task_manager.spawn_essential_handle(),
-		client.clone(),
-	);
-
-	let select_chain = LongestChain::new(backend.clone());
-
-	// Depending whether we are
-	let import_queue = sc_consensus_manual_seal::import_queue(
-		Box::new(client.clone()),
-		&task_manager.spawn_essential_handle(),
-		config.prometheus_registry(),
-	);
-
-	Ok(PartialComponents {
-		backend,
-		client,
-		import_queue,
-		keystore_container,
-		task_manager,
-		transaction_pool,
-		select_chain,
-		other: (),
-	})
-}
-
 /// Builds a new development service. This service uses manual seal, and mocks
 /// the parachain inherent.
-pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 	let sc_service::PartialComponents {
 		client,
 		backend,
 		mut task_manager,
 		import_queue,
 		keystore_container,
-		select_chain,
+		select_chain: maybe_select_chain,
 		transaction_pool,
-		other: (),
-	} = new_partial(&config)?;
+		other: (_, _),
+	} = crate::new_partial::<asgard_runtime::RuntimeApi, crate::AsgardExecutor>(&config, true)?;
 
 	let (network, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -169,6 +74,9 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 
 	let prometheus_registry = config.prometheus_registry().cloned();
 	let role = config.role.clone();
+
+	let select_chain = maybe_select_chain
+		.expect("In dev mode, `new_partial` will return some `select_chain`; qed");
 
 	if role.is_authority() {
 		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
@@ -212,12 +120,20 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	}
 
 	let rpc_extensions_builder = {
-		Box::new(move |_deny_unsafe, _| -> Result<IoHandler<Metadata>, _> {
-			return Ok(RpcExtension::default());
+		let client = client.clone();
+		let transaction_pool = transaction_pool.clone();
+		Box::new(move |deny_unsafe, _| {
+			let deps = crate::rpc::FullDeps {
+				client: client.clone(),
+				pool: transaction_pool.clone(),
+				deny_unsafe,
+			};
+
+			Ok(crate::rpc::create_asgard_rpc(deps))
 		})
 	};
 
-	let _rpc_handlers = sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
 		network,
 		client,
 		keystore: keystore_container.sync_keystore(),

@@ -51,6 +51,7 @@ frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate"
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", optional = true }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
 # Cumulus dependencies
 cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.12" }
@@ -77,7 +78,6 @@ log = '0.4'
 bifrost-runtime-common = { path = "../../runtime/common"}
 asgard-runtime = { path = "../../runtime/asgard", optional = true }
 bifrost-runtime = { path = "../../runtime/bifrost", optional = true }
-dev-runtime = { path = "../../runtime/dev", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
@@ -104,9 +104,6 @@ with-asgard-runtime = [
 ]
 with-bifrost-runtime = [
 	"bifrost-runtime",
-]
-with-dev-runtime = [
-	"dev-runtime",
 ]
 with-all-runtime = [
 	"with-asgard-runtime",

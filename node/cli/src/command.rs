@@ -73,8 +73,8 @@ fn load_spec(
 		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-dev-runtime")]
-		"dev" => Box::new(service::chain_spec::dev::development_config(para_id)?),
+		#[cfg(feature = "with-asgard-runtime")]
+		"dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
@@ -91,15 +91,8 @@ fn load_spec(
 				}
 				#[cfg(not(feature = "with-bifrost-runtime"))]
 				return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
-			} else if path.to_str().map(|s| s.contains("asgard-dev")) == Some(true) {
-				#[cfg(feature = "with-dev-runtime")]
-				{
-					Box::new(service::chain_spec::dev::ChainSpec::from_json_file(path)?)
-				}
-				#[cfg(not(feature = "with-dev-runtime"))]
-				return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
 			} else {
-				return Err("Unknown runtime is not available.".into());
+				return Err(service::UNKNOWN_RUNTIME.into());
 			}
 		},
 	})
@@ -141,27 +134,22 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if spec.is_asgard() {
+		if spec.is_asgard() || spec.is_dev() {
 			#[cfg(feature = "with-asgard-runtime")]
 			{
-				&service::collator::asgard_runtime::VERSION
+				&asgard_runtime::VERSION
 			}
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("{}", service::ASGARD_RUNTIME_NOT_AVAILABLE);
 		} else if spec.is_bifrost() {
 			#[cfg(feature = "with-bifrost-runtime")]
 			{
-				&service::collator::bifrost_runtime::VERSION
+				&bifrost_runtime::VERSION
 			}
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
 		} else {
-			#[cfg(feature = "with-dev-runtime")]
-			{
-				&service::dev::dev_runtime::VERSION
-			}
-			#[cfg(not(feature = "with-dev-runtime"))]
-			panic!("{}", service::DEV_RUNTIME_NOT_AVAILABLE);
+			panic!("{}", "unknown runtime!");
 		}
 	}
 }
@@ -219,38 +207,6 @@ use service::{asgard_runtime, AsgardExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
 use service::{bifrost_runtime, BifrostExecutor};
 
-macro_rules! construct_async_run {
-	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
-		let runner = $cli.create_runner($cmd)?;
-			#[cfg(feature = "with-asgard-runtime")]
-			return runner.async_run(|$config| {
-				let $components = crate::service::collator::new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor, _>(
-					&$config,
-					crate::service::collator::parachain_build_import_queue,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			});
-			#[cfg(feature = "with-bifrost-runtime")]
-			return runner.async_run(|$config| {
-				let $components = crate::service::collator::new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor, _>(
-					&$config,
-					crate::service::collator::parachain_build_import_queue,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			});
-			#[cfg(feature = "with-dev-runtime")]
-			return runner.async_run(|$config| {
-				let $components = crate::service::dev::new_partial(
-					&$config,
-				)?;
-				let task_manager = $components.task_manager;
-				{ $( $code )* }.map(|v| (v, task_manager))
-			});
-	}}
-}
-
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
 		if $chain_spec.is_bifrost() {
@@ -265,7 +221,7 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_asgard() {
+		} else if $chain_spec.is_asgard() || $chain_spec.is_dev() {
 			#[cfg(feature = "with-asgard-runtime")]
 			#[allow(unused_imports)]
 			use asgard_runtime::{Block, RuntimeApi};
@@ -277,8 +233,9 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-		} else {
-			return Err(service::DEV_RUNTIME_NOT_AVAILABLE.into());
+		}
+		else {
+			return Err(service::UNKNOWN_RUNTIME.into());
 		}
 	}
 }
@@ -304,10 +261,10 @@ pub fn run() -> Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
-				if config.chain_spec.is_asgard_dev() {
-					#[cfg(feature = "with-dev-runtime")]
+				if config.chain_spec.is_dev() {
+					#[cfg(feature = "with-asgard-runtime")]
 					{
-						return service::dev::new_full(config).map_err(Into::into);
+						return service::dev::start_node(config).map_err(Into::into);
 					}
 				}
 
@@ -343,14 +300,10 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						service::collator::start_node::<RuntimeApi, Executor>(
-							config,
-							polkadot_config,
-							id,
-						)
-						.await
-						.map(|r| r.0)
-						.map_err(Into::into)
+						service::start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+							.await
+							.map(|r| r.0)
+							.map_err(Into::into)
 					}
 				})
 			})
@@ -387,23 +340,47 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		},
 		Some(Subcommand::CheckBlock(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, components.import_queue))
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, config.database))
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, config.database), task_manager))
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, config.chain_spec))
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, config.chain_spec), task_manager))
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, components.import_queue))
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+
+			runner.async_run(|mut config| {
+				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, import_queue), task_manager))
 			})
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
@@ -428,8 +405,13 @@ pub fn run() -> Result<()> {
 			})
 		},
 		Some(Subcommand::Revert(cmd)) => {
-			construct_async_run!(|components, cli, cmd, config| {
-				Ok(cmd.run(components.client, components.backend))
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
+
+			set_default_ss58_version(chain_spec);
+			runner.async_run(|mut config| {
+				let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
+				Ok((cmd.run(client, backend), task_manager))
 			})
 		},
 		Some(Subcommand::ExportGenesisState(params)) => {
@@ -437,17 +419,20 @@ pub fn run() -> Result<()> {
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let block: crate::service::collator::Block = generate_genesis_block(&load_spec(
-				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.unwrap_or(2001).into(),
-			)?)?;
-			let raw_header = block.header().encode();
-			let output_buf = if params.raw {
-				raw_header
-			} else {
-				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-			};
-
+			let chain_spec = cli.load_spec(&params.chain.clone().unwrap_or_default())?;
+			let output_buf = with_runtime_or_err!(chain_spec, {
+				{
+					let block: Block =
+						generate_genesis_block(&chain_spec).map_err(|e| format!("{:?}", e))?;
+					let raw_header = block.header().encode();
+					let buf = if params.raw {
+						raw_header
+					} else {
+						format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+					};
+					buf
+				}
+			});
 			if let Some(output) = &params.output {
 				std::fs::write(output, output_buf)?;
 			} else {
