@@ -241,15 +241,15 @@ macro_rules! with_runtime_or_err {
 }
 
 fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
-	use sp_core::crypto::Ss58AddressFormat;
+	use sp_core::crypto::Ss58AddressFormatRegistry;
 
 	let ss58_version = if spec.is_bifrost() {
-		Ss58AddressFormat::BifrostAccount
+		Ss58AddressFormatRegistry::BifrostAccount
 	} else {
-		Ss58AddressFormat::SubstrateAccount
+		Ss58AddressFormatRegistry::SubstrateAccount
 	};
 
-	sp_core::crypto::set_default_ss58_version(ss58_version);
+	sp_core::crypto::set_default_ss58_version(ss58_version.into());
 }
 
 /// Parse command line arguments into service configuration.
