@@ -413,11 +413,7 @@ pub mod pallet {
 						#[allow(non_snake_case)]
 						let (_, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
-						let balance = T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
-						ensure!(
-							balance == Zero::zero(),
-							Error::<T>::NotEnoughReservedAssetsToRefund
-						);
+						T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
 
 						let (_, vs_bond_new) = Self::vsAssets(
 							index,
@@ -442,83 +438,6 @@ pub mod pallet {
 				FundsToMigrate::<T>::remove(index);
 				Funds::<T>::insert(index, Some(to_migrate_fund));
 				Self::deposit_event(Event::<T>::AllMigrated(index));
-			}
-
-			Ok(())
-		}
-
-		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight(T::WeightInfo::unlock())]
-		#[transactional]
-		pub fn unlock(
-			_origin: OriginFor<T>,
-			who: AccountIdOf<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-
-			let (contributed, _) = Self::contribution(fund.trie_index, &who);
-
-			#[allow(non_snake_case)]
-			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-
-			let balance = T::MultiCurrency::unreserve(vsToken, &who, contributed);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
-			let balance = T::MultiCurrency::unreserve(vsBond, &who, contributed);
-			ensure!(balance == Zero::zero(), Error::<T>::NotEnoughBalanceToUnlock);
-
-			Self::put_contribution(
-				fund.trie_index,
-				&who,
-				contributed,
-				ContributionStatus::Unlocked,
-			);
-
-			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
-
-			Ok(())
-		}
-
-		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight(T::WeightInfo::batch_unlock(T::BatchKeysLimit::get()))]
-		#[transactional]
-		pub fn batch_unlock(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
-			ensure_signed(origin)?;
-
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-
-			let mut unlock_count = 0u32;
-			let contributions = Self::contribution_iterator(fund.trie_index);
-			// Assume everyone will be refunded.
-			let mut all_unlocked = true;
-
-			for (who, (contributed, status)) in contributions {
-				if unlock_count >= T::BatchKeysLimit::get() {
-					// Not everyone was able to be refunded this time around.
-					all_unlocked = false;
-					break;
-				}
-				if status != ContributionStatus::Unlocked {
-					#[allow(non_snake_case)]
-					let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-					T::MultiCurrency::unreserve(vsToken, &who, contributed);
-					T::MultiCurrency::unreserve(vsBond, &who, contributed);
-
-					Self::put_contribution(
-						fund.trie_index,
-						&who,
-						contributed,
-						ContributionStatus::Unlocked,
-					);
-					unlock_count += 1;
-				}
-			}
-
-			if all_unlocked {
-				Self::deposit_event(Event::<T>::AllUnlocked(index));
 			}
 
 			Ok(())
@@ -601,9 +520,7 @@ pub mod pallet {
 
 			// Issue reserved vsToken/vsBond to contributor
 			T::MultiCurrency::deposit(vs_token, &who, value)?;
-			T::MultiCurrency::reserve(vs_token, &who, value)?;
 			T::MultiCurrency::deposit(vs_bond, &who, value)?;
-			T::MultiCurrency::reserve(vs_bond, &who, value)?;
 
 			// Update the raised of fund
 			let fund_new = FundInfo { raised: fund.raised.saturating_add(value), ..fund };

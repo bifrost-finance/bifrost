@@ -20,7 +20,7 @@
 
 use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use node_primitives::ContributionStatus;
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::MultiCurrency;
 
 use crate::{mock::*, Error, FundStatus};
 
@@ -244,52 +244,6 @@ fn set_fund_end_with_wrong_fund_status_should_fail() {
 }
 
 #[test]
-fn unlock_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX,));
-		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
-
-		#[allow(non_snake_case)]
-		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
-	});
-}
-
-#[test]
-fn unlock_without_enough_reserved_vsassets_should_fail() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
-		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-
-		// ABSOLUTELY NOT HAPPEN AT NORMAL PROCESS!
-		#[allow(non_snake_case)]
-		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-		Tokens::slash_reserved(vsToken, &BRUCE, 50);
-		Tokens::slash_reserved(vsBond, &BRUCE, 50);
-
-		// ```
-		// // The following code will produce a supernatural bug.
-		// // DONT ASK WHY, I DONT KNOW!
-		// assert_noop!(
-		// Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000),
-		// Error::<Test>::NotEnoughBalanceToUnlock
-		// );
-		// ```
-		let result = Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000);
-		assert_noop!(result, Error::<Test>::NotEnoughBalanceToUnlock);
-	});
-}
-
-#[test]
 fn contribute_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
@@ -303,12 +257,12 @@ fn contribute_should_work() {
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 100);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 	});
 }
 
@@ -328,12 +282,12 @@ fn double_contribute_should_work() {
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 200);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 200);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 	});
 }
 
@@ -352,12 +306,12 @@ fn confirm_contribute_later_should_work() {
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 100);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 100);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 	});
 }
 
@@ -516,10 +470,10 @@ fn refund_should_work() {
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 	});
@@ -638,7 +592,6 @@ fn redeem_should_work() {
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
@@ -680,7 +633,6 @@ fn redeem_with_speical_vsbond_should_work() {
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 2001, 100, CONTRIBUTON_INDEX));
 
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 2001));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 2001));
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
@@ -721,7 +673,6 @@ fn redeem_with_wrong_origin_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
@@ -741,7 +692,6 @@ fn redeem_with_not_redeemable_vsbond_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
 		// Mock the BlockNumber
 		let block_not_redeemable = LeasePeriod::get();
@@ -765,7 +715,6 @@ fn redeem_without_enough_vsassets_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
@@ -798,7 +747,6 @@ fn redeem_without_enough_balance_in_pool_should_fail() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 
 		// Mock the BlockNumber
 		let block_begin_redeem = (SlotLength::get() + 1) * LeasePeriod::get();
@@ -837,7 +785,6 @@ fn release_from_redeem_to_bancor_should_work() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 
@@ -859,16 +806,6 @@ fn check_next_trie_index() {
 }
 
 #[test]
-fn batch_unlock_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
-		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::batch_unlock(Some(ALICE).into(), 3_000));
-	})
-}
-
-#[test]
 fn batch_migrate_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
@@ -886,8 +823,7 @@ fn batch_migrate_should_work() {
 		let to_migrate_fund = Salp::to_migrate_funds(3_000).unwrap();
 		assert_eq!(to_migrate_fund.first_slot, 2);
 
-		let (_, vs_bond) = Salp::vsAssets(3000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 100);
+		let (_, _) = Salp::vsAssets(3000, 1, SlotLength::get());
 
 		assert_ok!(Salp::batch_migrate(Some(ALICE).into(), 3_000));
 
@@ -897,31 +833,7 @@ fn batch_migrate_should_work() {
 		let fund = Salp::funds(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::Ongoing);
 		assert_eq!(fund.first_slot, 2);
-
-		let (_, vs_bond) = Salp::vsAssets(3000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vs_bond).reserved, 0);
-		let (_, vs_bond_new) = Salp::vsAssets(3000, 2, SlotLength::get() + 1);
-		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).reserved, 100);
 	})
-}
-
-#[test]
-fn unlock_when_fund_ongoing_should_work() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
-
-		#[allow(non_snake_case)]
-		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
-	});
 }
 
 #[test]
@@ -933,10 +845,10 @@ fn refund_when_fund_ongoing_should_work() {
 
 		#[allow(non_snake_case)]
 		let (vsToken, vsBond) = Salp::vsAssets(3_000, 1, SlotLength::get());
-		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsToken).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsToken).reserved, 0);
-		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 0);
+		assert_eq!(Tokens::accounts(BRUCE, vsBond).free, 100);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, vsBond).reserved, 0);
 		assert_eq!(Tokens::accounts(BRUCE, RelayCurrencyId::get()).free, INIT_BALANCE);
@@ -951,7 +863,6 @@ fn redeem_when_fund_failed_should_work() {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 
-		assert_ok!(Salp::unlock(Some(BRUCE).into(), BRUCE, 3_000));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
 		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
 

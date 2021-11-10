@@ -1304,7 +1304,6 @@ parameter_types! {
 	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub ConfirmSalpLiteConfirmAsMultiSig: AccountId = hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
@@ -1341,6 +1340,12 @@ impl bifrost_salp::Config for Runtime {
 	type RelayNetwork = RelayNetwork;
 }
 
+parameter_types! {
+	pub const PolkaMinContribution: Balance = 5 * DOLLARS;
+	pub const PolkaLeasePeriod: BlockNumber = POLKA_LEASE_PERIOD;
+	pub ConfirmSalpLiteConfirmAsMultiSig: AccountId = hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
+}
+
 pub struct EnsureSalpLiteConfirmAsMultiSig;
 impl EnsureOrigin<Origin> for EnsureSalpLiteConfirmAsMultiSig {
 	type Success = AccountId;
@@ -1366,8 +1371,8 @@ impl EnsureOrigin<Origin> for EnsureSalpLiteConfirmAsMultiSig {
 impl bifrost_salp_lite::Config for Runtime {
 	type BancorPool = ();
 	type Event = Event;
-	type LeasePeriod = LeasePeriod;
-	type MinContribution = MinContribution;
+	type LeasePeriod = PolkaLeasePeriod;
+	type MinContribution = PolkaMinContribution;
 	type MultiCurrency = Currencies;
 	type PalletId = BifrostSalpLiteCrowdloanId;
 	type RelayChainToken = PolkadotCurrencyId;
@@ -1838,6 +1843,16 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl bifrost_salp_lite_rpc_runtime_api::SalpLiteRuntimeApi<Block, ParaId, AccountId> for Runtime {
+		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
+			let rs = SalpLite::contribution_by_fund(index, &who);
+			match rs {
+				Ok((val,status)) => (val,status.to_rpc()),
+				_ => (Zero::zero(),RpcContributionStatus::Idle),
+			}
+		}
+	}
+
 	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
 		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
 			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
@@ -1857,7 +1872,7 @@ impl_runtime_apis! {
 
 			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_salp, Salp);
-			// list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
+			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
@@ -1895,7 +1910,7 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
-			// add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
+			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);

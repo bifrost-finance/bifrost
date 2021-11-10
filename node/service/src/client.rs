@@ -50,6 +50,7 @@ pub trait RuntimeApiCollection:
 	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
 	+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
 	+ bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
+	+ bifrost_salp_lite_rpc_runtime_api::SalpLiteRuntimeApi<Block, BifrostParaId, AccountId>
 	+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>
 where
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
@@ -74,6 +75,7 @@ where
 			AccountId,
 			PoolId,
 		> + bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, BifrostParaId, AccountId>
+		+ bifrost_salp_lite_rpc_runtime_api::SalpLiteRuntimeApi<Block, BifrostParaId, AccountId>
 		+ zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId>,
 	<Self as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 {
