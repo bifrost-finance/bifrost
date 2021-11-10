@@ -26,7 +26,7 @@ use node_primitives::RpcContributionStatus;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT, SaturatedConversion};
+use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 
 pub use self::gen_client::Client as SalpClient;
 
@@ -75,7 +75,7 @@ where
 		let rs = salp_rpc_api.get_contribution(&at, index, account);
 
 		match rs {
-			Ok((val, status)) => Ok((NumberOrHex::Hex(val.saturated_into()), status)),
+			Ok((val, status)) => Ok((NumberOrHex::Hex(val.into()), status)),
 			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
 				message: "Failed to get salp contribution.".to_owned(),

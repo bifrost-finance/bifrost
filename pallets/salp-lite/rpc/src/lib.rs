@@ -75,7 +75,7 @@ where
 		let rs = salp_rpc_api.get_contribution(&at, index, account);
 
 		match rs {
-			Ok((val, status)) => Ok((NumberOrHex::Hex(val.saturated_into()), status)),
+			Ok((val, status)) => Ok((NumberOrHex::Hex(val.into()), status)),
 			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
 				message: "Failed to get salp contribution.".to_owned(),
