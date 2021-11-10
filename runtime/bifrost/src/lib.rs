@@ -300,6 +300,7 @@ parameter_types! {
 parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
+	pub const BifrostSalpLiteCrowdloanId: PalletId = PalletId(*b"bf/salpl");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
@@ -1143,8 +1144,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
-				.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
+				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
+			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1367,7 +1369,7 @@ impl bifrost_salp_lite::Config for Runtime {
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
 	type MultiCurrency = Currencies;
-	type PalletId = BifrostCrowdloanId;
+	type PalletId = BifrostSalpLiteCrowdloanId;
 	type RelayChainToken = PolkadotCurrencyId;
 	type ReleaseCycle = ReleaseCycle;
 	type ReleaseRatio = ReleaseRatio;

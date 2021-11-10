@@ -126,7 +126,7 @@ where
 		let rs = api.get_fee_token_and_amount(&at, who, total_inclusion_fee);
 
 		match rs {
-			Ok((id, val)) => Ok((id, NumberOrHex::Number(val.saturated_into()))),
+			Ok((id, val)) => Ok((id, NumberOrHex::Hex(val.saturated_into()))),
 			Err(e) => Err(RpcError {
 				code: ErrorCode::ServerError(Error::RuntimeError.into()),
 				message: "Unable to query fee token and amount.".into(),
