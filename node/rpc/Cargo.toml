@@ -23,8 +23,6 @@ bifrost-flexible-fee-rpc = { path = "../../pallets/flexible-fee/rpc" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api" }
 bifrost-salp-rpc-api = { path = "../../pallets/salp/rpc" }
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
-bifrost-salp-lite-rpc-api = { path = "../../pallets/salp-lite/rpc" }
-bifrost-salp-lite-rpc-runtime-api = { path = "../../pallets/salp-lite/rpc/runtime-api" }
 bifrost-liquidity-mining-rpc-api = { path = "../../pallets/liquidity-mining/rpc" }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api" }
 zenlink-protocol-rpc = "*"

@@ -31,5 +31,10 @@ decl_runtime_apis! {
 			index: ParaId,
 			who: AccountId
 		) -> (Balance,RpcContributionStatus);
+
+		fn get_lite_contribution(
+			index: ParaId,
+			who: AccountId
+		) -> (Balance,RpcContributionStatus);
 	}
 }

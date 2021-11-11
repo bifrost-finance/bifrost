@@ -62,18 +62,6 @@ impl<T: frame_system::Config> bifrost_salp_lite::WeightInfo for WeightInfo<T> {
 	}
 	// Storage: SalpLite Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
-	// Storage: System Number (r:1 w:0)
-	// Storage: System ExecutionPhase (r:1 w:0)
-	// Storage: System EventCount (r:1 w:1)
-	// Storage: System Events (r:1 w:1)
-	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
-	fn unlock() -> Weight {
-		(128_872_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(8 as Weight))
-			.saturating_add(T::DbWeight::get().writes(5 as Weight))
-	}
-	// Storage: SalpLite Funds (r:1 w:0)
-	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
 	// Storage: System Number (r:1 w:0)
 	// Storage: System ExecutionPhase (r:1 w:0)
@@ -576,7 +564,7 @@ impl<T: frame_system::Config> bifrost_salp_lite::WeightInfo for WeightInfo<T> {
 	// Storage: unknown [0xd35ed52d5edd31264c21a0c30d3994d5600b3e19ebb66d6f8099661d6dcc57c0] (r:1 w:1)
 	// Storage: unknown [0xf5b993b187b5029b7a30de61f1bce1be780f8790b3daf85742ec63b66f79cc80] (r:1 w:1)
 	// Storage: unknown [0xf98428e38450dcc80131bed1b84059f80938df6d2941d17917c968e553afa753] (r:1 w:1)
-	fn batch_unlock(k: u32, ) -> Weight {
+	fn batch_migrate(k: u32, ) -> Weight {
 		(0 as Weight)
 			// Standard Error: 53_000
 			.saturating_add((107_557_000 as Weight).saturating_mul(k as Weight))

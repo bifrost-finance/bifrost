@@ -19,12 +19,6 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod migration {
-	pub fn migrate() {
-		log::info!("salp migration...");
-	}
-}
-
 #[cfg(feature = "runtime-benchmarks")]
 pub mod benchmarking;
 #[cfg(test)]
@@ -106,7 +100,7 @@ pub mod pallet {
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
+	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be
@@ -382,7 +376,7 @@ pub mod pallet {
 		}
 
 		/// Unlock the reserved vsToken/vsBond after fund success
-		#[pallet::weight(T::WeightInfo::batch_unlock(T::BatchKeysLimit::get()))]
+		#[pallet::weight(T::WeightInfo::batch_migrate(T::BatchKeysLimit::get()))]
 		#[transactional]
 		pub fn batch_migrate(
 			origin: OriginFor<T>,
@@ -807,19 +801,14 @@ pub mod pallet {
 }
 
 pub trait WeightInfo {
-	fn unlock() -> Weight;
-	fn batch_unlock(k: u32) -> Weight;
+	fn batch_migrate(k: u32) -> Weight;
 	fn refund() -> Weight;
 	fn redeem() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn unlock() -> Weight {
-		50_000_000 as Weight
-	}
-
-	fn batch_unlock(_k: u32) -> Weight {
+	fn batch_migrate(_k: u32) -> Weight {
 		50_000_000 as Weight
 	}
 
