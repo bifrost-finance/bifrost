@@ -173,7 +173,6 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-lite",
- "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-token-issuer",
  "bifrost-vesting",
@@ -858,7 +857,6 @@ dependencies = [
  "bifrost-runtime-common",
  "bifrost-salp",
  "bifrost-salp-lite",
- "bifrost-salp-lite-rpc-runtime-api",
  "bifrost-salp-rpc-runtime-api",
  "bifrost-token-issuer",
  "bifrost-vesting",
@@ -1050,15 +1048,6 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
-]
-
-[[package]]
-name = "bifrost-salp-lite-rpc-runtime-api"
-version = "0.8.0"
-dependencies = [
- "node-primitives",
- "parity-scale-codec",
- "sp-api",
 ]
 
 [[package]]

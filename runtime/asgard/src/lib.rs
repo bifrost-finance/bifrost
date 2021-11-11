@@ -1903,6 +1903,14 @@ impl_runtime_apis! {
 				_ => (Zero::zero(),RpcContributionStatus::Idle),
 			}
 		}
+
+		fn get_lite_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
+			let rs = SalpLite::contribution_by_fund(index, &who);
+			match rs {
+				Ok((val,status)) => (val,status.to_rpc()),
+				_ => (Zero::zero(),RpcContributionStatus::Idle),
+			}
+		}
 	}
 
 	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
