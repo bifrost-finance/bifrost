@@ -244,7 +244,7 @@ where
 ///
 /// This is the actual implementation that is abstract over the executor and the
 /// runtime api.
-#[sc_tracing::logging::prefix_logs_with("Parachain")]
+#[sc_tracing::logging::prefix_logs_with("Parachain🌈")]
 async fn start_node_impl<RB, RuntimeApi, Executor, BIC>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
@@ -338,15 +338,6 @@ where
 			};
 			Ok(rpc)
 		})
-	};
-
-	if parachain_config.offchain_worker.enabled {
-		sc_service::build_offchain_workers(
-			&parachain_config,
-			task_manager.spawn_handle(),
-			client.clone(),
-			network.clone(),
-		);
 	};
 
 	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
