@@ -478,3 +478,39 @@ fn deduct_salp_fee_should_work() {
 		);
 	});
 }
+
+#[test]
+// #[ignore = "This should be used with mock config type FeeDealer = FixedCurrencyFeeRate."]
+fn cal_fee_token_and_amount_v2_should_work() {
+	new_test_ext().execute_with(|| {
+		// Deposit 500 DOT and none of native token to Alice's account
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::DOT), &ALICE, 500));
+
+		assert_noop!(
+			<Test as crate::Config>::FeeDealer::cal_fee_token_and_amount(&ALICE, 100,),
+			crate::Error::<Test>::NotEnoughBalance
+		);
+
+		assert_ok!(Currencies::deposit(CurrencyId::Token(TokenSymbol::KSM), &ALICE, 2));
+
+		let (currency_id, amount) =
+			(<Test as crate::Config>::FeeDealer::cal_fee_token_and_amount(&ALICE, 100)).unwrap();
+
+		assert_eq!(currency_id, CurrencyId::Token(TokenSymbol::KSM));
+		assert_eq!(amount, 1);
+
+		assert_noop!(
+			<Test as crate::Config>::FeeDealer::cal_fee_token_and_amount(&ALICE, 800),
+			crate::Error::<Test>::NotEnoughBalance
+		);
+
+		// deposit enough native token for fee
+		assert_ok!(Currencies::deposit(CurrencyId::Native(TokenSymbol::ASG), &ALICE, 1000));
+
+		let (currency_id, amount) =
+			(<Test as crate::Config>::FeeDealer::cal_fee_token_and_amount(&ALICE, 800)).unwrap();
+
+		assert_eq!(currency_id, CurrencyId::Native(TokenSymbol::ASG));
+		assert_eq!(amount, 800);
+	});
+}

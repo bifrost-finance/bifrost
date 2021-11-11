@@ -19,7 +19,7 @@
 use std::{convert::TryInto, marker::PhantomData, sync::Arc};
 
 pub use bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi as FeeRuntimeApi;
-use codec::{Codec, Decode};
+use codec::{Codec, Decode, Encode};
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
 use node_primitives::{Balance, CurrencyId};
@@ -32,6 +32,15 @@ use sp_runtime::{
 	generic::BlockId,
 	traits::{Block as BlockT, Zero},
 };
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Copy)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct FeeTokenNAmount<CurrencyId, NumberOrHex> {
+	/// Charged fee token id.
+	fee_token: CurrencyId,
+	/// Charged fee token amount.
+	fee_amount: NumberOrHex,
+}
 
 #[derive(Clone, Debug)]
 pub struct FlexibleFeeStruct<C, Block> {
@@ -55,7 +64,7 @@ pub trait FeeRpcApi<BlockHash, AccountId> {
 		who: AccountId,
 		encoded_xt: Bytes,
 		at: Option<BlockHash>,
-	) -> JsonRpcResult<(CurrencyId, NumberOrHex)>;
+	) -> JsonRpcResult<FeeTokenNAmount<CurrencyId, NumberOrHex>>;
 }
 
 /// Error type of this RPC api.
@@ -89,12 +98,7 @@ where
 		who: AccountId,
 		encoded_xt: Bytes,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> JsonRpcResult<(CurrencyId, NumberOrHex)> {
-		// Ok((
-		//     CurrencyId::Native(TokenSymbol::BNC),
-		//     sp_rpc::number::NumberOrHex::Number(1200),
-		// ))
-
+	) -> JsonRpcResult<FeeTokenNAmount<CurrencyId, NumberOrHex>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 		let encoded_len = encoded_xt.len() as u32;
@@ -134,7 +138,10 @@ where
 
 		match rs {
 			Ok((id, val)) => match try_into_rpc_balance(val) {
-				Ok(value) => Ok((id, value)),
+				Ok(value) => {
+					let fee_info = FeeTokenNAmount { fee_token: id, fee_amount: value };
+					Ok(fee_info)
+				},
 				Err(e) => Err(e),
 			},
 			Err(e) => Err(RpcError {

@@ -17,6 +17,7 @@ sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 bifrost-flexible-fee-rpc-runtime-api = { path = "./runtime-api" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
+serde = { version = "1.0.123", optional = true, features = ["derive"] }
 
 [features]
 default = ["std"]
@@ -28,4 +29,5 @@ std = [
     "pallet-transaction-payment-rpc-runtime-api/std",
     "bifrost-flexible-fee-rpc-runtime-api/std",
     "node-primitives/std",
+    "serde",
 ]
