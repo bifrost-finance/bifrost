@@ -1740,6 +1740,8 @@ fn force_retire_pool_charged_should_work() {
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
+		assert_eq!(LM::charged_pids().contains(&0), true);
+
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
 		assert_ok!(LM::deposit(Some(USER_2).into(), 0, UNIT));
 
@@ -1754,6 +1756,8 @@ fn force_retire_pool_charged_should_work() {
 		assert_noop!(LM::claim(Some(USER_2).into(), 0), Error::<T>::InvalidPoolState);
 		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
 		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
+
+		assert_ne!(LM::charged_pids().contains(&0), true);
 
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
@@ -1806,12 +1810,16 @@ fn force_retire_pool_charged_without_deposit_should_work() {
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
+		assert_eq!(LM::charged_pids().contains(&0), true);
+
 		let keeper = LM::pool(0).unwrap().keeper;
 
 		assert_ok!(LM::force_retire_pool(
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
 			0
 		));
+
+		assert_ne!(LM::charged_pids().contains(&0), true);
 
 		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_1).free, 0);
 		assert_eq!(Tokens::accounts(keeper.clone(), REWARD_1).frozen, 0);
@@ -1849,6 +1857,8 @@ fn force_retire_pool_ongoing_should_work() {
 		// It is unable to call Collective::execute(..) which is private;
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
 
+		assert_eq!(LM::charged_pids().contains(&0), true);
+
 		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
 
 		run_to_block(100);
@@ -1856,6 +1866,8 @@ fn force_retire_pool_ongoing_should_work() {
 		assert_ok!(LM::deposit(Some(USER_2).into(), 0, UNIT));
 
 		run_to_block(200);
+
+		assert_ne!(LM::charged_pids().contains(&0), true);
 
 		assert_ok!(LM::force_retire_pool(
 			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),

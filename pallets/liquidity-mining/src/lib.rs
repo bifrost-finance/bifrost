@@ -480,6 +480,11 @@ pub mod pallet {
 	#[pallet::getter(fn pool_id)]
 	pub(crate) type NextPoolId<T: Config> = StorageValue<_, PoolId, ValueQuery>;
 
+	/// The storage is used to store pool-ids which point to the Pools at `PoolState::Charged`.
+	///
+	/// Actually, the pools(that the storage points to) are pending to be activated by `Hook`;
+	/// The activation means converting the pools from `PoolState::Charged` to `PoolState::Ongoing`
+	/// after the conditions that are set at the pool-creation stage are met.
 	#[pallet::storage]
 	#[pallet::getter(fn charged_pids)]
 	pub(crate) type ChargedPoolIds<T: Config> = StorageValue<_, BTreeSet<PoolId>, ValueQuery>;
@@ -701,6 +706,10 @@ pub mod pallet {
 
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
+
+			if pool.state == PoolState::Charged {
+				ChargedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
+			}
 
 			match pool.state {
 				PoolState::Charged if pool.deposit == Zero::zero() => {
