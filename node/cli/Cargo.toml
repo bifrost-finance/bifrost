@@ -73,9 +73,13 @@ with-asgard-runtime = [
 with-bifrost-runtime = [
 	"node-service/with-bifrost-runtime",
 ]
+with-bifrost-polkadot-runtime = [
+	"node-service/with-bifrost-polkadot-runtime",
+]
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",
+	"with-bifrost-polkadot-runtime",
 ]
 try-runtime = [
 	"node-service/try-runtime",

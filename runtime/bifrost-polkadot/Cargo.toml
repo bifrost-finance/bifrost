@@ -52,7 +52,6 @@ pallet-randomness-collective-flip = { git = "https://github.com/paritytech/subst
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-pallet-tips = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -80,6 +79,8 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12", default-features = false }
 
 # Bifrost
+pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 
 [build-dependencies]
@@ -138,7 +139,9 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-vesting/std",
-	"xcm-support/std"
+	"xcm-support/std",
+	"bifrost-runtime-common/std",
+	"pallet-xcm/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

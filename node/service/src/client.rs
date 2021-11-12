@@ -169,6 +169,8 @@ macro_rules! with_client {
 			Self::Asgard($client) => { $( $code )* },
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost($client) => { $( $code )* },
+			#[cfg(feature = "with-bifrost-polkadot-runtime")]
+			Self::BifrostPolkadot($client) => { $( $code )* },
 		}
 	}
 }
@@ -184,6 +186,11 @@ pub enum Client {
 	#[cfg(feature = "with-bifrost-runtime")]
 	#[allow(dead_code)]
 	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
+	#[cfg(feature = "with-bifrost-polkadot-runtime")]
+	#[allow(dead_code)]
+	BifrostPolkadot(
+		Arc<FullClient<bifrost_polkadot_runtime::RuntimeApi, crate::BifrostPolkadotExecutor>>,
+	),
 }
 
 impl ClientHandle for Client {

@@ -41,6 +41,7 @@ pub use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
@@ -70,8 +71,8 @@ use bifrost_runtime_common::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvertForPolkadot,
 		BifrostFilteredAssets,
 	},
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee,
-	SlowAdjustingFeeUpdate, TechnicalCollective,
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, SlowAdjustingFeeUpdate,
+	TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
@@ -96,9 +97,9 @@ use sp_runtime::traits::ConvertInto;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
-	AllowTopLevelPaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible,
-	FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser, ParentIsDefault,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	AllowTopLevelPaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin,
+	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
+	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
 	TakeWeightCredit,
 };
@@ -118,8 +119,8 @@ impl_opaque_keys! {
 /// This runtime version.
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("bifrost"),
-	impl_name: create_runtime_str!("bifrost"),
+	spec_name: create_runtime_str!("bifrost_polkadot"),
+	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 1,
 	spec_version: 906,
 	impl_version: 0,
@@ -167,7 +168,6 @@ parameter_types! {
 		.build_or_panic();
 	pub const SS58Prefix: u8 = 6;
 }
-
 
 parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
@@ -301,14 +301,8 @@ impl InstanceFilter<Call> for ProxyType {
 				// Specifically omitting the entire Balances pallet
 				Call::Authorship(..) |
 				Call::Session(..) |
-				Call::Democracy(..) |
-				Call::Council(..) |
-				Call::TechnicalCommittee(..) |
-				Call::PhragmenElection(..) |
-				Call::TechnicalMembership(..) |
 				Call::Treasury(..) |
 				Call::Bounties(..) |
-				Call::Tips(..) |
 				Call::Vesting(pallet_vesting::Call::vest{..}) |
 				Call::Vesting(pallet_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
@@ -316,14 +310,7 @@ impl InstanceFilter<Call> for ProxyType {
 				Call::Proxy(..) |
 				Call::Multisig(..)
 			),
-			ProxyType::Governance => matches!(
-				c,
-				Call::Democracy(..) |
-					Call::Council(..) | Call::TechnicalCommittee(..) |
-					Call::PhragmenElection(..) |
-					Call::Treasury(..) | Call::Bounties(..) |
-					Call::Tips(..) | Call::Utility(..)
-			),
+			ProxyType::Governance => matches!(c, Call::Treasury(..) | Call::Bounties(..)),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
 			},
@@ -494,20 +481,9 @@ impl pallet_bounties::Config for Runtime {
 	type WeightInfo = weights::pallet_bounties::WeightInfo<Runtime>;
 }
 
-impl pallet_tips::Config for Runtime {
-	type DataDepositPerByte = DataDepositPerByte;
-	type Event = Event;
-	type MaximumReasonLength = MaximumReasonLength;
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type Tippers = PhragmenElection;
-	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
-}
-
 impl pallet_transaction_payment::Config for Runtime {
 	type FeeMultiplierUpdate = SlowAdjustingFeeUpdate<Self>;
-	type OnChargeTransaction = FlexibleFee;
+	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
 	type TransactionByteFee = TransactionByteFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
 	type WeightToFee = IdentityFee<Balance>;
@@ -557,7 +533,7 @@ pub type LocationToAccountId = (
 );
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
+pub type LocalAssetTransactor = XcmCurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
@@ -614,41 +590,16 @@ pub type Barrier = (
 	AllowSubscriptionsFrom<Everything>,
 );
 
-pub type BifrostAssetTransactor = MultiCurrencyAdapter<
-	Currencies,
-	UnknownTokens,
-	BifrostAssetMatcher<CurrencyId, BifrostCurrencyIdConvertForPolkadot<SelfParaChainId>>,
-	AccountId,
-	LocationToAccountId,
-	CurrencyId,
-	BifrostCurrencyIdConvertForPolkadot<SelfParaChainId>,
->;
-
 parameter_types! {
 	pub DotPerSecond: (AssetId, u128) = (MultiLocation::parent().into(), dot_per_second());
 }
 
-pub struct ToTreasury;
-impl TakeRevenue for ToTreasury {
-	fn take_revenue(revenue: MultiAsset) {
-		if let MultiAsset { id: Concrete(location), fun: Fungible(amount) } = revenue {
-			if let Some(currency_id) =
-			BifrostCurrencyIdConvertForPolkadot::<SelfParaChainId>::convert(location)
-			{
-				let _ = Currencies::deposit(currency_id, &BifrostTreasuryAccount::get(), amount);
-			}
-		}
-	}
-}
-
-pub type Trader = (
-	FixedRateOfFungible<DotPerSecond, ToTreasury>,
-);
+pub type Trader = (FixedRateOfFungible<DotPerSecond, ()>,);
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
-	type AssetTransactor = BifrostAssetTransactor;
+	type AssetTransactor = LocalAssetTransactor;
 	type AssetTrap = PolkadotXcm;
 	type Barrier = Barrier;
 	type Call = Call;
@@ -784,7 +735,6 @@ impl pallet_vesting::Config for Runtime {
 	type WeightInfo = weights::pallet_vesting::WeightInfo<Runtime>;
 }
 
-
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -829,7 +779,6 @@ construct_runtime! {
 		// Treasury stuff
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 61,
 		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
-		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 	}
 }
 
@@ -984,87 +933,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId> for Runtime {
-		fn get_fee_token_and_amount(who: AccountId, fee: Balance) -> (CurrencyId, Balance) {
-			let rs = FlexibleFee::cal_fee_token_and_amount(&who, fee);
-			match rs {
-				Ok(val) => val,
-				_ => (CurrencyId::Native(TokenSymbol::BNC), Zero::zero()),
-			}
-		}
-	}
 
-	// zenlink runtime outer apis
-	impl zenlink_protocol_runtime_api::ZenlinkProtocolApi<Block, AccountId> for Runtime {
-
-		fn get_balance(
-			asset_id: ZenlinkAssetId,
-			owner: AccountId
-		) -> AssetBalance {
-			<Runtime as zenlink_protocol::Config>::MultiAssetsHandler::balance_of(asset_id, &owner)
-		}
-
-		fn get_sovereigns_info(
-			asset_id: ZenlinkAssetId
-		) -> Vec<(u32, AccountId, AssetBalance)> {
-			ZenlinkProtocol::get_sovereigns_info(&asset_id)
-		}
-
-		fn get_pair_by_asset_id(
-			asset_0: ZenlinkAssetId,
-			asset_1: ZenlinkAssetId
-		) -> Option<PairInfo<AccountId, AssetBalance>> {
-			ZenlinkProtocol::get_pair_by_asset_id(asset_0, asset_1)
-		}
-
-		fn get_amount_in_price(
-			supply: AssetBalance,
-			path: Vec<ZenlinkAssetId>
-		) -> AssetBalance {
-			ZenlinkProtocol::desired_in_amount(supply, path)
-		}
-
-		fn get_amount_out_price(
-			supply: AssetBalance,
-			path: Vec<ZenlinkAssetId>
-		) -> AssetBalance {
-			ZenlinkProtocol::supply_out_amount(supply, path)
-		}
-
-		fn get_estimate_lptoken(
-			token_0: ZenlinkAssetId,
-			token_1: ZenlinkAssetId,
-			amount_0_desired: AssetBalance,
-			amount_1_desired: AssetBalance,
-			amount_0_min: AssetBalance,
-			amount_1_min: AssetBalance,
-		) -> AssetBalance{
-			ZenlinkProtocol::get_estimate_lptoken(
-				token_0,
-				token_1,
-				amount_0_desired,
-				amount_1_desired,
-				amount_0_min,
-				amount_1_min
-			)
-		}
-	}
-
-	impl bifrost_salp_rpc_runtime_api::SalpRuntimeApi<Block, ParaId, AccountId> for Runtime {
-		fn get_contribution(index: ParaId, who: AccountId) -> (Balance,RpcContributionStatus) {
-			let rs = Salp::contribution_by_fund(index, &who);
-			match rs {
-				Ok((val,status)) => (val,status.to_rpc()),
-				_ => (Zero::zero(),RpcContributionStatus::Idle),
-			}
-		}
-	}
-
-	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
-		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
-			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
-		}
-	}
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
@@ -1076,14 +945,6 @@ impl_runtime_apis! {
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
 
 			let mut list = Vec::<BenchmarkList>::new();
-
-			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
-			list_benchmark!(list, extra, bifrost_salp, Salp);
-			// list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
-			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
-			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
-			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
-			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -1114,14 +975,6 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_treasury, Treasury);
 			add_benchmark!(params, batches, pallet_utility, Utility);
 			add_benchmark!(params, batches, pallet_vesting, Vesting);
-
-			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
-			add_benchmark!(params, batches, bifrost_salp, Salp);
-			// add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
-			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
-			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
-			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
-			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)
