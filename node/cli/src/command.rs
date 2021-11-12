@@ -123,7 +123,9 @@ fn load_spec(
 						path,
 					)?)
 				}
-				#[cfg(not(feature = "with-bifrost-runtime"))]
+				#[cfg(feature = "with-bifrost-runtime")]
+				return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+				#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
 				return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
 				#[cfg(feature = "with-bifrost-runtime")]
@@ -192,9 +194,9 @@ impl SubstrateCli for Cli {
 		} else if spec.is_bifrost_polkadot() {
 			#[cfg(feature = "with-bifrost-polkadot-runtime")]
 			{
-				&bifrost_polkadot_runtime::VERSION
+				return &bifrost_polkadot_runtime::VERSION;
 			}
-			#[cfg(not(feature = "with-bifrost-runtime"))]
+			#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
 			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
 		} else if spec.is_asgard_polkadot() {
 			#[cfg(feature = "with-asgard-polkadot-runtime")]
@@ -257,12 +259,12 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
+#[cfg(feature = "with-bifrost-polkadot-runtime")]
+use service::bifrost_polkadot_runtime;
 #[cfg(feature = "with-asgard-polkadot-runtime")]
 use service::{asgard_polkadot_runtime, AsgardPolkadotExecutor};
 #[cfg(feature = "with-asgard-runtime")]
 use service::{asgard_runtime, AsgardExecutor};
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
-use service::{bifrost_polkadot_runtime, BifrostPolkadotExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
 use service::{bifrost_runtime, BifrostExecutor};
 
@@ -292,18 +294,6 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_bifrost_polkadot() {
-			#[cfg(feature = "with-bifrost-polkadot-runtime")]
-			#[allow(unused_imports)]
-			use bifrost_runtime::{Block, RuntimeApi};
-			#[cfg(feature = "with-bifrost-polkadot-runtime")]
-			#[allow(unused_imports)]
-	        use BifrostExecutor as Executor;
-			#[cfg(feature = "with-bifrost-polkadot-runtime")]
-			$( $code )*
-
-			#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
-			return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_asgard_polkadot() {
 			#[cfg(feature = "with-asgard-polkadot-runtime")]
 			#[allow(unused_imports)]
@@ -379,6 +369,19 @@ pub fn run() -> Result<()> {
 				info!("Parachain Account: {}", parachain_account);
 				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					if config.chain_spec.is_bifrost_polkadot() {
+						return service::light::start_node::<
+							bifrost_polkadot_runtime::RuntimeApi,
+							service::light::BifrostPolkadotExecutor,
+						>(config, polkadot_config, id)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into);
+					}
+				}
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
@@ -502,19 +505,14 @@ pub fn run() -> Result<()> {
 			let _ = builder.init();
 
 			let chain_spec = cli.load_spec(&params.chain.clone().unwrap_or_default())?;
-			let output_buf = with_runtime_or_err!(chain_spec, {
-				{
-					let block: Block =
-						generate_genesis_block(&chain_spec).map_err(|e| format!("{:?}", e))?;
-					let raw_header = block.header().encode();
-					let buf = if params.raw {
-						raw_header
-					} else {
-						format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-					};
-					buf
-				}
-			});
+			let block: Block =
+				generate_genesis_block(&chain_spec).map_err(|e| format!("{:?}", e))?;
+			let raw_header = block.header().encode();
+			let output_buf = if params.raw {
+				raw_header
+			} else {
+				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+			};
 			if let Some(output) = &params.output {
 				std::fs::write(output, output_buf)?;
 			} else {
