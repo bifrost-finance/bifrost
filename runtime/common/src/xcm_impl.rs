@@ -185,7 +185,7 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>>
 	for BifrostCurrencyIdConvertForPolkadot<T>
 {
 	fn convert(id: CurrencyId) -> Option<MultiLocation> {
-		use CurrencyId::{Native, Stable, Token, VSToken};
+		use CurrencyId::Token;
 		match id {
 			Token(TokenSymbol::DOT) => Some(MultiLocation::parent()),
 			_ => None,

@@ -24,12 +24,11 @@ use std::{
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
-	SessionConfig, SystemConfig, VestingConfig, WASM_BINARY,
+	SessionConfig, SudoConfig, SystemConfig, VestingConfig, WASM_BINARY,
 };
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::de::DeserializeOwned;
@@ -49,6 +48,7 @@ const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
 pub fn bifrost_polkadot_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
+	root_key: AccountId,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
@@ -85,6 +85,7 @@ pub fn bifrost_polkadot_genesis(
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		sudo: SudoConfig { key: root_key.clone() },
 	}
 }
 
@@ -105,6 +106,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
 		)],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		balances,
 		vestings,
 		id,
@@ -158,6 +160,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			),
 			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		],
+		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		balances,
 		vestings,
 		id,
@@ -224,6 +227,12 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 		),
 	];
 
+	let root_key: AccountId = hex![
+		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
+		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+	]
+	.into();
+
 	let exe_dir = {
 		let mut exe_dir = std::env::current_exe().unwrap();
 		exe_dir.pop();
@@ -231,39 +240,9 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 		exe_dir
 	};
 
-	// let balances_configs: Vec<BalancesConfig> =
-	// 	config_from_json_files(exe_dir.join("res/genesis_config/balances")).unwrap();
-
-	// let mut total_issuance: Balance = Zero::zero();
-	// let balances = balances_configs
-	// 	.into_iter()
-	// 	.flat_map(|bc| bc.balances)
-	// 	.fold(BTreeMap::<AccountId, Balance>::new(), |mut acc, (account_id, amount)| {
-	// 		if let Some(balance) = acc.get_mut(&account_id) {
-	// 			*balance = balance
-	// 				.checked_add(amount)
-	// 				.expect("balance cannot overflow when building genesis");
-	// 		} else {
-	// 			acc.insert(account_id.clone(), amount);
-	// 		}
-
-	// 		total_issuance = total_issuance
-	// 			.checked_add(amount)
-	// 			.expect("total insurance cannot overflow when building genesis");
-	// 		acc
-	// 	})
-	// 	.into_iter()
-	// 	.collect();
-
-	// assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320
-	// million");
-
-	// let vesting_configs: Vec<VestingConfig> =
-	// 	config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
-
-	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_polkadot_genesis(
 		invulnerables,
+		root_key,
 		// balances,
 		// vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		vec![], // temporarily set balances endowment as blank
