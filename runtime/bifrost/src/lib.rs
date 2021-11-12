@@ -914,7 +914,7 @@ parameter_types! {
 	pub KarPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KAR_KEY.to_vec()))
+			X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec()))
 		).into(),
 		// KAR:KSM = 100:1
 		ksm_per_second() * 100
@@ -922,7 +922,7 @@ parameter_types! {
 	pub KusdPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
-			X2(Parachain(parachains::karura::ID), GeneralKey(parachains::karura::KUSD_KEY.to_vec()))
+			X2(Parachain(parachains::kusama::karura::ID), GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec()))
 		).into(),
 		// kUSD:KSM = 400:1
 		ksm_per_second() * 400

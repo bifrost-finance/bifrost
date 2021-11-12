@@ -48,7 +48,7 @@ fn load_spec(
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
-		["asgard", "bifrost", "bifrost_polkadot"]
+		["asgard", "bifrost", "bifrost_polkadot", "asgard_polkadot"]
 			.iter()
 			.cloned()
 			.find(|&chain| n.starts_with(chain))
@@ -86,11 +86,30 @@ fn load_spec(
 		"bifrost-polkadot-local" =>
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config(para_id)?),
 
+		#[cfg(feature = "with-asgard-polkadot-runtime")]
+		"asgard-polkadot" => Box::new(service::chain_spec::asgard_polkadot::ChainSpec::from_json_bytes(
+			&include_bytes!("../../service/res/asgard-polkadot.json")[..],
+		)?),
+		#[cfg(feature = "with-asgard-polkadot-runtime")]
+		"asgard-polkadot-genesis" =>
+			Box::new(service::chain_spec::asgard_polkadot::chainspec_config(para_id)),
+		#[cfg(feature = "with-asgard-polkadot-runtime")]
+		"asgard-polkadot-local" =>
+			Box::new(service::chain_spec::asgard_polkadot::local_testnet_config(para_id)?),
+
 		#[cfg(feature = "with-asgard-runtime")]
 		"dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
+
 		path => {
 			let path = std::path::PathBuf::from(path);
-			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
+			if path.to_str().map(|s| s.contains("asgard-polkadot")) == Some(true) {
+				#[cfg(feature = "with-asgard-polkadot-runtime")]
+				{
+					Box::new(service::chain_spec::asgard_polkadot::ChainSpec::from_json_file(path)?)
+				}
+				#[cfg(not(feature = "with-asgard-polkadot-runtime"))]
+				return Err(service::ASGARD_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+			} else if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
 				#[cfg(feature = "with-asgard-runtime")]
 				{
 					Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?)
@@ -177,6 +196,13 @@ impl SubstrateCli for Cli {
 			}
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
+		} else if spec.is_asgard_polkadot() {
+			#[cfg(feature = "with-asgard-polkadot-runtime")]
+			{
+				&asgard_polkadot_runtime::VERSION
+			}
+			#[cfg(not(feature = "with-asgard-polkadot-runtime"))]
+			panic!("{}", service::ASGARD_POLKADOT_RUNTIME_NOT_AVAILABLE);
 		} else {
 			panic!("{}", "unknown runtime!");
 		}
@@ -231,6 +257,8 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
+#[cfg(feature = "with-asgard-polkadot-runtime")]
+use service::{asgard_polkadot_runtime, AsgardPolkadotExecutor};
 #[cfg(feature = "with-asgard-runtime")]
 use service::{asgard_runtime, AsgardExecutor};
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
@@ -276,6 +304,18 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
 			return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+		} else if $chain_spec.is_asgard_polkadot() {
+			#[cfg(feature = "with-asgard-polkadot-runtime")]
+			#[allow(unused_imports)]
+			use asgard_polkadot_runtime::{Block, RuntimeApi};
+			#[cfg(feature = "with-asgard-polkadot-runtime")]
+			#[allow(unused_imports)]
+			use AsgardPolkadotExecutor as Executor;
+			#[cfg(feature = "with-asgard-polkadot-runtime")]
+			$( $code )*
+
+			#[cfg(not(feature = "with-asgard-polkadot-runtime"))]
+			return Err(service::ASGARD_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 		} else {
 			return Err(service::UNKNOWN_RUNTIME.into());
 		}

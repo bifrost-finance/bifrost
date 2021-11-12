@@ -35,6 +35,8 @@ use sc_consensus_aura::SlotProportion;
 pub mod chain_spec;
 #[cfg(feature = "with-asgard-runtime")]
 pub mod dev;
+#[cfg(feature = "with-asgard-polkadot-runtime")]
+pub use asgard_polkadot_runtime;
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
@@ -73,6 +75,21 @@ impl sc_executor::NativeExecutionDispatch for AsgardExecutor {
 
 	fn native_version() -> sc_executor::NativeVersion {
 		asgard_runtime::native_version()
+	}
+}
+
+#[cfg(feature = "with-asgard-polkadot-runtime")]
+pub struct AsgardPolkadotExecutor;
+#[cfg(feature = "with-asgard-polkadot-runtime")]
+impl sc_executor::NativeExecutionDispatch for AsgardPolkadotExecutor {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		asgard_polkadot_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		asgard_polkadot_runtime::native_version()
 	}
 }
 
@@ -118,6 +135,9 @@ pub trait IdentifyVariant {
 	/// Returns if this is a configuration for the `Asgard` network.
 	fn is_asgard(&self) -> bool;
 
+	/// Returns if this is a configuration for the `AsgardPolkadot` network.
+	fn is_asgard_polkadot(&self) -> bool;
+
 	/// Returns if this is a configuration for the `Bifrost` network.
 	fn is_bifrost(&self) -> bool;
 
@@ -130,7 +150,11 @@ pub trait IdentifyVariant {
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 	fn is_asgard(&self) -> bool {
-		self.id().starts_with("asgard") || self.id().starts_with("asg")
+		self.id().starts_with("asgard") && !self.id().starts_with("asgard_polkadot")
+	}
+
+	fn is_asgard_polkadot(&self) -> bool {
+		self.id().starts_with("asgard_polkadot")
 	}
 
 	fn is_bifrost(&self) -> bool {
@@ -150,6 +174,8 @@ pub const BIFROST_RUNTIME_NOT_AVAILABLE: &str =
 	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.";
 pub const ASGARD_RUNTIME_NOT_AVAILABLE: &str =
 	"Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.";
+pub const ASGARD_POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
+	"Asgard-polkadot runtime is not available. Please compile the node with `--features with-asgard-polkadot-runtime` to enable it.";
 pub const BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
 "Bifrost-polkadot runtime is not available. Please compile the node with `--features with-bifrost-polkadot-runtime` to enable it.";
 pub const UNKNOWN_RUNTIME: &str = "Unknown runtime";
@@ -347,6 +373,7 @@ where
 
 	let is_bifrost = parachain_config.chain_spec.is_bifrost();
 	let is_asgard = parachain_config.chain_spec.is_asgard();
+	let is_asgard_polkadot = parachain_config.chain_spec.is_asgard_polkadot();
 
 	let rpc_extensions_builder = {
 		let client = client.clone();
@@ -362,6 +389,8 @@ where
 				crate::rpc::create_bifrost_rpc(deps)
 			} else if is_asgard {
 				crate::rpc::create_asgard_rpc(deps)
+			} else if is_asgard_polkadot {
+				crate::rpc::create_asgard_polkadot_rpc(deps)
 			} else {
 				crate::rpc::create_bifrost_polkadot_rpc(deps)
 			};
@@ -565,6 +594,17 @@ pub fn new_chain_ops(
 		}
 		#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
 		Err(BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into())
+	} else if config.chain_spec.is_asgard_polkadot() {
+		#[cfg(feature = "with-asgard-polkadot-runtime")]
+		{
+			let PartialComponents { client, backend, import_queue, task_manager, .. } =
+				new_partial::<asgard_polkadot_runtime::RuntimeApi, AsgardPolkadotExecutor>(
+					config, false,
+				)?;
+			Ok((Arc::new(Client::AsgardPolkadot(client)), backend, import_queue, task_manager))
+		}
+		#[cfg(not(feature = "with-asgard-polkadot-runtime"))]
+		Err(ASGARD_POLKADOT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		Err(UNKNOWN_RUNTIME.into())
 	}
