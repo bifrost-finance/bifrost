@@ -26,8 +26,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use core::convert::TryInto;
-
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -44,45 +42,29 @@ pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::CurrencyAdapter;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{
-	u32_trait::{_1, _2, _3, _4, _5},
-	OpaqueMetadata,
-};
+use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdConversion, BlakeTwo256, Block as BlockT, UniqueSaturatedInto, Zero},
+	traits::{BlakeTwo256, Block as BlockT, ConvertInto},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, DispatchError, DispatchResult, SaturatedConversion,
+	ApplyExtrinsicResult,
 };
 pub use sp_runtime::{Perbill, Permill};
-use sp_std::{marker::PhantomData, prelude::*};
+use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use static_assertions::const_assert;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_runtime_common::{
-	constants::parachains,
-	xcm_impl::{
-		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvertForPolkadot,
-		BifrostFilteredAssets,
-	},
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, SlowAdjustingFeeUpdate,
-	TechnicalCollective,
-};
+use bifrost_runtime_common::{xcm_impl::BifrostFilteredAssets, SlowAdjustingFeeUpdate};
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::{
-	sp_runtime::traits::Convert,
-	traits::{EnsureOrigin, LockIdentifier, OnRuntimeUpgrade},
-};
-use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
-use hex_literal::hex;
+use frame_support::traits::OnRuntimeUpgrade;
+use frame_system::EnsureRoot;
 pub use node_primitives::{
 	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
 	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
@@ -93,18 +75,15 @@ use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
 use sp_arithmetic::Percent;
-use sp_runtime::traits::ConvertInto;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin,
 	FixedRateOfFungible, FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser,
 	ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
-	TakeWeightCredit,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_support::{BifrostXcmAdaptor, Get};
 // Weights used in the runtime.
 mod weights;
 
@@ -489,6 +468,11 @@ impl pallet_transaction_payment::Config for Runtime {
 	type WeightToFee = IdentityFee<Balance>;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type Call = Call;
+	type Event = Event;
+}
+
 // culumus runtime start
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -745,6 +729,7 @@ construct_runtime! {
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
 		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
