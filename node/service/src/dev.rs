@@ -129,7 +129,7 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 				deny_unsafe,
 			};
 
-			Ok(crate::rpc::create_asgard_rpc(deps))
+			Ok(crate::rpc::create_full_rpc(deps))
 		})
 	};
 

@@ -195,9 +195,7 @@ pub enum Client {
 	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
 	#[cfg(feature = "with-bifrost-polkadot-runtime")]
 	#[allow(dead_code)]
-	BifrostPolkadot(
-		Arc<FullClient<bifrost_polkadot_runtime::RuntimeApi, crate::BifrostPolkadotExecutor>>,
-	),
+	BifrostPolkadot(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
 }
 
 impl ClientHandle for Client {
