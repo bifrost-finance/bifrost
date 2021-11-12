@@ -28,6 +28,10 @@ build-all: copy-genesis-config
 build-asgard-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-asgard-runtime" --release
 
+.PHONY: build-asgard-polkadot-release
+build-asgard-polkadot-release: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-asgard-polkadot-runtime" --release
+
 .PHONY: build-bifrost-release
 build-bifrost-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-runtime" --release

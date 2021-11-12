@@ -120,15 +120,15 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			Token(TokenSymbol::KAR) => Some(MultiLocation::new(
 				1,
 				X2(
-					Parachain(parachains::karura::ID),
-					GeneralKey(parachains::karura::KAR_KEY.to_vec()),
+					Parachain(parachains::kusama::karura::ID),
+					GeneralKey(parachains::kusama::karura::KAR_KEY.to_vec()),
 				),
 			)),
 			Stable(TokenSymbol::KUSD) => Some(MultiLocation::new(
 				1,
 				X2(
-					Parachain(parachains::karura::ID),
-					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
+					Parachain(parachains::kusama::karura::ID),
+					GeneralKey(parachains::kusama::karura::KUSD_KEY.to_vec()),
 				),
 			)),
 			_ => None,
@@ -159,10 +159,10 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						None
 					}
 				},
-				X2(Parachain(id), GeneralKey(key)) if id == parachains::karura::ID => {
-					if key == parachains::karura::KAR_KEY.to_vec() {
+				X2(Parachain(id), GeneralKey(key)) if id == parachains::kusama::karura::ID => {
+					if key == parachains::kusama::karura::KAR_KEY.to_vec() {
 						Some(Token(TokenSymbol::KAR))
-					} else if key == parachains::karura::KUSD_KEY.to_vec() {
+					} else if key == parachains::kusama::karura::KUSD_KEY.to_vec() {
 						Some(Stable(TokenSymbol::KUSD))
 					} else {
 						None

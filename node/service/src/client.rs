@@ -167,6 +167,8 @@ macro_rules! with_client {
 		match $self {
 			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard($client) => { $( $code )* },
+			#[cfg(feature = "with-asgard-polkadot-runtime")]
+			Self::AsgardPolkadot($client) => { $( $code )* },
 			#[cfg(feature = "with-bifrost-runtime")]
 			Self::Bifrost($client) => { $( $code )* },
 			#[cfg(feature = "with-bifrost-polkadot-runtime")]
@@ -183,6 +185,11 @@ pub enum Client {
 	#[cfg(feature = "with-asgard-runtime")]
 	#[allow(dead_code)]
 	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, crate::AsgardExecutor>>),
+	#[cfg(feature = "with-asgard-polkadot-runtime")]
+	#[allow(dead_code)]
+	AsgardPolkadot(
+		Arc<FullClient<asgard_polkadot_runtime::RuntimeApi, crate::AsgardPolkadotExecutor>>,
+	),
 	#[cfg(feature = "with-bifrost-runtime")]
 	#[allow(dead_code)]
 	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, crate::BifrostExecutor>>),
