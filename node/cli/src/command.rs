@@ -48,7 +48,7 @@ fn load_spec(
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
-		["asgard", "bifrost"]
+		["asgard", "bifrost", "bifrost_polkadot"]
 			.iter()
 			.cloned()
 			.find(|&chain| n.starts_with(chain))
@@ -73,6 +73,19 @@ fn load_spec(
 		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
 		#[cfg(feature = "with-bifrost-runtime")]
 		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
+
+		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		"bifrost-polkadot" =>
+			Box::new(service::chain_spec::bifrost_polkadot::ChainSpec::from_json_bytes(
+				&include_bytes!("../../service/res/bifrost-polkadot.json")[..],
+			)?),
+		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		"bifrost-polkadot-genesis" =>
+			Box::new(service::chain_spec::bifrost_polkadot::chainspec_config(para_id)),
+		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		"bifrost-polkadot-local" =>
+			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config(para_id)?),
+
 		#[cfg(feature = "with-asgard-runtime")]
 		"dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
 		path => {
@@ -84,6 +97,15 @@ fn load_spec(
 				}
 				#[cfg(not(feature = "with-asgard-runtime"))]
 				return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
+			} else if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					Box::new(service::chain_spec::bifrost_polkadot::ChainSpec::from_json_file(
+						path,
+					)?)
+				}
+				#[cfg(not(feature = "with-bifrost-runtime"))]
+				return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
 				#[cfg(feature = "with-bifrost-runtime")]
 				{
@@ -148,6 +170,13 @@ impl SubstrateCli for Cli {
 			}
 			#[cfg(not(feature = "with-bifrost-runtime"))]
 			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
+		} else if spec.is_bifrost_polkadot() {
+			#[cfg(feature = "with-bifrost-polkadot-runtime")]
+			{
+				&bifrost_polkadot_runtime::VERSION
+			}
+			#[cfg(not(feature = "with-bifrost-runtime"))]
+			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
 		} else {
 			panic!("{}", "unknown runtime!");
 		}
@@ -204,6 +233,8 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 
 #[cfg(feature = "with-asgard-runtime")]
 use service::{asgard_runtime, AsgardExecutor};
+#[cfg(feature = "with-bifrost-polkadot-runtime")]
+use service::{bifrost_polkadot_runtime, BifrostPolkadotExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
 use service::{bifrost_runtime, BifrostExecutor};
 
@@ -233,8 +264,19 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-		}
-		else {
+		} else if $chain_spec.is_bifrost_polkadot() {
+			#[cfg(feature = "with-bifrost-polkadot-runtime")]
+			#[allow(unused_imports)]
+			use bifrost_runtime::{Block, RuntimeApi};
+			#[cfg(feature = "with-bifrost-polkadot-runtime")]
+			#[allow(unused_imports)]
+	        use BifrostExecutor as Executor;
+			#[cfg(feature = "with-bifrost-polkadot-runtime")]
+			$( $code )*
+
+			#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
+			return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+		} else {
 			return Err(service::UNKNOWN_RUNTIME.into());
 		}
 	}

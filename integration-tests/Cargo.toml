@@ -96,6 +96,7 @@ pallet-vesting = { package = "bifrost-vesting", path = "../pallets/vesting", def
 xcm-support = { path = "../xcm-support", default-features = false }
 asgard-runtime = { path = "../runtime/asgard", default-features = false }
 bifrost-runtime = { path = "../runtime/bifrost", default-features = false }
+bifrost-polkadot-runtime = { path = "../runtime/bifrost-polkadot", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -133,6 +134,9 @@ with-asgard-runtime=[
 ]
 with-bifrost-runtime=[
 	"node-service/with-bifrost-runtime"
+]
+with-bifrost-polkadot-runtime=[
+	"node-service/with-bifrost-polkadot-runtime"
 ]
 std = [
 	"codec/std",
@@ -210,5 +214,6 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"asgard-runtime/std",
-	"bifrost-runtime/std"
+	"bifrost-runtime/std",
+	"bifrost-polkadot-runtime/std"
 ]

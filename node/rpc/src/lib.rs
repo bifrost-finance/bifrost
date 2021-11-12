@@ -137,3 +137,27 @@ where
 
 	io
 }
+
+/// RPC of bifrost_polkadot runtime.
+#[allow(non_snake_case)]
+pub fn create_bifrost_polkadot_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
+where
+	C: ProvideRuntimeApi<Block>
+		+ HeaderBackend<Block>
+		+ HeaderMetadata<Block, Error = BlockChainError>
+		+ Send
+		+ Sync
+		+ 'static,
+	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
+	C::Api: BlockBuilder<Block>,
+	P: TransactionPool + Sync + Send + 'static,
+{
+	let mut io = jsonrpc_core::IoHandler::default();
+	let FullDeps { client, pool, deny_unsafe } = deps;
+
+	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
+	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
+
+	io
+}
