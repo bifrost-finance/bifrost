@@ -72,38 +72,6 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, contribution).into())
 	}
 
-	unlock {
-		let fund_index = create_fund::<T>(1);
-		let caller: T::AccountId = whitelisted_caller();
-		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
-		let contribution = T::MinContribution::get();
-		contribute_fund::<T>(&caller,fund_index);
-		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Root, caller.clone(),fund_index)
-	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Unlocked);
-	}
-
-	batch_unlock {
-		let k in 1 .. T::BatchKeysLimit::get();
-		let fund_index = create_fund::<T>(1);
-		let contribution = T::MinContribution::get();
-		let mut caller: T::AccountId = whitelisted_caller();
-		for i in 0 .. k {
-			caller = account("contributor", i, 0);
-			contribute_fund::<T>(&caller,fund_index);
-		}
-		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Signed(caller.clone()), fund_index)
-	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Unlocked);
-		assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
-	}
-
 	redeem {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();

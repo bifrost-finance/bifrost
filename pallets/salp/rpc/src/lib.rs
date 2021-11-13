@@ -22,11 +22,11 @@ pub use bifrost_salp_rpc_runtime_api::{self as runtime_api, SalpRuntimeApi};
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result as JsonRpcResult};
 use jsonrpc_derive::rpc;
-use node_primitives::RpcContributionStatus;
+use node_primitives::{Balance, RpcContributionStatus};
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_rpc::number::NumberOrHex;
-use sp_runtime::{generic::BlockId, traits::Block as BlockT, SaturatedConversion};
+use sp_runtime::{generic::BlockId, sp_std::convert::TryInto, traits::Block as BlockT};
 
 pub use self::gen_client::Client as SalpClient;
 
@@ -52,6 +52,16 @@ pub trait SalpRpcApi<BlockHash, ParaId, AccountId> {
 		who: AccountId,
 		at: Option<BlockHash>,
 	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
+
+	#[rpc(name = "salp_getLiteContribution")]
+	fn get_lite_contribution(
+		&self,
+		index: ParaId,
+		who: AccountId,
+		at: Option<BlockHash>,
+	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)>;
+
+	fn convert_rpc_params(val: Balance) -> Result<NumberOrHex, RpcError>;
 }
 
 impl<C, Block, ParaId, AccountId> SalpRpcApi<<Block as BlockT>::Hash, ParaId, AccountId>
@@ -63,6 +73,13 @@ where
 	ParaId: Codec,
 	AccountId: Codec,
 {
+	fn convert_rpc_params(value: Balance) -> Result<NumberOrHex, RpcError> {
+		value.try_into().map_err(|_| RpcError {
+			code: ErrorCode::InvalidParams,
+			message: format!("{} doesn't fit in NumberOrHex representation", value),
+			data: None,
+		})
+	}
 	fn get_contribution(
 		&self,
 		index: ParaId,
@@ -75,7 +92,34 @@ where
 		let rs = salp_rpc_api.get_contribution(&at, index, account);
 
 		match rs {
-			Ok((val, status)) => Ok((NumberOrHex::Number(val.saturated_into()), status)),
+			Ok((val, status)) => match Self::convert_rpc_params(val) {
+				Ok(value) => Ok((value, status)),
+				Err(e) => Err(e),
+			},
+			Err(e) => Err(RpcError {
+				code: ErrorCode::InternalError,
+				message: "Failed to get salp contribution.".to_owned(),
+				data: Some(format!("{:?}", e).into()),
+			}),
+		}
+	}
+
+	fn get_lite_contribution(
+		&self,
+		index: ParaId,
+		account: AccountId,
+		at: Option<<Block as BlockT>::Hash>,
+	) -> JsonRpcResult<(NumberOrHex, RpcContributionStatus)> {
+		let salp_rpc_api = self.client.runtime_api();
+		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
+
+		let rs = salp_rpc_api.get_lite_contribution(&at, index, account);
+
+		match rs {
+			Ok((val, status)) => match Self::convert_rpc_params(val) {
+				Ok(value) => Ok((value, status)),
+				Err(e) => Err(e),
+			},
 			Err(e) => Err(RpcError {
 				code: ErrorCode::InternalError,
 				message: "Failed to get salp contribution.".to_owned(),

@@ -247,10 +247,6 @@ impl salp::Config for Test {
 
 pub struct SalpWeightInfo;
 impl WeightInfo for SalpWeightInfo {
-	fn unlock() -> Weight {
-		0
-	}
-
 	fn redeem() -> Weight {
 		0
 	}
@@ -259,7 +255,7 @@ impl WeightInfo for SalpWeightInfo {
 		0
 	}
 
-	fn batch_unlock(_k: u32) -> Weight {
+	fn batch_migrate(_k: u32) -> Weight {
 		0
 	}
 }
