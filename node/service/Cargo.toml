@@ -79,7 +79,6 @@ bifrost-runtime-common = { path = "../../runtime/common"}
 asgard-runtime = { path = "../../runtime/asgard", optional = true }
 bifrost-runtime = { path = "../../runtime/bifrost", optional = true }
 bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot", optional = true }
-asgard-polkadot-runtime = { path = "../../runtime/asgard-polkadot", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }
 
@@ -101,7 +100,6 @@ runtime-benchmarks = [
 	"asgard-runtime/runtime-benchmarks",
 	"bifrost-runtime/runtime-benchmarks",
 	"bifrost-polkadot-runtime/runtime-benchmarks",
-	"asgard-polkadot-runtime/runtime-benchmarks",
 ]
 with-asgard-runtime = [
 	"asgard-runtime",
@@ -113,19 +111,14 @@ with-bifrost-polkadot-runtime = [
 	"bifrost-runtime",
 	"bifrost-polkadot-runtime",
 ]
-with-asgard-polkadot-runtime = [
-	"asgard-polkadot-runtime",
-]
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",
 	"with-bifrost-polkadot-runtime",
-	"with-asgard-polkadot-runtime",
 ]
 try-runtime = [
 	"asgard-runtime/try-runtime",
 	"bifrost-runtime/try-runtime",
 	"bifrost-polkadot-runtime/try-runtime",
-	"asgard-polkadot-runtime/try-runtime",
 ]
 

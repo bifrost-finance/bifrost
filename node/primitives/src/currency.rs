@@ -268,8 +268,6 @@ create_currency_id! {
 		ETH("Ethereum", 18) = 5,
 		KAR("Karura", 12) = 6,
 		ZLK("Zenlink Network Token", 18) = 7,
-		AUSD("Acala Dollar", 12) = 8,
-		ACA("Acala", 12) = 9,
 	}
 }
 
