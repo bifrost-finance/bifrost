@@ -125,8 +125,6 @@ use zenlink_protocol::{
 mod benchmarking;
 mod weights;
 
-pub type SessionHandlers = ();
-
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub aura: Aura,
