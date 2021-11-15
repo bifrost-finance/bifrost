@@ -592,7 +592,8 @@ pub mod pallet {
 			ensure!(
 				status == ContributionStatus::Idle ||
 					status == ContributionStatus::Refunded ||
-					status == ContributionStatus::Redeemed,
+					status == ContributionStatus::Redeemed ||
+					status == ContributionStatus::Unlocked,
 				Error::<T>::InvalidContributionStatus
 			);
 
