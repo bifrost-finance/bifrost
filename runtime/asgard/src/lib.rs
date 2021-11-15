@@ -2013,18 +2013,13 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	fn pre_upgrade() -> Result<(), &'static str> {
 		#[allow(unused_imports)]
 		use frame_support::{migration, Identity};
-
 		log::info!("Asgard `pre_upgrade`...");
-
-		bifrost_salp::migration::migrate();
-
 		Ok(())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Asgard `on_runtime_upgrade`...");
-		let _ = PolkadotXcm::force_default_xcm_version(Origin::root(), Some(2));
 		log::info!("Asgard `on_runtime_upgrade finished`");
 		RocksDbWeight::get().writes(1)
 	}
