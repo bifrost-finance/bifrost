@@ -113,7 +113,6 @@ with-bifrost-polkadot-runtime = [
 with-all-runtime = [
 	"with-asgard-runtime",
 	"with-bifrost-runtime",
-	"with-bifrost-polkadot-runtime",
 ]
 try-runtime = [
 	"asgard-runtime/try-runtime",
