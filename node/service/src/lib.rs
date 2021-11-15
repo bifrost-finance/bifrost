@@ -31,6 +31,7 @@ use cumulus_primitives_core::ParaId;
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_consensus_aura::SlotProportion;
+
 use crate::light::BifrostPolkadotExecutor;
 
 pub mod chain_spec;
@@ -78,7 +79,6 @@ impl sc_executor::NativeExecutionDispatch for AsgardExecutor {
 		asgard_runtime::native_version()
 	}
 }
-
 
 #[cfg(any(feature = "with-bifrost-runtime", feature = "with-bifrost-polkadot-runtime"))]
 pub struct BifrostExecutor;
@@ -538,9 +538,7 @@ pub fn new_chain_ops(
 		#[cfg(feature = "with-bifrost-polkadot-runtime")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(
-					config, false,
-				)?;
+				new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
 			Ok((Arc::new(Client::BifrostPolkadot(client)), backend, import_queue, task_manager))
 		}
 		#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
