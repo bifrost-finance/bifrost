@@ -767,7 +767,7 @@ pub mod pallet {
 			let trading_pair = pool.trading_pair;
 
 			if pool.state == PoolState::Charged {
-				ChargedPoolIds::<T>::mutate(|pids| pids.remove(&pid));
+				ChargedPoolIds::<T, I>::mutate(|pids| pids.remove(&pid));
 			}
 
 			match pool.state {
