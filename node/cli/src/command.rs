@@ -233,12 +233,12 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
-use service::bifrost_polkadot_runtime;
 #[cfg(feature = "with-asgard-runtime")]
-use service::{asgard_runtime, AsgardExecutor};
+use service::full::{asgard_runtime, AsgardExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
-use service::{bifrost_runtime, BifrostExecutor};
+use service::full::{bifrost_runtime, BifrostExecutor};
+#[cfg(feature = "with-bifrost-polkadot-runtime")]
+use service::light::bifrost_polkadot_runtime;
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
@@ -266,18 +266,6 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_bifrost_polkadot() {
-			#[cfg(feature = "with-bifrost-polkadot-runtime")]
-			#[allow(unused_imports)]
-			use bifrost_runtime::{Block, RuntimeApi};
-			#[cfg(feature = "with-bifrost-polkadot-runtime")]
-			#[allow(unused_imports)]
-	        use BifrostExecutor as Executor;
-			#[cfg(feature = "with-bifrost-polkadot-runtime")]
-			$( $code )*
-
-			#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
-			return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 		} else {
 			return Err(service::UNKNOWN_RUNTIME.into());
 		}
@@ -357,10 +345,14 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						service::start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
-							.await
-							.map(|r| r.0)
-							.map_err(Into::into)
+						service::full::start_node::<RuntimeApi, Executor>(
+							config,
+							polkadot_config,
+							id,
+						)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
 					}
 				})
 			})
@@ -403,8 +395,18 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				{
+					let (client, _, import_queue, task_manager) =
+						service::full::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, import_queue), task_manager))
+				}
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					let (client, _, import_queue, task_manager) =
+						service::light::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, import_queue), task_manager))
+				}
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
@@ -414,8 +416,16 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, config.database), task_manager))
+				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				{
+					let (client, _, _, task_manager) = service::full::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, config.database), task_manager))
+				}
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					let (client, _, _, task_manager) = service::light::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, config.database), task_manager))
+				}
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
@@ -425,8 +435,16 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, config.chain_spec), task_manager))
+				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				{
+					let (client, _, _, task_manager) = service::full::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, config.chain_spec), task_manager))
+				}
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					let (client, _, _, task_manager) = service::light::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, config.chain_spec), task_manager))
+				}
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
@@ -436,8 +454,18 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				{
+					let (client, _, import_queue, task_manager) =
+						service::full::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, import_queue), task_manager))
+				}
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					let (client, _, import_queue, task_manager) =
+						service::light::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, import_queue), task_manager))
+				}
 			})
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
@@ -467,8 +495,18 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 			runner.async_run(|mut config| {
-				let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, backend), task_manager))
+				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				{
+					let (client, backend, _, task_manager) =
+						service::full::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, backend), task_manager))
+				}
+				#[cfg(feature = "with-bifrost-polkadot-runtime")]
+				{
+					let (client, backend, _, task_manager) =
+						service::light::new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, backend), task_manager))
+				}
 			})
 		},
 		Some(Subcommand::ExportGenesisState(params)) => {
