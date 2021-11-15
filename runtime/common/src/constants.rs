@@ -19,20 +19,10 @@
 //! A set of constant values used for all runtimes in common.
 
 pub mod parachains {
-	pub mod kusama {
-		pub mod karura {
-			pub const ID: u32 = 2000;
-			pub const KAR_KEY: &[u8] = &[0, 128];
-			pub const KUSD_KEY: &[u8] = &[0, 129];
-		}
-	}
-
-	pub mod polkadot {
-		pub mod acala {
-			pub const ID: u32 = 2000;
-			pub const ACA_KEY: &[u8] = &[0, 0];
-			pub const AUSD_KEY: &[u8] = &[0, 1];
-		}
+	pub mod karura {
+		pub const ID: u32 = 2000;
+		pub const KAR_KEY: &[u8] = &[0, 128];
+		pub const KUSD_KEY: &[u8] = &[0, 129];
 	}
 }
 
