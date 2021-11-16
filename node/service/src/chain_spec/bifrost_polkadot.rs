@@ -16,11 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{
-	fs::{read_dir, File},
-	path::PathBuf,
-};
-
 use bifrost_polkadot_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
@@ -31,8 +26,6 @@ use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
-use serde::de::DeserializeOwned;
-use serde_json as json;
 use sp_core::{crypto::UncheckedInto, sr25519};
 use sp_runtime::traits::Zero;
 
@@ -202,75 +195,45 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
 		(
-			// eunwjK45qDugPXhnjxGUcMbifgdtgefzoW7PgMMpr39AXwh
-			hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
-			hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"]
+			// dpEZwz5nHxEjQXcm3sjy6NTz83EGcBRXMBSyuuWSguiVGJB
+			hex!["5c7e9ccd1045cac7f8c5c77a79c87f44019d1dda4f5032713bda89c5d73cb36b"].into(),
+			hex!["5c7e9ccd1045cac7f8c5c77a79c87f44019d1dda4f5032713bda89c5d73cb36b"]
 				.unchecked_into(),
 		),
 		(
-			// dBkoWVdQCccH1xNAeR1Y4vrETt3a4j4iU8Ct2ewY1FUjasL
-			hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
-			hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"]
+			// duNwrtscWpfuTzRkjtt431kUj1gsfwbPi1bzdQL4cmk9QAa
+			hex!["606b0aad375ae1715fbe6a07315136a8e9c1c84a91230f6a0c296c2953581335"].into(),
+			hex!["606b0aad375ae1715fbe6a07315136a8e9c1c84a91230f6a0c296c2953581335"]
 				.unchecked_into(),
 		),
 		(
-			// dwrEwfj2RFU4DS6EiTCfmxMpQ1sAsaHykftzwoptFe4a8aH
-			hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
-			hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"]
+			// gPQG97HPe54fJpLoFePwm3fxdJaU2VV71hYbqd4RJcNeQfe
+			hex!["ce42cea2dd0d4ac87ccdd5f0f2e1010955467f5a37587cf6af8ee2b4ba781034"].into(),
+			hex!["ce42cea2dd0d4ac87ccdd5f0f2e1010955467f5a37587cf6af8ee2b4ba781034"]
 				.unchecked_into(),
 		),
 		(
-			// fAjW6bwT4GKgW88sjZfNLRr5hWyMM9T9ZwqHYkFiSxw4Yhp
-			hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
-			hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"]
+			// frYfsZhdVuG6Ap6AyJQLSHVqtKmUyqxo6ohnrmGTDk2neXK
+			hex!["b6ba81e73bd39203e006fc99cc1e41976745de2ea2007bf62ed7c9a48ccc5b1d"].into(),
+			hex!["b6ba81e73bd39203e006fc99cc1e41976745de2ea2007bf62ed7c9a48ccc5b1d"]
 				.unchecked_into(),
 		),
 	];
 
 	let root_key: AccountId = hex![
-		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
-		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
+		// cjAZA391BNi2S1Je7PNGHiX4UoJh3SbknQSDQ7qh3g4Aa9H
+		"2c64a40ec236d0a0823065791946f6254c4577c6110f512614bd6ece1a3fa22b"
 	]
 	.into();
 
-	let exe_dir = {
-		let mut exe_dir = std::env::current_exe().unwrap();
-		exe_dir.pop();
-
-		exe_dir
-	};
+	let balances = vec![(root_key.clone(), 10_000 * DOLLARS)];
 
 	bifrost_polkadot_genesis(
 		invulnerables,
 		root_key,
-		// balances,
+		balances,
 		// vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
-		vec![], // temporarily set balances endowment as blank
 		vec![], // temporarily set vesting as blank
 		id,
 	)
-}
-
-fn config_from_json_file<T: DeserializeOwned>(path: PathBuf) -> Result<T, String> {
-	let file = File::open(&path).map_err(|e| format!("Error opening genesis config: {}", e))?;
-
-	let config =
-		json::from_reader(file).map_err(|e| format!("Error parsing config file: {}", e))?;
-
-	Ok(config)
-}
-
-fn config_from_json_files<T: DeserializeOwned>(dir: PathBuf) -> Result<Vec<T>, String> {
-	let mut configs = vec![];
-
-	let iter = read_dir(&dir).map_err(|e| format!("Error opening directory: {}", e))?;
-	for entry in iter {
-		let path = entry.map_err(|e| format!("{}", e))?.path();
-
-		if !path.is_dir() {
-			configs.push(config_from_json_file(path)?);
-		}
-	}
-
-	Ok(configs)
 }

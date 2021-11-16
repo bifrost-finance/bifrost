@@ -55,7 +55,7 @@ use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
 use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
 
-use crate::{IdentifyVariant, BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE, UNKNOWN_RUNTIME};
+use crate::{IdentifyVariant, UNKNOWN_RUNTIME};
 
 pub type FullBackend = TFullBackend<Block>;
 
