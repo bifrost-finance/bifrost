@@ -238,7 +238,7 @@ use service::full::{asgard_runtime, AsgardExecutor};
 #[cfg(feature = "with-bifrost-runtime")]
 use service::full::{bifrost_runtime, BifrostExecutor};
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
-use service::light::bifrost_polkadot_runtime;
+use service::full_polkadot::bifrost_polkadot_runtime;
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
@@ -333,9 +333,9 @@ pub fn run() -> Result<()> {
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					if config.chain_spec.is_bifrost_polkadot() {
-						return service::light::start_node::<
+						return service::full_polkadot::start_node::<
 							bifrost_polkadot_runtime::RuntimeApi,
-							service::light::BifrostPolkadotExecutor,
+							service::full_polkadot::BifrostPolkadotExecutor,
 						>(config, polkadot_config, id)
 						.await
 						.map(|r| r.0)
@@ -404,7 +404,7 @@ pub fn run() -> Result<()> {
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, _, import_queue, task_manager) =
-						service::light::new_chain_ops(&mut config)?;
+						service::full_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, import_queue), task_manager))
 				}
 			})
@@ -423,7 +423,8 @@ pub fn run() -> Result<()> {
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
-					let (client, _, _, task_manager) = service::light::new_chain_ops(&mut config)?;
+					let (client, _, _, task_manager) =
+						service::full_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, config.database), task_manager))
 				}
 			})
@@ -442,7 +443,8 @@ pub fn run() -> Result<()> {
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
-					let (client, _, _, task_manager) = service::light::new_chain_ops(&mut config)?;
+					let (client, _, _, task_manager) =
+						service::full_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, config.chain_spec), task_manager))
 				}
 			})
@@ -463,7 +465,7 @@ pub fn run() -> Result<()> {
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, _, import_queue, task_manager) =
-						service::light::new_chain_ops(&mut config)?;
+						service::full_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, import_queue), task_manager))
 				}
 			})
@@ -504,7 +506,7 @@ pub fn run() -> Result<()> {
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, backend, _, task_manager) =
-						service::light::new_chain_ops(&mut config)?;
+						service::full_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, backend), task_manager))
 				}
 			})
