@@ -102,5 +102,5 @@ impl_benchmark_test_suite!(
 	crate::mock::ExtBuilder::default()
 		// .one_hundred_precision_for_each_currency_type_for_whitelist_account()
 		.build(),
-	crate::mock::Test
+	crate::mock::Runtime
 );

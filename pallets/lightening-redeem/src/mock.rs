@@ -19,6 +19,7 @@
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
 
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
@@ -31,7 +32,7 @@ use sp_core::{
 };
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	AccountId32,
 };
 
@@ -173,7 +174,7 @@ impl ExtBuilder {
 	#[cfg(feature = "runtime-benchmarks")]
 	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
 		let whitelist_caller: AccountId = whitelisted_caller();
-		let pool_account = LighteningRedeemPalletId::get().into_account();
+		let pool_account: AccountId = LighteningRedeemPalletId::get().into_account();
 
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
