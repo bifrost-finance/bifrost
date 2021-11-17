@@ -1940,7 +1940,7 @@ impl_runtime_apis! {
 
 			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_salp, Salp);
-			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
+			// add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
 			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);

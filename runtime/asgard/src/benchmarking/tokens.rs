@@ -23,16 +23,10 @@ use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrencyExtended;
-use sp_runtime::{
-	traits::{StaticLookup, UniqueSaturatedInto},
-	SaturatedConversion,
-};
+use sp_runtime::{traits::StaticLookup, SaturatedConversion};
 use sp_std::prelude::*;
 
-use crate::{
-	AccountId, Amount, Balance, Currencies, CurrencyId, ExistentialDeposit, Runtime,
-	StableCurrencyId, TokenSymbol,
-};
+use crate::{AccountId, Balance, Currencies, CurrencyId, Runtime, StableCurrencyId};
 
 const SEED: u32 = 0;
 const STABLECOIN: CurrencyId = StableCurrencyId::get();
@@ -99,7 +93,14 @@ mod tests {
 	use orml_benchmarking::impl_benchmark_test_suite;
 
 	use super::*;
-	use crate::benchmarking::utils::tests::new_test_ext;
+	// use crate::benchmarking::utils::tests::new_test_ext;
+
+	pub fn new_test_ext() -> sp_io::TestExternalities {
+		frame_system::GenesisConfig::default()
+			.build_storage::<crate::Runtime>()
+			.unwrap()
+			.into()
+	}
 
 	impl_benchmark_test_suite!(new_test_ext(),);
 }
