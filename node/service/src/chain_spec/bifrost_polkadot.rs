@@ -32,7 +32,7 @@ use sp_runtime::traits::Zero;
 use super::TELEMETRY_URL;
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 
-const DEFAULT_PROTOCOL_ID: &str = "bifrost";
+const DEFAULT_PROTOCOL_ID: &str = "bifrost_polkadot";
 
 /// Specialized `ChainSpec` for the bifrost-polkadot runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
