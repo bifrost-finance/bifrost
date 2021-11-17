@@ -102,7 +102,7 @@ where
 
 /// RPC of bifrost_polkadot runtime.
 #[allow(non_snake_case)]
-pub fn create_light_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
+pub fn create_full_polkadot_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>

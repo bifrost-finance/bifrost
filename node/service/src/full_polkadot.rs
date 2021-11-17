@@ -856,7 +856,7 @@ where
 				pool: transaction_pool.clone(),
 				deny_unsafe,
 			};
-			let rpc = crate::rpc::create_light_rpc(deps);
+			let rpc = crate::rpc::create_full_polkadot_rpc(deps);
 			Ok(rpc)
 		})
 	};

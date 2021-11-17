@@ -24,7 +24,7 @@ pub mod dev;
 #[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
 pub mod full;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
-pub mod light;
+pub mod full_polkadot;
 pub use node_rpc as rpc;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.

@@ -37,7 +37,6 @@ use cumulus_primitives_core::ParaId;
 use node_primitives::{
 	AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
 };
-use node_rpc as rpc;
 use sc_client_api::{
 	AuxStore, Backend as BackendT, BlockchainEvents, ExecutorProvider, KeyIterator, UsageProvider,
 };
@@ -63,6 +62,7 @@ use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
 use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
 
+#[allow(unused_imports)]
 use crate::{
 	IdentifyVariant, ASGARD_RUNTIME_NOT_AVAILABLE, BIFROST_RUNTIME_NOT_AVAILABLE, UNKNOWN_RUNTIME,
 };
