@@ -232,7 +232,6 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 		invulnerables,
 		root_key,
 		balances,
-		// vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		vec![], // temporarily set vesting as blank
 		id,
 	)

@@ -23,10 +23,10 @@ use std::sync::Arc;
 
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+pub use bifrost_kusama_runtime;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
 pub use bifrost_polkadot_runtime;
-#[cfg(feature = "with-bifrost-runtime")]
-pub use bifrost_runtime;
 use cumulus_client_consensus_aura::{build_aura_consensus, BuildAuraConsensusParams};
 use cumulus_client_consensus_common::ParachainConsensus;
 use cumulus_client_network::build_block_announce_validator;
@@ -64,7 +64,8 @@ use substrate_prometheus_endpoint::Registry;
 
 #[allow(unused_imports)]
 use crate::{
-	IdentifyVariant, ASGARD_RUNTIME_NOT_AVAILABLE, BIFROST_RUNTIME_NOT_AVAILABLE, UNKNOWN_RUNTIME,
+	IdentifyVariant, ASGARD_RUNTIME_NOT_AVAILABLE, BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE,
+	UNKNOWN_RUNTIME,
 };
 
 #[cfg(feature = "with-asgard-runtime")]
@@ -82,18 +83,18 @@ impl sc_executor::NativeExecutionDispatch for AsgardExecutor {
 	}
 }
 
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub struct BifrostExecutor;
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		bifrost_runtime::api::dispatch(method, data)
+		bifrost_kusama_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		bifrost_runtime::native_version()
+		bifrost_kusama_runtime::native_version()
 	}
 }
 
@@ -486,15 +487,15 @@ pub fn new_chain_ops(
 		}
 		#[cfg(not(feature = "with-asgard-runtime"))]
 		Err(ASGARD_RUNTIME_NOT_AVAILABLE.into())
-	} else if config.chain_spec.is_bifrost() {
-		#[cfg(feature = "with-bifrost-runtime")]
+	} else if config.chain_spec.is_bifrost_kusama() {
+		#[cfg(feature = "with-bifrost-kusama-runtime")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
+				new_partial::<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
 			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
 		}
-		#[cfg(not(feature = "with-bifrost-runtime"))]
-		Err(BIFROST_RUNTIME_NOT_AVAILABLE.into())
+		#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
+		Err(BIFROST_KUSAM_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		Err(UNKNOWN_RUNTIME.into())
 	}
@@ -631,7 +632,7 @@ macro_rules! with_client {
 		match $self {
 			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard($client) => { $( $code )* },
-			#[cfg(feature = "with-bifrost-runtime")]
+			#[cfg(feature = "with-bifrost-kusama-runtime")]
 			Self::Bifrost($client) => { $( $code )* },
 		}
 	}
@@ -645,9 +646,9 @@ pub enum Client {
 	#[cfg(feature = "with-asgard-runtime")]
 	#[allow(dead_code)]
 	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, AsgardExecutor>>),
-	#[cfg(feature = "with-bifrost-runtime")]
+	#[cfg(feature = "with-bifrost-kusama-runtime")]
 	#[allow(dead_code)]
-	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, BifrostExecutor>>),
+	Bifrost(Arc<FullClient<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>>),
 }
 
 impl ClientHandle for Client {

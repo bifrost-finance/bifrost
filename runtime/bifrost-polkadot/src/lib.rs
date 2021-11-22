@@ -65,7 +65,7 @@ use bifrost_runtime_common::{xcm_impl::BifrostFilteredAssets, SlowAdjustingFeeUp
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::traits::{Currency, OnRuntimeUpgrade};
+use frame_support::traits::Currency;
 use frame_system::EnsureRoot;
 pub use node_primitives::{
 	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
@@ -91,8 +91,6 @@ use xcm_executor::{Config, XcmExecutor};
 // Weights used in the runtime.
 mod weights;
 
-pub type SessionHandlers = ();
-
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub aura: Aura,
@@ -105,7 +103,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost_polkadot"),
 	impl_name: create_runtime_str!("bifrost_polkadot"),
 	authoring_version: 0,
-	spec_version: 200,
+	spec_version: 908,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -156,7 +154,6 @@ parameter_types! {
 	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 	pub SelfParaId: u32 = ParachainInfo::parachain_id().into();
-	pub const PolkadotCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 }
 
 parameter_types! {
@@ -515,8 +512,6 @@ impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
 
-impl pallet_randomness_collective_flip::Config for Runtime {}
-
 parameter_types! {
 	pub const DotLocation: MultiLocation = MultiLocation::parent();
 	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
@@ -749,7 +744,6 @@ construct_runtime! {
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
 		Indices: pallet_indices::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 3,
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Storage} = 4,
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>, ValidateUnsigned} = 5,
 		ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
@@ -825,7 +819,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	CustomOnRuntimeUpgrade,
+	(),
 >;
 
 impl_runtime_apis! {
@@ -937,8 +931,6 @@ impl_runtime_apis! {
 		}
 	}
 
-
-
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn benchmark_metadata(extra: bool) -> (
@@ -995,27 +987,6 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
-	}
-}
-
-pub struct CustomOnRuntimeUpgrade;
-impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-
-		log::info!("Bifrost `pre_upgrade`...");
-
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-		let _ = PolkadotXcm::force_default_xcm_version(Origin::root(), Some(2));
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-		RocksDbWeight::get().writes(1)
 	}
 }
 

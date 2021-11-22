@@ -19,12 +19,12 @@
 #![warn(unused_extern_crates)]
 
 pub mod chain_spec;
+#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-kusama-runtime"))]
+pub mod collator_kusama;
+#[cfg(feature = "with-bifrost-polkadot-runtime")]
+pub mod collator_polkadot;
 #[cfg(feature = "with-asgard-runtime")]
 pub mod dev;
-#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
-pub mod full;
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
-pub mod full_polkadot;
 pub use node_rpc as rpc;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
@@ -32,10 +32,10 @@ pub trait IdentifyVariant {
 	/// Returns if this is a configuration for the `Asgard` network.
 	fn is_asgard(&self) -> bool;
 
-	/// Returns if this is a configuration for the `Bifrost` network.
-	fn is_bifrost(&self) -> bool;
+	/// Returns if this is a configuration for the `Bifrost-Kusama` network.
+	fn is_bifrost_kusama(&self) -> bool;
 
-	/// Returns if this is a configuration for the `BifrostPolkadot` network.
+	/// Returns if this is a configuration for the `Bifrost-Polkadot` network.
 	fn is_bifrost_polkadot(&self) -> bool;
 
 	/// Returns if this is a configuration for the `Dev` network.
@@ -47,7 +47,7 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 		self.id().starts_with("asgard")
 	}
 
-	fn is_bifrost(&self) -> bool {
+	fn is_bifrost_kusama(&self) -> bool {
 		self.id().starts_with("bifrost") && !self.id().starts_with("bifrost_polkadot")
 	}
 
@@ -60,10 +60,10 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 	}
 }
 
-pub const BIFROST_RUNTIME_NOT_AVAILABLE: &str =
-	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-runtime` to enable it.";
 pub const ASGARD_RUNTIME_NOT_AVAILABLE: &str =
 	"Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.";
+pub const BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
+	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-kusama-runtime` to enable it.";
 pub const BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
-"Bifrost-polkadot runtime is not available. Please compile the node with `--features with-bifrost-polkadot-runtime` to enable it.";
+	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-polkadot-runtime` to enable it.";
 pub const UNKNOWN_RUNTIME: &str = "Unknown runtime";
