@@ -50,7 +50,6 @@ pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -60,7 +59,6 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-pallet-society = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.12" }
@@ -145,7 +143,6 @@ std = [
 	"pallet-membership/std",
 	"pallet-multisig/std",
 	"pallet-proxy/std",
-	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-tips/std",
@@ -155,7 +152,6 @@ std = [
 	"pallet-session/std",
 	"pallet-vesting/std",
 	"pallet-utility/std",
-	"pallet-society/std",
 	"sp-arithmetic/std",
 	"sp-api/std",
 	"sp-block-builder/std",
@@ -218,7 +214,6 @@ runtime-benchmarks = [
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
-	"pallet-society/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
 	"bifrost-salp-lite/runtime-benchmarks",
 	"bifrost-bancor/runtime-benchmarks",

@@ -35,7 +35,6 @@ vtoken-mint = { package = "bifrost-vtoken-mint", path = "../vtoken-mint" }
 
 substrate-offchain = { version = "3.0.0", package = "sp-offchain" }
 pallet-balances = { version = "3.0.0" }
-pallet-randomness-collective-flip = "3.0.0"
 
 
 [features]

@@ -48,7 +48,6 @@ pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "po
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
@@ -94,7 +93,8 @@ bifrost-vsbond-auction = { path = "../pallets/vsbond-auction", default-features 
 bifrost-vtoken-mint = { path = "../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../pallets/vesting", default-features = false }
 xcm-support = { path = "../xcm-support", default-features = false }
-bifrost-runtime = { path = "../runtime/bifrost", default-features = false }
+asgard-runtime = { path = "../runtime/asgard", default-features = false }
+bifrost-kusama-runtime = { path = "../runtime/bifrost", default-features = false }
 bifrost-polkadot-runtime = { path = "../runtime/bifrost-polkadot", default-features = false }
 
 # orml
@@ -129,7 +129,11 @@ node-service = { path = "../node/service", features = ["with-all-runtime"] }
 default = ["std"]
 no_std = []
 with-bifrost-runtime=[
-	"node-service/with-bifrost-runtime"
+	"node-service/with-bifrost-kusama-runtime",
+	"node-service/with-bifrost-polkadot-runtime"
+]
+with-bifrost-kusama-runtime=[
+	"node-service/with-bifrost-kusama-runtime"
 ]
 with-bifrost-polkadot-runtime=[
 	"node-service/with-bifrost-polkadot-runtime"
@@ -155,7 +159,6 @@ std = [
 	"pallet-membership/std",
 	"pallet-multisig/std",
 	"pallet-proxy/std",
-	"pallet-randomness-collective-flip/std",
 	"pallet-sudo/std",
 	"pallet-timestamp/std",
 	"pallet-tips/std",
@@ -210,6 +213,6 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"asgard-runtime/std",
-	"bifrost-runtime/std",
+	"bifrost-kusama-runtime/std",
 	"bifrost-polkadot-runtime/std"
 ]

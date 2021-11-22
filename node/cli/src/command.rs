@@ -65,14 +65,17 @@ fn load_spec(
 		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost" => Box::new(service::chain_spec::bifrost::ChainSpec::from_json_bytes(
-			&include_bytes!("../../service/res/bifrost.json")[..],
-		)?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
+		#[cfg(feature = "with-bifrost-kusama-runtime")]
+		"bifrost" | "bifrost-kusama" =>
+			Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_bytes(
+				&include_bytes!("../../service/res/bifrost-kusama.json")[..],
+			)?),
+		#[cfg(feature = "with-bifrost-kusama-runtime")]
+		"bifrost-genesis" | "bifrost-kusama-genesis" =>
+			Box::new(service::chain_spec::bifrost_kusama::chainspec_config(para_id)),
+		#[cfg(feature = "with-bifrost-kusama-runtime")]
+		"bifrost-local" | "bifrost-kusama-local" =>
+			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config(para_id)?),
 
 		#[cfg(feature = "with-bifrost-polkadot-runtime")]
 		"bifrost-polkadot" =>
@@ -104,17 +107,15 @@ fn load_spec(
 						path,
 					)?)
 				}
-				// #[cfg(feature = "with-bifrost-runtime")]
-				// return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 				#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
 				return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
-				#[cfg(feature = "with-bifrost-runtime")]
+				#[cfg(feature = "with-bifrost-kusama-runtime")]
 				{
-					Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+					Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_file(path)?)
 				}
-				#[cfg(not(feature = "with-bifrost-runtime"))]
-				return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
+				#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
+				return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				return Err(service::UNKNOWN_RUNTIME.into());
 			}
@@ -165,20 +166,20 @@ impl SubstrateCli for Cli {
 			}
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("{}", service::ASGARD_RUNTIME_NOT_AVAILABLE);
-		} else if spec.is_bifrost() {
-			#[cfg(feature = "with-bifrost-runtime")]
+		} else if spec.is_bifrost_kusama() {
+			#[cfg(feature = "with-bifrost-kusama-runtime")]
 			{
-				&bifrost_runtime::VERSION
+				&bifrost_kusama_runtime::VERSION
 			}
-			#[cfg(not(feature = "with-bifrost-runtime"))]
-			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
+			#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
+			panic!("{}", service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE);
 		} else if spec.is_bifrost_polkadot() {
 			#[cfg(feature = "with-bifrost-polkadot-runtime")]
 			{
 				return &bifrost_polkadot_runtime::VERSION;
 			}
 			#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
-			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
+			panic!("{}", service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE);
 		} else {
 			panic!("{}", "unknown runtime!");
 		}
@@ -234,26 +235,26 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 }
 
 #[cfg(feature = "with-asgard-runtime")]
-use service::full::{asgard_runtime, AsgardExecutor};
-#[cfg(feature = "with-bifrost-runtime")]
-use service::full::{bifrost_runtime, BifrostExecutor};
+use service::collator_kusama::{asgard_runtime, AsgardExecutor};
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+use service::collator_kusama::{bifrost_kusama_runtime, BifrostExecutor};
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
-use service::full_polkadot::bifrost_polkadot_runtime;
+use service::collator_polkadot::bifrost_polkadot_runtime;
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_bifrost() {
-			#[cfg(feature = "with-bifrost-runtime")]
+		if $chain_spec.is_bifrost_kusama() {
+			#[cfg(feature = "with-bifrost-kusama-runtime")]
 			#[allow(unused_imports)]
-			use bifrost_runtime::{Block, RuntimeApi};
-			#[cfg(feature = "with-bifrost-runtime")]
+			use bifrost_kusama_runtime::{Block, RuntimeApi};
+			#[cfg(feature = "with-bifrost-kusama-runtime")]
 			#[allow(unused_imports)]
 	        use BifrostExecutor as Executor;
-			#[cfg(feature = "with-bifrost-runtime")]
+			#[cfg(feature = "with-bifrost-kusama-runtime")]
 			$( $code )*
 
-			#[cfg(not(feature = "with-bifrost-runtime"))]
-			return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
+			#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
+			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_asgard() || $chain_spec.is_dev() {
 			#[cfg(feature = "with-asgard-runtime")]
 			#[allow(unused_imports)]
@@ -275,7 +276,7 @@ macro_rules! with_runtime_or_err {
 fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
 	use sp_core::crypto::Ss58AddressFormatRegistry;
 
-	let ss58_version = if spec.is_bifrost() {
+	let ss58_version = if spec.is_bifrost_kusama() || spec.is_bifrost_polkadot()  {
 		Ss58AddressFormatRegistry::BifrostAccount
 	} else {
 		Ss58AddressFormatRegistry::SubstrateAccount
@@ -333,9 +334,9 @@ pub fn run() -> Result<()> {
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					if config.chain_spec.is_bifrost_polkadot() {
-						return service::full_polkadot::start_node::<
+						return service::collator_polkadot::start_node::<
 							bifrost_polkadot_runtime::RuntimeApi,
-							service::full_polkadot::BifrostPolkadotExecutor,
+							service::collator_polkadot::BifrostPolkadotExecutor,
 						>(config, polkadot_config, id)
 						.await
 						.map(|r| r.0)
@@ -345,7 +346,7 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						service::full::start_node::<RuntimeApi, Executor>(
+						service::collator_kusama::start_node::<RuntimeApi, Executor>(
 							config,
 							polkadot_config,
 							id,
@@ -395,16 +396,19 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				#[cfg(any(
+					feature = "with-asgard-runtime",
+					feature = "with-bifrost-kusama-runtime"
+				))]
 				{
 					let (client, _, import_queue, task_manager) =
-						service::full::new_chain_ops(&mut config)?;
+						service::collator_kusama::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, import_queue), task_manager))
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, _, import_queue, task_manager) =
-						service::full_polkadot::new_chain_ops(&mut config)?;
+						service::collator_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, import_queue), task_manager))
 				}
 			})
@@ -416,15 +420,19 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				#[cfg(any(
+					feature = "with-asgard-runtime",
+					feature = "with-bifrost-kusama-runtime"
+				))]
 				{
-					let (client, _, _, task_manager) = service::full::new_chain_ops(&mut config)?;
+					let (client, _, _, task_manager) =
+						service::collator_kusama::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, config.database), task_manager))
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, _, _, task_manager) =
-						service::full_polkadot::new_chain_ops(&mut config)?;
+						service::collator_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, config.database), task_manager))
 				}
 			})
@@ -436,15 +444,19 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				#[cfg(any(
+					feature = "with-asgard-runtime",
+					feature = "with-bifrost-kusama-runtime"
+				))]
 				{
-					let (client, _, _, task_manager) = service::full::new_chain_ops(&mut config)?;
+					let (client, _, _, task_manager) =
+						service::collator_kusama::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, config.chain_spec), task_manager))
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, _, _, task_manager) =
-						service::full_polkadot::new_chain_ops(&mut config)?;
+						service::collator_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, config.chain_spec), task_manager))
 				}
 			})
@@ -456,16 +468,19 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.async_run(|mut config| {
-				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				#[cfg(any(
+					feature = "with-asgard-runtime",
+					feature = "with-bifrost-kusama-runtime"
+				))]
 				{
 					let (client, _, import_queue, task_manager) =
-						service::full::new_chain_ops(&mut config)?;
+						service::collator_kusama::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, import_queue), task_manager))
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, _, import_queue, task_manager) =
-						service::full_polkadot::new_chain_ops(&mut config)?;
+						service::collator_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, import_queue), task_manager))
 				}
 			})
@@ -497,16 +512,19 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 			runner.async_run(|mut config| {
-				#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-runtime"))]
+				#[cfg(any(
+					feature = "with-asgard-runtime",
+					feature = "with-bifrost-kusama-runtime"
+				))]
 				{
 					let (client, backend, _, task_manager) =
-						service::full::new_chain_ops(&mut config)?;
+						service::collator_kusama::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, backend), task_manager))
 				}
 				#[cfg(feature = "with-bifrost-polkadot-runtime")]
 				{
 					let (client, backend, _, task_manager) =
-						service::full_polkadot::new_chain_ops(&mut config)?;
+						service::collator_polkadot::new_chain_ops(&mut config)?;
 					Ok((cmd.run(client, backend), task_manager))
 				}
 			})
