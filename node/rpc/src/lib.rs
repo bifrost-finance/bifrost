@@ -63,7 +63,7 @@ pub struct FullDeps<C, P> {
 /// A IO handler that uses all Full RPC extensions.
 pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
-/// RPC of asgard runtime.
+/// RPC of asgard/bifrost-kusama runtime.
 pub fn create_full_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>
@@ -100,7 +100,7 @@ where
 	io
 }
 
-/// RPC of bifrost_polkadot runtime.
+/// RPC of bifrost-polkadot runtime.
 #[allow(non_snake_case)]
 pub fn create_full_polkadot_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
