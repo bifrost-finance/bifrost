@@ -18,8 +18,8 @@
 
 #[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
-#[cfg(feature = "with-bifrost-runtime")]
-pub mod bifrost;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+pub mod bifrost_kusama;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
 pub mod bifrost_polkadot;
 

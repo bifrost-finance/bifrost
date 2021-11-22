@@ -54,7 +54,6 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Storage, Event<T>},
 		Assets: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		PalletBalances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
 		MinterReward: minter_reward::{Pallet, Storage, Event<T>},
 
 	}
