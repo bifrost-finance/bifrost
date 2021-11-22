@@ -276,7 +276,7 @@ macro_rules! with_runtime_or_err {
 fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
 	use sp_core::crypto::Ss58AddressFormatRegistry;
 
-	let ss58_version = if spec.is_bifrost_kusama() || spec.is_bifrost_polkadot()  {
+	let ss58_version = if spec.is_bifrost_kusama() || spec.is_bifrost_polkadot() {
 		Ss58AddressFormatRegistry::BifrostAccount
 	} else {
 		Ss58AddressFormatRegistry::SubstrateAccount
