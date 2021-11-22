@@ -281,6 +281,8 @@ parameter_types! {
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
+	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"/mkl-dis");
+	pub const StringLimit: u32 = 50;
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
@@ -1409,6 +1411,17 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
 }
 
+impl merkle_distributor::Config for Runtime{
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type Balance = u128;
+	type MerkleDistributorId = u32;
+	type PalletId = MerkleDirtributorPalletId;
+	type StringLimit = StringLimit;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
 	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
@@ -1641,6 +1654,7 @@ construct_runtime! {
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
+		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 113,
 	}
 }
 

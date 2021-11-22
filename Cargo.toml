@@ -20,6 +20,7 @@ members = [
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
 	"pallets/call-switchgear",
+	"pallets/merkle-distributor",
 	"runtime/asgard",
 	"runtime/bifrost",
 	"xcm-support",
@@ -205,3 +206,5 @@ orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-m
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
 orml-benchmarking = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "5ba42f532b72d71a28aaa18421855de003b9ca71" }
+
+#merkle-distributor = {git = "https://github.com/zenlinkpro/merkle-distributor.git", rev = "ecfdf9ce68c484e45b821a08c95dfc29ec5a8152"}
