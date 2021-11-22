@@ -61,11 +61,12 @@ pub mod currency {
 	}
 
 	// 1 KSM = 10 DOT
+	// DOT precision is 1/100 of KSM and BNC
 	pub fn dot_per_second() -> u128 {
 		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
 		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
 		let fee_per_second = base_tx_per_second * base_tx_fee();
-		fee_per_second / 100 * 10
+		fee_per_second / 100 * 10 / 100
 	}
 }
 
