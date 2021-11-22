@@ -32,6 +32,10 @@ build-asgard-release: copy-genesis-config-release
 build-bifrost-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-runtime" --release
 
+.PHONY: build-bifrost-kusama-release
+build-bifrost-kusama-release: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --release
+
 .PHONY: build-bifrost-polkadot-release
 build-bifrost-polkadot-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-polkadot-runtime" --release

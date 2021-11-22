@@ -188,7 +188,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Cumulus Test Parachain Collator".into()
+		"Parachain Collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -196,7 +196,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
+		"Parachain collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
 		bifrost-collator [parachain-args] -- [relaychain-args]"
@@ -208,7 +208,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/cumulus/issues/new".into()
+		"https://github.com/bifrost-finance/bifrost/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
