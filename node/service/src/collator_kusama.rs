@@ -23,9 +23,9 @@ use std::sync::Arc;
 
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
+#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_kusama_runtime;
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_polkadot_runtime;
 use cumulus_client_consensus_aura::{build_aura_consensus, BuildAuraConsensusParams};
 use cumulus_client_consensus_common::ParachainConsensus;
@@ -83,9 +83,9 @@ impl sc_executor::NativeExecutionDispatch for AsgardExecutor {
 	}
 }
 
-#[cfg(feature = "with-bifrost-kusama-runtime")]
+#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub struct BifrostExecutor;
-#[cfg(feature = "with-bifrost-kusama-runtime")]
+#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
@@ -488,14 +488,17 @@ pub fn new_chain_ops(
 		#[cfg(not(feature = "with-asgard-runtime"))]
 		Err(ASGARD_RUNTIME_NOT_AVAILABLE.into())
 	} else if config.chain_spec.is_bifrost_kusama() {
-		#[cfg(feature = "with-bifrost-kusama-runtime")]
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
 				new_partial::<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
 			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
 		}
-		#[cfg(not(feature = "with-bifrost-kusama-runtime"))]
-		Err(BIFROST_KUSAM_RUNTIME_NOT_AVAILABLE.into())
+		#[cfg(not(any(
+			feature = "with-bifrost-kusama-runtime",
+			feature = "with-bifrost-runtime"
+		)))]
+		Err(BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		Err(UNKNOWN_RUNTIME.into())
 	}
@@ -632,7 +635,7 @@ macro_rules! with_client {
 		match $self {
 			#[cfg(feature = "with-asgard-runtime")]
 			Self::Asgard($client) => { $( $code )* },
-			#[cfg(feature = "with-bifrost-kusama-runtime")]
+			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 			Self::Bifrost($client) => { $( $code )* },
 		}
 	}

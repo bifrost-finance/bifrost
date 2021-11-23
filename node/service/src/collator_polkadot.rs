@@ -64,9 +64,9 @@ pub type FullClient<RuntimeApi, ExecutorDispatch> =
 
 pub type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
 
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub struct BifrostPolkadotExecutor;
-#[cfg(feature = "with-bifrost-polkadot-runtime")]
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 impl sc_executor::NativeExecutionDispatch for BifrostPolkadotExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
@@ -940,7 +940,7 @@ pub fn new_chain_ops(
 > {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
 	if config.chain_spec.is_bifrost_polkadot() {
-		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
 				new_partial::<bifrost_polkadot_runtime::RuntimeApi, BifrostPolkadotExecutor>(
@@ -948,7 +948,10 @@ pub fn new_chain_ops(
 				)?;
 			Ok((Arc::new(Client::BifrostPolkadot(client)), backend, import_queue, task_manager))
 		}
-		#[cfg(not(feature = "with-bifrost-polkadot-runtime"))]
+		#[cfg(not(any(
+			feature = "with-bifrost-polkadot-runtime",
+			feature = "with-bifrost-runtime"
+		)))]
 		Err(BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		Err(UNKNOWN_RUNTIME.into())
