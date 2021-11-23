@@ -92,6 +92,7 @@ bifrost-salp-lite = { path = "../../pallets/salp-lite", default-features = false
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-features = false }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
+bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
 bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
@@ -179,6 +180,7 @@ std = [
 	"bifrost-salp/std",
 	"bifrost-salp-rpc-runtime-api/std",
 	"bifrost-salp-lite/std",
+	"bifrost-vsbond-auction/std",
 	"bifrost-liquidity-mining/std",
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
@@ -211,6 +213,7 @@ runtime-benchmarks = [
 	"bifrost-salp/runtime-benchmarks",
 #	"bifrost-salp-lite/runtime-benchmarks",
 	"bifrost-liquidity-mining/runtime-benchmarks",
+	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
