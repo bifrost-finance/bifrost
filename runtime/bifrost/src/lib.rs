@@ -1386,6 +1386,20 @@ impl bifrost_salp_lite::Config for Runtime {
 }
 
 parameter_types! {
+	pub const MaximumOrderInTrade: u32 = 5;
+	pub const MinimumSupply: Balance = 0;
+}
+
+impl bifrost_vsbond_auction::Config for Runtime {
+	type Event = Event;
+	type InvoicingCurrency = RelayCurrencyId;
+	type MaximumOrderInTrade = MaximumOrderInTrade;
+	type MinimumAmount = MinimumSupply;
+	type MultiCurrency = Currencies;
+	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
+}
+
+parameter_types! {
 	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
 	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
@@ -1627,6 +1641,7 @@ construct_runtime! {
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
+		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 	}
 }
 
@@ -1890,6 +1905,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_salp, Salp);
 			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
 			list_benchmark!(list, extra, bifrost_liquidity_mining, LiquidityMining);
+			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
@@ -1928,6 +1944,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_salp, Salp);
 			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
 			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
+			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
