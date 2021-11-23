@@ -102,7 +102,7 @@ bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-f
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
-merkle-distributor = {path = "../../pallets/merkle-distributor", default-features = false }
+merkle-distributor = {version = "*", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }

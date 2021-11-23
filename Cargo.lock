@@ -4700,8 +4700,8 @@ checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 [[package]]
 name = "merkle-distributor"
 version = "0.1.0"
+source = "git+https://github.com/zenlinkpro/merkle-distributor.git?rev=b105372d97da5aab22bd1f77866237350e3e255d#b105372d97da5aab22bd1f77866237350e3e255d"
 dependencies = [
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "hex-literal 0.3.3",
