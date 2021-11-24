@@ -245,9 +245,7 @@ pub mod pallet {
 
 			// Check the token_symbol
 			ensure!(
-				token_symbol == TokenSymbol::KSM ||
-					token_symbol == TokenSymbol::BNC ||
-					token_symbol == TokenSymbol::DOT,
+				token_symbol == TokenSymbol::KSM || token_symbol == TokenSymbol::DOT,
 				Error::<T, I>::InvalidVsbond
 			);
 
