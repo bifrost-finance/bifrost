@@ -36,11 +36,11 @@ use frame_support::{
 	},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod, TokenInfo, TokenSymbol};
+use node_primitives::{CurrencyId, LeasePeriod, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
-use sp_std::{cmp::min, convert::TryFrom};
+use sp_std::cmp::min;
 pub use weights::WeightInfo;
 
 #[cfg(test)]
@@ -149,6 +149,7 @@ pub mod pallet {
 		ForbidClinchOrderNotInTrade,
 		ForbidClinchOrderWithinOwnership,
 		ExceedMaximumOrderInTrade,
+		InvalidVsbond,
 		Unexpected,
 	}
 
@@ -229,6 +230,7 @@ pub mod pallet {
 		pub fn create_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
+			token_symbol: TokenSymbol,
 			#[pallet::compact] first_slot: LeasePeriodOf<T>,
 			#[pallet::compact] last_slot: LeasePeriodOf<T>,
 			#[pallet::compact] amount: BalanceOf<T, I>,
@@ -241,14 +243,16 @@ pub mod pallet {
 			// Check amount
 			ensure!(amount > T::MinimumAmount::get(), Error::<T, I>::NotEnoughAmount);
 
-			let currency_id_u64: u64 = T::InvoicingCurrency::get().currency_id();
-			let token_symbol_bit = (currency_id_u64 & 0x0000_0000_0000_00ff) as u8;
-			let currency_token_symbol =
-				TokenSymbol::try_from(token_symbol_bit).map_err(|_| Error::<T, I>::Unexpected)?;
+			// Check the token_symbol
+			ensure!(
+				token_symbol == TokenSymbol::KSM ||
+					token_symbol == TokenSymbol::BNC ||
+					token_symbol == TokenSymbol::DOT,
+				Error::<T, I>::InvalidVsbond
+			);
 
 			// Construct vsbond
-			let (_, vsbond) =
-				CurrencyId::vsAssets(currency_token_symbol, index, first_slot, last_slot);
+			let (_, vsbond) = CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot);
 
 			// Check the balance
 			let (token_reserved, amount_reserved) = match order_type {
