@@ -1423,7 +1423,7 @@ impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for R
 	type MaximumCharged = MaximumCharged;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningDOTPalletId;
-	type WeightInfo = weights::bifrost_liquidity_mining::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 impl bifrost_token_issuer::Config for Runtime {
