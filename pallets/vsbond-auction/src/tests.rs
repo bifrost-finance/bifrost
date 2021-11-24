@@ -27,7 +27,7 @@ fn create_sell_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -54,7 +54,7 @@ fn create_buy_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -81,7 +81,7 @@ fn double_create_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			50,
@@ -91,7 +91,7 @@ fn double_create_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			50,
@@ -125,7 +125,7 @@ fn create_order_by_origin_illegal_should_fail() {
 			Auction::create_order(
 				Origin::root(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				100,
@@ -138,7 +138,7 @@ fn create_order_by_origin_illegal_should_fail() {
 			Auction::create_order(
 				Origin::none(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				100,
@@ -157,7 +157,7 @@ fn create_order_under_minimum_amount_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				0,
@@ -171,7 +171,7 @@ fn create_order_under_minimum_amount_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				0,
@@ -190,7 +190,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				1000,
@@ -206,7 +206,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				51,
@@ -220,7 +220,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				1000,
@@ -236,7 +236,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				51,
@@ -255,7 +255,7 @@ fn create_order_exceed_maximum_order_in_trade_should_fail() {
 			assert_ok!(Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				1,
@@ -265,7 +265,7 @@ fn create_order_exceed_maximum_order_in_trade_should_fail() {
 			assert_ok!(Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				1,
@@ -278,7 +278,7 @@ fn create_order_exceed_maximum_order_in_trade_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				1,
@@ -292,7 +292,7 @@ fn create_order_exceed_maximum_order_in_trade_should_fail() {
 			Auction::create_order(
 				Some(ALICE).into(),
 				3000,
-				TokenSymbol::KSM,
+				TOKEN_SYMBOL,
 				13,
 				20,
 				1,
@@ -310,7 +310,7 @@ fn revoke_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -321,7 +321,7 @@ fn revoke_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -357,7 +357,7 @@ fn revoke_sell_order_which_be_partial_clinchd_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -398,7 +398,7 @@ fn revoke_buy_order_which_be_partial_clinchd_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -446,7 +446,7 @@ fn revoke_order_without_enough_reserved_should_fail() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			50,
@@ -456,7 +456,7 @@ fn revoke_order_without_enough_reserved_should_fail() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			50,
@@ -490,7 +490,7 @@ fn revoke_order_by_origin_illegal_should_fail() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			50,
@@ -500,7 +500,7 @@ fn revoke_order_by_origin_illegal_should_fail() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			50,
@@ -531,7 +531,7 @@ fn partial_clinch_sell_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -595,7 +595,7 @@ fn partial_clinch_buy_order_should_work() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -670,7 +670,7 @@ fn clinch_order_by_origin_illegal_should_fail() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
@@ -703,7 +703,7 @@ fn clinch_order_without_enough_token_should_fail() {
 		assert_ok!(Auction::create_order(
 			Some(ALICE).into(),
 			3000,
-			TokenSymbol::KSM,
+			TOKEN_SYMBOL,
 			13,
 			20,
 			100,
