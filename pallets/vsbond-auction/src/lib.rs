@@ -226,7 +226,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
 		/// Create a sell order or buy order to sell `vsbond`.
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::create_order())]
 		pub fn create_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
@@ -306,7 +306,7 @@ pub mod pallet {
 		}
 
 		/// Revoke a sell or buy order in trade by the order creator.
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::revoke_order())]
 		pub fn revoke_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
@@ -352,7 +352,7 @@ pub mod pallet {
 		}
 
 		/// Users(non-order-creator) buy the remaining `vsbond` of a sell order.
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::clinch_order())]
 		pub fn clinch_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
@@ -365,7 +365,7 @@ pub mod pallet {
 		}
 
 		/// Users(non-order-creator) buys some of the remaining `vsbond` of a sell or buy order.
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::partial_clinch_order())]
 		pub fn partial_clinch_order(
 			origin: OriginFor<T>,
 			#[pallet::compact] order_id: OrderId,
