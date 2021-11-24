@@ -36,7 +36,7 @@ use frame_support::{
 	},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod, TokenSymbol};
+use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
@@ -98,7 +98,6 @@ pub enum OrderType {
 }
 
 type OrderId = u64;
-type ParaId = u32;
 
 #[allow(type_alias_bounds)]
 type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
@@ -402,18 +401,10 @@ pub mod pallet {
 				.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
 
 			// Get the new OrderInfo
-			let new_order_info = if quantity_clinchd == order_info.remain {
-				OrderInfo {
-					remain: Zero::zero(),
-					remain_price: order_info.remain_price.saturating_sub(price_to_pay),
-					..order_info
-				}
-			} else {
-				OrderInfo {
-					remain: order_info.remain.saturating_sub(quantity_clinchd),
-					remain_price: order_info.remain_price.saturating_sub(price_to_pay),
-					..order_info
-				}
+			let new_order_info = OrderInfo {
+				remain: order_info.remain.saturating_sub(quantity_clinchd),
+				remain_price: order_info.remain_price.saturating_sub(price_to_pay),
+				..order_info
 			};
 
 			// Unreserve the balance
