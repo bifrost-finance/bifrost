@@ -28,7 +28,7 @@ use sp_runtime::{
 };
 
 mod bridge;
-mod currency;
+pub mod currency;
 mod salp;
 mod tests;
 pub mod traits;

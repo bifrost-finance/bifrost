@@ -76,8 +76,8 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::parachains,
-	xcm_impl::{
+	constants::{parachains, time::*},
+	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
 	},
@@ -85,7 +85,7 @@ use bifrost_runtime_common::{
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
-use constants::{currency::*, time::*};
+use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,

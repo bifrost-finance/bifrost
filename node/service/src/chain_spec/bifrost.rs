@@ -22,12 +22,12 @@ use std::{
 };
 
 use bifrost_runtime::{
-	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
-	CollatorSelectionConfig, CouncilConfig, CouncilMembershipConfig, DemocracyConfig,
-	GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig, SessionConfig,
-	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
+	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
+	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
+	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
+use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
@@ -47,7 +47,10 @@ const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 /// Specialized `ChainSpec` for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
-const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+#[allow(non_snake_case)]
+pub fn ENDOWMENT() -> u128 {
+	1_000_000 * dollar(CurrencyId::Token(TokenSymbol::BNC))
+}
 
 pub fn bifrost_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
@@ -114,21 +117,21 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		whitelisted_caller(), // Benchmarking whitelist_account
 	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
-		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT() * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT()),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT()),
 			]
 		})
 		.collect();
@@ -182,29 +185,29 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
 		                       * with whitelistted_caller */
 	];
-	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT)).collect();
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
-		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KAR), ENDOWMENT() * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT() * 4_000_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT() * 4_000_000),
 				(
 					x.clone(),
 					CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20),
-					ENDOWMENT * 4_000_000,
+					ENDOWMENT() * 4_000_000,
 				),
 				(
 					x.clone(),
 					CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20),
-					ENDOWMENT * 4_000_000,
+					ENDOWMENT() * 4_000_000,
 				),
 			]
 		})
@@ -321,7 +324,11 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		.into_iter()
 		.collect();
 
-	assert_eq!(total_issuance, 32_000_000 * DOLLARS, "total issuance must be equal to 320 million");
+	assert_eq!(
+		total_issuance,
+		32_000_000 * dollar(CurrencyId::Token(TokenSymbol::BNC)),
+		"total issuance must be equal to 320 million"
+	);
 
 	let vesting_configs: Vec<VestingConfig> =
 		config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();

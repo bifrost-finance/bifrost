@@ -19,14 +19,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use frame_support::{parameter_types, sp_runtime::traits::BlockNumberProvider};
 use frame_system::{EnsureOneOf, EnsureRoot};
-use node_primitives::{AccountId, BlockNumber};
+use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::u32_trait::{_1, _2};
 use sp_runtime::{FixedPointNumber, Perquintill};
 
 pub mod constants;
-pub mod xcm_impl;
+pub mod r#impl;
 
 pub struct RelaychainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
 
@@ -74,3 +74,41 @@ pub type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
 	EnsureRoot<AccountId>,
 	pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
 >;
+
+pub fn dollar(currency_id: CurrencyId) -> Balance {
+	10u128.saturating_pow(currency_id.decimals().into())
+}
+
+pub fn milli(currency_id: CurrencyId) -> Balance {
+	dollar(currency_id) / 1000
+}
+
+pub fn micro(currency_id: CurrencyId) -> Balance {
+	milli(currency_id) / 1000
+}
+
+pub fn cent(currency_id: CurrencyId) -> Balance {
+	dollar(currency_id) / 100
+}
+
+pub fn millicent(currency_id: CurrencyId) -> Balance {
+	cent(currency_id) / 1000
+}
+
+pub fn microcent(currency_id: CurrencyId) -> Balance {
+	millicent(currency_id) / 1000
+}
+
+pub struct RelayChainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
+
+impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
+	for RelayChainBlockNumberProvider<T>
+{
+	type BlockNumber = BlockNumber;
+
+	fn current_block_number() -> Self::BlockNumber {
+		cumulus_pallet_parachain_system::Pallet::<T>::validation_data()
+			.map(|d| d.relay_parent_number)
+			.unwrap_or_default()
+	}
+}
