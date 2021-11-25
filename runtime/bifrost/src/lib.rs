@@ -134,7 +134,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 908,
+	spec_version: 909,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -191,27 +191,8 @@ impl Contains<Call> for CallFilter {
 			return true;
 		}
 
-		// temporarily ban ZLK transfer and PhragmenElection
-		let is_temporarily_banned = matches!(
-			call,
-			Call::Currencies(orml_currencies::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer_all {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				keep_alive: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer_keep_alive {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::PhragmenElection(_)
-		);
+		// temporarily ban PhragmenElection
+		let is_temporarily_banned = matches!(call, Call::PhragmenElection(_));
 
 		if is_temporarily_banned {
 			return false;
