@@ -36,7 +36,7 @@ use frame_support::{
 	},
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, LeasePeriod, TokenSymbol, ParaId};
+use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
