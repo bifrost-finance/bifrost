@@ -134,5 +134,6 @@ pub type TrieIndex = u32;
 )]
 pub enum ExtraFeeName {
 	SalpContribute,
+	StatemineTransfer,
 	NoExtraFee,
 }

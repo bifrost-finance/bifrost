@@ -701,6 +701,8 @@ dependencies = [
 name = "bifrost-flexible-fee"
 version = "0.8.0"
 dependencies = [
+ "bifrost-runtime",
+ "bifrost-runtime-common",
  "bifrost-salp",
  "cumulus-primitives-core",
  "frame-benchmarking",
@@ -724,6 +726,7 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-builder",
+ "xcm-executor",
  "xcm-support",
  "zenlink-protocol",
 ]
@@ -1000,6 +1003,10 @@ version = "0.8.0"
 dependencies = [
  "bifrost-bancor",
  "bifrost-runtime",
+ "bifrost-runtime-common",
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -1021,6 +1028,7 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-builder",
+ "xcm-executor",
  "xcm-support",
 ]
 

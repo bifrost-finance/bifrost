@@ -18,10 +18,15 @@
 
 //! A set of constant values used for all runtimes in common.
 
+#[allow(non_snake_case)]
 pub mod parachains {
 	pub mod karura {
 		pub const ID: u32 = 2000;
 		pub const KAR_KEY: &[u8] = &[0, 128];
 		pub const KUSD_KEY: &[u8] = &[0, 129];
+	}
+	pub mod Statemine {
+		pub const ID: u32 = 1000;
+		pub const USDT_ID: u32 = 11;
 	}
 }

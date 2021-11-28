@@ -22,6 +22,7 @@ orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12"  }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12"}
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12"}
 smallvec = "1.6.1"
@@ -31,8 +32,12 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.12" }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.12" }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.12" }
 bifrost-bancor = { path = "../../pallets/bancor" }
 bifrost-runtime = { path = "../../runtime/bifrost" }
+bifrost-runtime-common = { path = "../../runtime/common" }
 
 [features]
 default = ["std"]

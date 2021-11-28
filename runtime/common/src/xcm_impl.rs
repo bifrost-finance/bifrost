@@ -106,6 +106,13 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
 				),
 			)),
+			Stable(TokenSymbol::USDT) => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::Statemine::ID),
+					GeneralIndex(parachains::Statemine::USDT_ID as u128),
+				),
+			)),
 			_ => None,
 		}
 	}
@@ -139,6 +146,13 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						Some(Token(TokenSymbol::KAR))
 					} else if key == parachains::karura::KUSD_KEY.to_vec() {
 						Some(Stable(TokenSymbol::KUSD))
+					} else {
+						None
+					}
+				},
+				X2(Parachain(id), GeneralIndex(key)) if id == parachains::Statemine::ID => {
+					if key == parachains::Statemine::USDT_ID.into() {
+						Some(Stable(TokenSymbol::USDT))
 					} else {
 						None
 					}

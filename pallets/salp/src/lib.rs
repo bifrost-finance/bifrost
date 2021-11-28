@@ -121,6 +121,7 @@ pub mod pallet {
 	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
 	use sp_arithmetic::Percent;
+	use sp_runtime::traits::Convert;
 	use sp_std::prelude::*;
 	use xcm::latest::prelude::*;
 
@@ -212,6 +213,12 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
+
+		/// XCM executor.
+		type XcmExecutor: ExecuteXcm<Self::Call>;
+
+		/// Convert `T::AccountId` to `MultiLocation`.
+		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
 	}
 
 	#[pallet::pallet]
@@ -254,6 +261,7 @@ pub mod pallet {
 		ProxyRemoved(AccountIdOf<T>),
 		/// Mint
 		Minted(AccountIdOf<T>, BalanceOf<T>),
+		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -296,6 +304,8 @@ pub mod pallet {
 		NotEnoughFreeAssetsToRedeem,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
+		ConvertFailure,
+		XcmExecutionFailed,
 	}
 
 	/// Tracker for the next available fund index
@@ -968,6 +978,62 @@ pub mod pallet {
 			Self::xcm_ump_transfer(who.clone(), amount.clone())?;
 
 			Self::deposit_event(Event::<T>::Minted(who, amount));
+
+			Ok(())
+		}
+
+		/// transfer asset to statemine
+		#[pallet::weight(T::WeightInfo::contribute())]
+		pub fn transfer_statemine_assets(
+			origin: OriginFor<T>,
+			amount: BalanceOf<T>,
+			asset_id: u32,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let origin_location = T::AccountIdToMultiLocation::convert(who.clone());
+			let mut assets = MultiAssets::new(); // VersionedMultiAssets::V1(MultiAssets::new(MultiAsset))
+			let amount_128 =
+				TryInto::<u128>::try_into(amount).map_err(|_| Error::<T>::ConvertFailure)?;
+			let statemine_asset = MultiAsset {
+				id: AssetId::Concrete(MultiLocation::new(
+					1,
+					Junctions::X2(
+						Junction::Parachain(1000),
+						Junction::GeneralIndex(asset_id.into()),
+					),
+				)),
+				fun: Fungibility::Fungible(amount_128),
+			};
+			let dest_weight = 4 * T::BaseXcmWeight::get();
+			let fee_asset = MultiAsset {
+				id: AssetId::Concrete(MultiLocation::new(1, Junctions::Here)),
+				fun: Fungibility::Fungible(dest_weight.into()),
+			};
+			assets.push(statemine_asset);
+			assets.push(fee_asset.clone());
+			let msg = Xcm(vec![
+				WithdrawAsset(assets),
+				InitiateReserveWithdraw {
+					assets: All.into(),
+					reserve: MultiLocation::new(1, Junctions::X1(Junction::Parachain(1000))),
+					xcm: Xcm(vec![
+						BuyExecution {
+							fees: fee_asset,
+							weight_limit: WeightLimit::Limited(dest_weight),
+						},
+						DepositAsset {
+							assets: All.into(),
+							max_assets: 2,
+							beneficiary: origin_location.clone(),
+						},
+					]),
+				},
+			]);
+			T::XcmExecutor::execute_xcm_in_credit(origin_location, msg, dest_weight, dest_weight)
+				.ensure_complete()
+				.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+
+			Self::deposit_event(Event::<T>::TransferredStatemineMultiAsset(who, amount));
 
 			Ok(())
 		}
