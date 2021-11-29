@@ -30,7 +30,7 @@ use orml_traits::MultiReservableCurrency;
 
 use crate::{
 	mock::{Test as T, *},
-	Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos,
+	Error, PoolId, PoolState, PoolType, TotalPoolInfos,
 };
 
 fn run_to_block(n: BlockNumber) {
@@ -708,7 +708,7 @@ fn deposit_to_pool_ongoing_with_init_deposit_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 3_000_000);
 
 		for (_rtoken, reward) in pool.rewards.iter() {
@@ -762,7 +762,7 @@ fn double_deposit_to_pool_ongoing_in_diff_block_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 3_000_000);
 
 		for (_rtoken, reward) in pool.rewards.iter() {
@@ -808,7 +808,7 @@ fn double_deposit_to_pool_ongoing_in_same_block_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 3_000_000);
 
 		for (_rtoken, reward) in pool.rewards.iter() {
@@ -1554,7 +1554,7 @@ fn claim_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).free, kept - rewarded);
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).frozen, 0);
@@ -1563,7 +1563,7 @@ fn claim_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.rewards.get(&REWARD_1).unwrap().claimed, rewarded);
 		assert_eq!(pool.rewards.get(&REWARD_2).unwrap().claimed, rewarded);
 	});
