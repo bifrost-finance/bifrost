@@ -504,11 +504,7 @@ pub mod pallet {
 			let raised = fund.raised.checked_add(&value).ok_or(Error::<T>::Overflow)?;
 			ensure!(raised <= fund.cap, Error::<T>::CapExceeded);
 
-			let (contributed, status) = Self::contribution(fund.trie_index, &who);
-			ensure!(
-				status == ContributionStatus::Idle || status == ContributionStatus::MigrateToIdle,
-				Error::<T>::InvalidContributionStatus
-			);
+			let (contributed, _) = Self::contribution(fund.trie_index, &who);
 
 			let (vs_token, vs_bond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
