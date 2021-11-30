@@ -24,7 +24,7 @@ use std::sync::Arc;
 #[cfg(feature = "with-asgard-runtime")]
 pub use asgard_runtime;
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-pub use bifrost_kusama_runtime;
+pub use bifrost_runtime;
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub use bifrost_polkadot_runtime;
 use cumulus_client_consensus_aura::{build_aura_consensus, BuildAuraConsensusParams};
@@ -90,11 +90,11 @@ impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		bifrost_kusama_runtime::api::dispatch(method, data)
+		bifrost_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		bifrost_kusama_runtime::native_version()
+		bifrost_runtime::native_version()
 	}
 }
 
@@ -491,7 +491,7 @@ pub fn new_chain_ops(
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
+				new_partial::<bifrost_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
 			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
 		}
 		#[cfg(not(any(
@@ -651,7 +651,7 @@ pub enum Client {
 	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, AsgardExecutor>>),
 	#[cfg(feature = "with-bifrost-kusama-runtime")]
 	#[allow(dead_code)]
-	Bifrost(Arc<FullClient<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>>),
+	Bifrost(Arc<FullClient<bifrost_runtime::RuntimeApi, BifrostExecutor>>),
 }
 
 impl ClientHandle for Client {
