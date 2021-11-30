@@ -184,7 +184,7 @@ impl SubstrateCli for Cli {
 		} else if spec.is_bifrost_kusama() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 			{
-				&bifrost_runtime::VERSION
+				&bifrost_kusama_runtime::VERSION
 			}
 			#[cfg(not(any(
 				feature = "with-bifrost-kusama-runtime",
@@ -261,7 +261,7 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 #[cfg(feature = "with-asgard-runtime")]
 use service::collator_kusama::{asgard_runtime, AsgardExecutor};
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-use service::collator_kusama::{bifrost_runtime, BifrostExecutor};
+use service::collator_kusama::{bifrost_kusama_runtime, BifrostExecutor};
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 use service::collator_polkadot::bifrost_polkadot_runtime;
 
@@ -270,7 +270,7 @@ macro_rules! with_runtime_or_err {
 		if $chain_spec.is_bifrost_kusama() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
-			use bifrost_runtime::{Block, RuntimeApi};
+			use bifrost_kusama_runtime::{Block, RuntimeApi};
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use BifrostExecutor as Executor;

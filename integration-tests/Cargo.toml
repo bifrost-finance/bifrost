@@ -94,7 +94,7 @@ bifrost-vtoken-mint = { path = "../pallets/vtoken-mint", default-features = fals
 pallet-vesting = { package = "bifrost-vesting", path = "../pallets/vesting", default-features = false }
 xcm-support = { path = "../xcm-support", default-features = false }
 asgard-runtime = { path = "../runtime/asgard", default-features = false }
-bifrost-runtime = { path = "../runtime/bifrost", default-features = false }
+bifrost-kusama-runtime = { package = "bifrost-runtime", path = "../runtime/bifrost", default-features = false }
 bifrost-polkadot-runtime = { path = "../runtime/bifrost-polkadot", default-features = false }
 
 # orml
@@ -216,6 +216,6 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"asgard-runtime/std",
-	"bifrost-runtime/std",
+	"bifrost-kusama-runtime/std",
 	"bifrost-polkadot-runtime/std"
 ]
