@@ -28,6 +28,9 @@ use sp_runtime::{FixedPointNumber, Perquintill};
 pub mod constants;
 pub mod r#impl;
 
+#[cfg(test)]
+mod tests;
+
 pub struct RelaychainBlockNumberProvider<T>(sp_std::marker::PhantomData<T>);
 
 impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider

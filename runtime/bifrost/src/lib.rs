@@ -1126,13 +1126,13 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent(StableCurrencyId::get()),
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 KSM
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),
-			&CurrencyId::Token(TokenSymbol::DOT) => 10 * millicent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
-			&CurrencyId::Token(TokenSymbol::ZLK) => 10 * millicent(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
-			&CurrencyId::VSToken(TokenSymbol::DOT) => 10 * millicent(PolkadotCurrencyId::get()),
+			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
-			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 10 * millicent(PolkadotCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			_ => Balance::max_value() // unsupported
 		}

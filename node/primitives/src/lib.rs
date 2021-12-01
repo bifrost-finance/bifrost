@@ -30,10 +30,12 @@ use sp_runtime::{
 mod bridge;
 pub mod currency;
 mod salp;
-mod tests;
 pub mod traits;
 mod xcm;
 pub use salp::*;
+
+#[cfg(test)]
+mod tests;
 
 pub use crate::{
 	bridge::*,

@@ -76,7 +76,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
+	cent,
 	constants::{parachains, time::*},
+	micro, milli, millicent,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -1113,19 +1115,18 @@ impl orml_currencies::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::ASG) => 10 * MILLIBNC,  // 0.01 BNC
-			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,  // 0.0001 KSM
-			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::DOT) => 100_000_000,  // DOT has a decimals of 10e10, 0.01 DOT
-			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
-			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
-			&CurrencyId::VSToken(TokenSymbol::DOT) => 100_000_000,
-			&CurrencyId::VSBond(TokenSymbol::ASG, ..) => 10 * MILLICENTS,
-			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
-			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
-			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 100_000_000,
-			&CurrencyId::LPToken(..) => 10 * MILLICENTS,
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent(StableCurrencyId::get()),
+			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 KSM
+			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),
+			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
+			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			_ => Balance::max_value() // unsupported
 		}
 	};
