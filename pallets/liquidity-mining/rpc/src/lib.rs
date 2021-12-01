@@ -38,6 +38,7 @@ pub trait LiquidityMiningRpcApi<BlockHash, AccountId, PoolId> {
 		&self,
 		who: AccountId,
 		pid: PoolId,
+		pallet_instance: u32,
 		at: Option<BlockHash>,
 	) -> JsonRpcResult<Vec<(CurrencyId, NumberOrHex)>>;
 }
@@ -67,12 +68,14 @@ where
 		&self,
 		who: AccountId,
 		pid: PoolId,
+		pallet_instance: u32,
 		at: Option<<Block as BlockT>::Hash>,
 	) -> JsonRpcResult<Vec<(CurrencyId, NumberOrHex)>> {
 		let lm_rpc_api = self.client.runtime_api();
 		let at = BlockId::<Block>::hash(at.unwrap_or_else(|| self.client.info().best_hash));
 
-		let rs: Result<Vec<(CurrencyId, Balance)>, _> = lm_rpc_api.get_rewards(&at, who, pid);
+		let rs: Result<Vec<(CurrencyId, Balance)>, _> =
+			lm_rpc_api.get_rewards(&at, who, pid, pallet_instance);
 
 		match rs {
 			Ok(rewards) => Ok(rewards
