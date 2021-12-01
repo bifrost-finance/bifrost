@@ -189,27 +189,8 @@ impl Contains<Call> for CallFilter {
 			return true;
 		}
 
-		// temporarily ban ZLK transfer and PhragmenElection
-		let is_temporarily_banned = matches!(
-			call,
-			Call::Currencies(orml_currencies::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer_all {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				keep_alive: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer_keep_alive {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::PhragmenElection(_)
-		);
+		// temporarily ban PhragmenElection
+		let is_temporarily_banned = matches!(call, Call::PhragmenElection(_));
 
 		if is_temporarily_banned {
 			return false;
@@ -241,10 +222,11 @@ impl Contains<Call> for CallFilter {
 					&NativeCurrencyId::get(),
 				),
 				// orml-tokens module
-				Call::Tokens(orml_tokens::Call::transfer { dest: _, currency_id, amount: _ }) =>
+				Call::Tokens(orml_tokens::Call::transfer { dest: _, currency_id, amount: _ }) => {
 					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 						&currency_id,
-					),
+					)
+				}
 				Call::Tokens(orml_tokens::Call::transfer_all {
 					dest: _,
 					currency_id,
@@ -260,20 +242,22 @@ impl Contains<Call> for CallFilter {
 					&currency_id,
 				),
 				// Balances module
-				Call::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) =>
+				Call::Balances(pallet_balances::Call::transfer { dest: _, value: _ }) => {
 					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 						&NativeCurrencyId::get(),
-					),
+					)
+				}
 				Call::Balances(pallet_balances::Call::transfer_keep_alive {
 					dest: _,
 					value: _,
 				}) => bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 					&NativeCurrencyId::get(),
 				),
-				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) =>
+				Call::Balances(pallet_balances::Call::transfer_all { dest: _, keep_alive: _ }) => {
 					bifrost_call_switchgear::DisableTransfersFilter::<Runtime>::contains(
 						&NativeCurrencyId::get(),
-					),
+					)
+				}
 				_ => false,
 			};
 
@@ -442,15 +426,15 @@ impl InstanceFilter<Call> for ProxyType {
 			),
 			ProxyType::Governance => matches!(
 				c,
-				Call::Democracy(..) |
-					Call::Council(..) | Call::TechnicalCommittee(..) |
-					Call::PhragmenElection(..) |
-					Call::Treasury(..) | Call::Bounties(..) |
-					Call::Tips(..) | Call::Utility(..)
+				Call::Democracy(..)
+					| Call::Council(..) | Call::TechnicalCommittee(..)
+					| Call::PhragmenElection(..)
+					| Call::Treasury(..) | Call::Bounties(..)
+					| Call::Tips(..) | Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
-			},
+			}
 			ProxyType::IdentityJudgement => matches!(
 				c,
 				Call::Identity(pallet_identity::Call::provide_judgement { .. }) | Call::Utility(..)
@@ -1139,12 +1123,12 @@ orml_traits::parameter_type_with_key! {
 pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
-		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
-			AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
+		AccountIdConversion::<AccountId>::into_account(&TreasuryPalletId::get()).eq(a)
+			|| AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a)
+			|| AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
-			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
-			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
+			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			|| LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1263,12 +1247,13 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) =>
+			RawOrigin::Signed(who) => {
 				if who == ConfirmMuitiSigAccount::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
-				},
+				}
+			}
 			r => Err(Origin::from(r)),
 		})
 	}
@@ -1350,12 +1335,13 @@ impl EnsureOrigin<Origin> for EnsureSalpLiteConfirmAsMultiSig {
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) =>
+			RawOrigin::Signed(who) => {
 				if who == PolkaConfirmAsMultiSig::get() {
 					Ok(who)
 				} else {
 					Err(Origin::from(Some(who)))
-				},
+				}
+			}
 			r => Err(Origin::from(r)),
 		})
 	}
@@ -1396,7 +1382,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MaximumOrderInTrade = MaximumOrderInTrade;
 	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = Currencies;
-	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
+	type WeightInfo = ();
 }
 
 parameter_types! {
