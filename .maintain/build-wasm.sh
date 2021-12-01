@@ -2,7 +2,7 @@
 
 set -xe
 
-RUSTC_VERSION="1.53.0"
+RUSTC_VERSION="1.56.1"
 EXTRA_ARGS='--json'
 BIN_PATH=$(dirname $(readlink -f $0))
 WORK_PATH=${BIN_PATH}/..
@@ -18,5 +18,5 @@ docker run --rm -it \
   paritytech/srtool:${RUSTC_VERSION} build ${EXTRA_ARGS}
 
 mkdir -p ${WORK_PATH}/deploy/wasm
-cp ${WORK_PATH}/runtime/$RUNTIME/target/srtool/release/wbuild/$RUNTIME-runtime/${RUNTIME}_runtime.compact.wasm \
+cp ${WORK_PATH}/runtime/$RUNTIME/target/srtool/release/wbuild/$RUNTIME-runtime/${RUNTIME}_runtime.compact.compressed.wasm \
 ${WORK_PATH}/deploy/wasm

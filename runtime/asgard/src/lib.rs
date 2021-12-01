@@ -127,8 +127,6 @@ use zenlink_protocol::{
 mod benchmarking;
 mod weights;
 
-pub type SessionHandlers = ();
-
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub aura: Aura,
@@ -282,6 +280,7 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"bf/trsry");
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
+	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
 
@@ -1136,7 +1135,8 @@ pub struct DustRemovalWhitelist;
 impl Contains<AccountId> for DustRemovalWhitelist {
 	fn contains(a: &AccountId) -> bool {
 		get_all_pallet_accounts().contains(a) ||
-			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
+			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1412,6 +1412,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 
 parameter_types! {
 	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
+	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
 	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
@@ -1420,7 +1421,7 @@ parameter_types! {
 	pub const MaximumCharged: u32 = 32;
 }
 
-impl bifrost_liquidity_mining::Config for Runtime {
+impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance1> for Runtime {
 	type Event = Event;
 	type ControlOrigin = MoreThanHalfCouncil;
 	type MultiCurrency = Currencies;
@@ -1432,6 +1433,21 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MaximumCharged = MaximumCharged;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
+	type WeightInfo = ();
+}
+
+impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for Runtime {
+	type Event = Event;
+	type ControlOrigin = MoreThanHalfCouncil;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolDOT;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumCharged = MaximumCharged;
+	type MaximumOptionRewards = MaximumOptionRewards;
+	type PalletId = LiquidityMiningDOTPalletId;
 	type WeightInfo = ();
 }
 
@@ -1636,12 +1652,13 @@ construct_runtime! {
 		MinterReward: bifrost_minter_reward::{Pallet, Call, Storage, Event<T>, Config<T>} = 102,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
 		Bancor: bifrost_bancor::{Pallet, Call, Storage, Event<T>, Config<T>} = 106,
-		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 107,
-		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
+		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
+		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
+		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 	}
 }
 
@@ -1915,8 +1932,12 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
-		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
-			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
+		fn get_rewards(who: AccountId, pid: PoolId, pallet_instance: u32) -> Vec<(CurrencyId, Balance)> {
+			match pallet_instance {
+				1 => LiquidityMining::rewards(who, pid).unwrap_or(Vec::new()),
+				2 => LiquidityMiningDOT::rewards(who, pid).unwrap_or(Vec::new()),
+				_ => Vec::new()
+			}
 		}
 	}
 
@@ -2014,18 +2035,13 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	fn pre_upgrade() -> Result<(), &'static str> {
 		#[allow(unused_imports)]
 		use frame_support::{migration, Identity};
-
 		log::info!("Asgard `pre_upgrade`...");
-
-		bifrost_salp::migration::migrate();
-
 		Ok(())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Asgard `on_runtime_upgrade`...");
-		let _ = PolkadotXcm::force_default_xcm_version(Origin::root(), Some(2));
 		log::info!("Asgard `on_runtime_upgrade finished`");
 		RocksDbWeight::get().writes(1)
 	}

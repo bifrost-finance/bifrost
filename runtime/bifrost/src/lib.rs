@@ -122,8 +122,6 @@ use zenlink_protocol::{
 // Weights used in the runtime.
 mod weights;
 
-pub type SessionHandlers = ();
-
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub aura: Aura,
@@ -136,7 +134,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 908,
+	spec_version: 910,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -193,27 +191,8 @@ impl Contains<Call> for CallFilter {
 			return true;
 		}
 
-		// temporarily ban ZLK transfer and PhragmenElection
-		let is_temporarily_banned = matches!(
-			call,
-			Call::Currencies(orml_currencies::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer_all {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				keep_alive: _,
-			}) | Call::Tokens(orml_tokens::Call::transfer_keep_alive {
-				dest: _,
-				currency_id: CurrencyId::Token(TokenSymbol::ZLK),
-				amount: _,
-			}) | Call::PhragmenElection(_)
-		);
+		// temporarily ban PhragmenElection
+		let is_temporarily_banned = matches!(call, Call::PhragmenElection(_));
 
 		if is_temporarily_banned {
 			return false;
@@ -304,6 +283,7 @@ parameter_types! {
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const BifrostSalpLiteCrowdloanId: PalletId = PalletId(*b"bf/salpl");
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
+	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 }
 
@@ -1092,7 +1072,7 @@ impl pallet_collator_selection::Config for Runtime {
 	type MaxInvulnerables = MaxInvulnerables;
 	type MinCandidates = MinCandidates;
 	type PotId = PotId;
-	type UpdateOrigin = EnsureRoot<AccountId>;
+	type UpdateOrigin = MoreThanHalfCouncil;
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
@@ -1146,7 +1126,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
-			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a)
+			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
+			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
 	}
 }
 
@@ -1389,8 +1370,9 @@ impl bifrost_salp_lite::Config for Runtime {
 }
 
 parameter_types! {
-	pub const RelayChainTokenSymbol: TokenSymbol = TokenSymbol::KSM;
-	pub MaximumDepositInPool: Balance = 1_000_000_000 * dollar(RelayCurrencyId::get());
+	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
+	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
+	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = HOURS;
@@ -1398,11 +1380,11 @@ parameter_types! {
 	pub const MaximumCharged: u32 = 32;
 }
 
-impl bifrost_liquidity_mining::Config for Runtime {
+impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance1> for Runtime {
 	type Event = Event;
 	type ControlOrigin = MoreThanHalfCouncil;
 	type MultiCurrency = Currencies;
-	type RelayChainTokenSymbol = RelayChainTokenSymbol;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolKSM;
 	type MaximumDepositInPool = MaximumDepositInPool;
 	type MinimumDepositOfUser = MinimumDepositOfUser;
 	type MinimumRewardPerBlock = MinimumRewardPerBlock;
@@ -1410,6 +1392,21 @@ impl bifrost_liquidity_mining::Config for Runtime {
 	type MaximumCharged = MaximumCharged;
 	type MaximumOptionRewards = MaximumOptionRewards;
 	type PalletId = LiquidityMiningPalletId;
+	type WeightInfo = ();
+}
+
+impl bifrost_liquidity_mining::Config<bifrost_liquidity_mining::Instance2> for Runtime {
+	type Event = Event;
+	type ControlOrigin = MoreThanHalfCouncil;
+	type MultiCurrency = Currencies;
+	type RelayChainTokenSymbol = RelayChainTokenSymbolDOT;
+	type MaximumDepositInPool = MaximumDepositInPool;
+	type MinimumDepositOfUser = MinimumDepositOfUser;
+	type MinimumRewardPerBlock = MinimumRewardPerBlock;
+	type MinimumDuration = MinimumDuration;
+	type MaximumCharged = MaximumCharged;
+	type MaximumOptionRewards = MaximumOptionRewards;
+	type PalletId = LiquidityMiningDOTPalletId;
 	type WeightInfo = ();
 }
 
@@ -1578,7 +1575,7 @@ construct_runtime! {
 
 		// XCM helpers.
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 40,
-		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin, Config} = 41,
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin, Config} = 41,
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Call, Event<T>, Origin} = 42,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 43,
 
@@ -1608,7 +1605,8 @@ construct_runtime! {
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
 		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
-		LiquidityMining: bifrost_liquidity_mining::{Pallet, Call, Storage, Event<T>} = 108,
+		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
+		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
@@ -1852,8 +1850,12 @@ impl_runtime_apis! {
 	}
 
 	impl bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId> for Runtime {
-		fn get_rewards(who: AccountId, pid: PoolId) -> Vec<(CurrencyId, Balance)> {
-			LiquidityMining::rewards(who, pid).unwrap_or(Vec::new())
+		fn get_rewards(who: AccountId, pid: PoolId, pallet_instance: u32) -> Vec<(CurrencyId, Balance)> {
+			match pallet_instance {
+				1 => LiquidityMining::rewards(who, pid).unwrap_or(Vec::new()),
+				2 => LiquidityMiningDOT::rewards(who, pid).unwrap_or(Vec::new()),
+				_ => Vec::new()
+			}
 		}
 	}
 
@@ -1938,16 +1940,13 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	fn pre_upgrade() -> Result<(), &'static str> {
 		#[allow(unused_imports)]
 		use frame_support::{migration, Identity};
-
 		log::info!("Bifrost `pre_upgrade`...");
-
 		Ok(())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Bifrost `on_runtime_upgrade`...");
-		let _ = PolkadotXcm::force_default_xcm_version(Origin::root(), Some(2));
 		log::info!("Bifrost `on_runtime_upgrade finished`");
 		RocksDbWeight::get().writes(1)
 	}
