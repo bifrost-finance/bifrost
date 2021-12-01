@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         chain: ["bifrost"]
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
@@ -70,7 +70,7 @@ jobs:
           subwasm --json meta ${{ steps.srtool_build.outputs.wasm }} > ${{ matrix.chain }}-metadata.json
       - name: Check the metadata diff
         run: |
-          subwasm get wss://bifrost-rpc.liebi.com/ws --output runtime_mainnet.wasm
+          subwasm get wss://bifrost-rpc.liebi.com:443/ws --output runtime_mainnet.wasm
           subwasm diff ${{ steps.srtool_build.outputs.wasm }} runtime_mainnet.wasm | tee ${{ matrix.chain }}-diff.txt
       - name: Archive Subwasm results
         uses: actions/upload-artifact@v2
