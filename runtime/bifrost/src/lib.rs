@@ -69,8 +69,10 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	constants::parachains,
-	xcm_impl::{
+	cent,
+	constants::{parachains, time::*},
+	dollar, micro, milli, millicent,
+	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
 	},
@@ -78,7 +80,7 @@ use bifrost_runtime_common::{
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
-use constants::{currency::*, time::*};
+use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
@@ -337,10 +339,10 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 10 * MILLIBNC;
-	pub const TransferFee: Balance = 1 * MILLIBNC;
-	pub const CreationFee: Balance = 1 * MILLIBNC;
-	pub const TransactionByteFee: Balance = 1 * MICROBNC;
+	pub ExistentialDeposit: Balance = 10 * milli(NativeCurrencyId::get());
+	pub TransferFee: Balance = 1 * milli(NativeCurrencyId::get());
+	pub CreationFee: Balance = 1 * milli(NativeCurrencyId::get());
+	pub TransactionByteFee: Balance = 16 * micro(NativeCurrencyId::get());
 	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
@@ -354,12 +356,12 @@ impl pallet_utility::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size 32, value size 8; .
-	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	pub ProxyDepositBase: Balance = deposit(1, 8);
 	// Additional storage item size of 33 bytes.
-	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub ProxyDepositFactor: Balance = deposit(0, 33);
 	pub const MaxProxies: u16 = 32;
-	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
-	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+	pub AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub AnnouncementDepositFactor: Balance = deposit(0, 66);
 	pub const MaxPending: u16 = 32;
 }
 
@@ -484,9 +486,9 @@ impl pallet_scheduler::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub const DepositBase: Balance = deposit(1, 88);
+	pub DepositBase: Balance = deposit(1, 88);
 	// Additional storage item size of 32 bytes.
-	pub const DepositFactor: Balance = deposit(0, 32);
+	pub DepositFactor: Balance = deposit(0, 32);
 	pub const MaxSignatories: u16 = 100;
 }
 
@@ -502,9 +504,9 @@ impl pallet_multisig::Config for Runtime {
 
 parameter_types! {
 	// Minimum 4 CENTS/byte
-	pub const BasicDeposit: Balance = deposit(1, 258);
-	pub const FieldDeposit: Balance = deposit(0, 66);
-	pub const SubAccountDeposit: Balance = deposit(1, 53);
+	pub BasicDeposit: Balance = deposit(1, 258);
+	pub FieldDeposit: Balance = deposit(0, 66);
+	pub SubAccountDeposit: Balance = deposit(1, 53);
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
 	pub const MaxRegistrars: u32 = 20;
@@ -526,7 +528,7 @@ impl pallet_identity::Config for Runtime {
 }
 
 parameter_types! {
-	pub const IndexDeposit: Balance = 1 * DOLLARS;
+	pub IndexDeposit: Balance = 1 * dollar(NativeCurrencyId::get());
 }
 
 impl pallet_indices::Config for Runtime {
@@ -612,11 +614,11 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 100 * CENTS;
+	pub CandidacyBond: Balance = 100 * cent(NativeCurrencyId::get());
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = deposit(1, 64);
+	pub VotingBondBase: Balance = deposit(1, 64);
 	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = deposit(0, 32);
+	pub VotingBondFactor: Balance = deposit(0, 32);
 	/// Daily council elections
 	pub const TermDuration: BlockNumber = 24 * HOURS;
 	pub const DesiredMembers: u32 = 7;
@@ -649,10 +651,10 @@ parameter_types! {
 	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
 	pub const VotingPeriod: BlockNumber = 7 * DAYS;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub const MinimumDeposit: Balance = 100 * DOLLARS;
+	pub MinimumDeposit: Balance = 100 * dollar(NativeCurrencyId::get());
 	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
 	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
-	pub const PreimageByteDeposit: Balance = 10 * MILLICENTS;
+	pub PreimageByteDeposit: Balance = 10 * millicent(NativeCurrencyId::get());
 	pub const InstantAllowed: bool = true;
 	pub const MaxVotes: u32 = 100;
 	pub const MaxProposals: u32 = 100;
@@ -712,20 +714,20 @@ impl pallet_democracy::Config for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
+	pub ProposalBondMinimum: Balance = 100 * dollar(NativeCurrencyId::get());
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
 
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-	pub const DataDepositPerByte: Balance = 10 * CENTS;
-	pub const BountyDepositBase: Balance = 1 * DOLLARS;
+	pub TipReportDepositBase: Balance = 1 * dollar(NativeCurrencyId::get());
+	pub DataDepositPerByte: Balance = 10 * cent(NativeCurrencyId::get());
+	pub BountyDepositBase: Balance = 1 * dollar(NativeCurrencyId::get());
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+	pub BountyValueMinimum: Balance = 10 * dollar(NativeCurrencyId::get());
 	pub const MaxApprovals: u32 = 100;
 }
 
@@ -780,7 +782,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = WeightToFee;
 }
 
 // culumus runtime start
@@ -1100,18 +1102,18 @@ impl orml_currencies::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * MILLIBNC,   // 0.01 BNC
-			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::KSM) => 10 * MILLICENTS,  // 0.0001 KSM
-			&CurrencyId::Token(TokenSymbol::KAR) => 10 * MILLICENTS,
-			&CurrencyId::Token(TokenSymbol::DOT) => 100_000_000,  // DOT has a decimals of 10e10, 0.01 DOT
-			&CurrencyId::Token(TokenSymbol::ZLK) => 1_000_000_000_000,	// ZLK has a decimals of 10e18
-			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * MILLICENTS,
-			&CurrencyId::VSToken(TokenSymbol::DOT) => 100_000_000,
-			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * MILLICENTS,
-			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * MILLICENTS,
-			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 100_000_000,
-			&CurrencyId::LPToken(..) => 10 * MILLICENTS,
+			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent(StableCurrencyId::get()),
+			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 KSM
+			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),
+			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
+			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
+			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
+			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			_ => Balance::max_value() // unsupported
 		}
 	};
@@ -1147,6 +1149,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
+	pub RelayXcmBaseWeight: u64 = milli(RelayCurrencyId::get()) as u64;
 }
 
 impl orml_xtokens::Config for Runtime {
@@ -1159,7 +1162,7 @@ impl orml_xtokens::Config for Runtime {
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type BaseXcmWeight = XcmWeight;
+	type BaseXcmWeight = RelayXcmBaseWeight;
 }
 
 impl orml_unknown_tokens::Config for Runtime {
@@ -1212,7 +1215,7 @@ impl Contains<Call> for ContributeFeeFilter {
 
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + u64::pow(2, 24).into();
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * milli(RelayCurrencyId::get()) as u64) + ContributionWeight::get() + u64::pow(2, 24).into();
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
@@ -1232,7 +1235,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MiscFeeHandler = MiscFeeHandler<
 		Runtime,
 		RelayCurrencyId,
-		WeightToFee,
+		KsmWeightToFee,
 		SalpWeightHolder,
 		ContributeFeeFilter,
 	>;
@@ -1271,7 +1274,7 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 }
 
 parameter_types! {
-	pub const MinContribution: Balance = DOLLARS / 10;
+	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1279,9 +1282,9 @@ parameter_types! {
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub XcmWeight: XcmBaseWeight = RelayXcmBaseWeight::get().into();
+	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
+	pub AddProxyWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
@@ -1290,7 +1293,7 @@ parameter_types! {
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = ();
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee, SelfParaId>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, KsmWeightToFee, SelfParaId>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
@@ -1383,7 +1386,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 parameter_types! {
 	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
-	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub MaximumDepositInPool: Balance = 1_000_000_000 * dollar(NativeCurrencyId::get());
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = HOURS;
