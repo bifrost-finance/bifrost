@@ -49,12 +49,28 @@ pub mod currency {
 		}
 	}
 
+	pub struct WeightToFee;
+	impl WeightToFeePolynomial for WeightToFee {
+		type Balance = Balance;
+		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			let p = base_tx_fee();
+			let q = Balance::from(ExtrinsicBaseWeight::get());
+			smallvec![WeightToFeeCoefficient {
+				degree: 1,
+				negative: false,
+				coeff_frac: Perbill::from_rational(p % q, q),
+				coeff_integer: p / q,
+			}]
+		}
+	}
+
 	fn ksm_base_tx_fee() -> Balance {
 		dollar(CurrencyId::Token(TokenSymbol::KSM)) / 10_000
 	}
 
 	fn base_tx_fee() -> Balance {
-		cent(CurrencyId::Token(TokenSymbol::BNC)) / 10
+		cent(CurrencyId::Token(TokenSymbol::BNC)) / 5
 	}
 
 	pub fn ksm_per_second() -> u128 {

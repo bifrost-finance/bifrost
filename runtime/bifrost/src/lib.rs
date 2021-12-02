@@ -342,7 +342,7 @@ parameter_types! {
 	pub ExistentialDeposit: Balance = 10 * milli(NativeCurrencyId::get());
 	pub TransferFee: Balance = 1 * milli(NativeCurrencyId::get());
 	pub CreationFee: Balance = 1 * milli(NativeCurrencyId::get());
-	pub TransactionByteFee: Balance = 1 * micro(NativeCurrencyId::get());
+	pub TransactionByteFee: Balance = 16 * micro(NativeCurrencyId::get());
 	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
@@ -782,7 +782,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = WeightToFee;
 }
 
 // culumus runtime start
@@ -1372,7 +1372,7 @@ impl bifrost_salp_lite::Config for Runtime {
 parameter_types! {
 	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
-	pub const MaximumDepositInPool: Balance = 1_000_000_000 * DOLLARS;
+	pub MaximumDepositInPool: Balance = 1_000_000_000 * dollar(NativeCurrencyId::get());
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = HOURS;
