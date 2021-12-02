@@ -26,7 +26,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::OriginFor;
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
-use orml_traits::MultiReservableCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{
 	mock::{Test as T, *},
@@ -2251,6 +2251,61 @@ fn discard_reward_lower_than_ed_should_work() {
 
 		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).free, REWARD_AMOUNT - reward_1);
 		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).free, REWARD_AMOUNT - reward_2);
+	});
+}
+
+#[test]
+fn discard_deposit_lower_than_ed_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		let keeper = LM::pool(0).unwrap().keeper;
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, DEPOSIT_AMOUNT));
+
+		run_to_block(100);
+
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, DEPOSIT_AMOUNT - MinimumDeposit::get()));
+
+		assert_eq!(
+			Tokens::accounts(USER_1, MINING_DEPOSIT).free,
+			DEPOSIT_AMOUNT - MinimumDeposit::get()
+		);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).free, MinimumDeposit::get());
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).reserved, 0);
+
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::withdraw(
+			MINING_DEPOSIT,
+			&USER_1,
+			DEPOSIT_AMOUNT - MinimumDeposit::get()
+		));
+
+		run_to_block(DAYS);
+
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).free, MinimumDeposit::get());
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).reserved, 0);
+
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
 	});
 }
 

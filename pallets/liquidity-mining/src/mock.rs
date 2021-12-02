@@ -126,8 +126,11 @@ impl orml_currencies::Config for Test {
 }
 
 orml_traits::parameter_type_with_key! {
-	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		1_000_000
+	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
+		match currency_id {
+			CurrencyId::LPToken(..) => 10_000_000,
+			_ => 1_000_000,
+		}
 	};
 }
 

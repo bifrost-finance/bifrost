@@ -1121,16 +1121,34 @@ pub mod pallet {
 			match pool.r#type {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
-					T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
-						.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					let lpt_ed = T::MultiCurrency::minimum_balance(lpt);
+					let lpt_total =
+						T::MultiCurrency::total_balance(lpt, &user).saturating_add(try_redeem);
+
+					if lpt_total >= lpt_ed {
+						T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
 				},
 				PoolType::Farming => {
 					let (token_a, token_b) = pool.trading_pair;
 
-					T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
-						.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
-					T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
-						.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					let ta_ed = T::MultiCurrency::minimum_balance(token_a);
+					let tb_ed = T::MultiCurrency::minimum_balance(token_b);
+
+					let ta_total =
+						T::MultiCurrency::total_balance(token_a, &user).saturating_add(try_redeem);
+					let tb_total =
+						T::MultiCurrency::total_balance(token_b, &user).saturating_add(try_redeem);
+
+					if ta_total > ta_ed {
+						T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
+					if tb_total > tb_ed {
+						T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
 				},
 				PoolType::EBFarming => {},
 			};
