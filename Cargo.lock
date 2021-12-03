@@ -935,6 +935,14 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
+ "orml-benchmarking",
+ "orml-currencies",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=5ba42f532b72d71a28aaa18421855de003b9ca71)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=5ba42f532b72d71a28aaa18421855de003b9ca71)",
+ "orml-unknown-tokens",
+ "orml-xcm",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -11801,6 +11809,7 @@ version = "0.4.4"
 source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e5747a897cfd0fb5d322781ffe656220ae1e814f#e5747a897cfd0fb5d322781ffe656220ae1e814f"
 dependencies = [
  "cumulus-primitives-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

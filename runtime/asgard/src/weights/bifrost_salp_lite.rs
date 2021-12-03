@@ -68,4 +68,8 @@ impl<T: frame_system::Config> bifrost_salp_lite::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(11 as Weight))
 			.saturating_add(T::DbWeight::get().writes(8 as Weight))
 	}
+
+	fn batch_migrate(k: u32) -> Weight {
+		(207_069_000 * k as Weight)
+	}
 }

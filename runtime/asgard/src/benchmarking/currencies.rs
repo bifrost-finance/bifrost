@@ -122,7 +122,6 @@ mod tests {
 	use orml_benchmarking::impl_benchmark_test_suite;
 
 	use super::*;
-	// use crate::benchmarking::utils::tests::new_test_ext;
 
 	pub fn new_test_ext() -> sp_io::TestExternalities {
 		frame_system::GenesisConfig::default()
