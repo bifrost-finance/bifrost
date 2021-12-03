@@ -19,15 +19,15 @@
 use asgard_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
 	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
-	IndicesConfig, MinterRewardConfig, ParachainInfoConfig, PolkadotXcmConfig, SessionConfig,
-	SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
-	VtokenMintConfig, WASM_BINARY, SS58Prefix
+	IndicesConfig, MinterRewardConfig, ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix,
+	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
+	VtokenMintConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::constants::time::*;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, TokenInfo, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
@@ -170,8 +170,30 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 
 pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "ASG".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	let mut token_symbol: Vec<String> = vec![];
+	let mut token_decimals: Vec<u32> = vec![];
+	[
+		// native token
+		CurrencyId::Native(TokenSymbol::ASG),
+		// stable token
+		CurrencyId::Stable(TokenSymbol::KUSD),
+		// token
+		CurrencyId::Token(TokenSymbol::DOT),
+		CurrencyId::Token(TokenSymbol::KSM),
+		CurrencyId::Token(TokenSymbol::KAR),
+		CurrencyId::Token(TokenSymbol::ZLK),
+		// vstoken
+		CurrencyId::VSToken(TokenSymbol::KSM),
+		CurrencyId::VSToken(TokenSymbol::DOT),
+	]
+	.iter()
+	.for_each(|token| {
+		token_symbol.push(token.symbol().to_string());
+		token_decimals.push(token.decimals() as u32);
+	});
+
+	properties.insert("tokenSymbol".into(), token_symbol.into());
+	properties.insert("tokenDecimals".into(), token_decimals.into());
 	properties.insert("ss58Format".into(), SS58Prefix::get().into());
 
 	Ok(ChainSpec::from_genesis(
@@ -254,8 +276,30 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "ASG".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	let mut token_symbol: Vec<String> = vec![];
+	let mut token_decimals: Vec<u32> = vec![];
+	[
+		// native token
+		CurrencyId::Native(TokenSymbol::ASG),
+		// stable token
+		CurrencyId::Stable(TokenSymbol::KUSD),
+		// token
+		CurrencyId::Token(TokenSymbol::DOT),
+		CurrencyId::Token(TokenSymbol::KSM),
+		CurrencyId::Token(TokenSymbol::KAR),
+		CurrencyId::Token(TokenSymbol::ZLK),
+		// vstoken
+		CurrencyId::VSToken(TokenSymbol::KSM),
+		CurrencyId::VSToken(TokenSymbol::DOT),
+	]
+	.iter()
+	.for_each(|token| {
+		token_symbol.push(token.symbol().to_string());
+		token_decimals.push(token.decimals() as u32);
+	});
+
+	properties.insert("tokenSymbol".into(), token_symbol.into());
+	properties.insert("tokenDecimals".into(), token_decimals.into());
 	properties.insert("ss58Format".into(), SS58Prefix::get().into());
 
 	Ok(ChainSpec::from_genesis(
@@ -273,8 +317,30 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 
 pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "ASG".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	let mut token_symbol: Vec<String> = vec![];
+	let mut token_decimals: Vec<u32> = vec![];
+	[
+		// native token
+		CurrencyId::Native(TokenSymbol::ASG),
+		// stable token
+		CurrencyId::Stable(TokenSymbol::KUSD),
+		// token
+		CurrencyId::Token(TokenSymbol::DOT),
+		CurrencyId::Token(TokenSymbol::KSM),
+		CurrencyId::Token(TokenSymbol::KAR),
+		CurrencyId::Token(TokenSymbol::ZLK),
+		// vstoken
+		CurrencyId::VSToken(TokenSymbol::KSM),
+		CurrencyId::VSToken(TokenSymbol::DOT),
+	]
+	.iter()
+	.for_each(|token| {
+		token_symbol.push(token.symbol().to_string());
+		token_decimals.push(token.decimals() as u32);
+	});
+
+	properties.insert("tokenSymbol".into(), token_symbol.into());
+	properties.insert("tokenDecimals".into(), token_decimals.into());
 	properties.insert("ss58Format".into(), SS58Prefix::get().into());
 
 	ChainSpec::from_genesis(
