@@ -18,7 +18,7 @@
 
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
-
+#[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,

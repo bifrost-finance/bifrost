@@ -141,8 +141,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// #[pallet::weight(T::WeightInfo::disable_transfers())]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::disable_transfers())]
 		#[transactional]
 		pub fn disable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
@@ -156,8 +155,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// #[pallet::weight(T::WeightInfo::enable_transfers())]
-		#[pallet::weight(10000)]
+		#[pallet::weight(T::WeightInfo::enable_transfers())]
 		#[transactional]
 		pub fn enable_transfers(origin: OriginFor<T>, currency_id: CurrencyId) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;

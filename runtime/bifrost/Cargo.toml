@@ -104,6 +104,7 @@ orml-xtokens = { version = "0.4.1-dev", default-features = false }
 orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
+orml-benchmarking = { version = "0.4.1-dev", default-features = false, optional = true }
 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
@@ -189,11 +190,13 @@ with-tracing = ["frame-executive/with-tracing"]
 
 runtime-benchmarks = [
 	"frame-benchmarking",
+	"orml-benchmarking",
 	"frame-system-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
+	"pallet-membership/runtime-benchmarks",
 	"pallet-collective/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
@@ -212,6 +215,7 @@ runtime-benchmarks = [
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
+	"zenlink-protocol/runtime-benchmarks",
 ]
 
 try-runtime = [

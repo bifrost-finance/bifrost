@@ -11720,6 +11720,7 @@ version = "0.4.4"
 source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2458c585b0313de495092a5633a547f7e8fa0588#2458c585b0313de495092a5633a547f7e8fa0588"
 dependencies = [
  "cumulus-primitives-core",
+ "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
