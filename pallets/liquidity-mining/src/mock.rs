@@ -215,9 +215,12 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 				(USER_2, FARMING_DEPOSIT_2, DEPOSIT_AMOUNT),
 				(USER_1, MINING_DEPOSIT, DEPOSIT_AMOUNT),
 				(USER_2, MINING_DEPOSIT, DEPOSIT_AMOUNT),
+				(USER_1, SINGLE_TOKEN_DEPOSIT, DEPOSIT_AMOUNT),
+				(USER_2, SINGLE_TOKEN_DEPOSIT, DEPOSIT_AMOUNT),
 				(RICHER, FARMING_DEPOSIT_1, 1_000_000_000_000 * UNIT),
 				(RICHER, FARMING_DEPOSIT_2, 1_000_000_000_000 * UNIT),
 				(RICHER, MINING_DEPOSIT, 1_000_000_000_000 * UNIT),
+				(RICHER, SINGLE_TOKEN_DEPOSIT, 1_000_000_000_000 * UNIT),
 			],
 		},
 		collective: pallet_collective::GenesisConfig {
@@ -242,6 +245,7 @@ pub(crate) const MINING_DEPOSIT: CurrencyId =
 	CurrencyId::LPToken(TokenSymbol::DOT, 2u8, TokenSymbol::KSM, 2u8);
 pub(crate) const FARMING_DEPOSIT_1: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub(crate) const FARMING_DEPOSIT_2: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
+pub(crate) const SINGLE_TOKEN_DEPOSIT: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
 pub(crate) const DEPOSIT_AMOUNT: Balance = UNIT;
 pub(crate) const REWARD_1: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub(crate) const REWARD_2: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);

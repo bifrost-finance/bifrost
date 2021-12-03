@@ -577,7 +577,7 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		pub fn create_single_pool(
+		pub fn create_single_token_pool(
 			origin: OriginFor<T>,
 			token: CurrencyId,
 			main_reward: (CurrencyId, BalanceOf<T, I>),
