@@ -182,6 +182,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		CurrencyId::Token(TokenSymbol::KSM),
 		CurrencyId::Token(TokenSymbol::KAR),
 		CurrencyId::Token(TokenSymbol::ZLK),
+		CurrencyId::Token(TokenSymbol::PHA),
 		// vstoken
 		CurrencyId::VSToken(TokenSymbol::KSM),
 		CurrencyId::VSToken(TokenSymbol::DOT),
@@ -288,6 +289,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		CurrencyId::Token(TokenSymbol::KSM),
 		CurrencyId::Token(TokenSymbol::KAR),
 		CurrencyId::Token(TokenSymbol::ZLK),
+		CurrencyId::Token(TokenSymbol::PHA),
 		// vstoken
 		CurrencyId::VSToken(TokenSymbol::KSM),
 		CurrencyId::VSToken(TokenSymbol::DOT),
@@ -329,6 +331,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		CurrencyId::Token(TokenSymbol::KSM),
 		CurrencyId::Token(TokenSymbol::KAR),
 		CurrencyId::Token(TokenSymbol::ZLK),
+		CurrencyId::Token(TokenSymbol::PHA),
 		// vstoken
 		CurrencyId::VSToken(TokenSymbol::KSM),
 		CurrencyId::VSToken(TokenSymbol::DOT),

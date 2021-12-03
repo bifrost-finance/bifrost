@@ -131,6 +131,9 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
 				),
 			)),
+			// Phala Native token
+			Token(TokenSymbol::PHA) =>
+				Some(MultiLocation::new(1, X1(Parachain(parachains::phala::ID)))),
 			_ => None,
 		}
 	}
@@ -168,6 +171,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						None
 					}
 				},
+				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
 				_ => None,
 			},
 			_ => None,

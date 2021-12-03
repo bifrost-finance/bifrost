@@ -938,6 +938,14 @@ parameter_types! {
 		// kUSD:KSM = 400:1
 		ksm_per_second() * 400
 	);
+	pub PhaPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X1(Parachain(parachains::phala::ID)),
+		).into(),
+		// PHA:KSM = 400:1
+		ksm_per_second() * 400
+	);
 }
 
 pub struct ToTreasury;
@@ -959,6 +967,7 @@ pub type Trader = (
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
+	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1119,6 +1128,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),
 			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
+			&CurrencyId::Token(TokenSymbol::PHA) => 4 * cent(CurrencyId::Token(TokenSymbol::PHA)),	// 0.04 PHA, PHA has a decimals of 10e12.
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),

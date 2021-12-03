@@ -24,6 +24,9 @@ pub mod parachains {
 		pub const KAR_KEY: &[u8] = &[0, 128];
 		pub const KUSD_KEY: &[u8] = &[0, 129];
 	}
+	pub mod phala {
+		pub const ID: u32 = 2004;
+	}
 }
 
 /// Time.
