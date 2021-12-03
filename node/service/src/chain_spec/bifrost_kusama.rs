@@ -25,7 +25,7 @@ use bifrost_kusama_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
 	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY, SS58Prefix
 };
 use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
@@ -154,6 +154,11 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "BNC".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Development",
 		"bifrost_dev",
@@ -162,7 +167,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(properties),
 		RelayExtensions { relay_chain: "kusama-dev".into(), para_id: id.into() },
 	))
 }
@@ -234,6 +239,11 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "BNC".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Local Testnet",
 		"bifrost_local_testnet",
@@ -242,7 +252,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(properties),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: id.into() },
 	))
 }
@@ -251,6 +261,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "BNC".into());
 	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
 
 	ChainSpec::from_genesis(
 		"Bifrost",

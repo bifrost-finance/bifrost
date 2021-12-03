@@ -21,7 +21,7 @@ use asgard_runtime::{
 	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
 	IndicesConfig, MinterRewardConfig, ParachainInfoConfig, PolkadotXcmConfig, SessionConfig,
 	SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
-	VtokenMintConfig, WASM_BINARY,
+	VtokenMintConfig, WASM_BINARY, SS58Prefix
 };
 use bifrost_runtime_common::constants::time::*;
 use cumulus_primitives_core::ParaId;
@@ -169,6 +169,11 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "ASG".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
@@ -177,7 +182,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(properties),
 		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
 	))
 }
@@ -248,6 +253,11 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+	let mut properties = sc_chain_spec::Properties::new();
+	properties.insert("tokenSymbol".into(), "ASG".into());
+	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
 	Ok(ChainSpec::from_genesis(
 		"Asgard Local Testnet",
 		"asgard_local_testnet",
@@ -256,7 +266,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(properties),
 		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
 	))
 }
@@ -265,6 +275,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 	let mut properties = sc_chain_spec::Properties::new();
 	properties.insert("tokenSymbol".into(), "ASG".into());
 	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
 
 	ChainSpec::from_genesis(
 		"Bifrost Asgard CC4",
