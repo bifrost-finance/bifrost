@@ -101,7 +101,7 @@ generate-asgard-weights:
 
 .PHONY: generate-all-weights
 generate-all-weights:
-	bash ./scripts/generate-weights.sh asgard bifrost
+	bash ./scripts/generate-weights.sh bifrost
 
 .PHONY: build-asgard-release-with-bench
 build-asgard-release-with-bench: copy-genesis-config-release
