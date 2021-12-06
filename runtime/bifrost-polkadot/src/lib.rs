@@ -61,7 +61,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_runtime_common::{xcm_impl::BifrostFilteredAssets, SlowAdjustingFeeUpdate};
+use bifrost_runtime_common::{r#impl::BifrostFilteredAssets, SlowAdjustingFeeUpdate};
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
