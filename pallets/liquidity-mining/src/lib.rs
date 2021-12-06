@@ -259,6 +259,8 @@ pub enum PoolType {
 	Farming,
 	/// Only `vsToken(reserved)` + `vsBond(reserved)` can deposit into the pool
 	EBFarming,
+	/// Any token can deposit into the pool
+	SingleToken,
 }
 
 #[derive(Encode, Decode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
@@ -568,6 +570,37 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
+		/// Create a liquidity-pool which type is `PoolType::SingleToken`, accepts any token as
+		/// deposit.
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn create_single_token_pool(
+			origin: OriginFor<T>,
+			token: CurrencyId,
+			main_reward: (CurrencyId, BalanceOf<T, I>),
+			option_rewards: BoundedVec<(CurrencyId, BalanceOf<T, I>), T::MaximumOptionRewards>,
+			#[pallet::compact] duration: BlockNumberFor<T>,
+			#[pallet::compact] min_deposit_to_start: BalanceOf<T, I>,
+			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
+			let trading_pair = (token, token);
+
+			Self::create_pool(
+				trading_pair,
+				main_reward,
+				option_rewards,
+				PoolType::SingleToken,
+				duration,
+				min_deposit_to_start,
+				after_block_to_start,
+			)
+		}
+
 		/// Create a liquidity-pool which type is `PoolType::Mining`, Only accepts `lpToken` as
 		/// deposit.
 		#[pallet::weight((
@@ -862,6 +895,11 @@ pub mod pallet {
 						Error::<T, I>::NotEnoughToDeposit
 					);
 				},
+				PoolType::SingleToken => {
+					let token = pool.trading_pair.0;
+					T::MultiCurrency::transfer(token, &user, &pool.keeper, value)
+						.map_err(|_e| Error::<T, I>::NotEnoughToDeposit)?;
+				},
 			}
 
 			let r#type = pool.r#type;
@@ -1013,7 +1051,11 @@ pub mod pallet {
 			after_block_to_start: BlockNumberFor<T>,
 		) -> DispatchResultWithPostInfo {
 			// Check the trading-pair
-			ensure!(trading_pair.0 != trading_pair.1, Error::<T, I>::InvalidTradingPair);
+			if r#type != PoolType::SingleToken {
+				ensure!(trading_pair.0 != trading_pair.1, Error::<T, I>::InvalidTradingPair);
+			} else {
+				ensure!(trading_pair.0 == trading_pair.1, Error::<T, I>::InvalidTradingPair);
+			}
 
 			// Check the duration
 			ensure!(duration > T::MinimumDuration::get(), Error::<T, I>::InvalidDuration);
@@ -1121,18 +1163,47 @@ pub mod pallet {
 			match pool.r#type {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
-					T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
-						.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					let lpt_ed = T::MultiCurrency::minimum_balance(lpt);
+					let lpt_total =
+						T::MultiCurrency::total_balance(lpt, &user).saturating_add(try_redeem);
+
+					if lpt_total >= lpt_ed {
+						T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
 				},
 				PoolType::Farming => {
 					let (token_a, token_b) = pool.trading_pair;
 
-					T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
-						.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
-					T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
-						.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					let ta_ed = T::MultiCurrency::minimum_balance(token_a);
+					let tb_ed = T::MultiCurrency::minimum_balance(token_b);
+
+					let ta_total =
+						T::MultiCurrency::total_balance(token_a, &user).saturating_add(try_redeem);
+					let tb_total =
+						T::MultiCurrency::total_balance(token_b, &user).saturating_add(try_redeem);
+
+					if ta_total > ta_ed {
+						T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
+					if tb_total > tb_ed {
+						T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
 				},
 				PoolType::EBFarming => {},
+				PoolType::SingleToken => {
+					let token = pool.trading_pair.0;
+					let token_ed = T::MultiCurrency::minimum_balance(token);
+					let token_total =
+						T::MultiCurrency::total_balance(token, &user).saturating_add(try_redeem);
+
+					if token_total >= token_ed {
+						T::MultiCurrency::transfer(token, &pool.keeper, &user, try_redeem)
+							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					}
+				},
 			};
 
 			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
