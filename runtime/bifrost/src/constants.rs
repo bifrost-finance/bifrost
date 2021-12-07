@@ -30,8 +30,8 @@ pub mod currency {
 	pub use sp_runtime::Perbill;
 
 	pub fn deposit(items: u32, bytes: u32) -> Balance {
-		items as Balance * 15 * cent(CurrencyId::Token(TokenSymbol::BNC)) +
-			(bytes as Balance) * 6 * cent(CurrencyId::Token(TokenSymbol::BNC))
+		items as Balance * 15 * cent(CurrencyId::Native(TokenSymbol::BNC)) +
+			(bytes as Balance) * 6 * cent(CurrencyId::Native(TokenSymbol::BNC))
 	}
 
 	pub struct KsmWeightToFee;
@@ -70,7 +70,7 @@ pub mod currency {
 	}
 
 	fn base_tx_fee() -> Balance {
-		cent(CurrencyId::Token(TokenSymbol::BNC)) / 5
+		cent(CurrencyId::Native(TokenSymbol::BNC)) / 5
 	}
 
 	pub fn ksm_per_second() -> u128 {
