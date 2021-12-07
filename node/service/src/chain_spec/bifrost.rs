@@ -49,7 +49,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
-	1_000_000 * dollar(CurrencyId::Token(TokenSymbol::BNC))
+	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::BNC))
 }
 
 pub fn bifrost_genesis(
@@ -326,7 +326,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 
 	assert_eq!(
 		total_issuance,
-		32_000_000 * dollar(CurrencyId::Token(TokenSymbol::BNC)),
+		32_000_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
 		"total issuance must be equal to 320 million"
 	);
 
