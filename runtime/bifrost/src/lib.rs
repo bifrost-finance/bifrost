@@ -1370,7 +1370,7 @@ impl bifrost_salp_lite::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaximumOrderInTrade: u32 = 5;
+	pub const MaximumOrderInTrade: u32 = 1_000;
 	pub const MinimumSupply: Balance = 0;
 }
 
