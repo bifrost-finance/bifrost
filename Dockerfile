@@ -25,7 +25,7 @@ WORKDIR /app
 COPY . /app
 
 RUN export PATH="$PATH:$HOME/.cargo/bin" && \
-	make build-all-release
+	make production-release
 
 # ===== SECOND STAGE ======
 
@@ -44,7 +44,7 @@ RUN rm -rf /usr/share  && \
   ln -s /spec /bifrost/.local/share/spec
 
 USER bifrost
-COPY --from=builder /app/target/release/bifrost /usr/local/bin
+COPY --from=builder /app/target/production/bifrost /usr/local/bin
 COPY ./node/service/res/asgard.json /spec
 COPY ./node/service/res/bifrost.json /spec
 

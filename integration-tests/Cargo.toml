@@ -94,7 +94,6 @@ bifrost-vsbond-auction = { path = "../pallets/vsbond-auction", default-features 
 bifrost-vtoken-mint = { path = "../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../pallets/vesting", default-features = false }
 xcm-support = { path = "../xcm-support", default-features = false }
-asgard-runtime = { path = "../runtime/asgard", default-features = false }
 bifrost-runtime = { path = "../runtime/bifrost", default-features = false }
 
 # orml
@@ -121,16 +120,13 @@ cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumul
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
-xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator" }
+xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", rev = "18f6d9e78d1fe92c167594b88b218793ac38bc1f" }
 
 node-service = { path = "../node/service", features = ["with-all-runtime"] }
 
 [features]
 default = ["std"]
 no_std = []
-with-asgard-runtime=[
-	"node-service/with-asgard-runtime"
-]
 with-bifrost-runtime=[
 	"node-service/with-bifrost-runtime"
 ]
@@ -209,6 +205,5 @@ std = [
 	"orml-xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
-	"asgard-runtime/std",
 	"bifrost-runtime/std"
 ]
