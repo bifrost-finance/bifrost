@@ -41,8 +41,8 @@ pub mod currency {
 		items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
 	}
 
-	pub struct WeightToFee;
-	impl WeightToFeePolynomial for WeightToFee {
+	pub struct KsmWeightToFee;
+	impl WeightToFeePolynomial for KsmWeightToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
 			let p = super::currency::RELAY_CENTS;
@@ -56,8 +56,24 @@ pub mod currency {
 		}
 	}
 
+	pub struct WeightToFee;
+	impl WeightToFeePolynomial for WeightToFee {
+		type Balance = Balance;
+		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
+			// extrinsic base weight (smallest non-zero weight) is mapped to 1/10 CENT:
+			let p = base_tx_fee();
+			let q = Balance::from(ExtrinsicBaseWeight::get());
+			smallvec![WeightToFeeCoefficient {
+				degree: 1,
+				negative: false,
+				coeff_frac: Perbill::from_rational(p % q, q),
+				coeff_integer: p / q,
+			}]
+		}
+	}
+
 	fn base_tx_fee() -> Balance {
-		CENTS / 10
+		CENTS / 5
 	}
 
 	pub fn ksm_per_second() -> u128 {
