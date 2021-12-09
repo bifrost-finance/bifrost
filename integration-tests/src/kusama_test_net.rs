@@ -18,8 +18,10 @@
 
 //! Relay chain and parachains emulation.
 
+use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
 use frame_support::traits::GenesisBuild;
+use node_primitives::TokenSymbol::KSM;
 use polkadot_primitives::v1::{BlockNumber, MAX_CODE_SIZE, MAX_POV_SIZE};
 use polkadot_runtime_parachains::configuration::HostConfiguration;
 use sp_runtime::traits::AccountIdConversion;
@@ -39,7 +41,15 @@ decl_test_parachain! {
 	pub struct Bifrost {
 		Runtime = Runtime,
 		Origin = Origin,
-		new_ext = bifrost_ext(),
+		new_ext = para_ext(2001),
+	}
+}
+
+decl_test_parachain! {
+	pub struct Sibling {
+		Runtime = Runtime,
+		Origin = Origin,
+		new_ext = para_ext(2000),
 	}
 }
 
@@ -48,6 +58,7 @@ decl_test_network! {
 		relay_chain = KusamaNet,
 		parachains = vec![
 			(2001, Bifrost),
+			(2000, Sibling),
 		],
 	}
 }
@@ -96,8 +107,8 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 
 	pallet_balances::GenesisConfig::<Runtime> {
 		balances: vec![
-			(AccountId::from(ALICE), 2002 * DOLLARS),
-			(ParaId::from(2001).into_account(), 2 * DOLLARS),
+			(AccountId::from(ALICE), 2002 * dollar(CurrencyId::Token(KSM))),
+			(ParaId::from(2001).into_account(), 2 * dollar(CurrencyId::Token(KSM))),
 		],
 	}
 	.assimilate_storage(&mut t)
@@ -120,8 +131,13 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 	ext
 }
 
-pub fn bifrost_ext() -> sp_io::TestExternalities {
+pub fn para_ext(parachain_id: u32) -> sp_io::TestExternalities {
 	ExtBuilder::default()
-		.balances(vec![(AccountId::from(ALICE), RelayCurrencyId::get(), 10 * DOLLARS)])
+		.balances(vec![(
+			AccountId::from(ALICE),
+			RelayCurrencyId::get(),
+			10 * dollar(RelayCurrencyId::get()),
+		)])
+		.parachain_id(parachain_id)
 		.build()
 }
