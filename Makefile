@@ -66,7 +66,7 @@ test-all:
 
 .PHONY: integration-test
 integration-test:
-	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-asgard-runtime
+	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-runtime
 
 .PHONY: clean
 clean:
@@ -166,6 +166,11 @@ keystore:
 	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type aura
 	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type gran
 
+.PHONY: copy-genesis-config-production
+copy-genesis-config-production:
+	mkdir -p "target/production/res"
+	cp -r node/service/res/genesis_config target/production/res
+
 .PHONY: production-release
 production-release:
-	.maintain/publish-release.sh
+	cargo build -p node-cli --locked --features "with-bifrost-runtime" --profile production

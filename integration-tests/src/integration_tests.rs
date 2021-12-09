@@ -33,19 +33,20 @@ pub use sp_runtime::{
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
 
-#[cfg(feature = "with-asgard-runtime")]
-pub use asgard_imports::*;
+#[cfg(feature = "with-bifrost-runtime")]
+pub use bifrost_imports::*;
+use bifrost_runtime::{ExistentialDeposit, NativeCurrencyId};
 
-#[cfg(feature = "with-asgard-runtime")]
-mod asgard_imports {
-	pub use asgard_runtime::{
-		constants::currency::DOLLARS, create_x2_multilocation, AccountId, Balance, Balances,
-		BifrostCrowdloanId, BlockNumber, Call, Currencies, CurrencyId, Event, ExistentialDeposit,
-		ExistentialDeposits, NativeCurrencyId, Origin, OriginCaller, ParachainInfo,
-		ParachainSystem, Perbill, Proxy, RelayCurrencyId, RelaychainSovereignSubAccount, Runtime,
-		Salp, Scheduler, Session, SlotLength, System, Tokens, TreasuryPalletId, Utility, Vesting,
-		XTokens, XcmConfig,
+#[cfg(feature = "with-bifrost-runtime")]
+mod bifrost_imports {
+	pub use bifrost_runtime::{
+		create_x2_multilocation, AccountId, Balance, Balances, BifrostCrowdloanId, BlockNumber,
+		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
+		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Perbill, Proxy,
+		RelayCurrencyId, RelaychainSovereignSubAccount, Runtime, Salp, Scheduler, Session,
+		SlotLength, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
 	};
+	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
 	pub use sp_runtime::traits::AccountIdConversion;
 }
@@ -88,17 +89,24 @@ pub fn get_all_module_accounts() -> Vec<AccountId> {
 
 pub struct ExtBuilder {
 	balances: Vec<(AccountId, CurrencyId, Balance)>,
+	parachain_id: u32,
 }
 
 impl Default for ExtBuilder {
 	fn default() -> Self {
-		Self { balances: vec![] }
+		Self { balances: vec![], parachain_id: 2001 }
 	}
 }
 
 impl ExtBuilder {
 	pub fn balances(mut self, balances: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
 		self.balances = balances;
+		self
+	}
+
+	#[allow(dead_code)]
+	pub fn parachain_id(mut self, parachain_id: u32) -> Self {
+		self.parachain_id = parachain_id;
 		self
 	}
 
@@ -139,7 +147,7 @@ impl ExtBuilder {
 		.unwrap();
 
 		<parachain_info::GenesisConfig as GenesisBuild<Runtime>>::assimilate_storage(
-			&parachain_info::GenesisConfig { parachain_id: 2001.into() },
+			&parachain_info::GenesisConfig { parachain_id: self.parachain_id.into() },
 			&mut t,
 		)
 		.unwrap();
@@ -182,8 +190,8 @@ fn parachain_subaccounts_are_unique() {
 fn salp() {
 	ExtBuilder::default()
 		.balances(vec![
-			(AccountId::from(ALICE), RelayCurrencyId::get(), 100 * DOLLARS),
-			(AccountId::from(BOB), RelayCurrencyId::get(), 100 * DOLLARS),
+			(AccountId::from(ALICE), RelayCurrencyId::get(), 100 * dollar(RelayCurrencyId::get())),
+			(AccountId::from(BOB), RelayCurrencyId::get(), 100 * dollar(RelayCurrencyId::get())),
 		])
 		.build()
 		.execute_with(|| {
