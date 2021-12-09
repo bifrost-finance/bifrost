@@ -27,6 +27,7 @@ pub mod bifrost_liquidity_mining;
 pub mod bifrost_salp;
 pub mod bifrost_salp_lite;
 pub mod bifrost_token_issuer;
+pub mod bifrost_vsbond_auction;
 pub mod frame_system;
 pub mod orml_currencies;
 pub mod orml_tokens;
