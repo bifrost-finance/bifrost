@@ -20,7 +20,7 @@
 
 /// Money matters.
 pub mod currency {
-	use bifrost_runtime_common::{cent, dollar};
+	use bifrost_runtime_common::{cent, dollar, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -70,13 +70,17 @@ pub mod currency {
 	}
 
 	fn base_tx_fee() -> Balance {
-		cent(CurrencyId::Native(TokenSymbol::BNC)) / 5
+		milli(CurrencyId::Native(TokenSymbol::BNC)) / 3
+	}
+
+	fn xcm_base_tx_fee() -> Balance {
+		cent(CurrencyId::Native(TokenSymbol::BNC)) / 10
 	}
 
 	pub fn ksm_per_second() -> u128 {
 		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
 		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
-		let fee_per_second = base_tx_per_second * base_tx_fee();
+		let fee_per_second = base_tx_per_second * xcm_base_tx_fee();
 		fee_per_second / 100
 	}
 }

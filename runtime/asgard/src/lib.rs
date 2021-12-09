@@ -787,7 +787,8 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	type WeightToFee = IdentityFee<Balance>;
+	// type WeightToFee = IdentityFee<Balance>;
+	type WeightToFee = WeightToFee;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -1255,7 +1256,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type MiscFeeHandler = MiscFeeHandler<
 		Runtime,
 		RelayCurrencyId,
-		WeightToFee,
+		KsmWeightToFee,
 		SalpWeightHolder,
 		ContributeFeeFilter,
 	>;
@@ -1335,7 +1336,7 @@ parameter_types! {
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, WeightToFee, SelfParaId>;
+	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, KsmWeightToFee, SelfParaId>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;

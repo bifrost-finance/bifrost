@@ -860,6 +860,7 @@ dependencies = [
  "bifrost-salp-rpc-runtime-api",
  "bifrost-token-issuer",
  "bifrost-vesting",
+ "bifrost-vsbond-auction",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -4976,7 +4977,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.10"
+version = "0.9.12"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
