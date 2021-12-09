@@ -236,6 +236,16 @@ dependencies = [
  "scale-info",
  "serde",
  "smallvec",
+ "snowbridge-assets",
+ "snowbridge-basic-channel",
+ "snowbridge-core",
+ "snowbridge-dispatch",
+ "snowbridge-dot-app",
+ "snowbridge-erc20-app",
+ "snowbridge-ethereum-light-client",
+ "snowbridge-incentivized-channel",
+ "snowbridge-runtime-common",
+ "snowbridge-xcm-support",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -1626,6 +1636,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if 1.0.0",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "constant_time_eq"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2467,6 +2487,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "enum-iterator"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c79a6321a1197d7730510c7e3f6cb80432dfefecb32426de8cea0aa19b4bb8d7"
+dependencies = [
+ "enum-iterator-derive",
+]
+
+[[package]]
+name = "enum-iterator-derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e94aa31f7c0dc764f57896dc615ddd76fc13b0d5dca7eb6cc5e018a5a09ec06"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "enumflags2"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2551,6 +2591,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethabi-decode"
+version = "1.3.2"
+source = "git+https://github.com/snowfork/ethabi-decode.git?branch=master#becd27ee393fc1c38ba778c674943690f4ba3d5b"
+dependencies = [
+ "ethereum-types",
+ "tiny-keccak 1.5.0",
+]
+
+[[package]]
+name = "ethash"
+version = "0.5.0"
+source = "git+https://github.com/snowfork/ethash.git?branch=master#d777b18df8ebc29f9d8a5d78566bdd7fbee4a7cc"
+dependencies = [
+ "byteorder",
+ "ethereum-types",
+ "rlp",
+ "sha3 0.8.2",
+]
+
+[[package]]
 name = "ethbloom"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2558,9 +2618,11 @@ checksum = "bfb684ac8fa8f6c5759f788862bb22ec6fe3cb392f6bfd08e3c64b603661e3f8"
 dependencies = [
  "crunchy",
  "fixed-hash",
+ "impl-codec",
  "impl-rlp",
  "impl-serde",
- "tiny-keccak",
+ "scale-info",
+ "tiny-keccak 2.0.2",
 ]
 
 [[package]]
@@ -2571,9 +2633,11 @@ checksum = "05136f7057fe789f06e6d41d07b34e6f70d8c86e5693b60f97aaa6553553bdaf"
 dependencies = [
  "ethbloom",
  "fixed-hash",
+ "impl-codec",
  "impl-rlp",
  "impl-serde",
  "primitive-types",
+ "scale-info",
  "uint",
 ]
 
@@ -3145,8 +3209,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
 dependencies = [
  "cfg-if 1.0.0",
+ "js-sys",
  "libc",
  "wasi 0.10.0+wasi-snapshot-preview1",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -4332,7 +4398,7 @@ dependencies = [
  "pin-project 1.0.8",
  "rand 0.7.3",
  "salsa20",
- "sha3",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -5003,7 +5069,7 @@ dependencies = [
  "generic-array 0.14.4",
  "multihash-derive",
  "sha2 0.9.8",
- "sha3",
+ "sha3 0.9.1",
  "unsigned-varint 0.5.1",
 ]
 
@@ -5254,6 +5320,7 @@ dependencies = [
  "sc-transaction-pool",
  "serde",
  "serde_json",
+ "snowbridge-core",
  "sp-api",
  "sp-block-builder",
  "sp-blockchain",
@@ -6408,6 +6475,12 @@ dependencies = [
  "scale-info",
  "serde",
 ]
+
+[[package]]
+name = "parity-bytes"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16b56e3a2420138bdb970f84dfb9c774aea80fa0e7371549eedec0d80c209c67"
 
 [[package]]
 name = "parity-db"
@@ -9736,6 +9809,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-big-array"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18b20e7752957bbe9661cff4e0bb04d183d0948cdab2ea58cdb9df36a61dfe62"
+dependencies = [
+ "serde",
+ "serde_derive",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.130"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9805,6 +9888,19 @@ dependencies = [
  "cpufeatures 0.2.1",
  "digest 0.9.0",
  "opaque-debug 0.3.0",
+]
+
+[[package]]
+name = "sha3"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd26bc0e7a2e3a7c959bc494caf58b72ee0c71d67704e9520f736ca7e4853ecf"
+dependencies = [
+ "block-buffer 0.7.3",
+ "byte-tools",
+ "digest 0.8.1",
+ "keccak",
+ "opaque-debug 0.2.3",
 ]
 
 [[package]]
@@ -9926,6 +10022,254 @@ dependencies = [
  "sha2 0.9.8",
  "subtle 2.4.1",
  "x25519-dalek",
+]
+
+[[package]]
+name = "snowbridge-assets"
+version = "0.1.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-basic-channel"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "parity-scale-codec",
+ "rlp",
+ "scale-info",
+ "serde",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-core"
+version = "0.1.1"
+dependencies = [
+ "enum-iterator",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "snowbridge-ethereum",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-dispatch"
+version = "0.1.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "snowbridge-core",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-dot-app"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "snowbridge-assets",
+ "snowbridge-basic-channel",
+ "snowbridge-core",
+ "snowbridge-dispatch",
+ "snowbridge-ethereum",
+ "snowbridge-incentivized-channel",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-erc20-app"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "snowbridge-assets",
+ "snowbridge-basic-channel",
+ "snowbridge-core",
+ "snowbridge-dispatch",
+ "snowbridge-ethereum",
+ "snowbridge-incentivized-channel",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-ethereum"
+version = "0.1.0"
+dependencies = [
+ "ethabi-decode",
+ "ethash",
+ "ethbloom",
+ "ethereum-types",
+ "getrandom 0.2.3",
+ "hex-literal 0.3.3",
+ "libsecp256k1 0.3.5",
+ "parity-bytes",
+ "parity-scale-codec",
+ "rand 0.7.3",
+ "rlp",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "serde-big-array",
+ "serde_json",
+ "snowbridge-testutils",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "wasm-bindgen-test",
+]
+
+[[package]]
+name = "snowbridge-ethereum-light-client"
+version = "0.1.1"
+dependencies = [
+ "ethash",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "snowbridge-testutils",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-incentivized-channel"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "pallet-balances",
+ "parity-scale-codec",
+ "rlp",
+ "scale-info",
+ "serde",
+ "snowbridge-assets",
+ "snowbridge-core",
+ "snowbridge-ethereum",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-runtime-common"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "snowbridge-basic-channel",
+ "snowbridge-core",
+ "snowbridge-incentivized-channel",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-testutils"
+version = "0.1.0"
+dependencies = [
+ "ethereum-types",
+ "rustc-hex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "snowbridge-xcm-support"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "snowbridge-core",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -10215,7 +10559,7 @@ dependencies = [
  "substrate-bip39",
  "thiserror",
  "tiny-bip39",
- "tiny-keccak",
+ "tiny-keccak 2.0.2",
  "twox-hash",
  "wasmi",
  "zeroize",
@@ -11029,6 +11373,15 @@ dependencies = [
 
 [[package]]
 name = "tiny-keccak"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d8a021c69bb74a44ccedb824a046447e2c84a01df9e5c20779750acb38e11b2"
+dependencies = [
+ "crunchy",
+]
+
+[[package]]
+name = "tiny-keccak"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
@@ -11597,6 +11950,30 @@ name = "wasm-bindgen-shared"
 version = "0.2.78"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0237232789cf037d5480773fe568aac745bfe2afbc11a863e97901780a6b47cc"
+
+[[package]]
+name = "wasm-bindgen-test"
+version = "0.3.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96f1aa7971fdf61ef0f353602102dbea75a56e225ed036c1e3740564b91e6b7e"
+dependencies = [
+ "console_error_panic_hook",
+ "js-sys",
+ "scoped-tls",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test-macro",
+]
+
+[[package]]
+name = "wasm-bindgen-test-macro"
+version = "0.3.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6006f79628dfeb96a86d4db51fbf1344cd7fd8408f06fc9aa3c84913a4789688"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
 
 [[package]]
 name = "wasm-gc-api"

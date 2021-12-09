@@ -23,6 +23,15 @@ members = [
 	"runtime/asgard",
 	"runtime/bifrost",
 	"xcm-support",
+	"snowbridge/primitives/core",
+	"snowbridge/primitives/ethereum",
+	"snowbridge/pallets/basic-channel",
+	"snowbridge/pallets/incentivized-channel",
+	"snowbridge/pallets/dispatch",
+	"snowbridge/pallets/erc20-app",
+	"snowbridge/pallets/dot-app",
+	"snowbridge/pallets/ethereum-light-client",
+	"snowbridge/runtime/common",
 ]
 
 resolver = "2"

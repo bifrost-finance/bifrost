@@ -116,6 +116,19 @@ orml-benchmarking = { version = "0.4.1-dev", default-features = false, optional 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
+# snowbridge
+snowbridge-core = { path = "../../snowbridge/primitives/core", default-features = false }
+snowbridge-xcm-support = { path = "../../snowbridge/primitives/xcm-support", default-features = false }
+basic-channel = { path = "../../snowbridge/pallets/basic-channel", package = "snowbridge-basic-channel", default-features = false }
+incentivized-channel = { path = "../../snowbridge/pallets/incentivized-channel", package = "snowbridge-incentivized-channel", default-features = false }
+dispatch = { path = "../../snowbridge/pallets/dispatch", package = "snowbridge-dispatch", default-features = false }
+ethereum-light-client = { path = "../../snowbridge/pallets/ethereum-light-client", package = "snowbridge-ethereum-light-client", default-features = false }
+assets = { path = "../../snowbridge/pallets/assets", package = "snowbridge-assets", default-features = false }
+dot-app = { path = "../../snowbridge/pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
+erc20-app = { path = "../../snowbridge/pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
+snowbridge-runtime-common= { path = "../../snowbridge/runtime/common", package = "snowbridge-runtime-common", default-features = false }
+
+
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 
@@ -208,6 +221,14 @@ std = [
 	"orml-benchmarking/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
+	"snowbridge-core/std",
+	"basic-channel/std",
+	"dispatch/std",
+	"ethereum-light-client/std",
+	"assets/std",
+	"erc20-app/std",
+	"dot-app/std",
+	"snowbridge-runtime-common/std",
 ]
 
 runtime-benchmarks = [

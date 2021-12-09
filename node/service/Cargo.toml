@@ -92,6 +92,8 @@ bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/
 bifrost-salp-rpc-runtime-api = { path = "../../pallets/salp/rpc/runtime-api" }
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api" }
 
+snowbridge-core = { path = "../../snowbridge/primitives/core" }
+
 [features]
 default = [ "std" ]
 std = []

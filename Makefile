@@ -174,3 +174,7 @@ copy-genesis-config-production:
 .PHONY: production-release
 production-release:
 	cargo build -p node-cli --locked --features "with-bifrost-runtime" --profile production
+
+.PHONY: link-snowbridge
+link-snowbridge:
+	git clone https://github.com/Snowfork/snowbridge ../snowbridge && ln -s ../snowbridge/parachain snowbridge

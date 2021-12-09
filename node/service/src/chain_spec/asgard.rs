@@ -30,8 +30,9 @@ use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenSymbol};
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
-use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::traits::Zero;
+use snowbridge_core::AssetId;
+use sp_core::{crypto::UncheckedInto, sr25519, U256};
+use sp_runtime::{traits::Zero, Perbill};
 
 use super::TELEMETRY_URL;
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
@@ -125,6 +126,38 @@ pub fn asgard_genesis(
 			],
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		basic_inbound_channel: asgard_runtime::BasicInboundChannelConfig {
+			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+		},
+		basic_outbound_channel: asgard_runtime::BasicOutboundChannelConfig {
+			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
+			interval: 1,
+		},
+		incentivized_inbound_channel: asgard_runtime::IncentivizedInboundChannelConfig {
+			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
+			reward_fraction: Perbill::from_percent(80),
+		},
+		incentivized_outbound_channel: asgard_runtime::IncentivizedOutboundChannelConfig {
+			fee: U256::from_str_radix("10000000000000000", 10).unwrap(), // 0.01 SnowEther
+			interval: 1,
+		},
+		assets: asgard_runtime::AssetsConfig {
+			balances: vec![(
+				AssetId::ETH,
+				get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+				U256::from_str_radix("1000000000000000000", 10).unwrap(),
+			)],
+		},
+		ethereum_light_client: asgard_runtime::EthereumLightClientConfig {
+			initial_header: Default::default(),
+			initial_difficulty: Default::default(),
+		},
+		dot_app: asgard_runtime::DotAppConfig {
+			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
+		},
+		erc_20_app: asgard_runtime::Erc20AppConfig {
+			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
+		},
 	}
 }
 

@@ -1583,6 +1583,127 @@ where
 
 // zenlink runtime end
 
+// snowbridge runtime start
+use assets::SingleAssetAdaptor;
+use dispatch::EnsureEthereumAccount;
+pub use ethereum_light_client::{EthereumDifficultyConfig, EthereumHeader};
+use incentivized_channel::{
+	inbound as incentivized_channel_inbound, outbound as incentivized_channel_outbound,
+};
+pub use snowbridge_core::{AssetId as SnowbridgeAssetId, ChannelId, ERC721TokenData, MessageId};
+use snowbridge_runtime_common::{
+	DotPalletId, Ether, MaxMessagePayloadSize, MaxMessagesPerCommit, OutboundRouter,
+	INDEXING_PREFIX,
+};
+use sp_core::U256;
+use sp_runtime::traits::Keccak256;
+
+impl dispatch::Config for Runtime {
+	type Origin = Origin;
+	type Event = Event;
+	type MessageId = MessageId;
+	type Call = Call;
+	type CallFilter = Everything;
+}
+
+use basic_channel::{inbound as basic_channel_inbound, outbound as basic_channel_outbound};
+
+impl basic_channel_inbound::Config for Runtime {
+	type Event = Event;
+	type Verifier = ethereum_light_client::Pallet<Runtime>;
+	type MessageDispatch = dispatch::Pallet<Runtime>;
+	type WeightInfo = ();
+}
+
+impl basic_channel_outbound::Config for Runtime {
+	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
+	type Event = Event;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type SetPrincipalOrigin = EnsureRootOrAllTechnicalCommittee;
+	type WeightInfo = basic_channel::outbound::weights::SnowbridgeWeight<Self>;
+}
+
+parameter_types! {
+	pub SourceAccount: AccountId = DotPalletId::get().into_account();
+	pub TreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+}
+
+pub struct FeeConverter;
+impl Convert<U256, Option<Balance>> for FeeConverter {
+	fn convert(amount: U256) -> Option<Balance> {
+		dot_app::primitives::unwrap::<Runtime>(amount, Decimals::get())
+	}
+}
+
+impl incentivized_channel_inbound::Config for Runtime {
+	type Event = Event;
+	type Verifier = ethereum_light_client::Pallet<Runtime>;
+	type MessageDispatch = dispatch::Pallet<Runtime>;
+	type Currency = Balances;
+	type SourceAccount = SourceAccount;
+	type TreasuryAccount = TreasuryAccount;
+	type FeeConverter = FeeConverter;
+	type UpdateOrigin = EnsureRootOrAllTechnicalCommittee;
+	type WeightInfo = incentivized_channel::inbound::weights::SnowbridgeWeight<Self>;
+}
+
+impl incentivized_channel_outbound::Config for Runtime {
+	const INDEXING_PREFIX: &'static [u8] = INDEXING_PREFIX;
+	type Event = Event;
+	type Hashing = Keccak256;
+	type MaxMessagePayloadSize = MaxMessagePayloadSize;
+	type MaxMessagesPerCommit = MaxMessagesPerCommit;
+	type FeeCurrency = SingleAssetAdaptor<Runtime, Ether>;
+	type SetFeeOrigin = EnsureRootOrAllTechnicalCommittee;
+	type WeightInfo = incentivized_channel::outbound::weights::SnowbridgeWeight<Self>;
+}
+
+parameter_types! {
+	pub const DescendantsUntilFinalized: u8 = 3;
+	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::mainnet();
+	pub const VerifyPoW: bool = true;
+	pub const MaxHeadersForNumber: u32 = 100;
+}
+
+impl ethereum_light_client::Config for Runtime {
+	type Event = Event;
+	type DescendantsUntilFinalized = DescendantsUntilFinalized;
+	type DifficultyConfig = DifficultyConfig;
+	type VerifyPoW = VerifyPoW;
+	type MaxHeadersForNumber = MaxHeadersForNumber;
+	type WeightInfo = ethereum_light_client::weights::SnowbridgeWeight<Self>;
+}
+
+impl assets::Config for Runtime {
+	type Event = Event;
+	type WeightInfo = assets::weights::SnowbridgeWeight<Self>;
+}
+
+impl erc20_app::Config for Runtime {
+	type Event = Event;
+	type Assets = assets::Module<Runtime>;
+	type OutboundRouter = OutboundRouter<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = erc20_app::weights::SnowbridgeWeight<Self>;
+}
+
+parameter_types! {
+	pub const Decimals: u32 = 10;
+}
+
+impl dot_app::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type OutboundRouter = OutboundRouter<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type PalletId = DotPalletId;
+	type Decimals = Decimals;
+	type WeightInfo = dot_app::weights::SnowbridgeWeight<Self>;
+}
+// snowbridge runtime end
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -1660,6 +1781,17 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
+
+		// Snowbridge modules
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 210,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 211,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 212,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 213,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 214,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 215,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 216,
+		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 220,
+		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 221,
 	}
 }
 
