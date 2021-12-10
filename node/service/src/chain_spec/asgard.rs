@@ -28,6 +28,7 @@ use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
 use node_primitives::{CurrencyId, TokenInfo, TokenSymbol};
+use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
@@ -42,6 +43,38 @@ const DEFAULT_PROTOCOL_ID: &str = "asgard";
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
 const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+
+fn asgard_properties() -> Properties {
+	let mut properties = sc_chain_spec::Properties::new();
+	let mut token_symbol: Vec<String> = vec![];
+	let mut token_decimals: Vec<u32> = vec![];
+	[
+		// native token
+		CurrencyId::Native(TokenSymbol::ASG),
+		// stable token
+		CurrencyId::Stable(TokenSymbol::KUSD),
+		// token
+		CurrencyId::Token(TokenSymbol::DOT),
+		CurrencyId::Token(TokenSymbol::KSM),
+		CurrencyId::Token(TokenSymbol::KAR),
+		CurrencyId::Token(TokenSymbol::ZLK),
+		CurrencyId::Token(TokenSymbol::PHA),
+		// vstoken
+		CurrencyId::VSToken(TokenSymbol::KSM),
+		CurrencyId::VSToken(TokenSymbol::DOT),
+	]
+	.iter()
+	.for_each(|token| {
+		token_symbol.push(token.symbol().to_string());
+		token_decimals.push(token.decimals() as u32);
+	});
+
+	properties.insert("tokenSymbol".into(), token_symbol.into());
+	properties.insert("tokenDecimals".into(), token_decimals.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
+	properties
+}
 
 /// Helper function to create asgard GenesisConfig for testing
 pub fn asgard_genesis(
@@ -169,34 +202,6 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
-	let mut properties = sc_chain_spec::Properties::new();
-	let mut token_symbol: Vec<String> = vec![];
-	let mut token_decimals: Vec<u32> = vec![];
-	[
-		// native token
-		CurrencyId::Native(TokenSymbol::ASG),
-		// stable token
-		CurrencyId::Stable(TokenSymbol::KUSD),
-		// token
-		CurrencyId::Token(TokenSymbol::DOT),
-		CurrencyId::Token(TokenSymbol::KSM),
-		CurrencyId::Token(TokenSymbol::KAR),
-		CurrencyId::Token(TokenSymbol::ZLK),
-		CurrencyId::Token(TokenSymbol::PHA),
-		// vstoken
-		CurrencyId::VSToken(TokenSymbol::KSM),
-		CurrencyId::VSToken(TokenSymbol::DOT),
-	]
-	.iter()
-	.for_each(|token| {
-		token_symbol.push(token.symbol().to_string());
-		token_decimals.push(token.decimals() as u32);
-	});
-
-	properties.insert("tokenSymbol".into(), token_symbol.into());
-	properties.insert("tokenDecimals".into(), token_decimals.into());
-	properties.insert("ss58Format".into(), SS58Prefix::get().into());
-
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
@@ -205,7 +210,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		Some(properties),
+		Some(asgard_properties()),
 		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
 	))
 }
@@ -276,34 +281,6 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 }
 
 pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
-	let mut properties = sc_chain_spec::Properties::new();
-	let mut token_symbol: Vec<String> = vec![];
-	let mut token_decimals: Vec<u32> = vec![];
-	[
-		// native token
-		CurrencyId::Native(TokenSymbol::ASG),
-		// stable token
-		CurrencyId::Stable(TokenSymbol::KUSD),
-		// token
-		CurrencyId::Token(TokenSymbol::DOT),
-		CurrencyId::Token(TokenSymbol::KSM),
-		CurrencyId::Token(TokenSymbol::KAR),
-		CurrencyId::Token(TokenSymbol::ZLK),
-		CurrencyId::Token(TokenSymbol::PHA),
-		// vstoken
-		CurrencyId::VSToken(TokenSymbol::KSM),
-		CurrencyId::VSToken(TokenSymbol::DOT),
-	]
-	.iter()
-	.for_each(|token| {
-		token_symbol.push(token.symbol().to_string());
-		token_decimals.push(token.decimals() as u32);
-	});
-
-	properties.insert("tokenSymbol".into(), token_symbol.into());
-	properties.insert("tokenDecimals".into(), token_decimals.into());
-	properties.insert("ss58Format".into(), SS58Prefix::get().into());
-
 	Ok(ChainSpec::from_genesis(
 		"Asgard Local Testnet",
 		"asgard_local_testnet",
@@ -312,40 +289,12 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		Some(properties),
+		Some(asgard_properties()),
 		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
 	))
 }
 
 pub fn chainspec_config(id: ParaId) -> ChainSpec {
-	let mut properties = sc_chain_spec::Properties::new();
-	let mut token_symbol: Vec<String> = vec![];
-	let mut token_decimals: Vec<u32> = vec![];
-	[
-		// native token
-		CurrencyId::Native(TokenSymbol::ASG),
-		// stable token
-		CurrencyId::Stable(TokenSymbol::KUSD),
-		// token
-		CurrencyId::Token(TokenSymbol::DOT),
-		CurrencyId::Token(TokenSymbol::KSM),
-		CurrencyId::Token(TokenSymbol::KAR),
-		CurrencyId::Token(TokenSymbol::ZLK),
-		CurrencyId::Token(TokenSymbol::PHA),
-		// vstoken
-		CurrencyId::VSToken(TokenSymbol::KSM),
-		CurrencyId::VSToken(TokenSymbol::DOT),
-	]
-	.iter()
-	.for_each(|token| {
-		token_symbol.push(token.symbol().to_string());
-		token_decimals.push(token.decimals() as u32);
-	});
-
-	properties.insert("tokenSymbol".into(), token_symbol.into());
-	properties.insert("tokenDecimals".into(), token_decimals.into());
-	properties.insert("ss58Format".into(), SS58Prefix::get().into());
-
 	ChainSpec::from_genesis(
 		"Bifrost Asgard CC4",
 		"asgard_testnet",
@@ -354,7 +303,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
-		Some(properties),
+		Some(asgard_properties()),
 		RelayExtensions { relay_chain: "westend".into(), para_id: id.into() },
 	)
 }
