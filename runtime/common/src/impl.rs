@@ -32,6 +32,10 @@ use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
 
 use crate::constants::parachains;
 
+/// ********************************************************************
+// Below are for the common utilities for both of Polkadot and Kusama.
+/// ********************************************************************
+
 /// Bifrost Asset Matcher
 pub struct BifrostAssetMatcher<CurrencyId, CurrencyIdConvert>(
 	PhantomData<(CurrencyId, CurrencyIdConvert)>,
@@ -82,6 +86,27 @@ pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 	MultiLocation::new(1, X2(Parachain(para_id.into()), GeneralKey(id.encode())))
 }
+
+impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
+	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
+		if let MultiAsset { id: Concrete(id), fun: Fungible(_) } = asset {
+			Self::convert(id)
+		} else {
+			None
+		}
+	}
+}
+
+pub struct BifrostAccountIdToMultiLocation;
+impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
+	fn convert(account: AccountId) -> MultiLocation {
+		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
+	}
+}
+
+/// **************************************
+// Below is for the network of Kusama.
+/// **************************************
 
 pub struct BifrostCurrencyIdConvert<T>(sp_std::marker::PhantomData<T>);
 impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurrencyIdConvert<T> {
@@ -149,19 +174,36 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 		}
 	}
 }
-impl<T: Get<ParaId>> Convert<MultiAsset, Option<CurrencyId>> for BifrostCurrencyIdConvert<T> {
-	fn convert(asset: MultiAsset) -> Option<CurrencyId> {
-		if let MultiAsset { id: Concrete(id), fun: Fungible(_) } = asset {
-			Self::convert(id)
-		} else {
-			None
+
+/// **************************************
+// Below is for the network of Polkadot.
+/// **************************************
+
+// This currency converter is used for the network of Polkadot
+pub struct BifrostCurrencyIdConvertForPolkadot<T>(sp_std::marker::PhantomData<T>);
+impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>>
+	for BifrostCurrencyIdConvertForPolkadot<T>
+{
+	fn convert(id: CurrencyId) -> Option<MultiLocation> {
+		use CurrencyId::Token;
+		match id {
+			Token(TokenSymbol::DOT) => Some(MultiLocation::parent()),
+			_ => None,
 		}
 	}
 }
 
-pub struct BifrostAccountIdToMultiLocation;
-impl Convert<AccountId, MultiLocation> for BifrostAccountIdToMultiLocation {
-	fn convert(account: AccountId) -> MultiLocation {
-		X1(AccountId32 { network: NetworkId::Any, id: account.into() }).into()
+// This convert is for the network of Polkadot
+impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>>
+	for BifrostCurrencyIdConvertForPolkadot<T>
+{
+	fn convert(location: MultiLocation) -> Option<CurrencyId> {
+		use CurrencyId::Token;
+		use TokenSymbol::*;
+		if location == MultiLocation::parent() {
+			Some(Token(DOT))
+		} else {
+			None
+		}
 	}
 }
