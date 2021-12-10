@@ -21,7 +21,7 @@ use std::{
 	path::PathBuf,
 };
 
-use bifrost_runtime::{
+use bifrost_kusama_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
 	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
@@ -96,9 +96,9 @@ pub fn bifrost_genesis(
 				.cloned()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                           // account id
-						acc.clone(),                           // validator id
-						bifrost_runtime::SessionKeys { aura }, // session keys
+						acc.clone(),                                  // account id
+						acc.clone(),                                  // validator id
+						bifrost_kusama_runtime::SessionKeys { aura }, // session keys
 					)
 				})
 				.collect(),

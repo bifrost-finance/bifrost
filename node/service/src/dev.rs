@@ -22,8 +22,8 @@ use sc_executor::NativeElseWasmExecutor;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
 
 pub type Block = node_primitives::Block;
-pub type Executor = crate::AsgardExecutor;
-pub type RuntimeApi = crate::asgard_runtime::RuntimeApi;
+pub type Executor = crate::collator_kusama::AsgardExecutor;
+pub type RuntimeApi = crate::collator_kusama::asgard_runtime::RuntimeApi;
 pub type FullClient<RuntimeApi, ExecutorDispatch> =
 	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
@@ -49,7 +49,10 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 		select_chain: maybe_select_chain,
 		transaction_pool,
 		other: (_, _),
-	} = crate::new_partial::<asgard_runtime::RuntimeApi, crate::AsgardExecutor>(&config, true)?;
+	} = crate::collator_kusama::new_partial::<
+		asgard_runtime::RuntimeApi,
+		crate::collator_kusama::AsgardExecutor,
+	>(&config, true)?;
 
 	let (network, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -129,7 +132,7 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 				deny_unsafe,
 			};
 
-			Ok(crate::rpc::create_asgard_rpc(deps))
+			Ok(crate::rpc::create_full_rpc(deps))
 		})
 	};
 

@@ -18,8 +18,10 @@
 
 #[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
-#[cfg(feature = "with-bifrost-runtime")]
-pub mod bifrost;
+#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+pub mod bifrost_kusama;
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+pub mod bifrost_polkadot;
 
 pub use node_primitives::{AccountId, Block, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
