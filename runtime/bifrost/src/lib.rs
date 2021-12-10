@@ -1386,7 +1386,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 parameter_types! {
 	pub const RelayChainTokenSymbolKSM: TokenSymbol = TokenSymbol::KSM;
 	pub const RelayChainTokenSymbolDOT: TokenSymbol = TokenSymbol::DOT;
-	pub MaximumDepositInPool: Balance = 1_000_000_000 * dollar(NativeCurrencyId::get());
+	pub MaximumDepositInPool: Balance = 1_000_000_000_000_000 * dollar(NativeCurrencyId::get());
 	pub const MinimumDepositOfUser: Balance = 1_000_000;
 	pub const MinimumRewardPerBlock: Balance = 1_000;
 	pub const MinimumDuration: BlockNumber = HOURS;
