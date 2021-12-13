@@ -242,6 +242,7 @@ dependencies = [
  "snowbridge-dispatch",
  "snowbridge-dot-app",
  "snowbridge-erc20-app",
+ "snowbridge-eth-app",
  "snowbridge-ethereum-light-client",
  "snowbridge-incentivized-channel",
  "snowbridge-runtime-common",
@@ -10131,6 +10132,33 @@ dependencies = [
 
 [[package]]
 name = "snowbridge-erc20-app"
+version = "0.1.1"
+dependencies = [
+ "ethabi-decode",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal 0.3.3",
+ "parity-scale-codec",
+ "rlp",
+ "rustc-hex",
+ "scale-info",
+ "serde",
+ "snowbridge-assets",
+ "snowbridge-basic-channel",
+ "snowbridge-core",
+ "snowbridge-dispatch",
+ "snowbridge-ethereum",
+ "snowbridge-incentivized-channel",
+ "sp-core",
+ "sp-io",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "snowbridge-eth-app"
 version = "0.1.1"
 dependencies = [
  "ethabi-decode",

@@ -42,7 +42,7 @@ const DEFAULT_PROTOCOL_ID: &str = "asgard";
 /// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
-const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+const ENDOWMENT: u128 = DOLLARS;
 
 /// Helper function to create asgard GenesisConfig for testing
 pub fn asgard_genesis(
@@ -97,8 +97,8 @@ pub fn asgard_genesis(
 		tokens: TokensConfig { balances: tokens },
 		bancor: BancorConfig {
 			bancor_pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::DOT), 1_000 * DOLLARS),
+				(CurrencyId::Token(TokenSymbol::KSM), 1_000 * DOLLARS),
 			],
 		},
 		minter_reward: MinterRewardConfig {
@@ -158,6 +158,9 @@ pub fn asgard_genesis(
 		erc_20_app: asgard_runtime::Erc20AppConfig {
 			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
 		},
+		eth_app: asgard_runtime::EthAppConfig {
+			address: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+		},
 	}
 }
 
@@ -182,7 +185,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 1000),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 			]
 		})
@@ -211,7 +214,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
-		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "rococo-dev".into(), para_id: id.into() },
 	))
 }
 
@@ -223,6 +226,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		get_account_id_from_seed::<sr25519::Public>("Dave"),
 		get_account_id_from_seed::<sr25519::Public>("Eve"),
 		get_account_id_from_seed::<sr25519::Public>("Ferdie"),
+		get_account_id_from_seed::<sr25519::Public>("Relay"),
 		get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 		get_account_id_from_seed::<sr25519::Public>("Charlie//stash"),
@@ -249,17 +253,15 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(
-					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20),
-					ENDOWMENT * 4_000_000,
-				),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::VSBond(TokenSymbol::ASG, 2001, 13, 20), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT * 4_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ERC20), ENDOWMENT * 4_000),
 			]
 		})
 		.collect();
@@ -290,7 +292,7 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
-		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "rococo-local".into(), para_id: id.into() },
 	))
 }
 
@@ -308,7 +310,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(properties),
-		RelayExtensions { relay_chain: "westend".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "rococo".into(), para_id: id.into() },
 	)
 }
 
@@ -357,9 +359,9 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				// (x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-				// (x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 1000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
+				(x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
 			]
 		})

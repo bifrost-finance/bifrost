@@ -78,7 +78,7 @@ use bifrost_flexible_fee::{
 use bifrost_runtime_common::{
 	cent,
 	constants::{parachains, time::*},
-	dollar, micro, milli, millicent,
+	dollar, micro, microcent, milli, millicent,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -344,10 +344,10 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 10 * MILLIBNC;
-	pub const TransferFee: Balance = 1 * MILLIBNC;
-	pub const CreationFee: Balance = 1 * MILLIBNC;
-	pub const TransactionByteFee: Balance = 1 * MICROBNC;
+	pub const ExistentialDeposit: Balance = 10 * MILLI;
+	pub const TransferFee: Balance = 1 * MILLI;
+	pub const CreationFee: Balance = 1 * MILLI;
+	pub const TransactionByteFee: Balance = 1 * MICRO;
 	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
@@ -1115,7 +1115,8 @@ impl orml_currencies::Config for Runtime {
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
-			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Native(TokenSymbol::ASG) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Token(TokenSymbol::BNC) => 10 * millicent(CurrencyId::Token(TokenSymbol::BNC)),
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent(StableCurrencyId::get()),
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 KSM
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),
@@ -1123,10 +1124,13 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
-			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::ASG, ..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(CurrencyId::Token(TokenSymbol::BNC)),
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::Token(TokenSymbol::ETH) => 1 * microcent(CurrencyId::Token(TokenSymbol::ETH)),
+			&CurrencyId::Token(TokenSymbol::ERC20) => 1 * microcent(CurrencyId::Token(TokenSymbol::ERC20)),
 			_ => Balance::max_value() // unsupported
 		}
 	};
@@ -1681,6 +1685,18 @@ impl assets::Config for Runtime {
 	type WeightInfo = assets::weights::SnowbridgeWeight<Self>;
 }
 
+parameter_types! {
+	pub const EthAssetId: SnowbridgeAssetId = SnowbridgeAssetId::ETH;
+}
+
+impl eth_app::Config for Runtime {
+	type Event = Event;
+	type Asset = assets::SingleAssetAdaptor<Runtime, EthAssetId>;
+	type OutboundRouter = OutboundRouter<Runtime>;
+	type CallOrigin = EnsureEthereumAccount;
+	type WeightInfo = eth_app::weights::SnowbridgeWeight<Self>;
+}
+
 impl erc20_app::Config for Runtime {
 	type Event = Event;
 	type Assets = assets::Module<Runtime>;
@@ -1783,15 +1799,18 @@ construct_runtime! {
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 
 		// Snowbridge modules
-		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 210,
-		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 211,
-		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 212,
-		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 213,
-		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 214,
-		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 215,
-		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 216,
-		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 220,
-		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 221,
+		BasicInboundChannel: basic_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 200,
+		BasicOutboundChannel: basic_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 201,
+		IncentivizedInboundChannel: incentivized_channel_inbound::{Pallet, Call, Config, Storage, Event<T>} = 202,
+		IncentivizedOutboundChannel: incentivized_channel_outbound::{Pallet, Call, Config<T>, Storage, Event<T>} = 203,
+		Dispatch: dispatch::{Pallet, Call, Storage, Event<T>, Origin} = 204,
+		EthereumLightClient: ethereum_light_client::{Pallet, Call, Config, Storage, Event<T>} = 205,
+		Assets: assets::{Pallet, Call, Config<T>, Storage, Event<T>} = 206,
+		// NOTE: Do not change the following pallet indices without updating
+		//   the peer apps (smart contracts) on the Ethereum side.
+		DotApp: dot_app::{Pallet, Call, Config, Storage, Event<T>} = 64,
+		EthApp: eth_app::{Pallet, Call, Config, Storage, Event<T>} = 65,
+		Erc20App: erc20_app::{Pallet, Call, Config, Storage, Event<T>} = 66,
 	}
 }
 

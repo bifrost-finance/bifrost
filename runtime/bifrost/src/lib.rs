@@ -1103,6 +1103,7 @@ orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
+			&CurrencyId::Token(TokenSymbol::ASG) => 10 * milli(CurrencyId::Token(TokenSymbol::ASG)),
 			&CurrencyId::Stable(TokenSymbol::KUSD) => 10 * millicent(StableCurrencyId::get()),
 			&CurrencyId::Token(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 KSM
 			&CurrencyId::Token(TokenSymbol::KAR) => 10 * millicent(CurrencyId::Token(TokenSymbol::KAR)),

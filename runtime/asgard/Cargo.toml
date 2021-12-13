@@ -126,6 +126,7 @@ ethereum-light-client = { path = "../../snowbridge/pallets/ethereum-light-client
 assets = { path = "../../snowbridge/pallets/assets", package = "snowbridge-assets", default-features = false }
 dot-app = { path = "../../snowbridge/pallets/dot-app", package = "snowbridge-dot-app", default-features = false }
 erc20-app = { path = "../../snowbridge/pallets/erc20-app", package = "snowbridge-erc20-app", default-features = false }
+eth-app = { path = "../../snowbridge/pallets/eth-app", package = "snowbridge-eth-app", default-features = false }
 snowbridge-runtime-common= { path = "../../snowbridge/runtime/common", package = "snowbridge-runtime-common", default-features = false }
 
 
@@ -228,6 +229,7 @@ std = [
 	"assets/std",
 	"erc20-app/std",
 	"dot-app/std",
+	"eth-app/std",
 	"snowbridge-runtime-common/std",
 ]
 

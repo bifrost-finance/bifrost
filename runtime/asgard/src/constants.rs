@@ -33,8 +33,8 @@ pub mod currency {
 	pub const CENTS: Balance = DOLLARS / 100; // assume this is worth about a cent.
 	pub const RELAY_CENTS: Balance = DOLLARS / 30_000;
 	pub const MILLICENTS: Balance = CENTS / 1_000;
-	pub const MILLIBNC: Balance = 1_000_000_000;
-	pub const MICROBNC: Balance = 1_000_000;
+	pub const MILLI: Balance = 1_000_000_000;
+	pub const MICRO: Balance = 1_000_000;
 	pub const XCM_WEIGHT: u64 = 1_000_000_000;
 
 	pub const fn deposit(items: u32, bytes: u32) -> Balance {
