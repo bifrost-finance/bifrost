@@ -11,8 +11,13 @@
   ],
   "protocolId": "bifrost_polkadot",
   "properties": {
-    "tokenDecimals": 12,
-    "tokenSymbol": "BNC"
+    "ss58Format": 6,
+    "tokenDecimals": [
+      12
+    ],
+    "tokenSymbol": [
+      "BNC"
+    ]
   },
   "relay_chain": "polkadot",
   "para_id": 2001,
