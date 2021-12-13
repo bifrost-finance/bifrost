@@ -2,7 +2,7 @@
 name = "bifrost-settlement"
 version = "0.6.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bifrost-assets = { path = "../assets", default-features = false }

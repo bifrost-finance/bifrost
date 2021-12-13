@@ -3,19 +3,19 @@ name = "xcm-support"
 description = "Supporting module for XCM integration."
 version = "0.8.0"
 authors = ["Bifrost Developers"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false }
 paste = "1.0.5"
 smallvec = "1.6.1"
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12", default-features = false }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.12", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.13", default-features = false }
 node-primitives = { default-features = false, path = "../node/primitives" }
 
 [features]

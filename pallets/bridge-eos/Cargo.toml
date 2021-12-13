@@ -2,7 +2,7 @@
 name = "bifrost-bridge-eos"
 version = "0.7.0"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }

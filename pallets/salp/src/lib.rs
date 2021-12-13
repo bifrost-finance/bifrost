@@ -38,7 +38,6 @@ use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
-use sp_std::convert::TryFrom;
 use xcm_support::*;
 
 macro_rules! use_relay {
