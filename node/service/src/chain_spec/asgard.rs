@@ -59,9 +59,6 @@ fn asgard_properties() -> Properties {
 		CurrencyId::Token(TokenSymbol::KAR),
 		CurrencyId::Token(TokenSymbol::ZLK),
 		CurrencyId::Token(TokenSymbol::PHA),
-		// vstoken
-		CurrencyId::VSToken(TokenSymbol::KSM),
-		CurrencyId::VSToken(TokenSymbol::DOT),
 	]
 	.iter()
 	.for_each(|token| {
