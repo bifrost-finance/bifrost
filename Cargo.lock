@@ -5019,7 +5019,7 @@ dependencies = [
  "frame-benchmarking-cli",
  "frame-try-runtime",
  "log",
- "node-inspect 0.9.0-dev",
+ "node-inspect",
  "node-primitives",
  "node-service",
  "parity-scale-codec",
@@ -5035,22 +5035,6 @@ dependencies = [
  "structopt",
  "substrate-build-script-utils",
  "try-runtime-cli",
-]
-
-[[package]]
-name = "node-inspect"
-version = "0.8.0"
-dependencies = [
- "derive_more",
- "parity-scale-codec",
- "sc-cli",
- "sc-client-api",
- "sc-executor",
- "sc-service",
- "sp-blockchain",
- "sp-core",
- "sp-runtime",
- "structopt",
 ]
 
 [[package]]

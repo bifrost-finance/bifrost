@@ -2,7 +2,6 @@
 members = [
 #	"integration-tests",
 	"node/cli",
-	"node/inspect",
 	"node/primitives",
 	"node/rpc",
 	"node/service",
