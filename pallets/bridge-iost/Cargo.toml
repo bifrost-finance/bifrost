@@ -2,7 +2,7 @@
 name = "bifrost-bridge-iost"
 version = "0.8.0"
 authors = ["Qiannan Lyu <lvqiannan@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }

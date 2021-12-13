@@ -61,7 +61,6 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 			transaction_pool: transaction_pool.clone(),
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue,
-			on_demand: None,
 			block_announce_validator_builder: None,
 			warp_sync: None,
 		})?;
@@ -117,9 +116,11 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 				},
 			});
 		// we spawn the future on a background thread managed by service.
-		task_manager
-			.spawn_essential_handle()
-			.spawn_blocking("instant-seal", authorship_future);
+		task_manager.spawn_essential_handle().spawn_blocking(
+			"instant-seal",
+			Some("block-authoring"),
+			authorship_future,
+		);
 	}
 
 	let rpc_extensions_builder = {
@@ -143,8 +144,6 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 		task_manager: &mut task_manager,
 		transaction_pool,
 		rpc_extensions_builder,
-		on_demand: None,
-		remote_blockchain: None,
 		backend,
 		system_rpc_tx,
 		config,
