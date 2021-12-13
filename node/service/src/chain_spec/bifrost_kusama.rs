@@ -24,14 +24,15 @@ use std::{
 use bifrost_kusama_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SessionConfig, SystemConfig,
+	TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, TokenInfo, TokenSymbol};
+use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use serde::de::DeserializeOwned;
@@ -50,6 +51,35 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
 	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::BNC))
+}
+
+fn bifrost_kusama_properties() -> Properties {
+	let mut properties = sc_chain_spec::Properties::new();
+	let mut token_symbol: Vec<String> = vec![];
+	let mut token_decimals: Vec<u32> = vec![];
+	[
+		// native token
+		CurrencyId::Native(TokenSymbol::BNC),
+		// stable token
+		CurrencyId::Stable(TokenSymbol::KUSD),
+		// token
+		CurrencyId::Token(TokenSymbol::DOT),
+		CurrencyId::Token(TokenSymbol::KSM),
+		CurrencyId::Token(TokenSymbol::KAR),
+		CurrencyId::Token(TokenSymbol::ZLK),
+		CurrencyId::Token(TokenSymbol::PHA),
+	]
+	.iter()
+	.for_each(|token| {
+		token_symbol.push(token.symbol().to_string());
+		token_decimals.push(token.decimals() as u32);
+	});
+
+	properties.insert("tokenSymbol".into(), token_symbol.into());
+	properties.insert("tokenDecimals".into(), token_decimals.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
+	properties
 }
 
 pub fn bifrost_genesis(
@@ -162,7 +192,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-dev".into(), para_id: id.into() },
 	))
 }
@@ -242,16 +272,12 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: id.into() },
 	))
 }
 
 pub fn chainspec_config(id: ParaId) -> ChainSpec {
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "BNC".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-
 	ChainSpec::from_genesis(
 		"Bifrost",
 		"bifrost",
@@ -260,7 +286,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
-		Some(properties),
+		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama".into(), para_id: id.into() },
 	)
 }

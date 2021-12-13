@@ -268,6 +268,7 @@ create_currency_id! {
 		ETH("Ethereum", 18) = 5,
 		KAR("Karura", 12) = 6,
 		ZLK("Zenlink Network Token", 18) = 7,
+		PHA("Phala Native Token", 12) = 8,
 	}
 }
 
