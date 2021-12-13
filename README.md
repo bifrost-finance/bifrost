@@ -83,7 +83,7 @@ cd -
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.12
+git checkout release-v0.9.13
 cargo build --release
 cd -
 ```
@@ -141,7 +141,6 @@ docker run -d \
 -p 9944:9944 \
 -p 9933:9933 \
 -p 30333:30333 \
--p 9615:9615 \
 bifrostnetwork/bifrost:latest \
   --name your-fullnode-name \
   --base-path "/data" \
@@ -149,9 +148,9 @@ bifrostnetwork/bifrost:latest \
   --chain "/spec/bifrost.json" \
   --parachain-id 2001 \
   --pruning=archive \
-  --prometheus-external \
   --rpc-external \
   --ws-external \
   --rpc-cors all \
+  --state-cache-size 0 \
   --execution wasm
 ```

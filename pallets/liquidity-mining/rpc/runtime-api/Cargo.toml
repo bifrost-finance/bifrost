@@ -2,12 +2,12 @@
 name = "bifrost-liquidity-mining-rpc-runtime-api"
 version = "0.8.0"
 authors = ["Allen Pocket <AllenPocketGamer@Gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = ["derive"] }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
 node-primitives = { path = "../../../../node/primitives", default-features = false }
 
 [features]

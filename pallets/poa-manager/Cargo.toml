@@ -2,7 +2,7 @@
 name = "bifrost-poa-manager"
 version = "0.8.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = ["derive"] }
