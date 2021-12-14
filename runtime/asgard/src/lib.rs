@@ -1665,9 +1665,9 @@ impl incentivized_channel_outbound::Config for Runtime {
 }
 
 parameter_types! {
-	pub const DescendantsUntilFinalized: u8 = 3;
+	pub const DescendantsUntilFinalized: u8 = 1;
 	pub const DifficultyConfig: EthereumDifficultyConfig = EthereumDifficultyConfig::mainnet();
-	pub const VerifyPoW: bool = true;
+	pub const VerifyPoW: bool = false;
 	pub const MaxHeadersForNumber: u32 = 100;
 }
 
@@ -1706,7 +1706,7 @@ impl erc20_app::Config for Runtime {
 }
 
 parameter_types! {
-	pub const Decimals: u32 = 10;
+	pub const Decimals: u32 = 12;
 }
 
 impl dot_app::Config for Runtime {

@@ -127,14 +127,14 @@ pub fn asgard_genesis(
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		basic_inbound_channel: asgard_runtime::BasicInboundChannelConfig {
-			source_channel: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
+			source_channel: hex!["F8F7758FbcEfd546eAEff7dE24AFf666B6228e73"].into(),
 		},
 		basic_outbound_channel: asgard_runtime::BasicOutboundChannelConfig {
 			principal: get_account_id_from_seed::<sr25519::Public>("Alice"),
 			interval: 1,
 		},
 		incentivized_inbound_channel: asgard_runtime::IncentivizedInboundChannelConfig {
-			source_channel: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
+			source_channel: hex!["EE9170ABFbf9421Ad6DD07F6BDec9D89F2B581E0"].into(),
 			reward_fraction: Perbill::from_percent(80),
 		},
 		incentivized_outbound_channel: asgard_runtime::IncentivizedOutboundChannelConfig {
@@ -153,10 +153,10 @@ pub fn asgard_genesis(
 			initial_difficulty: Default::default(),
 		},
 		dot_app: asgard_runtime::DotAppConfig {
-			address: hex!["3f839E70117C64744930De8567Ae7A5363487cA3"].into(),
+			address: hex!["8cF6147918A5CBb672703F879f385036f8793a24"].into(),
 		},
 		erc_20_app: asgard_runtime::Erc20AppConfig {
-			address: hex!["440eDFFA1352B13227e8eE646f3Ea37456deC701"].into(),
+			address: hex!["3f0839385DB9cBEa8E73AdA6fa0CFe07E321F61d"].into(),
 		},
 		eth_app: asgard_runtime::EthAppConfig {
 			address: hex!["B1185EDE04202fE62D38F5db72F71e38Ff3E8305"].into(),
