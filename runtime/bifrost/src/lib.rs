@@ -285,7 +285,7 @@ parameter_types! {
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
-	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"/mkl-dis");
+	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 }
 
 impl frame_system::Config for Runtime {
