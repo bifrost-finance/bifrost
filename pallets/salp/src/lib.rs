@@ -211,6 +211,8 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
+
+		type ConfirmAsMultiSig: Get<AccountIdOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -297,6 +299,11 @@ pub mod pallet {
 		NotEnoughBalanceInRedeemPool,
 	}
 
+	/// Multisig confirm account
+	#[pallet::storage]
+	#[pallet::getter(fn multisig_confirm_account)]
+	pub type MultisigConfirmAccount<T: Config> = StorageValue<_, AccountIdOf<T>, ValueQuery>;
+
 	/// Tracker for the next available fund index
 	#[pallet::storage]
 	#[pallet::getter(fn current_trie_index)]
@@ -327,6 +334,22 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn set_multisig_account(
+			origin: OriginFor<T>,
+			account: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			MultisigConfirmAccount::<T>::put(account);
+
+			Ok(())
+		}
+
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -637,7 +660,12 @@ pub mod pallet {
 			is_success: bool,
 			message_id: MessageId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			let confirmor = ensure_signed(origin.clone())?;
+			if confirmor != MultisigConfirmAccount::<T>::get() &&
+				confirmor != T::ConfirmAsMultiSig::get()
+			{
+				return Err(DispatchError::BadOrigin.into());
+			}
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
 				fund.status == FundStatus::Failed ||

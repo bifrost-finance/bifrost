@@ -298,6 +298,7 @@ impl salp::Config for Test {
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
 	type RelayNetwork = RelayNetwork;
+	type ConfirmAsMultiSig = ConfirmMuitiSigAccount;
 }
 
 pub struct SalpWeightInfo;
