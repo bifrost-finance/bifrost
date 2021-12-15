@@ -109,6 +109,7 @@ orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
+merkle-distributor = {version = "*", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
@@ -187,6 +188,7 @@ std = [
 	"bifrost-lightening-redeem/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
+	"merkle-distributor/std",
 	"xcm-support/std"
 ]
 with-tracing = ["frame-executive/with-tracing"]
