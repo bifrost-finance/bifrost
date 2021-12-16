@@ -522,7 +522,7 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 	}
 }
 
-use bifrost_runtime_common::xcm_impl::BifrostAccountIdToMultiLocation;
+use bifrost_runtime_common::r#impl::BifrostAccountIdToMultiLocation;
 
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();

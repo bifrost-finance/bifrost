@@ -28,12 +28,14 @@ use sp_runtime::{
 };
 
 mod bridge;
-mod currency;
+pub mod currency;
 mod salp;
-mod tests;
 pub mod traits;
 mod xcm;
 pub use salp::*;
+
+#[cfg(test)]
+mod tests;
 
 pub use crate::{
 	bridge::*,
@@ -85,7 +87,7 @@ pub type Hash = sp_core::H256;
 pub type Timestamp = u64;
 
 /// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
+pub type DigestItem = generic::DigestItem;
 
 /// Header type.
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

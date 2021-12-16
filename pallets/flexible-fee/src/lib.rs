@@ -286,9 +286,6 @@ where
 			// Calculate how much refund we should return
 			let refund_amount = paid.peek().saturating_sub(corrected_fee);
 
-			#[cfg(feature = "std")]
-			println!("refund_amount: {:?}", refund_amount);
-
 			// refund to the the account that paid the fees. If this fails, the
 			// account might have dropped below the existential balance. In
 			// that case we don't refund anything.

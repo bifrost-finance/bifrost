@@ -18,14 +18,14 @@
 FROM rust:buster as builder
 
 RUN apt-get update && apt-get install time clang libclang-dev llvm -y
-RUN rustup toolchain install nightly-2021-09-12
-RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2021-09-12
+RUN rustup toolchain install nightly-2021-11-07
+RUN rustup target add wasm32-unknown-unknown --toolchain nightly-2021-11-07
 
 WORKDIR /app
 COPY . /app
 
 RUN export PATH="$PATH:$HOME/.cargo/bin" && \
-	make build-all-release
+	make production-release
 
 # ===== SECOND STAGE ======
 
@@ -44,9 +44,11 @@ RUN rm -rf /usr/share  && \
   ln -s /spec /bifrost/.local/share/spec
 
 USER bifrost
-COPY --from=builder /app/target/release/bifrost /usr/local/bin
+COPY --from=builder /app/target/production/bifrost /usr/local/bin
 COPY ./node/service/res/asgard.json /spec
-COPY ./node/service/res/bifrost.json /spec
+COPY ./node/service/res/bifrost-kusama.json /spec/bifrost.json
+COPY ./node/service/res/bifrost-kusama.json /spec
+COPY ./node/service/res/bifrost-polkadot.json /spec
 
 # checks
 RUN ldd /usr/local/bin/bifrost && \

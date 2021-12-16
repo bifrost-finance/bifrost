@@ -17,7 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
-use bifrost_runtime::create_x2_multilocation;
+use bifrost_kusama_runtime::create_x2_multilocation;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{EnsureOrigin, GenesisBuild, Nothing},
@@ -271,7 +271,7 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 	}
 }
 
-use bifrost_runtime_common::xcm_impl::BifrostAccountIdToMultiLocation;
+use bifrost_runtime_common::r#impl::BifrostAccountIdToMultiLocation;
 
 impl salp::Config for Test {
 	type BancorPool = Bancor;

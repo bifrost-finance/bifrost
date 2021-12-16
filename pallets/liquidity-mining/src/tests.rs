@@ -26,11 +26,11 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::OriginFor;
 use node_primitives::{Balance, CurrencyId, TokenSymbol};
-use orml_traits::MultiReservableCurrency;
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{
 	mock::{Test as T, *},
-	Error, PoolId, PoolInfo, PoolState, PoolType, TotalPoolInfos,
+	Error, PoolId, PoolState, PoolType, TotalPoolInfos,
 };
 
 fn run_to_block(n: BlockNumber) {
@@ -708,7 +708,7 @@ fn deposit_to_pool_ongoing_with_init_deposit_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 3_000_000);
 
 		for (_rtoken, reward) in pool.rewards.iter() {
@@ -762,7 +762,7 @@ fn double_deposit_to_pool_ongoing_in_diff_block_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 3_000_000);
 
 		for (_rtoken, reward) in pool.rewards.iter() {
@@ -808,7 +808,7 @@ fn double_deposit_to_pool_ongoing_in_same_block_should_work() {
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.deposit, 3_000_000);
 
 		for (_rtoken, reward) in pool.rewards.iter() {
@@ -1019,10 +1019,10 @@ fn redeem_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).frozen, 0);
 		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).reserved, 0);
 
-		run_to_block(100);
+		run_to_block(200);
 
 		let pbpd = FixedU128::from((per_block, 2 * deposit_left));
-		let rewarded = (pbpd * (100 * deposit_left).into()).into_inner() / FixedU128::accuracy();
+		let rewarded = (pbpd * (200 * deposit_left).into()).into_inner() / FixedU128::accuracy();
 
 		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
 
@@ -1554,7 +1554,7 @@ fn claim_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).free, kept - rewarded);
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).frozen, 0);
@@ -1563,7 +1563,7 @@ fn claim_from_pool_ongoing_should_work() {
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).frozen, 0);
 		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).reserved, 0);
 
-		let pool: PoolInfo<T> = LM::pool(0).unwrap();
+		let pool = LM::pool(0).unwrap();
 		assert_eq!(pool.rewards.get(&REWARD_1).unwrap().claimed, rewarded);
 		assert_eq!(pool.rewards.get(&REWARD_2).unwrap().claimed, rewarded);
 	});
@@ -2191,6 +2191,344 @@ fn claim_from_eb_farming_should_work() {
 }
 
 #[test]
+fn create_single_token_pool_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_single_token_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			SINGLE_TOKEN_DEPOSIT,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		let pool = LM::pool(0).unwrap();
+
+		assert_eq!(pool.r#type, PoolType::SingleToken);
+
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).free, REWARD_AMOUNT);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).free, REWARD_AMOUNT);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).reserved, 0);
+	});
+}
+
+#[test]
+fn deposit_to_single_token_pool_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_single_token_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			SINGLE_TOKEN_DEPOSIT,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1_000 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		let deposit = 1_000_000 as Balance;
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, deposit));
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, deposit));
+
+		assert_eq!(
+			Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).free,
+			DEPOSIT_AMOUNT - 2 * deposit
+		);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		let pool = LM::pool(0).unwrap();
+		assert_eq!(pool.deposit, 2 * deposit);
+
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), SINGLE_TOKEN_DEPOSIT).free, 2 * deposit);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		let deposit_data = LM::user_deposit_data(0, USER_1).unwrap();
+		assert_eq!(deposit_data.deposit, 2 * deposit);
+	});
+}
+
+#[test]
+fn redeem_from_single_token_pool_ongoing_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_single_token_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			SINGLE_TOKEN_DEPOSIT,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		let keeper = LM::pool(0).unwrap().keeper;
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, DEPOSIT_AMOUNT));
+		assert_ok!(LM::deposit(Some(USER_2).into(), 0, DEPOSIT_AMOUNT));
+
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).free, 2 * DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		run_to_block(100);
+
+		let per_block = REWARD_AMOUNT / DAYS as Balance;
+		let pbpd = FixedU128::from((per_block, 2 * DEPOSIT_AMOUNT));
+		let rewarded = (pbpd * (100 * DEPOSIT_AMOUNT).into()).into_inner() / FixedU128::accuracy();
+
+		let redeemed = DEPOSIT_AMOUNT / 2;
+		let deposit_left = DEPOSIT_AMOUNT - redeemed;
+
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, redeemed));
+
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).free, redeemed);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
+		assert_eq!(LM::user_deposit_data(0, USER_1).unwrap().deposit, deposit_left);
+
+		assert_ok!(LM::redeem(Some(USER_2).into(), 0, redeemed));
+
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).free, redeemed);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
+		assert_eq!(LM::user_deposit_data(0, USER_2).unwrap().deposit, deposit_left);
+
+		assert_eq!(LM::pool(0).unwrap().deposit, 2 * deposit_left);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).free, 2 * deposit_left);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		run_to_block(200);
+
+		let pbpd = FixedU128::from((per_block, 2 * deposit_left));
+		let rewarded = (pbpd * (200 * deposit_left).into()).into_inner() / FixedU128::accuracy();
+
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
+
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
+
+		assert_eq!(
+			Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).free,
+			DEPOSIT_AMOUNT - MinimumDeposit::get()
+		);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
+		assert_eq!(LM::user_deposit_data(0, USER_2).unwrap().deposit, MinimumDeposit::get());
+
+		assert_eq!(
+			Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).free,
+			MinimumDeposit::get()
+		);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).reserved, 0);
+	});
+}
+
+#[test]
+fn redeem_from_single_token_pool_retired_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_single_token_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			SINGLE_TOKEN_DEPOSIT,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		let keeper = LM::pool(0).unwrap().keeper;
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, DEPOSIT_AMOUNT));
+		assert_ok!(LM::deposit(Some(USER_2).into(), 0, DEPOSIT_AMOUNT));
+
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).free, 2 * DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		run_to_block(DAYS);
+
+		let per_block = REWARD_AMOUNT / DAYS as Balance;
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let rewarded =
+			(pbpd * (DAYS as Balance * UNIT).into()).into_inner() / FixedU128::accuracy();
+
+		let minimum: Balance = 1;
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, minimum));
+
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
+
+		assert_ok!(LM::redeem_all(Some(USER_2).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).free, DEPOSIT_AMOUNT);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, SINGLE_TOKEN_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_2, REWARD_2).reserved, 0);
+		assert!(LM::user_deposit_data(0, USER_2).is_none());
+
+		assert!(LM::pool(0).is_none());
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), SINGLE_TOKEN_DEPOSIT).reserved, 0);
+
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).free, REWARD_AMOUNT - 2 * rewarded);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).free, REWARD_AMOUNT - 2 * rewarded);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).reserved, 0);
+	});
+}
+
+#[test]
+fn claim_from_single_token_pool_ongoing_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_single_token_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			SINGLE_TOKEN_DEPOSIT,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+		assert_ok!(LM::deposit(Some(USER_2).into(), 0, UNIT));
+
+		run_to_block(100);
+
+		assert_ok!(LM::claim(Some(USER_1).into(), 0));
+
+		let per_block = REWARD_AMOUNT / DAYS as Balance;
+		let kept = per_block * DAYS as Balance;
+
+		let pbpd = FixedU128::from((per_block, 2 * UNIT));
+		let rewarded: Balance = (pbpd * (100 * UNIT).into()).into_inner() / FixedU128::accuracy();
+
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).free, rewarded);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, REWARD_2).reserved, 0);
+
+		let pool = LM::pool(0).unwrap();
+
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).free, kept - rewarded);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).frozen, 0);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_1).reserved, 0);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).free, kept - rewarded);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).frozen, 0);
+		assert_eq!(Tokens::accounts(pool.keeper.clone(), REWARD_2).reserved, 0);
+
+		let pool = LM::pool(0).unwrap();
+		assert_eq!(pool.rewards.get(&REWARD_1).unwrap().claimed, rewarded);
+		assert_eq!(pool.rewards.get(&REWARD_2).unwrap().claimed, rewarded);
+	});
+}
+
+#[test]
+fn claim_from_single_tokenpool_retired_should_fail() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_single_token_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			SINGLE_TOKEN_DEPOSIT,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, UNIT));
+
+		run_to_block(DAYS);
+
+		let result = LM::claim(Some(USER_1).into(), 0);
+		assert_noop!(result, Error::<T>::InvalidPoolState);
+	});
+}
+
+#[test]
 fn discard_reward_lower_than_ed_should_work() {
 	new_test_ext().execute_with(|| {
 		const PER_BLOCK: Balance = REWARD_AMOUNT / DAYS as Balance;
@@ -2251,6 +2589,61 @@ fn discard_reward_lower_than_ed_should_work() {
 
 		assert_eq!(Tokens::accounts(INVESTOR, REWARD_1).free, REWARD_AMOUNT - reward_1);
 		assert_eq!(Tokens::accounts(INVESTOR, REWARD_2).free, REWARD_AMOUNT - reward_2);
+	});
+}
+
+#[test]
+fn discard_deposit_lower_than_ed_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(LM::create_mining_pool(
+			pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(),
+			MINING_TRADING_PAIR,
+			(REWARD_1, REWARD_AMOUNT),
+			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
+			DAYS,
+			1 * UNIT,
+			0
+		));
+
+		// It is unable to call Collective::execute(..) which is private;
+		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
+
+		let keeper = LM::pool(0).unwrap().keeper;
+
+		assert_ok!(LM::deposit(Some(USER_1).into(), 0, DEPOSIT_AMOUNT));
+
+		run_to_block(100);
+
+		assert_ok!(LM::redeem(Some(USER_1).into(), 0, DEPOSIT_AMOUNT - MinimumDeposit::get()));
+
+		assert_eq!(
+			Tokens::accounts(USER_1, MINING_DEPOSIT).free,
+			DEPOSIT_AMOUNT - MinimumDeposit::get()
+		);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).free, MinimumDeposit::get());
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).reserved, 0);
+
+		assert_ok!(<Tokens as MultiCurrency<AccountId>>::withdraw(
+			MINING_DEPOSIT,
+			&USER_1,
+			DEPOSIT_AMOUNT - MinimumDeposit::get()
+		));
+
+		run_to_block(DAYS);
+
+		assert_ok!(LM::redeem_all(Some(USER_1).into(), 0));
+
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).free, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(USER_1, MINING_DEPOSIT).reserved, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).free, MinimumDeposit::get());
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).frozen, 0);
+		assert_eq!(Tokens::accounts(keeper.clone(), MINING_DEPOSIT).reserved, 0);
+
+		assert!(LM::user_deposit_data(0, USER_1).is_none());
 	});
 }
 

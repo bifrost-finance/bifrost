@@ -32,6 +32,14 @@ build-asgard-release: copy-genesis-config-release
 build-bifrost-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-bifrost-runtime" --release
 
+.PHONY: build-bifrost-kusama-release
+build-bifrost-kusama-release: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --release
+
+.PHONY: build-bifrost-polkadot-release
+build-bifrost-polkadot-release: copy-genesis-config-release
+	cargo build -p node-cli --locked --features "with-bifrost-polkadot-runtime" --release
+
 .PHONY: build-all-release
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
@@ -66,7 +74,7 @@ test-all:
 
 .PHONY: integration-test
 integration-test:
-	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-asgard-runtime
+	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-runtime
 
 .PHONY: clean
 clean:
@@ -101,7 +109,7 @@ generate-asgard-weights:
 
 .PHONY: generate-all-weights
 generate-all-weights:
-	bash ./scripts/generate-weights.sh asgard bifrost
+	bash ./scripts/generate-weights.sh bifrost
 
 .PHONY: build-asgard-release-with-bench
 build-asgard-release-with-bench: copy-genesis-config-release
@@ -166,6 +174,11 @@ keystore:
 	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type aura
 	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type gran
 
+.PHONY: copy-genesis-config-production
+copy-genesis-config-production:
+	mkdir -p "target/production/res"
+	cp -r node/service/res/genesis_config target/production/res
+
 .PHONY: production-release
 production-release:
-	.maintain/publish-release.sh
+	cargo build -p node-cli --locked --features "with-bifrost-runtime" --profile production

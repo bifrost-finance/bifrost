@@ -63,9 +63,8 @@ pub struct FullDeps<C, P> {
 /// A IO handler that uses all Full RPC extensions.
 pub type RpcExtension = jsonrpc_core::IoHandler<sc_rpc::Metadata>;
 
-/// RPC of bifrost runtime.
-#[allow(non_snake_case)]
-pub fn create_bifrost_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
+/// RPC of asgard/bifrost-kusama runtime.
+pub fn create_full_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
@@ -101,8 +100,9 @@ where
 	io
 }
 
-/// RPC of asgard runtime.
-pub fn create_asgard_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
+/// RPC of bifrost-polkadot runtime.
+#[allow(non_snake_case)]
+pub fn create_full_polkadot_rpc<C, P>(deps: FullDeps<C, P>) -> RpcExtension
 where
 	C: ProvideRuntimeApi<Block>
 		+ HeaderBackend<Block>
@@ -112,10 +112,6 @@ where
 		+ 'static,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
-	C::Api: FeeRuntimeApi<Block, AccountId>,
-	C::Api: SalpRuntimeApi<Block, ParaId, AccountId>,
-	C::Api: LiquidityMiningRuntimeApi<Block, AccountId, PoolId>,
-	C::Api: ZenlinkProtocolRuntimeApi<Block, AccountId>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool + Sync + Send + 'static,
 {
@@ -124,16 +120,6 @@ where
 
 	io.extend_with(SystemApi::to_delegate(FullSystem::new(client.clone(), pool, deny_unsafe)));
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
-
-	io.extend_with(FeeRpcApi::to_delegate(FlexibleFeeStruct::new(client.clone())));
-
-	io.extend_with(SalpRpcApi::to_delegate(SalpRpcWrapper::new(client.clone())));
-
-	io.extend_with(LiquidityMiningRpcApi::to_delegate(LiquidityMiningRpcWrapper::new(
-		client.clone(),
-	)));
-
-	io.extend_with(ZenlinkProtocolApi::to_delegate(ZenlinkProtocol::new(client.clone())));
 
 	io
 }

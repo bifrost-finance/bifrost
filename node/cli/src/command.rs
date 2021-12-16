@@ -30,6 +30,8 @@ use sc_cli::{
 	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+use service::collator_polkadot::BifrostPolkadotExecutor;
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 
@@ -48,7 +50,8 @@ fn load_spec(
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
-		["asgard", "bifrost"]
+
+		["bifrost"]
 			.iter()
 			.cloned()
 			.find(|&chain| n.starts_with(chain))
@@ -65,14 +68,30 @@ fn load_spec(
 		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
 		#[cfg(feature = "with-asgard-runtime")]
 		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost" => Box::new(service::chain_spec::bifrost::ChainSpec::from_json_bytes(
-			&include_bytes!("../../service/res/bifrost.json")[..],
-		)?),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-genesis" => Box::new(service::chain_spec::bifrost::chainspec_config(para_id)),
-		#[cfg(feature = "with-bifrost-runtime")]
-		"bifrost-local" => Box::new(service::chain_spec::bifrost::local_testnet_config(para_id)?),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost" | "bifrost-kusama" =>
+			Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_bytes(
+				&include_bytes!("../../service/res/bifrost-kusama.json")[..],
+			)?),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-genesis" | "bifrost-kusama-genesis" =>
+			Box::new(service::chain_spec::bifrost_kusama::chainspec_config(para_id)),
+		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-local" | "bifrost-kusama-local" =>
+			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config(para_id)?),
+
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot" =>
+			Box::new(service::chain_spec::bifrost_polkadot::ChainSpec::from_json_bytes(
+				&include_bytes!("../../service/res/bifrost-polkadot.json")[..],
+			)?),
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot-genesis" =>
+			Box::new(service::chain_spec::bifrost_polkadot::chainspec_config(para_id)),
+		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+		"bifrost-polkadot-local" =>
+			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config(para_id)?),
+
 		#[cfg(feature = "with-asgard-runtime")]
 		"dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
 		path => {
@@ -84,13 +103,34 @@ fn load_spec(
 				}
 				#[cfg(not(feature = "with-asgard-runtime"))]
 				return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
-				#[cfg(feature = "with-bifrost-runtime")]
+			} else if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
+				#[cfg(any(
+					feature = "with-bifrost-polkadot-runtime",
+					feature = "with-bifrost-runtime"
+				))]
 				{
-					Box::new(service::chain_spec::bifrost::ChainSpec::from_json_file(path)?)
+					Box::new(service::chain_spec::bifrost_polkadot::ChainSpec::from_json_file(
+						path,
+					)?)
 				}
-				#[cfg(not(feature = "with-bifrost-runtime"))]
-				return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
+				#[cfg(not(any(
+					feature = "with-bifrost-polkadot-runtime",
+					feature = "with-bifrost-runtime"
+				)))]
+				return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+			} else if path.to_str().map(|s| s.contains("bifrost")) == Some(true) {
+				#[cfg(any(
+					feature = "with-bifrost-kusama-runtime",
+					feature = "with-bifrost-runtime"
+				))]
+				{
+					Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_file(path)?)
+				}
+				#[cfg(not(any(
+					feature = "with-bifrost-kusama-runtime",
+					feature = "with-bifrost-runtime"
+				)))]
+				return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				return Err(service::UNKNOWN_RUNTIME.into());
 			}
@@ -130,7 +170,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(2001).into())
+		load_spec(id, ParaId::from(id.parse::<u32>().unwrap_or(2001)))
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -141,13 +181,29 @@ impl SubstrateCli for Cli {
 			}
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			panic!("{}", service::ASGARD_RUNTIME_NOT_AVAILABLE);
-		} else if spec.is_bifrost() {
-			#[cfg(feature = "with-bifrost-runtime")]
+		} else if spec.is_bifrost_kusama() {
+			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 			{
-				&bifrost_runtime::VERSION
+				&bifrost_kusama_runtime::VERSION
 			}
-			#[cfg(not(feature = "with-bifrost-runtime"))]
-			panic!("{}", service::BIFROST_RUNTIME_NOT_AVAILABLE);
+			#[cfg(not(any(
+				feature = "with-bifrost-kusama-runtime",
+				feature = "with-bifrost-runtime"
+			)))]
+			panic!("{}", service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE);
+		} else if spec.is_bifrost_polkadot() {
+			#[cfg(any(
+				feature = "with-bifrost-polkadot-runtime",
+				feature = "with-bifrost-runtime"
+			))]
+			{
+				return &bifrost_polkadot_runtime::VERSION;
+			}
+			#[cfg(not(any(
+				feature = "with-bifrost-polkadot-runtime",
+				feature = "with-bifrost-runtime"
+			)))]
+			panic!("{}", service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE);
 		} else {
 			panic!("{}", "unknown runtime!");
 		}
@@ -156,7 +212,7 @@ impl SubstrateCli for Cli {
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Cumulus Test Parachain Collator".into()
+		"Parachain Collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -164,7 +220,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
+		"Parachain collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
 		bifrost-collator [parachain-args] -- [relaychain-args]"
@@ -176,7 +232,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn support_url() -> String {
-		"https://github.com/paritytech/cumulus/issues/new".into()
+		"https://github.com/bifrost-finance/bifrost/issues/new".into()
 	}
 
 	fn copyright_start_year() -> i32 {
@@ -203,24 +259,32 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 }
 
 #[cfg(feature = "with-asgard-runtime")]
-use service::{asgard_runtime, AsgardExecutor};
-#[cfg(feature = "with-bifrost-runtime")]
-use service::{bifrost_runtime, BifrostExecutor};
+use service::collator_kusama::{asgard_runtime, AsgardExecutor};
+#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+use service::collator_kusama::{bifrost_kusama_runtime, BifrostExecutor};
+#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+use service::collator_polkadot::bifrost_polkadot_runtime;
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_bifrost() {
-			#[cfg(feature = "with-bifrost-runtime")]
+		if $chain_spec.is_bifrost_kusama() {
+			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
-			use bifrost_runtime::{Block, RuntimeApi};
-			#[cfg(feature = "with-bifrost-runtime")]
+			use bifrost_kusama_runtime::{Block, RuntimeApi};
+			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
-	        use BifrostExecutor as Executor;
-			#[cfg(feature = "with-bifrost-runtime")]
+			use BifrostExecutor as Executor;
+			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
+			#[allow(unused_imports)]
+			use service::collator_kusama::start_node;
+			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
+			#[allow(unused_imports)]
+			use service::collator_kusama::new_chain_ops;
+			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			$( $code )*
 
-			#[cfg(not(feature = "with-bifrost-runtime"))]
-			return Err(service::BIFROST_RUNTIME_NOT_AVAILABLE.into());
+			#[cfg(not(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime")))]
+			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_asgard() || $chain_spec.is_dev() {
 			#[cfg(feature = "with-asgard-runtime")]
 			#[allow(unused_imports)]
@@ -229,12 +293,37 @@ macro_rules! with_runtime_or_err {
 			#[allow(unused_imports)]
 			use AsgardExecutor as Executor;
 			#[cfg(feature = "with-asgard-runtime")]
+			#[allow(unused_imports)]
+			use service::collator_kusama::start_node;
+			#[cfg(feature = "with-asgard-runtime")]
+			#[allow(unused_imports)]
+			use service::collator_kusama::new_chain_ops;
+
+			#[cfg(feature = "with-asgard-runtime")]
 			$( $code )*
 
 			#[cfg(not(feature = "with-asgard-runtime"))]
 			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-		}
-		else {
+		} else if $chain_spec.is_bifrost_polkadot() {
+			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+			#[allow(unused_imports)]
+			use bifrost_polkadot_runtime::{Block, RuntimeApi};
+			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+			#[allow(unused_imports)]
+			use BifrostPolkadotExecutor as Executor;
+			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+			#[allow(unused_imports)]
+			use service::collator_polkadot::start_node;
+			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+			#[allow(unused_imports)]
+			use service::collator_polkadot::new_chain_ops;
+
+			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
+			$( $code )*
+
+			#[cfg(not(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime")))]
+			return Err(service::BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+		} else {
 			return Err(service::UNKNOWN_RUNTIME.into());
 		}
 	}
@@ -243,7 +332,7 @@ macro_rules! with_runtime_or_err {
 fn set_default_ss58_version(spec: &Box<dyn ChainSpec>) {
 	use sp_core::crypto::Ss58AddressFormatRegistry;
 
-	let ss58_version = if spec.is_bifrost() {
+	let ss58_version = if spec.is_bifrost_kusama() || spec.is_bifrost_polkadot() {
 		Ss58AddressFormatRegistry::BifrostAccount
 	} else {
 		Ss58AddressFormatRegistry::SubstrateAccount
@@ -279,7 +368,7 @@ pub fn run() -> Result<()> {
 						.chain(cli.relaychain_args.iter()),
 				);
 
-				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(2001));
+				let id = ParaId::from(para_id.unwrap_or(2001));
 
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
@@ -300,7 +389,7 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						service::start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+						start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)
@@ -345,9 +434,11 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 
-			runner.async_run(|mut config| {
-				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+			with_runtime_or_err!(chain_spec, {
+				return runner.async_run(|mut config| {
+					let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, import_queue), task_manager))
+				});
 			})
 		},
 		Some(Subcommand::ExportBlocks(cmd)) => {
@@ -356,9 +447,11 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 
-			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, config.database), task_manager))
+			with_runtime_or_err!(chain_spec, {
+				return runner.async_run(|mut config| {
+					let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, config.database), task_manager))
+				});
 			})
 		},
 		Some(Subcommand::ExportState(cmd)) => {
@@ -367,9 +460,11 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 
-			runner.async_run(|mut config| {
-				let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, config.chain_spec), task_manager))
+			with_runtime_or_err!(chain_spec, {
+				return runner.async_run(|mut config| {
+					let (client, _, _, task_manager) = new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, config.chain_spec), task_manager))
+				});
 			})
 		},
 		Some(Subcommand::ImportBlocks(cmd)) => {
@@ -378,9 +473,11 @@ pub fn run() -> Result<()> {
 
 			set_default_ss58_version(chain_spec);
 
-			runner.async_run(|mut config| {
-				let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+			with_runtime_or_err!(chain_spec, {
+				return runner.async_run(|mut config| {
+					let (client, _, import_queue, task_manager) = new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, import_queue), task_manager))
+				});
 			})
 		},
 		Some(Subcommand::PurgeChain(cmd)) => {
@@ -409,9 +506,11 @@ pub fn run() -> Result<()> {
 			let chain_spec = &runner.config().chain_spec;
 
 			set_default_ss58_version(chain_spec);
-			runner.async_run(|mut config| {
-				let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
-				Ok((cmd.run(client, backend), task_manager))
+			with_runtime_or_err!(chain_spec, {
+				return runner.async_run(|mut config| {
+					let (client, backend, _, task_manager) = new_chain_ops(&mut config)?;
+					Ok((cmd.run(client, backend), task_manager))
+				});
 			})
 		},
 		Some(Subcommand::ExportGenesisState(params)) => {
@@ -420,19 +519,14 @@ pub fn run() -> Result<()> {
 			let _ = builder.init();
 
 			let chain_spec = cli.load_spec(&params.chain.clone().unwrap_or_default())?;
-			let output_buf = with_runtime_or_err!(chain_spec, {
-				{
-					let block: Block =
-						generate_genesis_block(&chain_spec).map_err(|e| format!("{:?}", e))?;
-					let raw_header = block.header().encode();
-					let buf = if params.raw {
-						raw_header
-					} else {
-						format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-					};
-					buf
-				}
-			});
+			let block: Block =
+				generate_genesis_block(&chain_spec).map_err(|e| format!("{:?}", e))?;
+			let raw_header = block.header().encode();
+			let output_buf = if params.raw {
+				raw_header
+			} else {
+				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+			};
 			if let Some(output) = &params.output {
 				std::fs::write(output, output_buf)?;
 			} else {

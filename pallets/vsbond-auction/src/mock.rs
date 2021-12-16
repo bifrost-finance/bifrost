@@ -152,5 +152,6 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 pub(crate) const ALICE: AccountId = 1;
 pub(crate) const BRUCE: AccountId = 2;
 pub(crate) const TOKEN: CurrencyId = InvoicingCurrency::get();
-pub(crate) const VSBOND: CurrencyId = CurrencyId::VSBond(TokenSymbol::KSM, 3000, 13, 20);
+pub(crate) const TOKEN_SYMBOL: TokenSymbol = TokenSymbol::KSM;
+pub(crate) const VSBOND: CurrencyId = CurrencyId::VSBond(TOKEN_SYMBOL, 3000, 13, 20);
 pub(crate) const SPECIAL_VSBOND: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);

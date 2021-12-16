@@ -22,8 +22,8 @@ use sc_executor::NativeElseWasmExecutor;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
 
 pub type Block = node_primitives::Block;
-pub type Executor = crate::AsgardExecutor;
-pub type RuntimeApi = crate::asgard_runtime::RuntimeApi;
+pub type Executor = crate::collator_kusama::AsgardExecutor;
+pub type RuntimeApi = crate::collator_kusama::asgard_runtime::RuntimeApi;
 pub type FullClient<RuntimeApi, ExecutorDispatch> =
 	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
@@ -49,7 +49,10 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 		select_chain: maybe_select_chain,
 		transaction_pool,
 		other: (_, _),
-	} = crate::new_partial::<asgard_runtime::RuntimeApi, crate::AsgardExecutor>(&config, true)?;
+	} = crate::collator_kusama::new_partial::<
+		asgard_runtime::RuntimeApi,
+		crate::collator_kusama::AsgardExecutor,
+	>(&config, true)?;
 
 	let (network, system_rpc_tx, network_starter) =
 		sc_service::build_network(sc_service::BuildNetworkParams {
@@ -58,7 +61,6 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 			transaction_pool: transaction_pool.clone(),
 			spawn_handle: task_manager.spawn_handle(),
 			import_queue,
-			on_demand: None,
 			block_announce_validator_builder: None,
 			warp_sync: None,
 		})?;
@@ -114,9 +116,11 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 				},
 			});
 		// we spawn the future on a background thread managed by service.
-		task_manager
-			.spawn_essential_handle()
-			.spawn_blocking("instant-seal", authorship_future);
+		task_manager.spawn_essential_handle().spawn_blocking(
+			"instant-seal",
+			Some("block-authoring"),
+			authorship_future,
+		);
 	}
 
 	let rpc_extensions_builder = {
@@ -129,7 +133,7 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 				deny_unsafe,
 			};
 
-			Ok(crate::rpc::create_asgard_rpc(deps))
+			Ok(crate::rpc::create_full_rpc(deps))
 		})
 	};
 
@@ -140,8 +144,6 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 		task_manager: &mut task_manager,
 		transaction_pool,
 		rpc_extensions_builder,
-		on_demand: None,
-		remote_blockchain: None,
 		backend,
 		system_rpc_tx,
 		config,

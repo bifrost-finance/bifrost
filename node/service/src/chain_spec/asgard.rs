@@ -17,16 +17,18 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use asgard_runtime::{
-	constants::{currency::DOLLARS, time::DAYS},
-	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CollatorSelectionConfig,
-	CouncilConfig, DemocracyConfig, GenesisConfig, IndicesConfig, MinterRewardConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SudoConfig, SystemConfig,
-	TechnicalCommitteeConfig, TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
+	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
+	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
+	IndicesConfig, MinterRewardConfig, ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix,
+	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
+	VtokenMintConfig, WASM_BINARY,
 };
+use bifrost_runtime_common::constants::time::*;
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, TokenInfo, TokenSymbol};
+use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
@@ -42,6 +44,35 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
 
+fn asgard_properties() -> Properties {
+	let mut properties = sc_chain_spec::Properties::new();
+	let mut token_symbol: Vec<String> = vec![];
+	let mut token_decimals: Vec<u32> = vec![];
+	[
+		// native token
+		CurrencyId::Native(TokenSymbol::ASG),
+		// stable token
+		CurrencyId::Stable(TokenSymbol::KUSD),
+		// token
+		CurrencyId::Token(TokenSymbol::DOT),
+		CurrencyId::Token(TokenSymbol::KSM),
+		CurrencyId::Token(TokenSymbol::KAR),
+		CurrencyId::Token(TokenSymbol::ZLK),
+		CurrencyId::Token(TokenSymbol::PHA),
+	]
+	.iter()
+	.for_each(|token| {
+		token_symbol.push(token.symbol().to_string());
+		token_decimals.push(token.decimals() as u32);
+	});
+
+	properties.insert("tokenSymbol".into(), token_symbol.into());
+	properties.insert("tokenDecimals".into(), token_decimals.into());
+	properties.insert("ss58Format".into(), SS58Prefix::get().into());
+
+	properties
+}
+
 /// Helper function to create asgard GenesisConfig for testing
 pub fn asgard_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
@@ -54,7 +85,6 @@ pub fn asgard_genesis(
 	GenesisConfig {
 		system: SystemConfig {
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			changes_trie_config: Default::default(),
 		},
 		balances: BalancesConfig { balances },
 		indices: IndicesConfig { indices: vec![] },
@@ -176,7 +206,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(asgard_properties()),
 		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
 	))
 }
@@ -255,16 +285,12 @@ pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
-		None,
+		Some(asgard_properties()),
 		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
 	))
 }
 
 pub fn chainspec_config(id: ParaId) -> ChainSpec {
-	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "ASG".into());
-	properties.insert("tokenDecimals".into(), 12.into());
-
 	ChainSpec::from_genesis(
 		"Bifrost Asgard CC4",
 		"asgard_testnet",
@@ -273,7 +299,7 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
-		Some(properties),
+		Some(asgard_properties()),
 		RelayExtensions { relay_chain: "westend".into(), para_id: id.into() },
 	)
 }

@@ -2,7 +2,7 @@
 name = "bifrost-salp-rpc-api"
 version = "0.8.0"
 authors = ["Ron Yang <yrong1997@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 serde = { version = "1.0.124", features = ["derive"] }
@@ -10,10 +10,10 @@ codec = { package = "parity-scale-codec", version = "2.3.0", default-features = 
 jsonrpc-core = "18.0.0"
 jsonrpc-core-client = "18.0.0"
 jsonrpc-derive = "18.0.0"
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 node-primitives = { path = "../../../node/primitives", default-features = false }
 bifrost-salp-rpc-runtime-api = { path = "./runtime-api" }
