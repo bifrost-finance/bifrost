@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -xe
 
@@ -18,5 +18,5 @@ docker run --rm -it \
   paritytech/srtool:${RUSTC_VERSION} build ${EXTRA_ARGS}
 
 mkdir -p ${WORK_PATH}/deploy/wasm
-cp ${WORK_PATH}/runtime/$RUNTIME/target/srtool/release/wbuild/$RUNTIME-runtime/${RUNTIME}_runtime.compact.compressed.wasm \
+cp ${WORK_PATH}/runtime/${RUNTIME/bifrost-kusama/bifrost}/target/srtool/release/wbuild/$RUNTIME-runtime/${RUNTIME/-/_}_runtime.compact.compressed.wasm \
 ${WORK_PATH}/deploy/wasm
