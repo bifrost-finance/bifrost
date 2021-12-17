@@ -332,6 +332,27 @@ pub mod pallet {
 	#[pallet::getter(fn redeem_pool)]
 	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub initial_multisig_account: Option<AccountIdOf<T>>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { initial_multisig_account: None }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			if let Some(ref key) = self.initial_multisig_account {
+				MultisigConfirmAccount::<T>::put(key)
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight((
@@ -339,13 +360,13 @@ pub mod pallet {
 		DispatchClass::Normal,
 		Pays::No
 		))]
-		pub fn set_multisig_account(
+		pub fn set_multisig_confirm_account(
 			origin: OriginFor<T>,
 			account: AccountIdOf<T>,
 		) -> DispatchResult {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
-			MultisigConfirmAccount::<T>::put(account);
+			Self::set_multisig_account(account);
 
 			Ok(())
 		}
@@ -1030,6 +1051,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// set multisig account
+		pub fn set_multisig_account(account: AccountIdOf<T>) {
+			MultisigConfirmAccount::<T>::put(account);
+		}
 		/// Check if the vsBond is `past` the redeemable date
 		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
 			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
