@@ -904,7 +904,7 @@ fn set_confirmor_should_work() {
 			Salp::issue(Some(BRUCE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX),
 			DispatchError::BadOrigin,
 		);
-		assert_ok!(Salp::set_multisig_account(Some(ALICE).into(), BRUCE));
+		assert_ok!(Salp::set_multisig_confirm_account(Some(ALICE).into(), BRUCE));
 		assert_ok!(Salp::issue(Some(BRUCE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
 	});
 }

@@ -549,7 +549,6 @@ impl bifrost_salp::Config for Test {
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
 	type RelayNetwork = RelayNetwork;
-	type ConfirmAsMultiSig = ConfirmMuitiSigAccount;
 }
 
 //************** Salp mock end *****************

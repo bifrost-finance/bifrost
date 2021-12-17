@@ -243,7 +243,6 @@ impl salp::Config for Test {
 	type WeightInfo = SalpWeightInfo;
 	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
 	type EnsureConfirmAsGovernance = EnsureConfirmAsMultiSig;
-	type ConfirmAsMultiSig = ConfirmMuitiSigAccount;
 }
 
 pub struct SalpWeightInfo;

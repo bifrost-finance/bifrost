@@ -211,8 +211,6 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
-
-		type ConfirmAsMultiSig: Get<AccountIdOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -682,9 +680,7 @@ pub mod pallet {
 			message_id: MessageId,
 		) -> DispatchResult {
 			let confirmor = ensure_signed(origin.clone())?;
-			if confirmor != MultisigConfirmAccount::<T>::get() &&
-				confirmor != T::ConfirmAsMultiSig::get()
-			{
+			if confirmor != MultisigConfirmAccount::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;

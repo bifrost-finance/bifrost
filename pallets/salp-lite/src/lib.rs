@@ -143,10 +143,7 @@ pub mod pallet {
 
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
-		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
-
-		type ConfirmAsMultiSig: Get<AccountIdOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -537,8 +534,7 @@ pub mod pallet {
 			message_id: MessageId,
 		) -> DispatchResult {
 			let issuer = ensure_signed(origin.clone())?;
-			if issuer != MultisigConfirmAccount::<T>::get() && issuer != T::ConfirmAsMultiSig::get()
-			{
+			if issuer != MultisigConfirmAccount::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 
