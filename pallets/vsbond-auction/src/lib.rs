@@ -31,16 +31,19 @@ use core::fmt::Debug;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero},
+		traits::{
+			AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero,
+		},
 		FixedPointNumber, FixedU128,
 	},
-	transactional,
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
+use sp_arithmetic::per_things::Permill;
 use sp_std::cmp::min;
 pub use weights::WeightInfo;
 
@@ -69,7 +72,8 @@ where
 	remain: BalanceOf,
 	/// Total price of the order
 	total_price: BalanceOf,
-	/// Helper to calculate the remain to unreserve
+	/// Helper to calculate the remain to unreserve.
+	/// Useful for buy order, it is the amount that has not been spent yet.
 	remain_price: BalanceOf,
 	/// The unique id of the order
 	order_id: OrderId,
@@ -135,14 +139,24 @@ pub mod pallet {
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
+
+		/// ModuleID for creating sub account
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
+		/// The account that transaction fees go into
+		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		/// The only origin that can modify transaction fee rate
+		type ControlOrigin: EnsureOrigin<Self::Origin>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
 		NotEnoughAmount,
 		NotFindOrderInfo,
-		NotEnoughBalanceToUnreserve,
-		NotEnoughBalanceToReserve,
+		NotEnoughBalanceToCreateOrder,
 		DontHaveEnoughToPay,
 		ForbidRevokeOrderNotInTrade,
 		ForbidRevokeOrderWithoutOwnership,
@@ -195,6 +209,10 @@ pub mod pallet {
 			BalanceOf<T, I>,
 			BalanceOf<T, I>,
 		),
+		/// Transaction fee rate has been reset.
+		///
+		/// [buy_fee_rate, sell_fee_rate]
+		TransactionFeeRateSet(Permill, Permill),
 	}
 
 	#[pallet::storage]
@@ -219,6 +237,18 @@ pub mod pallet {
 	#[pallet::getter(fn order_info)]
 	pub(crate) type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<AccountIdOf<T>, BalanceOf<T, I>>>;
+
+	/// transaction fee rate[sellFee, buyFee]
+	#[pallet::storage]
+	#[pallet::getter(fn get_transaction_fee_rate)]
+	pub type TransactionFee<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, (Permill, Permill), ValueQuery, DefaultPrice>;
+
+	// Defult rate for sell and buy transaction fees is 0
+	#[pallet::type_value]
+	pub fn DefaultPrice() -> (Permill, Permill) {
+		(Permill::zero(), Permill::zero())
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
@@ -254,15 +284,40 @@ pub mod pallet {
 			let (_, vsbond) = CurrencyId::vsAssets(token_symbol, index, first_slot, last_slot);
 
 			// Check the balance
-			let (token_reserved, amount_reserved) = match order_type {
+			let (token_to_transfer, amount_to_transfer) = match order_type {
 				OrderType::Buy => (T::InvoicingCurrency::get(), total_price),
 				OrderType::Sell => (vsbond, amount),
 			};
 
-			ensure!(
-				T::MultiCurrency::can_reserve(token_reserved, &owner, amount_reserved),
-				Error::<T, I>::NotEnoughBalanceToReserve
-			);
+			// Calculate the transaction fee
+			let maker_fee_rate = Self::get_transaction_fee_rate().0;
+			let maker_fee = maker_fee_rate.mul_floor(total_price);
+
+			match order_type {
+				OrderType::Buy => {
+					T::MultiCurrency::ensure_can_withdraw(
+						token_to_transfer,
+						&owner,
+						amount_to_transfer.saturating_add(maker_fee),
+					)
+					.map_err(|_| Error::<T, I>::NotEnoughBalanceToCreateOrder)?;
+				},
+				OrderType::Sell => {
+					T::MultiCurrency::ensure_can_withdraw(
+						token_to_transfer,
+						&owner,
+						amount_to_transfer,
+					)
+					.map_err(|_| Error::<T, I>::NotEnoughBalanceToCreateOrder)?;
+
+					T::MultiCurrency::ensure_can_withdraw(
+						T::InvoicingCurrency::get(),
+						&owner,
+						maker_fee,
+					)
+					.map_err(|_| Error::<T, I>::NotEnoughBalanceToCreateOrder)?;
+				},
+			}
 
 			let order_ids_len = Self::user_order_ids(&owner, order_type).len();
 			ensure!(
@@ -283,8 +338,23 @@ pub mod pallet {
 				order_type,
 			};
 
-			// Reserve the balance.
-			T::MultiCurrency::reserve(token_reserved, &owner, amount_reserved)?;
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+
+			// Transfer the amount to vsbond-acution module account.
+			T::MultiCurrency::transfer(
+				token_to_transfer,
+				&owner,
+				&module_account,
+				amount_to_transfer,
+			)?;
+
+			// Charge fee
+			T::MultiCurrency::transfer(
+				T::InvoicingCurrency::get(),
+				&owner,
+				&T::TreasuryAccount::get(),
+				maker_fee,
+			)?;
 
 			// Insert OrderInfo to Storage
 			TotalOrderInfos::<T, I>::insert(order_id, order_info);
@@ -320,19 +390,19 @@ pub mod pallet {
 			// Check OrderOwner
 			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
 
-			let (token_unreserve, amount_unreserve) = match order_info.order_type {
+			let (token_to_return, amount_to_return) = match order_info.order_type {
 				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
 				OrderType::Sell => (order_info.vsbond, order_info.remain),
 			};
 
-			// To unreserve
-			let reserved_balance =
-				T::MultiCurrency::reserved_balance(token_unreserve, &order_info.owner);
-			ensure!(
-				reserved_balance >= amount_unreserve,
-				Error::<T, I>::NotEnoughBalanceToUnreserve
-			);
-			T::MultiCurrency::unreserve(token_unreserve, &order_info.owner, amount_unreserve);
+			// To transfer back the unused amount
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			T::MultiCurrency::transfer(
+				token_to_return,
+				&module_account,
+				&order_info.owner,
+				amount_to_return,
+			)?;
 
 			// Revoke order
 			TotalOrderInfos::<T, I>::remove(order_id);
@@ -379,20 +449,23 @@ pub mod pallet {
 			}
 
 			// Check origin
-			let opponent = ensure_signed(origin)?;
+			let order_taker = ensure_signed(origin)?;
 
 			// Check OrderInfo
 			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
 
 			// Check OrderOwner
-			ensure!(order_info.owner != opponent, Error::<T, I>::ForbidClinchOrderWithinOwnership);
+			ensure!(
+				order_info.owner != order_taker,
+				Error::<T, I>::ForbidClinchOrderWithinOwnership
+			);
 
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
 			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price());
 
-			let (token_owner, amount_owner, token_opponent, amount_opponent) = match order_info
+			let (token_to_get, amount_to_get, token_to_pay, amount_to_pay) = match order_info
 				.order_type
 			{
 				OrderType::Buy =>
@@ -401,9 +474,39 @@ pub mod pallet {
 					(order_info.vsbond, quantity_clinchd, T::InvoicingCurrency::get(), price_to_pay),
 			};
 
-			// Check the balance of opponent
-			T::MultiCurrency::ensure_can_withdraw(token_opponent, &opponent, amount_opponent)
-				.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
+			// Calculate the transaction fee
+			let taker_fee_rate = Self::get_transaction_fee_rate().1;
+			let taker_fee = taker_fee_rate.mul_floor(price_to_pay);
+
+			// Check the balance of order taker
+			match order_info.order_type {
+				OrderType::Buy => {
+					// transaction amount
+					T::MultiCurrency::ensure_can_withdraw(
+						token_to_pay,
+						&order_taker,
+						amount_to_pay,
+					)
+					.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
+
+					// fee
+					T::MultiCurrency::ensure_can_withdraw(
+						T::InvoicingCurrency::get(),
+						&order_taker,
+						taker_fee,
+					)
+					.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
+				},
+				OrderType::Sell => {
+					// transaction amount + fee
+					T::MultiCurrency::ensure_can_withdraw(
+						token_to_pay,
+						&order_taker,
+						amount_to_pay.saturating_add(taker_fee),
+					)
+					.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
+				},
+			};
 
 			// Get the new OrderInfo
 			let new_order_info = OrderInfo {
@@ -412,28 +515,31 @@ pub mod pallet {
 				..order_info
 			};
 
-			// Unreserve the balance
-			let reserved_balance =
-				T::MultiCurrency::reserved_balance(token_owner, &new_order_info.owner);
-			ensure!(reserved_balance >= amount_owner, Error::<T, I>::NotEnoughBalanceToUnreserve);
-			T::MultiCurrency::unreserve(token_owner, &new_order_info.owner, amount_owner);
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
-			// Exchange: Transfer assets to opponent
+			// Exchange: Transfer corresponding token amount to the order maker from order taker
 			T::MultiCurrency::transfer(
-				token_owner,
+				token_to_pay,
+				&order_taker,
 				&new_order_info.owner,
-				&opponent,
-				amount_owner,
+				amount_to_pay,
 			)?;
-			// Exchange: Transfer assets to owner
+
+			// Charge fee
 			T::MultiCurrency::transfer(
-				token_opponent,
-				&opponent,
-				&new_order_info.owner,
-				amount_opponent,
+				T::InvoicingCurrency::get(),
+				&order_taker,
+				&T::TreasuryAccount::get(),
+				taker_fee,
 			)?;
+
+			// Transfer corresponding token amount to the order taker from the module account
+			T::MultiCurrency::transfer(token_to_get, &module_account, &order_taker, amount_to_get)?;
 
 			// Change the OrderInfo in Storage
+			// The seller sells out what he want to sell in the case of sell-order type.
+			// Or the buyer get all the tokens he wants to buy in the case of buy-order type,
+			// but the buyer might still have some unspent fund due to small number round-up.
 			if new_order_info.remain == Zero::zero() {
 				TotalOrderInfos::<T, I>::remove(order_id);
 				Self::try_to_remove_order_id(
@@ -443,11 +549,12 @@ pub mod pallet {
 				);
 
 				if new_order_info.order_type == OrderType::Buy {
-					T::MultiCurrency::unreserve(
-						token_owner,
+					T::MultiCurrency::transfer(
+						token_to_get,
+						&module_account,
 						&new_order_info.owner,
 						new_order_info.remain_price,
-					);
+					)?;
 				}
 			} else {
 				TotalOrderInfos::<T, I>::insert(order_id, new_order_info.clone());
@@ -457,7 +564,7 @@ pub mod pallet {
 				order_id,
 				new_order_info.order_type,
 				new_order_info.owner,
-				opponent,
+				order_taker,
 				new_order_info.vsbond,
 				quantity_clinchd,
 				new_order_info.amount,
@@ -466,6 +573,28 @@ pub mod pallet {
 			));
 
 			Ok(().into())
+		}
+
+		// edit token release start and end block
+		// input number used as perthousand rate, so it should be less or equal than 1000.
+		#[transactional]
+		#[pallet::weight(T::WeightInfo::set_buy_and_sell_transaction_fee_rate())]
+		pub fn set_buy_and_sell_transaction_fee_rate(
+			origin: OriginFor<T>,
+			buy_rate: u32,
+			sell_rate: u32,
+		) -> DispatchResult {
+			// Check origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let buy_fee_rate = Permill::from_perthousand(buy_rate);
+			let sell_fee_rate = Permill::from_perthousand(sell_rate);
+
+			TransactionFee::<T, I>::mutate(|fee| *fee = (buy_fee_rate, sell_fee_rate));
+
+			Self::deposit_event(Event::TransactionFeeRateSet(buy_fee_rate, sell_fee_rate));
+
+			Ok(())
 		}
 	}
 

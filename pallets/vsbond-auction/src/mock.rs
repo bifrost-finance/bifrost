@@ -21,12 +21,13 @@ use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{GenesisBuild, Nothing},
+	PalletId,
 };
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
 	generic,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 };
 
 use crate as vsbond_auction;
@@ -106,6 +107,8 @@ parameter_types! {
 	pub const InvoicingCurrency: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const MaximumOrderInTrade: u32 = 5;
 	pub const MinimumSupply: Balance = 0;
+	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
+	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account();
 }
 
 impl vsbond_auction::Config for Test {
@@ -115,6 +118,9 @@ impl vsbond_auction::Config for Test {
 	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = orml_tokens::Pallet<Self>;
 	type WeightInfo = ();
+	type PalletId = VsbondAuctionPalletId;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ControlOrigin = ALICE;
 }
 
 // mockup runtime

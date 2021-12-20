@@ -1164,6 +1164,7 @@ dependencies = [
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
  "parity-scale-codec",
  "scale-info",
+ "sp-arithmetic",
  "sp-core",
  "sp-io",
  "sp-runtime",

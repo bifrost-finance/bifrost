@@ -197,7 +197,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 				1000,
 				OrderType::Sell
 			),
-			Error::<Test>::NotEnoughBalanceToReserve,
+			Error::<Test>::NotEnoughBalanceToCreateOrder,
 		);
 
 		const LOCK_ID_SELL: LockIdentifier = 0u64.to_be_bytes();
@@ -213,7 +213,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 				51,
 				OrderType::Sell
 			),
-			Error::<Test>::NotEnoughBalanceToReserve,
+			Error::<Test>::NotEnoughBalanceToCreateOrder,
 		);
 
 		assert_noop!(
@@ -227,7 +227,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 				1000,
 				OrderType::Buy
 			),
-			Error::<Test>::NotEnoughBalanceToReserve,
+			Error::<Test>::NotEnoughBalanceToCreateOrder,
 		);
 
 		const LOCK_ID_BUY: LockIdentifier = 1u64.to_be_bytes();
@@ -243,7 +243,7 @@ fn create_order_without_enough_to_reserve_should_fail() {
 				51,
 				OrderType::Buy
 			),
-			Error::<Test>::NotEnoughBalanceToReserve,
+			Error::<Test>::NotEnoughBalanceToCreateOrder,
 		);
 	});
 }
@@ -475,11 +475,11 @@ fn revoke_order_without_enough_reserved_should_fail() {
 
 		assert_noop!(
 			Auction::revoke_order(Some(ALICE).into(), 0),
-			Error::<Test>::NotEnoughBalanceToUnreserve
+			Error::<Test>::NotEnoughBalanceToCreateOrder
 		);
 		assert_noop!(
 			Auction::revoke_order(Some(ALICE).into(), 1),
-			Error::<Test>::NotEnoughBalanceToUnreserve
+			Error::<Test>::NotEnoughBalanceToCreateOrder
 		);
 	});
 }

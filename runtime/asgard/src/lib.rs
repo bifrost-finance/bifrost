@@ -286,6 +286,7 @@ parameter_types! {
 	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
+	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
@@ -1423,6 +1424,10 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = Currencies;
 	type WeightInfo = weights::bifrost_vsbond_auction::WeightInfo<Runtime>;
+	type PalletId = VsbondAuctionPalletId;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
