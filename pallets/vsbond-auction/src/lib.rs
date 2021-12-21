@@ -165,6 +165,7 @@ pub mod pallet {
 		ExceedMaximumOrderInTrade,
 		InvalidVsbond,
 		Unexpected,
+		InvalidRateInput,
 	}
 
 	#[pallet::event]
@@ -587,8 +588,12 @@ pub mod pallet {
 			// Check origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let buy_fee_rate = Permill::from_perthousand(buy_rate);
-			let sell_fee_rate = Permill::from_perthousand(sell_rate);
+			// number input should be less than 10_000, since it is used as x * 1/10_000
+			ensure!(buy_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
+			ensure!(sell_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
+
+			let buy_fee_rate = Permill::from_parts(buy_rate.saturating_mul(100));
+			let sell_fee_rate = Permill::from_parts(sell_rate.saturating_mul(100));
 
 			TransactionFee::<T, I>::mutate(|fee| *fee = (buy_fee_rate, sell_fee_rate));
 

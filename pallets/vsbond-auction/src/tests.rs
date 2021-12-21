@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::{assert_noop, assert_ok, dispatch::DispatchError, traits::BalanceStatus};
+use frame_support::{assert_noop, assert_ok, dispatch::DispatchError};
 use orml_traits::{LockIdentifier, MultiLockableCurrency};
 
 use crate::{mock::*, *};
@@ -44,7 +44,9 @@ fn create_sell_order_should_work() {
 
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 100);
+
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 100);
 	});
 }
 
@@ -67,11 +69,13 @@ fn create_buy_order_should_work() {
 		let user_order_ids = Auction::user_order_ids(ALICE, OrderType::Buy);
 		assert!(user_order_ids.contains(&0));
 
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+
 		assert!(Auction::order_info(&0).is_some());
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 100);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 100);
 	});
 }
 
@@ -109,12 +113,14 @@ fn double_create_order_should_work() {
 		assert!(Auction::order_info(&0).is_some());
 		assert!(Auction::order_info(&1).is_some());
 
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 50);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 50);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 50);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 50);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 50);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 50);
 	});
 }
 
@@ -441,50 +447,6 @@ fn revoke_order_not_exist_should_fail() {
 }
 
 #[test]
-fn revoke_order_without_enough_reserved_should_fail() {
-	new_test_ext().execute_with(|| {
-		assert_ok!(Auction::create_order(
-			Some(ALICE).into(),
-			3000,
-			TOKEN_SYMBOL,
-			13,
-			20,
-			50,
-			50,
-			OrderType::Sell
-		));
-		assert_ok!(Auction::create_order(
-			Some(ALICE).into(),
-			3000,
-			TOKEN_SYMBOL,
-			13,
-			20,
-			50,
-			50,
-			OrderType::Buy
-		));
-
-		assert_ok!(Tokens::repatriate_reserved(
-			VSBOND,
-			&ALICE,
-			&BRUCE,
-			25,
-			BalanceStatus::Reserved
-		));
-		assert_ok!(Tokens::repatriate_reserved(TOKEN, &ALICE, &BRUCE, 25, BalanceStatus::Reserved));
-
-		assert_noop!(
-			Auction::revoke_order(Some(ALICE).into(), 0),
-			Error::<Test>::NotEnoughBalanceToCreateOrder
-		);
-		assert_noop!(
-			Auction::revoke_order(Some(ALICE).into(), 1),
-			Error::<Test>::NotEnoughBalanceToCreateOrder
-		);
-	});
-}
-
-#[test]
 fn revoke_order_by_origin_illegal_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Auction::create_order(
@@ -548,21 +510,23 @@ fn partial_clinch_sell_order_should_work() {
 		let order_info = Auction::order_info(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 67);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 67);
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 110);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, VSBOND).free, 133);
 		assert_eq!(Tokens::accounts(BRUCE, VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 67);
 
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 90);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
@@ -612,21 +576,23 @@ fn partial_clinch_buy_order_should_work() {
 		let order_info = Auction::order_info(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 133);
 		assert_eq!(Tokens::accounts(ALICE, VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 0);
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 67);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 23);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 23);
 
 		assert_eq!(Tokens::accounts(BRUCE, VSBOND).free, 67);
 		assert_eq!(Tokens::accounts(BRUCE, VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 110);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 23);
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
@@ -741,21 +707,23 @@ fn handle_special_vsbond_sell_order_should_work() {
 		let order_info = Auction::order_info(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 67);
+		assert_eq!(Tokens::accounts(module_account, SPECIAL_VSBOND).free, 67);
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 110);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 133);
 		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, SPECIAL_VSBOND).free, 67);
 
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 90);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
@@ -766,19 +734,19 @@ fn handle_special_vsbond_sell_order_should_work() {
 
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 0);
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, SPECIAL_VSBOND).free, 0);
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 132);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 200);
 		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, SPECIAL_VSBOND).free, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 68);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 	});
 }
 
@@ -805,21 +773,23 @@ fn handle_special_vsbond_buy_order_should_work() {
 		let order_info = Auction::order_info(0).unwrap();
 		assert_eq!(order_info.remain, 67);
 
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).free, 133);
 		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, SPECIAL_VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, SPECIAL_VSBOND).free, 0);
 
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 67);
 		assert_eq!(Tokens::accounts(ALICE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(ALICE, TOKEN).reserved, 23);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 23);
 
 		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).free, 67);
 		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, SPECIAL_VSBOND).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, SPECIAL_VSBOND).free, 0);
 
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 110);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
-		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 23);
 
 		assert_ok!(Auction::partial_clinch_order(Some(BRUCE).into(), 0, 9999999));
 
@@ -843,6 +813,62 @@ fn handle_special_vsbond_buy_order_should_work() {
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 132);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).frozen, 0);
 		assert_eq!(Tokens::accounts(BRUCE, TOKEN).reserved, 0);
+	});
+}
+
+#[test]
+fn set_buy_and_sell_transaction_fee_rate_should_work() {
+	new_test_ext().execute_with(|| {
+		// both buy and see rate are 10%.
+		assert_ok!(Auction::set_buy_and_sell_transaction_fee_rate(Some(ALICE).into(), 1000, 1000));
+
+		assert_eq!(
+			Auction::get_transaction_fee_rate(),
+			(Permill::from_percent(10), Permill::from_percent(10))
+		);
+
+		assert_ok!(Auction::create_order(
+			Some(ALICE).into(),
+			3000,
+			TOKEN_SYMBOL,
+			13,
+			20,
+			80,
+			80,
+			OrderType::Sell
+		));
+
+		assert_eq!(Tokens::accounts(ALICE, VSBOND).free, 20);
+		// 8 token fee is charged
+		assert_eq!(Tokens::accounts(ALICE, TOKEN).free, 92);
+
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 80);
+
+		let treasury_account: u64 = <Test as crate::Config>::TreasuryAccount::get();
+		assert_eq!(Tokens::accounts(treasury_account, TOKEN).free, 8);
+
+		assert_ok!(Auction::create_order(
+			Some(BRUCE).into(),
+			3000,
+			TOKEN_SYMBOL,
+			13,
+			20,
+			80,
+			80,
+			OrderType::Buy
+		));
+
+		assert_eq!(Tokens::accounts(BRUCE, VSBOND).free, 100);
+		// 8 token fee is charged + 80 total price
+		assert_eq!(Tokens::accounts(BRUCE, TOKEN).free, 12);
+
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 80);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 80);
+
+		let treasury_account: u64 = <Test as crate::Config>::TreasuryAccount::get();
+		assert_eq!(Tokens::accounts(treasury_account, TOKEN).free, 8 + 8);
 	});
 }
 

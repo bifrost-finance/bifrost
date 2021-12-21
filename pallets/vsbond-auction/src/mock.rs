@@ -19,10 +19,11 @@
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime, ord_parameter_types, parameter_types,
 	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
+use frame_system::EnsureSignedBy;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use sp_core::H256;
 use sp_runtime::{
@@ -111,6 +112,10 @@ parameter_types! {
 	pub BifrostTreasuryAccount: AccountId = PalletId(*b"bf/trsry").into_account();
 }
 
+ord_parameter_types! {
+	pub const One: AccountId = 1;
+}
+
 impl vsbond_auction::Config for Test {
 	type Event = Event;
 	type InvoicingCurrency = InvoicingCurrency;
@@ -120,7 +125,7 @@ impl vsbond_auction::Config for Test {
 	type WeightInfo = ();
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
-	type ControlOrigin = ALICE;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 }
 
 // mockup runtime
