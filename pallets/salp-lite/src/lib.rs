@@ -623,6 +623,10 @@ pub mod pallet {
 					fund.status == FundStatus::RefundWithdrew,
 				Error::<T>::InvalidRefund
 			);
+			ensure!(
+				fund.first_slot == first_slot && fund.last_slot == last_slot,
+				Error::<T>::InvalidRefund
+			);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInFund);
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRefundPool);
 

@@ -837,8 +837,8 @@ fn refund_meanwhile_issue_should_work() {
 		assert_eq!(new_fund.raised, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).free, 100);
 		// refund from old failed fund should success
-		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
-		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 0);
+		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50));
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 50);
 		// refund from new fund should failed
 		assert_noop!(
 			Salp::refund(Some(BRUCE).into(), 3_000, 2, SlotLength::get() + 1, 100),
@@ -849,5 +849,20 @@ fn refund_meanwhile_issue_should_work() {
 			Salp::refund(Some(BRUCE).into(), 4_000, 2, SlotLength::get() + 1, 100),
 			Error::<Test>::InvalidFundNotExist,
 		);
+		// after dissolve failed fund refund from old should fail
+		assert_ok!(Salp::dissolve_refunded(Some(ALICE).into(), 3_000, 1, SlotLength::get()));
+		assert_noop!(
+			Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 50),
+			Error::<Test>::InvalidRefund,
+		);
+		// after new fund finally success redeem should success
+		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::fund_retire(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::withdraw(Some(ALICE).into(), 3_000));
+		assert_ok!(Salp::redeem(Some(BRUCE).into(), 3_000, 50));
+		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).free, 50);
+		// after fund dissolved redeem should fail
+		assert_ok!(Salp::dissolve(Some(ALICE).into(), 3_000));
+		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 	});
 }
