@@ -48,7 +48,7 @@ pub enum FundStatus {
 	Failed,
 	RefundWithdrew,
 	RedeemWithdrew,
-	End,
+	FailedToContinue,
 }
 
 impl Default for FundStatus {
@@ -160,7 +160,7 @@ pub mod pallet {
 		/// Withdrew full balance of a contributor. [who, fund_index, amount]
 		Withdrew(ParaId, BalanceOf<T>),
 		/// refund to account. [who, fund_index,value]
-		Refunded(AccountIdOf<T>, ParaId, BalanceOf<T>),
+		Refunded(AccountIdOf<T>, ParaId, LeasePeriod, LeasePeriod, BalanceOf<T>),
 		/// redeem to account. [who, fund_index, first_slot, last_slot, value]
 		Redeemed(AccountIdOf<T>, ParaId, LeasePeriod, LeasePeriod, BalanceOf<T>),
 		/// Fund is edited. [fund_index]
@@ -174,9 +174,8 @@ pub mod pallet {
 		Failed(ParaId),
 		Success(ParaId),
 		Retired(ParaId),
-		End(ParaId),
-		/// vsAssets migrated
-		AllMigrated(ParaId),
+		Continued(ParaId, LeasePeriod, LeasePeriod),
+		RefundedDissolved(ParaId, LeasePeriod, LeasePeriod),
 	}
 
 	#[pallet::error]
@@ -215,6 +214,11 @@ pub mod pallet {
 		NotEnoughFreeAssetsToRedeem,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
+		/// Invalid Fund when refund/redeem
+		NotEnoughBalanceInFund,
+		InvalidFundSameSlot,
+		InvalidFundNotExist,
+		InvalidRefund,
 	}
 
 	/// Multisig confirm account
@@ -238,21 +242,24 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	/// Info on all of the fail-to-continue funds.
+	#[pallet::storage]
+	#[pallet::getter(fn failed_funds_to_refund)]
+	pub(super) type FailedFundsToRefund<T: Config> = StorageNMap<
+		_,
+		(
+			NMapKey<Blake2_128Concat, ParaId>,
+			NMapKey<Blake2_128Concat, LeasePeriod>,
+			NMapKey<Blake2_128Concat, LeasePeriod>,
+		),
+		Option<FundInfo<BalanceOf<T>, LeasePeriod>>,
+		ValueQuery,
+	>;
+
 	/// The balance can be redeemed to users.
 	#[pallet::storage]
 	#[pallet::getter(fn redeem_pool)]
 	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
-	/// Funds to migrate
-	#[pallet::storage]
-	#[pallet::getter(fn to_migrate_funds)]
-	pub(super) type FundsToMigrate<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		ParaId,
-		Option<FundInfo<BalanceOf<T>, LeasePeriod>>,
-		ValueQuery,
-	>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -328,6 +335,7 @@ pub mod pallet {
 
 			let fund_new = FundInfo { status: FundStatus::Failed, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
+
 			Self::deposit_event(Event::<T>::Failed(index));
 
 			Ok(())
@@ -350,128 +358,6 @@ pub mod pallet {
 			let fund_new = FundInfo { status: FundStatus::Retired, ..fund };
 			Funds::<T>::insert(index, Some(fund_new));
 			Self::deposit_event(Event::<T>::Retired(index));
-
-			Ok(())
-		}
-
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
-		pub fn fund_end(origin: OriginFor<T>, #[pallet::compact] index: ParaId) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
-
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::RefundWithdrew ||
-					fund.status == FundStatus::RedeemWithdrew,
-				Error::<T>::InvalidFundStatus
-			);
-
-			let fund_new = FundInfo { status: FundStatus::End, ..fund };
-			Funds::<T>::insert(index, Some(fund_new));
-			Self::deposit_event(Event::<T>::End(index));
-
-			Ok(())
-		}
-
-		/// Edit the configuration for an in-progress crowdloan.
-		///
-		/// Can only be called by Root origin.
-		#[pallet::weight((
-		0,
-		DispatchClass::Normal,
-		Pays::No
-		))]
-		pub fn edit(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-			#[pallet::compact] cap: BalanceOf<T>,
-			#[pallet::compact] first_slot: LeasePeriod,
-			#[pallet::compact] last_slot: LeasePeriod,
-			fund_status: Option<FundStatus>,
-		) -> DispatchResult {
-			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
-
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-
-			let status = match fund_status {
-				None => fund.status,
-				Some(status) => status,
-			};
-			FundsToMigrate::<T>::insert(
-				index,
-				Some(FundInfo {
-					cap,
-					first_slot,
-					last_slot,
-					status,
-					raised: fund.raised,
-					trie_index: fund.trie_index,
-				}),
-			);
-			Self::deposit_event(Event::<T>::Edited(index));
-			Ok(())
-		}
-
-		/// Batch migrate old vsBond to new
-		#[pallet::weight(T::WeightInfo::batch_migrate(T::BatchKeysLimit::get()))]
-		#[transactional]
-		pub fn batch_migrate(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: ParaId,
-		) -> DispatchResult {
-			ensure_signed(origin)?;
-			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::Failed || fund.status == FundStatus::RefundWithdrew,
-				Error::<T>::InvalidFundStatus
-			);
-			let to_migrate_fund = Self::to_migrate_funds(index).ok_or(Error::<T>::InvalidParaId)?;
-
-			let mut migrate_count = 0u32;
-			let contributions = Self::contribution_iterator(fund.trie_index);
-			let mut all_migrated = true;
-
-			if fund.first_slot != to_migrate_fund.first_slot ||
-				fund.last_slot != to_migrate_fund.last_slot
-			{
-				for (who, (contributed, status)) in contributions {
-					if migrate_count >= T::BatchKeysLimit::get() {
-						// Not everyone was able to be refunded this time around.
-						all_migrated = false;
-						break;
-					}
-					if status != ContributionStatus::MigrateToIdle {
-						#[allow(non_snake_case)]
-						let (_, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
-
-						T::MultiCurrency::withdraw(vsBond, &who, contributed)?;
-
-						let (_, vs_bond_new) = Self::vsAssets(
-							index,
-							to_migrate_fund.first_slot,
-							to_migrate_fund.last_slot,
-						);
-						T::MultiCurrency::deposit(vs_bond_new, &who, contributed)?;
-
-						Self::put_contribution(
-							fund.trie_index,
-							&who,
-							contributed,
-							ContributionStatus::MigrateToIdle,
-						);
-						migrate_count += 1;
-					}
-				}
-			}
-
-			if all_migrated {
-				FundsToMigrate::<T>::remove(index);
-				Funds::<T>::insert(index, Some(to_migrate_fund));
-				Self::deposit_event(Event::<T>::AllMigrated(index));
-			}
 
 			Ok(())
 		}
@@ -612,15 +498,10 @@ pub mod pallet {
 			let who = ensure_signed(origin.clone())?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(
-				fund.status == FundStatus::RefundWithdrew ||
-					fund.status == FundStatus::RedeemWithdrew,
-				Error::<T>::InvalidFundStatus
-			);
-
+			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
+			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInFund);
 			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 
-			let (contributed, _) = Self::contribution(fund.trie_index, &who);
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
@@ -632,16 +513,9 @@ pub mod pallet {
 			T::MultiCurrency::withdraw(vsToken, &who, value)?;
 			T::MultiCurrency::withdraw(vsBond, &who, value)?;
 			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
-
 			fund.raised = fund.raised.saturating_sub(value);
+			Funds::<T>::insert(index, Some(fund.clone()));
 
-			let contributed_new = contributed.saturating_sub(value);
-			Self::put_contribution(
-				fund.trie_index,
-				&who,
-				contributed_new,
-				ContributionStatus::Redeemed,
-			);
 			Self::deposit_event(Event::Redeemed(
 				who,
 				index,
@@ -664,7 +538,11 @@ pub mod pallet {
 			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
 
 			let mut fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::End, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::RedeemWithdrew ||
+					fund.status == FundStatus::RefundWithdrew,
+				Error::<T>::InvalidFundStatus
+			);
 
 			let mut refund_count = 0u32;
 			// Try killing the crowdloan child trie and Assume everyone will be refunded.
@@ -685,6 +563,125 @@ pub mod pallet {
 				Funds::<T>::remove(index);
 				Self::deposit_event(Event::<T>::Dissolved(index));
 			}
+
+			Ok(())
+		}
+
+		#[pallet::weight((
+			0,
+			DispatchClass::Normal,
+			Pays::No
+			))]
+		pub fn continue_fund(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			// crownload is failed, so enable the withdrawal function of vsToken/vsBond
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			ensure!(fund.status == FundStatus::RefundWithdrew, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.first_slot != first_slot || fund.last_slot != last_slot,
+				Error::<T>::InvalidFundSameSlot
+			);
+
+			let fund_old = FundInfo { status: FundStatus::FailedToContinue, ..fund };
+			FailedFundsToRefund::<T>::insert(
+				(index, fund.first_slot, fund.last_slot),
+				Some(fund_old.clone()),
+			);
+			let fund_new = FundInfo { status: FundStatus::Ongoing, first_slot, last_slot, ..fund };
+			Funds::<T>::insert(index, Some(fund_new));
+
+			Self::deposit_event(Event::<T>::Continued(
+				index,
+				fund_old.first_slot,
+				fund_old.last_slot,
+			));
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::refund())]
+		#[transactional]
+		pub fn refund(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
+			#[pallet::compact] value: BalanceOf<T>,
+		) -> DispatchResult {
+			let who = ensure_signed(origin.clone())?;
+
+			let mut fund = Self::find_fund(index, first_slot, last_slot)
+				.map_err(|_| Error::<T>::InvalidFundNotExist)?;
+			ensure!(
+				fund.status == FundStatus::FailedToContinue ||
+					fund.status == FundStatus::RefundWithdrew,
+				Error::<T>::InvalidRefund
+			);
+			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInFund);
+			ensure!(Self::redeem_pool() >= value, Error::<T>::NotEnoughBalanceInRefundPool);
+
+			#[allow(non_snake_case)]
+			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
+			T::MultiCurrency::ensure_can_withdraw(vsToken, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+			T::MultiCurrency::ensure_can_withdraw(vsBond, &who, value)
+				.map_err(|_e| Error::<T>::NotEnoughFreeAssetsToRedeem)?;
+
+			T::MultiCurrency::withdraw(vsToken, &who, value)?;
+			T::MultiCurrency::withdraw(vsBond, &who, value)?;
+
+			RedeemPool::<T>::set(Self::redeem_pool().saturating_sub(value));
+			let mut fund_new = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+			fund_new.raised = fund_new.raised.saturating_sub(value);
+			Funds::<T>::insert(index, Some(fund_new));
+			if fund.status == FundStatus::FailedToContinue {
+				fund.raised = fund.raised.saturating_sub(value);
+				FailedFundsToRefund::<T>::insert(
+					(index, first_slot, last_slot),
+					Some(fund.clone()),
+				);
+			}
+
+			Self::deposit_event(Event::Refunded(
+				who,
+				index,
+				fund.first_slot,
+				fund.last_slot,
+				value,
+			));
+
+			Ok(())
+		}
+
+		/// Remove a fund after the retirement period has ended and all funds have been returned.
+		#[pallet::weight((
+			0,
+			DispatchClass::Normal,
+			Pays::No
+			))]
+		#[transactional]
+		pub fn dissolve_refunded(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			let fund = Self::failed_funds_to_refund((index, first_slot, last_slot))
+				.ok_or(Error::<T>::InvalidRefund)?;
+
+			ensure!(fund.status == FundStatus::FailedToContinue, Error::<T>::InvalidFundStatus);
+
+			FailedFundsToRefund::<T>::remove((index, first_slot, last_slot));
+
+			Self::deposit_event(Event::<T>::RefundedDissolved(index, first_slot, last_slot));
 
 			Ok(())
 		}
@@ -722,6 +719,20 @@ pub mod pallet {
 		/// set multisig account
 		pub fn set_multisig_account(account: AccountIdOf<T>) {
 			MultisigConfirmAccount::<T>::put(account);
+		}
+
+		pub fn find_fund(
+			index: ParaId,
+			first_slot: LeasePeriod,
+			last_slot: LeasePeriod,
+		) -> Result<FundInfo<BalanceOf<T>, LeasePeriod>, Error<T>> {
+			return match Self::failed_funds_to_refund((index, first_slot, last_slot)) {
+				Some(fund) => Ok(fund),
+				_ => match Self::funds(index) {
+					Some(fund) => Ok(fund),
+					_ => Err(Error::<T>::InvalidFundNotExist),
+				},
+			};
 		}
 		pub fn fund_account_id(index: ParaId) -> T::AccountId {
 			T::PalletId::get().into_sub_account(index)
@@ -809,13 +820,13 @@ pub mod pallet {
 }
 
 pub trait WeightInfo {
-	fn batch_migrate(k: u32) -> Weight;
+	fn refund() -> Weight;
 	fn redeem() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
-	fn batch_migrate(_k: u32) -> Weight {
+	fn refund() -> Weight {
 		50_000_000 as Weight
 	}
 
