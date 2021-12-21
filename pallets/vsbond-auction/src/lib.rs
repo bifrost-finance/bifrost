@@ -47,6 +47,7 @@ use sp_arithmetic::per_things::Permill;
 use sp_std::cmp::min;
 pub use weights::WeightInfo;
 
+mod migration;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -249,6 +250,13 @@ pub mod pallet {
 	#[pallet::type_value]
 	pub fn DefaultPrice() -> (Permill, Permill) {
 		(Permill::zero(), Permill::zero())
+	}
+
+	#[pallet::hooks]
+	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
+		fn on_runtime_upgrade() -> Weight {
+			migration::migrate_orders::<T, I>()
+		}
 	}
 
 	#[pallet::pallet]
