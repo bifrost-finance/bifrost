@@ -825,14 +825,29 @@ fn refund_meanwhile_issue_should_work() {
 		let (_, vs_bond_old) = Salp::vsAssets(3_000, 1, SlotLength::get());
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 100);
 		assert_ok!(Salp::continue_fund(Some(ALICE).into(), 3_000, 2, SlotLength::get() + 1));
+		let old_fund = Salp::failed_funds_to_refund((3_000, 1, SlotLength::get())).unwrap();
+		assert_eq!(old_fund.first_slot, 1);
+		assert_eq!(old_fund.raised, 100);
+		let mut new_fund = Salp::funds(3_000).unwrap();
+		assert_eq!(new_fund.first_slot, 2);
+		assert_eq!(new_fund.raised, 100);
 		let (_, vs_bond_new) = Salp::vsAssets(3_000, 2, SlotLength::get() + 1);
 		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
+		new_fund = Salp::funds(3_000).unwrap();
+		assert_eq!(new_fund.raised, 200);
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_new).free, 100);
+		// refund from old failed fund should success
 		assert_ok!(Salp::refund(Some(BRUCE).into(), 3_000, 1, SlotLength::get(), 100));
 		assert_eq!(Tokens::accounts(BRUCE, vs_bond_old).free, 0);
+		// refund from new fund should failed
 		assert_noop!(
 			Salp::refund(Some(BRUCE).into(), 3_000, 2, SlotLength::get() + 1, 100),
 			Error::<Test>::InvalidRefund,
+		);
+		// refund from not exist fund should failed
+		assert_noop!(
+			Salp::refund(Some(BRUCE).into(), 4_000, 2, SlotLength::get() + 1, 100),
+			Error::<Test>::InvalidFundNotExist,
 		);
 	});
 }
