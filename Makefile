@@ -148,11 +148,6 @@ build-bifrost-wasm:
 	.maintain/build-wasm.sh bifrost-kusama
 	.maintain/build-wasm.sh bifrost-polkadot
 
-.PHONY: build-bifrost-wasm-jenkins
-build-bifrost-wasm-jenkins:
-	.maintain/build-wasm-jenkins.sh bifrost-kusama
-	.maintain/build-wasm-jenkins.sh bifrost-polkadot
-
 .PHONY: build-bifrost-kusama-wasm
 build-bifrost-kusama-wasm:
 	.maintain/build-wasm.sh bifrost-kusama
