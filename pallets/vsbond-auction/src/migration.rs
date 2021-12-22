@@ -1,3 +1,24 @@
+// This file is part of Bifrost.
+
+// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+// Ensure we're `no_std` when compiling for Wasm.
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use super::*;
 use crate::{Pallet, TotalOrderInfos};
 
@@ -18,28 +39,42 @@ pub fn migrate_orders<T: Config<I>, I: 'static>() -> Weight {
 			OrderType::Sell => (vsbond, order_info.remain),
 		};
 
-		let rs =
-			T::MultiCurrency::ensure_can_withdraw(token_to_transfer, &owner, amount_to_transfer);
+		let total = T::MultiCurrency::total_balance(token_to_transfer, &owner);
+		let free = T::MultiCurrency::free_balance(token_to_transfer, &owner);
+		let reserved = total - free;
 
 		let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
-		match rs {
-			// keep the order and transfer the amount to the module account
-			Ok(_) => {
-				ok_count += 1;
-				T::MultiCurrency::transfer(
-					token_to_transfer,
-					&owner,
-					&module_account,
-					amount_to_transfer,
-				);
-			},
-			// cancel the order
-			Err(_) => {
-				err_count += 1;
-				TotalOrderInfos::<T, I>::remove(order_id);
-				Pallet::<T, I>::try_to_remove_order_id(owner, order_type, order_id);
-			},
+		if reserved >= amount_to_transfer {
+			ok_count += 1;
+			// unreserved and then transfer
+			T::MultiCurrency::unreserve(token_to_transfer, &owner, amount_to_transfer);
+			let _ = T::MultiCurrency::transfer(
+				token_to_transfer,
+				&owner,
+				&module_account,
+				amount_to_transfer,
+			);
+		} else if total >= amount_to_transfer {
+			ok_count += 1;
+			// make free all the reserved balance and then transfer
+			T::MultiCurrency::unreserve(token_to_transfer, &owner, reserved);
+			let _ = T::MultiCurrency::transfer(
+				token_to_transfer,
+				&owner,
+				&module_account,
+				amount_to_transfer,
+			);
+		} else {
+			err_count += 1;
+			TotalOrderInfos::<T, I>::remove(order_id);
+			Pallet::<T, I>::try_to_remove_order_id(owner, order_type, order_id);
+			log::info!(
+				"Order {:?} is removed, transfer amount is: {:?}, account balance is: {:?}",
+				order_id,
+				amount_to_transfer,
+				total
+			);
 		}
 	}
 

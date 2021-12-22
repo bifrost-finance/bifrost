@@ -47,7 +47,7 @@ use sp_arithmetic::per_things::Permill;
 use sp_std::cmp::min;
 pub use weights::WeightInfo;
 
-mod migration;
+pub mod migration;
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -237,7 +237,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn order_info)]
-	pub(crate) type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
+	pub type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<AccountIdOf<T>, BalanceOf<T, I>>>;
 
 	/// transaction fee rate[sellFee, buyFee]
@@ -252,12 +252,12 @@ pub mod pallet {
 		(Permill::zero(), Permill::zero())
 	}
 
-	#[pallet::hooks]
-	impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
-		fn on_runtime_upgrade() -> Weight {
-			migration::migrate_orders::<T, I>()
-		}
-	}
+	// #[pallet::hooks]
+	// impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
+	// 	fn on_runtime_upgrade() -> Weight {
+	// 		migration::migrate_orders::<T, I>()
+	// 	}
+	// }
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
