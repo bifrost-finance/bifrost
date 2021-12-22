@@ -76,6 +76,17 @@ pub mod pallet {
 		TransferAccountEnabled(CurrencyId),
 	}
 
+	/// Controls whether or not all of the pallets are banned.
+	#[pallet::storage]
+	#[pallet::getter(fn get_overall_indicator)]
+	pub(crate) type OverallToggle<T: Config> = StorageValue<_, bool, ValueQuery, DefaultStatus>;
+
+	// Defult release amount is 30 KSM
+	#[pallet::type_value]
+	pub fn DefaultStatus() -> bool {
+		false
+	}
+
 	#[pallet::storage]
 	#[pallet::getter(fn get_switchoff_transactions)]
 	pub type SwitchedOffTransactions<T: Config> =
@@ -110,18 +121,24 @@ pub mod pallet {
 				Error::<T>::CannotSwitchOff
 			);
 
-			SwitchedOffTransactions::<T>::mutate_exists(
-				(pallet_name.clone(), function_name.clone()),
-				|item| {
-					if item.is_none() {
-						*item = Some(());
-						Self::deposit_event(Event::TransactionSwitchedoff(
-							pallet_name,
-							function_name,
-						));
-					}
-				},
-			);
+			// If "all" received, ban all of the pallets. Otherwise, only the passed-in pallet.
+			if (pallet_name_string == "All") || (pallet_name_string == "all") {
+				OverallToggle::<T>::put(true);
+			} else {
+				SwitchedOffTransactions::<T>::mutate_exists(
+					(pallet_name.clone(), function_name.clone()),
+					|item| {
+						if item.is_none() {
+							*item = Some(());
+							Self::deposit_event(Event::TransactionSwitchedoff(
+								pallet_name,
+								function_name,
+							));
+						}
+					},
+				);
+			}
+
 			Ok(())
 		}
 
@@ -133,6 +150,14 @@ pub mod pallet {
 			function_name: Vec<u8>,
 		) -> DispatchResult {
 			T::UpdateOrigin::ensure_origin(origin)?;
+
+			let pallet_name_string =
+				sp_std::str::from_utf8(&pallet_name).map_err(|_| Error::<T>::InvalidCharacter)?;
+
+			if (pallet_name_string == "All") || (pallet_name_string == "all") {
+				OverallToggle::<T>::put(false);
+			}
+
 			if SwitchedOffTransactions::<T>::take((pallet_name.clone(), &function_name.clone()))
 				.is_some()
 			{
@@ -188,5 +213,13 @@ pub struct DisableTransfersFilter<T>(sp_std::marker::PhantomData<T>);
 impl<T: Config> Contains<CurrencyId> for DisableTransfersFilter<T> {
 	fn contains(currency_id: &CurrencyId) -> bool {
 		DisabledTransfers::<T>::contains_key(currency_id)
+	}
+}
+
+pub struct OverallToggleFilter<T>(sp_std::marker::PhantomData<T>);
+impl<T: Config> OverallToggleFilter<T> {
+	#[allow(dead_code)]
+	pub fn get_overall_toggle_status() -> bool {
+		OverallToggle::<T>::get()
 	}
 }
