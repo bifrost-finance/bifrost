@@ -9,7 +9,7 @@ WORK_PATH=${BIN_PATH}/..
 
 RUNTIME=$1
 
-docker run --rm -it \
+docker run --rm -i \
   -e PACKAGE=$RUNTIME-runtime \
   -e VERBOSE=1 \
   -e CARGO_TERM_COLOR=always \
