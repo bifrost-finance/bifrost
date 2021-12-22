@@ -399,33 +399,22 @@ pub mod pallet {
 			// Check OrderOwner
 			ensure!(order_info.owner == from, Error::<T, I>::ForbidRevokeOrderWithoutOwnership);
 
-			let (token_to_return, amount_to_return) = match order_info.order_type {
-				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
-				OrderType::Sell => (order_info.vsbond, order_info.remain),
-			};
+			Self::do_order_revoke(order_id)?;
 
-			// To transfer back the unused amount
-			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
-			T::MultiCurrency::transfer(
-				token_to_return,
-				&module_account,
-				&order_info.owner,
-				amount_to_return,
-			)?;
+			Ok(().into())
+		}
 
-			// Revoke order
-			TotalOrderInfos::<T, I>::remove(order_id);
-			Self::try_to_remove_order_id(order_info.owner.clone(), order_info.order_type, order_id);
+		/// Revoke a sell or buy order in trade by the order creator.
+		#[transactional]
+		#[pallet::weight(T::WeightInfo::revoke_order())]
+		pub fn force_revoke(
+			origin: OriginFor<T>,
+			#[pallet::compact] order_id: OrderId,
+		) -> DispatchResultWithPostInfo {
+			// Check origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
-			Self::deposit_event(Event::OrderRevoked(
-				order_id,
-				order_info.order_type,
-				order_info.owner,
-				order_info.vsbond,
-				order_info.amount,
-				order_info.remain,
-				order_info.total_price,
-			));
+			Self::do_order_revoke(order_id)?;
 
 			Ok(().into())
 		}
@@ -641,6 +630,41 @@ pub mod pallet {
 				FixedU128::accuracy();
 
 			BalanceOf::<T, I>::saturated_from(total_price)
+		}
+
+		pub(crate) fn do_order_revoke(order_id: OrderId) -> DispatchResultWithPostInfo {
+			// Check OrderInfo
+			let order_info = Self::order_info(order_id).ok_or(Error::<T, I>::NotFindOrderInfo)?;
+
+			let (token_to_return, amount_to_return) = match order_info.order_type {
+				OrderType::Buy => (T::InvoicingCurrency::get(), order_info.remain_price),
+				OrderType::Sell => (order_info.vsbond, order_info.remain),
+			};
+
+			// To transfer back the unused amount
+			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
+			T::MultiCurrency::transfer(
+				token_to_return,
+				&module_account,
+				&order_info.owner,
+				amount_to_return,
+			)?;
+
+			// Revoke order
+			TotalOrderInfos::<T, I>::remove(order_id);
+			Self::try_to_remove_order_id(order_info.owner.clone(), order_info.order_type, order_id);
+
+			Self::deposit_event(Event::OrderRevoked(
+				order_id,
+				order_info.order_type,
+				order_info.owner,
+				order_info.vsbond,
+				order_info.amount,
+				order_info.remain,
+				order_info.total_price,
+			));
+
+			Ok(().into())
 		}
 	}
 }
