@@ -144,7 +144,6 @@ pub mod pallet {
 
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
-		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 	}
 
@@ -219,6 +218,11 @@ pub mod pallet {
 		NotEnoughBalanceInRedeemPool,
 	}
 
+	/// Multisig confirm account
+	#[pallet::storage]
+	#[pallet::getter(fn multisig_confirm_account)]
+	pub type MultisigConfirmAccount<T: Config> = StorageValue<_, AccountIdOf<T>, ValueQuery>;
+
 	/// Tracker for the next available fund index
 	#[pallet::storage]
 	#[pallet::getter(fn current_trie_index)]
@@ -251,8 +255,45 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub initial_multisig_account: Option<AccountIdOf<T>>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { initial_multisig_account: None }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			if let Some(ref key) = self.initial_multisig_account {
+				MultisigConfirmAccount::<T>::put(key)
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn set_multisig_confirm_account(
+			origin: OriginFor<T>,
+			account: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			Self::set_multisig_account(account);
+
+			Ok(())
+		}
+
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -493,7 +534,10 @@ pub mod pallet {
 			#[pallet::compact] value: BalanceOf<T>,
 			message_id: MessageId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin.clone())?;
+			let issuer = ensure_signed(origin.clone())?;
+			if issuer != MultisigConfirmAccount::<T>::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
@@ -676,6 +720,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// set multisig account
+		pub fn set_multisig_account(account: AccountIdOf<T>) {
+			MultisigConfirmAccount::<T>::put(account);
+		}
 		pub fn fund_account_id(index: ParaId) -> T::AccountId {
 			T::PalletId::get().into_sub_account(index)
 		}

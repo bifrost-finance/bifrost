@@ -1636,12 +1636,12 @@ construct_runtime! {
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>, Config<T>} = 105,
 		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
-		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 	}
@@ -1686,7 +1686,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	(),
+	CustomOnRuntimeUpgrade,
 >;
 
 impl_runtime_apis! {
@@ -1983,6 +1983,8 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Bifrost `on_runtime_upgrade`...");
 		log::info!("Bifrost `on_runtime_upgrade finished`");
+		Salp::set_multisig_account(ConfirmMuitiSigAccount::get());
+		SalpLite::set_multisig_account(PolkaConfirmAsMultiSig::get());
 		RocksDbWeight::get().writes(1)
 	}
 }

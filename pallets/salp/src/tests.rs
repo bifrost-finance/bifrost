@@ -407,10 +407,6 @@ fn contribute_with_wrong_origin_should_fail() {
 		assert_noop!(Salp::contribute(Origin::none(), 3_000, 100), DispatchError::BadOrigin);
 
 		assert_noop!(
-			Salp::confirm_contribute(Origin::root(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
-			Error::<Test>::InvalidContributionStatus,
-		);
-		assert_noop!(
 			Salp::confirm_contribute(Origin::none(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
 			DispatchError::BadOrigin,
 		);

@@ -24,8 +24,9 @@ use std::{
 use bifrost_runtime::{
 	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
 	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
-	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
+	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig,
+	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
+	WASM_BINARY,
 };
 use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
@@ -60,6 +61,8 @@ pub fn bifrost_genesis(
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
 	council_membership: Vec<AccountId>,
 	technical_committee_membership: Vec<AccountId>,
+	salp_multisig_key: AccountId,
+	salp_lite_multisig_key_salp: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -109,6 +112,8 @@ pub fn bifrost_genesis(
 		vesting: VestingConfig { vesting: vestings },
 		tokens: TokensConfig { balances: tokens },
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
+		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
 	}
 }
 
@@ -139,6 +144,12 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+
 	bifrost_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -150,6 +161,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		tokens,
 		council_membership,
 		technical_committee_membership,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
@@ -215,6 +228,10 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let council_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
 	let technical_committee_membership = vec![get_account_id_from_seed::<sr25519::Public>("Alice")];
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	bifrost_genesis(
 		vec![
@@ -230,6 +247,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		tokens,
 		council_membership,
 		technical_committee_membership,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
@@ -333,6 +352,11 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	let vesting_configs: Vec<VestingConfig> =
 		config_from_json_files(exe_dir.join("res/genesis_config/vesting")).unwrap();
 
+	let salp_multisig: AccountId =
+		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
+
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
 		invulnerables,
@@ -342,6 +366,8 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![], // tokens
 		vec![], // council membership
 		vec![], // technical committee membership
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
