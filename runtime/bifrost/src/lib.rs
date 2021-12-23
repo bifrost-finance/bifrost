@@ -1990,9 +1990,9 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
 		let mut account = Salp::multisig_confirm_account();
-		log::info!("after salp migration multisig account as {}", account);
+		log::info!("after salp migration multisig account as {:?}", account);
 		account = SalpLite::multisig_confirm_account();
-		log::info!("after salp-lite migration multisig account as {}", account);
+		log::info!("after salp-lite migration multisig account as {:?}", account);
 		Ok(())
 	}
 }
