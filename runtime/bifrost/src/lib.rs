@@ -1979,13 +1979,21 @@ impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
 		Ok(())
 	}
 
-	#[cfg(feature = "try-runtime")]
 	fn on_runtime_upgrade() -> Weight {
 		log::info!("Bifrost `on_runtime_upgrade`...");
-		log::info!("Bifrost `on_runtime_upgrade finished`");
 		Salp::set_multisig_account(ConfirmMuitiSigAccount::get());
 		SalpLite::set_multisig_account(PolkaConfirmAsMultiSig::get());
+		log::info!("Bifrost `on_runtime_upgrade finished`");
 		RocksDbWeight::get().writes(1)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		let mut account = Salp::multisig_confirm_account();
+		log::info!("after salp migration multisig account as {}", account);
+		account = SalpLite::multisig_confirm_account();
+		log::info!("after salp-lite migration multisig account as {}", account);
+		Ok(())
 	}
 }
 
