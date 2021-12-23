@@ -84,6 +84,7 @@ pub struct VestingInfo<Balance, BlockNumber> {
 	/// Amount that gets unlocked every block after `starting_block`.
 	pub per_block: Balance,
 	/// Starting block for unlocking(vesting).
+	/// It's relative position to the pallet vesting starting block.
 	pub starting_block: BlockNumber,
 }
 
@@ -394,6 +395,26 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			VestingStartAt::<T>::put(vesting_start_at);
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn modify_vesting_per_block_data(
+			origin: OriginFor<T>,
+			target: <T::Lookup as StaticLookup>::Source,
+			per_block: BalanceOf<T>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			let target = T::Lookup::lookup(target)?;
+
+			Vesting::<T>::mutate_exists(&target, |info| {
+				if let Some(vesting) = info {
+					vesting.per_block = per_block;
+				}
+			});
+
+			Self::update_lock(target)?;
 
 			Ok(())
 		}
@@ -944,6 +965,39 @@ mod tests {
 			// Verify no currency transfer happened.
 			assert_eq!(user2_free_balance, 256 * 20);
 			assert_eq!(user4_free_balance, 256 * 40);
+		});
+	}
+
+	#[test]
+	fn modify_vesting_per_block_data_should_work() {
+		ExtBuilder::default().existential_deposit(256).build().execute_with(|| {
+			let user1_free_balance = Balances::free_balance(&1);
+			assert_eq!(user1_free_balance, 256 * 10); // Account 1 has free balance
+			let user1_vesting_schedule = VestingInfo {
+				locked: 256 * 5,
+				per_block: 128, // Vesting over 10 blocks
+				starting_block: 0,
+			};
+
+			assert_eq!(Vesting::vesting(&1), Some(user1_vesting_schedule)); // Account 1 has a vesting schedule
+
+			// Account 1 has only 128 units vested from their illiquid 256 * 5 units at block 1
+			assert_eq!(Vesting::vesting_balance(&1), Some(256 * 5));
+
+			System::set_block_number(5);
+			assert_eq!(System::block_number(), 5);
+
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 0));
+
+			// Account 1 has vested by half at the end of block 5
+			assert_eq!(Vesting::vesting_balance(&1), Some(128 * 5));
+
+			// Change the per_block of account 1 to  256
+			assert_ok!(Vesting::modify_vesting_per_block_data(Origin::root(), 1, 256));
+
+			// Under the new releasing amount per_block, account 1 should has fully vested by the
+			// block of 5.
+			assert_eq!(Vesting::vesting_balance(&1), None);
 		});
 	}
 }
