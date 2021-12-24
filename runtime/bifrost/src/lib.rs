@@ -193,6 +193,10 @@ impl Contains<Call> for CallFilter {
 			return true;
 		}
 
+		if bifrost_call_switchgear::OverallToggleFilter::<Runtime>::get_overall_toggle_status() {
+			return false;
+		}
+
 		// temporarily ban PhragmenElection
 		let is_temporarily_banned = matches!(call, Call::PhragmenElection(_));
 
