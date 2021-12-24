@@ -1714,7 +1714,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	CustomOnRuntimeUpgrade,
+	(),
 >;
 
 impl_runtime_apis! {
@@ -2039,24 +2039,6 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
-	}
-}
-
-pub struct CustomOnRuntimeUpgrade;
-impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Asgard `pre_upgrade`...");
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Asgard `on_runtime_upgrade`...");
-		log::info!("Asgard `on_runtime_upgrade finished`");
-		RocksDbWeight::get().writes(1)
 	}
 }
 
