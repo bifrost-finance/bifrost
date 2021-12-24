@@ -1650,12 +1650,12 @@ construct_runtime! {
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>, Config<T>} = 105,
 		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
-		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 	}
@@ -1980,24 +1980,6 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
-	}
-}
-
-pub struct CustomOnRuntimeUpgrade;
-impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `pre_upgrade`...");
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-		RocksDbWeight::get().writes(1)
 	}
 }
 

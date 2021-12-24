@@ -297,6 +297,11 @@ pub mod pallet {
 		NotEnoughBalanceInRedeemPool,
 	}
 
+	/// Multisig confirm account
+	#[pallet::storage]
+	#[pallet::getter(fn multisig_confirm_account)]
+	pub type MultisigConfirmAccount<T: Config> = StorageValue<_, AccountIdOf<T>, ValueQuery>;
+
 	/// Tracker for the next available fund index
 	#[pallet::storage]
 	#[pallet::getter(fn current_trie_index)]
@@ -325,8 +330,45 @@ pub mod pallet {
 	#[pallet::getter(fn redeem_pool)]
 	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub initial_multisig_account: Option<AccountIdOf<T>>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { initial_multisig_account: None }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			if let Some(ref key) = self.initial_multisig_account {
+				MultisigConfirmAccount::<T>::put(key)
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn set_multisig_confirm_account(
+			origin: OriginFor<T>,
+			account: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			Self::set_multisig_account(account);
+
+			Ok(())
+		}
+
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -637,7 +679,10 @@ pub mod pallet {
 			is_success: bool,
 			message_id: MessageId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			let confirmor = ensure_signed(origin.clone())?;
+			if confirmor != MultisigConfirmAccount::<T>::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
 				fund.status == FundStatus::Failed ||
@@ -1002,6 +1047,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// set multisig account
+		pub fn set_multisig_account(account: AccountIdOf<T>) {
+			MultisigConfirmAccount::<T>::put(account);
+		}
 		/// Check if the vsBond is `past` the redeemable date
 		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
 			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);
