@@ -20,8 +20,8 @@ use asgard_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
 	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
 	IndicesConfig, MinterRewardConfig, ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix,
-	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
-	VtokenMintConfig, WASM_BINARY,
+	SalpConfig, SalpLiteConfig, SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig,
+	TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::constants::time::*;
 use cumulus_primitives_core::ParaId;
@@ -81,6 +81,8 @@ pub fn asgard_genesis(
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
+	salp_multisig_key: AccountId,
+	salp_lite_multisig_key_salp: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -154,6 +156,8 @@ pub fn asgard_genesis(
 			],
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
+		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
 	}
 }
 
@@ -183,6 +187,10 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 			]
 		})
 		.collect();
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	asgard_genesis(
 		vec![(
@@ -194,6 +202,8 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vestings,
 		tokens,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
@@ -260,6 +270,11 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		})
 		.collect();
 
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+
 	asgard_genesis(
 		vec![
 			(
@@ -273,6 +288,8 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vestings,
 		tokens,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
@@ -356,6 +373,10 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 			]
 		})
 		.collect();
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	asgard_genesis(
 		invulnerables,
@@ -364,6 +385,8 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		tokens,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
