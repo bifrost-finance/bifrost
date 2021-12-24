@@ -21,34 +21,29 @@
 //! Service implementation. Specialized wrapper over substrate service.
 use std::sync::Arc;
 
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-pub use bifrost_kusama_runtime;
-use cumulus_client_consensus_aura::{build_aura_consensus, BuildAuraConsensusParams};
-use cumulus_client_consensus_common::ParachainConsensus;
+#[cfg(feature = "with-asgard-runtime")]
+pub use asgard_runtime;
 use cumulus_client_network::build_block_announce_validator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
+use cumulus_primitives_parachain_inherent::ParachainInherentData;
+use nimbus_consensus::{build_nimbus_consensus, BuildNimbusConsensusParams};
+use nimbus_primitives::NimbusId;
 use node_primitives::{
 	AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce, ParaId as BifrostParaId, PoolId,
 };
-use sc_client_api::{
-	AuxStore, Backend as BackendT, BlockchainEvents, ExecutorProvider, KeyIterator, UsageProvider,
-};
+use sc_client_api::{AuxStore, Backend as BackendT, BlockchainEvents, KeyIterator, UsageProvider};
 use sc_consensus::LongestChain;
-use sc_consensus_aura::SlotProportion;
 use sc_executor::NativeElseWasmExecutor;
-use sc_network::NetworkService;
 use sc_service::{
 	error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TaskManager,
 };
-use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+use sc_telemetry::{Telemetry, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::{CallApiAt, ConstructRuntimeApi, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
-use sp_consensus::{BlockStatus, SlotData};
-use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
-use sp_keystore::SyncCryptoStorePtr;
+use sp_consensus::BlockStatus;
 use sp_runtime::{
 	generic::{BlockId, SignedBlock},
 	traits::{BlakeTwo256, Block as BlockT},
@@ -56,23 +51,25 @@ use sp_runtime::{
 };
 use sp_storage::{ChildInfo, StorageData, StorageKey};
 use sp_trie::PrefixedMemoryDB;
-use substrate_prometheus_endpoint::Registry;
 
 #[allow(unused_imports)]
-use crate::{IdentifyVariant, BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE, UNKNOWN_RUNTIME};
+use crate::{
+	IdentifyVariant, ASGARD_RUNTIME_NOT_AVAILABLE, BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE,
+	UNKNOWN_RUNTIME,
+};
 
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-pub struct BifrostExecutor;
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-impl sc_executor::NativeExecutionDispatch for BifrostExecutor {
+#[cfg(feature = "with-asgard-runtime")]
+pub struct AsgardExecutor;
+#[cfg(feature = "with-asgard-runtime")]
+impl sc_executor::NativeExecutionDispatch for AsgardExecutor {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		bifrost_kusama_runtime::api::dispatch(method, data)
+		asgard_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		bifrost_kusama_runtime::native_version()
+		asgard_runtime::native_version()
 	}
 }
 
@@ -91,7 +88,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		FullClient<RuntimeApi, Executor>,
 		FullBackend,
 		MaybeFullSelectChain,
-		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		sc_consensus::DefaultImportQueue<Block, FullClient<RuntimeApi, Executor>>,
 		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
@@ -102,7 +99,6 @@ where
 		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	let telemetry = config
@@ -156,29 +152,16 @@ where
 			registry,
 		)
 	} else {
-		let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
-		cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(
-			cumulus_client_consensus_aura::ImportQueueParams {
-				block_import: client.clone(),
-				client: client.clone(),
-				create_inherent_data_providers: move |_, _| async move {
-					let time = sp_timestamp::InherentDataProvider::from_system_time();
-
-					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-                        *time,
-                        slot_duration.slot_duration(),
-                    );
-
-					Ok((time, slot))
-				},
-				registry,
-				can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(
-					client.executor().clone(),
-				),
-				spawner: &task_manager.spawn_essential_handle(),
-				telemetry: telemetry.as_ref().map(|telemetry| telemetry.handle()),
+		nimbus_consensus::import_queue(
+			client.clone(),
+			client.clone(),
+			move |_, _| async move {
+				let time = sp_timestamp::InherentDataProvider::from_system_time();
+				Ok((time,))
 			},
+			&task_manager.spawn_essential_handle(),
+			registry,
+			!dev,
 		)?
 	};
 
@@ -200,36 +183,17 @@ where
 /// This is the actual implementation that is abstract over the executor and the
 /// runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain🌈")]
-async fn start_node_impl<RB, RuntimeApi, Executor, BIC>(
+async fn start_node_impl<RuntimeApi, Executor>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
-	_rpc_ext_builder: RB,
-	build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
-	RB: Fn(
-			Arc<FullClient<RuntimeApi, Executor>>,
-		) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
-		+ Send
-		+ 'static,
 	RuntimeApi:
 		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
-	BIC: FnOnce(
-		Arc<FullClient<RuntimeApi, Executor>>,
-		Option<&Registry>,
-		Option<TelemetryHandle>,
-		&TaskManager,
-		&polkadot_service::NewFull<polkadot_service::Client>,
-		Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
-		Arc<NetworkService<Block, Hash>>,
-		SyncCryptoStorePtr,
-		bool,
-	) -> Result<Box<dyn ParachainConsensus<Block>>, sc_service::Error>,
 {
 	if matches!(parachain_config.role, Role::Light) {
 		return Err("Light client not supported!".into());
@@ -272,6 +236,8 @@ where
 			block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
 			warp_sync: None,
 		})?;
+	let _subscription_task_executor =
+		sc_rpc::SubscriptionTaskExecutor::new(task_manager.spawn_handle());
 
 	let rpc_extensions_builder = {
 		let client = client.clone();
@@ -307,17 +273,59 @@ where
 	};
 
 	if validator {
-		let parachain_consensus = build_consensus(
+		// let parachain_consensus = build_consensus(
+		// 	client.clone(),
+		// 	prometheus_registry.as_ref(),
+		// 	telemetry.as_ref().map(|t| t.handle()),
+		// 	&task_manager,
+		// 	&relay_chain_full_node,
+		// 	transaction_pool,
+		// 	network,
+		// 	params.keystore_container.sync_keystore(),
+		// 	force_authoring,
+		// )?;
+		let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
+			task_manager.spawn_handle(),
 			client.clone(),
+			transaction_pool,
 			prometheus_registry.as_ref(),
 			telemetry.as_ref().map(|t| t.handle()),
-			&task_manager,
-			&relay_chain_full_node,
-			transaction_pool,
-			network,
-			params.keystore_container.sync_keystore(),
-			force_authoring,
-		)?;
+		);
+
+		let relay_chain_backend = relay_chain_full_node.backend.clone();
+		let relay_chain_client = relay_chain_full_node.client.clone();
+		let parachain_consensus = build_nimbus_consensus(BuildNimbusConsensusParams {
+			para_id: id,
+			proposer_factory,
+			block_import: client.clone(),
+			relay_chain_client: relay_chain_full_node.client.clone(),
+			relay_chain_backend: relay_chain_full_node.backend.clone(),
+			parachain_client: client.clone(),
+			keystore: params.keystore_container.sync_keystore(),
+			skip_prediction: force_authoring,
+			create_inherent_data_providers: move |_, (relay_parent, validation_data, author_id)| {
+				let parachain_inherent = ParachainInherentData::create_at_with_client(
+					relay_parent,
+					&relay_chain_client,
+					&*relay_chain_backend,
+					&validation_data,
+					id,
+				);
+				async move {
+					let time = sp_timestamp::InherentDataProvider::from_system_time();
+
+					let parachain_inherent = parachain_inherent.ok_or_else(|| {
+						Box::<dyn std::error::Error + Send + Sync>::from(
+							"Failed to create parachain inherent",
+						)
+					})?;
+
+					let author = nimbus_primitives::InherentDataProvider::<NimbusId>(author_id);
+
+					Ok((time, parachain_inherent, author))
+				}
+			},
+		});
 
 		let spawner = task_manager.spawn_handle();
 
@@ -362,82 +370,9 @@ where
 		ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi:
 		RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
 	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
-	start_node_impl(
-        parachain_config,
-        polkadot_config,
-        id,
-        |_| Ok(Default::default()),
-        |client,
-         prometheus_registry,
-         telemetry,
-         task_manager,
-         relay_chain_node,
-         transaction_pool,
-         sync_oracle,
-         keystore,
-         force_authoring| {
-            let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
-            let proposer_factory = sc_basic_authorship::ProposerFactory::with_proof_recording(
-                task_manager.spawn_handle(),
-                client.clone(),
-                transaction_pool,
-                prometheus_registry,
-                telemetry.clone(),
-            );
-
-            let relay_chain_backend = relay_chain_node.backend.clone();
-            let relay_chain_client = relay_chain_node.client.clone();
-            Ok(build_aura_consensus::<AuraPair, _, _, _, _, _, _, _, _, _>(
-                BuildAuraConsensusParams {
-                    proposer_factory,
-                    create_inherent_data_providers: move |_, (relay_parent, validation_data)| {
-                        let parachain_inherent =
-                            cumulus_primitives_parachain_inherent::ParachainInherentData::create_at_with_client(
-                                relay_parent,
-                                &relay_chain_client,
-                                &*relay_chain_backend,
-                                &validation_data,
-                                id,
-                            );
-                        async move {
-                            let time = sp_timestamp::InherentDataProvider::from_system_time();
-
-                            let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-                                *time,
-                                slot_duration.slot_duration(),
-                            );
-
-                            let parachain_inherent = parachain_inherent.ok_or_else(|| {
-                                Box::<dyn std::error::Error + Send + Sync>::from(
-                                    "Failed to create parachain inherent",
-                                )
-                            })?;
-                            Ok((time, slot, parachain_inherent))
-                        }
-                    },
-                    block_import: client.clone(),
-                    relay_chain_client: relay_chain_node.client.clone(),
-                    relay_chain_backend: relay_chain_node.backend.clone(),
-                    para_client: client,
-                    backoff_authoring_blocks: Option::<()>::None,
-                    sync_oracle,
-                    keystore,
-                    force_authoring,
-                    slot_duration,
-                    // We got around 500ms for proposing
-                    block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
-                    // And a maximum of 750ms if slots are skipped
-                    max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
-                    telemetry,
-                },
-            ))
-        },
-    )
-        .await
+	start_node_impl(parachain_config, polkadot_config, id).await
 }
 
 /// Builds a new object suitable for chain operations.
@@ -453,18 +388,15 @@ pub fn new_chain_ops(
 	ServiceError,
 > {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
-	if config.chain_spec.is_bifrost_kusama() {
-		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+	if config.chain_spec.is_asgard() {
+		#[cfg(feature = "with-asgard-runtime")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>(config, false)?;
-			Ok((Arc::new(Client::Bifrost(client)), backend, import_queue, task_manager))
+				new_partial::<asgard_runtime::RuntimeApi, AsgardExecutor>(config, false)?;
+			Ok((Arc::new(Client::Asgard(client)), backend, import_queue, task_manager))
 		}
-		#[cfg(not(any(
-			feature = "with-bifrost-kusama-runtime",
-			feature = "with-bifrost-runtime"
-		)))]
-		Err(BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+		#[cfg(not(feature = "with-asgard-runtime"))]
+		Err(ASGARD_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		Err(UNKNOWN_RUNTIME.into())
 	}
@@ -480,6 +412,8 @@ pub trait RuntimeApiCollection:
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
+	+ nimbus_primitives::NimbusApi<Block>
+	+ nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
 	+ cumulus_primitives_core::CollectCollationInfo<Block>
 	+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
 	+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<Block, AccountId, PoolId>
@@ -501,6 +435,8 @@ where
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
+		+ nimbus_primitives::NimbusApi<Block>
+		+ nimbus_primitives::AuthorFilterAPI<Block, nimbus_primitives::NimbusId>
 		+ cumulus_primitives_core::CollectCollationInfo<Block>
 		+ bifrost_flexible_fee_rpc_runtime_api::FlexibleFeeRuntimeApi<Block, AccountId>
 		+ bifrost_liquidity_mining_rpc_runtime_api::LiquidityMiningRuntimeApi<
@@ -599,8 +535,8 @@ macro_rules! with_client {
 		}
 	} => {
 		match $self {
-			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-			Self::Bifrost($client) => { $( $code )* },
+			#[cfg(feature = "with-asgard-runtime")]
+			Self::Asgard($client) => { $( $code )* },
 		}
 	}
 }
@@ -610,9 +546,9 @@ macro_rules! with_client {
 /// See [`ExecuteWithClient`] for more information.
 #[derive(Clone)]
 pub enum Client {
-	#[cfg(feature = "with-bifrost-kusama-runtime")]
+	#[cfg(feature = "with-asgard-runtime")]
 	#[allow(dead_code)]
-	Bifrost(Arc<FullClient<bifrost_kusama_runtime::RuntimeApi, BifrostExecutor>>),
+	Asgard(Arc<FullClient<asgard_runtime::RuntimeApi, AsgardExecutor>>),
 }
 
 impl ClientHandle for Client {

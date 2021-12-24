@@ -19,7 +19,9 @@
 #![warn(unused_extern_crates)]
 
 pub mod chain_spec;
-#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-kusama-runtime"))]
+#[cfg(feature = "with-asgard-runtime")]
+pub mod collator_asgard;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub mod collator_kusama;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
 pub mod collator_polkadot;

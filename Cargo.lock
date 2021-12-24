@@ -169,7 +169,6 @@ dependencies = [
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
- "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
@@ -185,6 +184,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "nimbus-primitives",
  "node-primitives",
  "orml-benchmarking",
  "orml-currencies",
@@ -195,10 +195,12 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-aura",
+ "pallet-author-inherent",
+ "pallet-author-mapping",
+ "pallet-author-slot-filter",
  "pallet-authorship",
  "pallet-balances",
  "pallet-bounties",
- "pallet-collator-selection",
  "pallet-collective",
  "pallet-democracy",
  "pallet-elections-phragmen",
@@ -207,6 +209,7 @@ dependencies = [
  "pallet-membership",
  "pallet-multisig",
  "pallet-proxy",
+ "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
  "pallet-sudo",
@@ -218,13 +221,14 @@ dependencies = [
  "pallet-utility",
  "pallet-xcm",
  "parachain-info",
+ "parachain-staking",
  "parity-scale-codec",
  "polkadot-parachain",
  "polkadot-primitives",
  "polkadot-runtime-parachains",
  "scale-info",
  "serde",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -660,7 +664,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -686,7 +690,7 @@ dependencies = [
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
@@ -794,7 +798,7 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-primitives",
  "scale-info",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -954,7 +958,7 @@ dependencies = [
  "polkadot-parachain",
  "polkadot-primitives",
  "scale-info",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -1010,7 +1014,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain",
  "serde",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-api",
  "sp-arithmetic",
  "sp-block-builder",
@@ -1051,7 +1055,7 @@ dependencies = [
  "pallet-xcm",
  "parity-scale-codec",
  "scale-info",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
@@ -1079,7 +1083,7 @@ dependencies = [
  "pallet-multisig",
  "parity-scale-codec",
  "scale-info",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
@@ -1725,7 +1729,7 @@ dependencies = [
  "gimli 0.25.0",
  "log",
  "regalloc",
- "smallvec",
+ "smallvec 1.7.0",
  "target-lexicon",
 ]
 
@@ -1762,7 +1766,7 @@ checksum = "e07339bd461766deb7605169de039e01954768ff730fa1254e149001884a8525"
 dependencies = [
  "cranelift-codegen",
  "log",
- "smallvec",
+ "smallvec 1.7.0",
  "target-lexicon",
 ]
 
@@ -1788,7 +1792,7 @@ dependencies = [
  "cranelift-frontend",
  "itertools",
  "log",
- "smallvec",
+ "smallvec 1.7.0",
  "wasmparser",
  "wasmtime-types",
 ]
@@ -2676,7 +2680,7 @@ dependencies = [
  "az",
  "bytemuck",
  "half",
- "typenum",
+ "typenum 1.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -2837,7 +2841,7 @@ dependencies = [
  "paste",
  "scale-info",
  "serde",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-arithmetic",
  "sp-core",
  "sp-core-hashing-proc-macro",
@@ -3128,7 +3132,7 @@ version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffdf9f34f1447443d37393cc6c2b8313aebddcd96906caf34e54c68d8e57d7bd"
 dependencies = [
- "typenum",
+ "typenum 1.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3137,7 +3141,7 @@ version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "501466ecc8a30d1d3b7fc9229b122b2ce8ed6e9d9223f1138d4babb253e51817"
 dependencies = [
- "typenum",
+ "typenum 1.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "version_check",
 ]
 
@@ -3916,7 +3920,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "45a3f58dc069ec0e205a27f5b45920722a46faed802a0541538241af6228f512"
 dependencies = [
  "parity-util-mem",
- "smallvec",
+ "smallvec 1.7.0",
 ]
 
 [[package]]
@@ -3945,7 +3949,7 @@ dependencies = [
  "parking_lot 0.11.2",
  "regex",
  "rocksdb",
- "smallvec",
+ "smallvec 1.7.0",
 ]
 
 [[package]]
@@ -4029,7 +4033,7 @@ dependencies = [
  "multiaddr",
  "parking_lot 0.11.2",
  "pin-project 1.0.8",
- "smallvec",
+ "smallvec 1.7.0",
  "wasm-timer",
 ]
 
@@ -4060,7 +4064,7 @@ dependencies = [
  "ring",
  "rw-stream-sink",
  "sha2 0.9.8",
- "smallvec",
+ "smallvec 1.7.0",
  "thiserror",
  "unsigned-varint 0.7.1",
  "void",
@@ -4088,7 +4092,7 @@ dependencies = [
  "futures 0.3.18",
  "libp2p-core",
  "log",
- "smallvec",
+ "smallvec 1.7.0",
  "trust-dns-resolver",
 ]
 
@@ -4107,7 +4111,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.7.0",
 ]
 
 [[package]]
@@ -4131,7 +4135,7 @@ dependencies = [
  "rand 0.7.3",
  "regex",
  "sha2 0.9.8",
- "smallvec",
+ "smallvec 1.7.0",
  "unsigned-varint 0.7.1",
  "wasm-timer",
 ]
@@ -4149,7 +4153,7 @@ dependencies = [
  "lru 0.6.6",
  "prost",
  "prost-build",
- "smallvec",
+ "smallvec 1.7.0",
  "wasm-timer",
 ]
 
@@ -4172,7 +4176,7 @@ dependencies = [
  "prost-build",
  "rand 0.7.3",
  "sha2 0.9.8",
- "smallvec",
+ "smallvec 1.7.0",
  "uint",
  "unsigned-varint 0.7.1",
  "void",
@@ -4195,7 +4199,7 @@ dependencies = [
  "libp2p-swarm",
  "log",
  "rand 0.8.4",
- "smallvec",
+ "smallvec 1.7.0",
  "socket2 0.4.2",
  "void",
 ]
@@ -4228,7 +4232,7 @@ dependencies = [
  "nohash-hasher",
  "parking_lot 0.11.2",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.7.0",
  "unsigned-varint 0.7.1",
 ]
 
@@ -4317,7 +4321,7 @@ dependencies = [
  "prost",
  "prost-build",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.7.0",
  "unsigned-varint 0.7.1",
  "void",
  "wasm-timer",
@@ -4359,7 +4363,7 @@ dependencies = [
  "log",
  "lru 0.7.0",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.7.0",
  "unsigned-varint 0.7.1",
  "wasm-timer",
 ]
@@ -4375,7 +4379,7 @@ dependencies = [
  "libp2p-core",
  "log",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.7.0",
  "void",
  "wasm-timer",
 ]
@@ -4492,7 +4496,7 @@ dependencies = [
  "rand 0.8.4",
  "serde",
  "sha2 0.9.8",
- "typenum",
+ "typenum 1.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4685,6 +4689,12 @@ checksum = "add85d4dd35074e6fedc608f8c8f513a3548619a9024b751949ef0e8e45a4d84"
 dependencies = [
  "rawpointer",
 ]
+
+[[package]]
+name = "maybe-uninit"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60302e4db3a61da70c0cb7991976248362f30319e88850c487b9b95bbf059e00"
 
 [[package]]
 name = "memchr"
@@ -4956,7 +4966,7 @@ dependencies = [
  "futures 0.3.18",
  "log",
  "pin-project 1.0.8",
- "smallvec",
+ "smallvec 1.7.0",
  "unsigned-varint 0.7.1",
 ]
 
@@ -4975,7 +4985,7 @@ dependencies = [
  "rand 0.8.4",
  "rand_distr",
  "simba",
- "typenum",
+ "typenum 1.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -5007,6 +5017,54 @@ dependencies = [
  "cfg-if 0.1.10",
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "nimbus-consensus"
+version = "0.9.0"
+source = "git+https://github.com/bifrost-finance/nimbus?branch=bifrost-polkadot-v0.9.13#87c500f4ed506893ad3857190d9348e071c47f4d"
+dependencies = [
+ "async-trait",
+ "cumulus-client-consensus-common",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "futures 0.3.18",
+ "log",
+ "nimbus-primitives",
+ "parity-scale-codec",
+ "parking_lot 0.9.0",
+ "polkadot-client",
+ "sc-client-api",
+ "sc-consensus",
+ "sc-consensus-manual-seal",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-consensus",
+ "sp-core",
+ "sp-inherents",
+ "sp-keystore",
+ "sp-runtime",
+ "substrate-prometheus-endpoint",
+ "tracing",
+]
+
+[[package]]
+name = "nimbus-primitives"
+version = "0.9.0"
+source = "git+https://github.com/bifrost-finance/nimbus?branch=bifrost-polkadot-v0.9.13#87c500f4ed506893ad3857190d9348e071c47f4d"
+dependencies = [
+ "async-trait",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -5121,10 +5179,14 @@ dependencies = [
  "hex-literal",
  "jsonrpc-core",
  "log",
+ "nimbus-consensus",
+ "nimbus-primitives",
  "node-primitives",
  "node-rpc",
+ "pallet-author-inherent",
  "pallet-transaction-payment-rpc",
  "pallet-transaction-payment-rpc-runtime-api",
+ "parachain-staking",
  "polkadot-service",
  "sc-basic-authorship",
  "sc-chain-spec",
@@ -5570,6 +5632,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-author-inherent"
+version = "0.9.0"
+source = "git+https://github.com/bifrost-finance/nimbus?branch=bifrost-polkadot-v0.9.13#87c500f4ed506893ad3857190d9348e071c47f4d"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-application-crypto",
+ "sp-authorship",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-author-mapping"
+version = "2.0.5"
+source = "git+https://github.com/bifrost-finance/moonbeam?branch=bifrost-polkadot-v0.9.13#ec66e133cc916951efa5fc8c86b32916982f6895"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-author-slot-filter"
+version = "0.9.0"
+source = "git+https://github.com/bifrost-finance/nimbus?branch=bifrost-polkadot-v0.9.13#87c500f4ed506893ad3857190d9348e071c47f4d"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-authority-discovery"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.13#fcc54a72973d03afe7bf9e3ef2736050b3f33465"
@@ -6006,6 +6121,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-randomness-collective-flip"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.13#fcc54a72973d03afe7bf9e3ef2736050b3f33465"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "safe-mix",
+ "scale-info",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-scheduler"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.13#fcc54a72973d03afe7bf9e3ef2736050b3f33465"
@@ -6134,7 +6263,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -6248,6 +6377,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "parachain-staking"
+version = "3.0.0"
+source = "git+https://github.com/bifrost-finance/moonbeam?branch=bifrost-polkadot-v0.9.13#ec66e133cc916951efa5fc8c86b32916982f6895"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "nimbus-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-runtime",
+ "sp-std",
+ "substrate-fixed",
+]
+
+[[package]]
 name = "parity-db"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6326,7 +6473,7 @@ dependencies = [
  "parity-util-mem-derive",
  "parking_lot 0.11.2",
  "primitive-types",
- "smallvec",
+ "smallvec 1.7.0",
  "winapi 0.3.9",
 ]
 
@@ -6382,6 +6529,17 @@ checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 
 [[package]]
 name = "parking_lot"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f842b1982eb6c2fe34036a4fbfb06dd185a3f5c8edfaacdf7d1ea10b07de6252"
+dependencies = [
+ "lock_api 0.3.4",
+ "parking_lot_core 0.6.2",
+ "rustc_version 0.2.3",
+]
+
+[[package]]
+name = "parking_lot"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3a704eb390aafdc107b0e392f56a82b668e3a71366993b5340f5833fd62505e"
@@ -6403,6 +6561,21 @@ dependencies = [
 
 [[package]]
 name = "parking_lot_core"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b876b1b9e7ac6e1a74a6da34d25c42e17e8862aa409cbbbdcfc8d86c6f3bc62b"
+dependencies = [
+ "cfg-if 0.1.10",
+ "cloudabi",
+ "libc",
+ "redox_syscall 0.1.57",
+ "rustc_version 0.2.3",
+ "smallvec 0.6.14",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "parking_lot_core"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d58c7c768d4ba344e3e8d72518ac13e259d7c7ade24167003b8488e10b6740a3"
@@ -6411,7 +6584,7 @@ dependencies = [
  "cloudabi",
  "libc",
  "redox_syscall 0.1.57",
- "smallvec",
+ "smallvec 1.7.0",
  "winapi 0.3.9",
 ]
 
@@ -6425,7 +6598,7 @@ dependencies = [
  "instant",
  "libc",
  "redox_syscall 0.2.10",
- "smallvec",
+ "smallvec 1.7.0",
  "winapi 0.3.9",
 ]
 
@@ -7177,7 +7350,7 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-statement-table",
  "sc-network",
- "smallvec",
+ "smallvec 1.7.0",
  "substrate-prometheus-endpoint",
  "thiserror",
 ]
@@ -7390,7 +7563,7 @@ dependencies = [
  "scale-info",
  "serde",
  "serde_derive",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-api",
  "sp-authority-discovery",
  "sp-block-builder",
@@ -8055,7 +8228,7 @@ checksum = "a6304468554ed921da3d32c355ea107b8d13d7b8996c3adfb7aab48d3bc321f4"
 dependencies = [
  "log",
  "rustc-hash",
- "smallvec",
+ "smallvec 1.7.0",
 ]
 
 [[package]]
@@ -8220,6 +8393,15 @@ checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
 
 [[package]]
 name = "rustc_version"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
+dependencies = [
+ "semver 0.9.0",
+]
+
+[[package]]
+name = "rustc_version"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0dfe2087c51c460008730de8b57e6a320782fbfb312e1f4d520e6c6fae155ee"
@@ -8277,6 +8459,15 @@ name = "ryu"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c9613b5a66ab9ba26415184cfc41156594925a9cf3a2057e57f31ff145f6568"
+
+[[package]]
+name = "safe-mix"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d3d055a2582e6b00ed7a31c1524040aa391092bf636328350813f3a0605215c"
+dependencies = [
+ "rustc_version 0.2.3",
+]
 
 [[package]]
 name = "salsa20"
@@ -8905,7 +9096,7 @@ dependencies = [
  "sc-utils",
  "serde",
  "serde_json",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-arithmetic",
  "sp-blockchain",
  "sp-consensus",
@@ -9389,6 +9580,15 @@ dependencies = [
 
 [[package]]
 name = "semver"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
+dependencies = [
+ "semver-parser 0.7.0",
+]
+
+[[package]]
+name = "semver"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f301af10236f6df4160f7c3f04eec6dbc70ace82d23326abad5edee88801c6b6"
@@ -9590,6 +9790,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1e08e261d0e8f5c43123b7adf3e4ca1690d655377ac93a03b2c9d3e98de1342"
 dependencies = [
  "version_check",
+]
+
+[[package]]
+name = "smallvec"
+version = "0.6.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b97fcaeba89edba30f044a10c6a3cc39df9c3f17d7cd829dd1446cab35f890e0"
+dependencies = [
+ "maybe-uninit",
 ]
 
 [[package]]
@@ -10201,7 +10410,7 @@ dependencies = [
  "parity-scale-codec",
  "parking_lot 0.11.2",
  "rand 0.7.3",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-core",
  "sp-externalities",
  "sp-panic-handler",
@@ -10490,6 +10699,16 @@ version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.13#fcc54a72973d03afe7bf9e3ef2736050b3f33465"
 dependencies = [
  "platforms",
+]
+
+[[package]]
+name = "substrate-fixed"
+version = "0.5.7"
+source = "git+https://github.com/encointer/substrate-fixed#2f353acee3c7cf7a386863a89fc6cb805048561f"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "typenum 1.14.0 (git+https://github.com/encointer/typenum)",
 ]
 
 [[package]]
@@ -10876,12 +11095,12 @@ dependencies = [
  "chrono",
  "lazy_static",
  "matchers",
- "parking_lot 0.11.2",
+ "parking_lot 0.9.0",
  "regex",
  "serde",
  "serde_json",
  "sharded-slab",
- "smallvec",
+ "smallvec 1.7.0",
  "thread_local",
  "tracing",
  "tracing-core",
@@ -10899,7 +11118,7 @@ dependencies = [
  "hashbrown",
  "log",
  "rustc-hex",
- "smallvec",
+ "smallvec 1.7.0",
 ]
 
 [[package]]
@@ -10929,7 +11148,7 @@ dependencies = [
  "lazy_static",
  "log",
  "rand 0.8.4",
- "smallvec",
+ "smallvec 1.7.0",
  "thiserror",
  "tinyvec",
  "url 2.2.2",
@@ -10949,7 +11168,7 @@ dependencies = [
  "lru-cache",
  "parking_lot 0.11.2",
  "resolv-conf",
- "smallvec",
+ "smallvec 1.7.0",
  "thiserror",
  "trust-dns-proto",
 ]
@@ -10996,7 +11215,7 @@ version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "rand 0.8.4",
  "static_assertions",
 ]
@@ -11006,6 +11225,14 @@ name = "typenum"
 version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b63708a265f51345575b27fe43f9500ad611579e764c79edbc2037b1121959ec"
+
+[[package]]
+name = "typenum"
+version = "1.14.0"
+source = "git+https://github.com/encointer/typenum#ec35bb80fcfb495de2e1f6966381c3f85e8a6509"
+dependencies = [
+ "scale-info",
+]
 
 [[package]]
 name = "ucd-trie"
@@ -11692,7 +11919,7 @@ dependencies = [
  "node-primitives",
  "parity-scale-codec",
  "paste",
- "smallvec",
+ "smallvec 1.7.0",
  "sp-io",
  "sp-runtime",
  "sp-std",

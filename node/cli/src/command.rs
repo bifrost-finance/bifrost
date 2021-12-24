@@ -259,7 +259,7 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 }
 
 #[cfg(feature = "with-asgard-runtime")]
-use service::collator_kusama::{asgard_runtime, AsgardExecutor};
+use service::collator_asgard::{asgard_runtime, AsgardExecutor};
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 use service::collator_kusama::{bifrost_kusama_runtime, BifrostExecutor};
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
@@ -294,10 +294,10 @@ macro_rules! with_runtime_or_err {
 			use AsgardExecutor as Executor;
 			#[cfg(feature = "with-asgard-runtime")]
 			#[allow(unused_imports)]
-			use service::collator_kusama::start_node;
+			use service::collator_asgard::start_node;
 			#[cfg(feature = "with-asgard-runtime")]
 			#[allow(unused_imports)]
-			use service::collator_kusama::new_chain_ops;
+			use service::collator_asgard::new_chain_ops;
 
 			#[cfg(feature = "with-asgard-runtime")]
 			$( $code )*
@@ -356,7 +356,6 @@ pub fn run() -> Result<()> {
 						return service::dev::start_node(config).map_err(Into::into);
 					}
 				}
-
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id);
