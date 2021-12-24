@@ -122,7 +122,7 @@ pub mod pallet {
 			);
 
 			// If "all" received, ban all of the pallets. Otherwise, only the passed-in pallet.
-			if (pallet_name_string == "All") || (pallet_name_string == "all") {
+			if pallet_name_string.to_lowercase() == "all" {
 				OverallToggle::<T>::put(true);
 			} else {
 				SwitchedOffTransactions::<T>::mutate_exists(
@@ -154,7 +154,7 @@ pub mod pallet {
 			let pallet_name_string =
 				sp_std::str::from_utf8(&pallet_name).map_err(|_| Error::<T>::InvalidCharacter)?;
 
-			if (pallet_name_string == "All") || (pallet_name_string == "all") {
+			if pallet_name_string.to_lowercase() == "all" {
 				OverallToggle::<T>::put(false);
 			}
 
