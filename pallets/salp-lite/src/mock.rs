@@ -251,7 +251,7 @@ impl WeightInfo for SalpWeightInfo {
 		0
 	}
 
-	fn batch_migrate(_k: u32) -> Weight {
+	fn refund() -> Weight {
 		0
 	}
 }

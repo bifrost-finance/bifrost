@@ -193,6 +193,10 @@ impl Contains<Call> for CallFilter {
 			return true;
 		}
 
+		if bifrost_call_switchgear::OverallToggleFilter::<Runtime>::get_overall_toggle_status() {
+			return false;
+		}
+
 		// temporarily ban PhragmenElection
 		let is_temporarily_banned = matches!(call, Call::PhragmenElection(_));
 
@@ -287,6 +291,7 @@ parameter_types! {
 	pub const LiquidityMiningPalletId: PalletId = PalletId(*b"bf/lm###");
 	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
+	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 }
 
 impl frame_system::Config for Runtime {
@@ -1496,6 +1501,22 @@ impl bifrost_call_switchgear::Config for Runtime {
 // Bifrost modules end
 
 // zenlink runtime start
+
+parameter_types! {
+	pub const StringLimit: u32 = 50;
+}
+
+impl merkle_distributor::Config for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type Balance = Balance;
+	type MerkleDistributorId = u32;
+	type PalletId = MerkleDirtributorPalletId;
+	type StringLimit = StringLimit;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
 	pub const GetExchangeFee: (u32, u32) = (3, 1000);   // 0.3%
@@ -1660,15 +1681,16 @@ construct_runtime! {
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
+		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
-		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>} = 105,
+		Salp: bifrost_salp::{Pallet, Call, Storage, Event<T>, Config<T>} = 105,
 		LiquidityMiningDOT: bifrost_liquidity_mining::<Instance2>::{Pallet, Call, Storage, Event<T>} = 107,
 		LiquidityMining: bifrost_liquidity_mining::<Instance1>::{Pallet, Call, Storage, Event<T>} = 108,
 		TokenIssuer: bifrost_token_issuer::{Pallet, Call, Storage, Event<T>} = 109,
 		LighteningRedeem: bifrost_lightening_redeem::{Pallet, Call, Storage, Event<T>} = 110,
-		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>} = 111,
+		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 	}
@@ -1993,24 +2015,6 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
-	}
-}
-
-pub struct CustomOnRuntimeUpgrade;
-impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `pre_upgrade`...");
-		Ok(())
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-		RocksDbWeight::get().writes(1)
 	}
 }
 

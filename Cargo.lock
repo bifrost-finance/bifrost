@@ -185,6 +185,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "merkle-distributor",
  "node-primitives",
  "orml-benchmarking",
  "orml-currencies",
@@ -761,6 +762,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
+ "merkle-distributor",
  "node-primitives",
  "orml-currencies",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
@@ -4749,6 +4751,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 
 [[package]]
+name = "merkle-distributor"
+version = "0.1.0"
+source = "git+https://github.com/zenlinkpro/merkle-distributor?rev=e9bba954baaa0b1539e2647988da35f5fe81b0b3#e9bba954baaa0b1539e2647988da35f5fe81b0b3"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
+ "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "merlin"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5393,7 +5415,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#17a791edf431d7d7aee1ea3dfaeeb7bc21944301"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#8d076372849a4dced5468f0f14db96b7145160ee"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5423,7 +5445,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#17a791edf431d7d7aee1ea3dfaeeb7bc21944301"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#8d076372849a4dced5468f0f14db96b7145160ee"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -5474,7 +5496,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#17a791edf431d7d7aee1ea3dfaeeb7bc21944301"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#8d076372849a4dced5468f0f14db96b7145160ee"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -11719,7 +11741,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2458c585b0313de495092a5633a547f7e8fa0588#2458c585b0313de495092a5633a547f7e8fa0588"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e5747a897cfd0fb5d322781ffe656220ae1e814f#e5747a897cfd0fb5d322781ffe656220ae1e814f"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -11742,7 +11764,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-rpc"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2458c585b0313de495092a5633a547f7e8fa0588#2458c585b0313de495092a5633a547f7e8fa0588"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e5747a897cfd0fb5d322781ffe656220ae1e814f#e5747a897cfd0fb5d322781ffe656220ae1e814f"
 dependencies = [
  "jsonrpc-core",
  "jsonrpc-core-client",
@@ -11759,7 +11781,7 @@ dependencies = [
 [[package]]
 name = "zenlink-protocol-runtime-api"
 version = "0.4.4"
-source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=2458c585b0313de495092a5633a547f7e8fa0588#2458c585b0313de495092a5633a547f7e8fa0588"
+source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e5747a897cfd0fb5d322781ffe656220ae1e814f#e5747a897cfd0fb5d322781ffe656220ae1e814f"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
