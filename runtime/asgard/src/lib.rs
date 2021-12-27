@@ -92,10 +92,7 @@ use bifrost_runtime_common::{
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
-use frame_support::{
-	sp_runtime::traits::Convert,
-	traits::{EnsureOrigin, OnRuntimeUpgrade},
-};
+use frame_support::{sp_runtime::traits::Convert, traits::EnsureOrigin};
 pub use node_primitives::{
 	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
 	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
