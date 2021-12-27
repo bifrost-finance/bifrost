@@ -20,7 +20,7 @@
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
-	traits::{GenesisBuild, Nothing},
+	traits::{Contains, GenesisBuild},
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
@@ -84,8 +84,16 @@ impl frame_system::Config for Test {
 
 orml_traits::parameter_type_with_key! {
 	pub ExistentialDeposits: |_currency_id: CurrencyId| -> Balance {
-		0
+		10
 	};
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		BifrostTreasuryAccount::get().eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&VsbondAuctionPalletId::get()).eq(a)
+	}
 }
 
 parameter_types! {
@@ -96,7 +104,7 @@ impl orml_tokens::Config for Test {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
-	type DustRemovalWhitelist = Nothing;
+	type DustRemovalWhitelist = DustRemovalWhitelist;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
@@ -126,6 +134,7 @@ impl vsbond_auction::Config for Test {
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type ExistentialDeposits = ExistentialDeposits;
 }
 
 // mockup runtime
@@ -142,8 +151,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 			(ALICE, VSBOND, 100),
 			(BRUCE, TOKEN, 100),
 			(BRUCE, VSBOND, 100),
+			(CHARLIE, TOKEN, 100),
 			(ALICE, SPECIAL_VSBOND, 100),
 			(BRUCE, SPECIAL_VSBOND, 100),
+			(DAVE, VSBOND, 100),
 			#[cfg(feature = "runtime-benchmarks")]
 			(whitelist_caller.clone(), TOKEN, 100_000_000_000_000),
 			#[cfg(feature = "runtime-benchmarks")]
@@ -162,6 +173,8 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 
 pub(crate) const ALICE: AccountId = 1;
 pub(crate) const BRUCE: AccountId = 2;
+pub(crate) const CHARLIE: AccountId = 3;
+pub(crate) const DAVE: AccountId = 4;
 pub(crate) const TOKEN: CurrencyId = InvoicingCurrency::get();
 pub(crate) const TOKEN_SYMBOL: TokenSymbol = TokenSymbol::KSM;
 pub(crate) const VSBOND: CurrencyId = CurrencyId::VSBond(TOKEN_SYMBOL, 3000, 13, 20);

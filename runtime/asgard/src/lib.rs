@@ -294,6 +294,7 @@ pub fn get_all_pallet_accounts() -> Vec<AccountId> {
 		TreasuryPalletId::get().into_account(),
 		BifrostCrowdloanId::get().into_account(),
 		LighteningRedeemPalletId::get().into_account(),
+		VsbondAuctionPalletId::get().into_account(),
 	]
 }
 
@@ -1428,6 +1429,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ExistentialDeposits = ExistentialDeposits;
 }
 
 parameter_types! {

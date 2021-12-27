@@ -358,6 +358,39 @@ fn revoke_order_should_work() {
 }
 
 #[test]
+fn revoke_order_should_work_with_ed_limits() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(
+			Some(DAVE).into(),
+			3000,
+			TOKEN_SYMBOL,
+			13,
+			20,
+			100,
+			100,
+			OrderType::Sell
+		));
+
+		assert_ok!(Auction::partial_clinch_order(Some(CHARLIE).into(), 0, 96));
+		assert_ok!(Auction::revoke_order(Some(DAVE).into(), 0));
+
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+		let treasury_account: u64 = <Test as crate::Config>::TreasuryAccount::get();
+
+		assert_eq!(Tokens::accounts(DAVE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(CHARLIE, VSBOND).free, 96);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(treasury_account, VSBOND).free, 4);
+
+		assert_eq!(Tokens::accounts(DAVE, TOKEN).free, 96);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
+		// We didn't config OnDust filed for orml_tokens module, so dust will not be removed.
+		assert_eq!(Tokens::accounts(CHARLIE, TOKEN).free, 4);
+		assert_eq!(Tokens::accounts(treasury_account, TOKEN).free, 0);
+	});
+}
+
+#[test]
 fn revoke_sell_order_which_be_partial_clinchd_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Auction::create_order(
@@ -484,6 +517,41 @@ fn revoke_order_by_origin_illegal_should_fail() {
 
 		assert_noop!(Auction::revoke_order(Origin::none(), 0), DispatchError::BadOrigin);
 		assert_noop!(Auction::revoke_order(Origin::none(), 1), DispatchError::BadOrigin);
+	});
+}
+
+#[test]
+fn partial_clinch_sell_order_should_work_with_ed_limits() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Auction::create_order(
+			Some(DAVE).into(),
+			3000,
+			TOKEN_SYMBOL,
+			13,
+			20,
+			100,
+			33,
+			OrderType::Sell
+		));
+		assert_ok!(Auction::partial_clinch_order(Some(CHARLIE).into(), 0, 4));
+
+		let order_info = Auction::order_info(0).unwrap();
+		assert_eq!(order_info.remain, 96);
+
+		let module_account: u64 = <Test as crate::Config>::PalletId::get().into_account();
+		let treasury_account: u64 = <Test as crate::Config>::TreasuryAccount::get();
+
+		assert_eq!(Tokens::accounts(DAVE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(module_account, VSBOND).free, 96);
+
+		assert_eq!(Tokens::accounts(DAVE, TOKEN).free, 0);
+		assert_eq!(Tokens::accounts(treasury_account, TOKEN).free, 1);
+
+		assert_eq!(Tokens::accounts(CHARLIE, VSBOND).free, 0);
+		assert_eq!(Tokens::accounts(treasury_account, VSBOND).free, 4);
+
+		assert_eq!(Tokens::accounts(CHARLIE, TOKEN).free, 99);
+		assert_eq!(Tokens::accounts(module_account, TOKEN).free, 0);
 	});
 }
 

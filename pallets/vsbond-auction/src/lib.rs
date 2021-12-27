@@ -40,7 +40,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Permill;
@@ -151,6 +151,13 @@ pub mod pallet {
 
 		/// The only origin that can modify transaction fee rate
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
+
+		/// The minimum amount required to keep an account.
+		/// It's deprecated to config 0 as ED for any currency_id,
+		/// zero ED will retain account even if its total is zero.
+		/// Since accounts of orml_tokens are also used as providers of
+		/// System::AccountInfo, zero ED may cause some problems.
+		type ExistentialDeposits: GetByKey<CurrencyId, BalanceOf<Self, I>>;
 	}
 
 	#[pallet::error]
@@ -515,11 +522,24 @@ pub mod pallet {
 
 			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
+			let mut account_to_send = new_order_info.owner.clone();
+			let ed = T::ExistentialDeposits::get(&token_to_pay);
+
+			// deal with account exisitence error we might encounter
+			if amount_to_pay < ed {
+				let receiver_balance =
+					T::MultiCurrency::total_balance(token_to_pay, &new_order_info.owner);
+
+				if receiver_balance.saturating_add(amount_to_pay) < ed {
+					account_to_send = T::TreasuryAccount::get();
+				}
+			}
+
 			// Exchange: Transfer corresponding token amount to the order maker from order taker
 			T::MultiCurrency::transfer(
 				token_to_pay,
 				&order_taker,
-				&new_order_info.owner,
+				&account_to_send,
 				amount_to_pay,
 			)?;
 
@@ -531,8 +551,25 @@ pub mod pallet {
 				taker_fee,
 			)?;
 
+			let mut account_to_send = order_taker.clone();
+			let ed = T::ExistentialDeposits::get(&token_to_get);
+
+			// deal with account exisitence error we might encounter
+			if amount_to_get < ed {
+				let receiver_balance = T::MultiCurrency::total_balance(token_to_get, &order_taker);
+
+				if receiver_balance.saturating_add(amount_to_get) < ed {
+					account_to_send = T::TreasuryAccount::get();
+				}
+			}
+
 			// Transfer corresponding token amount to the order taker from the module account
-			T::MultiCurrency::transfer(token_to_get, &module_account, &order_taker, amount_to_get)?;
+			T::MultiCurrency::transfer(
+				token_to_get,
+				&module_account,
+				&account_to_send,
+				amount_to_get,
+			)?;
 
 			// Change the OrderInfo in Storage
 			// The seller sells out what he want to sell in the case of sell-order type.
@@ -641,12 +678,25 @@ pub mod pallet {
 				OrderType::Sell => (order_info.vsbond, order_info.remain),
 			};
 
+			let mut account_to_return = order_info.owner.clone();
+			let ed = T::ExistentialDeposits::get(&token_to_return);
+
+			// deal with account exisitence error we might encounter
+			if amount_to_return < ed {
+				let receiver_balance =
+					T::MultiCurrency::total_balance(token_to_return, &order_info.owner);
+
+				if receiver_balance.saturating_add(amount_to_return) < ed {
+					account_to_return = T::TreasuryAccount::get();
+				}
+			}
+
 			// To transfer back the unused amount
 			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 			T::MultiCurrency::transfer(
 				token_to_return,
 				&module_account,
-				&order_info.owner,
+				&account_to_return,
 				amount_to_return,
 			)?;
 

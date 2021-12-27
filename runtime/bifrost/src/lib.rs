@@ -1146,6 +1146,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
+			.eq(a) || AccountIdConversion::<AccountId>::into_account(&VsbondAuctionPalletId::get())
 			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
 	}
@@ -1405,6 +1406,7 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type ExistentialDeposits = ExistentialDeposits;
 }
 
 parameter_types! {
