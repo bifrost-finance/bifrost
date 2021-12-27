@@ -29,7 +29,7 @@ use frame_support::{
 	},
 	sp_std::{
 		cmp::{max, min},
-		collections::{btree_map::BTreeMap, btree_set::BTreeSet},
+		collections::{btree_map::BTreeMap, btree_set::BTreeSet, vec_deque::VecDeque},
 		convert::TryFrom,
 		vec::Vec,
 	},
@@ -95,6 +95,11 @@ where
 	block_startup: Option<BlockNumberOf>,
 	/// The block number when the liquidity-pool retired
 	block_retired: Option<BlockNumberOf>,
+
+	/// The balance of redeeming will be locked util exceeding the limit time;
+	redeem_limit_time: BlockNumberOf,
+	/// The max number of pending-unlocks at the same time;
+	unlock_limit_nums: u32,
 }
 
 impl<AccountIdOf, BalanceOf, BlockNumberOf> PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>
@@ -287,6 +292,13 @@ where
 	/// - Arg1: The block number updated lastest
 	gain_avgs: BTreeMap<CurrencyId, FixedU128>,
 	update_b: BlockNumberOf,
+	/// (unlock_height, unlock_amount)
+	///
+	/// unlock_height: When the block reaches the height, the balance was redeemed previously can
+	/// be unlocked;
+	///
+	/// unlock_amount: The amount that can be unlocked after reaching the `unlock-height`;
+	pending_unlocks: VecDeque<(BlockNumberOf, BalanceOf)>,
 }
 
 impl<BalanceOf, BlockNumberOf> DepositData<BalanceOf, BlockNumberOf>
@@ -303,7 +315,12 @@ where
 			gain_avgs.insert(*rtoken, reward.gain_avg);
 		}
 
-		Self { deposit: Zero::zero(), gain_avgs, update_b: pool.update_b }
+		Self {
+			deposit: Zero::zero(),
+			gain_avgs,
+			update_b: pool.update_b,
+			pending_unlocks: Default::default(),
+		}
 	}
 }
 
@@ -1103,6 +1120,9 @@ pub mod pallet {
 				state: PoolState::UnCharged,
 				block_startup: None,
 				block_retired: None,
+
+				redeem_limit_time: Zero::zero(),
+				unlock_limit_nums: 0,
 			};
 
 			TotalPoolInfos::<T, I>::insert(pool_id, mining_pool);
