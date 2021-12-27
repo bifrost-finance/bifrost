@@ -74,7 +74,7 @@ test-all:
 
 .PHONY: integration-test
 integration-test:
-	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-runtime
+	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-kusama-runtime
 
 .PHONY: clean
 clean:

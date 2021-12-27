@@ -109,6 +109,7 @@ zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 
 [dev-dependencies]
+env_logger = "0.9.0"
 libsecp256k1 = "0.3.4"
 hex = "0.4.0"
 
@@ -121,9 +122,10 @@ cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumul
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13" }
-xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", rev = "18f6d9e78d1fe92c167594b88b218793ac38bc1f" }
+xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", rev = "a6d58bbbb6dae844d86d6838fcf4954fa3ff6cea" }
 
 node-service = { path = "../node/service", features = ["with-all-runtime"] }
+westmint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.13" }
 
 [features]
 default = ["std"]

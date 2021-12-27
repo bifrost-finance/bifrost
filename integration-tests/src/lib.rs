@@ -17,11 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(test)]
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod integration_tests;
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod kusama_cross_chain_transact;
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod kusama_cross_chain_transfer;
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod kusama_test_net;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
+mod statemine;
