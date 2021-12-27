@@ -83,8 +83,7 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 				&include_bytes!("../../service/res/bifrost-polkadot.json")[..],
 			)?),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-		"bifrost-polkadot-genesis" =>
-			Box::new(service::chain_spec::bifrost_polkadot::chainspec_config()),
+		"bifrost-polkadot-genesis" => Box::new(service::chain_spec::bifrost_polkadot::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
