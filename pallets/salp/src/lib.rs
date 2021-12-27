@@ -464,6 +464,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] cap: BalanceOf<T>,
+			#[pallet::compact] raised: BalanceOf<T>,
 			#[pallet::compact] first_slot: LeasePeriod,
 			#[pallet::compact] last_slot: LeasePeriod,
 			fund_status: Option<FundStatus>,
@@ -484,7 +485,7 @@ pub mod pallet {
 					first_slot,
 					last_slot,
 					status,
-					raised: fund.raised,
+					raised,
 					trie_index: fund.trie_index,
 				}),
 			);
@@ -792,6 +793,8 @@ pub mod pallet {
 
 			fund.raised = fund.raised.saturating_sub(contributed);
 
+			Funds::<T>::insert(index, Some(fund.clone()));
+
 			T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
 			T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
 
@@ -853,6 +856,8 @@ pub mod pallet {
 				}
 			}
 
+			Funds::<T>::insert(index, Some(fund));
+
 			if all_refunded {
 				Self::deposit_event(Event::<T>::AllRefunded(index));
 			}
@@ -901,6 +906,7 @@ pub mod pallet {
 			}
 
 			fund.raised = fund.raised.saturating_sub(value);
+			Funds::<T>::insert(index, Some(fund.clone()));
 
 			if T::TransactType::get() == ParachainTransactType::Xcm {
 				T::MultiCurrency::transfer(

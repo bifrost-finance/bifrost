@@ -866,3 +866,25 @@ fn refund_meanwhile_issue_should_work() {
 		assert_noop!(Salp::redeem(Some(BRUCE).into(), 3_000, 50), Error::<Test>::InvalidParaId);
 	});
 }
+
+#[test]
+fn edit_fund_should_work() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
+		assert_ok!(Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
+
+		assert_ok!(Salp::edit(
+			Some(ALICE).into(),
+			3_000,
+			1_000,
+			150,
+			2,
+			SlotLength::get() + 1,
+			Some(FundStatus::Ongoing)
+		));
+		let fund = Salp::funds(3_000).unwrap();
+		assert_eq!(fund.raised, 150);
+		assert_eq!(fund.status, FundStatus::Ongoing);
+	});
+}
