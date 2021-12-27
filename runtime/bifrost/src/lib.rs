@@ -1987,34 +1987,6 @@ impl_runtime_apis! {
 	}
 }
 
-pub struct CustomOnRuntimeUpgrade;
-impl OnRuntimeUpgrade for CustomOnRuntimeUpgrade {
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `pre_upgrade`...");
-		Ok(())
-	}
-
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-		Salp::set_multisig_account(ConfirmMuitiSigAccount::get());
-		SalpLite::set_multisig_account(PolkaConfirmAsMultiSig::get());
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-		RocksDbWeight::get().writes(1)
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		let mut account = Salp::multisig_confirm_account();
-		log::info!("after salp migration multisig account as {:?}", account);
-		account = SalpLite::multisig_confirm_account();
-		log::info!("after salp-lite migration multisig account as {:?}", account);
-		Ok(())
-	}
-}
-
 struct CheckInherents;
 
 impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
