@@ -503,6 +503,8 @@ pub mod pallet {
 		PoolChargedAlready,
 		/// The number of pending-unlocks reaches the limit;
 		ExceedMaximumUnlock,
+		/// Not have pending-unlocks;
+		NoPendingUnlocks,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
 	}
@@ -541,8 +543,15 @@ pub mod pallet {
 		UserDeposited(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T, I>, AccountIdOf<T>),
 		/// User redeemed tokens from a liquidity-mining
 		///
-		/// [pool_id, pool_type, trading_pair, amount_redeemed, user]
-		UserRedeemed(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T, I>, AccountIdOf<T>),
+		/// [pool_id, pool_type, trading_pair, amount_redeemed, unlock_height, user]
+		UserRedeemed(
+			PoolId,
+			PoolType,
+			(CurrencyId, CurrencyId),
+			BalanceOf<T, I>,
+			BlockNumberFor<T>,
+			AccountIdOf<T>,
+		),
 		/// User withdrew the rewards whose deserved from a liquidity-pool
 		///
 		/// [pool_id, pool_type, trading_pair, rewards, user]
@@ -553,6 +562,10 @@ pub mod pallet {
 			Vec<(CurrencyId, BalanceOf<T, I>)>,
 			AccountIdOf<T>,
 		),
+		/// User unlock tokens from a liquidity-mining
+		///
+		/// [pool_id, pool_type, trading_pair, amount_redeemed, user]
+		UserUnlocked(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T, I>, AccountIdOf<T>),
 	}
 
 	#[pallet::storage]
@@ -1111,16 +1124,57 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// #[transactional]
-		// #[pallet::weight(1_000)]
-		// pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
-		// 	// TODO: If `redeem_limit_time == 0 || unlock_limit_nums == 0`, unlock all;
-		//
-		// 	// TODO: Check & Unlock One By One;
-		//
-		// 	todo!()
-		// }
-		//
+		#[transactional]
+		#[pallet::weight(1_000)]
+		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+			let user = ensure_signed(origin)?;
+
+			let pool: PoolInfo<_, _, _> = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+
+			ensure!(pool.r#type != PoolType::EBFarming, Error::<T, I>::InvalidPoolType);
+
+			let mut deposit_data: DepositData<_, _> =
+				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T, I>::NoDepositOfUser)?;
+
+			let pending_len = deposit_data.pending_unlocks.len();
+
+			ensure!(pending_len > 0, Error::<T, I>::NoPendingUnlocks);
+
+			let unlock_all = pool.redeem_limit_time == Zero::zero() || pool.unlock_limit_nums == 0;
+
+			let cur_height = frame_system::Pallet::<T>::block_number();
+
+			let mut total_unlock_amount: BalanceOf<T, I> = Zero::zero();
+			for _ in 0..pending_len {
+				if let Some((unlock_height, unlock_amount)) =
+					deposit_data.pending_unlocks.pop_front()
+				{
+					if unlock_all || cur_height >= unlock_height {
+						// TODO: DO TRANSFER!
+						total_unlock_amount = total_unlock_amount.saturating_add(unlock_amount);
+					} else {
+						deposit_data.pending_unlocks.push_back((unlock_height, unlock_amount));
+					}
+				}
+			}
+
+			match deposit_data.deposit.saturated_into() {
+				0u128 if deposit_data.pending_unlocks.len() == 0 =>
+					TotalDepositData::<T, I>::remove(pid, user.clone()),
+				_ => TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data),
+			}
+
+			Self::deposit_event(Event::UserUnlocked(
+				pid,
+				pool.r#type,
+				pool.trading_pair,
+				total_unlock_amount,
+				user,
+			));
+
+			Ok(().into())
+		}
+
 		// #[transactional]
 		// #[pallet::weight(1_000)]
 		// pub fn cancel_unlock(
@@ -1130,7 +1184,7 @@ pub mod pallet {
 		// ) -> DispatchResultWithPostInfo {
 		// 	// TODO: Too Difficult
 		//
-		// 	todo!()
+		// 	Ok(().into())
 		// }
 	}
 
@@ -1259,15 +1313,22 @@ pub mod pallet {
 			deposit_data.deposit = deposit_data.deposit.saturating_sub(try_redeem);
 
 			// To unlock the deposit
-			let is_immediate = pool.redeem_limit_time == Zero::zero() ||
+			let cur_height = frame_system::Pallet::<T>::block_number();
+			let unlock_height = if pool.redeem_limit_time == Zero::zero() ||
 				pool.unlock_limit_nums == 0 ||
-				pool.r#type == PoolType::EBFarming;
+				pool.r#type == PoolType::EBFarming
+			{
+				cur_height
+			} else {
+				cur_height.saturating_add(pool.redeem_limit_time)
+			};
+
 			ensure!(
-				is_immediate || pool.unlock_limit_nums > deposit_data.pending_unlocks.len() as u32,
+				cur_height == unlock_height ||
+					pool.unlock_limit_nums > deposit_data.pending_unlocks.len() as u32,
 				Error::<T, I>::ExceedMaximumUnlock
 			);
-			let limit_height =
-				pool.redeem_limit_time.saturating_add(frame_system::Pallet::<T>::block_number());
+
 			match pool.r#type {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
@@ -1276,11 +1337,11 @@ pub mod pallet {
 						T::MultiCurrency::total_balance(lpt, &user).saturating_add(try_redeem);
 
 					if lpt_total >= lpt_ed {
-						if is_immediate {
+						if cur_height == unlock_height {
 							T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 						} else {
-							deposit_data.pending_unlocks.push_back((limit_height, try_redeem));
+							deposit_data.pending_unlocks.push_back((unlock_height, try_redeem));
 						}
 					}
 				},
@@ -1296,13 +1357,13 @@ pub mod pallet {
 						T::MultiCurrency::total_balance(token_b, &user).saturating_add(try_redeem);
 
 					if ta_total >= ta_ed && tb_total >= tb_ed {
-						if is_immediate {
+						if cur_height == unlock_height {
 							T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 							T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 						} else {
-							deposit_data.pending_unlocks.push_back((limit_height, try_redeem));
+							deposit_data.pending_unlocks.push_back((unlock_height, try_redeem));
 						}
 					}
 				},
@@ -1314,11 +1375,11 @@ pub mod pallet {
 						T::MultiCurrency::total_balance(token, &user).saturating_add(try_redeem);
 
 					if token_total >= token_ed {
-						if is_immediate {
+						if cur_height == unlock_height {
 							T::MultiCurrency::transfer(token, &pool.keeper, &user, try_redeem)
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 						} else {
-							deposit_data.pending_unlocks.push_back((limit_height, try_redeem));
+							deposit_data.pending_unlocks.push_back((unlock_height, try_redeem));
 						}
 					}
 				},
@@ -1336,7 +1397,14 @@ pub mod pallet {
 			TotalPoolInfos::<T, I>::insert(pid, pool);
 			TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
 
-			Self::deposit_event(Event::UserRedeemed(pid, r#type, trading_pair, try_redeem, user));
+			Self::deposit_event(Event::UserRedeemed(
+				pid,
+				r#type,
+				trading_pair,
+				try_redeem,
+				unlock_height,
+				user,
+			));
 
 			Ok(().into())
 		}
