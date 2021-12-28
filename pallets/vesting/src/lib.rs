@@ -1026,9 +1026,9 @@ mod tests {
 			assert_eq!(Vesting::vesting(&1), Some(change1_user1_vesting_schedule)); // Account 1 has a vesting schedule
 			assert_eq!(Vesting::vesting_balance(&1), Some(256 * 5 - 128 * 5 - 256));
 
-			assert_noop!(
-				Vesting::set_vesting_per_block(Origin::root(), 1, 256),
-				Error::<Test>::SamePerBlock
+			assert_eq!(
+				Vesting::set_vesting_per_block(RawOrigin::Root.into(), 1, 256),
+				Err(DispatchError::Module { index: 2, error: 3, message: Some("SamePerBlock") })
 			);
 
 			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 10));
@@ -1048,9 +1048,9 @@ mod tests {
 			System::set_block_number(46);
 			assert_eq!(System::block_number(), 46);
 
-			assert_noop!(
+			assert_eq!(
 				Vesting::set_vesting_per_block(Origin::root(), 1, 20),
-				Error::<Test>::NotVesting,
+				Err(DispatchError::Module { index: 2, error: 0, message: Some("NotVesting") })
 			);
 		});
 	}
