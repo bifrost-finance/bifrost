@@ -15,6 +15,8 @@ frame-support = { git = "https://github.com/paritytech/substrate", branch = "pol
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false, optional = true }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false }
+log = { version = "0.4.14", default-features = false }
 
 [dev-dependencies]
 orml-tokens = { version = "0.4.1-dev" }
@@ -32,6 +34,7 @@ std = [
     "frame-support/std",
     "node-primitives/std",
     "orml-traits/std",
+    "log/std",
 ]
 
 runtime-benchmarks = [
