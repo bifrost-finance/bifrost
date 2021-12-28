@@ -259,13 +259,6 @@ pub mod pallet {
 		(Permill::zero(), Permill::zero())
 	}
 
-	// #[pallet::hooks]
-	// impl<T: Config<I>, I: 'static> Hooks<BlockNumberFor<T>> for Pallet<T, I> {
-	// 	fn on_runtime_upgrade() -> Weight {
-	// 		migration::migrate_orders::<T, I>()
-	// 	}
-	// }
-
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
 
