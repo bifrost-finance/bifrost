@@ -216,8 +216,6 @@ fn create_pool_with_wrong_origin_should_fail() {
 					DAYS,
 					1_000 * UNIT,
 					0,
-					Zero::zero(),
-					0,
 				),
 				DispatchError::BadOrigin
 			);
@@ -2106,8 +2104,6 @@ fn create_eb_farming_pool_should_work() {
 			DAYS,
 			1_000 * UNIT,
 			0,
-			Zero::zero(),
-			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -2135,8 +2131,6 @@ fn deposit_to_eb_farming_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0,
-			Zero::zero(),
 			0,
 		));
 
@@ -2188,8 +2182,6 @@ fn redeem_from_eb_farming_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0,
-			Zero::zero(),
 			0,
 		));
 
@@ -2258,8 +2250,6 @@ fn claim_from_eb_farming_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0,
-			Zero::zero(),
 			0,
 		));
 
@@ -2680,8 +2670,6 @@ fn discard_reward_lower_than_ed_should_work() {
 			DAYS,
 			1_000_000,
 			0,
-			Zero::zero(),
-			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2959,8 +2947,6 @@ fn fuck_bug() {
 			23,
 			UNIT,
 			0,
-			Zero::zero(),
-			0,
 		));
 
 		run_to_block(135);
@@ -2991,8 +2977,6 @@ fn fuck_bug() {
 			vec![].try_into().unwrap(),
 			23,
 			UNIT,
-			0,
-			Zero::zero(),
 			0,
 		));
 

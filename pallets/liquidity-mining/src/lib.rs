@@ -501,6 +501,8 @@ pub mod pallet {
 		TooShortBetweenTwoClaim,
 		/// The pool has been charged already
 		PoolChargedAlready,
+		/// The number of pending-unlocks reaches the limit;
+		ExceedMaximumUnlock,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
 	}
@@ -725,8 +727,6 @@ pub mod pallet {
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T, I>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
-			#[pallet::compact] redeem_limit_time: BlockNumberFor<T>,
-			#[pallet::compact] unlock_limit_nums: u32,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -742,8 +742,8 @@ pub mod pallet {
 				duration,
 				min_deposit_to_start,
 				after_block_to_start,
-				redeem_limit_time,
-				unlock_limit_nums,
+				Zero::zero(),
+				0,
 			)
 		}
 
@@ -863,6 +863,8 @@ pub mod pallet {
 		}
 
 		/// Edit the parameters of a liquidity-pool.
+		///
+		/// __NOTE__: Forbid editing the liquidity-pool which type is `PoolType::EBFarming`;
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -877,6 +879,8 @@ pub mod pallet {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
 			let pool: PoolInfo<_, _, _> = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+
+			ensure!(pool.r#type != PoolType::EBFarming, Error::<T, I>::InvalidPoolType);
 
 			let pool_edited = PoolInfo { redeem_limit_time, unlock_limit_nums, ..pool };
 			TotalPoolInfos::<T, I>::insert(pid, pool_edited);
@@ -1106,6 +1110,28 @@ pub mod pallet {
 
 			Ok(().into())
 		}
+
+		// #[transactional]
+		// #[pallet::weight(1_000)]
+		// pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
+		// 	// TODO: If `redeem_limit_time == 0 || unlock_limit_nums == 0`, unlock all;
+		//
+		// 	// TODO: Check & Unlock One By One;
+		//
+		// 	todo!()
+		// }
+		//
+		// #[transactional]
+		// #[pallet::weight(1_000)]
+		// pub fn cancel_unlock(
+		// 	origin: OriginFor<T>,
+		// 	pid: PoolId,
+		// 	index: u32,
+		// ) -> DispatchResultWithPostInfo {
+		// 	// TODO: Too Difficult
+		//
+		// 	todo!()
+		// }
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
@@ -1190,7 +1216,7 @@ pub mod pallet {
 			pid: PoolId,
 			value: Option<BalanceOf<T, I>>,
 		) -> DispatchResultWithPostInfo {
-			let mut pool = Self::pool(pid)
+			let mut pool: PoolInfo<_, _, _> = Self::pool(pid)
 				.ok_or(Error::<T, I>::InvalidPoolId)?
 				.try_retire::<T, I>()
 				.try_update::<T, I>();
@@ -1200,7 +1226,7 @@ pub mod pallet {
 				Error::<T, I>::InvalidPoolState
 			);
 
-			let mut deposit_data =
+			let mut deposit_data: DepositData<_, _> =
 				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T, I>::NoDepositOfUser)?;
 
 			if pool.update_b != deposit_data.update_b {
@@ -1233,6 +1259,15 @@ pub mod pallet {
 			deposit_data.deposit = deposit_data.deposit.saturating_sub(try_redeem);
 
 			// To unlock the deposit
+			let is_immediate = pool.redeem_limit_time == Zero::zero() ||
+				pool.unlock_limit_nums == 0 ||
+				pool.r#type == PoolType::EBFarming;
+			ensure!(
+				is_immediate || pool.unlock_limit_nums > deposit_data.pending_unlocks.len() as u32,
+				Error::<T, I>::ExceedMaximumUnlock
+			);
+			let limit_height =
+				pool.redeem_limit_time.saturating_add(frame_system::Pallet::<T>::block_number());
 			match pool.r#type {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
@@ -1241,8 +1276,12 @@ pub mod pallet {
 						T::MultiCurrency::total_balance(lpt, &user).saturating_add(try_redeem);
 
 					if lpt_total >= lpt_ed {
-						T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
-							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+						if is_immediate {
+							T::MultiCurrency::transfer(lpt, &pool.keeper, &user, try_redeem)
+								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+						} else {
+							deposit_data.pending_unlocks.push_back((limit_height, try_redeem));
+						}
 					}
 				},
 				PoolType::Farming => {
@@ -1256,13 +1295,15 @@ pub mod pallet {
 					let tb_total =
 						T::MultiCurrency::total_balance(token_b, &user).saturating_add(try_redeem);
 
-					if ta_total > ta_ed {
-						T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
-							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
-					}
-					if tb_total > tb_ed {
-						T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
-							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+					if ta_total >= ta_ed && tb_total >= tb_ed {
+						if is_immediate {
+							T::MultiCurrency::transfer(token_a, &pool.keeper, &user, try_redeem)
+								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+							T::MultiCurrency::transfer(token_b, &pool.keeper, &user, try_redeem)
+								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+						} else {
+							deposit_data.pending_unlocks.push_back((limit_height, try_redeem));
+						}
 					}
 				},
 				PoolType::EBFarming => {},
@@ -1273,8 +1314,12 @@ pub mod pallet {
 						T::MultiCurrency::total_balance(token, &user).saturating_add(try_redeem);
 
 					if token_total >= token_ed {
-						T::MultiCurrency::transfer(token, &pool.keeper, &user, try_redeem)
-							.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+						if is_immediate {
+							T::MultiCurrency::transfer(token, &pool.keeper, &user, try_redeem)
+								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
+						} else {
+							deposit_data.pending_unlocks.push_back((limit_height, try_redeem));
+						}
 					}
 				},
 			};
@@ -1287,15 +1332,9 @@ pub mod pallet {
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			match pool.deposit.saturated_into() {
-				0u128 => TotalPoolInfos::<T, I>::remove(pid),
-				_ => TotalPoolInfos::<T, I>::insert(pid, pool),
-			}
-
-			match deposit_data.deposit.saturated_into() {
-				0u128 => TotalDepositData::<T, I>::remove(pid, user.clone()),
-				_ => TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data),
-			}
+			// __NOTE__: Deletion will occur a bug if there are some pending-unlocks;
+			TotalPoolInfos::<T, I>::insert(pid, pool);
+			TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
 
 			Self::deposit_event(Event::UserRedeemed(pid, r#type, trading_pair, try_redeem, user));
 
