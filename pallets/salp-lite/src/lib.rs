@@ -689,6 +689,46 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// Edit the configuration for an in-progress crowdloan.
+		///
+		/// Can only be called by Root origin.
+		#[pallet::weight((
+			0,
+			DispatchClass::Normal,
+			Pays::No
+			))]
+		pub fn edit(
+			origin: OriginFor<T>,
+			#[pallet::compact] index: ParaId,
+			#[pallet::compact] cap: BalanceOf<T>,
+			#[pallet::compact] raised: BalanceOf<T>,
+			#[pallet::compact] first_slot: LeasePeriod,
+			#[pallet::compact] last_slot: LeasePeriod,
+			fund_status: Option<FundStatus>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
+
+			let status = match fund_status {
+				None => fund.status,
+				Some(status) => status,
+			};
+			Funds::<T>::insert(
+				index,
+				Some(FundInfo {
+					cap,
+					first_slot,
+					last_slot,
+					status,
+					raised,
+					trie_index: fund.trie_index,
+				}),
+			);
+			Self::deposit_event(Event::<T>::Edited(index));
+			Ok(())
+		}
 	}
 
 	#[pallet::hooks]

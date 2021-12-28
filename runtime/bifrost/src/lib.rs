@@ -292,6 +292,7 @@ parameter_types! {
 	pub const LiquidityMiningDOTPalletId: PalletId = PalletId(*b"bf/lmdot");
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
+	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 }
 
 impl frame_system::Config for Runtime {
@@ -1155,6 +1156,7 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			AccountIdConversion::<AccountId>::into_account(&BifrostCrowdloanId::get()).eq(a) ||
 			AccountIdConversion::<AccountId>::into_account(&BifrostSalpLiteCrowdloanId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
+			.eq(a) || AccountIdConversion::<AccountId>::into_account(&VsbondAuctionPalletId::get())
 			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
 	}
@@ -1431,6 +1433,10 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type MinimumAmount = MinimumSupply;
 	type MultiCurrency = Currencies;
 	type WeightInfo = ();
+	type PalletId = VsbondAuctionPalletId;
+	type TreasuryAccount = BifrostTreasuryAccount;
+	type ControlOrigin =
+		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 }
 
 parameter_types! {
@@ -1735,7 +1741,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	(),
+	VsbondAuctionOnRuntimeUpgrade<Runtime, ()>,
 >;
 
 impl_runtime_apis! {
@@ -2015,6 +2021,52 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
+	}
+}
+
+pub struct VsbondAuctionOnRuntimeUpgrade<T, I>(PhantomData<(T, I)>);
+impl<T: bifrost_vsbond_auction::Config<I>, I: 'static> OnRuntimeUpgrade
+	for VsbondAuctionOnRuntimeUpgrade<T, I>
+{
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `pre_upgrade`...");
+
+		// check the on-going order number
+		let order_iter = bifrost_vsbond_auction::TotalOrderInfos::<T, I>::iter();
+		let order_count = order_iter.count();
+		log::info!("Old order count is {:?}", order_count);
+
+		Ok(())
+	}
+
+	fn on_runtime_upgrade() -> Weight {
+		log::info!("Bifrost `on_runtime_upgrade`...");
+
+		let weight = bifrost_vsbond_auction::migration::migrate_orders::<Runtime, _>();
+
+		log::info!("Bifrost `on_runtime_upgrade finished`");
+
+		weight
+
+		// RocksDbWeight::get().writes(1)
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		#[allow(unused_imports)]
+		use frame_support::{migration, Identity};
+		log::info!("Bifrost `post_upgrade`...");
+
+		// check the post-upgrader remaining order number
+		let order_iter = bifrost_vsbond_auction::TotalOrderInfos::<T, I>::iter();
+		let order_count = order_iter.count();
+
+		log::info!("New order count is {:?}", order_count);
+
+		Ok(())
 	}
 }
 

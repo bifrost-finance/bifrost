@@ -65,4 +65,9 @@ impl<T: frame_system::Config> bifrost_vsbond_auction::WeightInfo for WeightInfo<
 			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
+	fn set_buy_and_sell_transaction_fee_rate() -> Weight {
+		(179_327_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(6 as Weight))
+			.saturating_add(T::DbWeight::get().writes(5 as Weight))
+	}
 }
