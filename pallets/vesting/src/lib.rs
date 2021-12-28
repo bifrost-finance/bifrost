@@ -212,6 +212,8 @@ pub mod pallet {
 		SamePerBlock,
 		/// VestingStartAt storage is not set
 		VestingStartAtNotSet,
+		/// Wrong amount
+		WrongLockedAmount,
 	}
 
 	#[pallet::hooks]
@@ -417,24 +419,26 @@ pub mod pallet {
 
 			ensure!(vesting.per_block != per_block, Error::<T>::SamePerBlock);
 
-			let chain_start_block =
+			let absolute_start =
 				VestingStartAt::<T>::get().ok_or(Error::<T>::VestingStartAtNotSet)?;
 			let now = <frame_system::Pallet<T>>::block_number();
 
-			let origin_start_at = chain_start_block.saturating_add(vesting.starting_block);
+			let old_start_at = absolute_start.saturating_add(vesting.starting_block);
 			let remained_vesting =
-				vesting.locked_at::<T::BlockNumberToBalance>(now, Some(origin_start_at));
+				vesting.locked_at::<T::BlockNumberToBalance>(now, Some(old_start_at));
 
-			let mut new_start_block = vesting.starting_block;
-			if now > new_start_block {
-				new_start_block = now - chain_start_block;
+			ensure!(remained_vesting <= vesting.locked, Error::<T>::WrongLockedAmount);
+
+			let mut new_start_offset = vesting.starting_block;
+			if now > old_start_at {
+				new_start_offset = now - absolute_start;
 			}
 
 			Vesting::<T>::mutate_exists(&target, |info| {
 				if let Some(ref mut vesting_info) = info {
 					vesting_info.locked = remained_vesting;
 					vesting_info.per_block = per_block;
-					vesting_info.starting_block = new_start_block;
+					vesting_info.starting_block = new_start_offset;
 				}
 			});
 
@@ -1057,6 +1061,53 @@ mod tests {
 				Vesting::set_vesting_per_block(Origin::root(), 1, 20),
 				Err(DispatchError::Module { index: 2, error: 0, message: Some("NotVesting") })
 			);
+		});
+	}
+
+	#[test]
+	fn set_vesting_per_block_before_and_after_original_start_block_should_work() {
+		ExtBuilder::default().existential_deposit(256).build().execute_with(|| {
+			assert_ok!(Vesting::init_vesting_start_at(Origin::root(), 10));
+
+			let user1_free_balance = Balances::free_balance(&1);
+			assert_eq!(user1_free_balance, 256 * 10); // Account 1 has free balance
+			let user1_vesting_schedule = VestingInfo {
+				locked: 256 * 5,
+				per_block: 128, // Vesting over 10 blocks
+				starting_block: 0,
+			};
+
+			assert_eq!(Vesting::vesting(&1), Some(user1_vesting_schedule)); // Account 1 has a vesting schedule
+
+			// Account 1 has only 128 units vested from their illiquid 256 * 5 units at block 1
+			assert_eq!(Vesting::vesting_balance(&1), Some(256 * 5));
+
+			System::set_block_number(6);
+			assert_eq!(System::block_number(), 6);
+
+			// Change the per_block of account 1 to  256
+			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 256));
+
+			let user2_vesting_schedule = VestingInfo {
+				locked: 256 * 5,
+				per_block: 256, // Vesting over 10 blocks
+				starting_block: 0,
+			};
+
+			assert_eq!(Vesting::vesting(&1), Some(user2_vesting_schedule)); // Account 1 has a vesting schedule
+
+			System::set_block_number(12);
+			assert_eq!(System::block_number(), 12);
+
+			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 128));
+
+			let user3_vesting_schedule = VestingInfo {
+				locked: 256 * 5 - 256 * 2,
+				per_block: 128, // Vesting over 10 blocks
+				starting_block: 2,
+			};
+
+			assert_eq!(Vesting::vesting(&1), Some(user3_vesting_schedule)); // Account 1 has a vesting schedule
 		});
 	}
 }
