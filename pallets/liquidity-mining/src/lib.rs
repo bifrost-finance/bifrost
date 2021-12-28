@@ -528,6 +528,11 @@ pub mod pallet {
 		///
 		/// [pool_id, pool_type, trading_pair]
 		PoolRetiredForcefully(PoolId, PoolType, (CurrencyId, CurrencyId)),
+		/// The liquidity-pool was edited
+		///
+		/// [pool_id, old_redeem_limit_time, old_unlock_limit_nums, new_redeem_limit_time,
+		/// new_unlock_limit_nums]
+		PoolEdited(PoolId, BlockNumberFor<T>, u32, BlockNumberFor<T>, u32),
 		/// User deposited tokens to a liquidity-pool
 		///
 		/// [pool_id, pool_type, trading_pair, amount_deposited, user]
@@ -602,6 +607,8 @@ pub mod pallet {
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T, I>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] redeem_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] unlock_limit_nums: u32,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -615,6 +622,8 @@ pub mod pallet {
 				duration,
 				min_deposit_to_start,
 				after_block_to_start,
+				redeem_limit_time,
+				unlock_limit_nums,
 			)
 		}
 
@@ -633,6 +642,8 @@ pub mod pallet {
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T, I>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] redeem_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] unlock_limit_nums: u32,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -653,6 +664,8 @@ pub mod pallet {
 				duration,
 				min_deposit_to_start,
 				after_block_to_start,
+				redeem_limit_time,
+				unlock_limit_nums,
 			)
 		}
 
@@ -673,6 +686,8 @@ pub mod pallet {
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T, I>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] redeem_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] unlock_limit_nums: u32,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -688,6 +703,8 @@ pub mod pallet {
 				duration,
 				min_deposit_to_start,
 				after_block_to_start,
+				redeem_limit_time,
+				unlock_limit_nums,
 			)
 		}
 
@@ -708,6 +725,8 @@ pub mod pallet {
 			#[pallet::compact] duration: BlockNumberFor<T>,
 			#[pallet::compact] min_deposit_to_start: BalanceOf<T, I>,
 			#[pallet::compact] after_block_to_start: BlockNumberFor<T>,
+			#[pallet::compact] redeem_limit_time: BlockNumberFor<T>,
+			#[pallet::compact] unlock_limit_nums: u32,
 		) -> DispatchResultWithPostInfo {
 			let _ = T::ControlOrigin::ensure_origin(origin)?;
 
@@ -723,6 +742,8 @@ pub mod pallet {
 				duration,
 				min_deposit_to_start,
 				after_block_to_start,
+				redeem_limit_time,
+				unlock_limit_nums,
 			)
 		}
 
@@ -837,6 +858,36 @@ pub mod pallet {
 			}
 
 			Self::deposit_event(Event::PoolRetiredForcefully(pid, r#type, trading_pair));
+
+			Ok(().into())
+		}
+
+		/// Edit the parameters of a liquidity-pool.
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn edit_pool(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			redeem_limit_time: BlockNumberFor<T>,
+			unlock_limit_nums: u32,
+		) -> DispatchResultWithPostInfo {
+			let _ = T::ControlOrigin::ensure_origin(origin)?;
+
+			let pool: PoolInfo<_, _, _> = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+
+			let pool_edited = PoolInfo { redeem_limit_time, unlock_limit_nums, ..pool };
+			TotalPoolInfos::<T, I>::insert(pid, pool_edited);
+
+			Self::deposit_event(Event::PoolEdited(
+				pid,
+				pool.redeem_limit_time,
+				pool.unlock_limit_nums,
+				redeem_limit_time,
+				unlock_limit_nums,
+			));
 
 			Ok(().into())
 		}
@@ -1066,6 +1117,8 @@ pub mod pallet {
 			duration: BlockNumberFor<T>,
 			min_deposit_to_start: BalanceOf<T, I>,
 			after_block_to_start: BlockNumberFor<T>,
+			redeem_limit_time: BlockNumberFor<T>,
+			unlock_limit_nums: u32,
 		) -> DispatchResultWithPostInfo {
 			// Check the trading-pair
 			if r#type != PoolType::SingleToken {
@@ -1121,8 +1174,8 @@ pub mod pallet {
 				block_startup: None,
 				block_retired: None,
 
-				redeem_limit_time: Zero::zero(),
-				unlock_limit_nums: 0,
+				redeem_limit_time,
+				unlock_limit_nums,
 			};
 
 			TotalPoolInfos::<T, I>::insert(pool_id, mining_pool);
