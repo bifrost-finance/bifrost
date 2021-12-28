@@ -425,11 +425,16 @@ pub mod pallet {
 			let remained_vesting =
 				vesting.locked_at::<T::BlockNumberToBalance>(now, Some(origin_start_at));
 
+			let mut new_start_block = vesting.starting_block;
+			if now > new_start_block {
+				new_start_block = now - chain_start_block;
+			}
+
 			Vesting::<T>::mutate_exists(&target, |info| {
 				if let Some(ref mut vesting_info) = info {
 					vesting_info.locked = remained_vesting;
 					vesting_info.per_block = per_block;
-					vesting_info.starting_block = now - chain_start_block;
+					vesting_info.starting_block = new_start_block;
 				}
 			});
 
