@@ -1406,7 +1406,6 @@ impl bifrost_vsbond_auction::Config for Runtime {
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin =
 		EnsureOneOf<AccountId, MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type ExistentialDeposits = ExistentialDeposits;
 }
 
 parameter_types! {

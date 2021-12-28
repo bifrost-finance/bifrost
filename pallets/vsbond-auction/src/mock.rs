@@ -134,7 +134,6 @@ impl vsbond_auction::Config for Test {
 	type PalletId = VsbondAuctionPalletId;
 	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
-	type ExistentialDeposits = ExistentialDeposits;
 }
 
 // mockup runtime

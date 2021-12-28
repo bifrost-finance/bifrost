@@ -40,7 +40,7 @@ use frame_support::{
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
-use orml_traits::{GetByKey, MultiCurrency, MultiReservableCurrency};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_arithmetic::per_things::Permill;
@@ -151,13 +151,6 @@ pub mod pallet {
 
 		/// The only origin that can modify transaction fee rate
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
-
-		/// The minimum amount required to keep an account.
-		/// It's deprecated to config 0 as ED for any currency_id,
-		/// zero ED will retain account even if its total is zero.
-		/// Since accounts of orml_tokens are also used as providers of
-		/// System::AccountInfo, zero ED may cause some problems.
-		type ExistentialDeposits: GetByKey<CurrencyId, BalanceOf<Self, I>>;
 	}
 
 	#[pallet::error]
@@ -516,7 +509,7 @@ pub mod pallet {
 			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
 			let mut account_to_send = new_order_info.owner.clone();
-			let ed = T::ExistentialDeposits::get(&token_to_pay);
+			let ed = T::MultiCurrency::minimum_balance(token_to_pay.clone());
 
 			// deal with account exisitence error we might encounter
 			if amount_to_pay < ed {
@@ -545,7 +538,7 @@ pub mod pallet {
 			)?;
 
 			let mut account_to_send = order_taker.clone();
-			let ed = T::ExistentialDeposits::get(&token_to_get);
+			let ed = T::MultiCurrency::minimum_balance(token_to_get.clone());
 
 			// deal with account exisitence error we might encounter
 			if amount_to_get < ed {
@@ -672,7 +665,7 @@ pub mod pallet {
 			};
 
 			let mut account_to_return = order_info.owner.clone();
-			let ed = T::ExistentialDeposits::get(&token_to_return);
+			let ed = T::MultiCurrency::minimum_balance(token_to_return.clone());
 
 			// deal with account exisitence error we might encounter
 			if amount_to_return < ed {
