@@ -21,7 +21,7 @@ use std::convert::TryInto;
 use frame_support::{
 	assert_noop, assert_ok,
 	dispatch::DispatchError,
-	sp_runtime::{FixedPointNumber, FixedU128},
+	sp_runtime::{traits::Zero, FixedPointNumber, FixedU128},
 	traits::Hooks,
 };
 use frame_system::pallet_prelude::OriginFor;
@@ -55,7 +55,9 @@ fn create_farming_pool_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -82,7 +84,9 @@ fn create_mining_pool_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -114,6 +118,8 @@ fn create_mining_pool_with_wrong_currency_should_fail() {
 				DAYS,
 				1_000 * UNIT,
 				0,
+				Zero::zero(),
+				0,
 			),
 			Error::<T>::InvalidTradingPair,
 		);
@@ -129,6 +135,8 @@ fn create_mining_pool_with_wrong_currency_should_fail() {
 				vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 				DAYS,
 				1_000 * UNIT,
+				0,
+				Zero::zero(),
 				0,
 			),
 			Error::<T>::InvalidTradingPair,
@@ -148,7 +156,9 @@ fn increase_pid_when_create_pool_should_work() {
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
-				0
+				0,
+				Zero::zero(),
+				0,
 			));
 			let pool = LM::pool(pid).unwrap();
 			assert_eq!(pool.pool_id, pid);
@@ -171,7 +181,9 @@ fn create_pool_with_wrong_origin_should_fail() {
 					vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 					DAYS,
 					1_000 * UNIT,
-					0
+					0,
+					Zero::zero(),
+					0,
 				),
 				DispatchError::BadOrigin,
 			);
@@ -186,7 +198,9 @@ fn create_pool_with_wrong_origin_should_fail() {
 					vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 					DAYS,
 					1_000 * UNIT,
-					0
+					0,
+					Zero::zero(),
+					0,
 				),
 				DispatchError::BadOrigin
 			);
@@ -201,7 +215,9 @@ fn create_pool_with_wrong_origin_should_fail() {
 					vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 					DAYS,
 					1_000 * UNIT,
-					0
+					0,
+					Zero::zero(),
+					0,
 				),
 				DispatchError::BadOrigin
 			);
@@ -220,7 +236,9 @@ fn create_pool_with_duplicate_trading_pair_should_fail() {
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
-				0
+				0,
+				Zero::zero(),
+				0,
 			),
 			Error::<T>::InvalidTradingPair,
 		);
@@ -238,7 +256,9 @@ fn create_pool_with_too_small_duration_should_fail() {
 				PoolType::Farming,
 				MinimumDuration::get() - 1,
 				1_000 * UNIT,
-				0
+				0,
+				Zero::zero(),
+				0,
 			),
 			Error::<T>::InvalidDuration,
 		);
@@ -256,7 +276,9 @@ fn create_pool_with_wrong_condition_should_fail() {
 				PoolType::Farming,
 				DAYS,
 				MinimumDeposit::get() - 1,
-				0
+				0,
+				Zero::zero(),
+				0,
 			),
 			Error::<T>::InvalidDepositLimit,
 		);
@@ -269,7 +291,9 @@ fn create_pool_with_wrong_condition_should_fail() {
 				PoolType::Farming,
 				DAYS,
 				MaximumDepositInPool::get() + 1,
-				0
+				0,
+				Zero::zero(),
+				0,
 			),
 			Error::<T>::InvalidDepositLimit,
 		);
@@ -287,7 +311,9 @@ fn create_pool_with_too_small_per_block_should_fail() {
 				PoolType::Farming,
 				(REWARD_AMOUNT + 1) as BlockNumber,
 				1_000 * UNIT,
-				0
+				0,
+				Zero::zero(),
+				0,
 			),
 			Error::<T>::InvalidRewardPerBlock,
 		);
@@ -305,6 +331,8 @@ fn create_pool_with_duplicate_reward_should_fail() {
 			DAYS,
 			1_000 * UNIT,
 			0,
+			Zero::zero(),
+			0,
 		);
 		assert_noop!(result, Error::<T>::DuplicateReward,);
 	});
@@ -320,7 +348,9 @@ fn charge_should_work() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -365,7 +395,9 @@ fn charge_with_wrong_origin_should_fail() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(
@@ -387,7 +419,9 @@ fn charge_with_wrong_state_should_fail() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
@@ -408,7 +442,9 @@ fn charge_exceed_maximum_should_fail() {
 				PoolType::Farming,
 				DAYS,
 				1_000 * UNIT,
-				0
+				0,
+				Zero::zero(),
+				0,
 			));
 
 			assert_ok!(LM::charge(Some(INVESTOR).into(), i));
@@ -425,7 +461,9 @@ fn charge_exceed_maximum_should_fail() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(
@@ -447,7 +485,9 @@ fn charge_without_enough_balance_should_fail() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -469,7 +509,9 @@ fn kill_pool_should_work() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -491,7 +533,9 @@ fn kill_pool_with_wrong_origin_should_fail() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(LM::kill_pool(Some(USER_1).into(), 0), DispatchError::BadOrigin);
@@ -510,7 +554,9 @@ fn kill_pool_with_wrong_state_should_fail() {
 			PoolType::Farming,
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_ok!(LM::charge(Some(INVESTOR).into(), 0));
@@ -532,7 +578,9 @@ fn deposit_to_mining_pool_charged_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -570,7 +618,9 @@ fn deposit_to_farming_pool_charged_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -614,7 +664,9 @@ fn startup_pool_meet_conditions_should_auto_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -643,7 +695,9 @@ fn deposit_to_pool_ongoing_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -683,7 +737,9 @@ fn deposit_to_pool_ongoing_with_init_deposit_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -734,7 +790,9 @@ fn double_deposit_to_pool_ongoing_in_diff_block_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -788,7 +846,9 @@ fn double_deposit_to_pool_ongoing_in_same_block_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -834,7 +894,9 @@ fn deposit_with_wrong_pid_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -856,7 +918,9 @@ fn deposit_with_wrong_state_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(LM::deposit(Some(USER_1).into(), 0, 1_000_000), Error::<T>::InvalidPoolState);
@@ -884,7 +948,9 @@ fn deposit_too_little_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -909,7 +975,9 @@ fn deposit_with_wrong_origin_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -932,7 +1000,9 @@ fn deposit_exceed_the_limit_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -956,7 +1026,9 @@ fn redeem_from_pool_ongoing_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let keeper = LM::pool(0).unwrap().keeper;
@@ -1069,7 +1141,9 @@ fn redeem_from_pool_retired_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1150,7 +1224,9 @@ fn double_redeem_from_pool_in_diff_state_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1271,7 +1347,9 @@ fn redeem_with_wrong_pid_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1295,7 +1373,9 @@ fn redeem_with_wrong_state_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
@@ -1318,7 +1398,9 @@ fn redeem_without_deposit_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
@@ -1345,7 +1427,9 @@ fn redeem_all_deposit_from_pool_ongoing_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(LM::redeem_all(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
@@ -1372,7 +1456,9 @@ fn redeem_some_more_than_user_can_redeem_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1401,7 +1487,9 @@ fn volunteer_to_redeem_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1467,7 +1555,9 @@ fn volunteer_to_redeem_with_wrong_pid_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1491,7 +1581,9 @@ fn volunteer_to_redeem_with_wrong_state_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(
@@ -1528,7 +1620,9 @@ fn claim_from_pool_ongoing_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1579,7 +1673,9 @@ fn claim_from_pool_retired_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1604,7 +1700,9 @@ fn claim_with_wrong_pid_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1629,7 +1727,9 @@ fn claim_with_wrong_origin_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1655,7 +1755,9 @@ fn claim_with_wrong_state_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(LM::claim(Some(USER_1).into(), 0), Error::<T>::InvalidPoolState);
@@ -1684,7 +1786,9 @@ fn claim_without_deposit_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1709,7 +1813,9 @@ fn double_claim_in_same_block_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1734,7 +1840,9 @@ fn force_retire_pool_charged_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1804,7 +1912,9 @@ fn force_retire_pool_charged_without_deposit_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1851,7 +1961,9 @@ fn force_retire_pool_ongoing_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1934,7 +2046,9 @@ fn force_retire_pool_with_wrong_origin_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -1956,7 +2070,9 @@ fn force_retire_pool_with_wrong_pool_state_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		assert_noop!(
@@ -1989,7 +2105,9 @@ fn create_eb_farming_pool_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -2017,7 +2135,9 @@ fn deposit_to_eb_farming_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2068,7 +2188,9 @@ fn redeem_from_eb_farming_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2136,7 +2258,9 @@ fn claim_from_eb_farming_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2200,7 +2324,9 @@ fn create_single_token_pool_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let pool = LM::pool(0).unwrap();
@@ -2226,7 +2352,9 @@ fn deposit_to_single_token_pool_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2265,7 +2393,9 @@ fn redeem_from_single_token_pool_ongoing_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		let keeper = LM::pool(0).unwrap().keeper;
@@ -2381,7 +2511,9 @@ fn redeem_from_single_token_pool_retired_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2462,7 +2594,9 @@ fn claim_from_single_token_pool_ongoing_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2513,7 +2647,9 @@ fn claim_from_single_tokenpool_retired_should_fail() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2543,7 +2679,9 @@ fn discard_reward_lower_than_ed_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1_000_000,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2602,7 +2740,9 @@ fn discard_deposit_lower_than_ed_should_work() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2659,7 +2799,9 @@ fn simple_integration_test() {
 			vec![(REWARD_2, REWARD_AMOUNT)].try_into().unwrap(),
 			DAYS,
 			1 * UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		// It is unable to call Collective::execute(..) which is private;
@@ -2816,7 +2958,9 @@ fn fuck_bug() {
 			vec![].try_into().unwrap(),
 			23,
 			UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		run_to_block(135);
@@ -2847,7 +2991,9 @@ fn fuck_bug() {
 			vec![].try_into().unwrap(),
 			23,
 			UNIT,
-			0
+			0,
+			Zero::zero(),
+			0,
 		));
 
 		run_to_block(235);
