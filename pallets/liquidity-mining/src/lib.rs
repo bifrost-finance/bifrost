@@ -509,6 +509,8 @@ pub mod pallet {
 		ExceedMaximumUnlock,
 		/// Not have pending-unlocks;
 		NoPendingUnlocks,
+		/// Input wrong index to `cancel_unlock`;
+		WrongIndex,
 		/// __NOTE__: ERROR HAPPEN
 		Unexpected,
 	}
@@ -566,10 +568,20 @@ pub mod pallet {
 			Vec<(CurrencyId, BalanceOf<T, I>)>,
 			AccountIdOf<T>,
 		),
-		/// User unlock tokens from a liquidity-mining
+		/// User unlock tokens from a liquidity-pool
 		///
 		/// [pool_id, pool_type, trading_pair, amount_redeemed, user]
 		UserUnlocked(PoolId, PoolType, (CurrencyId, CurrencyId), BalanceOf<T, I>, AccountIdOf<T>),
+		/// User cancels a pending-unlock from a liquidity-pool
+		///
+		/// [pool_id, pool_type, trading_pair, amount_canceled, user]
+		UserCancelUnlock(
+			PoolId,
+			PoolType,
+			(CurrencyId, CurrencyId),
+			BalanceOf<T, I>,
+			AccountIdOf<T>,
+		),
 	}
 
 	#[pallet::storage]
@@ -1128,13 +1140,23 @@ pub mod pallet {
 			Ok(().into())
 		}
 
+		/// Caller unlocks the locked deposit in the liquidity-pool.
+		///
+		/// __NOTE__: The extrinsic will retire the pool, which is reached the end of life.
+		///
+		/// The conditions to unlock:
+		/// - The pool type is not `PoolType::EBFarming`.
+		/// - There are pending-unlocks in the deposit_data.
+		/// - The current block-height exceeded the unlock-height;
 		#[transactional]
 		#[pallet::weight(1_000)]
 		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let mut pool: PoolInfo<_, _, _> =
-				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+			let mut pool: PoolInfo<_, _, _> = Self::pool(pid)
+				.ok_or(Error::<T, I>::InvalidPoolId)?
+				.try_retire::<T, I>()
+				.try_update::<T, I>();
 
 			ensure!(pool.r#type != PoolType::EBFarming, Error::<T, I>::InvalidPoolType);
 
@@ -1223,17 +1245,65 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		// #[transactional]
-		// #[pallet::weight(1_000)]
-		// pub fn cancel_unlock(
-		// 	origin: OriginFor<T>,
-		// 	pid: PoolId,
-		// 	index: u32,
-		// ) -> DispatchResultWithPostInfo {
-		// 	// TODO: Too Difficult
-		//
-		// 	Ok(().into())
-		// }
+		/// Caller cancels the specific pending-unlock.
+		///
+		/// __NOTE__: The extrinsic will retire the pool, which is reached the end of life.
+		///
+		/// The conditions to cancel:
+		/// - The pool state is `PoolState::Ongoing`.
+		/// - There is a `pending-unlock` that is specific by the parameter `index`;
+		#[transactional]
+		#[pallet::weight(1_000)]
+		pub fn cancel_unlock(
+			origin: OriginFor<T>,
+			pid: PoolId,
+			index: u32,
+		) -> DispatchResultWithPostInfo {
+			let user = ensure_signed(origin)?;
+
+			let mut pool: PoolInfo<_, _, _> = Self::pool(pid)
+				.ok_or(Error::<T, I>::InvalidPoolId)?
+				.try_retire::<T, I>()
+				.try_update::<T, I>();
+
+			ensure!(pool.state == PoolState::Ongoing, Error::<T, I>::InvalidPoolState);
+
+			let mut deposit_data: DepositData<_, _> =
+				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T, I>::NoDepositOfUser)?;
+
+			ensure!(deposit_data.pending_unlocks.len() as u32 > index, Error::<T, I>::WrongIndex);
+
+			// redeposit
+			if let Some((_, unlock_amount)) = deposit_data.pending_unlocks.remove(index as usize) {
+				if pool.update_b != deposit_data.update_b {
+					pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
+				}
+
+				deposit_data.deposit = deposit_data.deposit.saturating_add(unlock_amount);
+				pool.deposit = pool.deposit.saturating_add(unlock_amount);
+				ensure!(
+					pool.deposit <= T::MaximumDepositInPool::get(),
+					Error::<T, I>::ExceedMaximumDeposit
+				);
+
+				pool.pending_unlock_nums -= 1;
+
+				let r#type = pool.r#type;
+				let trading_pair = pool.trading_pair;
+
+				Self::post_process(pool, user.clone(), deposit_data)?;
+
+				Self::deposit_event(Event::UserCancelUnlock(
+					pid,
+					r#type,
+					trading_pair,
+					unlock_amount,
+					user,
+				));
+			}
+
+			Ok(().into())
+		}
 	}
 
 	impl<T: Config<I>, I: 'static> Pallet<T, I> {
