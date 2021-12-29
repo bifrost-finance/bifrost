@@ -270,6 +270,7 @@ create_currency_id! {
 		ZLK("Zenlink Network Token", 18) = 7,
 		PHA("Phala Native Token", 12) = 8,
 		USDT("Tether",6) = 9,
+		RMRK("RMRK Token",10) = 10,
 	}
 }
 

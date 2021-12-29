@@ -81,7 +81,7 @@ use bifrost_flexible_fee::{
 use bifrost_runtime_common::{
 	cent,
 	constants::{parachains, time::*},
-	dollar, micro, milli, millicent,
+	dollar, micro, microcent, milli, millicent,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -962,6 +962,14 @@ parameter_types! {
 		// PHA:KSM = 400:1
 		ksm_per_second() * 400
 	);
+	pub RmrkPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into()))
+		).into(),
+		// usdt:KSM = 10:1
+		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+	);
 }
 
 pub struct ToTreasury;
@@ -985,6 +993,7 @@ pub type Trader = (
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<UsdtPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
+	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1152,7 +1161,8 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
-			&CurrencyId::Stable(TokenSymbol::USDT) => 10 * millicent(CurrencyId::Token(TokenSymbol::USDT)),
+			&CurrencyId::Stable(TokenSymbol::USDT) => 1 * microcent(CurrencyId::Stable(TokenSymbol::USDT)),
+			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
 			_ => Balance::max_value(), // unsupported
 		}
 	};

@@ -28,6 +28,7 @@ pub mod parachains {
 	pub mod Statemine {
 		pub const ID: u32 = 1000;
 		pub const USDT_ID: u32 = 11;
+		pub const RMRK_ID: u32 = 8;
 	}
 	pub mod phala {
 		pub const ID: u32 = 2004;

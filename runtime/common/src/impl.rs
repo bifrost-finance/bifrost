@@ -139,6 +139,13 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 					GeneralIndex(parachains::Statemine::USDT_ID as u128),
 				),
 			)),
+			Token(TokenSymbol::RMRK) => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::Statemine::ID),
+					GeneralIndex(parachains::Statemine::RMRK_ID as u128),
+				),
+			)),
 			// Phala Native token
 			Token(TokenSymbol::PHA) =>
 				Some(MultiLocation::new(1, X1(Parachain(parachains::phala::ID)))),
@@ -182,6 +189,8 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X2(Parachain(id), GeneralIndex(key)) if id == parachains::Statemine::ID => {
 					if key == parachains::Statemine::USDT_ID.into() {
 						Some(Stable(TokenSymbol::USDT))
+					} else if key == parachains::Statemine::RMRK_ID.into() {
+						Some(Token(TokenSymbol::RMRK))
 					} else {
 						None
 					}
