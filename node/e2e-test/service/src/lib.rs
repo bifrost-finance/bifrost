@@ -18,7 +18,6 @@
 
 #![warn(missing_docs)]
 
-mod chain_spec;
 mod genesis;
 
 use core::future::Future;
@@ -54,7 +53,6 @@ use substrate_test_client::{
 	BlockchainEventsExt, RpcHandlersExt, RpcTransactionError, RpcTransactionOutput,
 };
 
-pub use chain_spec::*;
 pub use cumulus_test_runtime as runtime;
 pub use genesis::*;
 pub use sp_keyring::Sr25519Keyring as Keyring;
@@ -562,7 +560,9 @@ pub fn node_config(
 	let root = base_path.path().to_path_buf();
 	let role = if is_collator { Role::Authority } else { Role::Full };
 	let key_seed = key.to_seed();
-	let mut spec = Box::new(chain_spec::get_chain_spec(para_id));
+
+	#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+	let mut spec = Box::new(node_service::chain_spec::bifrost_kusama::local_testnet_config(para_id).unwrap());
 
 	let mut storage = spec.as_storage_builder().build_storage().expect("could not build storage");
 
