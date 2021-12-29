@@ -1158,8 +1158,6 @@ pub mod pallet {
 				.try_retire::<T, I>()
 				.try_update::<T, I>();
 
-			ensure!(pool.r#type != PoolType::EBFarming, Error::<T, I>::InvalidPoolType);
-
 			let mut deposit_data: DepositData<_, _> =
 				Self::user_deposit_data(pid, user.clone()).ok_or(Error::<T, I>::NoDepositOfUser)?;
 
