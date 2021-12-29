@@ -240,7 +240,7 @@ pub mod pallet {
 	pub type TotalOrderInfos<T: Config<I>, I: 'static = ()> =
 		StorageMap<_, Blake2_128Concat, OrderId, OrderInfo<AccountIdOf<T>, BalanceOf<T, I>>>;
 
-	/// transaction fee rate[sellFee, buyFee]
+	/// transaction fee rate[maker fee, taker fee]
 	#[pallet::storage]
 	#[pallet::getter(fn get_transaction_fee_rate)]
 	pub type TransactionFee<T: Config<I>, I: 'static = ()> =
@@ -599,25 +599,25 @@ pub mod pallet {
 		// edit token release start and end block
 		// input number used as perthousand rate, so it should be less or equal than 1000.
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::set_buy_and_sell_transaction_fee_rate())]
-		pub fn set_buy_and_sell_transaction_fee_rate(
+		#[pallet::weight(T::WeightInfo::set_transaction_fee_rate())]
+		pub fn set_transaction_fee_rate(
 			origin: OriginFor<T>,
-			buy_rate: u32,
-			sell_rate: u32,
+			maker_rate: u32,
+			taker_rate: u32,
 		) -> DispatchResult {
 			// Check origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			// number input should be less than 10_000, since it is used as x * 1/10_000
-			ensure!(buy_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
-			ensure!(sell_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
+			ensure!(maker_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
+			ensure!(taker_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
 
-			let buy_fee_rate = Permill::from_parts(buy_rate.saturating_mul(100));
-			let sell_fee_rate = Permill::from_parts(sell_rate.saturating_mul(100));
+			let maker_fee_rate = Permill::from_parts(maker_rate.saturating_mul(100));
+			let taker_fee_rate = Permill::from_parts(taker_rate.saturating_mul(100));
 
-			TransactionFee::<T, I>::mutate(|fee| *fee = (buy_fee_rate, sell_fee_rate));
+			TransactionFee::<T, I>::mutate(|fee| *fee = (maker_fee_rate, taker_fee_rate));
 
-			Self::deposit_event(Event::TransactionFeeRateSet(buy_fee_rate, sell_fee_rate));
+			Self::deposit_event(Event::TransactionFeeRateSet(maker_fee_rate, taker_fee_rate));
 
 			Ok(())
 		}
