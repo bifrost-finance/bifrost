@@ -885,10 +885,10 @@ fn handle_special_vsbond_buy_order_should_work() {
 }
 
 #[test]
-fn set_buy_and_sell_transaction_fee_rate_should_work() {
+fn set_transaction_fee_rate_should_work() {
 	new_test_ext().execute_with(|| {
 		// both buy and see rate are 10%.
-		assert_ok!(Auction::set_buy_and_sell_transaction_fee_rate(Some(ALICE).into(), 1000, 1000));
+		assert_ok!(Auction::set_transaction_fee_rate(Some(ALICE).into(), 1000, 1000));
 
 		assert_eq!(
 			Auction::get_transaction_fee_rate(),

@@ -31,7 +31,7 @@ pub trait WeightInfo {
 	fn revoke_order() -> Weight;
 	fn clinch_order() -> Weight;
 	fn partial_clinch_order() -> Weight;
-	fn set_buy_and_sell_transaction_fee_rate() -> Weight;
+	fn set_transaction_fee_rate() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -52,7 +52,7 @@ impl WeightInfo for () {
 		(50_000_000 as Weight)
 	}
 
-	fn set_buy_and_sell_transaction_fee_rate() -> Weight {
+	fn set_transaction_fee_rate() -> Weight {
 		(50_000_000 as Weight)
 	}
 }
