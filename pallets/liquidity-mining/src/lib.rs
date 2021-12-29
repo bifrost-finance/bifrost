@@ -100,6 +100,8 @@ where
 	redeem_limit_time: BlockNumberOf,
 	/// The max number of pending-unlocks at the same time;
 	unlock_limit_nums: u32,
+	/// The number of pending-unlocks belong to the pool;
+	pending_unlock_nums: u32,
 }
 
 impl<AccountIdOf, BalanceOf, BlockNumberOf> PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>
@@ -491,6 +493,8 @@ pub mod pallet {
 		NotEnoughToDeposit,
 		/// Keeper doesn't have enough balance to be redeemed by the user(VERY SCARY ERR)
 		NotEnoughToRedeem,
+		/// Keeper doesn't have enough balance to be unlocked by the user(VERY SCARY ERR)
+		NotEnoughToUnlock,
 		/// User has nothing be deposited to the pool
 		NoDepositOfUser,
 		/// The balance which was tried to deposit to the pool less than `MinimumDepositOfUser`
@@ -1129,7 +1133,8 @@ pub mod pallet {
 		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
-			let pool: PoolInfo<_, _, _> = Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
+			let mut pool: PoolInfo<_, _, _> =
+				Self::pool(pid).ok_or(Error::<T, I>::InvalidPoolId)?;
 
 			ensure!(pool.r#type != PoolType::EBFarming, Error::<T, I>::InvalidPoolType);
 
@@ -1150,7 +1155,51 @@ pub mod pallet {
 					deposit_data.pending_unlocks.pop_front()
 				{
 					if unlock_all || cur_height >= unlock_height {
-						// TODO: DO TRANSFER!
+						match pool.r#type {
+							PoolType::Mining => {
+								let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
+
+								T::MultiCurrency::transfer(lpt, &pool.keeper, &user, unlock_amount)
+									.map_err(|_e| Error::<T, I>::NotEnoughToUnlock)?;
+
+								pool.pending_unlock_nums -= 1;
+							},
+							PoolType::Farming => {
+								let (token_a, token_b) = pool.trading_pair;
+
+								T::MultiCurrency::transfer(
+									token_a,
+									&pool.keeper,
+									&user,
+									unlock_amount,
+								)
+								.map_err(|_e| Error::<T, I>::NotEnoughToUnlock)?;
+								T::MultiCurrency::transfer(
+									token_b,
+									&pool.keeper,
+									&user,
+									unlock_amount,
+								)
+								.map_err(|_e| Error::<T, I>::NotEnoughToUnlock)?;
+
+								pool.pending_unlock_nums -= 1;
+							},
+							PoolType::EBFarming => {},
+							PoolType::SingleToken => {
+								let token = pool.trading_pair.0;
+
+								T::MultiCurrency::transfer(
+									token,
+									&pool.keeper,
+									&user,
+									unlock_amount,
+								)
+								.map_err(|_e| Error::<T, I>::NotEnoughToUnlock)?;
+
+								pool.pending_unlock_nums -= 1;
+							},
+						}
+
 						total_unlock_amount = total_unlock_amount.saturating_add(unlock_amount);
 					} else {
 						deposit_data.pending_unlocks.push_back((unlock_height, unlock_amount));
@@ -1158,16 +1207,15 @@ pub mod pallet {
 				}
 			}
 
-			match deposit_data.deposit.saturated_into() {
-				0u128 if deposit_data.pending_unlocks.len() == 0 =>
-					TotalDepositData::<T, I>::remove(pid, user.clone()),
-				_ => TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data),
-			}
+			let r#type = pool.r#type;
+			let trading_pair = pool.trading_pair;
+
+			Self::post_process(pool, user.clone(), deposit_data)?;
 
 			Self::deposit_event(Event::UserUnlocked(
 				pid,
-				pool.r#type,
-				pool.trading_pair,
+				r#type,
+				trading_pair,
 				total_unlock_amount,
 				user,
 			));
@@ -1256,6 +1304,7 @@ pub mod pallet {
 
 				redeem_limit_time,
 				unlock_limit_nums,
+				pending_unlock_nums: 0,
 			};
 
 			TotalPoolInfos::<T, I>::insert(pool_id, mining_pool);
@@ -1342,6 +1391,7 @@ pub mod pallet {
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 						} else {
 							deposit_data.pending_unlocks.push_back((unlock_height, try_redeem));
+							pool.pending_unlock_nums += 1;
 						}
 					}
 				},
@@ -1364,6 +1414,7 @@ pub mod pallet {
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 						} else {
 							deposit_data.pending_unlocks.push_back((unlock_height, try_redeem));
+							pool.pending_unlock_nums += 1;
 						}
 					}
 				},
@@ -1380,22 +1431,16 @@ pub mod pallet {
 								.map_err(|_e| Error::<T, I>::NotEnoughToRedeem)?;
 						} else {
 							deposit_data.pending_unlocks.push_back((unlock_height, try_redeem));
+							pool.pending_unlock_nums += 1;
 						}
 					}
 				},
 			};
 
-			if pool.state == PoolState::Retired && pool.deposit == Zero::zero() {
-				pool.try_withdraw_remain::<T, I>()?;
-				pool.state = PoolState::Dead;
-			}
-
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			// __NOTE__: Deletion will occur a bug if there are some pending-unlocks;
-			TotalPoolInfos::<T, I>::insert(pid, pool);
-			TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
+			Self::post_process(pool, user.clone(), deposit_data)?;
 
 			Self::deposit_event(Event::UserRedeemed(
 				pid,
@@ -1405,6 +1450,37 @@ pub mod pallet {
 				unlock_height,
 				user,
 			));
+
+			Ok(().into())
+		}
+
+		/// Delete the pool from storage if there is no reason to exist; Otherwise save it back to
+		/// storage.
+		///
+		/// Same as the deposit_data;
+		pub(crate) fn post_process(
+			mut pool: PoolInfo<AccountIdOf<T>, BalanceOf<T, I>, BlockNumberFor<T>>,
+			user: AccountIdOf<T>,
+			deposit_data: DepositData<BalanceOf<T, I>, BlockNumberFor<T>>,
+		) -> DispatchResult {
+			let pid = pool.pool_id;
+
+			if pool.state == PoolState::Retired &&
+				pool.deposit == Zero::zero() &&
+				pool.pending_unlock_nums == 0
+			{
+				pool.try_withdraw_remain::<T, I>()?;
+				pool.state = PoolState::Dead;
+				TotalPoolInfos::<T, I>::remove(pid);
+			} else {
+				TotalPoolInfos::<T, I>::insert(pid, pool);
+			}
+
+			if deposit_data.deposit == Zero::zero() && deposit_data.pending_unlocks.len() == 0 {
+				TotalDepositData::<T, I>::remove(pid, user.clone());
+			} else {
+				TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
+			}
 
 			Ok(().into())
 		}
