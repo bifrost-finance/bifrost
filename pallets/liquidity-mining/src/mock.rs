@@ -237,6 +237,9 @@ pub(crate) const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
 pub(crate) const HOURS: BlockNumber = MINUTES * 60;
 pub(crate) const DAYS: BlockNumber = HOURS * 24;
 
+pub(crate) const REDEEM_LIMIT_TIME: BlockNumber = 100;
+pub(crate) const UNLOCK_LIMIT_NUMS: u32 = 3;
+
 pub(crate) const UNIT: Balance = 1_000_000_000_000;
 
 pub(crate) const MINING_TRADING_PAIR: (CurrencyId, CurrencyId) =
