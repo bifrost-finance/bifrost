@@ -212,7 +212,6 @@ dependencies = [
  "pallet-randomness-collective-flip",
  "pallet-scheduler",
  "pallet-session",
- "pallet-society",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-tips",
@@ -765,6 +764,7 @@ dependencies = [
  "log",
  "merkle-distributor",
  "node-primitives",
+ "orml-benchmarking",
  "orml-currencies",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
@@ -935,14 +935,6 @@ dependencies = [
  "hex-literal",
  "log",
  "node-primitives",
- "orml-benchmarking",
- "orml-currencies",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=5ba42f532b72d71a28aaa18421855de003b9ca71)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=5ba42f532b72d71a28aaa18421855de003b9ca71)",
- "orml-unknown-tokens",
- "orml-xcm",
- "orml-xcm-support",
- "orml-xtokens",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -6089,20 +6081,6 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "sp-trie",
-]
-
-[[package]]
-name = "pallet-society"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.13#fcc54a72973d03afe7bf9e3ef2736050b3f33465"
-dependencies = [
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "rand_chacha 0.2.2",
- "scale-info",
- "sp-runtime",
- "sp-std",
 ]
 
 [[package]]
@@ -11809,7 +11787,6 @@ version = "0.4.4"
 source = "git+https://github.com/zenlinkpro/Zenlink-DEX-Module?rev=e5747a897cfd0fb5d322781ffe656220ae1e814f#e5747a897cfd0fb5d322781ffe656220ae1e814f"
 dependencies = [
  "cumulus-primitives-core",
- "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",

@@ -206,7 +206,6 @@ runtime-benchmarks = [
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
-	"pallet-society/runtime-benchmarks",
 	"pallet-collator-selection/runtime-benchmarks",
 	"pallet-democracy/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
@@ -214,13 +213,13 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
 	"bifrost-salp/runtime-benchmarks",
-	"bifrost-salp-lite/runtime-benchmarks",
+#	"bifrost-salp-lite/runtime-benchmarks",
 	"bifrost-liquidity-mining/runtime-benchmarks",
 	"bifrost-vsbond-auction/runtime-benchmarks",
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
-	"zenlink-protocol/runtime-benchmarks",
+#	"zenlink-protocol/runtime-benchmarks",
 ]
 
 try-runtime = [

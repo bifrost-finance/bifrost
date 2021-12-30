@@ -70,23 +70,23 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::Redeemed(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 
-	batch_migrate {
-		let k in 1 .. T::BatchKeysLimit::get();
-		let fund_index = create_fund::<T>(1);
-		let contribution = T::MinContribution::get();
-		let mut caller: T::AccountId = whitelisted_caller();
-		for i in 0 .. k {
-			caller = account("contributor", i, 0);
-			contribute_fund::<T>(&caller,fund_index);
-		}
-		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Signed(caller.clone()), fund_index)
-	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Unlocked);
-		assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
-	}
+	// batch_migrate {
+	// 	let k in 1 .. T::BatchKeysLimit::get();
+	// 	let fund_index = create_fund::<T>(1);
+	// 	let contribution = T::MinContribution::get();
+	// 	let mut caller: T::AccountId = whitelisted_caller();
+	// 	for i in 0 .. k {
+	// 		caller = account("contributor", i, 0);
+	// 		contribute_fund::<T>(&caller,fund_index);
+	// 	}
+	// 	assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
+	// }: _(RawOrigin::Signed(caller.clone()), fund_index)
+	// verify {
+	// 	let fund = Salp::<T>::funds(fund_index).unwrap();
+	// 	let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
+	// 	assert_eq!(status, ContributionStatus::Unlocked);
+	// 	assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
+	// }
 }
 
 impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
