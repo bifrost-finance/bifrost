@@ -345,26 +345,24 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId)> = vec![
-		(get_account_id_from_seed::<sr25519::Public>("Alice"), get_from_seed::<AuraId>("Alice")),
-		(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
 		(
-			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
-			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"]
+			hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"].into(),
+			hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"]
 				.unchecked_into(),
 		),
 		(
-			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
-			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"]
+			hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"].into(),
+			hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"]
 				.unchecked_into(),
 		),
 		(
-			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"].into(),
-			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"]
+			hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"].into(),
+			hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"]
 				.unchecked_into(),
 		),
 		(
-			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
-			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"]
+			hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"].into(),
+			hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"]
 				.unchecked_into(),
 		),
 	];
@@ -421,6 +419,10 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 pub fn faucet_accounts() -> Vec<AccountId> {
 	vec![
 		hex!["30a74e1548ed3a26575ee1f1ea28e3c2d55cfdaeb539ae7aa06778ca7f75c935"].into(), /* asgard sudo account */
+		hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"].into(),
+		hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"].into(),
+		hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"].into(),
+		hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"].into(),
 		hex!["a2d57b8e781327bd2853b36e6f290bd8beeaa850971c9b0789ec4969f8beb01b"].into(), /* bifrost-faucet */
 		hex!["a272fa6e2282767b61a299e81023d44ef583c640fef99b0bafe216399775cd17"].into(),
 		hex!["56f6e7bb0826cd128672ad3a03016533834123c319adc635c6db595c6f72272e"].into(),
