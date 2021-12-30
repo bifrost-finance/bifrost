@@ -1149,7 +1149,7 @@ pub mod pallet {
 		/// - There are pending-unlocks in the deposit_data.
 		/// - The current block-height exceeded the unlock-height;
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>, pid: PoolId) -> DispatchResultWithPostInfo {
 			let user = ensure_signed(origin)?;
 
@@ -1251,7 +1251,7 @@ pub mod pallet {
 		/// - The pool state is `PoolState::Ongoing`.
 		/// - There is a `pending-unlock` that is specific by the parameter `index`;
 		#[transactional]
-		#[pallet::weight(1_000)]
+		#[pallet::weight(T::WeightInfo::cancel_unlock())]
 		pub fn cancel_unlock(
 			origin: OriginFor<T>,
 			pid: PoolId,
