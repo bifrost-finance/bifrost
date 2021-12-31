@@ -71,9 +71,10 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		contribute_fund::<T>(&caller,fund_index);
 		assert_ok!(Salp::<T>::confirm_contribute(
-			RawOrigin::Root.into(),
+			confirmer,
 			caller.clone(),
 			fund_index,
 			true,
@@ -87,7 +88,7 @@ benchmarks! {
 	}: _(RawOrigin::Signed(caller.clone()), fund_index)
 	verify {
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Refunded);
+		assert_eq!(status, ContributionStatus::Idle);
 		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, contribution).into())
 	}
 
@@ -96,9 +97,10 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		contribute_fund::<T>(&caller,fund_index);
 		assert_ok!(Salp::<T>::confirm_contribute(
-			RawOrigin::Root.into(),
+			confirmer,
 			caller.clone(),
 			fund_index,
 			true,
@@ -117,11 +119,12 @@ benchmarks! {
 		let fund_index = create_fund::<T>(1);
 		let contribution = T::MinContribution::get();
 		let mut caller: T::AccountId = whitelisted_caller();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		for i in 0 .. k {
 			caller = account("contributor", i, 0);
 			contribute_fund::<T>(&caller,fund_index);
 			let _ = Salp::<T>::confirm_contribute(
-				RawOrigin::Root.into(),
+				confirmer.clone(),
 				caller.clone(),
 				fund_index,
 				true,
@@ -142,9 +145,10 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		contribute_fund::<T>(&caller,fund_index);
 		assert_ok!(Salp::<T>::confirm_contribute(
-			RawOrigin::Root.into(),
+			confirmer,
 			caller.clone(),
 			fund_index,
 			true,

@@ -272,6 +272,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	.assimilate_storage(&mut t)
 	.unwrap();
 
+	crate::GenesisConfig::<Test> { initial_multisig_account: Some(ALICE) }
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 	t.into()
 }
 
