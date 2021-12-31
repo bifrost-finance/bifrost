@@ -21,7 +21,7 @@ use sc_client_api::BlockchainEvents;
 use sp_runtime::generic::BlockId;
 
 #[substrate_test_utils::test]
-#[ignore]
+// #[ignore]
 async fn test_runtime_upgrade() {
 	let mut builder = sc_cli::LoggerBuilder::new("runtime=debug");
 	builder.with_colors(false);
@@ -41,7 +41,7 @@ async fn test_runtime_upgrade() {
 	alice
 		.register_parachain(
 			para_id,
-			cumulus_test_runtime::WASM_BINARY
+			bifrost_kusama_test_runtime::WASM_BINARY
 				.expect("You need to build the WASM binary to run this test!")
 				.to_vec(),
 			initial_head_data(para_id),
@@ -73,7 +73,7 @@ async fn test_runtime_upgrade() {
 		.expect("Runtime version exists");
 	expected_runtime_version.spec_version += 1;
 
-	let wasm = cumulus_test_runtime::wasm_spec_version_incremented::WASM_BINARY
+	let wasm = bifrost_kusama_runtime::wasm_spec_version_incremented::WASM_BINARY
 		.expect("Wasm binary with incremented spec version should have been built");
 
 	// schedule runtime upgrade

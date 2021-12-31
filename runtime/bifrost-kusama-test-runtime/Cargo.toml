@@ -1,5 +1,5 @@
 [package]
-name = "bifrost-kusama-runtime"
+name = "bifrost-kusama-test-runtime"
 version = "0.8.0"
 authors = ["Edwin Wang <lark930@gmail.com>"]
 edition = "2021"

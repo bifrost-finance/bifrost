@@ -561,8 +561,9 @@ pub fn node_config(
 	let role = if is_collator { Role::Authority } else { Role::Full };
 	let key_seed = key.to_seed();
 
-	#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
-	let mut spec = Box::new(node_service::chain_spec::bifrost_kusama::local_testnet_config(para_id).unwrap());
+	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
+	let mut spec =
+		Box::new(node_service::chain_spec::bifrost_kusama::local_testnet_config(para_id).unwrap());
 
 	let mut storage = spec.as_storage_builder().build_storage().expect("could not build storage");
 

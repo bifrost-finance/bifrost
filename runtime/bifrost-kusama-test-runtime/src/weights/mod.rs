@@ -16,30 +16,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use substrate_wasm_builder::WasmBuilder;
+//! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 2.0.0
 
-fn main() {
-	#[cfg(not(feature = "with-bifrost-kusama-test-runtime"))]
-	WasmBuilder::new()
-		.with_current_project()
-		.export_heap_base()
-		.import_memory()
-		.build();
+//! A list of the different weight modules for our runtime.
 
-	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
-	WasmBuilder::new()
-		.with_current_project()
-		.export_heap_base()
-		.enable_feature("with-bifrost-kusama-test-runtime")
-		.import_memory()
-		.build();
-
-	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
-	WasmBuilder::new()
-		.with_current_project()
-		.enable_feature("increment-spec-version")
-		.enable_feature("with-bifrost-kusama-test-runtime")
-		.import_memory()
-		.set_file_name("wasm_binary_spec_version_incremented.rs")
-		.build();
-}
+pub mod bifrost_call_switchgear;
+pub mod bifrost_flexible_fee;
+pub mod bifrost_lightening_redeem;
+pub mod bifrost_liquidity_mining;
+pub mod bifrost_salp;
+pub mod bifrost_salp_lite;
+pub mod bifrost_token_issuer;
+pub mod bifrost_vsbond_auction;
+pub mod frame_system;
+pub mod orml_currencies;
+pub mod orml_tokens;
+pub mod pallet_balances;
+pub mod pallet_bounties;
+pub mod pallet_indices;
+pub mod pallet_scheduler;
+pub mod pallet_timestamp;
+pub mod pallet_treasury;
+pub mod pallet_utility;
+pub mod pallet_vesting;
