@@ -139,7 +139,7 @@ pub mod v2 {
 				log::info!(" >>> update `DepositData` storage: Migrating {} user", td_nums);
 
 				TotalDepositData::<T, I>::translate::<DepositDataOld<T, I>, _>(|id, user, data| {
-					log::info!("    migrated deposit-data for {}: {}", id, user);
+					log::info!("    migrated deposit-data for {}: {:?}", id, user);
 
 					Some(DepositDataNew::<T, I> {
 						deposit: data.deposit,
@@ -191,14 +191,14 @@ pub mod v2 {
 			let tp_nums_old = Self::get_temp_storage::<u32>("tp_nums_old");
 			let tp_nums_new = TotalPoolInfos::<T, I>::iter().count() as u32;
 			ensure!(
-				tp_nums_old == tp_nums_new,
+				tp_nums_old == Some(tp_nums_new),
 				"❌ liquidity-mining upgrade to V2_0_0: pool quantity does not match"
 			);
 
 			let td_nums_old = Self::get_temp_storage::<u32>("td_nums_old");
 			let td_nums_new = TotalDepositData::<T, I>::iter().count() as u32;
 			ensure!(
-				td_nums_old == td_nums_new,
+				td_nums_old == Some(td_nums_new),
 				"❌ liquidity-mining upgrade to V2_0_0: user quantity does not match"
 			);
 
