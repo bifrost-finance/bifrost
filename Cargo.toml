@@ -22,7 +22,8 @@ members = [
 	"pallets/vtoken-mint/rpc",
 	"pallets/call-switchgear",
 	"runtime/asgard",
-	"runtime/bifrost",
+	"runtime/bifrost-kusama",
+	"runtime/bifrost-polkadot",
 	"xcm-support",
 ]
 
