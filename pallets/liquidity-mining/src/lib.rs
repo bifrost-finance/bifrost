@@ -34,7 +34,7 @@ use frame_support::{
 		vec::Vec,
 	},
 	traits::EnsureOrigin,
-	transactional, PalletId,
+	transactional, PalletId, RuntimeDebug,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
@@ -48,6 +48,8 @@ mod benchmarking;
 mod mock;
 #[cfg(test)]
 mod tests;
+
+pub mod migration;
 pub mod weights;
 
 pub use weights::*;
@@ -415,14 +417,28 @@ where
 	}
 }
 
-#[allow(type_alias_bounds)]
-type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, TypeInfo)]
+pub enum StorageVersion {
+	// Default
+	V1_0_0,
+	// After add time limit to `lm::redeem_*`
+	V2_0_0,
+}
+
+impl Default for StorageVersion {
+	fn default() -> Self {
+		StorageVersion::V1_0_0
+	}
+}
 
 #[allow(type_alias_bounds)]
-type BalanceOf<T: Config<I>, I: 'static = ()> =
+pub(crate) type AccountIdOf<T: Config> = <T as frame_system::Config>::AccountId;
+
+#[allow(type_alias_bounds)]
+pub(crate) type BalanceOf<T: Config<I>, I: 'static = ()> =
 	<<T as Config<I>>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-type PoolId = u32;
+pub(crate) type PoolId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -617,6 +633,11 @@ pub mod pallet {
 		AccountIdOf<T>,
 		DepositData<BalanceOf<T, I>, BlockNumberFor<T>>,
 	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn storage_version)]
+	pub(crate) type PalletVersion<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, StorageVersion, ValueQuery>;
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
