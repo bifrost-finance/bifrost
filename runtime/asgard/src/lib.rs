@@ -112,7 +112,6 @@ use orml_xcm_support::MultiCurrencyAdapter;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
-use static_assertions::const_assert;
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
@@ -396,9 +395,8 @@ pub enum ProxyType {
 	NonTransfer = 1,
 	Governance = 2,
 	CancelProxy = 3,
-	IdentityJudgement = 4,
-	Staking = 5,
-	AuthorMapping = 6,
+	Staking = 4,
+	AuthorMapping = 5,
 }
 
 impl Default for ProxyType {
@@ -423,11 +421,8 @@ impl InstanceFilter<Call> for ProxyType {
 				Call::Democracy(..) |
 				Call::Council(..) |
 				Call::TechnicalCommittee(..) |
-				Call::PhragmenElection(..) |
 				Call::TechnicalMembership(..) |
 				Call::Treasury(..) |
-				Call::Bounties(..) |
-				Call::Tips(..) |
 				Call::Vesting(pallet_vesting::Call::vest{..}) |
 				Call::Vesting(pallet_vesting::Call::vest_other{..}) |
 				// Specifically omitting Vesting `vested_transfer`, and `force_vested_transfer`
@@ -444,17 +439,11 @@ impl InstanceFilter<Call> for ProxyType {
 				c,
 				Call::Democracy(..) |
 					Call::Council(..) | Call::TechnicalCommittee(..) |
-					Call::PhragmenElection(..) |
-					Call::Treasury(..) | Call::Bounties(..) |
-					Call::Tips(..) | Call::Utility(..)
+					Call::Treasury(..) | Call::Utility(..)
 			),
 			ProxyType::CancelProxy => {
 				matches!(c, Call::Proxy(pallet_proxy::Call::reject_announcement { .. }))
 			},
-			ProxyType::IdentityJudgement => matches!(
-				c,
-				Call::Identity(pallet_identity::Call::provide_judgement { .. }) | Call::Utility(..)
-			),
 			ProxyType::AuthorMapping => {
 				matches!(c, Call::AuthorMapping(..))
 			},
@@ -521,31 +510,6 @@ impl pallet_multisig::Config for Runtime {
 	type Event = Event;
 	type MaxSignatories = MaxSignatories;
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
-}
-
-parameter_types! {
-	// Minimum 4 CENTS/byte
-	pub const BasicDeposit: Balance = deposit(1, 258);
-	pub const FieldDeposit: Balance = deposit(0, 66);
-	pub const SubAccountDeposit: Balance = deposit(1, 53);
-	pub const MaxSubAccounts: u32 = 100;
-	pub const MaxAdditionalFields: u32 = 100;
-	pub const MaxRegistrars: u32 = 20;
-}
-
-impl pallet_identity::Config for Runtime {
-	type Event = Event;
-	type Currency = Balances;
-	type BasicDeposit = BasicDeposit;
-	type FieldDeposit = FieldDeposit;
-	type SubAccountDeposit = SubAccountDeposit;
-	type MaxSubAccounts = MaxSubAccounts;
-	type MaxAdditionalFields = MaxAdditionalFields;
-	type MaxRegistrars = MaxRegistrars;
-	type Slashed = Treasury;
-	type ForceOrigin = MoreThanHalfCouncil;
-	type RegistrarOrigin = MoreThanHalfCouncil;
-	type WeightInfo = pallet_identity::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -634,39 +598,6 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 	type WeightInfo = pallet_membership::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-	pub const CandidacyBond: Balance = 100 * CENTS;
-	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = deposit(1, 64);
-	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = deposit(0, 32);
-	/// Daily council elections
-	pub const TermDuration: BlockNumber = 24 * HOURS;
-	pub const DesiredMembers: u32 = 7;
-	pub const DesiredRunnersUp: u32 = 7;
-	pub const PhragmenElectionPalletId: LockIdentifier = *b"phrelect";
-}
-
-// Make sure that there are no more than MaxMembers members elected via phragmen.
-const_assert!(DesiredMembers::get() <= CouncilMaxMembers::get());
-
-impl pallet_elections_phragmen::Config for Runtime {
-	type CandidacyBond = CandidacyBond;
-	type ChangeMembers = Council;
-	type Currency = Balances;
-	type CurrencyToVote = frame_support::traits::U128CurrencyToVote;
-	type DesiredMembers = DesiredMembers;
-	type DesiredRunnersUp = DesiredRunnersUp;
-	type Event = Event;
-	type InitializeMembers = Council;
-	type KickedMember = Treasury;
-	type LoserCandidate = Treasury;
-	type PalletId = PhragmenElectionPalletId;
-	type TermDuration = TermDuration;
-	type VotingBondBase = VotingBondBase;
-	type VotingBondFactor = VotingBondFactor;
-	type WeightInfo = pallet_elections_phragmen::weights::SubstrateWeight<Runtime>;
-}
 
 parameter_types! {
 	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
@@ -738,17 +669,6 @@ parameter_types! {
 	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
-
-	pub const TipCountdown: BlockNumber = 1 * DAYS;
-	pub const TipFindersFee: Percent = Percent::from_percent(20);
-	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-	pub const DataDepositPerByte: Balance = 10 * CENTS;
-	pub const BountyDepositBase: Balance = 1 * DOLLARS;
-	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
-	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
-	pub const MaximumReasonLength: u32 = 16384;
-	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
 	pub const MaxApprovals: u32 = 100;
 }
 
@@ -770,32 +690,9 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type RejectOrigin = MoreThanHalfCouncil;
-	type SpendFunds = Bounties;
+	type SpendFunds = ();
 	type SpendPeriod = SpendPeriod;
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
-}
-
-impl pallet_bounties::Config for Runtime {
-	type BountyCuratorDeposit = BountyCuratorDeposit;
-	type BountyDepositBase = BountyDepositBase;
-	type BountyDepositPayoutDelay = BountyDepositPayoutDelay;
-	type BountyUpdatePeriod = BountyUpdatePeriod;
-	type BountyValueMinimum = BountyValueMinimum;
-	type DataDepositPerByte = DataDepositPerByte;
-	type Event = Event;
-	type MaximumReasonLength = MaximumReasonLength;
-	type WeightInfo = pallet_bounties::weights::SubstrateWeight<Runtime>;
-}
-
-impl pallet_tips::Config for Runtime {
-	type DataDepositPerByte = DataDepositPerByte;
-	type Event = Event;
-	type MaximumReasonLength = MaximumReasonLength;
-	type TipCountdown = TipCountdown;
-	type TipFindersFee = TipFindersFee;
-	type TipReportDepositBase = TipReportDepositBase;
-	type Tippers = PhragmenElection;
-	type WeightInfo = pallet_tips::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -803,7 +700,6 @@ impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = FlexibleFee;
 	type TransactionByteFee = TransactionByteFee;
 	type OperationalFeeMultiplier = OperationalFeeMultiplier;
-	// type WeightToFee = IdentityFee<Balance>;
 	type WeightToFee = WeightToFee;
 }
 
@@ -837,7 +733,7 @@ parameter_types! {
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
 	pub const MinBlocksPerRound: u32 = 10;
 	/// Blocks per round
-	pub const DefaultBlocksPerRound: u32 = 2 * HOURS;
+	pub const DefaultBlocksPerRound: u32 = 2 * MINUTES;
 	/// Rounds before the collator leaving the candidates request can be executed
 	pub const LeaveCandidatesDelay: u32 = 24;
 	/// Rounds before the candidate bond increase/decrease can be executed
@@ -1655,7 +1551,6 @@ construct_runtime! {
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,
 		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 31,
 		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 32,
-		PhragmenElection: pallet_elections_phragmen::{Pallet, Call, Storage, Event<T>, Config<T>} = 33,
 		CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 34,
 		TechnicalMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 35,
 
@@ -1670,15 +1565,12 @@ construct_runtime! {
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 51,
 		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 52,
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>} = 53,
-		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>} = 54,
 
 		// Vesting. Usable initially, but removed once all vesting is finished.
 		Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>} = 60,
 
 		// Treasury stuff
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 61,
-		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>} = 62,
-		Tips: pallet_tips::{Pallet, Call, Storage, Event<T>} = 63,
 
 		// Third party modules
 		XTokens: orml_xtokens::{Pallet, Call, Event<T>} = 70,

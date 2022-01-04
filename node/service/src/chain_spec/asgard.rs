@@ -124,7 +124,6 @@ pub fn asgard_genesis(
 		council_membership: Default::default(),
 		technical_membership: Default::default(),
 		treasury: Default::default(),
-		phragmen_election: Default::default(),
 		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		parachain_system: Default::default(),
