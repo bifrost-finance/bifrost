@@ -73,7 +73,7 @@ async fn test_runtime_upgrade() {
 		.expect("Runtime version exists");
 	expected_runtime_version.spec_version += 1;
 
-	let wasm = bifrost_kusama_runtime::wasm_spec_version_incremented::WASM_BINARY
+	let wasm = bifrost_kusama_test_runtime::wasm_spec_version_incremented::WASM_BINARY
 		.expect("Wasm binary with incremented spec version should have been built");
 
 	// schedule runtime upgrade
