@@ -43,7 +43,10 @@ use node_primitives::{CurrencyId, LeasePeriod, ParaId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 pub use pallet::*;
 use scale_info::TypeInfo;
-use sp_arithmetic::per_things::Permill;
+use sp_arithmetic::{
+	per_things::Permill,
+	traits::{CheckedAdd, CheckedMul, CheckedSub},
+};
 use sp_std::cmp::min;
 pub use weights::WeightInfo;
 
@@ -167,6 +170,7 @@ pub mod pallet {
 		InvalidVsbond,
 		Unexpected,
 		InvalidRateInput,
+		Overflow,
 	}
 
 	#[pallet::event]
@@ -297,10 +301,13 @@ pub mod pallet {
 
 			match order_type {
 				OrderType::Buy => {
+					let amt_to_transfer = amount_to_transfer
+						.checked_add(&maker_fee)
+						.ok_or(Error::<T, I>::Overflow)?;
 					T::MultiCurrency::ensure_can_withdraw(
 						token_to_transfer,
 						&owner,
-						amount_to_transfer.saturating_add(maker_fee),
+						amt_to_transfer,
 					)
 					.map_err(|_| Error::<T, I>::NotEnoughBalanceToCreateOrder)?;
 				},
@@ -454,7 +461,7 @@ pub mod pallet {
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
-			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price());
+			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price())?;
 
 			let (token_to_get, amount_to_get, token_to_pay, amount_to_pay) = match order_info
 				.order_type
@@ -489,22 +496,26 @@ pub mod pallet {
 					.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
 				},
 				OrderType::Sell => {
+					let amt_to_pay =
+						amount_to_pay.checked_add(&taker_fee).ok_or(Error::<T, I>::Overflow)?;
+
 					// transaction amount + fee
-					T::MultiCurrency::ensure_can_withdraw(
-						token_to_pay,
-						&order_taker,
-						amount_to_pay.saturating_add(taker_fee),
-					)
-					.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
+					T::MultiCurrency::ensure_can_withdraw(token_to_pay, &order_taker, amt_to_pay)
+						.map_err(|_| Error::<T, I>::DontHaveEnoughToPay)?;
 				},
 			};
 
 			// Get the new OrderInfo
-			let new_order_info = OrderInfo {
-				remain: order_info.remain.saturating_sub(quantity_clinchd),
-				remain_price: order_info.remain_price.saturating_sub(price_to_pay),
-				..order_info
-			};
+			let remain_order = order_info
+				.remain
+				.checked_sub(&quantity_clinchd)
+				.ok_or(Error::<T, I>::Overflow)?;
+			let remain_price = order_info
+				.remain_price
+				.checked_sub(&price_to_pay)
+				.ok_or(Error::<T, I>::Overflow)?;
+
+			let new_order_info = OrderInfo { remain: remain_order, remain_price, ..order_info };
 
 			let module_account: AccountIdOf<T> = T::PalletId::get().into_account();
 
@@ -516,7 +527,7 @@ pub mod pallet {
 				let receiver_balance =
 					T::MultiCurrency::total_balance(token_to_pay, &new_order_info.owner);
 
-				if receiver_balance.saturating_add(amount_to_pay) < ed {
+				if receiver_balance.checked_add(&amount_to_pay).unwrap_or(Zero::zero()) < ed {
 					account_to_send = T::TreasuryAccount::get();
 				}
 			}
@@ -544,7 +555,7 @@ pub mod pallet {
 			if amount_to_get < ed {
 				let receiver_balance = T::MultiCurrency::total_balance(token_to_get, &order_taker);
 
-				if receiver_balance.saturating_add(amount_to_get) < ed {
+				if receiver_balance.checked_add(&amount_to_get).unwrap_or(Zero::zero()) < ed {
 					account_to_send = T::TreasuryAccount::get();
 				}
 			}
@@ -612,8 +623,11 @@ pub mod pallet {
 			ensure!(buy_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
 			ensure!(sell_rate <= 10_000u32, Error::<T, I>::InvalidRateInput);
 
-			let buy_fee_rate = Permill::from_parts(buy_rate.saturating_mul(100));
-			let sell_fee_rate = Permill::from_parts(sell_rate.saturating_mul(100));
+			let b_rate = buy_rate.checked_mul(100).ok_or(Error::<T, I>::Overflow)?;
+			let s_rate = sell_rate.checked_mul(100).ok_or(Error::<T, I>::Overflow)?;
+
+			let buy_fee_rate = Permill::from_parts(b_rate);
+			let sell_fee_rate = Permill::from_parts(s_rate);
 
 			TransactionFee::<T, I>::mutate(|fee| *fee = (buy_fee_rate, sell_fee_rate));
 
@@ -646,13 +660,15 @@ pub mod pallet {
 		pub(crate) fn price_to_pay(
 			quantity: BalanceOf<T, I>,
 			unit_price: FixedU128,
-		) -> BalanceOf<T, I> {
+		) -> Result<BalanceOf<T, I>, Error<T, I>> {
 			let quantity: u128 = quantity.saturated_into();
 
-			let total_price = (unit_price.saturating_mul(quantity.into())).floor().into_inner() /
-				FixedU128::accuracy();
+			let ttl_price = (unit_price.checked_mul(&FixedU128::from(quantity)))
+				.ok_or(Error::<T, I>::Overflow)?;
 
-			BalanceOf::<T, I>::saturated_from(total_price)
+			let total_price = ttl_price.floor().into_inner() / FixedU128::accuracy();
+
+			Ok(BalanceOf::<T, I>::saturated_from(total_price))
 		}
 
 		pub(crate) fn do_order_revoke(order_id: OrderId) -> DispatchResultWithPostInfo {
@@ -672,7 +688,7 @@ pub mod pallet {
 				let receiver_balance =
 					T::MultiCurrency::total_balance(token_to_return, &order_info.owner);
 
-				if receiver_balance.saturating_add(amount_to_return) < ed {
+				if receiver_balance.checked_add(&amount_to_return).unwrap_or(Zero::zero()) < ed {
 					account_to_return = T::TreasuryAccount::get();
 				}
 			}
