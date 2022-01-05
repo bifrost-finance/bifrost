@@ -234,6 +234,7 @@ parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
 	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT + ContributionWeight::get()) + u64::pow(2, 24).into();
+	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 impl crate::Config for Test {
@@ -257,6 +258,7 @@ impl crate::Config for Test {
 		SalpWeightHolder,
 		ContributeFeeFilter,
 	>;
+	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {

@@ -23,7 +23,7 @@ use core::convert::{Into, TryFrom};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{
-		Currency, ExistenceRequirement, Get, Imbalance, OnUnbalanced, ReservableCurrency,
+		Currency, ExistenceRequirement, Get, Imbalance, Len, OnUnbalanced, ReservableCurrency,
 		WithdrawReasons,
 	},
 	transactional,
@@ -100,6 +100,9 @@ pub mod pallet {
 		/// Alternative Fee currency exchange rate: ?x Fee currency: ?y Native currency
 		#[pallet::constant]
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
+
+		#[pallet::constant]
+		type MaximumAssetsInOrder: Get<u8>;
 	}
 
 	pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
@@ -148,6 +151,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		NotEnoughBalance,
+		ExceedMaximumAssets,
 	}
 
 	#[pallet::call]
@@ -160,6 +164,10 @@ pub mod pallet {
 			asset_order_list_vec: Option<Vec<CurrencyIdOf<T>>>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			ensure!(
+				(asset_order_list_vec.len() as u8) <= T::MaximumAssetsInOrder::get(),
+				Error::<T>::ExceedMaximumAssets
+			);
 
 			if let Some(mut asset_order_list) = asset_order_list_vec {
 				asset_order_list.insert(0, T::NativeCurrencyId::get());

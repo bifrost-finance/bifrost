@@ -1250,6 +1250,7 @@ impl Contains<Call> for ContributeFeeFilter {
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + u64::pow(2, 24).into();
+	pub const MaximumAssetsInOrder: u8 = 20;
 }
 
 impl bifrost_flexible_fee::Config for Runtime {
@@ -1273,6 +1274,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 		SalpWeightHolder,
 		ContributeFeeFilter,
 	>;
+	type MaximumAssetsInOrder = MaximumAssetsInOrder;
 }
 
 parameter_types! {
