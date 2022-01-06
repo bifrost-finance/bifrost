@@ -54,7 +54,7 @@ use substrate_test_client::{
 };
 
 use bifrost_kusama_test_runtime::RuntimeApi;
-pub use cumulus_test_runtime as runtime;
+pub use cumulus_test_runtime as runtime; // bifrost_kusama_test_runtime
 pub use genesis::*;
 pub use sp_keyring::Sr25519Keyring as Keyring;
 
@@ -77,24 +77,7 @@ impl ParachainConsensus<Block> for NullConsensus {
 /// The signature of the announce block fn.
 pub type AnnounceBlockFn = Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>;
 
-/// Native executor instance.
-// pub struct RuntimeExecutor;
-
-// impl sc_executor::NativeExecutionDispatch for RuntimeExecutor {
-// 	type ExtendHostFunctions = ();
-
-// 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-// 		cumulus_test_runtime::api::dispatch(method, data)
-// 	}
-
-// 	fn native_version() -> sc_executor::NativeVersion {
-// 		cumulus_test_runtime::native_version()
-// 	}
-// }
-
-// #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub struct RuntimeExecutor;
-// #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 impl sc_executor::NativeExecutionDispatch for RuntimeExecutor {
 	type ExtendHostFunctions = ();
 
@@ -670,7 +653,7 @@ impl TestNode {
 	/// Send an extrinsic to this node.
 	pub async fn send_extrinsic(
 		&self,
-		function: impl Into<runtime::Call>,
+		function: impl Into<bifrost_kusama_test_runtime::Call>,
 		caller: Sr25519Keyring,
 	) -> Result<RpcTransactionOutput, RpcTransactionError> {
 		let extrinsic = construct_extrinsic(&*self.client, function, caller.pair(), Some(0));
@@ -683,7 +666,7 @@ impl TestNode {
 		let call = frame_system::Call::set_code { code: validation };
 
 		self.send_extrinsic(
-			runtime::SudoCall::sudo_unchecked_weight { call: Box::new(call.into()), weight: 1_000 },
+			bifrost_kusama_test_runtime::SudoCall::sudo_unchecked_weight { call: Box::new(call.into()), weight: 1_000 },
 			Sr25519Keyring::Alice,
 		)
 		.await
@@ -703,41 +686,42 @@ pub fn fetch_nonce(client: &Client, account: sp_core::sr25519::Public) -> u32 {
 /// Construct an extrinsic that can be applied to the test runtime.
 pub fn construct_extrinsic(
 	client: &Client,
-	function: impl Into<runtime::Call>,
+	function: impl Into<bifrost_kusama_test_runtime::Call>,
 	caller: sp_core::sr25519::Pair,
 	nonce: Option<u32>,
-) -> runtime::UncheckedExtrinsic {
+) -> bifrost_kusama_test_runtime::UncheckedExtrinsic {
 	let function = function.into();
 	let current_block_hash = client.info().best_hash;
 	let current_block = client.info().best_number.saturated_into();
 	let genesis_block = client.hash(0).unwrap().unwrap();
 	let nonce = nonce.unwrap_or_else(|| fetch_nonce(client, caller.public()));
-	let period = runtime::BlockHashCount::get()
+	let period = bifrost_kusama_test_runtime::BlockHashCount::get()
 		.checked_next_power_of_two()
 		.map(|c| c / 2)
 		.unwrap_or(2) as u64;
 	let tip = 0;
-	let extra: runtime::SignedExtra = (
-		frame_system::CheckSpecVersion::<runtime::Runtime>::new(),
-		frame_system::CheckGenesis::<runtime::Runtime>::new(),
-		frame_system::CheckEra::<runtime::Runtime>::from(generic::Era::mortal(
+	let extra: bifrost_kusama_test_runtime::SignedExtra = (
+		frame_system::CheckSpecVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
+		frame_system::CheckTxVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
+		frame_system::CheckGenesis::<bifrost_kusama_test_runtime::Runtime>::new(),
+		frame_system::CheckEra::<bifrost_kusama_test_runtime::Runtime>::from(generic::Era::mortal(
 			period,
 			current_block,
 		)),
-		frame_system::CheckNonce::<runtime::Runtime>::from(nonce),
-		frame_system::CheckWeight::<runtime::Runtime>::new(),
-		pallet_transaction_payment::ChargeTransactionPayment::<runtime::Runtime>::from(tip),
+		frame_system::CheckNonce::<bifrost_kusama_test_runtime::Runtime>::from(nonce),
+		frame_system::CheckWeight::<bifrost_kusama_test_runtime::Runtime>::new(),
+		pallet_transaction_payment::ChargeTransactionPayment::<bifrost_kusama_test_runtime::Runtime>::from(tip),
 	);
-	let raw_payload = runtime::SignedPayload::from_raw(
+	let raw_payload = bifrost_kusama_test_runtime::SignedPayload::from_raw(
 		function.clone(),
 		extra.clone(),
-		(runtime::VERSION.spec_version, genesis_block, current_block_hash, (), (), ()),
+		(bifrost_kusama_test_runtime::VERSION.spec_version, 1_u32, genesis_block, current_block_hash, (), (), ()),
 	);
 	let signature = raw_payload.using_encoded(|e| caller.sign(e));
-	runtime::UncheckedExtrinsic::new_signed(
+	bifrost_kusama_test_runtime::UncheckedExtrinsic::new_signed(
 		function.clone(),
-		caller.public().into(),
-		runtime::Signature::Sr25519(signature.clone()),
+		sp_runtime::MultiAddress::Id(caller.public().into()),
+		bifrost_kusama_test_runtime::Signature::Sr25519(signature.clone()),
 		extra.clone(),
 	)
 }

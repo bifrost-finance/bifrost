@@ -49,6 +49,7 @@ pub use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+pub use pallet_sudo::Call as SudoCall;
 use sp_api::impl_runtime_apis;
 use sp_core::{
 	u32_trait::{_1, _2, _3, _4, _5},
@@ -1736,6 +1737,8 @@ pub type Executive = frame_executive::Executive<
 	AllPallets,
 	VsbondAuctionOnRuntimeUpgrade<Runtime, ()>,
 >;
+/// The payload being signed in transactions.
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
 
 impl_runtime_apis! {
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -2089,14 +2092,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 #[cfg(feature = "with-bifrost-kusama-test-runtime")]
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
-	// BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
 	BlockExecutor = Executive,
 	CheckInherents = CheckInherents,
 }
 
-#[cfg(not(feature = "with-bifrost-kusama-test-runtime"))]
-cumulus_pallet_parachain_system::register_validate_block! {
-	Runtime = Runtime,
-	BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
-	CheckInherents = CheckInherents,
-}
