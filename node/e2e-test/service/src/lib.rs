@@ -27,7 +27,7 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_test_runtime::{Hash, Header, NodeBlock as Block, RuntimeApi};
+use cumulus_test_runtime::{Hash, Header, NodeBlock as Block};
 use frame_system_rpc_runtime_api::AccountNonceApi;
 use polkadot_primitives::v1::{CollatorPair, Hash as PHash, PersistedValidationData};
 use polkadot_service::ProvideRuntimeApi;
@@ -53,6 +53,7 @@ use substrate_test_client::{
 	BlockchainEventsExt, RpcHandlersExt, RpcTransactionError, RpcTransactionOutput,
 };
 
+use bifrost_kusama_test_runtime::RuntimeApi;
 pub use cumulus_test_runtime as runtime;
 pub use genesis::*;
 pub use sp_keyring::Sr25519Keyring as Keyring;
@@ -77,24 +78,39 @@ impl ParachainConsensus<Block> for NullConsensus {
 pub type AnnounceBlockFn = Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>;
 
 /// Native executor instance.
-pub struct RuntimeExecutor;
+// pub struct RuntimeExecutor;
 
+// impl sc_executor::NativeExecutionDispatch for RuntimeExecutor {
+// 	type ExtendHostFunctions = ();
+
+// 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+// 		cumulus_test_runtime::api::dispatch(method, data)
+// 	}
+
+// 	fn native_version() -> sc_executor::NativeVersion {
+// 		cumulus_test_runtime::native_version()
+// 	}
+// }
+
+// #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+pub struct RuntimeExecutor;
+// #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 impl sc_executor::NativeExecutionDispatch for RuntimeExecutor {
 	type ExtendHostFunctions = ();
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		cumulus_test_runtime::api::dispatch(method, data)
+		bifrost_kusama_test_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		cumulus_test_runtime::native_version()
+		bifrost_kusama_test_runtime::native_version()
 	}
 }
 
 /// The client type being used by the test service.
 pub type Client = TFullClient<
 	runtime::NodeBlock,
-	runtime::RuntimeApi,
+	RuntimeApi,
 	sc_executor::NativeElseWasmExecutor<RuntimeExecutor>,
 >;
 
