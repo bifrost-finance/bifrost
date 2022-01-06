@@ -940,6 +940,7 @@ dependencies = [
  "pallet-balances",
  "pallet-bounties",
  "pallet-collator-selection",
+ "pallet-collective",
  "pallet-democracy",
  "pallet-identity",
  "pallet-indices",

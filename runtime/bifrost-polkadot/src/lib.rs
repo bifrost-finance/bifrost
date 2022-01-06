@@ -942,8 +942,10 @@ impl_runtime_apis! {
 		) {
 			use frame_support::traits::StorageInfoTrait;
 			use frame_benchmarking::{list_benchmark, Benchmarking, BenchmarkList};
+			use frame_system_benchmarking::Pallet as SystemBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
+			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -966,14 +968,14 @@ impl_runtime_apis! {
 
 			// Adding the pallet you will perform the benchmarking
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_balances, Balances);
-			add_benchmark!(params, batches, pallet_bounties, Bounties);
-			add_benchmark!(params, batches, pallet_indices, Indices);
-			add_benchmark!(params, batches, pallet_scheduler, Scheduler);
-			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_treasury, Treasury);
-			add_benchmark!(params, batches, pallet_utility, Utility);
-			add_benchmark!(params, batches, pallet_vesting, Vesting);
+			// add_benchmark!(params, batches, pallet_balances, Balances);
+			// add_benchmark!(params, batches, pallet_bounties, Bounties);
+			// add_benchmark!(params, batches, pallet_indices, Indices);
+			// add_benchmark!(params, batches, pallet_scheduler, Scheduler);
+			// add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+			// add_benchmark!(params, batches, pallet_treasury, Treasury);
+			// add_benchmark!(params, batches, pallet_utility, Utility);
+			// add_benchmark!(params, batches, pallet_vesting, Vesting);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

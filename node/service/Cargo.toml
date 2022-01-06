@@ -100,7 +100,7 @@ runtime-benchmarks = [
 	"polkadot-service/runtime-benchmarks",
 	"asgard-runtime/runtime-benchmarks",
 	"bifrost-kusama-runtime/runtime-benchmarks",
-#	"bifrost-polkadot-runtime/runtime-benchmarks",
+	"bifrost-polkadot-runtime/runtime-benchmarks",
 ]
 with-asgard-runtime = [
 	"asgard-runtime",
