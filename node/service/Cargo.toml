@@ -78,7 +78,7 @@ log = '0.4'
 bifrost-runtime-common = { path = "../../runtime/common"}
 asgard-runtime = { path = "../../runtime/asgard", optional = true }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama", optional = true }
-bifrost-kusama-test-runtime = { path = "../../runtime/bifrost-kusama-test-runtime", optional = true }
+bifrost-kusama-test-runtime = { path = "../../runtime/bifrost-kusama-test", optional = true }
 bifrost-polkadot-runtime = { path = "../../runtime/bifrost-polkadot", optional = true }
 node-primitives = { path = "../primitives" }
 node-rpc = { path = "../rpc" }

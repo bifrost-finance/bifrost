@@ -58,8 +58,8 @@ criterion = { version = "0.3.5", features = [ "async_tokio" ] }
 # RPC related dependencies
 jsonrpc-core = "18.0.0"
 
-# bifrost-kusama-runtime = { path = "../../../runtime/bifrost-kusama", optional = true }
-bifrost-kusama-test-runtime = { path = "../../../runtime/bifrost-kusama-test-runtime", optional = true }
+bifrost-kusama-runtime = { path = "../../../runtime/bifrost-kusama", optional = true }
+bifrost-kusama-test-runtime = { path = "../../../runtime/bifrost-kusama-test", optional = true }
 node-service = { path = "../../service", default-features = false }
 
 [dev-dependencies]
@@ -78,7 +78,7 @@ std = []
 with-bifrost-kusama-test-runtime = [
 	"node-service/with-bifrost-kusama-test-runtime",
 	"bifrost-kusama-test-runtime/with-bifrost-kusama-test-runtime",
-	# "bifrost-kusama-runtime/with-bifrost-kusama-test-runtime"
+	"bifrost-kusama-runtime/with-bifrost-kusama-test-runtime"
 ]
 with-bifrost-polkadot-test-runtime = [
 	# "node-service/with-bifrost-polkadot-runtime",

@@ -1215,6 +1215,7 @@ name = "bifrost-test-service"
 version = "0.9.16"
 dependencies = [
  "async-trait",
+ "bifrost-kusama-runtime",
  "bifrost-kusama-test-runtime",
  "criterion",
  "cumulus-client-consensus-common",
