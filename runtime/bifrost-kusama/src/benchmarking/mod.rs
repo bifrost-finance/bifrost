@@ -20,7 +20,15 @@
 
 pub mod utils;
 
-// module benchmarking
-pub mod collator_selection;
-pub mod currencies;
-pub mod tokens;
+// pallet benchmarking
+pub mod collator_selection {
+	include!("../../../asgard/src/benchmarking/collator_selection.rs");
+}
+
+pub mod currencies {
+	include!("../../../asgard/src/benchmarking/currencies.rs");
+}
+
+pub mod tokens {
+	include!("../../../asgard/src/benchmarking/tokens.rs");
+}

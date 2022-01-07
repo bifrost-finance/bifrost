@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
@@ -93,13 +91,7 @@ mod tests {
 	use orml_benchmarking::impl_benchmark_test_suite;
 
 	use super::*;
-
-	pub fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
-			.build_storage::<crate::Runtime>()
-			.unwrap()
-			.into()
-	}
+	use crate::benchmarking::utils::tests::new_test_ext;
 
 	impl_benchmark_test_suite!(new_test_ext(),);
 }

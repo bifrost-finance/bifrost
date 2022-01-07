@@ -178,6 +178,8 @@ impl ExtBuilder {
 
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), vsKSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), vsBond, 100_000_000_000_000),
 			(pool_account.clone(), KSM, 100_000_000_000_000),
 		])
 	}

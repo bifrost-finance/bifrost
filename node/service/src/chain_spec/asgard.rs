@@ -240,6 +240,10 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		whitelisted_caller(), // Benchmarking whitelist_account
 		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
 		                       * with whitelistted_caller */
+		account("caller", 0, 0),  // for pallet_elections_phragmen benchmarking
+		account("voter", 0, 0),   // for pallet_elections_phragmen benchmarking
+		account("awesome", 0, 0), // for pallet_tips benchmarking
+		account("member", 0, 0),  // for pallet_tips benchmarking
 	];
 	let balances = endowed_accounts
 		.iter()

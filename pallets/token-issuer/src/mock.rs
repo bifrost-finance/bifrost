@@ -18,7 +18,8 @@
 
 #![cfg(test)]
 #![allow(non_upper_case_globals)]
-
+#[cfg(feature = "runtime-benchmarks")]
+use frame_benchmarking::whitelisted_caller;
 use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Nothing},
@@ -199,6 +200,13 @@ impl ExtBuilder {
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		let whitelist_caller: AccountId = whitelisted_caller();
+
+		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

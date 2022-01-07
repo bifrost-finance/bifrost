@@ -16,11 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-
-pub mod utils;
-
-// module benchmarking
-pub mod collator_selection;
-pub mod currencies;
-pub mod tokens;
+#[cfg(test)]
+pub mod tests {
+	pub fn new_test_ext() -> sp_io::TestExternalities {
+		frame_system::GenesisConfig::default()
+			.build_storage::<crate::Runtime>()
+			.unwrap()
+			.into()
+	}
+}

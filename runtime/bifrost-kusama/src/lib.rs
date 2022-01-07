@@ -121,6 +121,8 @@ use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler,
 	MultiAssetsHandler, PairInfo, ZenlinkMultiAssets,
 };
+
+mod benchmarking;
 // Weights used in the runtime.
 mod weights;
 
@@ -1930,7 +1932,7 @@ impl_runtime_apis! {
 			let mut list = Vec::<BenchmarkList>::new();
 
 			// Substrate modules
-			// list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
+			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
 			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
 			list_benchmark!(list, extra, pallet_indices, Indices);
 			list_benchmark!(list, extra, pallet_balances, Balances);
@@ -1944,20 +1946,26 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_collective, TechnicalCommittee);
 			list_benchmark!(list, extra, pallet_membership, CouncilMembership);
 			list_benchmark!(list, extra, pallet_membership, TechnicalMembership);
+			list_benchmark!(list, extra, pallet_proxy, Proxy);
+			list_benchmark!(list, extra, pallet_multisig, Multisig);
+			list_benchmark!(list, extra, pallet_identity, Identity);
+			list_benchmark!(list, extra, pallet_tips, Tips);	// fail
+			list_benchmark!(list, extra, pallet_elections_phragmen, PhragmenElection);	// fail
+
 
 			// Bifrost modules
 			list_benchmark!(list, extra, bifrost_salp, Salp);
-			list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
-			list_benchmark!(list, extra, bifrost_liquidity_mining::<Instance1>, LiquidityMining);
+			// list_benchmark!(list, extra, bifrost_salp_lite, SalpLite);
+			list_benchmark!(list, extra, bifrost_flexible_fee, FlexibleFee);
 			list_benchmark!(list, extra, bifrost_vsbond_auction, VSBondAuction);
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
 
 			// ORML modules
-			// orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
-			// orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
-			// orml_list_benchmark!(list, extra, pallet_collator_selection, benchmarking::collator_selection);
+			orml_list_benchmark!(list, extra, orml_currencies, benchmarking::currencies);
+			orml_list_benchmark!(list, extra, orml_tokens, benchmarking::tokens);
+			orml_list_benchmark!(list, extra, pallet_collator_selection, benchmarking::collator_selection);
 
 			// Thirdparty modules
 			// wait to be updated
@@ -1984,7 +1992,7 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			// Substrate pallet
-			// add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
+			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_bounties, Bounties);
 			add_benchmark!(params, batches, pallet_indices, Indices);
@@ -1998,20 +2006,25 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_collective, TechnicalCommittee);
 			add_benchmark!(params, batches, pallet_membership, CouncilMembership);
 			add_benchmark!(params, batches, pallet_membership, TechnicalMembership);
+			add_benchmark!(params, batches, pallet_proxy, Proxy);
+			add_benchmark!(params, batches, pallet_multisig, Multisig);
+			add_benchmark!(params, batches, pallet_identity, Identity);
+			add_benchmark!(params, batches, pallet_tips, Tips);	// fail
+			add_benchmark!(params, batches, pallet_elections_phragmen, PhragmenElection);	// fail
 
 			// Bifrost modules
 			add_benchmark!(params, batches, bifrost_salp, Salp);
-			add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
-			add_benchmark!(params, batches, bifrost_liquidity_mining, LiquidityMining);
+			// add_benchmark!(params, batches, bifrost_salp_lite, SalpLite);
+			add_benchmark!(params, batches, bifrost_flexible_fee, FlexibleFee);
 			add_benchmark!(params, batches, bifrost_vsbond_auction, VSBondAuction);
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
 
 			// ORML modules
-			// orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
-			// orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
-			// orml_add_benchmark!(params, batches, pallet_collator_selection, benchmarking::collator_selection);
+			orml_add_benchmark!(params, batches, orml_currencies, benchmarking::currencies);
+			orml_add_benchmark!(params, batches, orml_tokens, benchmarking::tokens);
+			orml_add_benchmark!(params, batches, pallet_collator_selection, benchmarking::collator_selection);
 
 			// Thirdparty modules
 			// wait to be updated

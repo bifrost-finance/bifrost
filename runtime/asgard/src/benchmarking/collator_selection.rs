@@ -16,23 +16,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use frame_benchmarking::{account, whitelisted_caller};
 use frame_support::{assert_ok, pallet_prelude::Decode, traits::Currency};
 use frame_system::RawOrigin;
 // use pallet_collator_selection::POINT_PER_BLOCK;
 use orml_benchmarking::{runtime_benchmarks, whitelist_account};
+use orml_traits::MultiCurrencyExtended;
 use pallet_authorship::EventHandler;
 use pallet_session::SessionManager;
+use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 
 use crate::{
-	AccountId, Balance, Balances, CollatorSelection, Event, MaxCandidates, MaxInvulnerables,
-	Runtime, Session, SessionKeys, System,
+	AccountId, Balance, Balances, CollatorSelection, Currencies, CurrencyId, Event, MaxCandidates,
+	MaxInvulnerables, NativeCurrencyId, Runtime, Session, SessionKeys, System,
 };
 
 const SEED: u32 = 0;
+const NATIVE: CurrencyId = NativeCurrencyId::get();
+
+pub fn set_balance(currency_id: CurrencyId, who: &AccountId, balance: Balance) {
+	assert_ok!(<Currencies as MultiCurrencyExtended<_>>::update_balance(
+		currency_id,
+		who,
+		balance.saturated_into()
+	));
+}
 
 fn assert_last_event(generic_event: Event) {
 	System::assert_last_event(generic_event.into());
@@ -44,6 +53,7 @@ fn register_candidates(count: u32) {
 		pallet_collator_selection::CandidacyBond::<Runtime>::get() > Balance::from(0u32),
 		"Bond cannot be zero!"
 	);
+
 	for (index, who) in candidates.iter().enumerate() {
 		Balances::make_free_balance_be(
 			&who,
@@ -106,6 +116,7 @@ runtime_benchmarks! {
 		register_candidates(c-1);
 
 		let caller: AccountId = whitelisted_caller();
+		set_balance(NATIVE, &caller, Balances::minimum_balance());
 		Session::set_keys(RawOrigin::Signed(caller.clone()).into(), SessionKeys::default(), vec![]).unwrap();
 	}: _(RawOrigin::Signed(caller.clone()))
 
@@ -167,13 +178,7 @@ mod tests {
 	use orml_benchmarking::impl_benchmark_test_suite;
 
 	use super::*;
-
-	pub fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
-			.build_storage::<crate::Runtime>()
-			.unwrap()
-			.into()
-	}
+	use crate::benchmarking::utils::tests::new_test_ext;
 
 	impl_benchmark_test_suite!(new_test_ext(),);
 }

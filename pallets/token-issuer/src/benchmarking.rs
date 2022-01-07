@@ -100,7 +100,7 @@ benchmarks! {
 impl_benchmark_test_suite!(
 	TokenIssuer,
 	crate::mock::ExtBuilder::default()
-		// .one_hundred_precision_for_each_currency_type_for_whitelist_account()
+		.one_hundred_precision_for_each_currency_type_for_whitelist_account()
 		.build(),
 	crate::mock::Runtime
 );

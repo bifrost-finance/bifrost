@@ -16,10 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#![cfg(feature = "runtime-benchmarks")]
-
 use frame_benchmarking::{account, whitelisted_caller};
-use frame_support::assert_ok;
+use frame_support::{assert_ok, traits::Currency};
 use frame_system::RawOrigin;
 use orml_benchmarking::runtime_benchmarks;
 use orml_traits::MultiCurrencyExtended;
@@ -30,8 +28,8 @@ use sp_runtime::{
 use sp_std::prelude::*;
 
 use crate::{
-	AccountId, Amount, Balance, Currencies, CurrencyId, ExistentialDeposit, NativeCurrencyId,
-	Runtime, TokenSymbol,
+	AccountId, Amount, Balance, Balances, Currencies, CurrencyId, ExistentialDeposit,
+	NativeCurrencyId, Runtime, TokenSymbol,
 };
 
 const SEED: u32 = 0;
@@ -51,7 +49,7 @@ runtime_benchmarks! {
 	// `transfer` non-native currency
 	transfer_non_native_currency {
 		let currency_id = CurrencyId::Token(TokenSymbol::KSM);
-		let amount: Balance = 100u32.into();
+		let amount: Balance = Balances::minimum_balance().saturating_add(100u32.into());
 		let from: AccountId = whitelisted_caller();
 		set_balance(currency_id, &from, amount);
 
@@ -122,13 +120,7 @@ mod tests {
 	use orml_benchmarking::impl_benchmark_test_suite;
 
 	use super::*;
-
-	pub fn new_test_ext() -> sp_io::TestExternalities {
-		frame_system::GenesisConfig::default()
-			.build_storage::<crate::Runtime>()
-			.unwrap()
-			.into()
-	}
+	use crate::benchmarking::utils::tests::new_test_ext;
 
 	impl_benchmark_test_suite!(new_test_ext(),);
 }
