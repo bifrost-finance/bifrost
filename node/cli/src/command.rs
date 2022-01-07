@@ -44,10 +44,7 @@ fn get_exec_name() -> Option<String> {
 		.and_then(|s| s.into_string().ok())
 }
 
-fn load_spec(
-	id: &str,
-	para_id: ParaId,
-) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
+fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	let id = if id == "" {
 		let n = get_exec_name().unwrap_or_default();
 
@@ -65,9 +62,9 @@ fn load_spec(
 			&include_bytes!("../../service/res/asgard.json")[..],
 		)?),
 		#[cfg(feature = "with-asgard-runtime")]
-		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config(para_id)),
+		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config()),
 		#[cfg(feature = "with-asgard-runtime")]
-		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config(para_id)?),
+		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config()?),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost" | "bifrost-kusama" =>
 			Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_bytes(
@@ -75,10 +72,10 @@ fn load_spec(
 			)?),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-genesis" | "bifrost-kusama-genesis" =>
-			Box::new(service::chain_spec::bifrost_kusama::chainspec_config(para_id)),
+			Box::new(service::chain_spec::bifrost_kusama::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-local" | "bifrost-kusama-local" =>
-			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config(para_id)?),
+			Box::new(service::chain_spec::bifrost_kusama::local_testnet_config()?),
 
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot" =>
@@ -86,14 +83,13 @@ fn load_spec(
 				&include_bytes!("../../service/res/bifrost-polkadot.json")[..],
 			)?),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
-		"bifrost-polkadot-genesis" =>
-			Box::new(service::chain_spec::bifrost_polkadot::chainspec_config(para_id)),
+		"bifrost-polkadot-genesis" => Box::new(service::chain_spec::bifrost_polkadot::chainspec_config()),
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
-			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config(para_id)?),
+			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
 
 		#[cfg(feature = "with-asgard-runtime")]
-		"dev" => Box::new(service::chain_spec::asgard::development_config(para_id)?),
+		"dev" => Box::new(service::chain_spec::asgard::development_config()?),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
@@ -170,7 +166,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, ParaId::from(id.parse::<u32>().unwrap_or(2001)))
+		load_spec(id)
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -359,16 +355,17 @@ pub fn run() -> Result<()> {
 
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
-						.map(|e| e.para_id);
+						.map(|e| e.para_id)
+						.ok_or_else(|| "Could not find parachain ID in chain-spec.")?;
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relaychain_args.iter()),
+						.chain(cli.relay_chain_args.iter()),
 				);
 
-				let id = ParaId::from(para_id.unwrap_or(2001));
+				let id = ParaId::from(para_id);
 
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
@@ -488,7 +485,7 @@ pub fn run() -> Result<()> {
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relaychain_args.iter()),
+						.chain(cli.relay_chain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(
