@@ -26,11 +26,6 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-pub mod wasm_spec_version_incremented {
-	#[cfg(feature = "std")]
-	include!(concat!(env!("OUT_DIR"), "/wasm_binary_spec_version_incremented.rs"));
-}
-
 use core::convert::TryInto;
 
 pub use bifrost_runtime_common::AuraId;
@@ -136,25 +131,12 @@ impl_opaque_keys! {
 }
 
 /// This runtime version.
-#[cfg(not(feature = "increment-spec-version"))]
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
 	spec_version: 916,
-	impl_version: 0,
-	apis: RUNTIME_API_VERSIONS,
-	transaction_version: 1,
-};
-
-#[cfg(feature = "increment-spec-version")]
-#[sp_version::runtime_version]
-pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("bifrost"),
-	impl_name: create_runtime_str!("bifrost"),
-	authoring_version: 1,
-	spec_version: 917,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -2037,7 +2019,6 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
 #[cfg(feature = "with-bifrost-kusama-test-runtime")]
 cumulus_pallet_parachain_system::register_validate_block! {
 	Runtime = Runtime,
-	// BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
 	BlockExecutor = Executive,
 	CheckInherents = CheckInherents,
 }
