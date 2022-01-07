@@ -27,7 +27,8 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-use cumulus_test_runtime::{Hash, Header, NodeBlock as Block};
+use cumulus_test_runtime::NodeBlock as Block;
+use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
 use frame_system_rpc_runtime_api::AccountNonceApi;
 use polkadot_primitives::v1::{CollatorPair, Hash as PHash, PersistedValidationData};
 use polkadot_service::ProvideRuntimeApi;
@@ -53,8 +54,7 @@ use substrate_test_client::{
 	BlockchainEventsExt, RpcHandlersExt, RpcTransactionError, RpcTransactionOutput,
 };
 
-use bifrost_kusama_test_runtime::RuntimeApi;
-pub use cumulus_test_runtime as runtime; // bifrost_kusama_test_runtime
+pub use cumulus_test_runtime as runtime;
 pub use genesis::*;
 pub use sp_keyring::Sr25519Keyring as Keyring;
 
@@ -562,7 +562,7 @@ pub fn node_config(
 
 	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
 	let mut spec =
-		Box::new(node_service::chain_spec::bifrost_kusama::local_testnet_config(para_id).unwrap());
+		Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config(para_id).unwrap());
 
 	let mut storage = spec.as_storage_builder().build_storage().expect("could not build storage");
 

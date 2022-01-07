@@ -80,12 +80,11 @@ harness = false
 default = [ "std" ]
 std = []
 runtime-benchmarks = [ "node-service/runtime-benchmarks" ]
-with-bifrost-runtime = [
-	"node-service/with-bifrost-kusama-runtime",
-	# "node-service/with-bifrost-polkadot-runtime",
-]
 with-bifrost-kusama-test-runtime = [
-	"node-service/with-bifrost-kusama-runtime",
+	"node-service/with-bifrost-kusama-test-runtime",
 	"bifrost-kusama-test-runtime/with-bifrost-kusama-test-runtime",
 	# "bifrost-kusama-runtime/with-bifrost-kusama-test-runtime"
+]
+with-bifrost-polkadot-test-runtime = [
+	# "node-service/with-bifrost-polkadot-runtime",
 ]
