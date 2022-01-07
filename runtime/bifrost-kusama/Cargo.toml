@@ -223,5 +223,4 @@ try-runtime = [
 	"pallet-vesting/try-runtime",
 ]
 
-increment-spec-version = []
 with-bifrost-kusama-test-runtime = []

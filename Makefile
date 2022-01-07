@@ -76,6 +76,14 @@ test-all:
 integration-test:
 	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-runtime
 
+.PHONY: e2e-integration
+e2e-integration:
+	cargo test -p bifrost-test-service --features="with-bifrost-kusama-test-runtime" --test integration --release
+
+.PHONY: e2e-runtime-upgrade
+e2e-runtime-upgrade:
+	cargo test -p bifrost-test-service --features="with-bifrost-kusama-test-runtime" --test runtime_upgrade --release
+
 .PHONY: clean
 clean:
 	cargo clean
