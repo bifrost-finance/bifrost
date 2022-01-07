@@ -23,7 +23,8 @@ use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
 		traits::{
-			AccountIdConversion, AtLeast32BitUnsigned, SaturatedConversion, Saturating, Zero,
+			AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedSub, SaturatedConversion,
+			Saturating, Zero,
 		},
 		FixedPointNumber, FixedU128,
 	},
@@ -982,8 +983,9 @@ pub mod pallet {
 				pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
 			}
 
-			deposit_data.deposit = deposit_data.deposit.saturating_add(value);
-			pool.deposit = pool.deposit.saturating_add(value);
+			deposit_data.deposit =
+				deposit_data.deposit.checked_add(&value).ok_or(Error::<T, I>::Unexpected)?;
+			pool.deposit = pool.deposit.checked_add(&value).ok_or(Error::<T, I>::Unexpected)?;
 			ensure!(
 				pool.deposit <= T::MaximumDepositInPool::get(),
 				Error::<T, I>::ExceedMaximumDeposit
@@ -1241,7 +1243,9 @@ pub mod pallet {
 							},
 						}
 
-						total_unlock_amount = total_unlock_amount.saturating_add(unlock_amount);
+						total_unlock_amount = total_unlock_amount
+							.checked_add(&unlock_amount)
+							.ok_or(Error::<T, I>::Unexpected)?;
 					} else {
 						deposit_data.pending_unlocks.push_back((unlock_height, unlock_amount));
 					}
@@ -1298,8 +1302,12 @@ pub mod pallet {
 					pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
 				}
 
-				deposit_data.deposit = deposit_data.deposit.saturating_add(unlock_amount);
-				pool.deposit = pool.deposit.saturating_add(unlock_amount);
+				deposit_data.deposit = deposit_data
+					.deposit
+					.checked_add(&unlock_amount)
+					.ok_or(Error::<T, I>::Unexpected)?;
+				pool.deposit =
+					pool.deposit.checked_add(&unlock_amount).ok_or(Error::<T, I>::Unexpected)?;
 				ensure!(
 					pool.deposit <= T::MaximumDepositInPool::get(),
 					Error::<T, I>::ExceedMaximumDeposit
@@ -1432,7 +1440,8 @@ pub mod pallet {
 				_ => return Err(Error::<T, I>::Unexpected.into()),
 			};
 
-			let pool_can_redeem = pool.deposit.saturating_sub(minimum_in_pool);
+			let pool_can_redeem =
+				pool.deposit.checked_sub(&minimum_in_pool).ok_or(Error::<T, I>::Unexpected)?;
 			let user_can_redeem = min(deposit_data.deposit, pool_can_redeem);
 
 			let try_redeem = match value {
@@ -1447,8 +1456,10 @@ pub mod pallet {
 				Error::<T, I>::TooLowToRedeem
 			);
 
-			pool.deposit = pool.deposit.saturating_sub(try_redeem);
-			deposit_data.deposit = deposit_data.deposit.saturating_sub(try_redeem);
+			pool.deposit =
+				pool.deposit.checked_sub(&try_redeem).ok_or(Error::<T, I>::Unexpected)?;
+			deposit_data.deposit =
+				deposit_data.deposit.checked_sub(&try_redeem).ok_or(Error::<T, I>::Unexpected)?;
 
 			// To unlock the deposit
 			let cur_height = frame_system::Pallet::<T>::block_number();
@@ -1458,7 +1469,9 @@ pub mod pallet {
 			{
 				cur_height
 			} else {
-				cur_height.saturating_add(pool.redeem_limit_time)
+				cur_height
+					.checked_add(&pool.redeem_limit_time)
+					.ok_or(Error::<T, I>::Unexpected)?
 			};
 
 			ensure!(
@@ -1471,8 +1484,9 @@ pub mod pallet {
 				PoolType::Mining => {
 					let lpt = Self::convert_to_lptoken(pool.trading_pair)?;
 					let lpt_ed = T::MultiCurrency::minimum_balance(lpt);
-					let lpt_total =
-						T::MultiCurrency::total_balance(lpt, &user).saturating_add(try_redeem);
+					let lpt_total = T::MultiCurrency::total_balance(lpt, &user)
+						.checked_add(&try_redeem)
+						.ok_or(Error::<T, I>::Unexpected)?;
 
 					if lpt_total >= lpt_ed {
 						if cur_height == unlock_height {
@@ -1490,10 +1504,12 @@ pub mod pallet {
 					let ta_ed = T::MultiCurrency::minimum_balance(token_a);
 					let tb_ed = T::MultiCurrency::minimum_balance(token_b);
 
-					let ta_total =
-						T::MultiCurrency::total_balance(token_a, &user).saturating_add(try_redeem);
-					let tb_total =
-						T::MultiCurrency::total_balance(token_b, &user).saturating_add(try_redeem);
+					let ta_total = T::MultiCurrency::total_balance(token_a, &user)
+						.checked_add(&try_redeem)
+						.ok_or(Error::<T, I>::Unexpected)?;
+					let tb_total = T::MultiCurrency::total_balance(token_b, &user)
+						.checked_add(&try_redeem)
+						.ok_or(Error::<T, I>::Unexpected)?;
 
 					if ta_total >= ta_ed && tb_total >= tb_ed {
 						if cur_height == unlock_height {
@@ -1511,8 +1527,9 @@ pub mod pallet {
 				PoolType::SingleToken => {
 					let token = pool.trading_pair.0;
 					let token_ed = T::MultiCurrency::minimum_balance(token);
-					let token_total =
-						T::MultiCurrency::total_balance(token, &user).saturating_add(try_redeem);
+					let token_total = T::MultiCurrency::total_balance(token, &user)
+						.checked_add(&try_redeem)
+						.ok_or(Error::<T, I>::Unexpected)?;
 
 					if token_total >= token_ed {
 						if cur_height == unlock_height {
