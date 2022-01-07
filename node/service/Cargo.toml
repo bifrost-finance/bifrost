@@ -64,6 +64,8 @@ cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/c
 # Polkadot dependencies
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13" }
 
+parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
+
 # External Crates
 hex-literal = "0.3.1"
 serde = { version = "1.0.124", features = ["derive"] }

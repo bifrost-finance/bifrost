@@ -18,10 +18,10 @@
 
 use asgard_runtime::{
 	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
-	BlockNumber, CollatorSelectionConfig, CouncilConfig, DemocracyConfig, GenesisConfig,
-	IndicesConfig, MinterRewardConfig, ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix,
-	SessionConfig, SudoConfig, SystemConfig, TechnicalCommitteeConfig, TokensConfig, VestingConfig,
-	VtokenMintConfig, WASM_BINARY,
+	BlockNumber, CouncilConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig,
+	IndicesConfig, InflationInfo, MinterRewardConfig, ParachainInfoConfig, ParachainStakingConfig,
+	PolkadotXcmConfig, Range, SS58Prefix, SessionConfig, SudoConfig, SystemConfig,
+	TechnicalCommitteeConfig, TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::constants::time::*;
 use cumulus_primitives_core::ParaId;
@@ -32,12 +32,13 @@ use sc_chain_spec::Properties;
 use sc_service::ChainType;
 use sc_telemetry::TelemetryEndpoints;
 use sp_core::{crypto::UncheckedInto, sr25519};
-use sp_runtime::traits::Zero;
 
 use super::TELEMETRY_URL;
 use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions};
 
 const DEFAULT_PROTOCOL_ID: &str = "asgard";
+
+use sp_runtime::Perbill;
 
 /// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
@@ -73,9 +74,33 @@ fn asgard_properties() -> Properties {
 	properties
 }
 
+pub fn moonbeam_inflation_config() -> InflationInfo<Balance> {
+	fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
+		use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
+		perbill_annual_to_perbill_round(
+			annual,
+			// rounds per year
+			BLOCKS_PER_YEAR / DefaultBlocksPerRound::get(),
+		)
+	}
+	let annual = Range {
+		min: Perbill::from_percent(4),
+		ideal: Perbill::from_percent(5),
+		max: Perbill::from_percent(5),
+	};
+	InflationInfo {
+		// staking expectations
+		expect: Range { min: 100_000 * DOLLARS, ideal: 200_000 * DOLLARS, max: 500_000 * DOLLARS },
+		// annual inflation
+		annual,
+		round: to_round_inflation(annual),
+	}
+}
+
 /// Helper function to create asgard GenesisConfig for testing
 pub fn asgard_genesis(
-	invulnerables: Vec<(AccountId, AuraId)>,
+	candidates: Vec<(AccountId, AuraId, Balance)>,
+	delegations: Vec<(AccountId, AccountId, Balance)>,
 	root_key: AccountId,
 	id: ParaId,
 	balances: Vec<(AccountId, Balance)>,
@@ -100,16 +125,12 @@ pub fn asgard_genesis(
 		phragmen_election: Default::default(),
 		sudo: SudoConfig { key: root_key.clone() },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		collator_selection: CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: Zero::zero(),
-			..Default::default()
-		},
+		parachain_system: Default::default(),
 		session: SessionConfig {
-			keys: invulnerables
+			keys: candidates
 				.iter()
 				.cloned()
-				.map(|(acc, aura)| {
+				.map(|(acc, aura, _)| {
 					(
 						acc.clone(),                          // account id
 						acc.clone(),                          // validator id
@@ -120,7 +141,6 @@ pub fn asgard_genesis(
 		},
 		aura: Default::default(),
 		aura_ext: Default::default(),
-		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
 		tokens: TokensConfig { balances: tokens },
 		bancor: BancorConfig {
@@ -154,6 +174,15 @@ pub fn asgard_genesis(
 			],
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		parachain_staking: ParachainStakingConfig {
+			candidates: candidates
+				.iter()
+				.cloned()
+				.map(|(account, _, bond)| (account, bond))
+				.collect(),
+			delegations,
+			inflation_config: moonbeam_inflation_config(),
+		},
 	}
 }
 
@@ -188,7 +217,9 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
+			ENDOWMENT,
 		)],
+		vec![],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		id,
 		balances,
@@ -233,7 +264,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.chain(faucet_accounts().iter())
 		.cloned()
-		.map(|x| (x, ENDOWMENT))
+		.map(|x| (x, ENDOWMENT * 4_000_000))
 		.collect();
 	let vestings = endowed_accounts
 		.iter()
@@ -265,9 +296,15 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_from_seed::<AuraId>("Alice"),
+				ENDOWMENT,
 			),
-			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_from_seed::<AuraId>("Bob"),
+				ENDOWMENT,
+			),
 		],
+		vec![],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		id,
 		balances,
@@ -305,29 +342,32 @@ pub fn chainspec_config(id: ParaId) -> ChainSpec {
 }
 
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
 			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"]
 				.unchecked_into(),
+			ENDOWMENT,
 		),
 		(
 			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
 			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"]
 				.unchecked_into(),
+			ENDOWMENT,
 		),
 		(
 			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"].into(),
 			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"]
 				.unchecked_into(),
+			ENDOWMENT,
 		),
 		(
 			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
 			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"]
 				.unchecked_into(),
+			ENDOWMENT,
 		),
 	];
-
 	let root_key: AccountId = hex![
 		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
 		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
@@ -359,6 +399,7 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 
 	asgard_genesis(
 		invulnerables,
+		vec![],
 		root_key,
 		id,
 		balances,

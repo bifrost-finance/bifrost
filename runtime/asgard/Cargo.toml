@@ -70,7 +70,6 @@ cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", defa
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.13" }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.13" }
 parachain-info = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.13" }
-pallet-collator-selection = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.13" }
 
 # Polkadot dependencies
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13", default-features = false }
@@ -100,6 +99,8 @@ bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-f
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
+parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
+
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -134,7 +135,6 @@ std = [
 	"pallet-aura/std",
 	"pallet-balances/std",
 	"pallet-bounties/std",
-	"pallet-collator-selection/std",
 	"pallet-collective/std",
 	"pallet-democracy/std",
 	"pallet-elections-phragmen/std",
@@ -172,6 +172,7 @@ std = [
 	"cumulus-primitives-core/std",
 	"cumulus-primitives-timestamp/std",
 	"cumulus-primitives-utility/std",
+	"parachain-staking/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",

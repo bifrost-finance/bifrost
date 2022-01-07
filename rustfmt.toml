@@ -19,3 +19,4 @@ match_block_trailing_comma = true
 use_field_init_shorthand = true
 binop_separator = "Back"
 license_template_path = "HEADER-GPL3"
+ignore = ["pallets/parachain-staking"]
