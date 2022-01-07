@@ -22,11 +22,9 @@ use polkadot_primitives::v0::HeadData;
 use sp_runtime::traits::Block as BlockT;
 
 /// Returns the initial head data for a parachain ID.
-pub fn initial_head_data(para_id: ParaId) -> HeadData {
-	// let spec = Box::new(crate::chain_spec::get_chain_spec(para_id));
+pub fn initial_head_data(_para_id: ParaId) -> HeadData {
 	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
-	let spec =
-		Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config(para_id).unwrap());
+	let spec = Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config().unwrap());
 	let block: Block = generate_genesis_block(&(spec as Box<_>)).unwrap();
 	let genesis_state = block.header().encode();
 	genesis_state.into()

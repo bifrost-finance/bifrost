@@ -15,7 +15,7 @@
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
 use cumulus_primitives_core::ParaId;
-use cumulus_test_service::{initial_head_data, run_relay_chain_validator_node, Keyring::*};
+use bifrost_test_service::{initial_head_data, run_relay_chain_validator_node, Keyring::*};
 
 #[substrate_test_utils::test]
 // #[ignore]
@@ -49,7 +49,7 @@ async fn test_collating_and_non_collator_mode_catching_up() {
 
 	// run cumulus charlie (a parachain collator)
 	let charlie =
-		cumulus_test_service::TestNodeBuilder::new(para_id, tokio_handle.clone(), Charlie)
+		bifrost_test_service::TestNodeBuilder::new(para_id, tokio_handle.clone(), Charlie)
 			.enable_collator()
 			.connect_to_relay_chain_nodes(vec![&alice, &bob])
 			.build()
@@ -57,7 +57,7 @@ async fn test_collating_and_non_collator_mode_catching_up() {
 	charlie.wait_for_blocks(5).await;
 
 	// run cumulus dave (a parachain full node) and wait for it to sync some blocks
-	let dave = cumulus_test_service::TestNodeBuilder::new(para_id, tokio_handle, Dave)
+	let dave = bifrost_test_service::TestNodeBuilder::new(para_id, tokio_handle, Dave)
 		.connect_to_parachain_node(&charlie)
 		.connect_to_relay_chain_nodes(vec![&alice, &bob])
 		.build()

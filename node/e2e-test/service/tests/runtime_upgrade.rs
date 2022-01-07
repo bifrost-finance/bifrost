@@ -15,7 +15,7 @@
 // along with Substrate.  If not, see <http://www.gnu.org/licenses/>.
 
 use cumulus_primitives_core::ParaId;
-use cumulus_test_service::{initial_head_data, run_relay_chain_validator_node, Keyring::*};
+use bifrost_test_service::{initial_head_data, run_relay_chain_validator_node, Keyring::*};
 use futures::StreamExt;
 use sc_client_api::BlockchainEvents;
 use sp_runtime::generic::BlockId;
@@ -27,7 +27,7 @@ async fn test_runtime_upgrade() {
 	builder.with_colors(false);
 	let _ = builder.init();
 
-	let para_id = ParaId::from(2001);
+	let para_id = ParaId::from(2001_i32);
 	let tokio_handle = tokio::runtime::Handle::current();
 
 	// start alice
@@ -51,14 +51,14 @@ async fn test_runtime_upgrade() {
 
 	// run cumulus charlie (a parachain collator)
 	let charlie =
-		cumulus_test_service::TestNodeBuilder::new(para_id, tokio_handle.clone(), Charlie)
+		bifrost_test_service::TestNodeBuilder::new(para_id, tokio_handle.clone(), Charlie)
 			.enable_collator()
 			.connect_to_relay_chain_nodes(vec![&alice, &bob])
 			.build()
 			.await;
 
 	// run cumulus dave (a parachain full node)
-	let dave = cumulus_test_service::TestNodeBuilder::new(para_id, tokio_handle, Dave)
+	let dave = bifrost_test_service::TestNodeBuilder::new(para_id, tokio_handle, Dave)
 		.connect_to_parachain_node(&charlie)
 		.connect_to_relay_chain_nodes(vec![&alice, &bob])
 		.build()

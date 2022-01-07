@@ -20,6 +20,7 @@
 
 mod genesis;
 
+use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
 use core::future::Future;
 use cumulus_client_consensus_common::{ParachainCandidate, ParachainConsensus};
 use cumulus_client_network::BlockAnnounceValidator;
@@ -28,7 +29,6 @@ use cumulus_client_service::{
 };
 use cumulus_primitives_core::ParaId;
 use cumulus_test_runtime::NodeBlock as Block;
-use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
 use frame_system_rpc_runtime_api::AccountNonceApi;
 use polkadot_primitives::v1::{CollatorPair, Hash as PHash, PersistedValidationData};
 use polkadot_service::ProvideRuntimeApi;
@@ -77,6 +77,7 @@ impl ParachainConsensus<Block> for NullConsensus {
 /// The signature of the announce block fn.
 pub type AnnounceBlockFn = Arc<dyn Fn(Hash, Option<Vec<u8>>) + Send + Sync>;
 
+/// Native executor instance.
 pub struct RuntimeExecutor;
 impl sc_executor::NativeExecutionDispatch for RuntimeExecutor {
 	type ExtendHostFunctions = ();
@@ -552,7 +553,7 @@ pub fn node_config(
 	key: Sr25519Keyring,
 	nodes: Vec<MultiaddrWithPeerId>,
 	nodes_exlusive: bool,
-	para_id: ParaId,
+	_para_id: ParaId,
 	is_collator: bool,
 ) -> Result<Configuration, ServiceError> {
 	let base_path = BasePath::new_temp_dir()?;
@@ -562,7 +563,7 @@ pub fn node_config(
 
 	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
 	let mut spec =
-		Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config(para_id).unwrap());
+		Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config().unwrap());
 
 	let mut storage = spec.as_storage_builder().build_storage().expect("could not build storage");
 
@@ -666,7 +667,10 @@ impl TestNode {
 		let call = frame_system::Call::set_code { code: validation };
 
 		self.send_extrinsic(
-			bifrost_kusama_test_runtime::SudoCall::sudo_unchecked_weight { call: Box::new(call.into()), weight: 1_000 },
+			bifrost_kusama_test_runtime::SudoCall::sudo_unchecked_weight {
+				call: Box::new(call.into()),
+				weight: 1_000,
+			},
 			Sr25519Keyring::Alice,
 		)
 		.await
@@ -700,22 +704,32 @@ pub fn construct_extrinsic(
 		.map(|c| c / 2)
 		.unwrap_or(2) as u64;
 	let tip = 0;
-	let extra: bifrost_kusama_test_runtime::SignedExtra = (
-		frame_system::CheckSpecVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
-		frame_system::CheckTxVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
-		frame_system::CheckGenesis::<bifrost_kusama_test_runtime::Runtime>::new(),
-		frame_system::CheckEra::<bifrost_kusama_test_runtime::Runtime>::from(generic::Era::mortal(
-			period,
-			current_block,
-		)),
-		frame_system::CheckNonce::<bifrost_kusama_test_runtime::Runtime>::from(nonce),
-		frame_system::CheckWeight::<bifrost_kusama_test_runtime::Runtime>::new(),
-		pallet_transaction_payment::ChargeTransactionPayment::<bifrost_kusama_test_runtime::Runtime>::from(tip),
-	);
+	let extra: bifrost_kusama_test_runtime::SignedExtra =
+		(
+			frame_system::CheckSpecVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
+			frame_system::CheckTxVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
+			frame_system::CheckGenesis::<bifrost_kusama_test_runtime::Runtime>::new(),
+			frame_system::CheckEra::<bifrost_kusama_test_runtime::Runtime>::from(
+				generic::Era::mortal(period, current_block),
+			),
+			frame_system::CheckNonce::<bifrost_kusama_test_runtime::Runtime>::from(nonce),
+			frame_system::CheckWeight::<bifrost_kusama_test_runtime::Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<
+				bifrost_kusama_test_runtime::Runtime,
+			>::from(tip),
+		);
 	let raw_payload = bifrost_kusama_test_runtime::SignedPayload::from_raw(
 		function.clone(),
 		extra.clone(),
-		(bifrost_kusama_test_runtime::VERSION.spec_version, 1_u32, genesis_block, current_block_hash, (), (), ()),
+		(
+			bifrost_kusama_test_runtime::VERSION.spec_version,
+			1_u32,
+			genesis_block,
+			current_block_hash,
+			(),
+			(),
+			(),
+		),
 	);
 	let signature = raw_payload.using_encoded(|e| caller.sign(e));
 	bifrost_kusama_test_runtime::UncheckedExtrinsic::new_signed(
