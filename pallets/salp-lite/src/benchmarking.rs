@@ -49,7 +49,8 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 #[allow(dead_code)]
 fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
 	let value = T::MinContribution::get();
-	assert_ok!(Salp::<T>::issue(RawOrigin::Root.into(), who.clone(), index, value, [0; 32]));
+	let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+	assert_ok!(Salp::<T>::issue(confirmer, who.clone(), index, value, [0; 32]));
 }
 
 benchmarks! {
@@ -76,16 +77,15 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
+		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
 		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
 	}: _(RawOrigin::Signed(caller.clone()), fund_index,(0 as u32).into(),(7 as u32).into(),contribution)
 	verify {
 		assert_eq!(Salp::<T>::redeem_pool(), 0_u32.saturated_into());
-		assert_last_event::<T>(Event::<T>::Redeemed(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
+		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 
 }
 
-// impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
+impl_benchmark_test_suite!(Salp, crate::mock::new_test_ext(), crate::mock::Test);
