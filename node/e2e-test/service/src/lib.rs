@@ -1,35 +1,41 @@
-// Copyright 2019-2021 Parity Technologies (UK) Ltd.
-// This file is part of Cumulus.
+// This file is part of Bifrost.
 
-// Cumulus is free software: you can redistribute it and/or modify
+// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
+
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 
-// Cumulus is distributed in the hope that it will be useful,
+// This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
 // You should have received a copy of the GNU General Public License
-// along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Crate used for testing with Cumulus.
+//! Crate used for testing with Bifrost.
 
 #![warn(missing_docs)]
 
 mod genesis;
 
-use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
 use core::future::Future;
+use std::sync::Arc;
+
+use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
 use cumulus_client_consensus_common::{ParachainCandidate, ParachainConsensus};
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
+pub use cumulus_test_runtime as runtime;
 use cumulus_test_runtime::NodeBlock as Block;
 use frame_system_rpc_runtime_api::AccountNonceApi;
+pub use genesis::*;
 use polkadot_primitives::v1::{CollatorPair, Hash as PHash, PersistedValidationData};
 use polkadot_service::ProvideRuntimeApi;
 use sc_client_api::execution_extensions::ExecutionStrategies;
@@ -46,17 +52,13 @@ use sp_arithmetic::traits::SaturatedConversion;
 use sp_blockchain::HeaderBackend;
 use sp_core::{Pair, H256};
 use sp_keyring::Sr25519Keyring;
+pub use sp_keyring::Sr25519Keyring as Keyring;
 use sp_runtime::{codec::Encode, generic, traits::BlakeTwo256};
 use sp_state_machine::BasicExternalities;
 use sp_trie::PrefixedMemoryDB;
-use std::sync::Arc;
 use substrate_test_client::{
 	BlockchainEventsExt, RpcHandlersExt, RpcTransactionError, RpcTransactionOutput,
 };
-
-pub use cumulus_test_runtime as runtime;
-pub use genesis::*;
-pub use sp_keyring::Sr25519Keyring as Keyring;
 
 /// A consensus that will never produce any block.
 #[derive(Clone)]
@@ -185,7 +187,7 @@ where
 		+ 'static,
 {
 	if matches!(parachain_config.role, Role::Light) {
-		return Err("Light client not supported!".into())
+		return Err("Light client not supported!".into());
 	}
 
 	let mut parachain_config = prepare_node_config(parachain_config);
@@ -357,8 +359,8 @@ pub struct TestNode {
 	pub client: Arc<Client>,
 	/// Node's network.
 	pub network: Arc<NetworkService<Block, H256>>,
-	/// The `MultiaddrWithPeerId` to this node. This is useful if you want to pass it as "boot node"
-	/// to other nodes.
+	/// The `MultiaddrWithPeerId` to this node. This is useful if you want to pass it as "boot
+	/// node" to other nodes.
 	pub addr: MultiaddrWithPeerId,
 	/// RPCHandlers to make RPC queries.
 	pub rpc_handlers: RpcHandlers,
@@ -393,7 +395,8 @@ impl TestNodeBuilder {
 	///
 	/// `para_id` - The parachain id this node is running for.
 	/// `tokio_handle` - The tokio handler to use.
-	/// `key` - The key that will be used to generate the name and that will be passed as `dev_seed`.
+	/// `key` - The key that will be used to generate the name and that will be passed as
+	/// `dev_seed`.
 	pub fn new(para_id: ParaId, tokio_handle: tokio::runtime::Handle, key: Sr25519Keyring) -> Self {
 		TestNodeBuilder {
 			key,

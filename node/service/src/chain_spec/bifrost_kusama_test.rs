@@ -132,8 +132,8 @@ pub fn bifrost_genesis(
 				.cloned()
 				.map(|(acc, aura)| {
 					(
-						acc.clone(),                                  // account id
-						acc.clone(),                                  // validator id
+						acc.clone(),                                       // account id
+						acc.clone(),                                       // validator id
 						bifrost_kusama_test_runtime::SessionKeys { aura }, // session keys
 					)
 				})
