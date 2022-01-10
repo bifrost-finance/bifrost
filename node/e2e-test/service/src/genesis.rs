@@ -25,7 +25,7 @@ use sp_runtime::traits::Block as BlockT;
 
 /// Returns the initial head data for a parachain ID.
 pub fn initial_head_data(_para_id: ParaId) -> HeadData {
-	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
+	#[cfg(any(feature = "with-bifrost-kusama-test-runtime", feature = "with-all-runtime"))]
 	let spec = Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config().unwrap());
 	let block: Block = generate_genesis_block(&(spec as Box<_>)).unwrap();
 	let genesis_state = block.header().encode();

@@ -23,7 +23,7 @@ use sc_client_api::BlockchainEvents;
 use sp_runtime::generic::BlockId;
 
 #[substrate_test_utils::test]
-// #[ignore]
+#[ignore]
 async fn test_runtime_upgrade() {
 	let mut builder = sc_cli::LoggerBuilder::new("runtime=debug");
 	builder.with_colors(false);

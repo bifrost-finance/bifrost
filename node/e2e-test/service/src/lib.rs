@@ -564,7 +564,7 @@ pub fn node_config(
 	let role = if is_collator { Role::Authority } else { Role::Full };
 	let key_seed = key.to_seed();
 
-	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
+	#[cfg(any(feature = "with-bifrost-kusama-test-runtime", feature = "with-all-runtime"))]
 	let mut spec =
 		Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config().unwrap());
 
