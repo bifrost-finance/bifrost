@@ -46,6 +46,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 pub fn ENDOWMENT() -> u128 {
 	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::ASG))
 }
+
 fn asgard_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
 	let mut token_symbol: Vec<String> = vec![];
@@ -233,17 +234,17 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn development_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
 		ChainType::Development,
-		move || development_config_genesis(id),
+		move || development_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(asgard_properties()),
-		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
 	))
 }
 
@@ -315,31 +316,31 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Asgard Local Testnet",
 		"asgard_local_testnet",
 		ChainType::Local,
-		move || local_config_genesis(id),
+		move || local_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(asgard_properties()),
-		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend-local".into(), para_id: PARA_ID },
 	))
 }
 
-pub fn chainspec_config(id: ParaId) -> ChainSpec {
+pub fn chainspec_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Bifrost Asgard CC4",
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
-		move || asgard_config_genesis(id),
+		move || asgard_config_genesis(PARA_ID.into()),
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(asgard_properties()),
-		RelayExtensions { relay_chain: "westend".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend".into(), para_id: PARA_ID },
 	)
 }
 

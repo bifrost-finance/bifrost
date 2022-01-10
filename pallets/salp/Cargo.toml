@@ -32,8 +32,8 @@ orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 bifrost-bancor = { path = "../../pallets/bancor" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost" }
 bifrost-runtime-common = { path = "../../runtime/common" }
+bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 
 [features]
 default = ["std"]

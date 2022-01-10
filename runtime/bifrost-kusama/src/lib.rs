@@ -136,7 +136,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 912,
+	spec_version: 916,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -958,7 +958,7 @@ parameter_types! {
 			1,
 			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into()))
 		).into(),
-		// usdt:KSM = 10:1
+		// rmrk:KSM = 10:1
 		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
 	);
 }
@@ -1023,11 +1023,11 @@ impl pallet_xcm::Config for Runtime {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type XcmExecuteFilter = Everything;
+	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = XcmRouter;
-	type XcmTeleportFilter = Everything;
+	type XcmTeleportFilter = Nothing;
 	type Origin = Origin;
 	type Call = Call;
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -1751,7 +1751,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	VsbondAuctionOnRuntimeUpgrade<Runtime, ()>,
+	(),
 >;
 
 impl_runtime_apis! {
@@ -2031,52 +2031,6 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
-	}
-}
-
-pub struct VsbondAuctionOnRuntimeUpgrade<T, I>(PhantomData<(T, I)>);
-impl<T: bifrost_vsbond_auction::Config<I>, I: 'static> OnRuntimeUpgrade
-	for VsbondAuctionOnRuntimeUpgrade<T, I>
-{
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `pre_upgrade`...");
-
-		// check the on-going order number
-		let order_iter = bifrost_vsbond_auction::TotalOrderInfos::<T, I>::iter();
-		let order_count = order_iter.count();
-		log::info!("Old order count is {:?}", order_count);
-
-		Ok(())
-	}
-
-	fn on_runtime_upgrade() -> Weight {
-		log::info!("Bifrost `on_runtime_upgrade`...");
-
-		let weight = bifrost_vsbond_auction::migration::migrate_orders::<Runtime, _>();
-
-		log::info!("Bifrost `on_runtime_upgrade finished`");
-
-		weight
-
-		// RocksDbWeight::get().writes(1)
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		#[allow(unused_imports)]
-		use frame_support::{migration, Identity};
-		log::info!("Bifrost `post_upgrade`...");
-
-		// check the post-upgrader remaining order number
-		let order_iter = bifrost_vsbond_auction::TotalOrderInfos::<T, I>::iter();
-		let order_count = order_iter.count();
-
-		log::info!("New order count is {:?}", order_count);
-
-		Ok(())
 	}
 }
 

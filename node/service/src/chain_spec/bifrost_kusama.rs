@@ -54,6 +54,8 @@ pub fn ENDOWMENT() -> u128 {
 	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::BNC))
 }
 
+pub const PARA_ID: u32 = 2001;
+
 fn bifrost_kusama_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
 	let mut token_symbol: Vec<String> = vec![];
@@ -281,31 +283,31 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Local Testnet",
 		"bifrost_local_testnet",
 		ChainType::Local,
-		move || local_config_genesis(id),
+		move || local_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-local".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
 	))
 }
 
-pub fn chainspec_config(id: ParaId) -> ChainSpec {
+pub fn chainspec_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Bifrost",
 		"bifrost",
 		ChainType::Live,
-		move || bifrost_config_genesis(id),
+		move || bifrost_config_genesis(PARA_ID.into()),
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
 	)
 }
 
