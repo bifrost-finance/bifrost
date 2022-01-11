@@ -47,6 +47,8 @@ pub fn ENDOWMENT() -> u128 {
 	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::ASG))
 }
 
+pub const PARA_ID: u32 = 2121;
+
 fn asgard_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
 	let mut token_symbol: Vec<String> = vec![];

@@ -32,7 +32,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13"}
 xcm-support = { path = "../../xcm-support"}
 bifrost-salp = { path = "../salp" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost" }
+bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-runtime-common = { path = "../../runtime/common" }
 
 [features]
