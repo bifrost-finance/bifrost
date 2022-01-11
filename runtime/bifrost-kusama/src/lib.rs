@@ -1710,7 +1710,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	(),
+	LatestRuntimeUpgrade,
 >;
 
 impl_runtime_apis! {
@@ -1990,6 +1990,50 @@ impl_runtime_apis! {
 		fn execute_block_no_check(block: Block) -> Weight {
 			Executive::execute_block_no_check(block)
 		}
+	}
+}
+
+pub struct LatestRuntimeUpgrade;
+impl OnRuntimeUpgrade for LatestRuntimeUpgrade {
+	fn on_runtime_upgrade() -> Weight {
+		let w_ksm = bifrost_liquidity_mining::migration::v2::Upgrade::<
+			Runtime,
+			bifrost_liquidity_mining::Instance1,
+		>::on_runtime_upgrade();
+		let w_dot = bifrost_liquidity_mining::migration::v2::Upgrade::<
+			Runtime,
+			bifrost_liquidity_mining::Instance2,
+		>::on_runtime_upgrade();
+
+		w_ksm + w_dot
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn pre_upgrade() -> Result<(), &'static str> {
+		bifrost_liquidity_mining::migration::v2::Upgrade::<
+			Runtime,
+			bifrost_liquidity_mining::Instance1,
+		>::pre_upgrade()?;
+		bifrost_liquidity_mining::migration::v2::Upgrade::<
+			Runtime,
+			bifrost_liquidity_mining::Instance2,
+		>::pre_upgrade()?;
+
+		Ok(())
+	}
+
+	#[cfg(feature = "try-runtime")]
+	fn post_upgrade() -> Result<(), &'static str> {
+		bifrost_liquidity_mining::migration::v2::Upgrade::<
+			Runtime,
+			bifrost_liquidity_mining::Instance1,
+		>::post_upgrade()?;
+		bifrost_liquidity_mining::migration::v2::Upgrade::<
+			Runtime,
+			bifrost_liquidity_mining::Instance2,
+		>::post_upgrade()?;
+
+		Ok(())
 	}
 }
 
