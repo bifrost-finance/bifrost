@@ -131,14 +131,6 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 					GeneralKey(parachains::karura::KUSD_KEY.to_vec()),
 				),
 			)),
-			// Usdt from statemine
-			Stable(TokenSymbol::USDT) => Some(MultiLocation::new(
-				1,
-				X2(
-					Parachain(parachains::Statemine::ID),
-					GeneralIndex(parachains::Statemine::USDT_ID as u128),
-				),
-			)),
 			Token(TokenSymbol::RMRK) => Some(MultiLocation::new(
 				1,
 				X2(
@@ -187,15 +179,39 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					}
 				},
 				X2(Parachain(id), GeneralIndex(key)) if id == parachains::Statemine::ID => {
-					if key == parachains::Statemine::USDT_ID.into() {
-						Some(Stable(TokenSymbol::USDT))
-					} else if key == parachains::Statemine::RMRK_ID.into() {
+					if key == parachains::Statemine::RMRK_ID.into() {
+						Some(Token(TokenSymbol::RMRK))
+					} else {
+						None
+					}
+				},
+				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
+					if (id == parachains::Statemine::ID &&
+						index == parachains::Statemine::PALLET_ID) =>
+				{
+					if key == parachains::Statemine::RMRK_ID.into() {
 						Some(Token(TokenSymbol::RMRK))
 					} else {
 						None
 					}
 				},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
+				_ => None,
+			},
+			MultiLocation { parents, interior } if parents == 0 => match interior {
+				X1(GeneralKey(key)) => {
+					// decode the general key
+					if let Ok(currency_id) = CurrencyId::decode(&mut &key[..]) {
+						match currency_id {
+							Native(TokenSymbol::ASG) |
+							Native(TokenSymbol::BNC) |
+							VSToken(TokenSymbol::KSM) => Some(currency_id),
+							_ => None,
+						}
+					} else {
+						None
+					}
+				},
 				_ => None,
 			},
 			_ => None,

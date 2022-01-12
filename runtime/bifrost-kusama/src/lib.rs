@@ -937,14 +937,6 @@ parameter_types! {
 		// kUSD:KSM = 400:1
 		ksm_per_second() * 400
 	);
-	pub UsdtPerSecond: (AssetId, u128) = (
-		MultiLocation::new(
-			1,
-			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::USDT_ID.into()))
-		).into(),
-		// usdt:KSM = 400:1
-		ksm_per_second() * 400 / 1_000_000 //usdt currency decimal as 6
-	);
 	pub PhaPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
@@ -982,7 +974,6 @@ pub type Trader = (
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
-	FixedRateOfFungible<UsdtPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 );
@@ -1152,7 +1143,6 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
-			&CurrencyId::Stable(TokenSymbol::USDT) => 1 * microcent(CurrencyId::Stable(TokenSymbol::USDT)),
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
 			_ => Balance::max_value(), // unsupported
 		}
