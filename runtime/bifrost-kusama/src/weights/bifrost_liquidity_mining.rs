@@ -125,14 +125,4 @@ impl<T: frame_system::Config> bifrost_liquidity_mining::WeightInfo for WeightInf
 			.saturating_add(T::DbWeight::get().reads(9 as Weight))
 			.saturating_add(T::DbWeight::get().writes(7 as Weight))
 	}
-
-	// By Hand
-	fn unlock() -> Weight {
-		1_000
-	}
-
-	// By Hand
-	fn cancel_unlock() -> Weight {
-		1_000
-	}
 }
