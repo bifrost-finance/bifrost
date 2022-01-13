@@ -132,10 +132,12 @@ pub mod v2 {
 		>;
 
 		#[allow(type_alias_bounds)]
-		pub(super) type TotalDepositData<T: Config<I>, I: 'static = ()> = StorageMap<
+		pub(super) type TotalDepositData<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 			TotalDepositDataPrefix<T, I>,
-			Twox64Concat,
+			Blake2_128Concat,
 			PoolId,
+			Blake2_128Concat,
+			AccountIdOf<T>,
 			self::DepositData<BalanceOf<T, I>, BlockNumberFor<T>>,
 		>;
 	}
