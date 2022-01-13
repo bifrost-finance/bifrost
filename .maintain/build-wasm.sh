@@ -9,6 +9,7 @@ WORK_PATH=${BIN_PATH}/..
 
 RUNTIME=$1
 
+cd runtime && ln -fsn $RUNTIME bifrost
 docker run --rm -i \
   -e PACKAGE=$RUNTIME-runtime \
   -e VERBOSE=1 \
@@ -18,6 +19,5 @@ docker run --rm -i \
   paritytech/srtool:${RUSTC_VERSION} build ${EXTRA_ARGS}
 
 mkdir -p ${WORK_PATH}/deploy/wasm
-ln -fsn ${WORK_PATH}/runtime/$RUNTIME ${WORK_PATH}/runtime/bifrost
 cp ${WORK_PATH}/runtime/$RUNTIME/target/srtool/release/wbuild/$RUNTIME-runtime/${RUNTIME/-/_}_runtime.compact.compressed.wasm \
 ${WORK_PATH}/deploy/wasm

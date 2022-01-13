@@ -141,6 +141,12 @@ pub mod pallet {
 	#[pallet::getter(fn vesting_start_at)]
 	pub(super) type VestingStartAt<T: Config> = StorageValue<_, T::BlockNumber>;
 
+	/// Cliff vesting
+	#[pallet::storage]
+	#[pallet::getter(fn cliffs)]
+	pub(super) type Cliff<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, T::BlockNumber>;
+
 	/// Information regarding the vesting of a given account.
 	#[pallet::storage]
 	#[pallet::getter(fn vesting)]
@@ -214,6 +220,8 @@ pub mod pallet {
 		VestingStartAtNotSet,
 		/// Wrong amount
 		WrongLockedAmount,
+		/// Wrong vesting during cliff period
+		WrongCliffVesting,
 	}
 
 	#[pallet::hooks]
@@ -239,6 +247,7 @@ pub mod pallet {
 		)]
 		pub fn vest(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			Self::check_cliff(who.clone())?;
 			Self::update_lock(who)
 		}
 
@@ -265,7 +274,9 @@ pub mod pallet {
 			target: <T::Lookup as StaticLookup>::Source,
 		) -> DispatchResult {
 			ensure_signed(origin)?;
-			Self::update_lock(T::Lookup::lookup(target)?)
+			let who = T::Lookup::lookup(target)?;
+			Self::check_cliff(who.clone())?;
+			Self::update_lock(who)
 		}
 
 		/// Create a vested transfer.
@@ -446,6 +457,20 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(0)]
+		pub fn force_set_cliff(
+			origin: OriginFor<T>,
+			target: <T::Lookup as StaticLookup>::Source,
+			cliff_block: T::BlockNumber,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			let target = T::Lookup::lookup(target)?;
+			Cliff::<T>::insert(target.clone(), cliff_block);
+
+			Ok(())
+		}
 	}
 }
 
@@ -469,6 +494,16 @@ impl<T: Config> Pallet<T> {
 			T::Currency::set_lock(VESTING_ID, &who, locked_now, reasons);
 			Self::deposit_event(Event::<T>::VestingUpdated(who, locked_now));
 		}
+		Ok(())
+	}
+
+	fn check_cliff(who: T::AccountId) -> DispatchResult {
+		if let Some(cliff_block) = Cliff::<T>::get(who.clone()) {
+			let now = <frame_system::Pallet<T>>::block_number();
+			ensure!(cliff_block < now, Error::<T>::WrongCliffVesting);
+			Cliff::<T>::remove(who);
+		};
+
 		Ok(())
 	}
 }
@@ -1108,6 +1143,22 @@ mod tests {
 			};
 
 			assert_eq!(Vesting::vesting(&1), Some(user3_vesting_schedule)); // Account 1 has a vesting schedule
+		});
+	}
+
+	#[test]
+	fn set_cliff_should_work() {
+		ExtBuilder::default().existential_deposit(10).build().execute_with(|| {
+			assert_ok!(Vesting::vest(Some(1).into()));
+			assert_ok!(Vesting::force_set_cliff(Origin::root(), 1, 10));
+			assert_noop!(Vesting::vest(Some(1).into()), Error::<Test>::WrongCliffVesting);
+			assert_noop!(Vesting::vest_other(Some(2).into(), 1), Error::<Test>::WrongCliffVesting);
+			System::set_block_number(10);
+			assert_noop!(Vesting::vest(Some(1).into()), Error::<Test>::WrongCliffVesting);
+			assert_noop!(Vesting::vest_other(Some(2).into(), 1), Error::<Test>::WrongCliffVesting);
+			System::set_block_number(11);
+			assert_ok!(Vesting::vest(Some(1).into()));
+			assert_ok!(Vesting::vest_other(Some(2).into(), 1));
 		});
 	}
 }
