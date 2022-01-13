@@ -33,8 +33,6 @@ pub trait WeightInfo {
 	fn redeem_all() -> Weight;
 	fn volunteer_to_redeem() -> Weight;
 	fn claim() -> Weight;
-	fn unlock() -> Weight;
-	fn cancel_unlock() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -60,14 +58,6 @@ impl WeightInfo for () {
 	}
 
 	fn claim() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn unlock() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn cancel_unlock() -> Weight {
 		(50_000_000 as Weight)
 	}
 }
