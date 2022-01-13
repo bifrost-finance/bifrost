@@ -1710,7 +1710,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	LatestRuntimeUpgrade,
+	(),
 >;
 
 impl_runtime_apis! {
