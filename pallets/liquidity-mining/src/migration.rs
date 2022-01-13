@@ -20,10 +20,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod v2 {
-	use frame_support::{
-		storage::StoragePrefixedMap,
-		traits::{OnRuntimeUpgrade, PalletInfo},
-	};
+	use frame_support::traits::{OnRuntimeUpgrade, PalletInfo};
 
 	use crate::*;
 
@@ -33,12 +30,12 @@ pub mod v2 {
 	type DepositDataOld<T, I> = deprecated::DepositData<BalanceOf<T, I>, BlockNumberFor<T>>;
 	type DepositDataNew<T, I> = DepositData<BalanceOf<T, I>, BlockNumberFor<T>>;
 
-	pub(super) mod deprecated {
-		use super::StoragePrefixedMap;
+	pub(crate) mod deprecated {
+		use super::PalletInfo;
 		use crate::*;
 
 		#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
-		pub struct PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>
+		pub(crate) struct PoolInfo<AccountIdOf, BalanceOf, BlockNumberOf>
 		where
 			AccountIdOf: Clone,
 			BalanceOf: AtLeast32BitUnsigned + Copy,
@@ -83,7 +80,7 @@ pub mod v2 {
 		}
 
 		#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
-		pub(super) struct DepositData<BalanceOf, BlockNumberOf>
+		pub(crate) struct DepositData<BalanceOf, BlockNumberOf>
 		where
 			BalanceOf: AtLeast32BitUnsigned + Copy,
 			BlockNumberOf: AtLeast32BitUnsigned + Copy,
@@ -101,30 +98,28 @@ pub mod v2 {
 			pub(super) update_b: BlockNumberOf,
 		}
 
-		pub(super) struct TotalPoolInfosPrefix<T, I>(PhantomData<(T, I)>);
+		pub(crate) struct TotalPoolInfosPrefix<T, I>(PhantomData<(T, I)>);
 		impl<T: Config<I>, I: 'static> frame_support::traits::StorageInstance
 			for TotalPoolInfosPrefix<T, I>
 		{
 			fn pallet_prefix() -> &'static str {
-				core::str::from_utf8(crate::TotalPoolInfos::<T, I>::module_prefix())
-					.unwrap_or("none")
+				T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none")
 			}
 			const STORAGE_PREFIX: &'static str = "TotalPoolInfos";
 		}
 
-		pub(super) struct TotalDepositDataPrefix<T, I>(PhantomData<(T, I)>);
+		pub(crate) struct TotalDepositDataPrefix<T, I>(PhantomData<(T, I)>);
 		impl<T: Config<I>, I: 'static> frame_support::traits::StorageInstance
 			for TotalDepositDataPrefix<T, I>
 		{
 			fn pallet_prefix() -> &'static str {
-				core::str::from_utf8(crate::TotalDepositData::<T, I>::module_prefix())
-					.unwrap_or("none")
+				T::PalletInfo::name::<Pallet<T, I>>().unwrap_or("none")
 			}
 			const STORAGE_PREFIX: &'static str = "TotalDepositData";
 		}
 
 		#[allow(type_alias_bounds)]
-		pub(super) type TotalPoolInfos<T: Config<I>, I: 'static = ()> = StorageMap<
+		pub(crate) type TotalPoolInfos<T: Config<I>, I: 'static = ()> = StorageMap<
 			TotalPoolInfosPrefix<T, I>,
 			Twox64Concat,
 			PoolId,
@@ -132,7 +127,7 @@ pub mod v2 {
 		>;
 
 		#[allow(type_alias_bounds)]
-		pub(super) type TotalDepositData<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+		pub(crate) type TotalDepositData<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 			TotalDepositDataPrefix<T, I>,
 			Blake2_128Concat,
 			PoolId,
