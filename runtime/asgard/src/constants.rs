@@ -20,32 +20,25 @@
 
 /// Money matters.
 pub mod currency {
+	use bifrost_runtime_common::{cent, dollar, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
 	};
-	use node_primitives::Balance;
+	use node_primitives::{Balance, CurrencyId, TokenSymbol};
 	use smallvec::smallvec;
 	pub use sp_runtime::Perbill;
 
-	pub const ASGS: Balance = 1_000_000_000_000;
-	pub const DOLLARS: Balance = ASGS;
-	pub const CENTS: Balance = DOLLARS / 100; // assume this is worth about a cent.
-	pub const RELAY_CENTS: Balance = DOLLARS / 30_000;
-	pub const MILLICENTS: Balance = CENTS / 1_000;
-	pub const MILLIBNC: Balance = 1_000_000_000;
-	pub const MICROBNC: Balance = 1_000_000;
-	pub const XCM_WEIGHT: u64 = 1_000_000_000;
-
-	pub const fn deposit(items: u32, bytes: u32) -> Balance {
-		items as Balance * 15 * CENTS + (bytes as Balance) * 6 * CENTS
+	pub fn deposit(items: u32, bytes: u32) -> Balance {
+		items as Balance * 15 * cent(CurrencyId::Native(TokenSymbol::ASG)) +
+			(bytes as Balance) * 6 * cent(CurrencyId::Native(TokenSymbol::ASG))
 	}
 
 	pub struct KsmWeightToFee;
 	impl WeightToFeePolynomial for KsmWeightToFee {
 		type Balance = Balance;
 		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			let p = super::currency::RELAY_CENTS;
+			let p = ksm_base_tx_fee();
 			let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
 			smallvec![WeightToFeeCoefficient {
 				degree: 1,
@@ -72,8 +65,12 @@ pub mod currency {
 		}
 	}
 
+	fn ksm_base_tx_fee() -> Balance {
+		dollar(CurrencyId::Token(TokenSymbol::KSM)) / 10_000
+	}
+
 	fn base_tx_fee() -> Balance {
-		CENTS / 5
+		milli(CurrencyId::Native(TokenSymbol::ASG)) / 3
 	}
 
 	pub fn ksm_per_second() -> u128 {
