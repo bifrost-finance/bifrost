@@ -53,10 +53,19 @@ decl_test_parachain! {
 	}
 }
 
+decl_test_parachain! {
+	pub struct Statemine {
+		Runtime = westmint_runtime::Runtime,
+		Origin = westmint_runtime::Origin,
+		new_ext = para_ext(1000),
+	}
+}
+
 decl_test_network! {
 	pub struct TestNet {
 		relay_chain = KusamaNet,
 		parachains = vec![
+			(1000, Statemine),
 			(2001, Bifrost),
 			(2000, Sibling),
 		],
