@@ -2,7 +2,7 @@
 
 set -xe
 
-RUSTC_VERSION="1.56.1"
+RUSTC_VERSION="1.57.0"
 EXTRA_ARGS='--json'
 BIN_PATH=$(dirname $(readlink -f $0))
 WORK_PATH=${BIN_PATH}/..
