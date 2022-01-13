@@ -532,6 +532,7 @@ pub mod pallet {
 		Unexpected,
 		/// On lazy-migration
 		OnMigration,
+		NoMigration,
 	}
 
 	#[pallet::event]
@@ -601,6 +602,10 @@ pub mod pallet {
 			BalanceOf<T, I>,
 			AccountIdOf<T>,
 		),
+		/// Lazy migration event
+		///
+		/// [deposit_data_migration_nums, pool_info_migration_nums]
+		LazyMigration(u32, u32),
 	}
 
 	#[pallet::storage]
@@ -1346,6 +1351,89 @@ pub mod pallet {
 					user,
 				));
 			}
+
+			Ok(().into())
+		}
+
+		#[pallet::weight(1_000_000)]
+		pub fn lazy_migration_v2_0_0(
+			_origin: OriginFor<T>,
+			max_nums: u32,
+		) -> DispatchResultWithPostInfo {
+			use migration::v2::deprecated::{
+				TotalDepositData as TotalDepositDataV1_0_0, TotalPoolInfos as TotalPoolInfosV1_0_0,
+			};
+
+			ensure!(Self::storage_version() == StorageVersion::V1_0_0, Error::<T, I>::NoMigration);
+
+			let (mut dd_nums, mut pi_nums) = (0, 0);
+
+			if max_nums > 0 {
+				let mut left = max_nums as usize;
+
+				let double_keys: Vec<(PoolId, AccountIdOf<T>)> =
+					TotalDepositDataV1_0_0::<T, I>::iter_keys().take(left).collect();
+
+				for (pid, user) in double_keys.iter() {
+					let dd_old = TotalDepositDataV1_0_0::<T, I>::get(*pid, user.clone())
+						.ok_or(Error::<T, I>::Unexpected)?;
+					TotalDepositDataV1_0_0::<T, I>::remove(*pid, user.clone());
+
+					let dd_new = DepositData {
+						deposit: dd_old.deposit,
+						gain_avgs: dd_old.gain_avgs,
+						update_b: dd_old.update_b,
+						pending_unlocks: Default::default(),
+					};
+
+					TotalDepositDataV2_0_0::<T, I>::insert(*pid, user.clone(), dd_new);
+				}
+
+				left = left - double_keys.len();
+				dd_nums = double_keys.len();
+
+				if left > 0 {
+					let keys: Vec<PoolId> =
+						TotalPoolInfosV1_0_0::<T, I>::iter_keys().take(left).collect();
+
+					for pid in keys.iter() {
+						let pi_old = TotalPoolInfosV1_0_0::<T, I>::get(*pid)
+							.ok_or(Error::<T, I>::Unexpected)?;
+						TotalPoolInfosV1_0_0::<T, I>::remove(*pid);
+
+						let pi_new = PoolInfo {
+							pool_id: pi_old.pool_id,
+							keeper: pi_old.keeper,
+							investor: pi_old.investor,
+							trading_pair: pi_old.trading_pair,
+							duration: pi_old.duration,
+							r#type: pi_old.r#type,
+							min_deposit_to_start: pi_old.min_deposit_to_start,
+							after_block_to_start: pi_old.after_block_to_start,
+							deposit: pi_old.deposit,
+							rewards: pi_old.rewards,
+							update_b: pi_old.update_b,
+							state: pi_old.state,
+							block_startup: pi_old.block_startup,
+							block_retired: pi_old.block_retired,
+							redeem_limit_time: Zero::zero(),
+							unlock_limit_nums: 0,
+							pending_unlock_nums: 0,
+						};
+
+						TotalPoolInfosV2_0_0::<T, I>::insert(*pid, pi_new);
+					}
+
+					left = left - keys.len();
+					pi_nums = keys.len();
+				}
+
+				if left > 0 {
+					PalletVersion::<T, I>::put(StorageVersion::V2_0_0);
+				}
+			}
+
+			Self::deposit_event(Event::LazyMigration(dd_nums as u32, pi_nums as u32));
 
 			Ok(().into())
 		}

@@ -29,8 +29,8 @@ use node_primitives::{Balance, CurrencyId, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{
-    mock::{Test as T, *},
-    Error, PoolId, PoolState, PoolType, TotalPoolInfosV2_0_0,
+	mock::{Test as T, *},
+	Error, PoolId, PoolState, PoolType, TotalPoolInfosV2_0_0,
 };
 
 fn run_to_block(n: BlockNumber) {

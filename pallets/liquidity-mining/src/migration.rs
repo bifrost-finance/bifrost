@@ -42,41 +42,41 @@ pub mod v2 {
 			BlockNumberOf: AtLeast32BitUnsigned + Copy,
 		{
 			/// Id of the liquidity-pool
-			pub(super) pool_id: PoolId,
+			pub(crate) pool_id: PoolId,
 			/// The keeper of the liquidity-pool
-			pub(super) keeper: AccountIdOf,
+			pub(crate) keeper: AccountIdOf,
 			/// The man who charges the rewards to the pool
-			pub(super) investor: Option<AccountIdOf>,
+			pub(crate) investor: Option<AccountIdOf>,
 			/// The trading-pair supported by the liquidity-pool
-			pub(super) trading_pair: (CurrencyId, CurrencyId),
+			pub(crate) trading_pair: (CurrencyId, CurrencyId),
 			/// The length of time the liquidity-pool releases rewards
-			pub(super) duration: BlockNumberOf,
+			pub(crate) duration: BlockNumberOf,
 			/// The liquidity-pool type
-			pub(super) r#type: PoolType,
+			pub(crate) r#type: PoolType,
 
 			/// The First Condition
 			///
 			/// When starts the liquidity-pool, the amount deposited in the liquidity-pool
 			/// should be greater than the value.
-			pub(super) min_deposit_to_start: BalanceOf,
+			pub(crate) min_deposit_to_start: BalanceOf,
 			/// The Second Condition
 			///
 			/// When starts the liquidity-pool, the current block should be greater than the value.
-			pub(super) after_block_to_start: BlockNumberOf,
+			pub(crate) after_block_to_start: BlockNumberOf,
 
 			/// The total amount deposited in the liquidity-pool
-			pub(super) deposit: BalanceOf,
+			pub(crate) deposit: BalanceOf,
 
 			/// The reward infos about the liquidity-pool
-			pub(super) rewards: BTreeMap<CurrencyId, RewardData<BalanceOf>>,
+			pub(crate) rewards: BTreeMap<CurrencyId, RewardData<BalanceOf>>,
 			/// The block of the last update of the rewards
-			pub(super) update_b: BlockNumberOf,
+			pub(crate) update_b: BlockNumberOf,
 			/// The liquidity-pool state
-			pub(super) state: PoolState,
+			pub(crate) state: PoolState,
 			/// The block number when the liquidity-pool startup
-			pub(super) block_startup: Option<BlockNumberOf>,
+			pub(crate) block_startup: Option<BlockNumberOf>,
 			/// The block number when the liquidity-pool retired
-			pub(super) block_retired: Option<BlockNumberOf>,
+			pub(crate) block_retired: Option<BlockNumberOf>,
 		}
 
 		#[derive(Encode, Decode, Clone, Eq, PartialEq, TypeInfo)]
@@ -86,7 +86,7 @@ pub mod v2 {
 			BlockNumberOf: AtLeast32BitUnsigned + Copy,
 		{
 			/// The amount of trading-pair deposited in the liquidity-pool
-			pub(super) deposit: BalanceOf,
+			pub(crate) deposit: BalanceOf,
 			/// The average gain in pico by 1 pico deposited from the startup of the
 			/// liquidity-pool, updated when the `DepositData`'s owner deposits/redeems/claims from
 			/// the liquidity-pool.
@@ -94,8 +94,8 @@ pub mod v2 {
 			/// - Arg0: The average gain in pico by 1 pico deposited from the startup of the
 			///   liquidity-pool
 			/// - Arg1: The block number updated lastest
-			pub(super) gain_avgs: BTreeMap<CurrencyId, FixedU128>,
-			pub(super) update_b: BlockNumberOf,
+			pub(crate) gain_avgs: BTreeMap<CurrencyId, FixedU128>,
+			pub(crate) update_b: BlockNumberOf,
 		}
 
 		pub(crate) struct TotalPoolInfosPrefix<T, I>(PhantomData<(T, I)>);
@@ -180,17 +180,19 @@ pub mod v2 {
 
 				log::info!(" >>> update `DepositData` storage: Migrating {} user", td_nums);
 
-				TotalDepositDataV2_0_0::<T, I>::translate::<DepositDataOld<T, I>, _>(|id, user, data| {
-					log::info!("    migrated deposit-data for {}: {:?}", id, user);
+				TotalDepositDataV2_0_0::<T, I>::translate::<DepositDataOld<T, I>, _>(
+					|id, user, data| {
+						log::info!("    migrated deposit-data for {}: {:?}", id, user);
 
-					Some(DepositDataNew::<T, I> {
-						deposit: data.deposit,
-						gain_avgs: data.gain_avgs,
-						update_b: data.update_b,
+						Some(DepositDataNew::<T, I> {
+							deposit: data.deposit,
+							gain_avgs: data.gain_avgs,
+							update_b: data.update_b,
 
-						pending_unlocks: Default::default(),
-					})
-				});
+							pending_unlocks: Default::default(),
+						})
+					},
+				);
 
 				PalletVersion::<T, I>::put(StorageVersion::V2_0_0);
 
