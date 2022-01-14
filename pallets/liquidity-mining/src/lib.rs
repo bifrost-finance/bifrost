@@ -37,6 +37,8 @@ use frame_support::{
 	traits::EnsureOrigin,
 	transactional, PalletId, RuntimeDebug,
 };
+#[cfg(feature = "std")]
+use frame_support::{Deserialize, Serialize};
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, CurrencyIdExt, LeasePeriod, ParaId, TokenInfo, TokenSymbol};
 use orml_traits::{MultiCurrency, MultiLockableCurrency, MultiReservableCurrency};
@@ -418,7 +420,8 @@ where
 	}
 }
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, TypeInfo)]
+#[derive(Encode, Decode, Clone, Copy, RuntimeDebug, PartialEq, TypeInfo)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum StorageVersion {
 	// Default
 	V1_0_0,
@@ -646,6 +649,26 @@ pub mod pallet {
 	#[pallet::getter(fn storage_version)]
 	pub(crate) type PalletVersion<T: Config<I>, I: 'static = ()> =
 		StorageValue<_, StorageVersion, ValueQuery>;
+
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
+		pub pallet_version: StorageVersion,
+		pub _phantom: PhantomData<(T, I)>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config<I>, I: 'static> Default for GenesisConfig<T, I> {
+		fn default() -> Self {
+			GenesisConfig { pallet_version: Default::default(), _phantom: PhantomData }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config<I>, I: 'static> GenesisBuild<T, I> for GenesisConfig<T, I> {
+		fn build(&self) {
+			PalletVersion::<T, I>::put(self.pallet_version);
+		}
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T, I = ()>(PhantomData<(T, I)>);
