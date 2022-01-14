@@ -150,7 +150,7 @@ pub mod v2 {
 
 				log::info!(" >>> update `PoolInfo` storage: Migrating {} pool", tp_nums);
 
-				TotalPoolInfosV2_0_0::<T, I>::translate::<PoolInfoOld<T, I>, _>(|id, pool| {
+				TotalPoolInfos::<T, I>::translate::<PoolInfoOld<T, I>, _>(|id, pool| {
 					log::info!("    migrated pool-info for {}", id);
 
 					Some(PoolInfoNew::<T, I> {
@@ -180,19 +180,17 @@ pub mod v2 {
 
 				log::info!(" >>> update `DepositData` storage: Migrating {} user", td_nums);
 
-				TotalDepositDataV2_0_0::<T, I>::translate::<DepositDataOld<T, I>, _>(
-					|id, user, data| {
-						log::info!("    migrated deposit-data for {}: {:?}", id, user);
+				TotalDepositData::<T, I>::translate::<DepositDataOld<T, I>, _>(|id, user, data| {
+					log::info!("    migrated deposit-data for {}: {:?}", id, user);
 
-						Some(DepositDataNew::<T, I> {
-							deposit: data.deposit,
-							gain_avgs: data.gain_avgs,
-							update_b: data.update_b,
+					Some(DepositDataNew::<T, I> {
+						deposit: data.deposit,
+						gain_avgs: data.gain_avgs,
+						update_b: data.update_b,
 
-							pending_unlocks: Default::default(),
-						})
-					},
-				);
+						pending_unlocks: Default::default(),
+					})
+				});
 
 				PalletVersion::<T, I>::put(StorageVersion::V2_0_0);
 
@@ -238,8 +236,8 @@ pub mod v2 {
 			let (tp_nums_old, td_nums_old) =
 				Self::get_temp_storage::<(u32, u32)>(pallet_name).unwrap();
 			let (tp_nums_new, td_nums_new) = (
-				TotalPoolInfosV2_0_0::<T, I>::iter().count() as u32,
-				TotalDepositDataV2_0_0::<T, I>::iter().count() as u32,
+				TotalPoolInfos::<T, I>::iter().count() as u32,
+				TotalDepositData::<T, I>::iter().count() as u32,
 			);
 
 			ensure!(

@@ -627,7 +627,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool)]
-	pub(crate) type TotalPoolInfosV2_0_0<T: Config<I>, I: 'static = ()> = StorageMap<
+	#[pallet::storage_prefix = "TotalPoolInfosV2_0_0"]
+	pub(crate) type TotalPoolInfos<T: Config<I>, I: 'static = ()> = StorageMap<
 		_,
 		Twox64Concat,
 		PoolId,
@@ -636,7 +637,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_deposit_data)]
-	pub(crate) type TotalDepositDataV2_0_0<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
+	#[pallet::storage_prefix = "TotalDepositDataV2_0_0"]
+	pub(crate) type TotalDepositData<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		PoolId,
@@ -862,7 +864,7 @@ pub mod pallet {
 
 			let pool_charged =
 				PoolInfo { state: PoolState::Charged, investor: Some(investor.clone()), ..pool };
-			TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool_charged);
+			TotalPoolInfos::<T, I>::insert(pid, pool_charged);
 
 			Self::deposit_event(Event::PoolCharged(pid, r#type, trading_pair, investor));
 
@@ -883,7 +885,7 @@ pub mod pallet {
 			ensure!(pool.state == PoolState::UnCharged, Error::<T, I>::InvalidPoolState);
 
 			let pool_killed = PoolInfo { state: PoolState::Dead, ..pool };
-			TotalPoolInfosV2_0_0::<T, I>::remove(pid);
+			TotalPoolInfos::<T, I>::remove(pid);
 
 			Self::deposit_event(Event::PoolKilled(
 				pid,
@@ -927,7 +929,7 @@ pub mod pallet {
 			match pool.state {
 				PoolState::Charged if pool.deposit == Zero::zero() => {
 					pool.try_withdraw_remain::<T, I>()?;
-					TotalPoolInfosV2_0_0::<T, I>::remove(pid);
+					TotalPoolInfos::<T, I>::remove(pid);
 				},
 				PoolState::Charged | PoolState::Ongoing => {
 					let pool_retired = PoolInfo {
@@ -935,7 +937,7 @@ pub mod pallet {
 						block_retired: Some(frame_system::Pallet::<T>::block_number()),
 						..pool
 					};
-					TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool_retired);
+					TotalPoolInfos::<T, I>::insert(pid, pool_retired);
 				},
 				_ => {},
 			}
@@ -966,7 +968,7 @@ pub mod pallet {
 			ensure!(pool.r#type != PoolType::EBFarming, Error::<T, I>::InvalidPoolType);
 
 			let pool_edited = PoolInfo { redeem_limit_time, unlock_limit_nums, ..pool };
-			TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool_edited);
+			TotalPoolInfos::<T, I>::insert(pid, pool_edited);
 
 			Self::deposit_event(Event::PoolEdited(
 				pid,
@@ -1063,8 +1065,8 @@ pub mod pallet {
 			let r#type = pool.r#type;
 			let trading_pair = pool.trading_pair;
 
-			TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool);
-			TotalDepositDataV2_0_0::<T, I>::insert(pid, user.clone(), deposit_data);
+			TotalPoolInfos::<T, I>::insert(pid, pool);
+			TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
 
 			Self::deposit_event(Event::UserDeposited(pid, r#type, trading_pair, value, user));
 
@@ -1161,7 +1163,7 @@ pub mod pallet {
 			let user = match account {
 				Some(account) => account,
 				None => {
-					let (account, _) = TotalDepositDataV2_0_0::<T, I>::iter_prefix(pid)
+					let (account, _) = TotalDepositData::<T, I>::iter_prefix(pid)
 						.next()
 						.ok_or(Error::<T, I>::NoDepositOfUser)?;
 
@@ -1199,8 +1201,8 @@ pub mod pallet {
 			ensure!(pool.update_b != deposit_data.update_b, Error::<T, I>::TooShortBetweenTwoClaim);
 			pool.try_settle_and_transfer::<T, I>(&mut deposit_data, user.clone())?;
 
-			TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool);
-			TotalDepositDataV2_0_0::<T, I>::insert(pid, user, deposit_data);
+			TotalPoolInfos::<T, I>::insert(pid, pool);
+			TotalDepositData::<T, I>::insert(pid, user, deposit_data);
 
 			Ok(().into())
 		}
@@ -1409,7 +1411,7 @@ pub mod pallet {
 						pending_unlocks: Default::default(),
 					};
 
-					TotalDepositDataV2_0_0::<T, I>::insert(*pid, user.clone(), dd_new);
+					TotalDepositData::<T, I>::insert(*pid, user.clone(), dd_new);
 				}
 
 				left = left - double_keys.len();
@@ -1444,7 +1446,7 @@ pub mod pallet {
 							pending_unlock_nums: 0,
 						};
 
-						TotalPoolInfosV2_0_0::<T, I>::insert(*pid, pi_new);
+						TotalPoolInfos::<T, I>::insert(*pid, pi_new);
 					}
 
 					left = left - keys.len();
@@ -1533,7 +1535,7 @@ pub mod pallet {
 				pending_unlock_nums: 0,
 			};
 
-			TotalPoolInfosV2_0_0::<T, I>::insert(pool_id, mining_pool);
+			TotalPoolInfos::<T, I>::insert(pool_id, mining_pool);
 
 			Self::deposit_event(Event::PoolCreated(pool_id, r#type, trading_pair, keeper));
 
@@ -1706,15 +1708,15 @@ pub mod pallet {
 			{
 				pool.try_withdraw_remain::<T, I>()?;
 				pool.state = PoolState::Dead;
-				TotalPoolInfosV2_0_0::<T, I>::remove(pid);
+				TotalPoolInfos::<T, I>::remove(pid);
 			} else {
-				TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool);
+				TotalPoolInfos::<T, I>::insert(pid, pool);
 			}
 
 			if deposit_data.deposit == Zero::zero() && deposit_data.pending_unlocks.len() == 0 {
-				TotalDepositDataV2_0_0::<T, I>::remove(pid, user.clone());
+				TotalDepositData::<T, I>::remove(pid, user.clone());
 			} else {
-				TotalDepositDataV2_0_0::<T, I>::insert(pid, user.clone(), deposit_data);
+				TotalDepositData::<T, I>::insert(pid, user.clone(), deposit_data);
 			}
 
 			Ok(().into())
@@ -1782,7 +1784,7 @@ pub mod pallet {
 
 					if pool.state == PoolState::Ongoing {
 						ChargedPoolIds::<T, I>::mutate(|pids| pids.remove(&pid));
-						TotalPoolInfosV2_0_0::<T, I>::insert(pid, pool);
+						TotalPoolInfos::<T, I>::insert(pid, pool);
 					}
 				}
 			}

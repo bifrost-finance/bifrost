@@ -30,7 +30,7 @@ use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::{
 	mock::{Test as T, *},
-	Error, PoolId, PoolState, PoolType, TotalPoolInfosV2_0_0,
+	Error, PoolId, PoolState, PoolType, TotalPoolInfos,
 };
 
 fn run_to_block(n: BlockNumber) {
@@ -517,7 +517,7 @@ fn kill_pool_should_work() {
 
 		assert_ok!(LM::kill_pool(pallet_collective::RawOrigin::Member(TC_MEMBER_1).into(), 0));
 
-		assert!(!TotalPoolInfosV2_0_0::<T>::contains_key(0));
+		assert!(!TotalPoolInfos::<T>::contains_key(0));
 	});
 }
 
