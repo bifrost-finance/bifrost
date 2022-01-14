@@ -627,7 +627,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn pool)]
-	#[pallet::storage_prefix = "TotalPoolInfosV2_0_0"]
+	#[pallet::storage_prefix = "TotalPoolInfosV200"]
 	pub(crate) type TotalPoolInfos<T: Config<I>, I: 'static = ()> = StorageMap<
 		_,
 		Twox64Concat,
@@ -637,7 +637,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn user_deposit_data)]
-	#[pallet::storage_prefix = "TotalDepositDataV2_0_0"]
+	#[pallet::storage_prefix = "TotalDepositDataV200"]
 	pub(crate) type TotalDepositData<T: Config<I>, I: 'static = ()> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
