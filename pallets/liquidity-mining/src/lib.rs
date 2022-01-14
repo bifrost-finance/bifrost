@@ -1391,6 +1391,8 @@ pub mod pallet {
 
 			ensure!(Self::storage_version() == StorageVersion::V1_0_0, Error::<T, I>::NoMigration);
 
+			let max_nums = min(200, max_nums);
+
 			let (mut dd_nums, mut pi_nums) = (0, 0);
 
 			if max_nums > 0 {
