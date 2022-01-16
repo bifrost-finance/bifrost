@@ -271,6 +271,8 @@ impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
 	}
 }
 
+use bifrost_runtime_common::r#impl::BifrostAccountIdToMultiLocation;
+
 impl salp::Config for Test {
 	type BancorPool = Bancor;
 	type BifrostXcmExecutor = MockXcmExecutor;
@@ -298,6 +300,8 @@ impl salp::Config for Test {
 	type TransactProxyType = SalpTransactProxyType;
 	type TransactType = SalpTransactType;
 	type RelayNetwork = RelayNetwork;
+	type XcmExecutor = ();
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 }
 
 pub struct SalpWeightInfo;

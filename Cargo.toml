@@ -2,7 +2,7 @@ cargo-features = ["named-profiles"]
 
 [workspace]
 members = [
-#	"integration-tests",
+	"integration-tests",
 	"node/cli",
 	"node/primitives",
 	"node/rpc",

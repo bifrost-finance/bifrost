@@ -269,6 +269,7 @@ create_currency_id! {
 		KAR("Karura", 12) = 6,
 		ZLK("Zenlink Network Token", 18) = 7,
 		PHA("Phala Native Token", 12) = 8,
+		RMRK("RMRK Token",10) = 9,
 	}
 }
 
