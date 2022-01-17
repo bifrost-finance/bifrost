@@ -146,7 +146,6 @@ bifrostnetwork/bifrost:latest \
   --base-path "/data" \
   --node-key-file "/node-key/bifrost.key" \
   --chain "/spec/bifrost.json" \
-  --parachain-id 2001 \
   --pruning=archive \
   --rpc-external \
   --ws-external \

@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.9.12"
+version = "0.9.20"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"

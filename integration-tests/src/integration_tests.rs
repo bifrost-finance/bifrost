@@ -33,13 +33,13 @@ pub use sp_runtime::{
 pub const ALICE: [u8; 32] = [0u8; 32];
 pub const BOB: [u8; 32] = [1u8; 32];
 
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub use bifrost_imports::*;
-use bifrost_runtime::{ExistentialDeposit, NativeCurrencyId};
+use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};
 
-#[cfg(feature = "with-bifrost-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod bifrost_imports {
-	pub use bifrost_runtime::{
+	pub use bifrost_kusama_runtime::{
 		create_x2_multilocation, AccountId, Balance, Balances, BifrostCrowdloanId, BlockNumber,
 		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Perbill, Proxy,

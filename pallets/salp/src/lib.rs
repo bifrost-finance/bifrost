@@ -120,6 +120,7 @@ pub mod pallet {
 	};
 	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
 	use sp_arithmetic::Percent;
+	use sp_runtime::traits::Convert;
 	use sp_std::prelude::*;
 	use xcm::latest::prelude::*;
 
@@ -211,6 +212,12 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type RelayNetwork: Get<NetworkId>;
+
+		/// XCM executor.
+		type XcmExecutor: ExecuteXcm<Self::Call>;
+
+		/// Convert `T::AccountId` to `MultiLocation`.
+		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
 	}
 
 	#[pallet::pallet]
@@ -253,6 +260,7 @@ pub mod pallet {
 		ProxyRemoved(AccountIdOf<T>),
 		/// Mint
 		Minted(AccountIdOf<T>, BalanceOf<T>),
+		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -295,7 +303,14 @@ pub mod pallet {
 		NotEnoughFreeAssetsToRedeem,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
+		ConvertFailure,
+		XcmExecutionFailed,
 	}
+
+	/// Multisig confirm account
+	#[pallet::storage]
+	#[pallet::getter(fn multisig_confirm_account)]
+	pub type MultisigConfirmAccount<T: Config> = StorageValue<_, AccountIdOf<T>, ValueQuery>;
 
 	/// Tracker for the next available fund index
 	#[pallet::storage]
@@ -325,8 +340,45 @@ pub mod pallet {
 	#[pallet::getter(fn redeem_pool)]
 	pub(super) type RedeemPool<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub initial_multisig_account: Option<AccountIdOf<T>>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { initial_multisig_account: None }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+		fn build(&self) {
+			if let Some(ref key) = self.initial_multisig_account {
+				MultisigConfirmAccount::<T>::put(key)
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		#[pallet::weight((
+		0,
+		DispatchClass::Normal,
+		Pays::No
+		))]
+		pub fn set_multisig_confirm_account(
+			origin: OriginFor<T>,
+			account: AccountIdOf<T>,
+		) -> DispatchResult {
+			T::EnsureConfirmAsGovernance::ensure_origin(origin)?;
+
+			Self::set_multisig_account(account);
+
+			Ok(())
+		}
+
 		#[pallet::weight((
 		0,
 		DispatchClass::Normal,
@@ -422,6 +474,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] index: ParaId,
 			#[pallet::compact] cap: BalanceOf<T>,
+			#[pallet::compact] raised: BalanceOf<T>,
 			#[pallet::compact] first_slot: LeasePeriod,
 			#[pallet::compact] last_slot: LeasePeriod,
 			fund_status: Option<FundStatus>,
@@ -442,7 +495,7 @@ pub mod pallet {
 					first_slot,
 					last_slot,
 					status,
-					raised: fund.raised,
+					raised,
 					trie_index: fund.trie_index,
 				}),
 			);
@@ -637,7 +690,10 @@ pub mod pallet {
 			is_success: bool,
 			message_id: MessageId,
 		) -> DispatchResult {
-			T::EnsureConfirmAsMultiSig::ensure_origin(origin)?;
+			let confirmor = ensure_signed(origin.clone())?;
+			if confirmor != MultisigConfirmAccount::<T>::get() {
+				return Err(DispatchError::BadOrigin.into());
+			}
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
 			let can_confirm = fund.status == FundStatus::Ongoing ||
 				fund.status == FundStatus::Failed ||
@@ -747,6 +803,8 @@ pub mod pallet {
 
 			fund.raised = fund.raised.saturating_sub(contributed);
 
+			Funds::<T>::insert(index, Some(fund.clone()));
+
 			T::MultiCurrency::slash_reserved(vsToken, &who, contributed);
 			T::MultiCurrency::slash_reserved(vsBond, &who, contributed);
 
@@ -808,6 +866,8 @@ pub mod pallet {
 				}
 			}
 
+			Funds::<T>::insert(index, Some(fund));
+
 			if all_refunded {
 				Self::deposit_event(Event::<T>::AllRefunded(index));
 			}
@@ -856,6 +916,7 @@ pub mod pallet {
 			}
 
 			fund.raised = fund.raised.saturating_sub(value);
+			Funds::<T>::insert(index, Some(fund.clone()));
 
 			if T::TransactType::get() == ParachainTransactType::Xcm {
 				T::MultiCurrency::transfer(
@@ -971,6 +1032,62 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// transfer asset to statemine
+		#[pallet::weight(T::WeightInfo::contribute())]
+		pub fn transfer_statemine_assets(
+			origin: OriginFor<T>,
+			amount: BalanceOf<T>,
+			asset_id: u32,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let origin_location = T::AccountIdToMultiLocation::convert(who.clone());
+			let mut assets = MultiAssets::new(); // VersionedMultiAssets::V1(MultiAssets::new(MultiAsset))
+			let amount_128 =
+				TryInto::<u128>::try_into(amount).map_err(|_| Error::<T>::ConvertFailure)?;
+			let statemine_asset = MultiAsset {
+				id: AssetId::Concrete(MultiLocation::new(
+					1,
+					Junctions::X2(
+						Junction::Parachain(1000),
+						Junction::GeneralIndex(asset_id.into()),
+					),
+				)),
+				fun: Fungibility::Fungible(amount_128),
+			};
+			let dest_weight = 4 * T::BaseXcmWeight::get();
+			let fee_asset = MultiAsset {
+				id: AssetId::Concrete(MultiLocation::new(1, Junctions::Here)),
+				fun: Fungibility::Fungible(dest_weight.into()),
+			};
+			assets.push(statemine_asset);
+			assets.push(fee_asset.clone());
+			let msg = Xcm(vec![
+				WithdrawAsset(assets),
+				InitiateReserveWithdraw {
+					assets: All.into(),
+					reserve: MultiLocation::new(1, Junctions::X1(Junction::Parachain(1000))),
+					xcm: Xcm(vec![
+						BuyExecution {
+							fees: fee_asset,
+							weight_limit: WeightLimit::Limited(dest_weight),
+						},
+						DepositAsset {
+							assets: All.into(),
+							max_assets: 2,
+							beneficiary: origin_location.clone(),
+						},
+					]),
+				},
+			]);
+			T::XcmExecutor::execute_xcm_in_credit(origin_location, msg, dest_weight, dest_weight)
+				.ensure_complete()
+				.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+
+			Self::deposit_event(Event::<T>::TransferredStatemineMultiAsset(who, amount));
+
+			Ok(())
+		}
 	}
 
 	#[pallet::hooks]
@@ -1002,6 +1119,10 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		/// set multisig account
+		pub fn set_multisig_account(account: AccountIdOf<T>) {
+			MultisigConfirmAccount::<T>::put(account);
+		}
 		/// Check if the vsBond is `past` the redeemable date
 		pub(crate) fn is_expired(block: BlockNumberFor<T>, last_slot: LeasePeriod) -> bool {
 			let block_begin_redeem = Self::block_end_of_lease_period_index(last_slot);

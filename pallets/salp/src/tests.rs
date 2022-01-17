@@ -407,10 +407,6 @@ fn contribute_with_wrong_origin_should_fail() {
 		assert_noop!(Salp::contribute(Origin::none(), 3_000, 100), DispatchError::BadOrigin);
 
 		assert_noop!(
-			Salp::confirm_contribute(Origin::root(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
-			Error::<Test>::InvalidContributionStatus,
-		);
-		assert_noop!(
 			Salp::confirm_contribute(Origin::none(), BRUCE, 3000, true, CONTRIBUTON_INDEX),
 			DispatchError::BadOrigin,
 		);
@@ -1199,7 +1195,15 @@ fn edit_fund_should_work() {
 			CONTRIBUTON_INDEX
 		));
 		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000));
-		assert_ok!(Salp::edit(Some(ALICE).into(), 3_000, 1_000, 2, SlotLength::get() + 1, None));
+		assert_ok!(Salp::edit(
+			Some(ALICE).into(),
+			3_000,
+			1_000,
+			200,
+			2,
+			SlotLength::get() + 1,
+			None
+		));
 		let mut fund = Salp::funds(3_000).unwrap();
 		assert_eq!(fund.first_slot, 2);
 		assert_eq!(fund.status, FundStatus::Failed);
@@ -1207,12 +1211,14 @@ fn edit_fund_should_work() {
 			Some(ALICE).into(),
 			3_000,
 			1_000,
+			200,
 			2,
 			SlotLength::get() + 1,
 			Some(FundStatus::Ongoing),
 		));
 		fund = Salp::funds(3_000).unwrap();
 		assert_eq!(fund.status, FundStatus::Ongoing);
+		assert_eq!(fund.raised, 200);
 	})
 }
 

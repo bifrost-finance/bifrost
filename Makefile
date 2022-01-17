@@ -1,6 +1,6 @@
 PARA_ID        := 2001
 DOCKER_TAG     := latest
-CHAIN		   := bifrost-local
+CHAIN		   := bifrost-genesis
 SURI           := //Alice
 
 .PHONY: init
@@ -74,7 +74,7 @@ test-all:
 
 .PHONY: integration-test
 integration-test:
-	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-runtime
+	SKIP_WASM_BUILD= cargo test -p runtime-integration-tests --features=with-bifrost-kusama-runtime
 
 .PHONY: clean
 clean:
@@ -174,14 +174,26 @@ try-asgard-runtime-upgrade:
 
 .PHONY: resources
 resources:
-	./target/release/bifrost export-genesis-state --chain $(CHAIN) --parachain-id $(PARA_ID) > ./resources/para-$(PARA_ID)-genesis
+	./target/release/bifrost export-genesis-state --chain $(CHAIN) > ./resources/para-$(PARA_ID)-genesis
 	./target/release/bifrost export-genesis-wasm --chain $(CHAIN) > ./resources/para-$(PARA_ID).wasm
 	./target/release/bifrost build-spec --chain $(CHAIN) --disable-default-bootnode --raw > ./resources/$(CHAIN)-raw.json
 
-.PHONY: keystore
-keystore:
-	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type aura
-	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --key-type gran
+.PHONY: generate-session-key
+generate-session-key:
+	./target/release/bifrost key generate --scheme Sr25519
+
+.PHONY: insert-session-key
+insert-session-key:
+	./target/release/bifrost key insert --chain $(CHAIN) --keystore-path ./resources/keystore --suri "$(SURI)" --scheme Sr25519 --key-type aura
+
+
+.PHONY: generate-node-key
+generate-node-key:
+	subkey generate-node-key --file ./resources/node-key	
+
+.PHONY: view-key
+view-key:
+	subkey inspect $(SURI) -n bifrost
 
 .PHONY: copy-genesis-config-production
 copy-genesis-config-production:

@@ -17,13 +17,13 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use asgard_runtime::{
-	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BancorConfig,
-	BlockNumber, CouncilConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig,
-	IndicesConfig, InflationInfo, MinterRewardConfig, ParachainInfoConfig, ParachainStakingConfig,
-	PolkadotXcmConfig, Range, SS58Prefix, SessionConfig, SudoConfig, SystemConfig,
+	AccountId, AuraId, Balance, BalancesConfig, BancorConfig, BlockNumber, CouncilConfig,
+	DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig, InflationInfo,
+	MinterRewardConfig, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
+	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SudoConfig, SystemConfig,
 	TechnicalCommitteeConfig, TokensConfig, VestingConfig, VtokenMintConfig, WASM_BINARY,
 };
-use bifrost_runtime_common::constants::time::*;
+use bifrost_runtime_common::{constants::time::*, dollar};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
@@ -43,7 +43,12 @@ use sp_runtime::Perbill;
 /// Specialized `ChainSpec` for the asgard runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
-const ENDOWMENT: u128 = 1_000_000 * DOLLARS;
+#[allow(non_snake_case)]
+pub fn ENDOWMENT() -> u128 {
+	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::ASG))
+}
+
+pub const PARA_ID: u32 = 2121;
 
 fn asgard_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
@@ -90,7 +95,11 @@ pub fn moonbeam_inflation_config() -> InflationInfo<Balance> {
 	};
 	InflationInfo {
 		// staking expectations
-		expect: Range { min: 100_000 * DOLLARS, ideal: 200_000 * DOLLARS, max: 500_000 * DOLLARS },
+		expect: Range {
+			min: 100_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+			ideal: 200_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+			max: 500_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+		},
 		// annual inflation
 		annual,
 		round: to_round_inflation(annual),
@@ -106,6 +115,8 @@ pub fn asgard_genesis(
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	tokens: Vec<(AccountId, CurrencyId, Balance)>,
+	salp_multisig_key: AccountId,
+	salp_lite_multisig_key_salp: AccountId,
 ) -> GenesisConfig {
 	GenesisConfig {
 		system: SystemConfig {
@@ -145,8 +156,14 @@ pub fn asgard_genesis(
 		tokens: TokensConfig { balances: tokens },
 		bancor: BancorConfig {
 			bancor_pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 10_000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1_000_000 * DOLLARS),
+				(
+					CurrencyId::Token(TokenSymbol::DOT),
+					10_000 * dollar(CurrencyId::Token(TokenSymbol::DOT)),
+				),
+				(
+					CurrencyId::Token(TokenSymbol::KSM),
+					1_000_000 * dollar(CurrencyId::Token(TokenSymbol::KSM)),
+				),
 			],
 		},
 		minter_reward: MinterRewardConfig {
@@ -155,17 +172,35 @@ pub fn asgard_genesis(
 				(CurrencyId::Token(TokenSymbol::ETH), 1 * 1),
 				(CurrencyId::Token(TokenSymbol::KSM), 1 * 3),
 			],
-			reward_per_block: 5 * DOLLARS / 100,
+			reward_per_block: 5 * dollar(CurrencyId::Native(TokenSymbol::ASG)) / 100,
 			cycle_index: 1,
 		},
 		vtoken_mint: VtokenMintConfig {
 			pools: vec![
-				(CurrencyId::Token(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::VToken(TokenSymbol::DOT), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::ETH), 1000 * DOLLARS),
-				(CurrencyId::VToken(TokenSymbol::ETH), 1000 * DOLLARS),
-				(CurrencyId::Token(TokenSymbol::KSM), 1000 * DOLLARS),
-				(CurrencyId::VToken(TokenSymbol::KSM), 1000 * DOLLARS),
+				(
+					CurrencyId::Token(TokenSymbol::DOT),
+					1000 * dollar(CurrencyId::Token(TokenSymbol::DOT)),
+				),
+				(
+					CurrencyId::VToken(TokenSymbol::DOT),
+					1000 * dollar(CurrencyId::VToken(TokenSymbol::DOT)),
+				),
+				(
+					CurrencyId::Token(TokenSymbol::ETH),
+					1000 * dollar(CurrencyId::Token(TokenSymbol::ETH)),
+				),
+				(
+					CurrencyId::VToken(TokenSymbol::ETH),
+					1000 * dollar(CurrencyId::VToken(TokenSymbol::ETH)),
+				),
+				(
+					CurrencyId::Token(TokenSymbol::KSM),
+					1000 * dollar(CurrencyId::Token(TokenSymbol::KSM)),
+				),
+				(
+					CurrencyId::VToken(TokenSymbol::KSM),
+					1000 * dollar(CurrencyId::VToken(TokenSymbol::KSM)),
+				),
 			],
 			staking_lock_period: vec![
 				(CurrencyId::Token(TokenSymbol::DOT), 28 * DAYS),
@@ -183,6 +218,8 @@ pub fn asgard_genesis(
 			delegations,
 			inflation_config: moonbeam_inflation_config(),
 		},
+		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
+		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
 	}
 }
 
@@ -195,29 +232,33 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.chain(faucet_accounts().iter())
 		.cloned()
-		.map(|x| (x, ENDOWMENT))
+		.map(|x| (x, ENDOWMENT()))
 		.collect();
 	let vestings = endowed_accounts
 		.iter()
 		.cloned()
-		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
+		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT() / 4))
 		.collect();
 	let tokens = endowed_accounts
 		.iter()
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 10_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT()),
 			]
 		})
 		.collect();
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	asgard_genesis(
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
-			ENDOWMENT,
+			ENDOWMENT(),
 		)],
 		vec![],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -225,20 +266,22 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vestings,
 		tokens,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
-pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn development_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Development",
 		"dev",
 		ChainType::Development,
-		move || development_config_genesis(id),
+		move || development_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(asgard_properties()),
-		RelayExtensions { relay_chain: "westend-dev".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
 	))
 }
 
@@ -264,119 +307,120 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.chain(faucet_accounts().iter())
 		.cloned()
-		.map(|x| (x, ENDOWMENT * 4_000_000))
+		.map(|x| (x, ENDOWMENT() * 40_000))
 		.collect();
-	let vestings = endowed_accounts
-		.iter()
-		.cloned()
-		.map(|x| (x.clone(), 0u32, 100u32, ENDOWMENT / 4))
-		.collect();
+	let vesting_configs: Vec<VestingConfig> = vec![];
 	let tokens = endowed_accounts
 		.iter()
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT * 4_000_000),
+				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT() * 40_000),
 				(
 					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20),
-					ENDOWMENT * 4_000_000,
+					CurrencyId::VSBond(TokenSymbol::ASG, 2121, 13, 20),
+					ENDOWMENT() * 40_000,
 				),
 			]
 		})
 		.collect();
+
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	asgard_genesis(
 		vec![
 			(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_from_seed::<AuraId>("Alice"),
-				ENDOWMENT,
+				ENDOWMENT(),
 			),
 			(
 				get_account_id_from_seed::<sr25519::Public>("Bob"),
 				get_from_seed::<AuraId>("Bob"),
-				ENDOWMENT,
+				ENDOWMENT(),
 			),
 		],
 		vec![],
 		get_account_id_from_seed::<sr25519::Public>("Alice"),
 		id,
 		balances,
-		vestings,
+		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		tokens,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
-pub fn local_testnet_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Asgard Local Testnet",
 		"asgard_local_testnet",
 		ChainType::Local,
-		move || local_config_genesis(id),
+		move || local_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(asgard_properties()),
-		RelayExtensions { relay_chain: "westend-local".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend-local".into(), para_id: PARA_ID },
 	))
 }
 
-pub fn chainspec_config(id: ParaId) -> ChainSpec {
+pub fn chainspec_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Bifrost Asgard CC4",
 		"asgard_testnet",
 		ChainType::Custom("Asgard Testnet".into()),
-		move || asgard_config_genesis(id),
+		move || asgard_config_genesis(PARA_ID.into()),
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		Some(asgard_properties()),
-		RelayExtensions { relay_chain: "westend".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend".into(), para_id: PARA_ID },
 	)
 }
 
 fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
-			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"].into(),
-			hex!["20b8de78cf83088dd5d8f1e05aeb7122635e5f00015e4cf03e961fe8cc7b9935"]
+			hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"].into(),
+			hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"]
 				.unchecked_into(),
-			ENDOWMENT,
+			ENDOWMENT(),
 		),
 		(
-			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"].into(),
-			hex!["0c5192dccfcab3a676d74d3aab838f4d1e6b4f490cf15703424c382c6a72401d"]
+			hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"].into(),
+			hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"]
 				.unchecked_into(),
-			ENDOWMENT,
+			ENDOWMENT(),
 		),
 		(
-			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"].into(),
-			hex!["3c7e936535c17ff1ab4c72e4d8bf7672fd8488e5a30a1b3305c959ee7f794f28"]
+			hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"].into(),
+			hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"]
 				.unchecked_into(),
-			ENDOWMENT,
+			ENDOWMENT(),
 		),
 		(
-			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"].into(),
-			hex!["eee4ed9bb0a1a72aa966a1a21c403835b5edac59de296be19bd8b2ad31d03f3b"]
+			hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"].into(),
+			hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"]
 				.unchecked_into(),
-			ENDOWMENT,
+			ENDOWMENT(),
 		),
 	];
-	let root_key: AccountId = hex![
-		// 5GjJNWYS6f2UQ9aiLexuB8qgjG8fRs2Ax4nHin1z1engpnNt
-		"ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"
-	]
-	.into();
+
+	let root_key: AccountId =
+		hex!["30a74e1548ed3a26575ee1f1ea28e3c2d55cfdaeb539ae7aa06778ca7f75c935"].into();
 
 	let balances = faucet_accounts()
 		.into_iter()
-		.map(|x| (x, ENDOWMENT))
+		.map(|x| (x, ENDOWMENT()))
 		.collect::<Vec<(AccountId, Balance)>>();
 
 	let vesting_configs: Vec<VestingConfig> = vec![];
@@ -389,13 +433,24 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT * 10_000),
-				// (x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT),
-				// (x.clone(), CurrencyId::Token(TokenSymbol::ETH), ENDOWMENT),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT),
+				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 40_000),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT() * 40_000),
+				(
+					x.clone(),
+					CurrencyId::VSBond(TokenSymbol::ASG, 2121, 13, 20),
+					ENDOWMENT() * 40_000,
+				),
 			]
 		})
 		.collect();
+	let salp_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["49daa32c7287890f38b7e1a8cd2961723d36d20baa0bf3b82e0c4bdda93b1c0a"].into();
 
 	asgard_genesis(
 		invulnerables,
@@ -405,12 +460,18 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		tokens,
+		salp_multisig,
+		salp_lite_multisig,
 	)
 }
 
 pub fn faucet_accounts() -> Vec<AccountId> {
 	vec![
-		hex!["ce6072037670ca8e974fd571eae4f215a58d0bf823b998f619c3f87a911c3541"].into(), /* asgard sudo account */
+		hex!["30a74e1548ed3a26575ee1f1ea28e3c2d55cfdaeb539ae7aa06778ca7f75c935"].into(), /* asgard sudo account */
+		hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"].into(),
+		hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"].into(),
+		hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"].into(),
+		hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"].into(),
 		hex!["a2d57b8e781327bd2853b36e6f290bd8beeaa850971c9b0789ec4969f8beb01b"].into(), /* bifrost-faucet */
 		hex!["a272fa6e2282767b61a299e81023d44ef583c640fef99b0bafe216399775cd17"].into(),
 		hex!["56f6e7bb0826cd128672ad3a03016533834123c319adc635c6db595c6f72272e"].into(),

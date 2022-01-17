@@ -136,6 +136,24 @@ fn switchon_transaction_transaction_should_work() {
 			)),
 			None
 		);
+
+		assert_eq!(CallSwitchgear::get_overall_indicator(), false);
+
+		assert_ok!(CallSwitchgear::switchoff_transaction(
+			Origin::signed(1),
+			b"All".to_vec(),
+			b"transfer".to_vec()
+		));
+
+		assert_eq!(CallSwitchgear::get_overall_indicator(), true);
+
+		assert_ok!(CallSwitchgear::switchon_transaction(
+			Origin::signed(1),
+			b"All".to_vec(),
+			b"transfer".to_vec()
+		));
+
+		assert_eq!(CallSwitchgear::get_overall_indicator(), false);
 	});
 }
 
