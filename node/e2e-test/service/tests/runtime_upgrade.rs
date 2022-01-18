@@ -43,7 +43,7 @@ async fn test_runtime_upgrade() {
 	alice
 		.register_parachain(
 			para_id,
-			bifrost_kusama_test_runtime::WASM_BINARY
+			bifrost_kusama_runtime::WASM_BINARY
 				.expect("You need to build the WASM binary to run this test!")
 				.to_vec(),
 			initial_head_data(para_id),
@@ -75,7 +75,7 @@ async fn test_runtime_upgrade() {
 		.expect("Runtime version exists");
 	expected_runtime_version.spec_version += 1;
 
-	let wasm = bifrost_kusama_runtime::WASM_BINARY
+	let wasm = bifrost_kusama_runtime::wasm_spec_version_incremented::WASM_BINARY
 		.expect("Wasm binary with incremented spec version should have been built");
 
 	// schedule runtime upgrade

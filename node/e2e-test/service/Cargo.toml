@@ -62,7 +62,6 @@ jsonrpc-core = "18.0.0"
 
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../../runtime/common", default-features = false }
 bifrost-kusama-runtime = { path = "../../../runtime/bifrost-kusama", optional = true }
-bifrost-kusama-test-runtime = { path = "../../../runtime/bifrost-kusama-test", optional = true }
 node-service = { path = "../../service", default-features = false }
 
 [dev-dependencies]
@@ -80,7 +79,6 @@ default = [ "std" ]
 std = []
 with-bifrost-kusama-test-runtime = [
 	"node-service/with-bifrost-kusama-test-runtime",
-	"bifrost-kusama-test-runtime/with-bifrost-kusama-test-runtime",
 	"bifrost-kusama-runtime/with-bifrost-kusama-test-runtime"
 ]
 with-bifrost-polkadot-test-runtime = [

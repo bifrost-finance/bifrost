@@ -32,4 +32,13 @@ fn main() {
 		.enable_feature("with-bifrost-kusama-test-runtime")
 		.import_memory()
 		.build();
+
+	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
+	WasmBuilder::new()
+		.with_current_project()
+		.enable_feature("increment-spec-version")
+		.enable_feature("with-bifrost-kusama-test-runtime")
+		.import_memory()
+		.set_file_name("wasm_binary_spec_version_incremented.rs")
+		.build();
 }

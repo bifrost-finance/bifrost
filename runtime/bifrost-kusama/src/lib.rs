@@ -26,9 +26,15 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+pub mod wasm_spec_version_incremented {
+	#[cfg(feature = "std")]
+	include!(concat!(env!("OUT_DIR"), "/wasm_binary_spec_version_incremented.rs"));
+}
+
 use core::convert::TryInto;
 
 pub use bifrost_runtime_common::AuraId;
+pub use cumulus_pallet_parachain_system::Call as ParachainSystemCall;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -43,7 +49,10 @@ pub use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
+pub use pallet_collective::Call as CollectiveCall;
+pub use pallet_democracy::Call as DemocracyCall;
 pub use pallet_timestamp::Call as TimestampCall;
+pub use pallet_utility::Call as UtilityCall;
 use sp_api::impl_runtime_apis;
 use sp_core::{
 	u32_trait::{_1, _2, _3, _4, _5},
@@ -131,12 +140,25 @@ impl_opaque_keys! {
 }
 
 /// This runtime version.
+#[cfg(not(feature = "increment-spec-version"))]
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
 	spec_version: 916,
+	impl_version: 0,
+	apis: RUNTIME_API_VERSIONS,
+	transaction_version: 1,
+};
+
+#[cfg(feature = "increment-spec-version")]
+#[sp_version::runtime_version]
+pub const VERSION: RuntimeVersion = RuntimeVersion {
+	spec_name: create_runtime_str!("bifrost"),
+	impl_name: create_runtime_str!("bifrost"),
+	authoring_version: 1,
+	spec_version: 917,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,

@@ -18,10 +18,12 @@
 
 #[cfg(feature = "with-asgard-runtime")]
 pub mod asgard;
-#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
+#[cfg(any(
+	feature = "with-bifrost-kusama-runtime",
+	feature = "with-bifrost-runtime",
+	feature = "with-bifrost-kusama-test-runtime"
+))]
 pub mod bifrost_kusama;
-#[cfg(feature = "with-bifrost-kusama-test-runtime")]
-pub mod bifrost_kusama_test;
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 pub mod bifrost_polkadot;
 

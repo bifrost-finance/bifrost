@@ -41,7 +41,7 @@ async fn test_collating_and_non_collator_mode_catching_up() {
 	alice
 		.register_parachain(
 			para_id,
-			bifrost_kusama_test_runtime::WASM_BINARY
+			bifrost_kusama_runtime::WASM_BINARY
 				.expect("You need to build the WASM binary to run this test!")
 				.to_vec(),
 			initial_head_data(para_id),

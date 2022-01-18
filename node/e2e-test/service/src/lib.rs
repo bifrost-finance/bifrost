@@ -25,7 +25,7 @@ mod genesis;
 use core::future::Future;
 use std::sync::Arc;
 
-use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
+use bifrost_kusama_runtime::{Hash, Header, RuntimeApi};
 use bifrost_runtime_common::{CouncilCollective, TechnicalCollective};
 use cumulus_client_consensus_common::{ParachainCandidate, ParachainConsensus};
 use cumulus_client_network::BlockAnnounceValidator;
@@ -66,6 +66,8 @@ use substrate_test_client::{
 	BlockchainEventsExt, RpcHandlersExt, RpcTransactionError, RpcTransactionOutput,
 };
 
+use crate::generic::SignedPayload;
+
 /// A consensus that will never produce any block.
 #[derive(Clone)]
 struct NullConsensus;
@@ -91,11 +93,11 @@ impl sc_executor::NativeExecutionDispatch for RuntimeExecutor {
 	type ExtendHostFunctions = ();
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		bifrost_kusama_test_runtime::api::dispatch(method, data)
+		bifrost_kusama_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		bifrost_kusama_test_runtime::native_version()
+		bifrost_kusama_runtime::native_version()
 	}
 }
 
@@ -571,8 +573,7 @@ pub fn node_config(
 	let key_seed = key.to_seed();
 
 	#[cfg(any(feature = "with-bifrost-kusama-test-runtime", feature = "with-all-runtime"))]
-	let mut spec =
-		Box::new(node_service::chain_spec::bifrost_kusama_test::local_testnet_config().unwrap());
+	let mut spec = Box::new(node_service::chain_spec::bifrost_kusama::local_testnet_config().unwrap());
 
 	let mut storage = spec.as_storage_builder().build_storage().expect("could not build storage");
 
@@ -663,7 +664,7 @@ impl TestNode {
 	/// Send an extrinsic to this node.
 	pub async fn send_extrinsic(
 		&self,
-		function: impl Into<bifrost_kusama_test_runtime::Call>,
+		function: impl Into<bifrost_kusama_runtime::Call>,
 		caller: Sr25519Keyring,
 	) -> Result<RpcTransactionOutput, RpcTransactionError> {
 		let extrinsic = construct_extrinsic(&*self.client, function, caller.pair(), Some(0));
@@ -672,28 +673,11 @@ impl TestNode {
 	}
 
 	/// Register a parachain at this relay chain.
-	pub async fn schedule_upgrade_by_sudo(
-		&self,
-		validation: Vec<u8>,
-	) -> Result<(), RpcTransactionError> {
-		let call = frame_system::Call::set_code { code: validation };
-
-		self.send_extrinsic(
-			bifrost_kusama_test_runtime::SudoCall::sudo_unchecked_weight {
-				call: Box::new(call.into()),
-				weight: 1_000,
-			},
-			Sr25519Keyring::Alice,
-		)
-		.await
-		.map(drop)
-	}
-
 	pub async fn schedule_upgrade(&self, validation: Vec<u8>) -> Result<(), RpcTransactionError> {
 		let code_hash = BlakeTwo256::hash(&validation.clone());
-		let proposal_upgrade: bifrost_kusama_test_runtime::Call =
-			bifrost_kusama_test_runtime::ParachainSystemCall::<
-				bifrost_kusama_test_runtime::Runtime,
+		let proposal_upgrade: bifrost_kusama_runtime::Call =
+			bifrost_kusama_runtime::ParachainSystemCall::<
+				bifrost_kusama_runtime::Runtime,
 			>::authorize_upgrade {
 				code_hash: code_hash.clone(),
 			}
@@ -701,115 +685,108 @@ impl TestNode {
 
 		let encoded_proposal_upgrade = proposal_upgrade.encode();
 		// note.preimage
-		let tx_note_preimage = self
-			.send_extrinsic(
-				bifrost_kusama_test_runtime::DemocracyCall::note_preimage {
-					encoded_proposal: encoded_proposal_upgrade.clone(),
-				},
-				Sr25519Keyring::Alice,
-			)
-			.await;
+		self.send_extrinsic(
+			bifrost_kusama_runtime::DemocracyCall::note_preimage {
+				encoded_proposal: encoded_proposal_upgrade.clone(),
+			},
+			Sr25519Keyring::Alice,
+		)
+		.await
+		.map(drop);
 
 		self.wait_for_blocks(1).await;
 		let proposal_upgrade_hash = BlakeTwo256::hash(&encoded_proposal_upgrade.clone()[..]);
-		let proposal = bifrost_kusama_test_runtime::DemocracyCall::external_propose_majority {
+		let proposal = bifrost_kusama_runtime::DemocracyCall::external_propose_majority {
 			proposal_hash: proposal_upgrade_hash.clone(),
 		};
 		// council.propose
-		let tx_council_propose = self
-			.send_extrinsic(
-				bifrost_kusama_test_runtime::CollectiveCall::<
-					bifrost_kusama_test_runtime::Runtime,
-					CouncilCollective,
-				>::propose {
-					threshold: 1_u32,
-					proposal: Box::new(proposal.into()),
-					length_bound: 36_u32,
-				},
-				Sr25519Keyring::Alice,
-			)
-			.await;
+		self.send_extrinsic(
+			bifrost_kusama_runtime::CollectiveCall::<
+				bifrost_kusama_runtime::Runtime,
+				CouncilCollective,
+			>::propose {
+				threshold: 1_u32,
+				proposal: Box::new(proposal.into()),
+				length_bound: 36_u32,
+			},
+			Sr25519Keyring::Alice,
+		)
+		.await
+		.map(drop);
 
 		self.wait_for_blocks(1).await;
-		let proposal_fast_track: bifrost_kusama_test_runtime::Call =
-			bifrost_kusama_test_runtime::DemocracyCall::fast_track {
+		let proposal_fast_track: bifrost_kusama_runtime::Call =
+			bifrost_kusama_runtime::DemocracyCall::fast_track {
 				proposal_hash: proposal_upgrade_hash.clone(),
-				voting_period: 10_u32,
+				voting_period: 3_u32,
 				delay: 1_u32,
 			}
 			.into();
-		let proposal_fast_track2 = bifrost_kusama_test_runtime::DemocracyCall::fast_track {
+		let proposal_fast_track2 = bifrost_kusama_runtime::DemocracyCall::fast_track {
 			proposal_hash: proposal_upgrade_hash.clone(),
-			voting_period: 10_u32,
+			voting_period: 3_u32,
 			delay: 1_u32,
 		};
 		let encoded_proposal_fast_track = proposal_fast_track.clone().encode();
 		let proposal_fast_track_hash = BlakeTwo256::hash(&encoded_proposal_fast_track.clone()[..]);
 
 		// technicalCommittee.propose
-		let tech_propose: bifrost_kusama_test_runtime::Call =
-			bifrost_kusama_test_runtime::CollectiveCall::<
-				bifrost_kusama_test_runtime::Runtime,
-				TechnicalCollective,
-			>::propose {
-				threshold: 1_u32,
-				proposal: Box::new(proposal_fast_track2.into()),
-				length_bound: 43_u32,
-			}
-			.into();
-		let mut calls: Vec<bifrost_kusama_test_runtime::Call> = Vec::new();
+		let tech_propose: bifrost_kusama_runtime::Call = bifrost_kusama_runtime::CollectiveCall::<
+			bifrost_kusama_runtime::Runtime,
+			TechnicalCollective,
+		>::propose {
+			threshold: 1_u32,
+			proposal: Box::new(proposal_fast_track2.into()),
+			length_bound: 43_u32,
+		}
+		.into();
+		let mut calls: Vec<bifrost_kusama_runtime::Call> = Vec::new();
 		calls.push(tech_propose);
 
 		// technicalCommittee.vote
-		let tech_vote: bifrost_kusama_test_runtime::Call =
-			bifrost_kusama_test_runtime::CollectiveCall::<
-				bifrost_kusama_test_runtime::Runtime,
-				TechnicalCollective,
-			>::vote {
-				proposal: proposal_fast_track_hash,
-				index: 0_u32,
-				approve: true,
-			}
-			.into();
+		let tech_vote: bifrost_kusama_runtime::Call = bifrost_kusama_runtime::CollectiveCall::<
+			bifrost_kusama_runtime::Runtime,
+			TechnicalCollective,
+		>::vote {
+			proposal: proposal_fast_track_hash,
+			index: 0_u32,
+			approve: true,
+		}
+		.into();
 		calls.push(tech_vote);
 
 		// utility.batch
-		let tx_batch =
-			self
-				.send_extrinsic(
-					bifrost_kusama_test_runtime::UtilityCall::<
-						bifrost_kusama_test_runtime::Runtime,
-					>::batch {
-						calls,
-					},
-					Sr25519Keyring::Alice,
-				)
-				.await;
+		self.send_extrinsic(
+			bifrost_kusama_runtime::UtilityCall::<bifrost_kusama_runtime::Runtime>::batch { calls },
+			Sr25519Keyring::Alice,
+		)
+		.await
+		.map(drop);
 
-		self.wait_for_blocks(3).await;
+		self.wait_for_blocks(2).await;
 		let v = Vote { aye: true, conviction: Conviction::None };
 		let vote = AccountVote::Standard { vote: v, balance: 75_000_000_000_000 };
 		// democracy.vote
-		let tx_democracy_vote = self
-			.send_extrinsic(
-				bifrost_kusama_test_runtime::DemocracyCall::vote { ref_index: 0_u32, vote },
-				Sr25519Keyring::Alice,
-			)
-			.await;
+		self.send_extrinsic(
+			bifrost_kusama_runtime::DemocracyCall::vote { ref_index: 0_u32, vote },
+			Sr25519Keyring::Alice,
+		)
+		.await
+		.map(drop);
 
-		self.wait_for_blocks(9).await;
+		self.wait_for_blocks(3).await;
 		// parachainSystem.enactAuthorizedUpgrade
-		let tx_enact_authorized_upgrade = self
+		self
 			.send_extrinsic(
-				bifrost_kusama_test_runtime::ParachainSystemCall::<
-					bifrost_kusama_test_runtime::Runtime,
+				bifrost_kusama_runtime::ParachainSystemCall::<
+					bifrost_kusama_runtime::Runtime,
 				>::enact_authorized_upgrade {
 					code: validation.clone(),
 				},
 				Sr25519Keyring::Alice,
 			)
-			.await;
-		tx_enact_authorized_upgrade.map(drop)
+			.await
+			.map(drop)
 	}
 }
 
@@ -825,39 +802,39 @@ pub fn fetch_nonce(client: &Client, account: sp_core::sr25519::Public) -> u32 {
 /// Construct an extrinsic that can be applied to the test runtime.
 pub fn construct_extrinsic(
 	client: &Client,
-	function: impl Into<bifrost_kusama_test_runtime::Call>,
+	function: impl Into<bifrost_kusama_runtime::Call>,
 	caller: sp_core::sr25519::Pair,
 	nonce: Option<u32>,
-) -> bifrost_kusama_test_runtime::UncheckedExtrinsic {
+) -> bifrost_kusama_runtime::UncheckedExtrinsic {
 	let function = function.into();
 	let current_block_hash = client.info().best_hash;
 	let current_block = client.info().best_number.saturated_into();
 	let genesis_block = client.hash(0).unwrap().unwrap();
 	let nonce = fetch_nonce(client, caller.public());
-	let period = bifrost_kusama_test_runtime::BlockHashCount::get()
+	let period = bifrost_kusama_runtime::BlockHashCount::get()
 		.checked_next_power_of_two()
 		.map(|c| c / 2)
 		.unwrap_or(2) as u64;
 	let tip = 0;
-	let extra: bifrost_kusama_test_runtime::SignedExtra =
+	let extra: bifrost_kusama_runtime::SignedExtra =
 		(
-			frame_system::CheckSpecVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
-			frame_system::CheckTxVersion::<bifrost_kusama_test_runtime::Runtime>::new(),
-			frame_system::CheckGenesis::<bifrost_kusama_test_runtime::Runtime>::new(),
-			frame_system::CheckEra::<bifrost_kusama_test_runtime::Runtime>::from(
+			frame_system::CheckSpecVersion::<bifrost_kusama_runtime::Runtime>::new(),
+			frame_system::CheckTxVersion::<bifrost_kusama_runtime::Runtime>::new(),
+			frame_system::CheckGenesis::<bifrost_kusama_runtime::Runtime>::new(),
+			frame_system::CheckEra::<bifrost_kusama_runtime::Runtime>::from(
 				generic::Era::mortal(period, current_block),
 			),
-			frame_system::CheckNonce::<bifrost_kusama_test_runtime::Runtime>::from(nonce),
-			frame_system::CheckWeight::<bifrost_kusama_test_runtime::Runtime>::new(),
+			frame_system::CheckNonce::<bifrost_kusama_runtime::Runtime>::from(nonce),
+			frame_system::CheckWeight::<bifrost_kusama_runtime::Runtime>::new(),
 			pallet_transaction_payment::ChargeTransactionPayment::<
-				bifrost_kusama_test_runtime::Runtime,
+				bifrost_kusama_runtime::Runtime,
 			>::from(tip),
 		);
-	let raw_payload = bifrost_kusama_test_runtime::SignedPayload::from_raw(
+	let raw_payload = SignedPayload::from_raw(
 		function.clone(),
 		extra.clone(),
 		(
-			bifrost_kusama_test_runtime::VERSION.spec_version,
+			bifrost_kusama_runtime::VERSION.spec_version,
 			1_u32,
 			genesis_block,
 			current_block_hash,
@@ -867,10 +844,10 @@ pub fn construct_extrinsic(
 		),
 	);
 	let signature = raw_payload.using_encoded(|e| caller.sign(e));
-	bifrost_kusama_test_runtime::UncheckedExtrinsic::new_signed(
+	bifrost_kusama_runtime::UncheckedExtrinsic::new_signed(
 		function.clone(),
 		sp_runtime::MultiAddress::Id(caller.public().into()),
-		bifrost_kusama_test_runtime::Signature::Sr25519(signature.clone()),
+		bifrost_kusama_runtime::Signature::Sr25519(signature.clone()),
 		extra.clone(),
 	)
 }
