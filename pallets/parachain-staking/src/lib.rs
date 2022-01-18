@@ -2428,7 +2428,7 @@ pub mod pallet {
 			<Points<T>>::mutate(now, |x| *x += 20);
 			frame_system::Pallet::<T>::register_extra_weight_unchecked(
 				T::DbWeight::get()
-					.reads_writes(T::DbWeight::get().reads(2), T::DbWeight::get().writes(4)),
+					.reads_writes(T::DbWeight::get().reads(2), T::DbWeight::get().writes(2)),
 				DispatchClass::Mandatory,
 			);
 		}

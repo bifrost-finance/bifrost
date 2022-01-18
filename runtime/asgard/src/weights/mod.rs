@@ -21,15 +21,24 @@
 //! A list of the different weight modules for our runtime.
 
 pub mod bifrost_bancor;
+pub mod bifrost_minter_reward;
+pub mod bifrost_vtoken_mint;
 pub mod bifrost_call_switchgear;
 pub mod bifrost_flexible_fee;
 pub mod bifrost_lightening_redeem;
-pub mod bifrost_minter_reward;
+pub mod bifrost_liquidity_mining;
 pub mod bifrost_salp;
 pub mod bifrost_salp_lite;
 pub mod bifrost_token_issuer;
 pub mod bifrost_vsbond_auction;
-pub mod bifrost_vtoken_mint;
+pub mod frame_system;
 pub mod orml_currencies;
 pub mod orml_tokens;
+pub mod pallet_balances;
+pub mod pallet_bounties;
+pub mod pallet_indices;
+pub mod pallet_scheduler;
+pub mod pallet_timestamp;
+pub mod pallet_treasury;
+pub mod pallet_utility;
 pub mod pallet_vesting;

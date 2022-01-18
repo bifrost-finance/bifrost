@@ -20,12 +20,12 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 4.0.0-dev
 //! DATE: 2021-10-28, STEPS: `50`, REPEAT: 20, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("asgard-local"), DB CACHE: 128
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("bifrost-local"), DB CACHE: 128
 
 // Executed Command:
 // target/release/bifrost
 // benchmark
-// --chain=asgard-local
+// --chain=bifrost-local
 // --steps=50
 // --repeat=20
 // --pallet=bifrost_salp
@@ -34,7 +34,7 @@
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --header=./HEADER-GPL3
-// --output=./runtime/asgard/src/weights/bifrost_salp.rs
+// --output=./runtime/bifrost/src/weights/bifrost_salp.rs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -49,37 +49,53 @@ pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:1 w:1)
+	// Storage: System Number (r:1 w:0)
+	// Storage: System ExecutionPhase (r:1 w:0)
+	// Storage: System EventCount (r:1 w:1)
+	// Storage: System Events (r:1 w:1)
 	// Storage: Salp CurrentNonce (r:1 w:1)
 	// Storage: ParachainInfo ParachainId (r:1 w:0)
 	// Storage: ParachainSystem HostConfiguration (r:1 w:0)
 	// Storage: ParachainSystem PendingUpwardMessages (r:1 w:1)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
 	fn contribute() -> Weight {
-		(462_345_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(7 as Weight))
-			.saturating_add(T::DbWeight::get().writes(4 as Weight))
+		(446_114_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(11 as Weight))
+			.saturating_add(T::DbWeight::get().writes(6 as Weight))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
+	// Storage: System Number (r:1 w:0)
+	// Storage: System ExecutionPhase (r:1 w:0)
+	// Storage: System EventCount (r:1 w:1)
+	// Storage: System Events (r:1 w:1)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
 	fn refund() -> Weight {
-		(328_450_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(9 as Weight))
-			.saturating_add(T::DbWeight::get().writes(8 as Weight))
+		(297_349_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(13 as Weight))
+			.saturating_add(T::DbWeight::get().writes(10 as Weight))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
+	// Storage: System Number (r:1 w:0)
+	// Storage: System ExecutionPhase (r:1 w:0)
+	// Storage: System EventCount (r:1 w:1)
+	// Storage: System Events (r:1 w:1)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
 	fn unlock() -> Weight {
-		(248_855_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(4 as Weight))
-			.saturating_add(T::DbWeight::get().writes(3 as Weight))
+		(221_876_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(8 as Weight))
+			.saturating_add(T::DbWeight::get().writes(5 as Weight))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Tokens Accounts (r:2 w:2)
 	// Storage: System Account (r:1 w:1)
+	// Storage: System Number (r:1 w:0)
+	// Storage: System ExecutionPhase (r:1 w:0)
+	// Storage: System EventCount (r:1 w:1)
+	// Storage: System Events (r:1 w:1)
 	// Storage: unknown [0x] (r:1 w:0)
 	// Storage: unknown [0xc85982571aa615c788ef9b2c16f54f25773fd439e8ee1ed2aa3ae43d48e880f0] (r:1 w:1)
 	// Storage: unknown [0x1793e0dee28dc36e243edc2691a5a966f4c15d0d4d432426816fcdad0229ee46] (r:1 w:1)
@@ -579,21 +595,26 @@ impl<T: frame_system::Config> bifrost_salp::WeightInfo for WeightInfo<T> {
 	// Storage: unknown [0xf98428e38450dcc80131bed1b84059f80938df6d2941d17917c968e553afa753] (r:1 w:1)
 	fn batch_unlock(k: u32, ) -> Weight {
 		(0 as Weight)
-			// Standard Error: 167_000
-			.saturating_add((185_561_000 as Weight).saturating_mul(k as Weight))
-			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			// Standard Error: 265_000
+			.saturating_add((184_877_000 as Weight).saturating_mul(k as Weight))
+			.saturating_add(T::DbWeight::get().reads(6 as Weight))
 			.saturating_add(T::DbWeight::get().reads((4 as Weight).saturating_mul(k as Weight)))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes((4 as Weight).saturating_mul(k as Weight)))
 	}
 	// Storage: Salp Funds (r:1 w:0)
 	// Storage: Salp RedeemPool (r:1 w:1)
+	// Storage: System Number (r:1 w:0)
 	// Storage: Tokens Accounts (r:4 w:4)
 	// Storage: Tokens TotalIssuance (r:2 w:2)
+	// Storage: System ExecutionPhase (r:1 w:0)
+	// Storage: System EventCount (r:1 w:1)
+	// Storage: System Events (r:1 w:1)
 	// Storage: System Account (r:1 w:1)
 	// Storage: unknown [0xd861ea1ebf4800d4b89f4ff787ad79ee96d9a708c85b57da7eb8f9ddeda61291] (r:1 w:1)
 	fn redeem() -> Weight {
-		(361_096_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(10 as Weight))
-			.saturating_add(T::DbWeight::get().writes(9 as Weight))
+		(354_497_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(14 as Weight))
+			.saturating_add(T::DbWeight::get().writes(11 as Weight))
 	}
 }

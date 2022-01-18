@@ -25,7 +25,7 @@
 // Executed Command:
 // target/release/bifrost
 // benchmark
-// --chain=asgard-local
+// --chain=bifrost-local
 // --steps=50
 // --repeat=20
 // --pallet=bifrost-salp-lite
@@ -34,7 +34,7 @@
 // --wasm-execution=compiled
 // --heap-pages=4096
 // --header=./HEADER-GPL3
-// --output=./runtime/asgard/src/weights/bifrost_salp_lite.rs
+// --output=./runtime/bifrost/src/weights/bifrost_salp_lite.rs
 
 
 #![cfg_attr(rustfmt, rustfmt_skip)]
@@ -47,6 +47,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions for `bifrost_salp_lite`.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> bifrost_salp_lite::WeightInfo for WeightInfo<T> {
+	
 	// Storage: SalpLite Funds (r:1 w:0)
 	// Storage: SalpLite RedeemPool (r:1 w:1)
 	// Storage: Tokens Accounts (r:2 w:2)
