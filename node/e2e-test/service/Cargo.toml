@@ -13,6 +13,7 @@ tokio = { version = "1.10", features = ["macros"] }
 
 # Substrate
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 sc-basic-authorship = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
@@ -37,6 +38,7 @@ sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polk
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 sp-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 substrate-test-client = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 
 # Polkadot
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13" }
@@ -58,6 +60,7 @@ criterion = { version = "0.3.5", features = [ "async_tokio" ] }
 # RPC related dependencies
 jsonrpc-core = "18.0.0"
 
+bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../../../runtime/common", default-features = false }
 bifrost-kusama-runtime = { path = "../../../runtime/bifrost-kusama", optional = true }
 bifrost-kusama-test-runtime = { path = "../../../runtime/bifrost-kusama-test", optional = true }
 node-service = { path = "../../service", default-features = false }

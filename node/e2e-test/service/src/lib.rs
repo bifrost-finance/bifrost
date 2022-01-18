@@ -26,6 +26,7 @@ use core::future::Future;
 use std::sync::Arc;
 
 use bifrost_kusama_test_runtime::{Hash, Header, RuntimeApi};
+use bifrost_runtime_common::{CouncilCollective, TechnicalCollective};
 use cumulus_client_consensus_common::{ParachainCandidate, ParachainConsensus};
 use cumulus_client_network::BlockAnnounceValidator;
 use cumulus_client_service::{
@@ -36,6 +37,7 @@ pub use cumulus_test_runtime as runtime;
 use cumulus_test_runtime::NodeBlock as Block;
 use frame_system_rpc_runtime_api::AccountNonceApi;
 pub use genesis::*;
+use pallet_democracy::{AccountVote, Conviction, Vote};
 use polkadot_primitives::v1::{CollatorPair, Hash as PHash, PersistedValidationData};
 use polkadot_service::ProvideRuntimeApi;
 use sc_client_api::execution_extensions::ExecutionStrategies;
@@ -53,7 +55,11 @@ use sp_blockchain::HeaderBackend;
 use sp_core::{Pair, H256};
 use sp_keyring::Sr25519Keyring;
 pub use sp_keyring::Sr25519Keyring as Keyring;
-use sp_runtime::{codec::Encode, generic, traits::BlakeTwo256};
+use sp_runtime::{
+	codec::Encode,
+	generic,
+	traits::{BlakeTwo256, Hash as OtherHash},
+};
 use sp_state_machine::BasicExternalities;
 use sp_trie::PrefixedMemoryDB;
 use substrate_test_client::{
@@ -666,7 +672,10 @@ impl TestNode {
 	}
 
 	/// Register a parachain at this relay chain.
-	pub async fn schedule_upgrade(&self, validation: Vec<u8>) -> Result<(), RpcTransactionError> {
+	pub async fn schedule_upgrade_by_sudo(
+		&self,
+		validation: Vec<u8>,
+	) -> Result<(), RpcTransactionError> {
 		let call = frame_system::Call::set_code { code: validation };
 
 		self.send_extrinsic(
@@ -678,6 +687,129 @@ impl TestNode {
 		)
 		.await
 		.map(drop)
+	}
+
+	pub async fn schedule_upgrade(&self, validation: Vec<u8>) -> Result<(), RpcTransactionError> {
+		let code_hash = BlakeTwo256::hash(&validation.clone());
+		let proposal_upgrade: bifrost_kusama_test_runtime::Call =
+			bifrost_kusama_test_runtime::ParachainSystemCall::<
+				bifrost_kusama_test_runtime::Runtime,
+			>::authorize_upgrade {
+				code_hash: code_hash.clone(),
+			}
+			.into();
+
+		let encoded_proposal_upgrade = proposal_upgrade.encode();
+		// note.preimage
+		let tx_note_preimage = self
+			.send_extrinsic(
+				bifrost_kusama_test_runtime::DemocracyCall::note_preimage {
+					encoded_proposal: encoded_proposal_upgrade.clone(),
+				},
+				Sr25519Keyring::Alice,
+			)
+			.await;
+
+		self.wait_for_blocks(1).await;
+		let proposal_upgrade_hash = BlakeTwo256::hash(&encoded_proposal_upgrade.clone()[..]);
+		let proposal = bifrost_kusama_test_runtime::DemocracyCall::external_propose_majority {
+			proposal_hash: proposal_upgrade_hash.clone(),
+		};
+		// council.propose
+		let tx_council_propose = self
+			.send_extrinsic(
+				bifrost_kusama_test_runtime::CollectiveCall::<
+					bifrost_kusama_test_runtime::Runtime,
+					CouncilCollective,
+				>::propose {
+					threshold: 1_u32,
+					proposal: Box::new(proposal.into()),
+					length_bound: 36_u32,
+				},
+				Sr25519Keyring::Alice,
+			)
+			.await;
+
+		self.wait_for_blocks(1).await;
+		let proposal_fast_track: bifrost_kusama_test_runtime::Call =
+			bifrost_kusama_test_runtime::DemocracyCall::fast_track {
+				proposal_hash: proposal_upgrade_hash.clone(),
+				voting_period: 10_u32,
+				delay: 1_u32,
+			}
+			.into();
+		let proposal_fast_track2 = bifrost_kusama_test_runtime::DemocracyCall::fast_track {
+			proposal_hash: proposal_upgrade_hash.clone(),
+			voting_period: 10_u32,
+			delay: 1_u32,
+		};
+		let encoded_proposal_fast_track = proposal_fast_track.clone().encode();
+		let proposal_fast_track_hash = BlakeTwo256::hash(&encoded_proposal_fast_track.clone()[..]);
+
+		// technicalCommittee.propose
+		let tech_propose: bifrost_kusama_test_runtime::Call =
+			bifrost_kusama_test_runtime::CollectiveCall::<
+				bifrost_kusama_test_runtime::Runtime,
+				TechnicalCollective,
+			>::propose {
+				threshold: 1_u32,
+				proposal: Box::new(proposal_fast_track2.into()),
+				length_bound: 43_u32,
+			}
+			.into();
+		let mut calls: Vec<bifrost_kusama_test_runtime::Call> = Vec::new();
+		calls.push(tech_propose);
+
+		// technicalCommittee.vote
+		let tech_vote: bifrost_kusama_test_runtime::Call =
+			bifrost_kusama_test_runtime::CollectiveCall::<
+				bifrost_kusama_test_runtime::Runtime,
+				TechnicalCollective,
+			>::vote {
+				proposal: proposal_fast_track_hash,
+				index: 0_u32,
+				approve: true,
+			}
+			.into();
+		calls.push(tech_vote);
+
+		// utility.batch
+		let tx_batch =
+			self
+				.send_extrinsic(
+					bifrost_kusama_test_runtime::UtilityCall::<
+						bifrost_kusama_test_runtime::Runtime,
+					>::batch {
+						calls,
+					},
+					Sr25519Keyring::Alice,
+				)
+				.await;
+
+		self.wait_for_blocks(3).await;
+		let v = Vote { aye: true, conviction: Conviction::None };
+		let vote = AccountVote::Standard { vote: v, balance: 75_000_000_000_000 };
+		// democracy.vote
+		let tx_democracy_vote = self
+			.send_extrinsic(
+				bifrost_kusama_test_runtime::DemocracyCall::vote { ref_index: 0_u32, vote },
+				Sr25519Keyring::Alice,
+			)
+			.await;
+
+		self.wait_for_blocks(9).await;
+		// parachainSystem.enactAuthorizedUpgrade
+		let tx_enact_authorized_upgrade = self
+			.send_extrinsic(
+				bifrost_kusama_test_runtime::ParachainSystemCall::<
+					bifrost_kusama_test_runtime::Runtime,
+				>::enact_authorized_upgrade {
+					code: validation.clone(),
+				},
+				Sr25519Keyring::Alice,
+			)
+			.await;
+		tx_enact_authorized_upgrade.map(drop)
 	}
 }
 
@@ -701,7 +833,7 @@ pub fn construct_extrinsic(
 	let current_block_hash = client.info().best_hash;
 	let current_block = client.info().best_number.saturated_into();
 	let genesis_block = client.hash(0).unwrap().unwrap();
-	let nonce = nonce.unwrap_or_else(|| fetch_nonce(client, caller.public()));
+	let nonce = fetch_nonce(client, caller.public());
 	let period = bifrost_kusama_test_runtime::BlockHashCount::get()
 		.checked_next_power_of_two()
 		.map(|c| c / 2)
