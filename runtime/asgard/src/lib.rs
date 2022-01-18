@@ -347,10 +347,11 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: Balance = 10 * MILLIBNC;
-	pub const TransferFee: Balance = 1 * MILLIBNC;
-	pub const CreationFee: Balance = 1 * MILLIBNC;
-	pub const TransactionByteFee: Balance = 1 * MICROBNC;
+
+	pub ExistentialDeposit: Balance = 10 * milli(NativeCurrencyId::get());
+	pub TransferFee: Balance = 1 * milli(NativeCurrencyId::get());
+	pub CreationFee: Balance = 1 * milli(NativeCurrencyId::get());
+	pub TransactionByteFee: Balance = 16 * micro(NativeCurrencyId::get());
 	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const MaxLocks: u32 = 50;
 	pub const MaxReserves: u32 = 50;
@@ -365,12 +366,12 @@ impl pallet_utility::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size 32, value size 8; .
-	pub const ProxyDepositBase: Balance = deposit(1, 8);
+	pub ProxyDepositBase: Balance = deposit(1, 8);
 	// Additional storage item size of 33 bytes.
-	pub const ProxyDepositFactor: Balance = deposit(0, 33);
+	pub ProxyDepositFactor: Balance = deposit(0, 33);
 	pub const MaxProxies: u16 = 32;
-	pub const AnnouncementDepositBase: Balance = deposit(1, 8);
-	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
+	pub AnnouncementDepositBase: Balance = deposit(1, 8);
+	pub AnnouncementDepositFactor: Balance = deposit(0, 66);
 	pub const MaxPending: u16 = 32;
 }
 
@@ -496,9 +497,9 @@ impl pallet_scheduler::Config for Runtime {
 
 parameter_types! {
 	// One storage item; key size is 32; value is size 4+4+16+32 bytes = 56 bytes.
-	pub const DepositBase: Balance = deposit(1, 88);
+	pub DepositBase: Balance = deposit(1, 88);
 	// Additional storage item size of 32 bytes.
-	pub const DepositFactor: Balance = deposit(0, 32);
+	pub DepositFactor: Balance = deposit(0, 32);
 	pub const MaxSignatories: u16 = 100;
 }
 
@@ -514,9 +515,9 @@ impl pallet_multisig::Config for Runtime {
 
 parameter_types! {
 	// Minimum 4 CENTS/byte
-	pub const BasicDeposit: Balance = deposit(1, 258);
-	pub const FieldDeposit: Balance = deposit(0, 66);
-	pub const SubAccountDeposit: Balance = deposit(1, 53);
+	pub BasicDeposit: Balance = deposit(1, 258);
+	pub FieldDeposit: Balance = deposit(0, 66);
+	pub SubAccountDeposit: Balance = deposit(1, 53);
 	pub const MaxSubAccounts: u32 = 100;
 	pub const MaxAdditionalFields: u32 = 100;
 	pub const MaxRegistrars: u32 = 20;
@@ -538,7 +539,7 @@ impl pallet_identity::Config for Runtime {
 }
 
 parameter_types! {
-	pub const IndexDeposit: Balance = 1 * DOLLARS;
+	pub IndexDeposit: Balance = 1 * dollar(NativeCurrencyId::get());
 }
 
 impl pallet_indices::Config for Runtime {
@@ -624,11 +625,11 @@ impl pallet_membership::Config<pallet_membership::Instance2> for Runtime {
 }
 
 parameter_types! {
-	pub const CandidacyBond: Balance = 100 * CENTS;
+	pub CandidacyBond: Balance = 100 * cent(NativeCurrencyId::get());
 	// 1 storage item created, key size is 32 bytes, value size is 16+16.
-	pub const VotingBondBase: Balance = deposit(1, 64);
+	pub VotingBondBase: Balance = deposit(1, 64);
 	// additional data per vote is 32 bytes (account id).
-	pub const VotingBondFactor: Balance = deposit(0, 32);
+	pub VotingBondFactor: Balance = deposit(0, 32);
 	/// Daily council elections
 	pub const TermDuration: BlockNumber = 24 * HOURS;
 	pub const DesiredMembers: u32 = 7;
@@ -661,10 +662,10 @@ parameter_types! {
 	pub const LaunchPeriod: BlockNumber = 7 * DAYS;
 	pub const VotingPeriod: BlockNumber = 7 * DAYS;
 	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
-	pub const MinimumDeposit: Balance = 100 * DOLLARS;
+	pub MinimumDeposit: Balance = 100 * dollar(NativeCurrencyId::get());
 	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
 	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
-	pub const PreimageByteDeposit: Balance = 10 * MILLICENTS;
+	pub PreimageByteDeposit: Balance = 10 * millicent(NativeCurrencyId::get());
 	pub const InstantAllowed: bool = true;
 	pub const MaxVotes: u32 = 100;
 	pub const MaxProposals: u32 = 100;
@@ -724,20 +725,20 @@ impl pallet_democracy::Config for Runtime {
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);
-	pub const ProposalBondMinimum: Balance = 100 * DOLLARS;
+	pub ProposalBondMinimum: Balance = 100 * dollar(NativeCurrencyId::get());
 	pub const SpendPeriod: BlockNumber = 6 * DAYS;
 	pub const Burn: Permill = Permill::from_perthousand(0);
 
 	pub const TipCountdown: BlockNumber = 1 * DAYS;
 	pub const TipFindersFee: Percent = Percent::from_percent(20);
-	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
-	pub const DataDepositPerByte: Balance = 10 * CENTS;
-	pub const BountyDepositBase: Balance = 1 * DOLLARS;
+	pub TipReportDepositBase: Balance = 1 * dollar(NativeCurrencyId::get());
+	pub DataDepositPerByte: Balance = 10 * cent(NativeCurrencyId::get());
+	pub BountyDepositBase: Balance = 1 * dollar(NativeCurrencyId::get());
 	pub const BountyDepositPayoutDelay: BlockNumber = 4 * DAYS;
 	pub const BountyUpdatePeriod: BlockNumber = 90 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
-	pub const BountyValueMinimum: Balance = 10 * DOLLARS;
+	pub BountyValueMinimum: Balance = 10 * dollar(NativeCurrencyId::get());
 	pub const MaxApprovals: u32 = 100;
 }
 
@@ -951,6 +952,14 @@ parameter_types! {
 		// PHA:KSM = 400:1
 		ksm_per_second() * 400
 	);
+	pub RmrkPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into()))
+		).into(),
+		// rmrk:KSM = 10:1
+		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+	);
 }
 
 pub struct ToTreasury;
@@ -973,6 +982,7 @@ pub type Trader = (
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
+	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1136,11 +1146,12 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::PHA) => 4 * cent(CurrencyId::Token(TokenSymbol::PHA)),	// 0.04 PHA, PHA has a decimals of 10e12.
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
-			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
+			&CurrencyId::VSBond(TokenSymbol::ASG, ..) => 10 * millicent(NativeCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
-			_ => Balance::max_value() // unsupported
+			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
+			_ => Balance::max_value(), // unsupported
 		}
 	};
 }
@@ -1172,6 +1183,7 @@ impl orml_tokens::Config for Runtime {
 
 parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::get().into())));
+	pub RelayXcmBaseWeight: u64 = milli(RelayCurrencyId::get()) as u64;
 }
 
 impl orml_xtokens::Config for Runtime {
@@ -1220,6 +1232,8 @@ impl NameGetter<Call> for FeeNameGetter {
 	fn get_name(c: &Call) -> ExtraFeeName {
 		match *c {
 			Call::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeName::SalpContribute,
+			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) =>
+				ExtraFeeName::StatemineTransfer,
 			_ => ExtraFeeName::NoExtraFee,
 		}
 	}
@@ -1232,6 +1246,7 @@ impl Contains<Call> for AggregateExtraFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
 			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
+			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) => true,
 			_ => false,
 		}
 	}
@@ -1247,10 +1262,32 @@ impl Contains<Call> for ContributeFeeFilter {
 	}
 }
 
+pub struct StatemineTransferFeeFilter;
+impl Contains<Call> for StatemineTransferFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) => true,
+			_ => false,
+		}
+	}
+}
+
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT) + ContributionWeight::get() + u64::pow(2, 24).into();
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * milli(RelayCurrencyId::get()) as u64) + ContributionWeight::get() + u64::pow(2, 24).into();
+	pub StatemineTransferWeightHolder: XcmBaseWeight = XcmBaseWeight::from(6 * milli(RelayCurrencyId::get()) as u64);
 }
+
+pub type MiscFeeHandlers = (
+	MiscFeeHandler<Runtime, RelayCurrencyId, KsmWeightToFee, SalpWeightHolder, ContributeFeeFilter>,
+	MiscFeeHandler<
+		Runtime,
+		RelayCurrencyId,
+		KsmWeightToFee,
+		StatemineTransferWeightHolder,
+		StatemineTransferFeeFilter,
+	>,
+);
 
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
@@ -1266,13 +1303,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type OnUnbalanced = Treasury;
 	type WeightInfo = weights::bifrost_flexible_fee::WeightInfo<Runtime>;
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler = MiscFeeHandler<
-		Runtime,
-		RelayCurrencyId,
-		KsmWeightToFee,
-		SalpWeightHolder,
-		ContributeFeeFilter,
-	>;
+	type MiscFeeHandler = MiscFeeHandlers;
 }
 
 parameter_types! {
@@ -1326,7 +1357,7 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 }
 
 parameter_types! {
-	pub const MinContribution: Balance = DOLLARS / 10;
+	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
 	pub const RemoveKeysLimit: u32 = 500;
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
@@ -1334,9 +1365,9 @@ parameter_types! {
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
 	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub XcmWeight: XcmBaseWeight = XCM_WEIGHT.into();
-	pub ContributionWeight:XcmBaseWeight = XCM_WEIGHT.into();
-	pub AddProxyWeight:XcmBaseWeight = XCM_WEIGHT.into();
+	pub XcmWeight: XcmBaseWeight = RelayXcmBaseWeight::get().into();
+	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
+	pub AddProxyWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),  // bob
 		hex!["90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22"].into(),  // charlie
@@ -1376,6 +1407,8 @@ impl bifrost_salp::Config for Runtime {
 	type TransactProxyType = SalpProxyType;
 	type TransactType = SalpTransactType;
 	type RelayNetwork = RelayNetwork;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 }
 
 impl bifrost_salp_lite::Config for Runtime {
@@ -1519,7 +1552,7 @@ parameter_types! {
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 	pub ZenlinkRegistedParaChains: Vec<(MultiLocation, u128)> = vec![
 		// Bifrost local and live, 0.01 BNC
-		(make_x2_location(2001), 10_000_000_000),
+		(make_x2_location(2121), 10_000_000_000),
 		// Phala local and live, 1 PHA
 		(make_x2_location(2004), 1_000_000_000_000),
 		// Plasm local and live, 0.0000000000001 SDN

@@ -82,7 +82,7 @@ use bifrost_flexible_fee::{
 use bifrost_runtime_common::{
 	cent,
 	constants::{parachains, time::*},
-	dollar, micro, milli, millicent,
+	dollar, micro, microcent, milli, millicent,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -146,7 +146,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 916,
+	spec_version: 920,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -967,6 +967,14 @@ parameter_types! {
 		// PHA:KSM = 400:1
 		ksm_per_second() * 400
 	);
+	pub RmrkPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X2(Parachain(parachains::Statemine::ID), GeneralIndex(parachains::Statemine::RMRK_ID.into()))
+		).into(),
+		// rmrk:KSM = 10:1
+		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+	);
 }
 
 pub struct ToTreasury;
@@ -989,6 +997,7 @@ pub type Trader = (
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
+	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1027,11 +1036,11 @@ impl pallet_xcm::Config for Runtime {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
-	type XcmExecuteFilter = Everything;
+	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmReserveTransferFilter = Everything;
 	type XcmRouter = XcmRouter;
-	type XcmTeleportFilter = Everything;
+	type XcmTeleportFilter = Nothing;
 	type Origin = Origin;
 	type Call = Call;
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
@@ -1156,7 +1165,8 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
-			_ => Balance::max_value() // unsupported
+			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
+			_ => Balance::max_value(), // unsupported
 		}
 	};
 }
@@ -1229,6 +1239,8 @@ impl NameGetter<Call> for FeeNameGetter {
 	fn get_name(c: &Call) -> ExtraFeeName {
 		match *c {
 			Call::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeName::SalpContribute,
+			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) =>
+				ExtraFeeName::StatemineTransfer,
 			_ => ExtraFeeName::NoExtraFee,
 		}
 	}
@@ -1241,6 +1253,7 @@ impl Contains<Call> for AggregateExtraFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
 			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
+			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) => true,
 			_ => false,
 		}
 	}
@@ -1256,10 +1269,32 @@ impl Contains<Call> for ContributeFeeFilter {
 	}
 }
 
+pub struct StatemineTransferFeeFilter;
+impl Contains<Call> for StatemineTransferFeeFilter {
+	fn contains(c: &Call) -> bool {
+		match *c {
+			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) => true,
+			_ => false,
+		}
+	}
+}
+
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * milli(RelayCurrencyId::get()) as u64) + ContributionWeight::get() + u64::pow(2, 24).into();
+	pub StatemineTransferWeightHolder: XcmBaseWeight = XcmBaseWeight::from(6 * milli(RelayCurrencyId::get()) as u64);
 }
+
+pub type MiscFeeHandlers = (
+	MiscFeeHandler<Runtime, RelayCurrencyId, KsmWeightToFee, SalpWeightHolder, ContributeFeeFilter>,
+	MiscFeeHandler<
+		Runtime,
+		RelayCurrencyId,
+		KsmWeightToFee,
+		StatemineTransferWeightHolder,
+		StatemineTransferFeeFilter,
+	>,
+);
 
 impl bifrost_flexible_fee::Config for Runtime {
 	type Currency = Balances;
@@ -1275,13 +1310,7 @@ impl bifrost_flexible_fee::Config for Runtime {
 	type OnUnbalanced = Treasury;
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Runtime, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler = MiscFeeHandler<
-		Runtime,
-		RelayCurrencyId,
-		KsmWeightToFee,
-		SalpWeightHolder,
-		ContributeFeeFilter,
-	>;
+	type MiscFeeHandler = MiscFeeHandlers;
 }
 
 pub struct EnsureConfirmAsMultiSig;
@@ -1363,6 +1392,8 @@ impl bifrost_salp::Config for Runtime {
 	type TransactProxyType = SalpProxyType;
 	type TransactType = SalpTransactType;
 	type RelayNetwork = RelayNetwork;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
 }
 
 parameter_types! {
