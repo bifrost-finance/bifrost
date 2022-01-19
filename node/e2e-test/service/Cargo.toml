@@ -81,10 +81,3 @@ with-bifrost-kusama-test-runtime = [
 	"node-service/with-bifrost-kusama-test-runtime",
 	"bifrost-kusama-runtime/with-bifrost-kusama-test-runtime"
 ]
-with-bifrost-polkadot-test-runtime = [
-	# "node-service/with-bifrost-polkadot-runtime",
-]
-with-all-runtime = [
-	"with-bifrost-kusama-test-runtime",
-	# "with-bifrost-polkadot-test-runtime"
-]
