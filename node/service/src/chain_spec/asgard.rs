@@ -45,7 +45,7 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions
 
 #[allow(non_snake_case)]
 pub fn ENDOWMENT() -> u128 {
-	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::ASG))
+	10_000 * dollar(CurrencyId::Native(TokenSymbol::ASG))
 }
 
 pub const PARA_ID: u32 = 2121;
@@ -79,7 +79,7 @@ fn asgard_properties() -> Properties {
 	properties
 }
 
-pub fn moonbeam_inflation_config() -> InflationInfo<Balance> {
+pub fn inflation_config() -> InflationInfo<Balance> {
 	fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
 		use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
 		perbill_annual_to_perbill_round(
@@ -216,7 +216,7 @@ pub fn asgard_genesis(
 				.map(|(account, _, bond)| (account, bond))
 				.collect(),
 			delegations,
-			inflation_config: moonbeam_inflation_config(),
+			inflation_config: inflation_config(),
 		},
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
 		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
@@ -244,7 +244,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 10_000),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT()),
 				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT()),
 			]
 		})
@@ -307,7 +307,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.iter()
 		.chain(faucet_accounts().iter())
 		.cloned()
-		.map(|x| (x, ENDOWMENT() * 40_000))
+		.map(|x| (x, ENDOWMENT()))
 		.collect();
 	let vesting_configs: Vec<VestingConfig> = vec![];
 	let tokens = endowed_accounts
@@ -315,17 +315,13 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT() * 40_000),
-				(
-					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::ASG, 2121, 13, 20),
-					ENDOWMENT() * 40_000,
-				),
+				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT()),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT()),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT()),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSBond(TokenSymbol::ASG, 2121, 13, 20), ENDOWMENT()),
 			]
 		})
 		.collect();
@@ -433,17 +429,13 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 		.chain(faucet_accounts().iter())
 		.flat_map(|x| {
 			vec![
-				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT() * 40_000),
-				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT() * 40_000),
-				(
-					x.clone(),
-					CurrencyId::VSBond(TokenSymbol::ASG, 2121, 13, 20),
-					ENDOWMENT() * 40_000,
-				),
+				(x.clone(), CurrencyId::Native(TokenSymbol::ASG), ENDOWMENT()),
+				(x.clone(), CurrencyId::Stable(TokenSymbol::KUSD), ENDOWMENT()),
+				(x.clone(), CurrencyId::Token(TokenSymbol::KSM), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::KSM), ENDOWMENT()),
+				(x.clone(), CurrencyId::Token(TokenSymbol::DOT), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSToken(TokenSymbol::DOT), ENDOWMENT()),
+				(x.clone(), CurrencyId::VSBond(TokenSymbol::ASG, 2121, 13, 20), ENDOWMENT()),
 			]
 		})
 		.collect();

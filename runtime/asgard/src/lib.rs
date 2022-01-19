@@ -831,15 +831,15 @@ parameter_types! {
 	/// Blocks per round
 	pub const DefaultBlocksPerRound: u32 = 2 * MINUTES;
 	/// Rounds before the collator leaving the candidates request can be executed
-	pub const LeaveCandidatesDelay: u32 = 24;
+	pub const LeaveCandidatesDelay: u32 = 36;
 	/// Rounds before the candidate bond increase/decrease can be executed
-	pub const CandidateBondLessDelay: u32 = 24;
+	pub const CandidateBondLessDelay: u32 = 36;
 	/// Rounds before the delegator exit can be executed
-	pub const LeaveDelegatorsDelay: u32 = 24;
+	pub const LeaveDelegatorsDelay: u32 = 36;
 	/// Rounds before the delegator revocation can be executed
-	pub const RevokeDelegationDelay: u32 = 24;
+	pub const RevokeDelegationDelay: u32 = 36;
 	/// Rounds before the delegator bond increase/decrease can be executed
-	pub const DelegationBondLessDelay: u32 = 24;
+	pub const DelegationBondLessDelay: u32 = 36;
 	/// Rounds before the reward is paid
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
@@ -853,9 +853,9 @@ parameter_types! {
 	/// Default percent of inflation set aside for parachain bond every round
 	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
 	/// Minimum stake required to become a collator
-	pub MinCollatorStk: u128 = 1000 * dollar(NativeCurrencyId::get());
+	pub MinCollatorStk: u128 = 5000 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a candidate
-	pub MinCandidateStk: u128 = 500 * dollar(NativeCurrencyId::get());
+	pub MinCandidateStk: u128 = 2000 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
 }
@@ -1701,7 +1701,6 @@ construct_runtime! {
 		Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 22,
 		Aura: pallet_aura::{Pallet, Storage, Config<T>} = 23,
 		AuraExt: cumulus_pallet_aura_ext::{Pallet, Storage, Config} = 24,
-		
 
 		// Governance stuff
 		Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 30,

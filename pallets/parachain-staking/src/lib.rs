@@ -2426,11 +2426,6 @@ pub mod pallet {
 			let score_plus_20 = <AwardedPts<T>>::get(now, &author) + 20;
 			<AwardedPts<T>>::insert(now, author, score_plus_20);
 			<Points<T>>::mutate(now, |x| *x += 20);
-			frame_system::Pallet::<T>::register_extra_weight_unchecked(
-				T::DbWeight::get()
-					.reads_writes(T::DbWeight::get().reads(2), T::DbWeight::get().writes(2)),
-				DispatchClass::Mandatory,
-			);
 		}
 
 		fn note_uncle(_author: T::AccountId, _age: T::BlockNumber) {
@@ -2451,11 +2446,6 @@ pub mod pallet {
 				"assembling new collators for new session {} at #{:?}",
 				new_index,
 				<frame_system::Pallet<T>>::block_number(),
-			);
-
-			frame_system::Pallet::<T>::register_extra_weight_unchecked(
-				T::DbWeight::get().reads(2),
-				DispatchClass::Mandatory,
 			);
 
 			let collators = Pallet::<T>::selected_candidates().to_vec();
@@ -2479,11 +2469,6 @@ pub mod pallet {
 
 	impl<T: Config> ShouldEndSession<T::BlockNumber> for Pallet<T> {
 		fn should_end_session(now: T::BlockNumber) -> bool {
-			frame_system::Pallet::<T>::register_extra_weight_unchecked(
-				T::DbWeight::get().reads(2),
-				DispatchClass::Mandatory,
-			);
-
 			let round = <Round<T>>::get();
 			// always update when a new round should start
 			return round.should_update(now);
