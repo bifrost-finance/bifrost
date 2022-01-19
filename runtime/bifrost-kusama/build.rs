@@ -33,6 +33,7 @@ fn main() {
 		.import_memory()
 		.build();
 
+	#[cfg(feature = "with-bifrost-kusama-test-runtime")]
 	WasmBuilder::new()
 		.with_current_project()
 		.enable_feature("increment-spec-version")
