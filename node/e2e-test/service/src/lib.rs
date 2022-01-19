@@ -667,7 +667,7 @@ impl TestNode {
 		function: impl Into<bifrost_kusama_runtime::Call>,
 		caller: Sr25519Keyring,
 	) -> Result<RpcTransactionOutput, RpcTransactionError> {
-		let extrinsic = construct_extrinsic(&*self.client, function, caller.pair(), Some(0));
+		let extrinsic = construct_extrinsic(&*self.client, function, caller.pair());
 
 		self.rpc_handlers.send_transaction(extrinsic.into()).await
 	}
@@ -692,7 +692,7 @@ impl TestNode {
 			Sr25519Keyring::Alice,
 		)
 		.await
-		.map(drop);
+		.ok();
 
 		self.wait_for_blocks(1).await;
 		let proposal_upgrade_hash = BlakeTwo256::hash(&encoded_proposal_upgrade.clone()[..]);
@@ -712,7 +712,7 @@ impl TestNode {
 			Sr25519Keyring::Alice,
 		)
 		.await
-		.map(drop);
+		.ok();
 
 		self.wait_for_blocks(1).await;
 		let proposal_fast_track: bifrost_kusama_runtime::Call =
@@ -722,13 +722,8 @@ impl TestNode {
 				delay: 1_u32,
 			}
 			.into();
-		let proposal_fast_track2 = bifrost_kusama_runtime::DemocracyCall::fast_track {
-			proposal_hash: proposal_upgrade_hash.clone(),
-			voting_period: 3_u32,
-			delay: 1_u32,
-		};
 		let encoded_proposal_fast_track = proposal_fast_track.clone().encode();
-		let proposal_fast_track_hash = BlakeTwo256::hash(&encoded_proposal_fast_track.clone()[..]);
+		let proposal_fast_track_hash = BlakeTwo256::hash(&encoded_proposal_fast_track[..]);
 
 		// technicalCommittee.propose
 		let tech_propose: bifrost_kusama_runtime::Call = bifrost_kusama_runtime::CollectiveCall::<
@@ -736,7 +731,7 @@ impl TestNode {
 			TechnicalCollective,
 		>::propose {
 			threshold: 1_u32,
-			proposal: Box::new(proposal_fast_track2.into()),
+			proposal: Box::new(proposal_fast_track.into()),
 			length_bound: 43_u32,
 		}
 		.into();
@@ -761,7 +756,7 @@ impl TestNode {
 			Sr25519Keyring::Alice,
 		)
 		.await
-		.map(drop);
+		.ok();
 
 		self.wait_for_blocks(2).await;
 		let v = Vote { aye: true, conviction: Conviction::None };
@@ -772,7 +767,7 @@ impl TestNode {
 			Sr25519Keyring::Alice,
 		)
 		.await
-		.map(drop);
+		.ok();
 
 		self.wait_for_blocks(3).await;
 		// parachainSystem.enactAuthorizedUpgrade
@@ -804,7 +799,6 @@ pub fn construct_extrinsic(
 	client: &Client,
 	function: impl Into<bifrost_kusama_runtime::Call>,
 	caller: sp_core::sr25519::Pair,
-	nonce: Option<u32>,
 ) -> bifrost_kusama_runtime::UncheckedExtrinsic {
 	let function = function.into();
 	let current_block_hash = client.info().best_hash;

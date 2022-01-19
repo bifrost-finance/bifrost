@@ -78,11 +78,11 @@ integration-test:
 
 .PHONY: e2e-integration
 e2e-integration:
-	cargo test -p bifrost-test-service --features="with-bifrost-kusama-test-runtime" --test integration --release
+	cargo test -p bifrost-test-service --features="with-bifrost-kusama-test-runtime" --test integration --release -- --ignored
 
 .PHONY: e2e-runtime-upgrade
 e2e-runtime-upgrade:
-	cargo test -p bifrost-test-service --features="with-bifrost-kusama-test-runtime" --test runtime_upgrade --release
+	cargo test -p bifrost-test-service --features="with-bifrost-kusama-test-runtime" --test runtime_upgrade --release -- --ignored
 
 .PHONY: clean
 clean:
@@ -197,7 +197,7 @@ insert-session-key:
 
 .PHONY: generate-node-key
 generate-node-key:
-	subkey generate-node-key --file ./resources/node-key	
+	subkey generate-node-key --file ./resources/node-key
 
 .PHONY: view-key
 view-key:

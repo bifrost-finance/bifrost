@@ -82,7 +82,7 @@ use bifrost_flexible_fee::{
 use bifrost_runtime_common::{
 	cent,
 	constants::{parachains, time::*},
-	dollar, micro, microcent, milli, millicent,
+	dollar, micro, milli, millicent,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -95,7 +95,7 @@ use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
-	traits::{EnsureOrigin, LockIdentifier, OnRuntimeUpgrade},
+	traits::{EnsureOrigin, LockIdentifier},
 };
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;

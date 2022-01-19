@@ -64,5 +64,5 @@ async fn test_collating_and_non_collator_mode_catching_up() {
 		.connect_to_relay_chain_nodes(vec![&alice, &bob])
 		.build()
 		.await;
-	dave.wait_for_blocks(7).await;
+	dave.wait_for_blocks(1).await;
 }
