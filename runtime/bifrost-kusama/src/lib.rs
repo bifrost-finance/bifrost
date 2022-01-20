@@ -96,7 +96,7 @@ use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
-	traits::{EnsureOrigin, LockIdentifier},
+	traits::{EnsureOrigin, LockIdentifier, OnRuntimeUpgrade},
 };
 use frame_system::{EnsureOneOf, EnsureRoot, RawOrigin};
 use hex_literal::hex;
