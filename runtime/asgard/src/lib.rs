@@ -102,7 +102,7 @@ pub use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
-use orml_xcm_support::MultiCurrencyAdapter;
+use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
@@ -909,6 +909,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	LocationToAccountId,
 	CurrencyId,
 	BifrostCurrencyIdConvert<SelfParaChainId>,
+	DepositToAlternative<BifrostTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 parameter_types! {
@@ -1533,16 +1534,16 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 }
 
-impl merkle_distributor::Config for Runtime {
-	type Event = Event;
-	type CurrencyId = CurrencyId;
-	type MultiCurrency = Currencies;
-	type Balance = Balance;
-	type MerkleDistributorId = u32;
-	type PalletId = MerkleDirtributorPalletId;
-	type StringLimit = StringLimit;
-	type WeightInfo = ();
-}
+// impl merkle_distributor::Config for Runtime {
+// 	type Event = Event;
+// 	type CurrencyId = CurrencyId;
+// 	type MultiCurrency = Currencies;
+// 	type Balance = Balance;
+// 	type MerkleDistributorId = u32;
+// 	type PalletId = MerkleDirtributorPalletId;
+// 	type StringLimit = StringLimit;
+// 	type WeightInfo = ();
+// }
 
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
@@ -1710,7 +1711,7 @@ construct_runtime! {
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
-		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
+		// MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
@@ -1766,7 +1767,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 	(),
 >;
 

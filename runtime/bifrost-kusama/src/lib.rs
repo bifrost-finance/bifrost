@@ -73,7 +73,7 @@ use bifrost_flexible_fee::{
 use bifrost_runtime_common::{
 	cent,
 	constants::{parachains, time::*},
-	dollar, micro, microcent, milli, millicent,
+	dollar, micro, milli, millicent,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -99,7 +99,7 @@ pub use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
-use orml_xcm_support::MultiCurrencyAdapter;
+use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -902,6 +902,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	LocationToAccountId,
 	CurrencyId,
 	BifrostCurrencyIdConvert<SelfParaChainId>,
+	DepositToAlternative<BifrostTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 parameter_types! {
@@ -1512,16 +1513,16 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 }
 
-impl merkle_distributor::Config for Runtime {
-	type Event = Event;
-	type CurrencyId = CurrencyId;
-	type MultiCurrency = Currencies;
-	type Balance = Balance;
-	type MerkleDistributorId = u32;
-	type PalletId = MerkleDirtributorPalletId;
-	type StringLimit = StringLimit;
-	type WeightInfo = ();
-}
+// impl merkle_distributor::Config for Runtime {
+// 	type Event = Event;
+// 	type CurrencyId = CurrencyId;
+// 	type MultiCurrency = Currencies;
+// 	type Balance = Balance;
+// 	type MerkleDistributorId = u32;
+// 	type PalletId = MerkleDirtributorPalletId;
+// 	type StringLimit = StringLimit;
+// 	type WeightInfo = ();
+// }
 
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
@@ -1687,7 +1688,7 @@ construct_runtime! {
 		UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 73,
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
-		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
+		// MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,
@@ -1740,7 +1741,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 	(),
 >;
 
