@@ -15,8 +15,6 @@
 // along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
 
 //! Test utilities
-use crate as stake;
-use crate::{pallet, AwardedPts, Config, InflationInfo, Points, Range};
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{Everything, GenesisBuild, OnFinalize, OnInitialize},
@@ -30,6 +28,8 @@ use sp_runtime::{
 	Perbill, Percent,
 };
 
+use crate as stake;
+use crate::{pallet, AwardedPts, Config, InflationInfo, Points, Range};
 pub type AccountId = u64;
 pub type Balance = u128;
 pub type BlockNumber = u64;
@@ -113,6 +113,8 @@ parameter_types! {
 	pub const MinCollatorStk: u128 = 10;
 	pub const MinDelegatorStk: u128 = 5;
 	pub const MinDelegation: u128 = 3;
+	pub AllowInflation: bool = true;
+	pub PaymentInRound: u128 = 10;
 }
 impl Config for Test {
 	type Event = Event;
@@ -135,6 +137,8 @@ impl Config for Test {
 	type MinCandidateStk = MinCollatorStk;
 	type MinDelegatorStk = MinDelegatorStk;
 	type MinDelegation = MinDelegation;
+	type AllowInflation = AllowInflation;
+	type PaymentInRound = PaymentInRound;
 	type WeightInfo = ();
 }
 
@@ -156,11 +160,7 @@ impl Default for ExtBuilder {
 			delegations: vec![],
 			collators: vec![],
 			inflation: InflationInfo {
-				expect: Range {
-					min: 700,
-					ideal: 700,
-					max: 700,
-				},
+				expect: Range { min: 700, ideal: 700, max: 700 },
 				// not used
 				annual: Range {
 					min: Perbill::from_percent(50),
@@ -208,11 +208,9 @@ impl ExtBuilder {
 			.build_storage::<Test>()
 			.expect("Frame system builds valid default genesis config");
 
-		pallet_balances::GenesisConfig::<Test> {
-			balances: self.balances,
-		}
-		.assimilate_storage(&mut t)
-		.expect("Pallet balances storage can be assimilated");
+		pallet_balances::GenesisConfig::<Test> { balances: self.balances }
+			.assimilate_storage(&mut t)
+			.expect("Pallet balances storage can be assimilated");
 		stake::GenesisConfig::<Test> {
 			candidates: self.collators,
 			delegations: self.delegations,
@@ -274,13 +272,7 @@ pub(crate) fn events() -> Vec<pallet::Event<Test>> {
 	System::events()
 		.into_iter()
 		.map(|r| r.event)
-		.filter_map(|e| {
-			if let Event::Stake(inner) = e {
-				Some(inner)
-			} else {
-				None
-			}
-		})
+		.filter_map(|e| if let Event::Stake(inner) = e { Some(inner) } else { None })
 		.collect::<Vec<_>>()
 }
 
@@ -358,7 +350,7 @@ macro_rules! assert_event_emitted {
 					e,
 					crate::mock::events()
 				);
-			}
+			},
 		}
 	};
 }
@@ -426,13 +418,7 @@ fn geneses() {
 			(10, 100),
 		])
 		.with_candidates(vec![(1, 20), (2, 20), (3, 20), (4, 20), (5, 10)])
-		.with_delegations(vec![
-			(6, 1, 10),
-			(7, 1, 10),
-			(8, 2, 10),
-			(9, 2, 10),
-			(10, 1, 10),
-		])
+		.with_delegations(vec![(6, 1, 10), (7, 1, 10), (8, 2, 10), (9, 2, 10), (10, 1, 10)])
 		.build()
 		.execute_with(|| {
 			assert!(System::events().is_empty());

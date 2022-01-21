@@ -1399,7 +1399,8 @@ pub mod pallet {
 		/// Account (re)set for parachain bond treasury [old, new]
 		ParachainBondAccountSet(T::AccountId, T::AccountId),
 		/// Percent of inflation or Fixed Payment (re)set
-		ParachainBondReservePercentOrPaymentSet(Option<BalanceOf<T>>, Option<Percent>),
+		ParachainBondReservePercentSet(Percent, Percent),
+		ParachainBondReservePaymentSet(BalanceOf<T>, BalanceOf<T>),
 		/// Annual inflation input (first 3) was used to derive new per-round inflation (last 3)
 		InflationSet(Perbill, Perbill, Perbill, Perbill, Perbill, Perbill),
 		/// Staking expectations set
@@ -1746,28 +1747,37 @@ pub mod pallet {
 		}
 		#[pallet::weight(<T as Config>::WeightInfo::set_parachain_bond_reserve_percent())]
 		/// Set the percent of inflation set aside for parachain bond
-		pub fn set_parachain_bond_reserve_percent_or_payment(
+		pub fn set_parachain_bond_reserve_percent(
 			origin: OriginFor<T>,
-			new: Option<Percent>,
-			payment: Option<BalanceOf<T>>,
+			new: Percent,
+		) -> DispatchResultWithPostInfo {
+			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
+			let ParachainBondConfig { account, percent: old, payment_in_round: old_pay } =
+				<ParachainBondInfo<T>>::get();
+			ensure!(old != new, Error::<T>::NoWritingSameValue);
+			<ParachainBondInfo<T>>::put(ParachainBondConfig {
+				account,
+				percent: new,
+				payment_in_round: old_pay,
+			});
+			Self::deposit_event(Event::ParachainBondReservePercentSet(old, new));
+			Ok(().into())
+		}
+		#[pallet::weight(<T as Config>::WeightInfo::set_parachain_bond_reserve_percent())]
+		/// Set the percent of inflation set aside for parachain bond
+		pub fn set_parachain_bond_reserve_payment(
+			origin: OriginFor<T>,
+			new: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
 			let ParachainBondConfig { account, percent: old_per, payment_in_round: old_pay } =
 				<ParachainBondInfo<T>>::get();
-			if T::AllowInflation::get() {
-				<ParachainBondInfo<T>>::put(ParachainBondConfig {
-					account,
-					percent: new.unwrap(),
-					payment_in_round: old_pay,
-				});
-			} else {
-				<ParachainBondInfo<T>>::put(ParachainBondConfig {
-					account,
-					percent: old_per,
-					payment_in_round: payment.unwrap(),
-				});
-			}
-			Self::deposit_event(Event::ParachainBondReservePercentOrPaymentSet(payment, new));
+			<ParachainBondInfo<T>>::put(ParachainBondConfig {
+				account,
+				percent: old_per,
+				payment_in_round: new,
+			});
+			Self::deposit_event(Event::ParachainBondReservePaymentSet(old_pay, new));
 			Ok(().into())
 		}
 		#[pallet::weight(<T as Config>::WeightInfo::set_total_selected())]
