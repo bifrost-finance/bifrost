@@ -69,7 +69,10 @@ use weights::WeightInfo;
 pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
-		traits::{Currency, EstimateNextSessionRotation, Get, Imbalance, ReservableCurrency},
+		traits::{
+			Currency, EstimateNextSessionRotation, ExistenceRequirement, Get, Imbalance,
+			ReservableCurrency,
+		},
 	};
 	use frame_system::pallet_prelude::*;
 	use pallet_session::ShouldEndSession;
@@ -80,7 +83,7 @@ pub mod pallet {
 		Perbill, Percent, Permill, RuntimeDebug,
 	};
 	use sp_staking::SessionIndex;
-	use sp_std::{cmp::Ordering, collections::btree_map::BTreeMap, prelude::*};
+	use sp_std::{cmp::Ordering, collections::btree_map::BTreeMap, prelude::*, vec};
 
 	use crate::{set::OrderedSet, InflationInfo, Range, WeightInfo};
 	/// Pallet for parachain staking
@@ -1189,15 +1192,21 @@ pub mod pallet {
 
 	#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
 	/// Reserve information { account, percent_of_inflation }
-	pub struct ParachainBondConfig<AccountId> {
+	pub struct ParachainBondConfig<AccountId, BalanceOf> {
 		/// Account which receives funds intended for parachain bond
 		pub account: AccountId,
 		/// Percent of inflation set aside for parachain bond account
 		pub percent: Percent,
+		/// fixed payment if no inflation
+		pub payment_in_round: BalanceOf,
 	}
-	impl<A: Default> Default for ParachainBondConfig<A> {
-		fn default() -> ParachainBondConfig<A> {
-			ParachainBondConfig { account: A::default(), percent: Percent::zero() }
+	impl<A: Default, B: Zero> Default for ParachainBondConfig<A, B> {
+		fn default() -> ParachainBondConfig<A, B> {
+			ParachainBondConfig {
+				account: A::default(),
+				percent: Percent::zero(),
+				payment_in_round: B::zero(),
+			}
 		}
 	}
 
@@ -1280,6 +1289,12 @@ pub mod pallet {
 		/// Minimum stake for any registered on-chain account to be a delegator
 		#[pallet::constant]
 		type MinDelegatorStk: Get<BalanceOf<Self>>;
+		/// Allow inflation or not
+		#[pallet::constant]
+		type AllowInflation: Get<bool>;
+		/// Fix payment in one round if no inflation
+		#[pallet::constant]
+		type PaymentInRound: Get<BalanceOf<Self>>;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 	}
@@ -1383,8 +1398,8 @@ pub mod pallet {
 		ReservedForParachainBond(T::AccountId, BalanceOf<T>),
 		/// Account (re)set for parachain bond treasury [old, new]
 		ParachainBondAccountSet(T::AccountId, T::AccountId),
-		/// Percent of inflation reserved for parachain bond (re)set [old, new]
-		ParachainBondReservePercentSet(Percent, Percent),
+		/// Percent of inflation or Fixed Payment (re)set
+		ParachainBondReservePercentOrPaymentSet(Option<BalanceOf<T>>, Option<Percent>),
 		/// Annual inflation input (first 3) was used to derive new per-round inflation (last 3)
 		InflationSet(Perbill, Perbill, Perbill, Perbill, Perbill, Perbill),
 		/// Staking expectations set
@@ -1445,7 +1460,7 @@ pub mod pallet {
 	#[pallet::getter(fn parachain_bond_info)]
 	/// Parachain bond config info { account, percent_of_inflation }
 	type ParachainBondInfo<T: Config> =
-		StorageValue<_, ParachainBondConfig<T::AccountId>, ValueQuery>;
+		StorageValue<_, ParachainBondConfig<T::AccountId, BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn round)]
@@ -1645,6 +1660,7 @@ pub mod pallet {
 				// must be set soon; if not => due inflation will be sent to collators/delegators
 				account: T::AccountId::default(),
 				percent: T::DefaultParachainBondReservePercent::get(),
+				payment_in_round: T::PaymentInRound::get(),
 			});
 			// Set total selected candidates to minimum config
 			<TotalSelected<T>>::put(T::MinSelectedCandidates::get());
@@ -1717,23 +1733,41 @@ pub mod pallet {
 			new: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
-			let ParachainBondConfig { account: old, percent } = <ParachainBondInfo<T>>::get();
+			let ParachainBondConfig { account: old, percent, payment_in_round } =
+				<ParachainBondInfo<T>>::get();
 			ensure!(old != new, Error::<T>::NoWritingSameValue);
-			<ParachainBondInfo<T>>::put(ParachainBondConfig { account: new.clone(), percent });
+			<ParachainBondInfo<T>>::put(ParachainBondConfig {
+				account: new.clone(),
+				percent,
+				payment_in_round,
+			});
 			Self::deposit_event(Event::ParachainBondAccountSet(old, new));
 			Ok(().into())
 		}
 		#[pallet::weight(<T as Config>::WeightInfo::set_parachain_bond_reserve_percent())]
 		/// Set the percent of inflation set aside for parachain bond
-		pub fn set_parachain_bond_reserve_percent(
+		pub fn set_parachain_bond_reserve_percent_or_payment(
 			origin: OriginFor<T>,
-			new: Percent,
+			new: Option<Percent>,
+			payment: Option<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			T::MonetaryGovernanceOrigin::ensure_origin(origin)?;
-			let ParachainBondConfig { account, percent: old } = <ParachainBondInfo<T>>::get();
-			ensure!(old != new, Error::<T>::NoWritingSameValue);
-			<ParachainBondInfo<T>>::put(ParachainBondConfig { account, percent: new });
-			Self::deposit_event(Event::ParachainBondReservePercentSet(old, new));
+			let ParachainBondConfig { account, percent: old_per, payment_in_round: old_pay } =
+				<ParachainBondInfo<T>>::get();
+			if T::AllowInflation::get() {
+				<ParachainBondInfo<T>>::put(ParachainBondConfig {
+					account,
+					percent: new.unwrap(),
+					payment_in_round: old_pay,
+				});
+			} else {
+				<ParachainBondInfo<T>>::put(ParachainBondConfig {
+					account,
+					percent: old_per,
+					payment_in_round: payment.unwrap(),
+				});
+			}
+			Self::deposit_event(Event::ParachainBondReservePercentOrPaymentSet(payment, new));
 			Ok(().into())
 		}
 		#[pallet::weight(<T as Config>::WeightInfo::set_total_selected())]
@@ -2245,22 +2279,26 @@ pub mod pallet {
 				return;
 			}
 			let total_staked = <Staked<T>>::take(round_to_payout);
-			let total_issuance = Self::compute_issuance(total_staked);
+			let total_issuance = match T::AllowInflation::get() {
+				true => Self::compute_issuance(total_staked),
+				false => BalanceOf::<T>::from(T::PaymentInRound::get()),
+			};
 			let mut left_issuance = total_issuance;
-			// reserve portion of issuance for parachain bond account
-			let bond_config = <ParachainBondInfo<T>>::get();
-			let parachain_bond_reserve = bond_config.percent * total_issuance;
-			if let Ok(imb) =
-				T::Currency::deposit_into_existing(&bond_config.account, parachain_bond_reserve)
-			{
-				// update round issuance iff transfer succeeds
-				left_issuance -= imb.peek();
-				Self::deposit_event(Event::ReservedForParachainBond(
-					bond_config.account,
-					imb.peek(),
-				));
+			if T::AllowInflation::get() {
+				// reserve portion of issuance for parachain bond account
+				let bond_config = <ParachainBondInfo<T>>::get();
+				let parachain_bond_reserve = bond_config.percent * total_issuance;
+				if let Ok(imb) =
+					T::Currency::deposit_into_existing(&bond_config.account, parachain_bond_reserve)
+				{
+					// update round issuance iff transfer succeeds
+					left_issuance -= imb.peek();
+					Self::deposit_event(Event::ReservedForParachainBond(
+						bond_config.account,
+						imb.peek(),
+					));
+				}
 			}
-
 			let payout = DelayedPayout {
 				round_issuance: total_issuance,
 				total_staking_reward: left_issuance,
@@ -2320,9 +2358,19 @@ pub mod pallet {
 			}
 
 			let mint = |amt: BalanceOf<T>, to: T::AccountId| {
-				if let Ok(amount_transferred) = T::Currency::deposit_into_existing(&to, amt) {
-					Self::deposit_event(Event::Rewarded(to.clone(), amount_transferred.peek()));
+				if T::AllowInflation::get() {
+					T::Currency::deposit_into_existing(&to, amt).ok();
+				} else {
+					let bond_config = <ParachainBondInfo<T>>::get();
+					T::Currency::transfer(
+						&bond_config.account.clone(),
+						&to,
+						amt,
+						ExistenceRequirement::AllowDeath,
+					)
+					.ok();
 				}
+				Self::deposit_event(Event::Rewarded(to.clone(), amt.clone()));
 			};
 
 			let collator_fee = payout_info.collator_commission;

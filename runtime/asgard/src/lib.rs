@@ -858,6 +858,8 @@ parameter_types! {
 	pub MinCandidateStk: u128 = 2000 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
+	pub AllowInflation: bool = false;
+	pub PaymentInRound: u128 = 50 * dollar(NativeCurrencyId::get());
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
@@ -880,6 +882,8 @@ impl parachain_staking::Config for Runtime {
 	type MinCandidateStk = MinCandidateStk;
 	type MinDelegation = MinDelegatorStk;
 	type MinDelegatorStk = MinDelegatorStk;
+	type AllowInflation = AllowInflation;
+	type PaymentInRound = PaymentInRound;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
