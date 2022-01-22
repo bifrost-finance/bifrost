@@ -1534,16 +1534,16 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 }
 
-// impl merkle_distributor::Config for Runtime {
-// 	type Event = Event;
-// 	type CurrencyId = CurrencyId;
-// 	type MultiCurrency = Currencies;
-// 	type Balance = Balance;
-// 	type MerkleDistributorId = u32;
-// 	type PalletId = MerkleDirtributorPalletId;
-// 	type StringLimit = StringLimit;
-// 	type WeightInfo = ();
-// }
+impl merkle_distributor::Config for Runtime {
+	type Event = Event;
+	type CurrencyId = CurrencyId;
+	type MultiCurrency = Currencies;
+	type Balance = Balance;
+	type MerkleDistributorId = u32;
+	type PalletId = MerkleDirtributorPalletId;
+	type StringLimit = StringLimit;
+	type WeightInfo = ();
+}
 
 parameter_types! {
 	pub const ZenlinkPalletId: PalletId = PalletId(*b"/zenlink");
@@ -1711,7 +1711,7 @@ construct_runtime! {
 		OrmlXcm: orml_xcm::{Pallet, Call, Event<T>} = 74,
 
 		ZenlinkProtocol: zenlink_protocol::{Pallet, Call, Storage, Event<T>} = 80,
-		// MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
+		MerkleDistributor: merkle_distributor::{Pallet, Call, Storage, Event<T>} = 81,
 
 		// Bifrost modules
 		FlexibleFee: bifrost_flexible_fee::{Pallet, Call, Storage, Event<T>} = 100,

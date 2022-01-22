@@ -95,6 +95,7 @@ bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features =
 bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
+merkle-distributor = {path = "../../pallets/merkle-distributor", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -107,7 +108,7 @@ orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
-#merkle-distributor = {version = "*", default-features = false }
+
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
@@ -184,7 +185,7 @@ std = [
 	"bifrost-lightening-redeem/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
-	#"merkle-distributor/std",
+	"merkle-distributor/std",
 	"xcm-support/std"
 ]
 with-tracing = ["frame-executive/with-tracing"]

@@ -2,7 +2,7 @@ cargo-features = ["named-profiles"]
 
 [workspace]
 members = [
-	#"integration-tests",
+	"integration-tests",
 	"node/cli",
 	"node/primitives",
 	"node/rpc",
@@ -21,6 +21,7 @@ members = [
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
 	"pallets/call-switchgear",
+	"pallets/merkle-distributor",
 	"runtime/asgard",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
@@ -201,7 +202,6 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "edd99cf8b646f23702c9875cb08c7fb4bff6f4b5"}
 zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "edd99cf8b646f23702c9875cb08c7fb4bff6f4b5" }
 zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "edd99cf8b646f23702c9875cb08c7fb4bff6f4b5" }
-#merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "e9bba954baaa0b1539e2647988da35f5fe81b0b3" }
 
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }

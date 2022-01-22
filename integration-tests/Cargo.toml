@@ -11,8 +11,8 @@ log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.124", optional = true }
 static_assertions = "1.1.0"
 hex = { version = "0.4", default-features = false, optional = true }
-hex-literal = { version = "0.3.1"}
-smallvec = "1.6.1"
+hex-literal = { version = "0.3.4"}
+smallvec = "1.7.0"
 
 # primitives
 node-primitives = { default-features = false, path = "../node/primitives" }
@@ -122,7 +122,7 @@ cumulus-test-relay-sproof-builder = { git = "https://github.com/paritytech/cumul
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15" }
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15" }
-xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", rev = "a6d58bbbb6dae844d86d6838fcf4954fa3ff6cea" }
+xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", rev = "9267cd8f59b95031e3c7a23cc4d43b2cb0688778" }
 
 node-service = { path = "../node/service", features = ["with-all-runtime"] }
 westmint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.15" }
