@@ -1202,7 +1202,13 @@ fn set_confirmor_should_work() {
 			DispatchError::BadOrigin,
 		);
 		assert_ok!(Salp::set_multisig_confirm_account(Some(ALICE).into(), BRUCE));
-		Salp::confirm_contribute(Some(BRUCE).into(), BRUCE, 3_000, true, CONTRIBUTON_INDEX);
+		assert_ok!(Salp::confirm_contribute(
+			Some(BRUCE).into(),
+			BRUCE,
+			3_000,
+			true,
+			CONTRIBUTON_INDEX
+		));
 	});
 }
 

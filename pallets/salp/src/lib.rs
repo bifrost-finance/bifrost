@@ -911,7 +911,6 @@ pub mod pallet {
 			ensure!(fund.status == FundStatus::RedeemWithdrew, Error::<T>::InvalidFundStatus);
 			ensure!(fund.raised >= value, Error::<T>::NotEnoughBalanceInRedeemPool);
 
-			let (contributed, _) = Self::contribution(fund.trie_index, &who);
 			#[allow(non_snake_case)]
 			let (vsToken, vsBond) = Self::vsAssets(index, fund.first_slot, fund.last_slot);
 
@@ -936,13 +935,6 @@ pub mod pallet {
 				&who,
 				value,
 			)?;
-			let contributed_new = contributed.saturating_sub(value);
-			Self::put_contribution(
-				fund.trie_index,
-				&who,
-				contributed_new,
-				ContributionStatus::Redeemed,
-			);
 			Self::deposit_event(Event::Redeemed(
 				who,
 				index,
