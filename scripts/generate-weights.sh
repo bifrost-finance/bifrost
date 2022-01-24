@@ -10,7 +10,7 @@
 # sh ./script/generate-weights.sh asgard bifrost
 
 # 1. Build all-release which is added with "runtime-benchmarks" feature;
-make "build-all-release-with-bench"
+make build-bifrost-release-with-bench
 # 2. Filter the pallets of ${runtime} that should be executed benchmark;
 IFS=', ' read -r -a runtimes <<< $@;
 for runtime in "${runtimes[@]}"
@@ -31,6 +31,6 @@ do
             --wasm-execution=compiled \
             --heap-pages=4096 \
             --header=./HEADER-GPL3 \
-            --output="./runtime/${runtime}/src/weights/${pallet}.rs";
+            --output="./runtime/${runtime}-kusama/src/weights/${pallet}.rs";
         done
 done
