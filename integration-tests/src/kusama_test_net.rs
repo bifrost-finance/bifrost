@@ -41,6 +41,8 @@ decl_test_parachain! {
 	pub struct Bifrost {
 		Runtime = Runtime,
 		Origin = Origin,
+		XcmpMessageHandler = bifrost_kusama_runtime::XcmpQueue,
+		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
 		new_ext = para_ext(2001),
 	}
 }
@@ -49,6 +51,8 @@ decl_test_parachain! {
 	pub struct Sibling {
 		Runtime = Runtime,
 		Origin = Origin,
+		XcmpMessageHandler = bifrost_kusama_runtime::XcmpQueue,
+		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
 		new_ext = para_ext(2000),
 	}
 }
@@ -57,6 +61,8 @@ decl_test_parachain! {
 	pub struct Statemine {
 		Runtime = westmint_runtime::Runtime,
 		Origin = westmint_runtime::Origin,
+		XcmpMessageHandler = westmint_runtime::XcmpQueue,
+		DmpMessageHandler = westmint_runtime::DmpQueue,
 		new_ext = para_ext(1000),
 	}
 }

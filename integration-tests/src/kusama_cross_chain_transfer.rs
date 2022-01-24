@@ -70,6 +70,8 @@ fn transfer_to_relay_chain() {
 
 #[test]
 fn transfer_to_sibling() {
+	env_logger::init();
+
 	TestNet::reset();
 
 	fn bifrost_reserve_account() -> AccountId {
