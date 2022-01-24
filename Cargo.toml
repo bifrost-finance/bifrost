@@ -202,7 +202,7 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "e5747a897cfd0fb5d322781ffe656220ae1e814f"}
 zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "e5747a897cfd0fb5d322781ffe656220ae1e814f" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "e5747a897cfd0fb5d322781ffe656220ae1e814f" }
-merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "e9bba954baaa0b1539e2647988da35f5fe81b0b3" }
+merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "80f61eb8d0fac40c0d0772bf16ae8714511e66f9" }
 
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "17a791edf431d7d7aee1ea3dfaeeb7bc21944301" }
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "17a791edf431d7d7aee1ea3dfaeeb7bc21944301" }

@@ -849,6 +849,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "node-primitives 0.8.0",
  "orml-currencies",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
@@ -857,6 +858,7 @@ dependencies = [
  "pallet-collective",
  "parity-scale-codec",
  "scale-info",
+ "serde",
  "sp-core",
 ]
 
@@ -4933,7 +4935,7 @@ checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 [[package]]
 name = "merkle-distributor"
 version = "0.1.0"
-source = "git+https://github.com/zenlinkpro/merkle-distributor?rev=e9bba954baaa0b1539e2647988da35f5fe81b0b3#e9bba954baaa0b1539e2647988da35f5fe81b0b3"
+source = "git+https://github.com/zenlinkpro/merkle-distributor?rev=80f61eb8d0fac40c0d0772bf16ae8714511e66f9#80f61eb8d0fac40c0d0772bf16ae8714511e66f9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -5216,7 +5218,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.20"
+version = "0.9.22"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",

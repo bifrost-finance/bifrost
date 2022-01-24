@@ -31,7 +31,7 @@ use node_primitives::{traits::CheckSubAccount, Amount, Balance, CurrencyId, Toke
 use sp_core::H256;
 
 use crate as lm;
-use crate::PoolId;
+use crate::{PoolId, StorageVersion};
 
 pub(crate) type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub(crate) type Block = frame_system::mocking::MockBlock<Test>;
@@ -51,7 +51,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>, Config<T>},
 		Collective: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		LM: lm::{Pallet, Call, Storage, Event<T>},
+		LM: lm::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
 );
 
@@ -227,6 +227,10 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 			members: vec![TC_MEMBER_1, TC_MEMBER_2, TC_MEMBER_3],
 			phantom: Default::default(),
 		},
+		lm: crate::GenesisConfig {
+			pallet_version: StorageVersion::V2_0_0,
+			_phantom: Default::default(),
+		},
 	}
 	.build_storage()
 	.unwrap()
@@ -236,6 +240,9 @@ pub(crate) fn new_test_ext() -> TestExternalities {
 pub(crate) const MINUTES: BlockNumber = 60 / (12 as BlockNumber);
 pub(crate) const HOURS: BlockNumber = MINUTES * 60;
 pub(crate) const DAYS: BlockNumber = HOURS * 24;
+
+pub(crate) const REDEEM_LIMIT_TIME: BlockNumber = 100;
+pub(crate) const UNLOCK_LIMIT_NUMS: u32 = 3;
 
 pub(crate) const UNIT: Balance = 1_000_000_000_000;
 
