@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
-use bifrost_kusama_runtime::create_x2_multilocation;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{EnsureOrigin, GenesisBuild, Nothing},
@@ -202,7 +201,7 @@ parameter_types! {
 		BRUCE,
 		CATHI
 	],2);
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(0);
+	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::parent();
 	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
