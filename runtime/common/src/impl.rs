@@ -186,15 +186,13 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 					}
 				},
 				X3(Parachain(id), PalletInstance(index), GeneralIndex(key))
-					if (id == parachains::Statemine::ID &&
-						index == parachains::Statemine::PALLET_ID) =>
-				{
+					if id == parachains::Statemine::ID &&
+						index == parachains::Statemine::PALLET_ID =>
 					if key == parachains::Statemine::RMRK_ID.into() {
 						Some(Token(TokenSymbol::RMRK))
 					} else {
 						None
-					}
-				},
+					},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
 				_ => None,
 			},
