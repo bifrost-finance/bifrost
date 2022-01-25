@@ -19,10 +19,11 @@ sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "pol
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13",default-features = false  }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13",default-features = false }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13",default-features = false }
 
 [dev-dependencies]
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13"  }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.13" }
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13"}
 smallvec = "1.6.1"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
@@ -33,7 +34,6 @@ orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13" }
 bifrost-bancor = { path = "../../pallets/bancor" }
 bifrost-runtime-common = { path = "../../runtime/common" }
-bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 
 [features]
 default = ["std"]
@@ -50,6 +50,9 @@ std = [
 	"sp-arithmetic/std",
 	"orml-traits/std",
 	"xcm/std",
+	"xcm-builder/std",
+	"pallet-xcm/std",
+	"pallet-collective/std",
 	"xcm-support/std",
 ]
 
@@ -57,4 +60,7 @@ runtime-benchmarks = [
 	"frame-benchmarking",
 	"sp-runtime/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
+	"pallet-xcm/runtime-benchmarks",
+	"xcm-builder/runtime-benchmarks",
 ]

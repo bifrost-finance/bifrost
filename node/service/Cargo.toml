@@ -99,9 +99,7 @@ bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-min
 default = [ "std" ]
 std = []
 runtime-benchmarks = [
-	"asgard-runtime/runtime-benchmarks",
 	"bifrost-kusama-runtime/runtime-benchmarks",
-	"bifrost-polkadot-runtime/runtime-benchmarks",
 ]
 with-asgard-runtime = [
 	"asgard-runtime",

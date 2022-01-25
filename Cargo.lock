@@ -1043,7 +1043,6 @@ name = "bifrost-salp"
 version = "0.8.0"
 dependencies = [
  "bifrost-bancor",
- "bifrost-kusama-runtime",
  "bifrost-runtime-common",
  "frame-benchmarking",
  "frame-support",
@@ -1054,6 +1053,7 @@ dependencies = [
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
  "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=17a791edf431d7d7aee1ea3dfaeeb7bc21944301)",
  "pallet-balances",
+ "pallet-collective",
  "pallet-multisig",
  "pallet-xcm",
  "parity-scale-codec",
@@ -5218,7 +5218,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.22"
+version = "0.9.23"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
