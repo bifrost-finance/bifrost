@@ -794,6 +794,7 @@ dependencies = [
  "pallet-utility",
  "pallet-xcm",
  "parachain-info",
+ "parachain-staking",
  "parity-scale-codec",
  "polkadot-parachain",
  "polkadot-primitives",

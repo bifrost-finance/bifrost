@@ -389,25 +389,25 @@ fn asgard_config_genesis(id: ParaId) -> GenesisConfig {
 			hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"].into(),
 			hex!["16deb8ffe47267721605dbd3049c09e3015a70bb188e89d11bcb81cd0103642f"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 		(
 			hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"].into(),
 			hex!["72f66e5ae3711acf3d2d13d13a53d238000664d2416a0f6faa6ee6b33477180b"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 		(
 			hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"].into(),
 			hex!["d481ed743d3c54fbda92e0c364ae49f73b34d5c396295849783944cbb138ad29"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 		(
 			hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"].into(),
 			hex!["5ca75e09f976da25ca776b748dd5b206d51db697f19bf71d0f93a21a4c983706"]
 				.unchecked_into(),
-			ENDOWMENT(),
+			ENDOWMENT() / 4,
 		),
 	];
 

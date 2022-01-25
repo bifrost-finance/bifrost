@@ -22,11 +22,11 @@ use std::{
 };
 
 use bifrost_kusama_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
-	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig,
-	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CouncilConfig,
+	CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig,
+	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
+	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
+	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
@@ -46,6 +46,8 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
+use sp_runtime::Perbill;
+
 /// Specialized `ChainSpec` for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
@@ -55,6 +57,33 @@ pub fn ENDOWMENT() -> u128 {
 }
 
 pub const PARA_ID: u32 = 2001;
+
+pub fn inflation_config() -> InflationInfo<Balance> {
+	fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
+		use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
+		perbill_annual_to_perbill_round(
+			annual,
+			// rounds per year
+			BLOCKS_PER_YEAR / DefaultBlocksPerRound::get(),
+		)
+	}
+	let annual = Range {
+		min: Perbill::from_percent(4),
+		ideal: Perbill::from_percent(5),
+		max: Perbill::from_percent(5),
+	};
+	InflationInfo {
+		// staking expectations
+		expect: Range {
+			min: 100_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+			ideal: 200_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+			max: 500_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+		},
+		// annual inflation
+		annual,
+		round: to_round_inflation(annual),
+	}
+}
 
 fn bifrost_kusama_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
@@ -87,7 +116,8 @@ fn bifrost_kusama_properties() -> Properties {
 }
 
 pub fn bifrost_genesis(
-	invulnerables: Vec<(AccountId, AuraId)>,
+	candidates: Vec<(AccountId, AuraId, Balance)>,
+	delegations: Vec<(AccountId, AccountId, Balance)>,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
@@ -120,16 +150,11 @@ pub fn bifrost_genesis(
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		collator_selection: CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
-			candidacy_bond: Zero::zero(),
-			..Default::default()
-		},
 		session: SessionConfig {
-			keys: invulnerables
+			keys: candidates
 				.iter()
 				.cloned()
-				.map(|(acc, aura)| {
+				.map(|(acc, aura, _)| {
 					(
 						acc.clone(),                                  // account id
 						acc.clone(),                                  // validator id
@@ -146,6 +171,15 @@ pub fn bifrost_genesis(
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
 		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
+		parachain_staking: ParachainStakingConfig {
+			candidates: candidates
+				.iter()
+				.cloned()
+				.map(|(account, _, bond)| (account, bond))
+				.collect(),
+			delegations,
+			inflation_config: inflation_config(),
+		},
 	}
 }
 
@@ -186,7 +220,9 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
+			ENDOWMENT() / 4,
 		)],
+		vec![],
 		balances,
 		vestings,
 		id,
@@ -270,9 +306,15 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_from_seed::<AuraId>("Alice"),
+				ENDOWMENT() / 4,
 			),
-			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_from_seed::<AuraId>("Bob"),
+				ENDOWMENT() / 4,
+			),
 		],
+		vec![],
 		balances,
 		vestings,
 		id,
@@ -313,30 +355,34 @@ pub fn chainspec_config() -> ChainSpec {
 }
 
 fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// eunwjK45qDugPXhnjxGUcMbifgdtgefzoW7PgMMpr39AXwh
 			hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
 			hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 		(
 			// dBkoWVdQCccH1xNAeR1Y4vrETt3a4j4iU8Ct2ewY1FUjasL
 			hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
 			hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 		(
 			// dwrEwfj2RFU4DS6EiTCfmxMpQ1sAsaHykftzwoptFe4a8aH
 			hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
 			hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 		(
 			// fAjW6bwT4GKgW88sjZfNLRr5hWyMM9T9ZwqHYkFiSxw4Yhp
 			hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
 			hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 	];
 
@@ -388,6 +434,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
 		invulnerables,
+		vec![],
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,
