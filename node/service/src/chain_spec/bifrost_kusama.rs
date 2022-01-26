@@ -298,6 +298,69 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	))
 }
 
+fn stage_config_genesis(id: ParaId) -> GenesisConfig {
+	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+		(
+			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
+			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
+			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"]
+				.unchecked_into(),
+		),
+		(
+			// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
+			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
+			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"]
+				.unchecked_into(),
+		),
+	];
+
+	let endowed_accounts: Vec<AccountId> = vec![
+		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
+		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+	];
+	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
+
+	let salp_multisig: AccountId =
+		hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+	let salp_lite_multisig: AccountId =
+		hex!["e4f78719c654cd8e8ac1375c447b7a80f9476cfe6505ea401c4b15bd6b967c93"].into();
+
+	let council_membership = vec![
+		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
+		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+	];
+	let technical_committee_membership = vec![
+		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
+		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+	];
+
+	bifrost_genesis(
+		invulnerables,
+		balances,
+		vec![],
+		id,
+		vec![],
+		council_membership,
+		technical_committee_membership,
+		salp_multisig,
+		salp_lite_multisig,
+	)
+}
+
+pub fn stage_testnet_config() -> Result<ChainSpec, String> {
+	Ok(ChainSpec::from_genesis(
+		"Bifrost Stage Testnet",
+		"bifrost_stage_testnet",
+		ChainType::Local,
+		move || stage_config_genesis(PARA_ID.into()),
+		vec![],
+		None,
+		Some(DEFAULT_PROTOCOL_ID),
+		Some(bifrost_kusama_properties()),
+		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
+	))
+}
+
 pub fn chainspec_config() -> ChainSpec {
 	ChainSpec::from_genesis(
 		"Bifrost",
