@@ -16,6 +16,3 @@ deploy
 snapshot.bin
 *.wasm
 data
-moonbeam
-snowbridge
-runtime/bifrost
