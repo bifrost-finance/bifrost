@@ -341,24 +341,30 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 }
 
 fn stage_config_genesis(id: ParaId) -> GenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
 			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
 			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"]
 				.unchecked_into(),
+			ENDOWMENT() / 4,
 		),
 		(
 			// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
 			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
 			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"]
 				.unchecked_into(),
+			ENDOWMENT() / 4,
 		),
 	];
 
 	let endowed_accounts: Vec<AccountId> = vec![
 		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
 		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+		// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
+		hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
+		// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
+		hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 
@@ -378,6 +384,7 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 
 	bifrost_genesis(
 		invulnerables,
+		vec![],
 		balances,
 		vec![],
 		id,

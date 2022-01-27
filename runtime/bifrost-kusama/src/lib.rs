@@ -824,7 +824,7 @@ parameter_types! {
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
 	pub const MinBlocksPerRound: u32 = 10;
 	/// Blocks per round
-	pub const DefaultBlocksPerRound: u32 = 2 * MINUTES;
+	pub const DefaultBlocksPerRound: u32 = 2 * HOURS;
 	/// Rounds before the collator leaving the candidates request can be executed
 	pub const LeaveCandidatesDelay: u32 = 36;
 	/// Rounds before the candidate bond increase/decrease can be executed
@@ -854,7 +854,7 @@ parameter_types! {
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
-	pub PaymentInRound: u128 = 50 * dollar(NativeCurrencyId::get());
+	pub PaymentInRound: u128 = 180 * dollar(NativeCurrencyId::get());
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
