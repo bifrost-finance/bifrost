@@ -860,6 +860,10 @@ parameter_types! {
 	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
 	pub PaymentInRound: u128 = 50 * dollar(NativeCurrencyId::get());
+	pub ToMigrateInvulnables: Vec<AccountId> = vec![
+		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
+		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into()
+	];
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
@@ -884,6 +888,7 @@ impl parachain_staking::Config for Runtime {
 	type MinDelegatorStk = MinDelegatorStk;
 	type AllowInflation = AllowInflation;
 	type PaymentInRound = PaymentInRound;
+	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 

@@ -75,9 +75,9 @@ pub fn inflation_config() -> InflationInfo<Balance> {
 	InflationInfo {
 		// staking expectations
 		expect: Range {
-			min: 100_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
-			ideal: 200_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
-			max: 500_000 * dollar(CurrencyId::Native(TokenSymbol::ASG)),
+			min: 100_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
+			ideal: 200_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
+			max: 500_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
 		},
 		// annual inflation
 		annual,
