@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.9.23"
+version = "0.9.24"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -37,7 +37,7 @@ node-primitives = { path = "../primitives" }
 # CLI-specific dependencies
 sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true }
 try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true }
-frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true  }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true }
 frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true }
 node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true }
 
@@ -55,8 +55,8 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = 
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true }
 
 [features]
-default = [ "wasmtime", "cli" ]
-wasmtime = [ "sc-cli/wasmtime", "sc-service/wasmtime" ]
+default = ["wasmtime", "cli"]
+wasmtime = ["sc-cli/wasmtime", "sc-service/wasmtime"]
 cli = [
 	"node-inspect",
 	"sc-cli",
@@ -66,25 +66,13 @@ cli = [
 	"structopt",
 	"substrate-build-script-utils",
 ]
-runtime-benchmarks = [ "node-service/runtime-benchmarks" ]
-with-asgard-runtime = [
-	"node-service/with-asgard-runtime",
-]
+runtime-benchmarks = ["node-service/runtime-benchmarks"]
+with-asgard-runtime = ["node-service/with-asgard-runtime"]
 with-bifrost-runtime = [
 	"node-service/with-bifrost-kusama-runtime",
 	"node-service/with-bifrost-polkadot-runtime",
 ]
-with-bifrost-kusama-runtime = [
-	"node-service/with-bifrost-kusama-runtime",
-]
-with-bifrost-polkadot-runtime = [
-	"node-service/with-bifrost-polkadot-runtime",
-]
-with-all-runtime = [
-	"with-asgard-runtime",
-	"with-bifrost-runtime",
-]
-try-runtime = [
-	"node-service/try-runtime",
-	"try-runtime-cli",
-]
+with-bifrost-kusama-runtime = ["node-service/with-bifrost-kusama-runtime"]
+with-bifrost-polkadot-runtime = ["node-service/with-bifrost-polkadot-runtime"]
+with-all-runtime = ["with-asgard-runtime", "with-bifrost-runtime"]
+try-runtime = ["node-service/try-runtime", "try-runtime-cli"]
