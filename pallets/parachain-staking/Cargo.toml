@@ -8,6 +8,7 @@ version = "3.0.0"
 [dependencies]
 log = "0.4"
 serde = { version = "1.0.101", optional = true }
+hex-literal = "0.3.1"
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", optional = true, default-features = false }
@@ -21,7 +22,7 @@ sp-staking = {git = "https://github.com/paritytech/substrate", branch = "polkado
 substrate-fixed = { git = "https://github.com/encointer/substrate-fixed", default-features = false }
 pallet-authorship = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false}
 pallet-session = {git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.13", default-features = false}
-
+node-primitives = { path = "../../node/primitives", default-features = false }
 
 [dev-dependencies]
 similar-asserts = "1.1.0"
@@ -44,6 +45,7 @@ std = [
 	"sp-staking/std",
 	"pallet-authorship/std",
 	"pallet-session/std",
+	"node-primitives/std",
 ]
 runtime-benchmarks = [ "frame-benchmarking" ]
 try-runtime = [ "frame-support/try-runtime" ]
