@@ -136,7 +136,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 923,
+	spec_version: 924,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -921,6 +921,15 @@ parameter_types! {
 		// BNC:KSM = 80:1
 		ksm_per_second() * 80
 	);
+	pub ZlkPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode()))
+		).into(),
+		// ZLK:KSM = 150:1
+		//ZLK has a decimal of 18, while KSM is 12.
+		ksm_per_second() * 150 * 1_000_000
+	);
 	pub KarPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
@@ -972,6 +981,7 @@ pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
+	FixedRateOfFungible<ZlkPerSecond, ToTreasury>,
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
