@@ -122,7 +122,7 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 	fn post_upgrade() -> Result<(), &'static str> {
 		let candidates = <CandidatePool<T>>::get();
 		let new_count = candidates.0.len() as u32;
-		assert_eq!(new_count, 2);
+		assert_eq!(new_count, 4);
 		Ok(())
 	}
 }
