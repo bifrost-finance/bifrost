@@ -23,8 +23,8 @@ use frame_support::Twox64Concat;
 use crate::{
 	inflation::{perbill_annual_to_perbill_round, InflationInfo, BLOCKS_PER_YEAR},
 	pallet::{
-		migrate_nominator_to_delegator_state, CollatorCommission, ParachainBondInfo, RoundIndex,
-		TotalSelected,
+		migrate_nominator_to_delegator_state, CandidatePool, CollatorCommission, ParachainBondInfo,
+		RoundIndex, TotalSelected,
 	},
 	BalanceOf, Bond, CandidateState, CollatorCandidate, CollatorState2, Config, DelegatorState,
 	ExitQueue2, InflationConfig, NominatorState2, Pallet, ParachainBondConfig, Points, Range,
@@ -112,11 +112,17 @@ impl<T: Config> OnRuntimeUpgrade for InitGenesisMigration<T> {
 
 	#[cfg(feature = "try-runtime")]
 	fn pre_upgrade() -> Result<(), &'static str> {
+		let candidates = <CandidatePool<T>>::get();
+		let old_count = candidates.0.len() as u32;
+		assert_eq!(old_count, 0);
 		Ok(())
 	}
 
 	#[cfg(feature = "try-runtime")]
 	fn post_upgrade() -> Result<(), &'static str> {
+		let candidates = <CandidatePool<T>>::get();
+		let new_count = candidates.0.len() as u32;
+		assert_eq!(new_count, 2);
 		Ok(())
 	}
 }

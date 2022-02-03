@@ -824,7 +824,7 @@ parameter_types! {
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
 	pub const MinBlocksPerRound: u32 = 10;
 	/// Blocks per round
-	pub const DefaultBlocksPerRound: u32 = 2 * HOURS;
+	pub const DefaultBlocksPerRound: u32 = 2 * MINUTES;
 	/// Rounds before the collator leaving the candidates request can be executed
 	pub const LeaveCandidatesDelay: u32 = 36;
 	/// Rounds before the candidate bond increase/decrease can be executed
@@ -838,7 +838,7 @@ parameter_types! {
 	/// Rounds before the reward is paid
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
-	pub const MinSelectedCandidates: u32 = 58;
+	pub const MinSelectedCandidates: u32 = 4;
 	/// Maximum delegators counted per candidate
 	pub const MaxDelegatorsPerCandidate: u32 = 100;
 	/// Maximum delegations per delegator
@@ -848,17 +848,17 @@ parameter_types! {
 	/// Default percent of inflation set aside for parachain bond every round
 	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
 	/// Minimum stake required to become a collator
-	pub MinCollatorStk: u128 = 5000 * dollar(NativeCurrencyId::get());
+	pub MinCollatorStk: u128 = 500 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a candidate
-	pub MinCandidateStk: u128 = 2000 * dollar(NativeCurrencyId::get());
+	pub MinCandidateStk: u128 = 200 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
-	pub PaymentInRound: u128 = 180 * dollar(NativeCurrencyId::get());
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![
 		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
 		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into()
 	];
+	pub PaymentInRound: u128 = 10 * dollar(NativeCurrencyId::get());
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
@@ -1789,7 +1789,7 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPallets,
-	(),
+	(parachain_staking::migrations::InitGenesisMigration<Runtime>),
 >;
 
 impl_runtime_apis! {
