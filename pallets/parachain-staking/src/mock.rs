@@ -19,6 +19,7 @@ use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{Everything, GenesisBuild, OnFinalize, OnInitialize},
 	weights::Weight,
+	PalletId,
 };
 use sp_core::H256;
 use sp_io;
@@ -115,6 +116,10 @@ parameter_types! {
 	pub const MinDelegation: u128 = 3;
 	pub AllowInflation: bool = true;
 	pub PaymentInRound: u128 = 10;
+	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
+	pub ToMigrateInvulnables: Vec<AccountId> = vec![
+		0,1
+	];
 }
 impl Config for Test {
 	type Event = Event;
@@ -139,6 +144,8 @@ impl Config for Test {
 	type MinDelegation = MinDelegation;
 	type AllowInflation = AllowInflation;
 	type PaymentInRound = PaymentInRound;
+	type PalletId = ParachainStakingPalletId;
+	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type WeightInfo = ();
 }
 

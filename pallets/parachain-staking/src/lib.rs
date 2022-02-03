@@ -73,13 +73,14 @@ pub mod pallet {
 			Currency, EstimateNextSessionRotation, ExistenceRequirement, Get, Imbalance,
 			ReservableCurrency,
 		},
+		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
 	use pallet_session::ShouldEndSession;
 	use parity_scale_codec::{Decode, Encode};
 	use scale_info::TypeInfo;
 	use sp_runtime::{
-		traits::{AtLeast32BitUnsigned, Saturating, Zero},
+		traits::{AccountIdConversion, AtLeast32BitUnsigned, Saturating, Zero},
 		Perbill, Percent, Permill, RuntimeDebug,
 	};
 	use sp_staking::SessionIndex;
@@ -1297,6 +1298,8 @@ pub mod pallet {
 		type PaymentInRound: Get<BalanceOf<Self>>;
 		#[pallet::constant]
 		type ToMigrateInvulnables: Get<Vec<Self::AccountId>>;
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 	}
@@ -2371,18 +2374,21 @@ pub mod pallet {
 
 			let mint = |amt: BalanceOf<T>, to: T::AccountId| {
 				if T::AllowInflation::get() {
-					T::Currency::deposit_into_existing(&to, amt).ok();
+					if let Ok(_) = T::Currency::deposit_into_existing(&to, amt) {
+						Self::deposit_event(Event::Rewarded(to.clone(), amt.clone()));
+					}
 				} else {
-					let bond_config = <ParachainBondInfo<T>>::get();
-					T::Currency::transfer(
-						&bond_config.account.clone(),
+					let pool_account: <T as frame_system::Config>::AccountId =
+						T::PalletId::get().into_account();
+					if let Ok(()) = T::Currency::transfer(
+						&pool_account,
 						&to,
 						amt,
 						ExistenceRequirement::AllowDeath,
-					)
-					.ok();
+					) {
+						Self::deposit_event(Event::Rewarded(to.clone(), amt.clone()));
+					}
 				}
-				Self::deposit_event(Event::Rewarded(to.clone(), amt.clone()));
 			};
 
 			let collator_fee = payout_info.collator_commission;

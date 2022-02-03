@@ -294,6 +294,7 @@ parameter_types! {
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
+	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 }
 
 impl frame_system::Config for Runtime {
@@ -844,9 +845,9 @@ parameter_types! {
 	/// Maximum delegations per delegator
 	pub const MaxDelegationsPerDelegator: u32 = 100;
 	/// Default fixed percent a collator takes off the top of due rewards
-	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(20);
+	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(5);
 	/// Default percent of inflation set aside for parachain bond every round
-	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(30);
+	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(5);
 	/// Minimum stake required to become a collator
 	pub MinCollatorStk: u128 = 5000 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a candidate
@@ -854,10 +855,6 @@ parameter_types! {
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 50 * dollar(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
-	// pub ToMigrateInvulnables: Vec<AccountId> = vec![
-	// 	hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
-	// 	hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into()
-	// ];
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![
 		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
 		hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
@@ -891,6 +888,7 @@ impl parachain_staking::Config for Runtime {
 	type AllowInflation = AllowInflation;
 	type PaymentInRound = PaymentInRound;
 	type ToMigrateInvulnables = ToMigrateInvulnables;
+	type PalletId = ParachainStakingPalletId;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
@@ -991,10 +989,25 @@ parameter_types! {
 		).into(),
 		ksm_per_second()
 	);
+	pub VsksmNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey(CurrencyId::VSToken(TokenSymbol::KSM).encode()))
+		).into(),
+		ksm_per_second()
+	);
 	pub BncPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(SelfParaId::get()), GeneralKey(NativeCurrencyId::get().encode()))
+		).into(),
+		// BNC:KSM = 80:1
+		ksm_per_second() * 80
+	);
+	pub BncNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey(NativeCurrencyId::get().encode()))
 		).into(),
 		// BNC:KSM = 80:1
 		ksm_per_second() * 80
@@ -1031,6 +1044,14 @@ parameter_types! {
 		// rmrk:KSM = 10:1
 		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
 	);
+	pub RmrkNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X3(Parachain(parachains::Statemine::ID), PalletInstance(parachains::Statemine::PALLET_ID),GeneralIndex(parachains::Statemine::RMRK_ID.into()))
+		).into(),
+		// rmrk:KSM = 10:1
+		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+	);
 }
 
 pub struct ToTreasury;
@@ -1049,11 +1070,14 @@ impl TakeRevenue for ToTreasury {
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmPerSecond, ToTreasury>,
+	FixedRateOfFungible<VsksmNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
+	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
+	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1212,7 +1236,9 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&LighteningRedeemPalletId::get())
 			.eq(a) || AccountIdConversion::<AccountId>::into_account(&VsbondAuctionPalletId::get())
 			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
-			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a)
+			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
+			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
+				.eq(a)
 	}
 }
 

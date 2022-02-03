@@ -285,6 +285,7 @@ parameter_types! {
 	pub const LighteningRedeemPalletId: PalletId = PalletId(*b"bf/ltnrd");
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
+	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
@@ -293,6 +294,7 @@ pub fn get_all_pallet_accounts() -> Vec<AccountId> {
 		BifrostCrowdloanId::get().into_account(),
 		LighteningRedeemPalletId::get().into_account(),
 		VsbondAuctionPalletId::get().into_account(),
+		ParachainStakingPalletId::get().into_account(),
 	]
 }
 
@@ -889,6 +891,7 @@ impl parachain_staking::Config for Runtime {
 	type AllowInflation = AllowInflation;
 	type PaymentInRound = PaymentInRound;
 	type ToMigrateInvulnables = ToMigrateInvulnables;
+	type PalletId = ParachainStakingPalletId;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 

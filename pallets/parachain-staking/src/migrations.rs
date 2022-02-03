@@ -20,11 +20,13 @@ use frame_support::traits::OnRuntimeUpgradeHelpersExt;
 #[cfg(feature = "try-runtime")]
 use frame_support::Twox64Concat;
 
+#[cfg(feature = "try-runtime")]
+use crate::pallet::CandidatePool;
 use crate::{
 	inflation::{perbill_annual_to_perbill_round, InflationInfo, BLOCKS_PER_YEAR},
 	pallet::{
-		migrate_nominator_to_delegator_state, CandidatePool, CollatorCommission, ParachainBondInfo,
-		RoundIndex, TotalSelected,
+		migrate_nominator_to_delegator_state, CollatorCommission, ParachainBondInfo, RoundIndex,
+		TotalSelected,
 	},
 	BalanceOf, Bond, CandidateState, CollatorCandidate, CollatorState2, Config, DelegatorState,
 	ExitQueue2, InflationConfig, NominatorState2, Pallet, ParachainBondConfig, Points, Range,
