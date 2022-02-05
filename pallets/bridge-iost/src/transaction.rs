@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -42,19 +42,13 @@ pub struct MultiSig<AccountId> {
 
 impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
 	fn new(threshold: u8) -> Self {
-		MultiSig {
-			signatures: Default::default(),
-			threshold,
-		}
+		MultiSig { signatures: Default::default(), threshold }
 	}
 }
 
 impl<AccountId> Default for MultiSig<AccountId> {
 	fn default() -> Self {
-		Self {
-			signatures: Default::default(),
-			threshold: 1,
-		}
+		Self { signatures: Default::default(), threshold: 1 }
 	}
 }
 
@@ -84,10 +78,7 @@ pub enum IostTxOut<AccountId, AssetId> {
 	/// Signed Eos multi-sig transaction
 	Signed(IostMultiSigTx<AccountId, AssetId>),
 	/// Sending Eos multi-sig transaction to and fetching tx id from Eos node
-	Processing {
-		tx_id: Vec<u8>,
-		multi_sig_tx: IostMultiSigTx<AccountId, AssetId>,
-	},
+	Processing { tx_id: Vec<u8>, multi_sig_tx: IostMultiSigTx<AccountId, AssetId> },
 	/// Eos multi-sig transaction processed successfully, so only save tx id
 	Success(Vec<u8>),
 	/// Eos multi-sig transaction processed failed
@@ -138,24 +129,20 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
 
 				let expiration = time + Duration::from_millis(1000 * 1000_000).millis() as i64;
 
-				let tx = Tx::new(
-					time,
-					expiration,
-					chain_id as u32,
-					vec![multi_sig_tx.action.clone()],
-				);
+				let tx =
+					Tx::new(time, expiration, chain_id as u32, vec![multi_sig_tx.action.clone()]);
 
-				multi_sig_tx.raw_tx = tx
-					.to_serialize_data()
-					.map_err(|_| Error::<T>::IostChainError)?;
+				multi_sig_tx.raw_tx =
+					tx.to_serialize_data().map_err(|_| Error::<T>::IostChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
 				// tx.sign("admin".to_string(), iost_keys::algorithm::SECP256K1,
-				//		 bs58::decode("3BZ3HWs2nWucCCvLp7FRFv1K7RR3fAjjEQccf9EJrTv4").into_vec().unwrap().as_slice());
-				// log::info!(target: "bridge-iost", "tx verify {:?}", tx.verify());
+				// 		 bs58::decode("3BZ3HWs2nWucCCvLp7FRFv1K7RR3fAjjEQccf9EJrTv4").into_vec().
+				// unwrap().as_slice()); log::info!(target: "bridge-iost", "tx verify {:?}",
+				// tx.verify());
 
 				Ok(IostTxOut::Generated(multi_sig_tx))
-			}
+			},
 			_ => Err(Error::<T>::InvalidTxOutType),
 		}
 	}
@@ -174,14 +161,13 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
 				let _ignore = tx.sign(account_name.to_string(), sig_algorithm, sk.as_slice());
 				match tx.verify() {
 					Ok(_) => {
-						multi_sig_tx.raw_tx = tx
-							.to_serialize_data()
-							.map_err(|_| Error::<T>::IostChainError)?;
+						multi_sig_tx.raw_tx =
+							tx.to_serialize_data().map_err(|_| Error::<T>::IostChainError)?;
 						Ok(IostTxOut::Signed(multi_sig_tx))
-					}
+					},
 					_ => Err(Error::<T>::IostChainError),
 				}
-			}
+			},
 			_ => Err(Error::<T>::InvalidTxOutType),
 		}
 	}
@@ -193,11 +179,8 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> IostTxOut<Account
 
 				let tx_id = iost_rpc::push_transaction(iost_node_url, signed_trx)?;
 
-				Ok(IostTxOut::Processing {
-					tx_id,
-					multi_sig_tx,
-				})
-			}
+				Ok(IostTxOut::Processing { tx_id, multi_sig_tx })
+			},
 			_ => Err(Error::<T>::InvalidTxOutType),
 		}
 	}
@@ -207,15 +190,13 @@ pub(crate) mod iost_rpc {
 	use lite_json::{parse_json, JsonValue};
 	use sp_runtime::offchain::http;
 
-	use crate::Error;
-
 	use super::*;
+	use crate::Error;
 
 	const HASH: [char; 4] = ['h', 'a', 's', 'h']; // tx hash
 	const CHAIN_ID: [char; 8] = ['c', 'h', 'a', 'i', 'n', '_', 'i', 'd']; // key chain_id
-	const HEAD_BLOCK_HASH: [char; 15] = [
-		'h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'h', 'a', 's', 'h',
-	]; // key head_block_hash
+	const HEAD_BLOCK_HASH: [char; 15] =
+		['h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'h', 'a', 's', 'h']; // key head_block_hash
 	const GET_INFO_API: &'static str = "/getChainInfo";
 	const PUSH_TRANSACTION_API: &'static str = "/sendTx";
 
@@ -240,7 +221,7 @@ pub(crate) mod iost_rpc {
 		let mut head_block_hash = Default::default();
 
 		match node_info {
-			JsonValue::Object(ref json) => {
+			JsonValue::Object(ref json) =>
 				for item in json.iter() {
 					if item.0 == CHAIN_ID {
 						chain_id = {
@@ -258,8 +239,7 @@ pub(crate) mod iost_rpc {
 							}
 						};
 					}
-				}
-			}
+				},
 			_ => return Err(Error::<T>::IOSTRpcError),
 		}
 		log::info!(target: "bridge-iost", "chain_id -- {:?} head_block_hash -- {:?}.", chain_id, head_block_hash);
@@ -282,22 +262,19 @@ pub(crate) mod iost_rpc {
 		node_url: &str,
 		signed_trx: Vec<u8>,
 	) -> Result<Vec<u8>, Error<T>> {
-		// log::info!(target: "bridge-iost", "signed_trx -- {:?}.", String::from_utf8_lossy(&signed_trx[..]));
+		// log::info!(target: "bridge-iost", "signed_trx -- {:?}.",
+		// String::from_utf8_lossy(&signed_trx[..]));
 
-		let pending = http::Request::post(
-			&format!("{}{}", node_url, PUSH_TRANSACTION_API),
-			vec![signed_trx],
-		)
-		.send()
-		.map_err(|_| Error::<T>::OffchainHttpError)?;
+		let pending =
+			http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx])
+				.send()
+				.map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
 		let body_str = String::from_utf8(body).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let tx_id = get_transaction_id(&body_str)?;
-		bs58::decode(tx_id)
-			.into_vec()
-			.map_err(|_| Error::<T>::DecodeBase58Error)
+		bs58::decode(tx_id).into_vec().map_err(|_| Error::<T>::DecodeBase58Error)
 	}
 
 	pub(crate) fn get_transaction_id<T: crate::Config>(
@@ -313,7 +290,7 @@ pub(crate) mod iost_rpc {
 		let node_info = parse_json(trx_response).map_err(|_| Error::<T>::LiteJsonError)?;
 
 		match node_info {
-			JsonValue::Object(ref json) => {
+			JsonValue::Object(ref json) =>
 				for item in json.iter() {
 					if item.0 == HASH {
 						trx_id = {
@@ -323,8 +300,7 @@ pub(crate) mod iost_rpc {
 							}
 						};
 					}
-				}
-			}
+				},
 			_ => return Err(Error::<T>::IOSTRpcError),
 		}
 
