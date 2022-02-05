@@ -34,10 +34,12 @@ split-debuginfo = "unpacked"
 
 [profile.release]
 panic = "unwind"
+opt-level = 3
 
 [profile.production]
 inherits = "release"
 lto = true
+codegen-units = 1
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of
