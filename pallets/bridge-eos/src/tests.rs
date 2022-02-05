@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -18,28 +18,26 @@
 
 #![cfg(test)]
 
-use crate::*;
-use crate::mock::*;
 use core::{convert::From, str::FromStr};
-use eos_chain::{
-	Action, ActionReceipt, Checksum256, ProducerAuthoritySchedule, IncrementalMerkle, SignedBlockHeader
-};
 #[cfg(feature = "std")]
-use std::{
-	error::Error,
-	fs::File,
-	io::Read as StdRead,
-	path::Path,
+use std::{error::Error, fs::File, io::Read as StdRead, path::Path};
+
+use eos_chain::{
+	Action, ActionReceipt, Checksum256, IncrementalMerkle, ProducerAuthoritySchedule,
+	SignedBlockHeader,
 };
-use sp_core::H256;
-use sp_core::offchain::{
-	OffchainDbExt, TransactionPoolExt,
-	testing::{TestOffchainExt, TestTransactionPoolExt},
-};
-use sp_runtime::traits::Header as HeaderT;
-use sp_runtime::{generic::DigestItem, testing::Header};
-use node_primitives::{BridgeAssetSymbol, BlockchainType};
 use frame_support::assert_ok;
+use node_primitives::{BlockchainType, BridgeAssetSymbol};
+use sp_core::{
+	offchain::{
+		testing::{TestOffchainExt, TestTransactionPoolExt},
+		OffchainDbExt, TransactionPoolExt,
+	},
+	H256,
+};
+use sp_runtime::{generic::DigestItem, testing::Header, traits::Header as HeaderT};
+
+use crate::{mock::*, *};
 
 #[test]
 fn get_latest_schedule_version_should_work() {
@@ -66,17 +64,23 @@ fn test_incremental_merkle() {
 		"4d018eda9a22334ac0492489fdf79118d696eea52af3871a7e4bf0e2d5ab5945".into(),
 		"acba7c7ee5c1d8ba97ea1a841707fbb2147e883b56544ba821814aebe086383e".into(),
 		"afa502d408f5bdf1660fa9fe3a1fcb432462467e7eb403a8499392ee5297d8d1".into(),
-		"4d723385cad26cf80c2db366f9666a3ef77679c098e07d1af48d523b64b1d460".into()
+		"4d723385cad26cf80c2db366f9666a3ef77679c098e07d1af48d523b64b1d460".into(),
 	];
 
 	let mut merkle = IncrementalMerkle::new(node_count, active_nodes);
 	let _ = merkle.append(id);
-	assert_eq!("bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a", merkle.get_root().to_string());
+	assert_eq!(
+		"bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a",
+		merkle.get_root().to_string()
+	);
 
 	let id = "00002461b0e90b849fe37ff9514230b4f9fc4012d0394b7d2445fedef6a45807"; // 9313
 	let id = Checksum256::from(id);
 	let _ = merkle.append(id);
-	assert_eq!("33cef09fe2565cb5ed2c18c389209897a226a4f8c47360d88cdc2dcc17a8cfc5", merkle.get_root().to_string());
+	assert_eq!(
+		"33cef09fe2565cb5ed2c18c389209897a226a4f8c47360d88cdc2dcc17a8cfc5",
+		merkle.get_root().to_string()
+	);
 }
 
 #[test]
@@ -93,7 +97,7 @@ fn block_id_append_should_be_ok() {
 		"0000246915e14cc2f5577cad9cc75ad0b910c98f4bcb0153d8191d061176d6ff".into(),
 		"0000246a7b047fb30b2052ad0af56787299bf123431e29f947c0f9c2a75f5cfb".into(),
 		"0000246b53b5dae2e0e3a84c84c3a67119fa1f1cfb4983995ef7c69d1c6adba1".into(),
-		"0000246c6388126ca93772c79ccf476f8f1aea397895fe35c05c6b153dad4e4f".into()
+		"0000246c6388126ca93772c79ccf476f8f1aea397895fe35c05c6b153dad4e4f".into(),
 	];
 
 	let node_count = 9312;
@@ -102,13 +106,16 @@ fn block_id_append_should_be_ok() {
 		"4d018eda9a22334ac0492489fdf79118d696eea52af3871a7e4bf0e2d5ab5945".into(),
 		"acba7c7ee5c1d8ba97ea1a841707fbb2147e883b56544ba821814aebe086383e".into(),
 		"afa502d408f5bdf1660fa9fe3a1fcb432462467e7eb403a8499392ee5297d8d1".into(),
-		"bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a".into()
+		"bd1dc07bd4f14bf4d9a32834ec1d35ea92eda26cc220fe91f4f65052bfb1d45a".into(),
 	];
 	let mut merkle = IncrementalMerkle::new(node_count, active_nodes);
 	for id in ids {
 		let _ = merkle.append(id);
 	}
-	assert_eq!(merkle.get_root().to_string(), "fc30e3852df3ecde2314fa1bbd4372341d1c9b922f9f44ce04460fb209b263e4");
+	assert_eq!(
+		merkle.get_root().to_string(),
+		"fc30e3852df3ecde2314fa1bbd4372341d1c9b922f9f44ce04460fb209b263e4"
+	);
 }
 
 #[test]
@@ -116,13 +123,15 @@ fn verify_block_header_signature_should_succeed() {
 	new_test_ext().execute_with(|| {
 		let json = "v2_data/change-schedule-27776771.json";
 		let signed_blocks_str = read_json_from_file(json);
-		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
+		let signed_blocks: Result<Vec<SignedBlockHeader>, _> =
+			serde_json::from_str(&signed_blocks_str.unwrap());
 		assert!(signed_blocks.is_ok());
 		let signed_blocks_headers = signed_blocks.unwrap();
 
 		let producers_schedule_json = "v2_data/producers-schedule-42.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
-		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
+		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> =
+			serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
 		let producers_schedule_v2 = producers_schedule_v2.unwrap();
 
@@ -130,8 +139,14 @@ fn verify_block_header_signature_should_succeed() {
 
 		let signed_block_header = signed_blocks_headers.first().as_ref().unwrap().clone();
 
-		let mroot: Checksum256 = "166c86f7ac95b10550698df6bb6741466c065e49c799a8fe92c0e293cb87a03c".into();
-		let result = BridgeEos::verify_block_header_signature(&producers_schedule_v2_hash, &producers_schedule_v2, &signed_block_header, &mroot);
+		let mroot: Checksum256 =
+			"166c86f7ac95b10550698df6bb6741466c065e49c799a8fe92c0e293cb87a03c".into();
+		let result = BridgeEos::verify_block_header_signature(
+			&producers_schedule_v2_hash,
+			&producers_schedule_v2,
+			&signed_block_header,
+			&mroot,
+		);
 		assert!(result.is_ok());
 	});
 }
@@ -141,7 +156,8 @@ fn verify_block_headers_should_succeed() {
 	new_test_ext().execute_with(|| {
 		let json = "v2_data/change-schedule-27776771.json";
 		let signed_blocks_str = read_json_from_file(json);
-		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
+		let signed_blocks: Result<Vec<SignedBlockHeader>, _> =
+			serde_json::from_str(&signed_blocks_str.unwrap());
 		assert!(signed_blocks.is_ok());
 		let signed_blocks_headers = signed_blocks.unwrap();
 
@@ -152,16 +168,20 @@ fn verify_block_headers_should_succeed() {
 
 		let producers_schedule_json = "v2_data/producers-schedule-42.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
-		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
+		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> =
+			serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
 		let producers_schedule_v2 = producers_schedule_v2.unwrap();
 
 		let producers_schedule_v2_hash = producers_schedule_v2.schedule_hash();
 		assert!(producers_schedule_v2_hash.is_ok());
 
-		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list.as_ref().unwrap().iter().map(|ids| {
-			ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>()
-		}).collect::<Vec<_>>();
+		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list
+			.as_ref()
+			.unwrap()
+			.iter()
+			.map(|ids| ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>())
+			.collect::<Vec<_>>();
 
 		let node_count = 27776769;
 		let active_nodes: Vec<Checksum256> = vec![
@@ -178,11 +198,17 @@ fn verify_block_headers_should_succeed() {
 			"28e66467001758a36489e45cc20f9c1812a3b853f2827a6a662fa02935b5ee59".into(),
 			"89c365695ac50e1342d854bf4bdb35066ca7b1954d04c6df4581915c5147b4df".into(),
 			"9292a3e4f9af07c619ba70ca31f8aef64bae7a31154369544f32874b416b2dad".into(),
-			"4095785f71399bf608c063e43ca5a8b0d09500d7560b1f2ea991ad3d59be5c26".into()
+			"4095785f71399bf608c063e43ca5a8b0d09500d7560b1f2ea991ad3d59be5c26".into(),
 		];
 
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
-		assert_ok!(BridgeEos::verify_block_headers(merkle, &producers_schedule_v2_hash.unwrap(), &producers_schedule_v2, &signed_blocks_headers, block_ids_list));
+		assert_ok!(BridgeEos::verify_block_headers(
+			merkle,
+			&producers_schedule_v2_hash.unwrap(),
+			&producers_schedule_v2,
+			&signed_blocks_headers,
+			block_ids_list
+		));
 	});
 }
 
@@ -192,7 +218,8 @@ fn change_schedule_should_work() {
 		// insert producers schedule v1 in advance.
 		let producers_schedule_json = "v2_data/producers-schedule-42.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
-		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
+		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> =
+			serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
 		let producers_schedule_v2 = producers_schedule_v2.unwrap();
 
@@ -200,11 +227,15 @@ fn change_schedule_should_work() {
 		assert!(producers_schedule_v2_hash.is_ok());
 
 		PendingScheduleVersion::put(producers_schedule_v2.version);
-		ProducerSchedules::insert(producers_schedule_v2.version, (&producers_schedule_v2.producers, producers_schedule_v2_hash.unwrap()));
+		ProducerSchedules::insert(
+			producers_schedule_v2.version,
+			(&producers_schedule_v2.producers, producers_schedule_v2_hash.unwrap()),
+		);
 
 		let block_headers_json = "v2_data/change-schedule-27776771.json";
 		let signed_blocks_str = read_json_from_file(block_headers_json);
-		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
+		let signed_blocks: Result<Vec<SignedBlockHeader>, _> =
+			serde_json::from_str(&signed_blocks_str.unwrap());
 		assert!(signed_blocks.is_ok());
 		let signed_blocks_headers = signed_blocks.unwrap();
 
@@ -213,9 +244,12 @@ fn change_schedule_should_work() {
 		let block_ids_list: Result<Vec<Vec<String>>, _> = serde_json::from_str(&ids_str);
 		assert!(block_ids_list.is_ok());
 
-		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list.as_ref().unwrap().iter().map(|ids| {
-			ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>()
-		}).collect::<Vec<_>>();
+		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list
+			.as_ref()
+			.unwrap()
+			.iter()
+			.map(|ids| ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>())
+			.collect::<Vec<_>>();
 
 		let node_count = 27776769;
 		let active_nodes: Vec<Checksum256> = vec![
@@ -232,23 +266,31 @@ fn change_schedule_should_work() {
 			"28e66467001758a36489e45cc20f9c1812a3b853f2827a6a662fa02935b5ee59".into(),
 			"89c365695ac50e1342d854bf4bdb35066ca7b1954d04c6df4581915c5147b4df".into(),
 			"9292a3e4f9af07c619ba70ca31f8aef64bae7a31154369544f32874b416b2dad".into(),
-			"4095785f71399bf608c063e43ca5a8b0d09500d7560b1f2ea991ad3d59be5c26".into()
+			"4095785f71399bf608c063e43ca5a8b0d09500d7560b1f2ea991ad3d59be5c26".into(),
 		];
 
 		let alice = Origin::signed(1u64);
 
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
-		assert_ok!(BridgeEos::change_schedule(alice, Checksum256::default(), producers_schedule_v2, merkle, signed_blocks_headers, block_ids_list));
+		assert_ok!(BridgeEos::change_schedule(
+			alice,
+			Checksum256::default(),
+			producers_schedule_v2,
+			merkle,
+			signed_blocks_headers,
+			block_ids_list
+		));
 	});
 }
 
 #[test]
 fn prove_action_should_be_ok() {
 	new_test_ext().execute_with(|| {
-		//	save producer schedule for block signature verification
+		// 	save producer schedule for block signature verification
 		let producers_schedule_json = "v2_data/producers-schedule-55.json";
 		let producers_schedule_str = read_json_from_file(&producers_schedule_json).unwrap();
-		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> = serde_json::from_str(&producers_schedule_str);
+		let producers_schedule_v2: Result<ProducerAuthoritySchedule, _> =
+			serde_json::from_str(&producers_schedule_str);
 		assert!(producers_schedule_v2.is_ok());
 		let producers_schedule_v2 = producers_schedule_v2.unwrap();
 
@@ -256,12 +298,16 @@ fn prove_action_should_be_ok() {
 		assert!(producers_schedule_v2_hash.is_ok());
 
 		PendingScheduleVersion::put(producers_schedule_v2.version);
-		ProducerSchedules::insert(producers_schedule_v2.version, (&producers_schedule_v2.producers, producers_schedule_v2_hash.unwrap()));
+		ProducerSchedules::insert(
+			producers_schedule_v2.version,
+			(&producers_schedule_v2.producers, producers_schedule_v2_hash.unwrap()),
+		);
 
 		// get block headers
 		let block_headers_json = "v2_data/prove-action-blockheaders.json";
 		let signed_blocks_str = read_json_from_file(block_headers_json);
-		let signed_blocks: Result<Vec<SignedBlockHeader>, _> = serde_json::from_str(&signed_blocks_str.unwrap());
+		let signed_blocks: Result<Vec<SignedBlockHeader>, _> =
+			serde_json::from_str(&signed_blocks_str.unwrap());
 		assert!(signed_blocks.is_ok());
 		let signed_blocks_headers = signed_blocks.unwrap();
 
@@ -280,7 +326,7 @@ fn prove_action_should_be_ok() {
 			"ca50800f17f87553c5905dcd56740e07ad8422527a9d2ca3b03a98bc2ed1aff9".into(),
 			"89c365695ac50e1342d854bf4bdb35066ca7b1954d04c6df4581915c5147b4df".into(),
 			"9292a3e4f9af07c619ba70ca31f8aef64bae7a31154369544f32874b416b2dad".into(),
-			"a40873bf277caf1bc14709cbb3f79f1391f2f7145016d8dd93e2ecf15723a007".into()
+			"a40873bf277caf1bc14709cbb3f79f1391f2f7145016d8dd93e2ecf15723a007".into(),
 		];
 		let merkle = IncrementalMerkle::new(node_count, active_nodes);
 
@@ -290,15 +336,19 @@ fn prove_action_should_be_ok() {
 		let block_ids_list: Result<Vec<Vec<String>>, _> = serde_json::from_str(&ids_str);
 		assert!(block_ids_list.is_ok());
 
-		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list.as_ref().unwrap().iter().map(|ids| {
-			ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>()
-		}).collect::<Vec<_>>();
+		let block_ids_list: Vec<Vec<Checksum256>> = block_ids_list
+			.as_ref()
+			.unwrap()
+			.iter()
+			.map(|ids| ids.iter().map(|id| Checksum256::from_str(id).unwrap()).collect::<Vec<_>>())
+			.collect::<Vec<_>>();
 
 		// read action merkle paths
 		let action_merkle_paths_json = "v2_data/prove-action-merkle-paths.json";
 		let action_merkle_paths_str = read_json_from_file(action_merkle_paths_json);
 		assert!(action_merkle_paths_str.is_ok());
-		let action_merkle_paths: Result<Vec<String>, _> = serde_json::from_str(&action_merkle_paths_str.unwrap());
+		let action_merkle_paths: Result<Vec<String>, _> =
+			serde_json::from_str(&action_merkle_paths_str.unwrap());
 		assert!(action_merkle_paths.is_ok());
 		let action_merkle_paths = action_merkle_paths.unwrap();
 		let _action_merkle_paths = {
@@ -311,7 +361,7 @@ fn prove_action_should_be_ok() {
 
 		let actual_merkle_paths = vec![
 			"f33eca1a95a23a69d4bac97428c67efff07e2abf9e293740d057c686eb8c7d12".into(),
-			"4d3498e9702fd9b6d1253a996e7f56de064c1e9f54046cbcf18dce51df6c16e2".into()
+			"4d3498e9702fd9b6d1253a996e7f56de064c1e9f54046cbcf18dce51df6c16e2".into(),
 		];
 
 		// get action
@@ -343,9 +393,16 @@ fn prove_action_should_be_ok() {
 
 		let alice = Origin::signed(1u64);
 
-		assert_ok!(
-			BridgeEos::prove_action(alice, action.clone(), action_receipt.clone(), actual_merkle_paths, merkle, signed_blocks_headers, block_ids_list, Checksum256::default())
-		);
+		assert_ok!(BridgeEos::prove_action(
+			alice,
+			action.clone(),
+			action_receipt.clone(),
+			actual_merkle_paths,
+			merkle,
+			signed_blocks_headers,
+			block_ids_list,
+			Checksum256::default()
+		));
 
 		// ensure action_receipt is saved after proved action
 		assert_eq!(BridgeActionReceipt::get(&action_receipt), action);
@@ -363,10 +420,18 @@ fn bridge_eos_offchain_should_work() {
 
 	ext.execute_with(|| {
 		System::set_block_number(1);
-		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_NODE_URL", b"http://127.0.0.1:8888/");
+		sp_io::offchain::local_storage_set(
+			StorageKind::PERSISTENT,
+			b"EOS_NODE_URL",
+			b"http://127.0.0.1:8888/",
+		);
 
 		// EOS secret key of account testa
-		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr");
+		sp_io::offchain::local_storage_set(
+			StorageKind::PERSISTENT,
+			b"EOS_SECRET_KEY",
+			b"5JgbL2ZnoEAhTudReWH1RnMuQS6DBeLZt4ucV6t8aymVEuYg7sr",
+		);
 
 		let raw_to = b"alice".to_vec();
 		let raw_symbol = b"EOS".to_vec();
@@ -382,7 +447,11 @@ fn bridge_eos_offchain_should_work() {
 		assert_ok!(BridgeEos::offchain(1));
 
 		// EOS secret key of account testb
-		sp_io::offchain::local_storage_set(StorageKind::PERSISTENT, b"EOS_SECRET_KEY", b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj");
+		sp_io::offchain::local_storage_set(
+			StorageKind::PERSISTENT,
+			b"EOS_SECRET_KEY",
+			b"5J6vV6xbVV2UEwBYYDRQQ8yTDcSmHJw67XqRriF4EkEzWKUFNKj",
+		);
 
 		rotate_author(2);
 		assert_ok!(BridgeEos::offchain(2));
@@ -413,10 +482,8 @@ fn chech_receiver_is_ss58_format() {
 	// alice is substrate address
 	let alice_key = "5CFK52zU59zUhC3s6mRobEJ3zm7JeXQZaS6ybvcuCDDhWwGG";
 	let expected_alice = [
-		8u8, 22, 254, 6, 137, 50, 46, 38,
-		205, 42, 169, 192, 220, 203, 108, 68,
-		133, 19, 69, 233, 111, 150, 154, 232,
-		92, 143, 26, 236, 159, 180, 112, 61
+		8u8, 22, 254, 6, 137, 50, 46, 38, 205, 42, 169, 192, 220, 203, 108, 68, 133, 19, 69, 233,
+		111, 150, 154, 232, 92, 143, 26, 236, 159, 180, 112, 61,
 	];
 
 	let data = BridgeEos::get_account_data(alice_key);
@@ -446,7 +513,8 @@ fn chech_receiver_is_ss58_format() {
 
 #[cfg(feature = "std")]
 fn read_json_from_file(json_name: impl AsRef<str>) -> Result<String, Box<dyn Error>> {
-	let path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/test_data/")).join(json_name.as_ref());
+	let path =
+		Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/test_data/")).join(json_name.as_ref());
 	let mut file = File::open(path)?;
 	let mut json_str = String::new();
 	file.read_to_string(&mut json_str)?;
@@ -464,28 +532,14 @@ fn seal_header(mut header: Header, author: u64) -> Header {
 }
 
 fn create_header(number: u64, parent_hash: H256, state_root: H256) -> Header {
-	Header::new(
-		number,
-		Default::default(),
-		state_root,
-		parent_hash,
-		Default::default(),
-	)
+	Header::new(number, Default::default(), state_root, parent_hash, Default::default())
 }
 
 fn rotate_author(author: u64) {
-	let mut header = seal_header(
-		create_header(1, Default::default(), [1; 32].into()),
-		author,
-	);
+	let mut header = seal_header(create_header(1, Default::default(), [1; 32].into()), author);
 
 	header.digest_mut().pop(); // pop the seal off.
-	System::initialize(
-		&1,
-		&Default::default(),
-		header.digest(),
-		Default::default(),
-	);
+	System::initialize(&1, &Default::default(), header.digest(), Default::default());
 
 	assert_eq!(Authorship::author(), author);
 }

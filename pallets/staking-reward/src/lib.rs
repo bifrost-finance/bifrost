@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -132,7 +132,7 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Modul
 		// The total statistics
 		let sum: T::Balance = {
 			if record_vec.len() >= LEN {
-				record_vec[.. LEN]
+				record_vec[..LEN]
 					.iter()
 					.fold(T::Balance::from(0u32), |acc, x| acc.saturating_add(x.record_amount))
 			} else {
@@ -143,7 +143,7 @@ impl<T: Config> RewardTrait<T::Balance, T::AccountId, CurrencyIdOf<T>> for Modul
 		};
 		// Dispatch reward
 		let length = if record_vec.len() < LEN { record_vec.len() } else { LEN };
-		for referer in record_vec[0 .. length].iter() {
+		for referer in record_vec[0..length].iter() {
 			let reward = referer.record_amount.saturating_mul(staking_profit) / sum;
 			// Check dispatch reward
 			if reward.ne(&T::Balance::from(0u32)) {
