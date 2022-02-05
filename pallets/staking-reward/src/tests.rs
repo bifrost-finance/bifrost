@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -149,7 +149,7 @@ fn more_than_256_dispatch_reward_is_be_ok() {
 		assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_one));
 		assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_two));
 		// Add other referer data
-		for i in 1 .. 300 {
+		for i in 1..300 {
 			assert_ok!(<crate::Module<Test>>::record_reward(vdot_id, 100, referer_two + i));
 		}
 

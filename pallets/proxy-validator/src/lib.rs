@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,16 +21,25 @@
 mod mock;
 mod tests;
 
-use codec::{Encode, Decode};
-use core::convert::{From, Into};
-use frame_support::storage::{StorageMap, IterableStorageDoubleMap};
-use frame_support::{weights::Weight,decl_event, decl_error, decl_module, decl_storage, ensure, debug, Parameter};
+use core::{
+	convert::{From, Into},
+	ops::Div,
+};
+
+use codec::{Decode, Encode};
+use frame_support::{
+	debug, decl_error, decl_event, decl_module, decl_storage, ensure,
+	storage::{IterableStorageDoubleMap, StorageMap},
+	weights::Weight,
+	Parameter,
+};
 use frame_system::{ensure_root, ensure_signed};
 use node_primitives::{AssetTrait, BridgeAssetTo, RewardHandler, TokenSymbol};
-use sp_runtime::RuntimeDebug;
-use sp_runtime::traits::{Member, Saturating, AtLeast32Bit, Zero};
+use sp_runtime::{
+	traits::{AtLeast32Bit, Member, Saturating, Zero},
+	RuntimeDebug,
+};
 use sp_std::prelude::*;
-use core::ops::Div;
 
 pub trait WeightInfo {
 	fn set_global_asset() -> Weight;
@@ -44,14 +53,30 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn set_global_asset() -> Weight { Default::default() }
-	fn stake() -> Weight { Default::default() }
-	fn unstake() -> Weight { Default::default() }
-	fn validator_register() -> Weight { Default::default() }
-	fn set_need_amount() -> Weight { Default::default() }
-	fn set_reward_per_block() -> Weight { Default::default() }
-	fn deposit() -> Weight { Default::default() }
-	fn withdraw() -> Weight { Default::default() }
+	fn set_global_asset() -> Weight {
+		Default::default()
+	}
+	fn stake() -> Weight {
+		Default::default()
+	}
+	fn unstake() -> Weight {
+		Default::default()
+	}
+	fn validator_register() -> Weight {
+		Default::default()
+	}
+	fn set_need_amount() -> Weight {
+		Default::default()
+	}
+	fn set_reward_per_block() -> Weight {
+		Default::default()
+	}
+	fn deposit() -> Weight {
+		Default::default()
+	}
+	fn withdraw() -> Weight {
+		Default::default()
+	}
 }
 
 pub type ValidatorAddress = Vec<u8>;
@@ -84,17 +109,8 @@ pub struct ProxyValidatorRegister<Balance, BlockNumber> {
 }
 
 impl<Balance: Default, BlockNumber: Default> ProxyValidatorRegister<Balance, BlockNumber> {
-	fn new(
-		need: Balance,
-		reward_per_block: Balance,
-		validator_address: ValidatorAddress
-	) -> Self {
-		Self {
-			need,
-			validator_address,
-			reward_per_block,
-			..Default::default()
-		}
+	fn new(need: Balance, reward_per_block: Balance, validator_address: ValidatorAddress) -> Self {
+		Self { need, validator_address, reward_per_block, ..Default::default() }
 	}
 }
 
@@ -112,13 +128,19 @@ pub trait Config: frame_system::Config {
 	/// The units in which we record asset precision.
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy;
 	/// Asset handler
-	type AssetTrait: AssetTrait<Self::AssetId, Self::AccountId, Self::Balance, Self::Cost, Self::Income>;
+	type AssetTrait: AssetTrait<
+		Self::AssetId,
+		Self::AccountId,
+		Self::Balance,
+		Self::Cost,
+		Self::Income,
+	>;
 	/// Bridge asset handler
 	type BridgeAssetTo: BridgeAssetTo<Self::AccountId, Self::Precision, Self::Balance>;
 	/// Reward handler
 	type RewardHandler: RewardHandler<TokenSymbol, Self::Balance>;
 	/// Set default weight
-	type WeightInfo : WeightInfo;
+	type WeightInfo: WeightInfo;
 }
 
 decl_event! {
@@ -402,7 +424,7 @@ impl<T: Config> Module<T> {
 	fn asset_lock(
 		account_id: T::AccountId,
 		token_symbol: TokenSymbol,
-		amount: T::Balance
+		amount: T::Balance,
 	) -> Result<(), Error<T>> {
 		// check if has enough balance
 		let account_asset = T::AssetTrait::get_account_asset(token_symbol, &account_id);
@@ -422,11 +444,14 @@ impl<T: Config> Module<T> {
 	fn asset_unlock(
 		account_id: T::AccountId,
 		token_symbol: TokenSymbol,
-		amount: T::Balance
+		amount: T::Balance,
 	) -> Result<(), Error<T>> {
 		// check if has enough locked_balance
 		ensure!(LockedBalances::<T>::contains_key(&account_id), Error::<T>::LockedBalanceNotEnough);
-		ensure!(LockedBalances::<T>::get(&account_id) >= amount, Error::<T>::LockedBalanceNotEnough);
+		ensure!(
+			LockedBalances::<T>::get(&account_id) >= amount,
+			Error::<T>::LockedBalanceNotEnough
+		);
 
 		// unlock asset to this module
 		LockedBalances::<T>::mutate(&account_id, |locked_balance| {
@@ -446,24 +471,25 @@ impl<T: Config> Module<T> {
 			let redeem_duration = asset_config.redeem_duration;
 			let min_reward_per_block = asset_config.min_reward_per_block;
 
-			let  reward;
-			let min_reward = val.staking.saturating_mul(
-				min_reward_per_block.saturating_mul(redeem_duration.into())
-			).div(1_000_000.into()).div(1_000_000.into());
+			let reward;
+			let min_reward = val
+				.staking
+				.saturating_mul(min_reward_per_block.saturating_mul(redeem_duration.into()))
+				.div(1_000_000.into())
+				.div(1_000_000.into());
 			if min_reward >= val.deposit {
 				// call redeem by bridge-eos
-				T::BridgeAssetTo::redeem(
-					token_symbol,
-					val.deposit,
-					val.validator_address.clone()
-				).map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
+				T::BridgeAssetTo::redeem(token_symbol, val.deposit, val.validator_address.clone())
+					.map_err(|_| Error::<T>::BridgeEOSRedeemError)?;
 				reward = val.deposit;
 				val.deposit = Zero::zero();
 			} else {
 				let blocks = now_block - val.last_block;
-				reward = val.staking.saturating_mul(
-					val.reward_per_block.saturating_mul(blocks.into())
-				).div(1_000_000.into()).div(1_000_000.into());
+				reward = val
+					.staking
+					.saturating_mul(val.reward_per_block.saturating_mul(blocks.into()))
+					.div(1_000_000.into())
+					.div(1_000_000.into());
 				val.deposit = val.deposit.saturating_sub(reward);
 			}
 
