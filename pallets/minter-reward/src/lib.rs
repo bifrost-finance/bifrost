@@ -169,6 +169,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {}
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::error]

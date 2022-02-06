@@ -106,7 +106,7 @@ pub fn bifrost_polkadot_genesis(
 		parachain_system: Default::default(),
 		vesting: VestingConfig { vesting: vestings },
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
-		sudo: SudoConfig { key: root_key.clone() },
+		sudo: SudoConfig { key: Some(root_key) },
 	}
 }
 
@@ -143,6 +143,7 @@ pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_polkadot_properties()),
 		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: id.into() },
 	))
@@ -197,6 +198,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_polkadot_properties()),
 		RelayExtensions { relay_chain: "polkadot-local".into(), para_id: PARA_ID },
 	))
@@ -211,6 +213,7 @@ pub fn chainspec_config() -> ChainSpec {
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_polkadot_properties()),
 		RelayExtensions { relay_chain: "polkadot".into(), para_id: PARA_ID },
 	)

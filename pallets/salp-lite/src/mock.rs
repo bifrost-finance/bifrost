@@ -19,14 +19,16 @@
 // Ensure we're `no_std` when compiling for Wasm.
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{EnsureOrigin, GenesisBuild},
-	weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
+	traits::{EnsureOrigin, GenesisBuild, Nothing},
+	weights::{Weight, WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
 	PalletId,
 };
 use frame_system::RawOrigin;
 use node_primitives::{Amount, Balance, CurrencyId, MessageId, TokenSymbol};
+use smallvec::smallvec;
 use sp_arithmetic::Percent;
 use sp_core::H256;
+pub use sp_runtime::Perbill;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -94,6 +96,7 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -193,8 +196,8 @@ parameter_types! {
 	],2);
 }
 
-pub struct EnsureConfirmAsMultiSig;
-impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+pub struct EnsureConfirmAsGovernance;
+impl EnsureOrigin<Origin> for EnsureConfirmAsGovernance {
 	type Success = AccountId;
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
@@ -210,10 +213,6 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
 	}
 }
-
-use frame_support::{traits::Nothing, weights::Weight};
-use smallvec::smallvec;
-pub use sp_runtime::Perbill;
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
@@ -241,8 +240,7 @@ impl salp::Config for Test {
 	type BatchKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type WeightInfo = SalpWeightInfo;
-	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
-	type EnsureConfirmAsGovernance = EnsureConfirmAsMultiSig;
+	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
 }
 
 pub struct SalpWeightInfo;
@@ -271,6 +269,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
+	crate::GenesisConfig::<Test> { initial_multisig_account: Some(ALICE) }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	t.into()
 }

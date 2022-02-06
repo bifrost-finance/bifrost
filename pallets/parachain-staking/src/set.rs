@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moonbeam.  If not, see <http://www.gnu.org/licenses/>.
 
-/* TODO: use orml_utilities::OrderedSet without leaking substrate v2.0 dependencies*/
+// TODO: use orml_utilities::OrderedSet without leaking substrate v2.0 dependencies
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
@@ -24,7 +24,7 @@ use sp_std::prelude::*;
 
 /// An ordered set backed by `Vec`
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-#[derive(RuntimeDebug, PartialEq, Eq, Encode, Decode, Default, Clone, TypeInfo)]
+#[derive(RuntimeDebug, PartialEq, Eq, Encode, Decode, Clone, TypeInfo, Default)]
 pub struct OrderedSet<T>(pub Vec<T>);
 
 impl<T: Ord> OrderedSet<T> {
@@ -55,7 +55,7 @@ impl<T: Ord> OrderedSet<T> {
 			Err(loc) => {
 				self.0.insert(loc, value);
 				true
-			}
+			},
 		}
 	}
 
@@ -66,7 +66,7 @@ impl<T: Ord> OrderedSet<T> {
 			Ok(loc) => {
 				self.0.remove(loc);
 				true
-			}
+			},
 			Err(_) => false,
 		}
 	}

@@ -155,6 +155,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::genesis_config]
@@ -635,6 +636,7 @@ mod tests {
 		type SS58Prefix = ();
 		type SystemWeightInfo = ();
 		type Version = ();
+		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 	parameter_types! {
 		pub const MaxLocks: u32 = 10;

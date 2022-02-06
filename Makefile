@@ -10,10 +10,6 @@ init:
 
 # Build Debug
 
-.PHONY: build-asgard
-build-asgard: copy-genesis-config
-	cargo build -p node-cli --locked --features "with-asgard-runtime"
-
 .PHONY: build-bifrost
 build-bifrost: copy-genesis-config
 	cargo build -p node-cli --locked --features "with-bifrost-runtime"
@@ -23,10 +19,6 @@ build-all: copy-genesis-config
 	cargo build -p node-cli --locked --features "with-all-runtime"
 
 # Build Release
-
-.PHONY: build-asgard-release
-build-asgard-release: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-asgard-runtime" --release
 
 .PHONY: build-bifrost-release
 build-bifrost-release: copy-genesis-config-release
@@ -44,10 +36,6 @@ build-bifrost-polkadot-release: copy-genesis-config-release
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
-.PHONY: check-asgard
-check-asgard:
-	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-asgard-runtime"
-
 .PHONY: check-bifrost
 check-bifrost:
 	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-bifrost-runtime"
@@ -63,10 +51,6 @@ check-tests:
 .PHONY: test-bifrost
 test-bifrost:
 	SKIP_WASM_BUILD= cargo test --features "with-bifrost-runtime"
-
-.PHONY: test-asgard
-test-asgard:
-	SKIP_WASM_BUILD= cargo test --features "with-asgard-runtime"
 
 .PHONY: test-all
 test-all:
@@ -97,23 +81,15 @@ format:
 
 .PHONY: test-benchmarking
 test-benchmarking:
-	cargo test --features runtime-benchmarks --features with-all-runtime --features --all benchmarking
+	cargo test --features runtime-benchmarks --features with-bifrost-kusama-runtime benchmarking
 
 .PHONY: generate-bifrost-weights
 generate-bifrost-weights:
 	bash ./scripts/generate-weights.sh bifrost
 
-.PHONY: generate-asgard-weights
-generate-asgard-weights:
-	bash ./scripts/generate-weights.sh asgard
-
 .PHONY: generate-all-weights
 generate-all-weights:
 	bash ./scripts/generate-weights.sh bifrost
-
-.PHONY: build-asgard-release-with-bench
-build-asgard-release-with-bench: copy-genesis-config-release
-	cargo build -p node-cli --locked --features "with-asgard-runtime,runtime-benchmarks" --release
 
 .PHONY: build-bifrost-release-with-bench
 build-bifrost-release-with-bench: copy-genesis-config-release
@@ -124,10 +100,6 @@ build-all-release-with-bench: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
 
 # Deploy
-.PHONY: deploy-asgard-local
-deploy-asgard-local:
-	pm2 start scripts/asgard-local-ecosystem.config.js
-
 .PHONY: deploy-bifrost-live
 deploy-bifrost-live:
 	pm2 deploy scripts/bifrost-ecosystem.config.js production
@@ -135,7 +107,7 @@ deploy-bifrost-live:
 # Run dev chain
 .PHONY: run-dev-manual-seal
 run-dev:
-	RUST_LOG=debug CARGO_INCREMENTAL=0 cargo run -p node-cli --locked --features "with-asgard-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
+	RUST_LOG=debug CARGO_INCREMENTAL=0 cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
 
 # Build docker image
 .PHONY: build-docker-image
@@ -156,10 +128,6 @@ build-bifrost-kusama-wasm:
 build-bifrost-polkadot-wasm:
 	.maintain/build-wasm.sh bifrost-polkadot
 
-.PHONY: build-asgard-wasm
-build-asgard-wasm:
-	.maintain/build-wasm.sh asgard
-
 .PHONY: check-try-runtime
 check-try-runtime:
 	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
@@ -167,10 +135,6 @@ check-try-runtime:
 .PHONY: try-bifrost-runtime-upgrade
 try-bifrost-runtime-upgrade:
 	./scripts/try-runtime.sh bifrost
-
-.PHONY: try-asgard-runtime-upgrade
-try-asgard-runtime-upgrade:
-	./scripts/try-runtime.sh asgard
 
 .PHONY: resources
 resources:

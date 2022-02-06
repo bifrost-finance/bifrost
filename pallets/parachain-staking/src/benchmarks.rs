@@ -139,13 +139,13 @@ benchmarks! {
 		let parachain_bond_account: T::AccountId = account("TEST", 0u32, USER_SEED);
 	}: _(RawOrigin::Root, parachain_bond_account.clone())
 	verify {
-		assert_eq!(Pallet::<T>::parachain_bond_info().account, parachain_bond_account);
+		assert_eq!(Pallet::<T>::parachain_bond_info().unwrap().account, parachain_bond_account);
 	}
 
 	set_parachain_bond_reserve_percent {
 	}: _(RawOrigin::Root, Percent::from_percent(33))
 	verify {
-		assert_eq!(Pallet::<T>::parachain_bond_info().percent, Percent::from_percent(33));
+		assert_eq!(Pallet::<T>::parachain_bond_info().unwrap().percent, Percent::from_percent(33));
 	}
 
 	// ROOT DISPATCHABLES

@@ -14,7 +14,7 @@ event
 ### run collator node & map sessionKey
 
 ```
-/home/bifrost/ronyang/parachain/bifrost/target/release/bifrost --ws-port=18850 --port=38850 --collator --base-path ./data --chain=asgard-local --unsafe-ws-external --unsafe-rpc-external --rpc-cors=all --rpc-methods=Unsafe --rpc-port=28850 --wasm-execution=compiled --execution=wasm -- --chain=/home/bifrost/ronyang/parachain/polkadot-launch/rococo-local-raw.json --wasm-execution=compiled --execution=wasm --no-beefy
+/home/bifrost/ronyang/parachain/bifrost/target/release/bifrost --ws-port=18850 --port=38850 --collator --base-path ./data --chain=bifrost-local --unsafe-ws-external --unsafe-rpc-external --rpc-cors=all --rpc-methods=Unsafe --rpc-port=28850 --wasm-execution=compiled --execution=wasm -- --chain=/home/bifrost/ronyang/parachain/polkadot-launch/rococo-local-raw.json --wasm-execution=compiled --execution=wasm --no-beefy
 ```
 
 ![](https://i.imgur.com/i9Zyphq.png)

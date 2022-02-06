@@ -234,17 +234,18 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn development_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Development",
 		"bifrost_dev",
 		ChainType::Development,
-		move || development_config_genesis(id),
+		move || development_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-dev".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "kusama-dev".into(), para_id: PARA_ID },
 	))
 }
 
@@ -335,6 +336,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
 	))
@@ -405,6 +407,7 @@ pub fn stage_testnet_config() -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
 	))
@@ -419,6 +422,7 @@ pub fn chainspec_config() -> ChainSpec {
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
 	)
