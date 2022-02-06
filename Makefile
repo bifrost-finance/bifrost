@@ -107,7 +107,7 @@ deploy-bifrost-live:
 # Run dev chain
 .PHONY: run-dev-manual-seal
 run-dev:
-	RUST_LOG=debug CARGO_INCREMENTAL=0 cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
+	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime" -- --tmp --dev --sealing instant --rpc-cors all --unsafe-ws-external
 
 # Build docker image
 .PHONY: build-docker-image

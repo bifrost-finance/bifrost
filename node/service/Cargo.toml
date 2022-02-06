@@ -23,6 +23,7 @@ sc-consensus-slots = { git = "https://github.com/paritytech/substrate", branch =
 sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16"}
 sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 sc-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-offchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 frame-benchmarking = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 
 # Substrate Primitives

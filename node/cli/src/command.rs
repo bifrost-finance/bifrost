@@ -157,7 +157,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if spec.is_bifrost_kusama() {
+		if spec.is_bifrost_kusama() || spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 			{
 				&bifrost_kusama_runtime::VERSION

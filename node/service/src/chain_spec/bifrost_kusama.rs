@@ -237,7 +237,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 pub fn development_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Development",
-		"bifrost_dev",
+		"dev",
 		ChainType::Development,
 		move || development_config_genesis(PARA_ID.into()),
 		vec![],
@@ -245,7 +245,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-dev".into(), para_id: PARA_ID },
+		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
 	))
 }
 
