@@ -745,13 +745,6 @@ pub mod pallet {
 			T::MultiCurrency::unreserve(vsToken, &who, contributed);
 			T::MultiCurrency::unreserve(vsBond, &who, contributed);
 
-			Self::put_contribution(
-				fund.trie_index,
-				&who,
-				contributed,
-				ContributionStatus::Unlocked,
-			);
-
 			Self::deposit_event(Event::<T>::Unlocked(who, index, contributed));
 
 			Ok(())
@@ -785,12 +778,6 @@ pub mod pallet {
 					T::MultiCurrency::unreserve(vsToken, &who, contributed);
 					T::MultiCurrency::unreserve(vsBond, &who, contributed);
 
-					Self::put_contribution(
-						fund.trie_index,
-						&who,
-						contributed,
-						ContributionStatus::Unlocked,
-					);
 					unlock_count += 1;
 				}
 			}
@@ -818,6 +805,9 @@ pub mod pallet {
 			ensure!(can, Error::<T>::InvalidFundStatus);
 
 			let amount_withdrew = fund.raised;
+			let total =
+				Self::redeem_pool().checked_add(&amount_withdrew).ok_or(Error::<T>::Overflow)?;
+			RedeemPool::<T>::set(total);
 
 			if fund.status == FundStatus::Retired {
 				let fund_new = FundInfo { status: FundStatus::RedeemWithdrew, ..fund };
@@ -826,7 +816,6 @@ pub mod pallet {
 				let fund_new = FundInfo { status: FundStatus::RefundWithdrew, ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
 			}
-			RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
 
 			Self::deposit_event(Event::Withdrew(index, amount_withdrew));
 
@@ -1116,13 +1105,10 @@ pub mod pallet {
 			block >= block_begin_redeem && block < block_end_redeem
 		}
 
-		#[allow(unused)]
-		pub(crate) fn block_start_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			slot.saturating_mul(T::LeasePeriod::get())
-		}
-
 		pub(crate) fn block_end_of_lease_period_index(slot: LeasePeriod) -> BlockNumberFor<T> {
-			(slot + 1).saturating_mul(T::LeasePeriod::get())
+			(slot + 1)
+				.checked_mul(T::LeasePeriod::get())
+				.expect("shouldn't fail when convert Lease to Block")
 		}
 
 		pub fn find_fund(
