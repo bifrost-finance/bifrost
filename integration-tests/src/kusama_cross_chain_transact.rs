@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -49,8 +49,9 @@ fn relaychain_transact_works() {
 
 	KusamaNet::execute_with(|| {
 		use kusama_runtime::{Event, System};
-		assert!(System::events()
-			.iter()
-			.any(|r| matches!(r.event, Event::System(frame_system::Event::Remarked(_, _)))));
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
+		)));
 	});
 }

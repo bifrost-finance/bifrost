@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,7 @@ mod bifrost_imports {
 	pub use bifrost_kusama_runtime::{
 		create_x2_multilocation, AccountId, Balance, Balances, BifrostCrowdloanId, BlockNumber,
 		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
-		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Perbill, Proxy,
+		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
 		RelayCurrencyId, RelaychainSovereignSubAccount, Runtime, Salp, Scheduler, Session,
 		SlotLength, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
 	};

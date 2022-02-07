@@ -103,7 +103,6 @@ zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Modul
 zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "e24926ccd75b6177d35c552006d961d66044f0cc" }
 zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "e24926ccd75b6177d35c552006d961d66044f0cc" }
 merkle-distributor = { git = "https://github.com/bifrost-finance/merkle-distributor", rev = "87e3635d937da111ae9422c40bca4d771dc3c166" }
-xcm-emulator = { git = "https://github.com/bifrost-finance/xcm-simulator", rev = "42e3b33672ee30d186e01acba4af8ca8b8e18568" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "a51c4f7f04ec909dc14b3841de9014dfbc8d3600" }
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "a51c4f7f04ec909dc14b3841de9014dfbc8d3600" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "a51c4f7f04ec909dc14b3841de9014dfbc8d3600" }

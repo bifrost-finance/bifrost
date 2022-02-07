@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,10 +19,8 @@
 use frame_support::assert_ok;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
-use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
-use xcm_builder::AccountId32Aliases;
+use xcm::latest::prelude::*;
 use xcm_emulator::TestExt;
-use xcm_executor::traits::Convert;
 
 use crate::{integration_tests::*, kusama_test_net::*};
 #[test]

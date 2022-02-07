@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -114,8 +114,10 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 		use CurrencyId::{Native, Stable, Token, VSToken};
 		match id {
 			Token(TokenSymbol::KSM) => Some(MultiLocation::parent()),
-			Native(TokenSymbol::ASG) | Native(TokenSymbol::BNC) | VSToken(TokenSymbol::KSM) =>
-				Some(native_currency_location(id, T::get())),
+			Native(TokenSymbol::ASG) |
+			Native(TokenSymbol::BNC) |
+			VSToken(TokenSymbol::KSM) |
+			Token(TokenSymbol::ZLK) => Some(native_currency_location(id, T::get())),
 			// Karura currencyId types
 			Token(TokenSymbol::KAR) => Some(MultiLocation::new(
 				1,
@@ -162,7 +164,8 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						match currency_id {
 							Native(TokenSymbol::ASG) |
 							Native(TokenSymbol::BNC) |
-							VSToken(TokenSymbol::KSM) => Some(currency_id),
+							VSToken(TokenSymbol::KSM) |
+							Token(TokenSymbol::ZLK) => Some(currency_id),
 							_ => None,
 						}
 					} else {
@@ -203,7 +206,8 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						match currency_id {
 							Native(TokenSymbol::ASG) |
 							Native(TokenSymbol::BNC) |
-							VSToken(TokenSymbol::KSM) => Some(currency_id),
+							VSToken(TokenSymbol::KSM) |
+							Token(TokenSymbol::ZLK) => Some(currency_id),
 							_ => None,
 						}
 					} else {

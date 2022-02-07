@@ -8,16 +8,6 @@ init:
 	git config core.hooksPath .githooks
 	./scripts/init.sh
 
-# Build Debug
-
-.PHONY: build-bifrost
-build-bifrost: copy-genesis-config
-	cargo build -p node-cli --locked --features "with-bifrost-runtime"
-
-.PHONY: build-all
-build-all: copy-genesis-config
-	cargo build -p node-cli --locked --features "with-all-runtime"
-
 # Build Release
 
 .PHONY: build-bifrost-release
@@ -36,17 +26,9 @@ build-bifrost-polkadot-release: copy-genesis-config-release
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
-.PHONY: check-bifrost
-check-bifrost:
-	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-bifrost-runtime"
-
 .PHONY: check-all
 check-all: format
 	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
-
-.PHONY: check-tests
-check-tests:
-	cargo check --features "with-all-runtime" --tests
 
 .PHONY: test-bifrost
 test-bifrost:
@@ -76,12 +58,11 @@ copy-genesis-config-release:
 
 .PHONY: format
 format:
-	rustup component add rustfmt
 	cargo +nightly fmt --all -- --check
 
 .PHONY: test-benchmarking
 test-benchmarking:
-	cargo test --features runtime-benchmarks --features with-bifrost-kusama-runtime benchmarking
+	cargo test --features runtime-benchmarks --features with-bifrost-kusama-runtime --features --all benchmarking
 
 .PHONY: generate-bifrost-weights
 generate-bifrost-weights:

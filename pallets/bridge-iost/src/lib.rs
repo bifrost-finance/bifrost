@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,12 @@
 #[macro_use]
 extern crate alloc;
 
+use alloc::{
+	collections::btree_map::BTreeMap,
+	string::{String, ToString},
+};
+use core::{convert::TryFrom, fmt::Debug, iter::FromIterator};
+
 use base64;
 use codec::{Decode, Encode};
 use frame_support::{
@@ -34,9 +40,17 @@ use frame_system::{
 	self as system, ensure_none, ensure_root, ensure_signed,
 	offchain::{SendTransactionTypes, SubmitTransaction},
 };
-use iost_chain::spv::{Head, VERIFIER_NUM, VOTE_INTERVAL};
-use iost_chain::{verify::BlockHead, ActionTransfer, IostAction};
+use iost_chain::{
+	spv::{Head, VERIFIER_NUM, VOTE_INTERVAL},
+	verify::BlockHead,
+	ActionTransfer, IostAction,
+};
 use lite_json::{parse_json, JsonValue};
+use node_primitives::{
+	BlockchainType, BridgeAssetBalance, BridgeAssetSymbol, BridgeAssetTo, CurrencyId,
+	CurrencyIdExt, TokenInfo, VtokenMintExt,
+};
+use orml_traits::{MultiCurrency, MultiReservableCurrency};
 use sp_application_crypto::RuntimeAppPublic;
 use sp_core::offchain::StorageKind;
 use sp_runtime::{
@@ -47,15 +61,6 @@ use sp_runtime::{
 	},
 };
 use sp_std::prelude::*;
-
-use alloc::collections::btree_map::BTreeMap;
-use alloc::string::{String, ToString};
-use core::{convert::TryFrom, fmt::Debug, iter::FromIterator};
-use node_primitives::{BlockchainType, BridgeAssetBalance,
-	BridgeAssetSymbol,BridgeAssetTo, 
-};
-use node_primitives::{CurrencyId, CurrencyIdExt, TokenInfo, VtokenMintExt};
-use orml_traits::{MultiCurrency, MultiReservableCurrency};
 
 use crate::transaction::IostTxOut;
 
@@ -147,8 +152,9 @@ const IOST_ACCOUNT_NAME: &[u8] = b"IOST_ACCOUNT_NAME";
 const IOST_SECRET_KEY: &[u8] = b"IOST_SECRET_KEY";
 const IOST_ACCOUNT_SIG_ALOG: &[u8] = b"IOST_ACCOUNT_SIG_ALOG";
 
-pub type CurrencyIdOf<T> =
-<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+pub type CurrencyIdOf<T> = <<T as Config>::CurrenciesHandler as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 decl_error! {
 	pub enum Error for Module<T: Config> {
@@ -256,8 +262,8 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
 
 	/// vtoken-mint module handler
-	type VtokenPoolHandler: VtokenMintExt<Balance = Self::Balance, CurrencyId= CurrencyId>;
-	
+	type VtokenPoolHandler: VtokenMintExt<Balance = Self::Balance, CurrencyId = CurrencyId>;
+
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
 
@@ -582,7 +588,7 @@ impl<T: Config> Module<T> {
 		let node_info = parse_json(data).map_err(|_| Error::<T>::LiteJsonError)?;
 
 		match node_info {
-			JsonValue::Array(ref json) => {
+			JsonValue::Array(ref json) =>
 				for (i, item) in json.iter().enumerate() {
 					match item {
 						JsonValue::String(ref chars) => {
@@ -595,11 +601,10 @@ impl<T: Config> Module<T> {
 								4 => action_transfer.memo = v,
 								_ => (),
 							}
-						}
+						},
 						_ => return Err(Error::<T>::IOSTRpcError),
 					}
-				}
-			}
+				},
 			_ => return Err(Error::<T>::IOSTRpcError),
 		}
 		Ok(action_transfer)
@@ -608,7 +613,8 @@ impl<T: Config> Module<T> {
 	fn transaction_from_iost_to_bifrost(
 		action_transfer: &ActionTransfer,
 	) -> Result<T::AccountId, Error<T>> {
-		// check memo, example like "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:IOST", the formatter: {receiver}@{chain}:{token_symbol}
+		// check memo, example like "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY@bifrost:IOST",
+		// the formatter: {receiver}@{chain}:{token_symbol}
 		let split_memo = action_transfer
 			.memo
 			.as_str()
@@ -636,7 +642,7 @@ impl<T: Config> Module<T> {
 					_ => {
 						log::error!("A invalid token type, default token type will be vtoken");
 						return Err(Error::<T>::InvalidMemo);
-					}
+					},
 				},
 				_ => unreachable!("previous step checked he length of split_memo."),
 			}
@@ -663,13 +669,18 @@ impl<T: Config> Module<T> {
 
 		if token_id.is_vtoken() {
 			// according convert pool to convert EOS to vEOS
-			let vtoken_balances: T::Balance =
-				new_balance.saturating_mul(T::VtokenPoolHandler::get_mint_pool(v_iost_id)) / T::VtokenPoolHandler::get_mint_pool(iost_id);
+			let vtoken_balances: T::Balance = new_balance
+				.saturating_mul(T::VtokenPoolHandler::get_mint_pool(v_iost_id)) /
+				T::VtokenPoolHandler::get_mint_pool(iost_id);
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId>>::deposit(v_iost_id, &target, vtoken_balances).map_err(|_| Error::<T>::DepositError)?;
+				<T as frame_system::Config>::AccountId,
+			>>::deposit(v_iost_id, &target, vtoken_balances)
+			.map_err(|_| Error::<T>::DepositError)?;
 		} else {
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId>>::deposit(iost_id, &target, new_balance).map_err(|_| Error::<T>::DepositError)?;
+				<T as frame_system::Config>::AccountId,
+			>>::deposit(iost_id, &target, new_balance)
+			.map_err(|_| Error::<T>::DepositError)?;
 		}
 
 		Ok(target)
@@ -684,21 +695,19 @@ impl<T: Config> Module<T> {
 		// core::str::from_utf8(&pending_trx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		for trx in bridge_tx_outs.iter() {
 			match trx {
-				IostTxOut::Processing {
-					tx_id,
-					multi_sig_tx,
-				} => {
+				IostTxOut::Processing { tx_id, multi_sig_tx } => {
 					let tx = bs58::encode(tx_id).into_string();
 					// let tx =
-					//	 core::str::from_utf8(&tx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
+					// 	 core::str::from_utf8(&tx_id).map_err(|_| Error::<T>::ParseUtf8Error)?;
 					if pending_trx.ne(tx.as_str()) {
 						continue;
 					}
 					let target = &multi_sig_tx.from;
 					let _token_symbol = multi_sig_tx.token_type;
 					let asset_id = Self::iost_asset_id();
-					let all_vtoken_balances =<<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId>>::free_balance(asset_id, &target);
+					let all_vtoken_balances = <<T as Config>::CurrenciesHandler as MultiCurrency<
+						<T as frame_system::Config>::AccountId,
+					>>::free_balance(asset_id, &target);
 
 					// let amount = action_transfer.amount.clone();
 					let token_balances: u128 = action_transfer
@@ -716,10 +725,11 @@ impl<T: Config> Module<T> {
 
 					// the trade is verified, unlock asset
 					<<T as Config>::CurrenciesHandler as MultiReservableCurrency<
-					<T as frame_system::Config>::AccountId>>::unreserve(asset_id, &target, vtoken_balances);
+						<T as frame_system::Config>::AccountId,
+					>>::unreserve(asset_id, &target, vtoken_balances);
 
 					return Ok(target.clone());
-				}
+				},
 				_ => continue,
 			}
 		}
@@ -728,9 +738,8 @@ impl<T: Config> Module<T> {
 	}
 
 	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
-		let decoded_ss58 = bs58::decode(receiver)
-			.into_vec()
-			.map_err(|_| Error::<T>::InvalidAccountId)?;
+		let decoded_ss58 =
+			bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
 
 		// todo, decoded_ss58.first() == Some(&42) || Some(&6) || ...
 		if decoded_ss58.len() == 35 {
@@ -771,7 +780,7 @@ impl<T: Config> Module<T> {
 					vote_block_number as IostBlockNumber,
 				));
 				Ok(())
-			}
+			},
 			Err(e) => Err(e),
 		}
 	}
@@ -819,7 +828,7 @@ impl<T: Config> Module<T> {
 			}
 
 			match valid_witness.get(&b.witness) {
-				None => {
+				None =>
 					for produce_arr in producers.iter() {
 						let produce = core::str::from_utf8(&produce_arr)
 							.map_err(|_| Error::<T>::ParseUtf8Error)?;
@@ -828,9 +837,8 @@ impl<T: Config> Module<T> {
 							valid_witness_count = valid_witness_count + 1;
 							break;
 						}
-					}
-				}
-				_ => {}
+					},
+				_ => {},
 			}
 			parent_block_number = b.number;
 			parent_hash = b.hash();
@@ -857,7 +865,8 @@ impl<T: Config> Module<T> {
 		let memo = core::str::from_utf8(&bridge_asset.memo)
 			.map_err(|_| Error::<T>::ParseUtf8Error)?
 			.to_string();
-		// let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+		// let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision
+		// as u32))) as i64;
 		let original_amount =
 			(bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(4))) as u128;
 
@@ -890,7 +899,8 @@ impl<T: Config> Module<T> {
 		log::info!(target: "bridge-iost", "IOST_SECRET_KEY ------------- {:?}.", sk_str.as_str());
 		log::info!(target: "bridge-iost", "IOST_ACCOUNT_SIG_ALOG ------------- {:?}.", sig_algorithm.as_str());
 
-		let bridge_tx_outs = bridge_tx_outs.into_iter()
+		let bridge_tx_outs = bridge_tx_outs
+			.into_iter()
 			.map(|bto| {
 				match bto {
 					// generate raw transactions
@@ -901,55 +911,55 @@ impl<T: Config> Module<T> {
 								log::info!(target: "bridge-iost", "bto.generate {:?}",generated_bto);
 								log::info!("bto.generate");
 								generated_bto
-							}
+							},
 							Err(e) => {
 								log::info!("failed to get latest block due to: {:?}", e);
 								bto
-							}
+							},
 						}
-					}
+					},
 					_ => bto,
 				}
 			})
-			.map(|bto| {
-				match bto {
-					IostTxOut::<T::AccountId, CurrencyIdOf<T>>::Generated(_) => {
-						let _author = <pallet_authorship::Pallet<T>>::author();
-						let mut ret = bto.clone();
-						let decoded_sk = bs58::decode(sk_str.as_str()).into_vec().map_err(|_| Error::<T>::IostKeysError).unwrap();
+			.map(|bto| match bto {
+				IostTxOut::<T::AccountId, CurrencyIdOf<T>>::Generated(_) => {
+					let _author = <pallet_authorship::Pallet<T>>::author();
+					let mut ret = bto.clone();
+					let decoded_sk = bs58::decode(sk_str.as_str())
+						.into_vec()
+						.map_err(|_| Error::<T>::IostKeysError)
+						.unwrap();
 
-						match bto.sign::<T>(decoded_sk, account_name.as_str(), sig_algorithm.as_str()) {
-							Ok(signed_bto) => {
-								has_change.set(true);
-								log::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
-								ret = signed_bto;
-							}
-							Err(e) => log::warn!("bto.sign with failure: {:?}", e),
-						}
-						ret
+					match bto.sign::<T>(decoded_sk, account_name.as_str(), sig_algorithm.as_str()) {
+						Ok(signed_bto) => {
+							has_change.set(true);
+							log::info!(target: "bridge-iost", "bto.sign {:?}", signed_bto);
+							ret = signed_bto;
+						},
+						Err(e) => log::warn!("bto.sign with failure: {:?}", e),
 					}
-					_ => bto,
-				}
+					ret
+				},
+				_ => bto,
 			})
-			.map(|bto| {
-				match bto {
-					IostTxOut::<T::AccountId, CurrencyIdOf<T>>::Signed(_) => {
-						match bto.clone().send::<T>(node_url.as_str()) {
-							Ok(sent_bto) => {
-								has_change.set(true);
-								log::info!(target: "bridge-iost", "bto.send {:?}", sent_bto,);
-								log::info!("bto.send");
-								sent_bto
-							}
-							Err(e) => {
-								log::warn!("error happened while pushing transaction: {:?}", e);
-								bto
-							}
-						}
+			.map(|bto| match bto {
+				IostTxOut::<T::AccountId, CurrencyIdOf<T>>::Signed(_) => {
+					match bto.clone().send::<T>(node_url.as_str()) {
+						Ok(sent_bto) => {
+							has_change.set(true);
+							log::info!(target: "bridge-iost", "bto.send {:?}", sent_bto,);
+							log::info!("bto.send");
+							sent_bto
+						},
+						Err(e) => {
+							log::warn!("error happened while pushing transaction: {:?}", e);
+							bto
+						},
 					}
-					_ => bto,
-				}
-			}).collect::<Vec<_>>();
+				},
+				_ => bto,
+			})
+			.collect::<Vec<_>>();
 
 		if has_change.get() {
 			// BridgeTxOuts::<T>::put(bridge_tx_outs.clone()); // update transaction list
@@ -958,7 +968,7 @@ impl<T: Config> Module<T> {
 			match SubmitTransaction::<T, Call<T>>::submit_unsigned_transaction(call.into()) {
 				Ok(_) => {
 					log::info!(target: "bridge-iost", "Call::bridge_tx_report {:?}", bridge_tx_outs)
-				}
+				},
 				Err(e) => log::warn!("submit transaction with failure: {:?}", e),
 			}
 		}
@@ -966,20 +976,21 @@ impl<T: Config> Module<T> {
 	}
 
 	// fn convert_to_iost_asset<A, P, B>(
-	//	 bridge_asset: &BridgeAssetBalance<A, P, B>
+	// 	 bridge_asset: &BridgeAssetBalance<A, P, B>
 	// ) -> Result<Asset, Error<T>>
-	//	 where
-	//		 P: AtLeast32Bit + Copy,
-	//		 B: AtLeast32Bit + Copy
+	// 	 where
+	// 		 P: AtLeast32Bit + Copy,
+	// 		 B: AtLeast32Bit + Copy
 	// {
-	//	 let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
-	//	 let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(|_| Error::<T>::ParseUtf8Error)?;
-	//	 let symbol_code = SymbolCode::try_from(symbol_str).map_err(|_| Error::<T>::ParseUtf8Error)?;
-	//	 let symbol = Symbol::new_with_code(precision, symbol_code);
+	// 	 let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
+	// 	 let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(|_|
+	// Error::<T>::ParseUtf8Error)?; 	 let symbol_code = SymbolCode::try_from(symbol_str).map_err(|_|
+	// Error::<T>::ParseUtf8Error)?; 	 let symbol = Symbol::new_with_code(precision, symbol_code);
 	//
-	//	 let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+	// 	 let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as
+	// u32))) as i64;
 	//
-	//	 Ok(Asset::new(amount, symbol))
+	// 	 Ok(Asset::new(amount, symbol))
 	// }
 
 	fn get_offchain_storage(key: &[u8]) -> Result<String, Error<T>> {
@@ -990,7 +1001,9 @@ impl<T: Config> Module<T> {
 	}
 }
 
-impl<T: Config> BridgeAssetTo<T::AccountId, CurrencyIdOf<T>, T::Precision, T::Balance> for Module<T> {
+impl<T: Config> BridgeAssetTo<T::AccountId, CurrencyIdOf<T>, T::Precision, T::Balance>
+	for Module<T>
+{
 	type Error = crate::Error<T>;
 	fn bridge_asset_to(
 		target: Vec<u8>,

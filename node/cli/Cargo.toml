@@ -55,8 +55,8 @@ polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = 
 substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
 
 [features]
-default = [ "wasmtime", "cli" ]
-wasmtime = [ "sc-cli/wasmtime", "sc-service/wasmtime" ]
+default = ["wasmtime", "cli"]
+wasmtime = ["sc-cli/wasmtime", "sc-service/wasmtime"]
 cli = [
 	"node-inspect",
 	"sc-cli",

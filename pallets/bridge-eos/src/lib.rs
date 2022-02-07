@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -21,41 +21,50 @@
 extern crate alloc;
 
 use alloc::string::{String, ToString};
-use core::{convert::TryFrom, ops::Div, str::FromStr, fmt::Debug};
-use crate::transaction::TxOut;
+use core::{convert::TryFrom, fmt::Debug, ops::Div, str::FromStr};
+
 use codec::{Decode, Encode};
 use eos_chain::{
-	Action, ActionTransfer, ActionReceipt, Asset, Checksum256, Digest, IncrementalMerkle,
-	ProducerSchedule, SignedBlockHeader, Symbol, SymbolCode, Read, verify_proof, ActionName,
-	ProducerAuthoritySchedule, ProducerAuthority,
+	verify_proof, Action, ActionName, ActionReceipt, ActionTransfer, Asset, Checksum256, Digest,
+	IncrementalMerkle, ProducerAuthority, ProducerAuthoritySchedule, ProducerSchedule, Read,
+	SignedBlockHeader, Symbol, SymbolCode,
 };
 use eos_keys::secret::SecretKey;
-use sp_std::prelude::*;
-use sp_core::offchain::StorageKind;
-use sp_runtime::{
-	traits::{Member, SaturatedConversion, Saturating, AtLeast32Bit, MaybeSerializeDeserialize, Zero},
-	transaction_validity::{
-		InvalidTransaction, TransactionLongevity, TransactionPriority,
-		TransactionValidity, ValidTransaction, TransactionSource
-	},
-};
 use frame_support::{
-	decl_event, decl_module, decl_storage, decl_error, ensure, Parameter, traits::Get,
-	dispatch::DispatchResult, weights::{DispatchClass, Weight, Pays}, IterableStorageMap, StorageValue,
+	decl_error, decl_event, decl_module, decl_storage,
+	dispatch::DispatchResult,
+	ensure,
+	traits::Get,
+	weights::{DispatchClass, Pays, Weight},
+	IterableStorageMap, Parameter, StorageValue,
 };
 use frame_system::{
-	self as system, ensure_root, ensure_none, ensure_signed, offchain::{SubmitTransaction, SendTransactionTypes}
+	self as system, ensure_none, ensure_root, ensure_signed,
+	offchain::{SendTransactionTypes, SubmitTransaction},
 };
 use node_primitives::{
-	BridgeAssetBalance,  BridgeAssetTo, BridgeAssetSymbol, BlockchainType,
-	VtokenMintExt, CurrencyId, CurrencyIdExt, TokenInfo,
+	BlockchainType, BridgeAssetBalance, BridgeAssetSymbol, BridgeAssetTo, CurrencyId,
+	CurrencyIdExt, TokenInfo, VtokenMintExt,
 };
-use sp_application_crypto::RuntimeAppPublic;
 use orml_traits::{MultiCurrency, MultiReservableCurrency};
+use sp_application_crypto::RuntimeAppPublic;
+use sp_core::offchain::StorageKind;
+use sp_runtime::{
+	traits::{
+		AtLeast32Bit, MaybeSerializeDeserialize, Member, SaturatedConversion, Saturating, Zero,
+	},
+	transaction_validity::{
+		InvalidTransaction, TransactionLongevity, TransactionPriority, TransactionSource,
+		TransactionValidity, ValidTransaction,
+	},
+};
+use sp_std::prelude::*;
 
-mod transaction;
+use crate::transaction::TxOut;
+
 mod mock;
 mod tests;
+mod transaction;
 
 pub trait WeightInfo {
 	fn clear_cross_trade_times() -> Weight;
@@ -74,19 +83,45 @@ pub trait WeightInfo {
 }
 
 impl WeightInfo for () {
-	fn clear_cross_trade_times() -> Weight { Default::default() }
-	fn bridge_enable() -> Weight { Default::default() }
-	fn save_producer_schedule() -> Weight { Default::default() }
-	fn init_schedule() -> Weight { Default::default() }
-	fn grant_crosschain_privilege() -> Weight { Default::default() }
-	fn remove_crosschain_privilege() -> Weight { Default::default() }
-	fn set_contract_accounts() -> Weight { Default::default() }
-	fn change_schedule() -> Weight { Default::default() }
-	fn prove_action() -> Weight { Default::default() }
-	fn bridge_tx_report() -> Weight { Default::default() }
-	fn update_bridge_trx_status() -> Weight { Default::default() }
-	fn trial_on_trx_status() -> Weight { Default::default() }
-	fn cross_to_eos(_: Weight) -> Weight { Default::default() }
+	fn clear_cross_trade_times() -> Weight {
+		Default::default()
+	}
+	fn bridge_enable() -> Weight {
+		Default::default()
+	}
+	fn save_producer_schedule() -> Weight {
+		Default::default()
+	}
+	fn init_schedule() -> Weight {
+		Default::default()
+	}
+	fn grant_crosschain_privilege() -> Weight {
+		Default::default()
+	}
+	fn remove_crosschain_privilege() -> Weight {
+		Default::default()
+	}
+	fn set_contract_accounts() -> Weight {
+		Default::default()
+	}
+	fn change_schedule() -> Weight {
+		Default::default()
+	}
+	fn prove_action() -> Weight {
+		Default::default()
+	}
+	fn bridge_tx_report() -> Weight {
+		Default::default()
+	}
+	fn update_bridge_trx_status() -> Weight {
+		Default::default()
+	}
+	fn trial_on_trx_status() -> Weight {
+		Default::default()
+	}
+	fn cross_to_eos(_: Weight) -> Weight {
+		Default::default()
+	}
 }
 
 lazy_static::lazy_static! {
@@ -113,8 +148,8 @@ pub mod sr25519 {
 
 		impl From<sp_runtime::AccountId32> for Public {
 			fn from(acct: sp_runtime::AccountId32) -> Self {
-				let mut data =  [0u8;32];
-				let acct_data: &[u8;32] = acct.as_ref();
+				let mut data = [0u8; 32];
+				let acct_data: &[u8; 32] = acct.as_ref();
 				for (index, val) in acct_data.iter().enumerate() {
 					data[index] = *val;
 				}
@@ -137,7 +172,7 @@ pub mod sr25519 {
 
 pub mod ed25519 {
 	mod app_ed25519 {
-		use sp_application_crypto::{app_crypto, key_types::ACCOUNT, ed25519};
+		use sp_application_crypto::{app_crypto, ed25519, key_types::ACCOUNT};
 		app_crypto!(ed25519, ACCOUNT);
 	}
 
@@ -156,8 +191,9 @@ pub mod ed25519 {
 const EOS_NODE_URL: &[u8] = b"EOS_NODE_URL";
 const EOS_SECRET_KEY: &[u8] = b"EOS_SECRET_KEY";
 
-pub type CurrencyIdOf<T> =
-<<T as Config>::CurrenciesHandler as MultiCurrency<<T as frame_system::Config>::AccountId>>::CurrencyId;
+pub type CurrencyIdOf<T> = <<T as Config>::CurrenciesHandler as MultiCurrency<
+	<T as frame_system::Config>::AccountId,
+>>::CurrencyId;
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Copy)]
 #[non_exhaustive]
@@ -272,7 +308,11 @@ decl_error! {
 
 pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 	/// The identifier type for an authority.
-	type AuthorityId: Member + Parameter + RuntimeAppPublic + Default + Ord
+	type AuthorityId: Member
+		+ Parameter
+		+ RuntimeAppPublic
+		+ Default
+		+ Ord
 		+ From<<Self as frame_system::Config>::AccountId>;
 
 	type Event: From<Event<Self>> + Into<<Self as system::Config>::Event>;
@@ -284,10 +324,10 @@ pub trait Config: SendTransactionTypes<Call<Self>> + pallet_authorship::Config {
 	type Precision: Member + Parameter + AtLeast32Bit + Default + Copy + MaybeSerializeDeserialize;
 
 	type CurrenciesHandler: MultiCurrency<Self::AccountId, CurrencyId = CurrencyId, Balance = Self::Balance>
-							+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
+		+ MultiReservableCurrency<Self::AccountId, CurrencyId = CurrencyId>;
 
 	/// vtoken-mint module handler
-	type VtokenPoolHandler: VtokenMintExt<Balance = Self::Balance, CurrencyId= CurrencyId>;
+	type VtokenPoolHandler: VtokenMintExt<Balance = Self::Balance, CurrencyId = CurrencyId>;
 
 	/// A dispatchable call type.
 	type Call: From<Call<Self>>;
@@ -783,7 +823,13 @@ impl<T: Config> Module<T> {
 			Self::calculate_block_header_merkle_root(&mut merkle, &block_header, &block_ids)?;
 
 			// verify block header signature
-			Self::verify_block_header_signature(schedule_hash, producer_schedule, block_header, &merkle.get_root()).map_err(|_| Error::<T>::SignatureVerificationFailure)?;
+			Self::verify_block_header_signature(
+				schedule_hash,
+				producer_schedule,
+				block_header,
+				&merkle.get_root(),
+			)
+			.map_err(|_| Error::<T>::SignatureVerificationFailure)?;
 
 			// append current block id
 			let block_id = block_header.id().map_err(|_| Error::<T>::FailureOnGetBlockId)?;
@@ -800,7 +846,9 @@ impl<T: Config> Module<T> {
 		expected_mroot: &Checksum256,
 	) -> Result<(), Error<T>> {
 		let pk = producer_schedule.get_producer_key(block_header.block_header.producer);
-		block_header.verify(*expected_mroot, *schedule_hash, pk).map_err(|_| Error::<T>::SignatureVerificationFailure)?;
+		block_header
+			.verify(*expected_mroot, *schedule_hash, pk)
+			.map_err(|_| Error::<T>::SignatureVerificationFailure)?;
 
 		Ok(())
 	}
@@ -815,19 +863,21 @@ impl<T: Config> Module<T> {
 		}
 
 		// append previous block id
-		merkle.append(block_header.block_header.previous).map_err(|_| Error::<T>::AppendIncreMerkleError)?;
+		merkle
+			.append(block_header.block_header.previous)
+			.map_err(|_| Error::<T>::AppendIncreMerkleError)?;
 
 		Ok(())
 	}
 
 	fn get_schedule_hash_and_public_key(
-		new_producers: Option<&ProducerSchedule>
+		new_producers: Option<&ProducerSchedule>,
 	) -> Result<(Checksum256, ProducerAuthoritySchedule), Error<T>> {
 		let ps = match new_producers {
 			Some(producers) => {
 				let schedule_version = PendingScheduleVersion::get();
 				if schedule_version != producers.version {
-					return Err(Error::<T>::InvalidScheduleHash)
+					return Err(Error::<T>::InvalidScheduleHash);
 				}
 				let producers = ProducerSchedules::get(schedule_version).0;
 				let ps = ProducerAuthoritySchedule::new(schedule_version, producers);
@@ -838,25 +888,32 @@ impl<T: Config> Module<T> {
 				let producers = ProducerSchedules::get(schedule_version).0;
 				let ps = ProducerAuthoritySchedule::new(schedule_version, producers);
 				ps
-			}
+			},
 		};
 
-		let schedule_hash: Checksum256 = ps.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
+		let schedule_hash: Checksum256 =
+			ps.schedule_hash().map_err(|_| Error::<T>::InvalidScheduleHash)?;
 
 		Ok((schedule_hash, ps))
 	}
 
 	fn get_action_transfer_from_action(act: &Action) -> Result<ActionTransfer, Error<T>> {
-		let action_transfer = ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
+		let action_transfer =
+			ActionTransfer::read(&act.data, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
 
 		Ok(action_transfer)
 	}
 
 	fn transaction_from_eos_to_bifrost(
-		action_transfer: &ActionTransfer
+		action_transfer: &ActionTransfer,
 	) -> Result<(T::AccountId, T::Balance), Error<T>> {
-		// check memo, example like "alice@bifrost:EOS", the formatter: {receiver}@{chain}:{token_symbol}
-		let split_memo = action_transfer.memo.as_str().split(|c| c == '@' || c == ':').collect::<Vec<_>>();
+		// check memo, example like "alice@bifrost:EOS", the formatter:
+		// {receiver}@{chain}:{token_symbol}
+		let split_memo = action_transfer
+			.memo
+			.as_str()
+			.split(|c| c == '@' || c == ':')
+			.collect::<Vec<_>>();
 
 		// the length should be 2, either 3.
 		if split_memo.len().gt(&3) || split_memo.len().lt(&2) {
@@ -872,17 +929,15 @@ impl<T: Config> Module<T> {
 		let token_id = {
 			match split_memo.len() {
 				2 => eos_id,
-				3 => {
-					match split_memo[2] {
-						"" | "vEOS" => v_eos_id,
-						"EOS" => eos_id,
-						_ => {
-							log::error!("A invalid token type, default token type will be vtoken");
-							return Err(Error::<T>::InvalidMemo);
-						}
-					}
-				}
-				_ => unreachable!("previous step checked he length of split_memo.")
+				3 => match split_memo[2] {
+					"" | "vEOS" => v_eos_id,
+					"EOS" => eos_id,
+					_ => {
+						log::error!("A invalid token type, default token type will be vtoken");
+						return Err(Error::<T>::InvalidMemo);
+					},
+				},
+				_ => unreachable!("previous step checked he length of split_memo."),
 			}
 		};
 		// todo, vEOS or EOS, all asset will be added to EOS asset, instead of vEOS or EOS
@@ -901,18 +956,25 @@ impl<T: Config> Module<T> {
 			Error::<T>::EOSSymbolMismatch
 		);
 
-		let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
+		let token_balances =
+			(action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
+		let new_balance: T::Balance = TryFrom::<u128>::try_from(token_balances)
+			.map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 		if token_id.is_vtoken() {
 			// according vtoken mint pool to mint EOS vEOS
-			let vtoken_balances: T::Balance =
-				new_balance.saturating_mul(T::VtokenPoolHandler::get_mint_pool(v_eos_id)) / T::VtokenPoolHandler::get_mint_pool(eos_id);
+			let vtoken_balances: T::Balance = new_balance
+				.saturating_mul(T::VtokenPoolHandler::get_mint_pool(v_eos_id)) /
+				T::VtokenPoolHandler::get_mint_pool(eos_id);
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId>>::deposit(v_eos_id, &target, vtoken_balances).map_err(|_| Error::<T>::DepositError)?;
+				<T as frame_system::Config>::AccountId,
+			>>::deposit(v_eos_id, &target, vtoken_balances)
+			.map_err(|_| Error::<T>::DepositError)?;
 		} else {
 			<<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId>>::deposit(eos_id, &target, new_balance).map_err(|_| Error::<T>::DepositError)?;
+				<T as frame_system::Config>::AccountId,
+			>>::deposit(eos_id, &target, new_balance)
+			.map_err(|_| Error::<T>::DepositError)?;
 		}
 
 		Ok((target, new_balance))
@@ -920,7 +982,7 @@ impl<T: Config> Module<T> {
 
 	fn transaction_from_bifrost_to_eos(
 		pending_trx_id: Checksum256,
-		action_transfer: &ActionTransfer
+		action_transfer: &ActionTransfer,
 	) -> Result<T::AccountId, Error<T>> {
 		let (processing_trx, trade_index) = ProcessingBridgeTrx::<T>::get(&pending_trx_id);
 
@@ -929,7 +991,8 @@ impl<T: Config> Module<T> {
 				let target = from.clone();
 
 				let all_vtoken_balances = <<T as Config>::CurrenciesHandler as MultiCurrency<
-				<T as frame_system::Config>::AccountId>>::free_balance(asset_id, &target);
+					<T as frame_system::Config>::AccountId,
+				>>::free_balance(asset_id, &target);
 
 				let symbol = action_transfer.quantity.symbol;
 				let symbol_code = symbol.code().to_string().into_bytes();
@@ -943,8 +1006,10 @@ impl<T: Config> Module<T> {
 					Error::<T>::EOSSymbolMismatch
 				);
 
-				let token_balances = (action_transfer.quantity.amount as u128) * 10u128.pow(12 - symbol_precision as u32);
-				let vtoken_balances = TryFrom::<u128>::try_from(token_balances).map_err(|_| Error::<T>::VtokenMintBalanceError)?;
+				let token_balances = (action_transfer.quantity.amount as u128) *
+					10u128.pow(12 - symbol_precision as u32);
+				let vtoken_balances = TryFrom::<u128>::try_from(token_balances)
+					.map_err(|_| Error::<T>::VtokenMintBalanceError)?;
 
 				if all_vtoken_balances.lt(&vtoken_balances) {
 					log::warn!("origin account balance must be greater than or equal to the transfer amount.");
@@ -953,7 +1018,8 @@ impl<T: Config> Module<T> {
 
 				// the trade is verified, unlock asset
 				<<T as Config>::CurrenciesHandler as MultiReservableCurrency<
-					<T as frame_system::Config>::AccountId>>::unreserve(asset_id, &target, vtoken_balances);
+					<T as frame_system::Config>::AccountId,
+				>>::unreserve(asset_id, &target, vtoken_balances);
 
 				// update times of trade from Bifrost => EOS
 				if LowLimitOnCrossChain::<T>::get() <= vtoken_balances {
@@ -969,7 +1035,7 @@ impl<T: Config> Module<T> {
 				ProcessingBridgeTrx::<T>::remove(pending_trx_id);
 
 				return Ok(target.clone());
-			}
+			},
 			_ => (),
 		}
 
@@ -979,7 +1045,8 @@ impl<T: Config> Module<T> {
 	/// check receiver account format
 	/// https://github.com/paritytech/substrate/wiki/External-Address-Format-(SS58)
 	fn get_account_data(receiver: &str) -> Result<[u8; 32], Error<T>> {
-		let decoded_ss58 = bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
+		let decoded_ss58 =
+			bs58::decode(receiver).into_vec().map_err(|_| Error::<T>::InvalidAccountId)?;
 
 		// todo, decoded_ss58.first() == Some(&42) || Some(&6) || ...
 		if decoded_ss58.len() == 35 {
@@ -1000,21 +1067,35 @@ impl<T: Config> Module<T> {
 		raw_to: Vec<u8>,
 		bridge_asset: BridgeAssetBalance<T::AccountId, CurrencyIdOf<T>, P, B>,
 	) -> Result<TxOut<T::AccountId, CurrencyIdOf<T>>, Error<T>>
-		where
-			P: AtLeast32Bit + Copy,
-			B: AtLeast32Bit + Copy,
+	where
+		P: AtLeast32Bit + Copy,
+		B: AtLeast32Bit + Copy,
 	{
 		let (raw_from, threshold) = BridgeContractAccount::get();
-		let memo = core::str::from_utf8(&bridge_asset.memo).map_err(|_| Error::<T>::ParseUtf8Error)?.to_string();
-		let amount = Self::convert_to_eos_asset::<T::AccountId, CurrencyIdOf<T>, P, B>(&bridge_asset)?;
+		let memo = core::str::from_utf8(&bridge_asset.memo)
+			.map_err(|_| Error::<T>::ParseUtf8Error)?
+			.to_string();
+		let amount =
+			Self::convert_to_eos_asset::<T::AccountId, CurrencyIdOf<T>, P, B>(&bridge_asset)?;
 
-		let tx_out = TxOut::<T::AccountId, CurrencyIdOf<T>>::init(raw_from, raw_to, amount, threshold, &memo, bridge_asset.from.clone(), bridge_asset.asset_id)?;
+		let tx_out = TxOut::<T::AccountId, CurrencyIdOf<T>>::init(
+			raw_from,
+			raw_to,
+			amount,
+			threshold,
+			&memo,
+			bridge_asset.from.clone(),
+			bridge_asset.asset_id,
+		)?;
 
 		CrossTradeIndex::<T>::mutate(&bridge_asset.from, |index| {
 			*index += 1;
 		});
 
-		BridgeTrxStatus::<T>::insert((&tx_out, CrossTradeIndex::<T>::get(&bridge_asset.from)), TransactionStatus::Initialized);
+		BridgeTrxStatus::<T>::insert(
+			(&tx_out, CrossTradeIndex::<T>::get(&bridge_asset.from)),
+			TransactionStatus::Initialized,
+		);
 
 		Ok(tx_out)
 	}
@@ -1026,25 +1107,32 @@ impl<T: Config> Module<T> {
 		let sk = SecretKey::from_wif(&sk_str).map_err(|_| Error::<T>::ParseSecretKeyError)?;
 
 		let mut changed_status_trxs = Vec::new();
-		for ((trx, index), status) in BridgeTrxStatus::<T>::iter()
-			.filter(|(_, status)|
-				status == &TransactionStatus::Initialized ||
+		for ((trx, index), status) in BridgeTrxStatus::<T>::iter().filter(|(_, status)| {
+			status == &TransactionStatus::Initialized ||
 				status == &TransactionStatus::Created ||
 				status == &TransactionStatus::SignComplete
-			)
-		{
+		}) {
 			match (trx.clone(), status) {
-				(TxOut::<T::AccountId, CurrencyIdOf<T>>::Initialized(_), TransactionStatus::Initialized) => {
-					match trx.clone().generate::<T>(node_url.as_str()) {
-						Ok(generated_trx) => {
-							changed_status_trxs.push(((generated_trx, index), TransactionStatus::Created, (trx.clone(), index),  None));
-						}
-						Err(e) => {
-							log::error!("failed to get latest block due to: {:?}", e);
-						}
-					}
-				}
-				(TxOut::<T::AccountId, CurrencyIdOf<T>>::Created(_), TransactionStatus::Created) => {
+				(
+					TxOut::<T::AccountId, CurrencyIdOf<T>>::Initialized(_),
+					TransactionStatus::Initialized,
+				) => match trx.clone().generate::<T>(node_url.as_str()) {
+					Ok(generated_trx) => {
+						changed_status_trxs.push((
+							(generated_trx, index),
+							TransactionStatus::Created,
+							(trx.clone(), index),
+							None,
+						));
+					},
+					Err(e) => {
+						log::error!("failed to get latest block due to: {:?}", e);
+					},
+				},
+				(
+					TxOut::<T::AccountId, CurrencyIdOf<T>>::Created(_),
+					TransactionStatus::Created,
+				) => {
 					let author = <pallet_authorship::Pallet<T>>::author();
 					// ensure current node has the right to sign a cross trade
 					if NotaryKeys::<T>::get().contains(&author) {
@@ -1052,42 +1140,63 @@ impl<T: Config> Module<T> {
 							Ok(signed_trx) => {
 								// ensure this transaction collects enough signatures
 								let status = {
-									if let TxOut::<T::AccountId, CurrencyIdOf<T>>::Created(_) = signed_trx {
+									if let TxOut::<T::AccountId, CurrencyIdOf<T>>::Created(_) =
+										signed_trx
+									{
 										TransactionStatus::Created
 									} else {
 										TransactionStatus::SignComplete
 									}
 								};
-								changed_status_trxs.push(((signed_trx, index), status, (trx.clone(), index), None));
-							}
+								changed_status_trxs.push((
+									(signed_trx, index),
+									status,
+									(trx.clone(), index),
+									None,
+								));
+							},
 							Err(e) => {
 								log::error!("failed to get latest block due to: {:?}", e);
-							}
+							},
 						}
 					}
-				}
-				(TxOut::<T::AccountId, CurrencyIdOf<T>>::SignComplete(_), TransactionStatus::SignComplete) => {
-					match trx.clone().send::<T>(node_url.as_str()) {
-						Ok(processing_trx) => {
-							let trx_id = match processing_trx {
-								TxOut::Sent { tx_id, .. } => Some(tx_id.clone()),
-								_ => None,
-							};
-							changed_status_trxs.push(((processing_trx, index), TransactionStatus::Sent, (trx.clone(), index), trx_id));
-						}
-						Err(e) => {
-							match e {
-								Error::<T>::SendingDuplicatedTransaction => {
-									changed_status_trxs.push(((trx.clone(), index), TransactionStatus::Sent, (trx, index), None));
-								}
-								Error::<T>::TransactionExpired => {
-									changed_status_trxs.push(((trx.clone(), index), TransactionStatus::Sent, (trx, index), None));
-								}
-								_ => {}
-							}
-						}
-					}
-				}
+				},
+				(
+					TxOut::<T::AccountId, CurrencyIdOf<T>>::SignComplete(_),
+					TransactionStatus::SignComplete,
+				) => match trx.clone().send::<T>(node_url.as_str()) {
+					Ok(processing_trx) => {
+						let trx_id = match processing_trx {
+							TxOut::Sent { tx_id, .. } => Some(tx_id.clone()),
+							_ => None,
+						};
+						changed_status_trxs.push((
+							(processing_trx, index),
+							TransactionStatus::Sent,
+							(trx.clone(), index),
+							trx_id,
+						));
+					},
+					Err(e) => match e {
+						Error::<T>::SendingDuplicatedTransaction => {
+							changed_status_trxs.push((
+								(trx.clone(), index),
+								TransactionStatus::Sent,
+								(trx, index),
+								None,
+							));
+						},
+						Error::<T>::TransactionExpired => {
+							changed_status_trxs.push((
+								(trx.clone(), index),
+								TransactionStatus::Sent,
+								(trx, index),
+								None,
+							));
+						},
+						_ => {},
+					},
+				},
 				_ => continue,
 			}
 		}
@@ -1104,40 +1213,55 @@ impl<T: Config> Module<T> {
 	}
 
 	fn convert_to_eos_asset<A, AI, P, B>(
-		bridge_asset: &BridgeAssetBalance<A, AI, P, B>
+		bridge_asset: &BridgeAssetBalance<A, AI, P, B>,
 	) -> Result<Asset, Error<T>>
-		where
-			P: AtLeast32Bit + Copy,
-			B: AtLeast32Bit + Copy
+	where
+		P: AtLeast32Bit + Copy,
+		B: AtLeast32Bit + Copy,
 	{
 		let precision = bridge_asset.symbol.precision.saturated_into::<u8>();
-		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol).map_err(|_| Error::<T>::ParseUtf8Error)?;
-		let symbol_code = SymbolCode::try_from(symbol_str).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let symbol_str = core::str::from_utf8(&bridge_asset.symbol.symbol)
+			.map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let symbol_code =
+			SymbolCode::try_from(symbol_str).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let symbol = Symbol::new_with_code(precision, symbol_code);
 
-		let amount = (bridge_asset.amount.saturated_into::<u128>() / (10u128.pow(12 - precision as u32))) as i64;
+		let amount = (bridge_asset.amount.saturated_into::<u128>() /
+			(10u128.pow(12 - precision as u32))) as i64;
 
 		Ok(Asset::new(amount, symbol))
 	}
 
 	fn get_offchain_storage(key: &[u8]) -> Result<String, Error<T>> {
-		let value = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key, ).ok_or(Error::<T>::NoLocalStorage)?;
+		let value = sp_io::offchain::local_storage_get(StorageKind::PERSISTENT, key)
+			.ok_or(Error::<T>::NoLocalStorage)?;
 
 		Ok(String::from_utf8(value).map_err(|_| Error::<T>::ParseUtf8Error)?)
 	}
 }
 
-impl<T: Config> BridgeAssetTo<T::AccountId, CurrencyIdOf<T>, T::Precision, T::Balance> for Module<T> {
+impl<T: Config> BridgeAssetTo<T::AccountId, CurrencyIdOf<T>, T::Precision, T::Balance>
+	for Module<T>
+{
 	type Error = crate::Error<T>;
-	fn bridge_asset_to(target: Vec<u8>, bridge_asset: BridgeAssetBalance<T::AccountId, CurrencyIdOf<T>, T::Precision, T::Balance>) -> Result<(), Self::Error> {
+	fn bridge_asset_to(
+		target: Vec<u8>,
+		bridge_asset: BridgeAssetBalance<T::AccountId, CurrencyIdOf<T>, T::Precision, T::Balance>,
+	) -> Result<(), Self::Error> {
 		let _ = Self::tx_transfer_to(target, bridge_asset)?;
 
 		Ok(())
 	}
 
-	fn redeem(_: CurrencyIdOf<T>, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn stake(_: CurrencyIdOf<T>, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
-	fn unstake(_: CurrencyIdOf<T>, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> { Ok(()) }
+	fn redeem(_: CurrencyIdOf<T>, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+		Ok(())
+	}
+	fn stake(_: CurrencyIdOf<T>, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+		Ok(())
+	}
+	fn unstake(_: CurrencyIdOf<T>, _: T::Balance, _: Vec<u8>) -> Result<(), Self::Error> {
+		Ok(())
+	}
 }
 
 #[allow(deprecated)]
