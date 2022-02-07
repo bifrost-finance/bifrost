@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -16,18 +16,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-/*
-This module is mainly for composing a transaction and how to send it to EOS node.
-*/
+// This module is mainly for composing a transaction and how to send it to EOS node.
 
 use alloc::string::{String, ToString};
 use core::{iter::FromIterator, str::FromStr};
+
 use codec::{Decode, Encode};
-use crate::Error;
 use eos_chain::{Action, Asset, Checksum256, Read, SerializeData, Signature, Transaction};
 use eos_keys::secret::SecretKey;
 use sp_core::offchain::Duration;
 use sp_std::prelude::*;
+
+use crate::Error;
 
 #[derive(Encode, Decode, Clone, PartialEq, Debug, Default)]
 pub struct TxSig<AccountId> {
@@ -46,10 +46,7 @@ pub struct MultiSig<AccountId> {
 
 impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
 	fn new(threshold: u8) -> Self {
-		MultiSig {
-			signatures: Default::default(),
-			threshold,
-		}
+		MultiSig { signatures: Default::default(), threshold }
 	}
 
 	/// check whether a transaction is complete
@@ -65,10 +62,7 @@ impl<AccountId: PartialEq + core::fmt::Debug> MultiSig<AccountId> {
 
 impl<AccountId> Default for MultiSig<AccountId> {
 	fn default() -> Self {
-		Self {
-			signatures: Default::default(),
-			threshold: 1,
-		}
+		Self { signatures: Default::default(), threshold: 1 }
 	}
 }
 
@@ -106,12 +100,12 @@ pub enum TxOut<AccountId, AssetId> {
 	},
 	/// Eos multi-sig transaction processed successfully, so only save tx id
 	Succeeded {
-		tx_id: Checksum256
+		tx_id: Checksum256,
 	},
 	/// Eos multi-sig transaction processed failed
 	Failed {
 		tx_id: Vec<u8>,
-		reason: Vec<u8>
+		reason: Vec<u8>,
 	},
 }
 
@@ -130,13 +124,14 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, 
 		threshold: u8,
 		memo: &str,
 		from: AccountId,
-		asset_id: AssetId
+		asset_id: AssetId,
 	) -> Result<Self, Error<T>> {
 		let eos_from = core::str::from_utf8(&raw_from).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let eos_to = core::str::from_utf8(&raw_to).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
 		// Construct action
-		let action = Action::transfer(eos_from, eos_to, amount.to_string().as_ref(), memo).map_err(|_| Error::<T>::EosChainError)?;
+		let action = Action::transfer(eos_from, eos_to, amount.to_string().as_ref(), memo)
+			.map_err(|_| Error::<T>::EosChainError)?;
 
 		// Construct transaction
 		let multi_sig_tx = MultiSigTx {
@@ -157,28 +152,37 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, 
 			TxOut::Initialized(mut multi_sig_tx) => {
 				// fetch info
 				let (chain_id, head_block_id) = eos_rpc::get_info(eos_node_url)?;
-				let chain_id: Vec<u8> = hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
+				let chain_id: Vec<u8> =
+					hex::decode(chain_id).map_err(|_| Error::<T>::DecodeHexError)?;
 
 				// fetch block
-				let (ref_block_num, ref_block_prefix) = eos_rpc::get_block(eos_node_url, head_block_id)?;
-				
+				let (ref_block_num, ref_block_prefix) =
+					eos_rpc::get_block(eos_node_url, head_block_id)?;
+
 				let actions = vec![multi_sig_tx.action.clone()];
-				// Construct transaction, and it will expire after one hour if doesn't send it EOS network
+				// Construct transaction, and it will expire after one hour if doesn't send it EOS
+				// network
 				let expiration = (sp_io::offchain::timestamp()
 					.add(Duration::from_millis(600 * 1000))
-					.unix_millis() as f64 / 1000.0) as u32;
+					.unix_millis() as f64 /
+					1000.0) as u32;
 				let tx = Transaction::new(expiration, ref_block_num, ref_block_prefix, actions);
-				multi_sig_tx.raw_tx = tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
+				multi_sig_tx.raw_tx =
+					tx.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 				multi_sig_tx.chain_id = chain_id;
 
 				Ok(TxOut::Created(multi_sig_tx))
 			},
-			_ => Err(Error::<T>::InvalidGeneratedTxOutType)
+			_ => Err(Error::<T>::InvalidGeneratedTxOutType),
 		}
 	}
 
 	/// sign the transaction
-	pub fn sign<T: crate::Config>(self, sk: SecretKey, author: AccountId) -> Result<Self, Error<T>> {
+	pub fn sign<T: crate::Config>(
+		self,
+		sk: SecretKey,
+		author: AccountId,
+	) -> Result<Self, Error<T>> {
 		match self {
 			TxOut::Created(mut multi_sig_tx) => {
 				if multi_sig_tx.multi_sig.has_signed(author.clone()) {
@@ -186,15 +190,26 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, 
 				}
 
 				let chain_id = &multi_sig_tx.chain_id;
-				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
-				let sig: Signature = trx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::EosChainError)?;
-				let sig_hex_data = sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
+				let trx = Transaction::read(&multi_sig_tx.raw_tx, &mut 0)
+					.map_err(|_| Error::<T>::EosChainError)?;
+				let sig: Signature =
+					trx.sign(sk, chain_id.clone()).map_err(|_| Error::<T>::EosChainError)?;
+				let sig_hex_data =
+					sig.to_serialize_data().map_err(|_| Error::<T>::EosChainError)?;
 
-				if multi_sig_tx.multi_sig.signatures.iter().any(|signed| signed.signature.eq(&sig_hex_data)) {
+				if multi_sig_tx
+					.multi_sig
+					.signatures
+					.iter()
+					.any(|signed| signed.signature.eq(&sig_hex_data))
+				{
 					return Ok(TxOut::Created(multi_sig_tx));
 				}
-				
-				multi_sig_tx.multi_sig.signatures.push(TxSig {author, signature: sig_hex_data});
+
+				multi_sig_tx
+					.multi_sig
+					.signatures
+					.push(TxSig { author, signature: sig_hex_data });
 
 				if multi_sig_tx.multi_sig.reach_threshold() {
 					Ok(TxOut::SignComplete(multi_sig_tx))
@@ -203,7 +218,7 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, 
 				}
 			},
 			TxOut::SignComplete(_) => Ok(self),
-			_ => Err(Error::<T>::InvalidSignedTxOutType)
+			_ => Err(Error::<T>::InvalidSignedTxOutType),
 		}
 	}
 
@@ -215,38 +230,37 @@ impl<AccountId: PartialEq + Clone + core::fmt::Debug, AssetId> TxOut<AccountId, 
 
 				let transaction_vec = eos_rpc::push_transaction(eos_node_url, signed_trx)?;
 
-				let transaction_id = core::str::from_utf8(transaction_vec.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
-				let tx_id = Checksum256::from_str(&transaction_id).map_err(|_| Error::<T>::InvalidChecksum256)?;
+				let transaction_id = core::str::from_utf8(transaction_vec.as_slice())
+					.map_err(|_| Error::<T>::ParseUtf8Error)?;
+				let tx_id = Checksum256::from_str(&transaction_id)
+					.map_err(|_| Error::<T>::InvalidChecksum256)?;
 
-				Ok(TxOut::Sent {
-					tx_id,
-					from: multi_sig_tx.from,
-					asset_id: multi_sig_tx.asset_id,
-				})
+				Ok(TxOut::Sent { tx_id, from: multi_sig_tx.from, asset_id: multi_sig_tx.asset_id })
 			},
-			_ => Err(Error::<T>::InvalidSendTxOutType)
+			_ => Err(Error::<T>::InvalidSendTxOutType),
 		}
 	}
 }
 
 pub(crate) mod eos_rpc {
-	/*
-	Compose a transaction and push a transaction to EOS net by rpc interafce, surely rpc API can be found
-	at: https://developers.eos.io/manuals/eos/latest/nodeos/plugins/chain_api_plugin/api-reference/index
-	And there're three APIs we need here:
-		1. get_info: Returns an object containing various details about the blockchain.
-		2. get_block: Returns an object containing various details about a specific block on the blockchain.
-		3. get_block: Returns an object containing various details about a specific block on the blockchain.
-	*/
-	use alloc::collections::btree_map::BTreeMap;
-	use alloc::string::ToString;
-	use crate::Error;
+	// Compose a transaction and push a transaction to EOS net by rpc interafce, surely rpc API can
+	// be found at: https://developers.eos.io/manuals/eos/latest/nodeos/plugins/chain_api_plugin/api-reference/index
+	// And there're three APIs we need here:
+	// 1. get_info: Returns an object containing various details about the blockchain.
+	// 2. get_block: Returns an object containing various details about a specific block on the
+	// blockchain. 3. get_block: Returns an object containing various details about a specific block
+	// on the blockchain.
+	use alloc::{collections::btree_map::BTreeMap, string::ToString};
+
 	use lite_json::{parse_json, JsonValue, Serialize};
 	use sp_runtime::offchain::http;
+
 	use super::*;
+	use crate::Error;
 
 	const CHAIN_ID: [char; 8] = ['c', 'h', 'a', 'i', 'n', '_', 'i', 'd']; // key chain_id
-	const HEAD_BLOCK_ID: [char; 13] = ['h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'i', 'd']; // key head_block_id
+	const HEAD_BLOCK_ID: [char; 13] =
+		['h', 'e', 'a', 'd', '_', 'b', 'l', 'o', 'c', 'k', '_', 'i', 'd']; // key head_block_id
 	const GET_INFO_API: &'static str = "/v1/chain/get_info";
 	const GET_BLOCK_API: &'static str = "/v1/chain/get_block";
 	const PUSH_TRANSACTION_API: &'static str = "/v1/chain/push_transaction";
@@ -257,22 +271,26 @@ pub(crate) mod eos_rpc {
 	type RefBlockPrefix = u32;
 
 	/// Get EOS node information
-	pub(crate) fn get_info<T: crate::Config>(node_url: &str) -> Result<(ChainId, HeadBlockId), Error<T>> {
+	pub(crate) fn get_info<T: crate::Config>(
+		node_url: &str,
+	) -> Result<(ChainId, HeadBlockId), Error<T>> {
 		let req_api = format!("{}{}", node_url, GET_INFO_API);
 		let pending = http::Request::post(&req_api, vec![b"{}"])
 			.add_header("Content-Type", "application/json")
-			.send().map_err(|_| Error::<T>::OffchainHttpError)?;
+			.send()
+			.map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
-		let body_str= core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let body_str =
+			core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 		let node_info = parse_json(body_str).map_err(|_| Error::<T>::LiteJsonError)?;
 
 		let mut chain_id = Default::default();
 		let mut head_block_id = Default::default();
 
 		match node_info {
-			JsonValue::Object(ref json) => {
+			JsonValue::Object(ref json) =>
 				for item in json.iter() {
 					if item.0 == CHAIN_ID {
 						chain_id = {
@@ -290,8 +308,7 @@ pub(crate) mod eos_rpc {
 							}
 						};
 					}
-				}
-			}
+				},
 			_ => return Err(Error::<T>::EOSRpcError),
 		}
 		if chain_id == String::default() || head_block_id == String::default() {
@@ -302,34 +319,45 @@ pub(crate) mod eos_rpc {
 	}
 
 	/// Get current highest block from EOS net
-	pub(crate) fn get_block<T: crate::Config>(node_url: &str, head_block_id: String) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
+	pub(crate) fn get_block<T: crate::Config>(
+		node_url: &str,
+		head_block_id: String,
+	) -> Result<(BlockNum, RefBlockPrefix), Error<T>> {
 		let req_body = {
-			JsonValue::Object(vec![
-				(
-					"block_num_or_id".chars().collect::<Vec<_>>(),
-					JsonValue::String(head_block_id.chars().collect::<Vec<_>>()),
-				),
-			]).serialize()
+			JsonValue::Object(vec![(
+				"block_num_or_id".chars().collect::<Vec<_>>(),
+				JsonValue::String(head_block_id.chars().collect::<Vec<_>>()),
+			)])
+			.serialize()
 		};
-		let pending = http::Request::post(&format!("{}{}", node_url, GET_BLOCK_API), vec![req_body.as_slice()])
-			.add_header("Content-Type", "application/json")
-			.send().map_err(|_| Error::<T>::OffchainHttpError)?;
+		let pending = http::Request::post(
+			&format!("{}{}", node_url, GET_BLOCK_API),
+			vec![req_body.as_slice()],
+		)
+		.add_header("Content-Type", "application/json")
+		.send()
+		.map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
-		let body_str = core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
+		let body_str =
+			core::str::from_utf8(body.as_slice()).map_err(|_| Error::<T>::ParseUtf8Error)?;
 
-		let maps = body_str.trim_matches(|c| c == '{' || c == '}')
-			.split(',').into_iter().filter_map(|i| {
-			if i.rfind("block_num").is_some() || i.rfind("ref_block_prefix").is_some() {
-				match i.split(':').collect::<Vec<&str>>().as_slice() {
-					[key, val] => Some((key.clone(), val.clone())),
-					_ => None
+		let maps = body_str
+			.trim_matches(|c| c == '{' || c == '}')
+			.split(',')
+			.into_iter()
+			.filter_map(|i| {
+				if i.rfind("block_num").is_some() || i.rfind("ref_block_prefix").is_some() {
+					match i.split(':').collect::<Vec<&str>>().as_slice() {
+						[key, val] => Some((key.clone(), val.clone())),
+						_ => None,
+					}
+				} else {
+					None
 				}
-			} else {
-				None
-			}
-		}).collect::<BTreeMap<_, _>>();
+			})
+			.collect::<BTreeMap<_, _>>();
 
 		if maps.is_empty() {
 			return Err(Error::<T>::EOSRpcError);
@@ -350,8 +378,14 @@ pub(crate) mod eos_rpc {
 	}
 
 	/// Push transaction to EOS net
-	pub(crate) fn push_transaction<T: crate::Config>(node_url: &str, signed_trx: Vec<u8>) -> Result<Vec<u8>, Error<T>>{
-		let pending = http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx]).send().map_err(|_| Error::<T>::OffchainHttpError)?;
+	pub(crate) fn push_transaction<T: crate::Config>(
+		node_url: &str,
+		signed_trx: Vec<u8>,
+	) -> Result<Vec<u8>, Error<T>> {
+		let pending =
+			http::Request::post(&format!("{}{}", node_url, PUSH_TRANSACTION_API), vec![signed_trx])
+				.send()
+				.map_err(|_| Error::<T>::OffchainHttpError)?;
 		let response = pending.wait().map_err(|_| Error::<T>::OffchainHttpError)?;
 
 		let body = response.body().collect::<Vec<u8>>();
@@ -369,11 +403,15 @@ pub(crate) mod eos_rpc {
 		Ok(tx_id.into_bytes())
 	}
 
-	pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(multi_sig_tx: &MultiSigTx<AccountId, AssetId>) -> Result<Vec<u8>, Error<T>> {
+	pub(crate) fn serialize_push_transaction_params<T: crate::Config, AccountId, AssetId>(
+		multi_sig_tx: &MultiSigTx<AccountId, AssetId>,
+	) -> Result<Vec<u8>, Error<T>> {
 		let serialized_signatures = {
-			let mut serialized_signatures = Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
+			let mut serialized_signatures =
+				Vec::with_capacity(multi_sig_tx.multi_sig.signatures.len());
 			for tx_sig in multi_sig_tx.multi_sig.signatures.iter() {
-				let sig = Signature::read(&tx_sig.signature, &mut 0).map_err(|_| Error::<T>::EosChainError)?;
+				let sig = Signature::read(&tx_sig.signature, &mut 0)
+					.map_err(|_| Error::<T>::EosChainError)?;
 				let val = JsonValue::String(sig.to_string().chars().collect());
 				serialized_signatures.push(val);
 			}
@@ -381,40 +419,40 @@ pub(crate) mod eos_rpc {
 		};
 
 		let signed_trx = JsonValue::Object(vec![
-			(
-				"signatures".chars().collect::<Vec<_>>(),
-				JsonValue::Array(serialized_signatures),
-			),
+			("signatures".chars().collect::<Vec<_>>(), JsonValue::Array(serialized_signatures)),
 			(
 				"compression".chars().collect::<Vec<_>>(),
 				JsonValue::String("none".chars().collect()),
 			),
-			(
-				"packed_context_free_data".chars().collect::<Vec<_>>(),
-				JsonValue::String(Vec::new()),
-			),
+			("packed_context_free_data".chars().collect::<Vec<_>>(), JsonValue::String(Vec::new())),
 			(
 				"packed_trx".chars().collect::<Vec<_>>(),
-				JsonValue::String(
-					hex::encode(&multi_sig_tx.raw_tx).chars().collect()
-				),
+				JsonValue::String(hex::encode(&multi_sig_tx.raw_tx).chars().collect()),
 			),
-		]).serialize();
+		])
+		.serialize();
 
 		Ok(signed_trx)
 	}
 
-	pub(crate) fn get_transaction_id<T: crate::Config>(trx_response: &str) -> Result<String, Error<T>> {
+	pub(crate) fn get_transaction_id<T: crate::Config>(
+		trx_response: &str,
+	) -> Result<String, Error<T>> {
 		// error happens while pushing transaction to EOS node
 		if !trx_response.contains("transaction_id") && !trx_response.contains("processed") {
 			return Err(Error::<T>::EOSRpcError);
 		}
 
 		let mut trx_id = String::new();
-		let splited_strs: Vec<&str> = trx_response.trim_matches(|c| c == '{' || c == '}').split("processed").collect();
+		let splited_strs: Vec<&str> =
+			trx_response.trim_matches(|c| c == '{' || c == '}').split("processed").collect();
 		for s in &splited_strs {
 			if s.contains("transaction_id") {
-				trx_id = s.replace("transaction_id", "").chars().filter(|c| c.is_numeric() || c.is_alphabetic()).collect();
+				trx_id = s
+					.replace("transaction_id", "")
+					.chars()
+					.filter(|c| c.is_numeric() || c.is_alphabetic())
+					.collect();
 				break;
 			}
 		}

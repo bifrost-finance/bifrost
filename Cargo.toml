@@ -1,8 +1,6 @@
-cargo-features = ["named-profiles"]
-
 [workspace]
 members = [
-	"integration-tests",
+	#"integration-tests",
 	"node/cli",
 	"node/primitives",
 	"node/rpc",
@@ -28,17 +26,17 @@ members = [
 	"xcm-support",
 ]
 
-resolver = "2"
-
 [profile.dev]
 split-debuginfo = "unpacked"
 
 [profile.release]
 panic = "unwind"
+opt-level = 3
 
 [profile.production]
 inherits = "release"
 lto = true
+codegen-units = 1
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of
@@ -202,12 +200,13 @@ substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", bran
 zenlink-protocol = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "edd99cf8b646f23702c9875cb08c7fb4bff6f4b5"}
 zenlink-protocol-rpc = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "edd99cf8b646f23702c9875cb08c7fb4bff6f4b5" }
 zenlink-protocol-runtime-api = { git = "https://github.com/bifrost-finance/Zenlink-DEX-Module", rev = "edd99cf8b646f23702c9875cb08c7fb4bff6f4b5" }
+merkle-distributor = { git = "https://github.com/bifrost-finance/merkle-distributor", rev = "2aaf978b8922e862b2e21d263b7698aaacce65bd" }
+orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
+orml-benchmarking = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
 
-orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }
-orml-benchmarking = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "598afc4a64a9892209a780f0aad2ba0bd2ccb704" }

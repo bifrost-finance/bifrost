@@ -80,6 +80,7 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.1
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.15", default-features = false }
 
+
 # Bifrost
 bifrost-flexible-fee = { path = "../../pallets/flexible-fee", default-features = false }
 bifrost-flexible-fee-rpc-runtime-api = { path = "../../pallets/flexible-fee/rpc/runtime-api", default-features = false }
@@ -95,7 +96,7 @@ bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features =
 bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
-merkle-distributor = {path = "../../pallets/merkle-distributor", default-features = false }
+
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -106,6 +107,7 @@ orml-unknown-tokens = { version = "0.4.1-dev", default-features = false }
 orml-xcm = { version = "0.4.1-dev", default-features = false }
 orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 
+merkle-distributor = {version = "*", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
 

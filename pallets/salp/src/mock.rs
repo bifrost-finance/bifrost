@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
-use bifrost_kusama_runtime::create_x2_multilocation;
 use frame_support::{
 	construct_runtime, parameter_types,
 	traits::{EnsureOrigin, GenesisBuild, Nothing},
@@ -202,7 +201,7 @@ parameter_types! {
 		BRUCE,
 		CATHI
 	],2);
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(0);
+	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::parent();
 	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;

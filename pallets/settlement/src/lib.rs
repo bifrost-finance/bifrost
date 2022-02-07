@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -19,13 +19,11 @@
 // Ensure we're `no_std` when compiling for Wasm.
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
+use frame_support::{decl_event, decl_module, decl_storage, traits::Get, Parameter};
+use node_primitives::{AssetIssue, ClearingHandler};
+use sp_runtime::traits::{AtLeast32Bit, Member, One, SaturatedConversion, Saturating, Zero};
 use sp_std::prelude::*;
-use codec::{Encode, Decode};
-use node_primitives::{ClearingHandler, AssetIssue};
-use frame_support::{
-	Parameter, decl_module, decl_event, decl_storage, traits::Get
-};
-use sp_runtime::traits::{Member, AtLeast32Bit, One, Zero, SaturatedConversion, Saturating};
 
 mod mock;
 mod tests;
@@ -40,7 +38,8 @@ pub struct BalanceDuration<BlockNumber, Balance, Duration> {
 	value: Duration,
 }
 
-impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Duration> where
+impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Duration>
+where
 	BlockNumber: Copy + AtLeast32Bit,
 	Balance: Copy + AtLeast32Bit + From<BlockNumber>,
 	Duration: Copy + AtLeast32Bit + From<Balance>,
@@ -51,9 +50,9 @@ impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Durat
 		prev_amount: Balance,
 		curr_amount: Balance,
 	) -> Self
-		where
-			SettlementId: Copy + AtLeast32Bit,
-			SettlementPeriod: Get<BlockNumber>,
+	where
+		SettlementId: Copy + AtLeast32Bit,
+		SettlementPeriod: Get<BlockNumber>,
 	{
 		let stl_index = stl_id.saturated_into::<u64>();
 		let stl_period = SettlementPeriod::get().saturated_into::<u64>();
@@ -61,11 +60,7 @@ impl<BlockNumber, Balance, Duration> BalanceDuration<BlockNumber, Balance, Durat
 		let blocks: BlockNumber = last_block - start_block;
 		let value: Duration = (prev_amount * blocks.into()).into();
 
-		Self {
-			last_block,
-			last_balance: curr_amount,
-			value,
-		}
+		Self { last_block, last_balance: curr_amount, value }
 	}
 
 	fn update(&mut self, last_block: BlockNumber, curr_amount: Balance) {
@@ -139,7 +134,9 @@ decl_module! {
 	}
 }
 
-impl<T: Config> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Balance> for Module<T> {
+impl<T: Config> ClearingHandler<T::AssetId, T::AccountId, T::BlockNumber, T::Balance>
+	for Module<T>
+{
 	fn asset_clearing(
 		asset_id: T::AssetId,
 		target: T::AccountId,
@@ -210,16 +207,16 @@ impl<T: Config> Module<T> {
 		let stl_blocks = T::SettlementPeriod::get();
 
 		// Update token's balance duration
-		for ((asset_id, stl_id), _clearing_token) in <ClearingTokens<T>>::enumerate()
-			.filter(|((_, stl_id), _)| *stl_id < curr_stl_id)
+		for ((asset_id, stl_id), _clearing_token) in
+			<ClearingTokens<T>>::enumerate().filter(|((_, stl_id), _)| *stl_id < curr_stl_id)
 		{
 			let last_block = stl_blocks * (stl_id + One::one()).into() - One::one();
 			let token = <bifrost_assets::Tokens<T>>::get(asset_id);
 			Self::token_clearing(asset_id, last_block, token.total_supply, token.total_supply);
 		}
 
-		for (index, _clearing_asset) in <ClearingAssets<T>>::enumerate()
-			.filter(|((_, _, stl_id), _)| *stl_id < curr_stl_id)
+		for (index, _clearing_asset) in
+			<ClearingAssets<T>>::enumerate().filter(|((_, _, stl_id), _)| *stl_id < curr_stl_id)
 		{
 			let (asset_id, target, stl_id) = index.clone();
 

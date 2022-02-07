@@ -24,7 +24,7 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
       - name: Generate WeightInfo Files
-        run: make generate-all-weights
+        run: make generate-bifrost-weights
       - name: Commit Automatically
         uses: stefanzweifel/git-auto-commit-action@v4
         with:

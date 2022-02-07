@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -49,11 +49,11 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 #[allow(dead_code)]
 fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
 	let value = T::MinContribution::get();
-	assert_ok!(Salp::<T>::issue(RawOrigin::Root.into(), who.clone(), index, value, [0; 32]));
+	let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+	assert_ok!(Salp::<T>::issue(confirmer, who.clone(), index, value, [0; 32]));
 }
 
 benchmarks! {
-
 	redeem {
 		let fund_index = create_fund::<T>(1);
 		let caller: T::AccountId = whitelisted_caller();
@@ -70,22 +70,19 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::Redeemed(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 
-	batch_migrate {
-		let k in 1 .. T::BatchKeysLimit::get();
+	refund {
 		let fund_index = create_fund::<T>(1);
+		let caller: T::AccountId = whitelisted_caller();
+		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
-		let mut caller: T::AccountId = whitelisted_caller();
-		for i in 0 .. k {
-			caller = account("contributor", i, 0);
-			contribute_fund::<T>(&caller,fund_index);
-		}
+		contribute_fund::<T>(&caller,fund_index);
 		assert_ok!(Salp::<T>::fund_fail(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Signed(caller.clone()), fund_index)
+		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
+		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
+	}: _(RawOrigin::Signed(caller.clone()), fund_index,(0 as u32).into(),(7 as u32).into(),contribution)
 	verify {
-		let fund = Salp::<T>::funds(fund_index).unwrap();
-		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Unlocked);
-		assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
+		assert_eq!(Salp::<T>::redeem_pool(), 0_u32.saturated_into());
+		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 }
 

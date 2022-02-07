@@ -1,6 +1,6 @@
 // This file is part of Bifrost.
 
-// Copyright (C) 2019-2021 Liebi Technologies (UK) Ltd.
+// Copyright (C) 2019-2022 Liebi Technologies (UK) Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later WITH Classpath-exception-2.0
 
 // This program is free software: you can redistribute it and/or modify
@@ -72,8 +72,9 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
-			RawOrigin::Root.into(),
+			confirmer,
 			caller.clone(),
 			fund_index,
 			true,
@@ -84,11 +85,11 @@ benchmarks! {
 		let fund = Salp::<T>::funds(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
 		assert_eq!(status, ContributionStatus::Idle);
-	}: _(RawOrigin::Signed(caller.clone()), fund_index)
+	}: _(RawOrigin::Signed(caller.clone()), fund_index,(0 as u32).into(),(7 as u32).into(),contribution)
 	verify {
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Refunded);
-		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, contribution).into())
+		assert_eq!(status, ContributionStatus::Idle);
+		assert_last_event::<T>(Event::<T>::Refunded(caller.clone(), fund_index, (0 as u32).into(),(7 as u32).into(),contribution).into())
 	}
 
 	unlock {
@@ -97,8 +98,9 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
-			RawOrigin::Root.into(),
+			confirmer,
 			caller.clone(),
 			fund_index,
 			true,
@@ -117,11 +119,12 @@ benchmarks! {
 		let fund_index = create_fund::<T>(1);
 		let contribution = T::MinContribution::get();
 		let mut caller: T::AccountId = whitelisted_caller();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		for i in 0 .. k {
 			caller = account("contributor", i, 0);
 			contribute_fund::<T>(&caller,fund_index);
 			let _ = Salp::<T>::confirm_contribute(
-				RawOrigin::Root.into(),
+				confirmer.clone(),
 				caller.clone(),
 				fund_index,
 				true,
@@ -143,8 +146,9 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
-			RawOrigin::Root.into(),
+			confirmer,
 			caller.clone(),
 			fund_index,
 			true,
