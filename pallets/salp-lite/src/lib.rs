@@ -472,6 +472,9 @@ pub mod pallet {
 			ensure!(can, Error::<T>::InvalidFundStatus);
 
 			let amount_withdrew = fund.raised;
+			let total =
+				Self::redeem_pool().checked_add(&amount_withdrew).ok_or(Error::<T>::Overflow)?;
+			RedeemPool::<T>::set(total);
 
 			if fund.status == FundStatus::Retired {
 				let fund_new = FundInfo { status: FundStatus::RedeemWithdrew, ..fund };
@@ -480,8 +483,6 @@ pub mod pallet {
 				let fund_new = FundInfo { status: FundStatus::RefundWithdrew, ..fund };
 				Funds::<T>::insert(index, Some(fund_new));
 			}
-			RedeemPool::<T>::set(Self::redeem_pool().saturating_add(amount_withdrew));
-
 			Self::deposit_event(Event::Withdrew(index, amount_withdrew));
 
 			Ok(())

@@ -110,6 +110,7 @@ impl<
 				require_weight_at_most: weight,
 				call,
 			},
+			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
 				max_assets: 1,
