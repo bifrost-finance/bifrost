@@ -19,7 +19,6 @@ members = [
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
 	"pallets/call-switchgear",
-	"pallets/merkle-distributor",
 	"runtime/asgard",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",

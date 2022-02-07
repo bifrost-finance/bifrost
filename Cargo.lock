@@ -185,7 +185,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
- "merkle-distributor 0.1.0",
+ "merkle-distributor",
  "node-primitives",
  "orml-benchmarking",
  "orml-currencies",
@@ -762,7 +762,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal",
  "log",
- "merkle-distributor 0.1.0 (git+https://github.com/bifrost-finance/merkle-distributor?rev=2aaf978b8922e862b2e21d263b7698aaacce65bd)",
+ "merkle-distributor",
  "node-primitives",
  "orml-currencies",
  "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=637b98e7c6f34c089076c41255d226c73d882c69)",
@@ -4736,26 +4736,6 @@ name = "memory_units"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
-
-[[package]]
-name = "merkle-distributor"
-version = "0.1.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "orml-tokens 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=637b98e7c6f34c089076c41255d226c73d882c69)",
- "orml-traits 0.4.1-dev (git+https://github.com/open-web3-stack/open-runtime-module-library?rev=637b98e7c6f34c089076c41255d226c73d882c69)",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "merkle-distributor"
