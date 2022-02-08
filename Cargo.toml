@@ -21,7 +21,6 @@ members = [
 	"pallets/vtoken-mint",
 	"pallets/vtoken-mint/rpc",
 	"pallets/call-switchgear",
-	"pallets/parachain-staking",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 	"xcm-support",
