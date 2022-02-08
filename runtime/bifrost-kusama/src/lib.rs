@@ -1099,6 +1099,15 @@ parameter_types! {
 		//ZLK has a decimal of 18, while KSM is 12.
 		ksm_per_second() * 150 * 1_000_000
 	);
+	pub ZlkNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode()))
+		).into(),
+		// ZLK:KSM = 150:1
+		//ZLK has a decimal of 18, while KSM is 12.
+		ksm_per_second() * 150 * 1_000_000
+	);
 	pub KarPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
@@ -1161,6 +1170,7 @@ pub type Trader = (
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<ZlkPerSecond, ToTreasury>,
+	FixedRateOfFungible<ZlkNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
