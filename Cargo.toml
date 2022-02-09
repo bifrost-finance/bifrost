@@ -196,9 +196,9 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", 
 substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.15" }
 
-zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "302914e11794ee273d2a16b913b0303e2e6c21b3"}
-zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "302914e11794ee273d2a16b913b0303e2e6c21b3" }
-zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "302914e11794ee273d2a16b913b0303e2e6c21b3" }
+zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "0d6cfd661b7855133e64f7bca350ce341d65d48a"}
+zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "0d6cfd661b7855133e64f7bca350ce341d65d48a" }
+zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "0d6cfd661b7855133e64f7bca350ce341d65d48a" }
 merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "93a8026fcb9da9afe0e57ce636a39d8c414f7d98" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
 orml-currencies = {git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "637b98e7c6f34c089076c41255d226c73d882c69" }
