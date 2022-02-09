@@ -21,6 +21,7 @@ xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16",default-features = false  }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16",default-features = false }
+bifrost-runtime-common = { path = "../../runtime/common",default-features = false }
 
 [dev-dependencies]
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16"}
@@ -34,7 +35,6 @@ orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 bifrost-bancor = { path = "../../pallets/bancor" }
-bifrost-runtime-common = { path = "../../runtime/common" }
 
 [features]
 default = ["std"]
@@ -54,6 +54,7 @@ std = [
 	"xcm-builder/std",
 	"pallet-xcm/std",
 	"xcm-support/std",
+	"bifrost-runtime-common/std",
 ]
 
 runtime-benchmarks = [

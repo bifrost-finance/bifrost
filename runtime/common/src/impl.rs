@@ -135,8 +135,9 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			)),
 			Token(TokenSymbol::RMRK) => Some(MultiLocation::new(
 				1,
-				X2(
+				X3(
 					Parachain(parachains::Statemine::ID),
+					PalletInstance(parachains::Statemine::PALLET_ID),
 					GeneralIndex(parachains::Statemine::RMRK_ID as u128),
 				),
 			)),
