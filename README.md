@@ -83,7 +83,7 @@ cd -
 ```bash
 git clone -n https://github.com/paritytech/polkadot.git /tmp/polkadot
 cd /tmp/polkadot
-git checkout release-v0.9.13
+git checkout release-v0.9.15
 cargo build --release
 cd -
 ```
