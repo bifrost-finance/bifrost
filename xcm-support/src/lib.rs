@@ -78,7 +78,7 @@ impl<
 	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId>
 {
 	fn transact_weight(weight: u64, nonce: u32) -> u64 {
-		return weight + 4 * BaseXcmWeight::get() + nonce as u64;
+		return weight + 6 * BaseXcmWeight::get() + nonce as u64;
 	}
 
 	fn transact_id(data: &[u8]) -> MessageId {
@@ -110,6 +110,7 @@ impl<
 				require_weight_at_most: weight,
 				call,
 			},
+			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
 				max_assets: 1,

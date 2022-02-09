@@ -46,6 +46,7 @@ where
 	pub fn is_contributing(&self) -> bool {
 		match self {
 			Self::Contributing(_) => true,
+			Self::Unlocked => true,
 			_ => false,
 		}
 	}

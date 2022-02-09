@@ -102,7 +102,7 @@ pub use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
-use orml_xcm_support::MultiCurrencyAdapter;
+use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::ConvertInto;
@@ -909,6 +909,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	LocationToAccountId,
 	CurrencyId,
 	BifrostCurrencyIdConvert<SelfParaChainId>,
+	DepositToAlternative<BifrostTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 parameter_types! {
@@ -1776,7 +1777,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 	(),
 >;
 

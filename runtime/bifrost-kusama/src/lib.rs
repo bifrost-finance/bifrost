@@ -99,7 +99,7 @@ pub use node_primitives::{
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::MultiCurrency;
-use orml_xcm_support::MultiCurrencyAdapter;
+use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -136,7 +136,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 924,
+	spec_version: 925,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -902,6 +902,7 @@ pub type BifrostAssetTransactor = MultiCurrencyAdapter<
 	LocationToAccountId,
 	CurrencyId,
 	BifrostCurrencyIdConvert<SelfParaChainId>,
+	DepositToAlternative<BifrostTreasuryAccount, Currencies, CurrencyId, AccountId, Balance>,
 >;
 
 parameter_types! {
@@ -913,6 +914,13 @@ parameter_types! {
 		).into(),
 		ksm_per_second()
 	);
+	pub VsksmNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey(CurrencyId::VSToken(TokenSymbol::KSM).encode()))
+		).into(),
+		ksm_per_second()
+	);
 	pub BncPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
@@ -921,10 +929,27 @@ parameter_types! {
 		// BNC:KSM = 80:1
 		ksm_per_second() * 80
 	);
+	pub BncNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey(NativeCurrencyId::get().encode()))
+		).into(),
+		// BNC:KSM = 80:1
+		ksm_per_second() * 80
+	);
 	pub ZlkPerSecond: (AssetId, u128) = (
 		MultiLocation::new(
 			1,
 			X2(Parachain(SelfParaId::get()), GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode()))
+		).into(),
+		// ZLK:KSM = 150:1
+		//ZLK has a decimal of 18, while KSM is 12.
+		ksm_per_second() * 150 * 1_000_000
+	);
+	pub ZlkNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			0,
+			X1(GeneralKey(CurrencyId::Token(TokenSymbol::ZLK).encode()))
 		).into(),
 		// ZLK:KSM = 150:1
 		//ZLK has a decimal of 18, while KSM is 12.
@@ -962,6 +987,14 @@ parameter_types! {
 		// rmrk:KSM = 10:1
 		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
 	);
+	pub RmrkNewPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X3(Parachain(parachains::Statemine::ID), PalletInstance(parachains::Statemine::PALLET_ID),GeneralIndex(parachains::Statemine::RMRK_ID.into()))
+		).into(),
+		// rmrk:KSM = 10:1
+		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
+	);
 }
 
 pub struct ToTreasury;
@@ -980,12 +1013,16 @@ impl TakeRevenue for ToTreasury {
 pub type Trader = (
 	FixedRateOfFungible<KsmPerSecond, ToTreasury>,
 	FixedRateOfFungible<VsksmPerSecond, ToTreasury>,
+	FixedRateOfFungible<VsksmNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<BncPerSecond, ToTreasury>,
+	FixedRateOfFungible<BncNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<ZlkPerSecond, ToTreasury>,
+	FixedRateOfFungible<ZlkNewPerSecond, ToTreasury>,
 	FixedRateOfFungible<KarPerSecond, ToTreasury>,
 	FixedRateOfFungible<KusdPerSecond, ToTreasury>,
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
+	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1750,7 +1787,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllPallets,
+	AllPalletsWithSystem,
 	(),
 >;
 
