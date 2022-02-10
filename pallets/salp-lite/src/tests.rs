@@ -298,7 +298,7 @@ fn contribute_with_wrong_para_id_should_fail() {
 fn contribute_with_wrong_fund_status_should_fail() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Salp::create(Some(ALICE).into(), 3_000, 1_000, 1, SlotLength::get()));
-		assert_ok!(Salp::fund_success(Some(ALICE).into(), 3_000,));
+		assert_ok!(Salp::fund_fail(Some(ALICE).into(), 3_000,));
 		assert_noop!(
 			Salp::issue(Some(ALICE).into(), BRUCE, 3_000, 100, CONTRIBUTON_INDEX),
 			Error::<Test>::InvalidFundStatus
