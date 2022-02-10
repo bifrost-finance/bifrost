@@ -96,11 +96,6 @@ build-docker-image:
 	.maintain/build-image.sh
 
 # Build wasm
-.PHONY: build-bifrost-wasm
-build-bifrost-wasm:
-	.maintain/build-wasm.sh bifrost-kusama
-	.maintain/build-wasm.sh bifrost-polkadot
-
 .PHONY: build-bifrost-kusama-wasm
 build-bifrost-kusama-wasm:
 	.maintain/build-wasm.sh bifrost-kusama

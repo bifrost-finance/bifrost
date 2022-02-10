@@ -165,6 +165,7 @@ runtime-benchmarks = [
 	"pallet-xcm/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
+	"sp-api/disable-logging",
 ]
 
 try-runtime = [
@@ -173,3 +174,19 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-vesting/try-runtime",
 ]
+
+
+# When enabled, the runtime API will not be build.
+#
+# This is required by Cumulus to access certain types of the
+# runtime without clashing with the runtime API exported functions
+# in WASM.
+disable-runtime-api = []
+
+# A feature that should be enabled when the runtime should be build for on-chain
+# deployment. This will disable stuff that shouldn't be part of the on-chain wasm
+# to make it smaller like logging for example.
+on-chain-release-build = [
+	"sp-api/disable-logging",
+]
+
