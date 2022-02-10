@@ -141,6 +141,8 @@ std = [
 	"pallet-treasury/std",
 	"pallet-preimage/std",
 	"pallet-scheduler/std",
+	"pallet-elections-phragmen/std",
+	"pallet-tips/std",
 	"sp-api/std",
 	"sp-arithmetic/std",
 	"sp-block-builder/std",
@@ -209,6 +211,8 @@ runtime-benchmarks = [
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"pallet-tips/runtime-benchmarks",
+	"pallet-elections-phragmen/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
@@ -219,6 +223,7 @@ runtime-benchmarks = [
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
+	"sp-api/disable-logging",
 ]
 
 try-runtime = [
@@ -227,4 +232,18 @@ try-runtime = [
 	"frame-system/try-runtime",
 	"pallet-vesting/try-runtime",
 	"bifrost-liquidity-mining/try-runtime",
+]
+
+# When enabled, the runtime API will not be build.
+#
+# This is required by Cumulus to access certain types of the
+# runtime without clashing with the runtime API exported functions
+# in WASM.
+disable-runtime-api = []
+
+# A feature that should be enabled when the runtime should be build for on-chain
+# deployment. This will disable stuff that shouldn't be part of the on-chain wasm
+# to make it smaller like logging for example.
+on-chain-release-build = [
+	"sp-api/disable-logging",
 ]

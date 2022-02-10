@@ -16,3 +16,4 @@ deploy
 snapshot.bin
 *.wasm
 data
+runtime/bifrost
