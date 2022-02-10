@@ -1,5 +1,3 @@
-cargo-features = ["named-profiles"]
-
 [workspace]
 members = [
 	"integration-tests",
@@ -7,19 +5,14 @@ members = [
 	"node/primitives",
 	"node/rpc",
 	"node/service",
-	"pallets/bancor",
-	#"pallets/bid",
 	"pallets/flexible-fee",
 	"pallets/lightening-redeem",
 	"pallets/liquidity-mining",
-	"pallets/minter-reward",
 	"pallets/salp",
 	"pallets/salp-lite",
 	"pallets/token-issuer",
 	"pallets/vesting",
 	"pallets/vsbond-auction",
-	"pallets/vtoken-mint",
-	"pallets/vtoken-mint/rpc",
 	"pallets/call-switchgear",
 	"pallets/parachain-staking",
 	"runtime/bifrost-kusama",
@@ -27,17 +20,17 @@ members = [
 	"xcm-support",
 ]
 
-resolver = "2"
-
 [profile.dev]
 split-debuginfo = "unpacked"
 
 [profile.release]
 panic = "unwind"
+opt-level = 3
 
 [profile.production]
 inherits = "release"
 lto = true
+codegen-units = 1
 
 # The list of dependencies below (which can be both direct and indirect dependencies) are crates
 # that are suspected to be CPU-intensive, and that are unlikely to require debugging (as some of

@@ -663,7 +663,6 @@ dependencies = [
  "pallet-proxy",
  "pallet-scheduler",
  "pallet-session",
- "pallet-society",
  "pallet-timestamp",
  "pallet-tips",
  "pallet-transaction-payment",
@@ -1079,28 +1078,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zenlink-protocol",
-]
-
-[[package]]
-name = "bifrost-vtoken-mint-rpc"
-version = "0.8.0"
-dependencies = [
- "bifrost-vtoken-mint-rpc-runtime-api",
- "jsonrpc-core",
- "jsonrpc-core-client",
- "jsonrpc-derive",
- "parity-scale-codec",
- "sp-api",
- "sp-blockchain",
- "sp-runtime",
-]
-
-[[package]]
-name = "bifrost-vtoken-mint-rpc-runtime-api"
-version = "0.8.0"
-dependencies = [
- "parity-scale-codec",
- "sp-api",
 ]
 
 [[package]]
