@@ -424,7 +424,10 @@ pub mod pallet {
 			}
 
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
-			ensure!(fund.status == FundStatus::Ongoing, Error::<T>::InvalidFundStatus);
+			ensure!(
+				fund.status == FundStatus::Ongoing || fund.status == FundStatus::Success,
+				Error::<T>::InvalidFundStatus
+			);
 
 			ensure!(value >= T::MinContribution::get(), Error::<T>::ContributionTooSmall);
 
