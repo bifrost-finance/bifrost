@@ -149,7 +149,7 @@ decl_error! {
 }
 
 /// struct for matched order in service
-#[derive(Default, Clone, Eq, PartialEq, Debug, Encode, Decode, TypeInfo)]
+#[derive(Clone, Eq, PartialEq, Debug, Encode, Decode, TypeInfo)]
 pub struct BiddingOrderUnit<AccountId, CurrencyId, BlockNumber, Balance> {
 	/// bidder id
 	bidder_id: AccountId,

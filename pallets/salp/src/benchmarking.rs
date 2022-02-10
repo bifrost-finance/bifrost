@@ -72,7 +72,7 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
 			caller.clone(),
@@ -98,7 +98,7 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
 			caller.clone(),
@@ -119,7 +119,7 @@ benchmarks! {
 		let fund_index = create_fund::<T>(1);
 		let contribution = T::MinContribution::get();
 		let mut caller: T::AccountId = whitelisted_caller();
-		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		for i in 0 .. k {
 			caller = account("contributor", i, 0);
 			contribute_fund::<T>(&caller,fund_index);
@@ -146,7 +146,7 @@ benchmarks! {
 		let caller_origin: T::Origin = RawOrigin::Signed(caller.clone()).into();
 		let contribution = T::MinContribution::get();
 		contribute_fund::<T>(&caller,fund_index);
-		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+		let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 		assert_ok!(Salp::<T>::confirm_contribute(
 			confirmer,
 			caller.clone(),

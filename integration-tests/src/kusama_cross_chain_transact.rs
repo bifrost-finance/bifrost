@@ -49,8 +49,9 @@ fn relaychain_transact_works() {
 
 	KusamaNet::execute_with(|| {
 		use kusama_runtime::{Event, System};
-		assert!(System::events()
-			.iter()
-			.any(|r| matches!(r.event, Event::System(frame_system::Event::Remarked(_, _)))));
+		assert!(System::events().iter().any(|r| matches!(
+			r.event,
+			Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
+		)));
 	});
 }

@@ -97,6 +97,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -199,6 +200,13 @@ impl ExtBuilder {
 			(BOB, DOT, 100),
 			(BOB, KSM, 100),
 		])
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		use frame_benchmarking::whitelisted_caller;
+		let whitelist_caller: AccountId = whitelisted_caller();
+		self.balances(vec![(whitelist_caller.clone(), KSM, 100_000_000_000_000)])
 	}
 
 	pub fn build(self) -> sp_io::TestExternalities {

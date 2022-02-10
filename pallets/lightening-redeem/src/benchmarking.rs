@@ -17,7 +17,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #![cfg(feature = "runtime-benchmarks")]
-
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::{dispatch::UnfilteredDispatchable, sp_runtime::traits::UniqueSaturatedFrom};
 use frame_system::RawOrigin;
@@ -79,5 +78,5 @@ impl_benchmark_test_suite!(
 	crate::mock::ExtBuilder::default()
 		.one_hundred_precision_for_each_currency_type_for_whitelist_account()
 		.build(),
-	crate::mock::Test
+	crate::mock::Runtime
 );

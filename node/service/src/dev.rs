@@ -16,14 +16,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+use std::sync::Arc;
+
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
 use futures::StreamExt;
 use sc_executor::NativeElseWasmExecutor;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager};
 
 pub type Block = node_primitives::Block;
-pub type Executor = crate::collator_kusama::AsgardExecutor;
-pub type RuntimeApi = crate::collator_kusama::asgard_runtime::RuntimeApi;
+pub type Executor = crate::collator_kusama::BifrostExecutor;
+pub type RuntimeApi = crate::collator_kusama::bifrost_kusama_runtime::RuntimeApi;
 pub type FullClient<RuntimeApi, ExecutorDispatch> =
 	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 pub type FullBackend = sc_service::TFullBackend<Block>;
@@ -34,6 +36,9 @@ pub fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInhe
 		current_para_block: 0,
 		relay_offset: 1000,
 		relay_blocks_per_para_block: 2,
+		xcm_config: Default::default(),
+		raw_downward_messages: vec![],
+		raw_horizontal_messages: vec![],
 	}
 }
 
@@ -50,8 +55,8 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 		transaction_pool,
 		other: (_, _),
 	} = crate::collator_kusama::new_partial::<
-		asgard_runtime::RuntimeApi,
-		crate::collator_kusama::AsgardExecutor,
+		bifrost_kusama_runtime::RuntimeApi,
+		crate::collator_kusama::BifrostExecutor,
 	>(&config, true)?;
 
 	let (network, system_rpc_tx, network_starter) =
@@ -66,11 +71,22 @@ pub fn start_node(config: Configuration) -> Result<TaskManager, ServiceError> {
 		})?;
 
 	if config.offchain_worker.enabled {
-		sc_service::build_offchain_workers(
-			&config,
-			task_manager.spawn_handle(),
+		let offchain_workers = Arc::new(sc_offchain::OffchainWorkers::new_with_options(
 			client.clone(),
-			network.clone(),
+			sc_offchain::OffchainWorkerOptions { enable_http_requests: false },
+		));
+
+		// Start the offchain workers to have
+		task_manager.spawn_handle().spawn(
+			"offchain-notifications",
+			None,
+			sc_offchain::notification_future(
+				config.role.is_authority(),
+				client.clone(),
+				offchain_workers,
+				task_manager.spawn_handle(),
+				network.clone(),
+			),
 		);
 	}
 

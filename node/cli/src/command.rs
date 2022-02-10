@@ -22,7 +22,6 @@ use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
-use node_primitives::Block;
 use node_service::{self as service, IdentifyVariant};
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
@@ -57,14 +56,6 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		id
 	};
 	Ok(match id {
-		#[cfg(feature = "with-asgard-runtime")]
-		"asgard" => Box::new(service::chain_spec::asgard::ChainSpec::from_json_bytes(
-			&include_bytes!("../../service/res/asgard.json")[..],
-		)?),
-		#[cfg(feature = "with-asgard-runtime")]
-		"asgard-genesis" => Box::new(service::chain_spec::asgard::chainspec_config()),
-		#[cfg(feature = "with-asgard-runtime")]
-		"asgard-local" => Box::new(service::chain_spec::asgard::local_testnet_config()?),
 		#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost" | "bifrost-kusama" =>
 			Box::new(service::chain_spec::bifrost_kusama::ChainSpec::from_json_bytes(
@@ -91,18 +82,11 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		"bifrost-polkadot-local" =>
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
 
-		#[cfg(feature = "with-asgard-runtime")]
-		"dev" => Box::new(service::chain_spec::asgard::development_config()?),
+		#[cfg(feature = "with-bifrost-kusama-runtime")]
+		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
 		path => {
 			let path = std::path::PathBuf::from(path);
-			if path.to_str().map(|s| s.contains("asgard")) == Some(true) {
-				#[cfg(feature = "with-asgard-runtime")]
-				{
-					Box::new(service::chain_spec::asgard::ChainSpec::from_json_file(path)?)
-				}
-				#[cfg(not(feature = "with-asgard-runtime"))]
-				return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
-			} else if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
+			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
 				#[cfg(any(
 					feature = "with-bifrost-polkadot-runtime",
 					feature = "with-bifrost-runtime"
@@ -173,14 +157,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if spec.is_asgard() || spec.is_dev() {
-			#[cfg(feature = "with-asgard-runtime")]
-			{
-				&asgard_runtime::VERSION
-			}
-			#[cfg(not(feature = "with-asgard-runtime"))]
-			panic!("{}", service::ASGARD_RUNTIME_NOT_AVAILABLE);
-		} else if spec.is_bifrost_kusama() {
+		if spec.is_bifrost_kusama() || spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 			{
 				&bifrost_kusama_runtime::VERSION
@@ -257,8 +234,6 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
-#[cfg(feature = "with-asgard-runtime")]
-use service::collator_kusama::{asgard_runtime, AsgardExecutor};
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 use service::collator_kusama::{bifrost_kusama_runtime, BifrostExecutor};
 #[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
@@ -266,7 +241,7 @@ use service::collator_polkadot::bifrost_polkadot_runtime;
 
 macro_rules! with_runtime_or_err {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_bifrost_kusama() {
+		if $chain_spec.is_bifrost_kusama() || $chain_spec.is_dev() {
 			#[cfg(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
 			use bifrost_kusama_runtime::{Block, RuntimeApi};
@@ -284,25 +259,6 @@ macro_rules! with_runtime_or_err {
 
 			#[cfg(not(any(feature = "with-bifrost-kusama-runtime",feature = "with-bifrost-runtime")))]
 			return Err(service::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_asgard() || $chain_spec.is_dev() {
-			#[cfg(feature = "with-asgard-runtime")]
-			#[allow(unused_imports)]
-			use asgard_runtime::{Block, RuntimeApi};
-			#[cfg(feature = "with-asgard-runtime")]
-			#[allow(unused_imports)]
-			use AsgardExecutor as Executor;
-			#[cfg(feature = "with-asgard-runtime")]
-			#[allow(unused_imports)]
-			use service::collator_kusama::start_node;
-			#[cfg(feature = "with-asgard-runtime")]
-			#[allow(unused_imports)]
-			use service::collator_kusama::new_chain_ops;
-
-			#[cfg(feature = "with-asgard-runtime")]
-			$( $code )*
-
-			#[cfg(not(feature = "with-asgard-runtime"))]
-			return Err(service::ASGARD_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_bifrost_polkadot() {
 			#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 			#[allow(unused_imports)]
@@ -350,12 +306,11 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			runner.run_node_until_exit(|config| async move {
 				if config.chain_spec.is_dev() {
-					#[cfg(feature = "with-asgard-runtime")]
+					#[cfg(feature = "with-bifrost-kusama-runtime")]
 					{
 						return service::dev::start_node(config).map_err(Into::into);
 					}
 				}
-
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id)
@@ -373,18 +328,15 @@ pub fn run() -> Result<()> {
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
 
-				let block: Block =
-					generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
-				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
-
-				let tokio_handle = config.tokio_handle.clone();
-				let polkadot_config =
-					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, tokio_handle)
-						.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.tokio_handle.clone(),
+				)
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
-				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {
@@ -519,14 +471,20 @@ pub fn run() -> Result<()> {
 			let _ = builder.init();
 
 			let chain_spec = cli.load_spec(&params.chain.clone().unwrap_or_default())?;
-			let block: Block =
-				generate_genesis_block(&chain_spec).map_err(|e| format!("{:?}", e))?;
-			let raw_header = block.header().encode();
-			let output_buf = if params.raw {
-				raw_header
-			} else {
-				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-			};
+			let state_version = Cli::native_runtime_version(&chain_spec).state_version();
+			let output_buf = with_runtime_or_err!(chain_spec, {
+				{
+					let block: Block = generate_genesis_block(&chain_spec, state_version)
+						.map_err(|e| format!("{:?}", e))?;
+					let raw_header = block.header().encode();
+					let buf = if params.raw {
+						raw_header
+					} else {
+						format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+					};
+					buf
+				}
+			});
 			if let Some(output) = &params.output {
 				std::fs::write(output, output_buf)?;
 			} else {
@@ -632,11 +590,24 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_ws(default_listen_port)
 	}
 
-	fn prometheus_config(&self, default_listen_port: u16) -> Result<Option<PrometheusConfig>> {
-		self.base.base.prometheus_config(default_listen_port)
+	fn prometheus_config(
+		&self,
+		default_listen_port: u16,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<PrometheusConfig>> {
+		self.base.base.prometheus_config(default_listen_port, chain_spec)
 	}
 
-	fn init<C: SubstrateCli>(&self) -> Result<()> {
+	fn init<F>(
+		&self,
+		_support_url: &String,
+		_impl_version: &String,
+		_logger_hook: F,
+		_config: &sc_service::Configuration,
+	) -> Result<()>
+	where
+		F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 

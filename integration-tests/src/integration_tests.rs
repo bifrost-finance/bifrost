@@ -42,7 +42,7 @@ mod bifrost_imports {
 	pub use bifrost_kusama_runtime::{
 		create_x2_multilocation, AccountId, Balance, Balances, BifrostCrowdloanId, BlockNumber,
 		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
-		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Perbill, Proxy,
+		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
 		RelayCurrencyId, RelaychainSovereignSubAccount, Runtime, Salp, Scheduler, Session,
 		SlotLength, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
 	};

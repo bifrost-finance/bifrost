@@ -18,7 +18,9 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 use frame_support::{
-	construct_runtime, parameter_types,
+	construct_runtime,
+	dispatch::DispatchResult,
+	parameter_types,
 	traits::{EnsureOrigin, GenesisBuild, Nothing},
 	weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
 	PalletId,
@@ -28,8 +30,11 @@ use node_primitives::{
 	Amount, Balance, CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType,
 	TokenSymbol, TransferOriginType,
 };
+use orml_traits::XcmTransfer;
+use smallvec::smallvec;
 use sp_arithmetic::Percent;
 use sp_core::H256;
+pub use sp_runtime::Perbill;
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -54,6 +59,7 @@ construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
@@ -99,6 +105,7 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 parameter_types! {
@@ -138,6 +145,11 @@ impl pallet_multisig::Config for Test {
 	type Event = Event;
 	type MaxSignatories = MaxSignatories;
 	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Test>;
+}
+
+impl pallet_sudo::Config for Test {
+	type Call = Call;
+	type Event = Event;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -211,8 +223,8 @@ parameter_types! {
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 }
 
-pub struct EnsureConfirmAsMultiSig;
-impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
+pub struct EnsureConfirmAsGovernance;
+impl EnsureOrigin<Origin> for EnsureConfirmAsGovernance {
 	type Success = AccountId;
 
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
@@ -228,11 +240,6 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
 		Origin::from(RawOrigin::Signed(ConfirmMuitiSigAccount::get()))
 	}
 }
-
-use frame_support::dispatch::DispatchResult;
-use orml_traits::XcmTransfer;
-use smallvec::smallvec;
-pub use sp_runtime::Perbill;
 
 pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
@@ -291,8 +298,7 @@ impl salp::Config for Test {
 	type SelfParaId = SelfParaId;
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
-	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
-	type EnsureConfirmAsGovernance = EnsureConfirmAsMultiSig;
+	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
@@ -375,6 +381,10 @@ impl BifrostXcmExecutor for MockXcmExecutor {
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 
+	pallet_sudo::GenesisConfig::<Test> { key: Some(ALICE) }
+		.assimilate_storage(&mut t)
+		.unwrap();
+
 	orml_tokens::GenesisConfig::<Test> {
 		balances: vec![
 			(ALICE, NativeCurrencyId::get(), INIT_BALANCE),
@@ -387,6 +397,10 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
+	crate::GenesisConfig::<Test> { initial_multisig_account: Some(ALICE) }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	t.into()
 }

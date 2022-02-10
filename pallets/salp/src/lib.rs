@@ -173,8 +173,6 @@ pub mod pallet {
 
 		type BancorPool: BancorHandler<BalanceOf<Self>>;
 
-		type EnsureConfirmAsMultiSig: EnsureOrigin<<Self as frame_system::Config>::Origin>;
-
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		type BifrostXcmExecutor: BifrostXcmExecutor;
@@ -223,6 +221,7 @@ pub mod pallet {
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(_);
 
 	#[pallet::event]
@@ -318,7 +317,7 @@ pub mod pallet {
 	/// Multisig confirm account
 	#[pallet::storage]
 	#[pallet::getter(fn multisig_confirm_account)]
-	pub type MultisigConfirmAccount<T: Config> = StorageValue<_, AccountIdOf<T>, ValueQuery>;
+	pub type MultisigConfirmAccount<T: Config> = StorageValue<_, AccountIdOf<T>, OptionQuery>;
 
 	/// Tracker for the next available fund index
 	#[pallet::storage]
@@ -669,7 +668,7 @@ pub mod pallet {
 			message_id: MessageId,
 		) -> DispatchResult {
 			let confirmor = ensure_signed(origin.clone())?;
-			if confirmor != MultisigConfirmAccount::<T>::get() {
+			if Some(confirmor) != MultisigConfirmAccount::<T>::get() {
 				return Err(DispatchError::BadOrigin.into());
 			}
 			let fund = Self::funds(index).ok_or(Error::<T>::InvalidParaId)?;
@@ -1005,6 +1004,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 			asset_id: u32,
 		) -> DispatchResult {
+			use bifrost_runtime_common::constants::parachains;
 			let who = ensure_signed(origin)?;
 			let origin_location = T::AccountIdToMultiLocation::convert(who.clone());
 			let mut assets = MultiAssets::new(); // VersionedMultiAssets::V1(MultiAssets::new(MultiAsset))
@@ -1013,8 +1013,9 @@ pub mod pallet {
 			let statemine_asset = MultiAsset {
 				id: AssetId::Concrete(MultiLocation::new(
 					1,
-					Junctions::X2(
+					Junctions::X3(
 						Junction::Parachain(1000),
+						Junction::PalletInstance(parachains::Statemine::PALLET_ID),
 						Junction::GeneralIndex(asset_id.into()),
 					),
 				)),
