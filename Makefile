@@ -22,6 +22,11 @@ build-bifrost-polkadot-release: copy-genesis-config-release
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
+.PHONY: build-bifrost-kusama-fast-release
+build-bifrost-kusama-fast-release:
+	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime,fast-runtime" --release
+
+
 .PHONY: check-all
 check-all: format
 	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
