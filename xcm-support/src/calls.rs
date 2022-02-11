@@ -35,6 +35,19 @@ pub enum StakingCall {
 	WithdrawUnbonded(u32),
 }
 
+pub mod rococo {
+
+	pub use crate::calls::*;
+
+	#[derive(Encode, Decode, RuntimeDebug)]
+	pub enum RelaychainCall<BalanceOf, AccountIdOf, BlockNumberOf> {
+		#[codec(index = 28)]
+		Crowdloan(ContributeCall<BalanceOf, AccountIdOf>),
+		#[codec(index = 91)]
+		Proxy(ProxyCall<AccountIdOf, BlockNumberOf>),
+	}
+}
+
 pub mod kusama {
 
 	pub use crate::calls::*;

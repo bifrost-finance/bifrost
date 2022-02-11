@@ -50,6 +50,10 @@ macro_rules! use_relay {
             use kusama::RelaychainCall;
 
 			$( $code )*
+        } else if T::RelayNetwork::get() == NetworkId::Any {
+            use rococo::RelaychainCall;
+
+			$( $code )*
         } else {
             unreachable!()
         }

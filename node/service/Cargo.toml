@@ -121,4 +121,8 @@ try-runtime = [
 	"bifrost-kusama-runtime/try-runtime",
 	"bifrost-polkadot-runtime/try-runtime",
 ]
+fast-runtime = [
+	"bifrost-kusama-runtime/fast-runtime",
+	"bifrost-polkadot-runtime/fast-runtime",
+]
 
