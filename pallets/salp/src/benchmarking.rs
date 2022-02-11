@@ -111,7 +111,7 @@ benchmarks! {
 	verify {
 		let fund = Salp::<T>::funds(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Unlocked);
+		assert_eq!(status, ContributionStatus::Idle);
 	}
 
 	batch_unlock {
@@ -136,7 +136,7 @@ benchmarks! {
 	verify {
 		let fund = Salp::<T>::funds(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
-		assert_eq!(status, ContributionStatus::Unlocked);
+		assert_eq!(status, ContributionStatus::Idle);
 		assert_last_event::<T>(Event::<T>::AllUnlocked(fund_index).into());
 	}
 
