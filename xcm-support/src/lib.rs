@@ -66,8 +66,8 @@ impl From<Error> for XcmError {
 	}
 }
 
-pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId>(
-	PhantomData<(XcmSender, BaseXcmWeight, WeightToFee, SelfParaId)>,
+pub struct BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId, XcmTransactFee>(
+	PhantomData<(XcmSender, BaseXcmWeight, WeightToFee, SelfParaId, XcmTransactFee)>,
 );
 
 impl<
@@ -75,10 +75,12 @@ impl<
 		BaseXcmWeight: Get<u64>,
 		WeightToFee: WeightToFeePolynomial<Balance = u128>,
 		SelfParaId: Get<u32>,
-	> BifrostXcmExecutor for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId>
+		XcmTransactFee: Get<u128>,
+	> BifrostXcmExecutor
+	for BifrostXcmAdaptor<XcmSender, BaseXcmWeight, WeightToFee, SelfParaId, XcmTransactFee>
 {
 	fn transact_weight(weight: u64, nonce: u32) -> u64 {
-		return weight + 4 * BaseXcmWeight::get() + nonce as u64;
+		return weight + 5 * BaseXcmWeight::get() + nonce as u64;
 	}
 
 	fn transact_id(data: &[u8]) -> MessageId {
@@ -96,18 +98,15 @@ impl<
 
 		let asset: MultiAsset = MultiAsset {
 			id: Concrete(MultiLocation::here()),
-			fun: Fungible(WeightToFee::calc(&Self::transact_weight(weight, nonce))),
+			fun: Fungibility::from(XcmTransactFee::get()),
 		};
 
 		let message = Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
-			BuyExecution {
-				fees: asset,
-				weight_limit: WeightLimit::Limited(Self::transact_weight(weight, nonce)),
-			},
-			Instruction::Transact {
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
 				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: weight,
+				require_weight_at_most: weight + nonce as u64,
 				call,
 			},
 			RefundSurplus,

@@ -115,3 +115,21 @@ impl<T: cumulus_pallet_parachain_system::Config> BlockNumberProvider
 			.unwrap_or_default()
 	}
 }
+
+#[macro_export]
+macro_rules! prod_or_test {
+	($prod:expr, $test:expr) => {
+		if cfg!(feature = "fast-runtime") {
+			$test
+		} else {
+			$prod
+		}
+	};
+	($prod:expr, $test:expr, $env:expr) => {
+		if cfg!(feature = "fast-runtime") {
+			core::option_env!($env).map(|s| s.parse().ok()).flatten().unwrap_or($test)
+		} else {
+			$prod
+		}
+	};
+}

@@ -76,7 +76,7 @@ use bifrost_flexible_fee::{
 use bifrost_runtime_common::{
 	cent,
 	constants::{parachains, time::*},
-	dollar, micro, milli, millicent,
+	dollar, micro, milli, millicent, prod_or_test,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
 		BifrostFilteredAssets,
@@ -902,35 +902,35 @@ parameter_types! {
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
 	pub const MinBlocksPerRound: u32 = 10;
 	/// Blocks per round
-	pub const DefaultBlocksPerRound: u32 = 2 * HOURS;
+	pub const DefaultBlocksPerRound: u32 = 30 * MINUTES;
 	/// Rounds before the collator leaving the candidates request can be executed
-	pub const LeaveCandidatesDelay: u32 = 36;
+	pub const LeaveCandidatesDelay: u32 = 24;
 	/// Rounds before the candidate bond increase/decrease can be executed
-	pub const CandidateBondLessDelay: u32 = 36;
+	pub const CandidateBondLessDelay: u32 = 24;
 	/// Rounds before the delegator exit can be executed
-	pub const LeaveDelegatorsDelay: u32 = 36;
+	pub const LeaveDelegatorsDelay: u32 = 24;
 	/// Rounds before the delegator revocation can be executed
-	pub const RevokeDelegationDelay: u32 = 36;
+	pub const RevokeDelegationDelay: u32 = 24;
 	/// Rounds before the delegator bond increase/decrease can be executed
-	pub const DelegationBondLessDelay: u32 = 36;
+	pub const DelegationBondLessDelay: u32 = 24;
 	/// Rounds before the reward is paid
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
-	pub const MinSelectedCandidates: u32 = 8;
+	pub const MinSelectedCandidates: u32 = 16;
 	/// Maximum delegators counted per candidate
 	pub const MaxDelegatorsPerCandidate: u32 = 100;
 	/// Maximum delegations per delegator
 	pub const MaxDelegationsPerDelegator: u32 = 100;
 	/// Default fixed percent a collator takes off the top of due rewards
-	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(5);
+	pub const DefaultCollatorCommission: Perbill = Perbill::from_percent(10);
 	/// Default percent of inflation set aside for parachain bond every round
-	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(5);
+	pub const DefaultParachainBondReservePercent: Percent = Percent::from_percent(0);
 	/// Minimum stake required to become a collator
-	pub MinCollatorStk: u128 = 5000 * dollar(NativeCurrencyId::get());
+	pub MinCollatorStk: u128 = 100 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a candidate
-	pub MinCandidateStk: u128 = 2000 * dollar(NativeCurrencyId::get());
+	pub MinCandidateStk: u128 = 50 * dollar(NativeCurrencyId::get());
 	/// Minimum stake required to be reserved to be a delegator
-	pub MinDelegatorStk: u128 = 50 * dollar(NativeCurrencyId::get());
+	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
 	pub ToMigrateInvulnables: Vec<AccountId> = vec![
 		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
@@ -938,7 +938,7 @@ parameter_types! {
 		hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
 		hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
 	];
-	pub PaymentInRound: u128 = 180 * dollar(NativeCurrencyId::get());
+	pub PaymentInRound: u128 = 45 * dollar(NativeCurrencyId::get());
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
@@ -971,7 +971,7 @@ impl parachain_staking::Config for Runtime {
 
 parameter_types! {
 	pub const KsmLocation: MultiLocation = MultiLocation::parent();
-	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
+	pub const RelayNetwork: NetworkId = prod_or_test!(NetworkId::Kusama, NetworkId::Any);
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub SelfParaChainId: CumulusParaId = ParachainInfo::parachain_id();
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
@@ -1440,7 +1440,7 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * milli(RelayCurrencyId::get()) as u64) + ContributionWeight::get() + u64::pow(2, 24).into();
+	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(6 * milli(RelayCurrencyId::get()) as u64) + ContributionWeight::get() + u64::pow(2, 24).into();
 	pub StatemineTransferWeightHolder: XcmBaseWeight = XcmBaseWeight::from(6 * milli(RelayCurrencyId::get()) as u64);
 }
 
@@ -1498,11 +1498,13 @@ parameter_types! {
 	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
 	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
+	pub XcmTransactFee: Balance = dollar(RelayCurrencyId::get()) / 10;
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = ();
-	type BifrostXcmExecutor = BifrostXcmAdaptor<XcmRouter, XcmWeight, KsmWeightToFee, SelfParaId>;
+	type BifrostXcmExecutor =
+		BifrostXcmAdaptor<XcmRouter, XcmWeight, KsmWeightToFee, SelfParaId, XcmTransactFee>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;

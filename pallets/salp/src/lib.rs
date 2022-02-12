@@ -50,6 +50,10 @@ macro_rules! use_relay {
             use kusama::RelaychainCall;
 
 			$( $code )*
+        } else if T::RelayNetwork::get() == NetworkId::Any {
+            use rococo::RelaychainCall;
+
+			$( $code )*
         } else {
             unreachable!()
         }
@@ -1004,6 +1008,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 			asset_id: u32,
 		) -> DispatchResult {
+			use bifrost_runtime_common::constants::parachains;
 			let who = ensure_signed(origin)?;
 			let origin_location = T::AccountIdToMultiLocation::convert(who.clone());
 			let mut assets = MultiAssets::new(); // VersionedMultiAssets::V1(MultiAssets::new(MultiAsset))
@@ -1012,8 +1017,9 @@ pub mod pallet {
 			let statemine_asset = MultiAsset {
 				id: AssetId::Concrete(MultiLocation::new(
 					1,
-					Junctions::X2(
+					Junctions::X3(
 						Junction::Parachain(1000),
+						Junction::PalletInstance(parachains::Statemine::PALLET_ID),
 						Junction::GeneralIndex(asset_id.into()),
 					),
 				)),

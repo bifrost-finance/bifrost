@@ -60,7 +60,6 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-pallet-society = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 
 # Cumulus dependencies
 cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16", default-features = false }
@@ -141,7 +140,8 @@ std = [
 	"pallet-treasury/std",
 	"pallet-preimage/std",
 	"pallet-scheduler/std",
-	"pallet-society/std",
+	"pallet-elections-phragmen/std",
+	"pallet-tips/std",
 	"sp-api/std",
 	"sp-arithmetic/std",
 	"sp-block-builder/std",
@@ -201,17 +201,18 @@ runtime-benchmarks = [
 	"frame-system-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"pallet-collective/runtime-benchmarks",
 	"pallet-balances/runtime-benchmarks",
 	"pallet-bounties/runtime-benchmarks",
+	"pallet-collective/runtime-benchmarks",
 	"pallet-indices/runtime-benchmarks",
 	"pallet-scheduler/runtime-benchmarks",
-	"pallet-society/runtime-benchmarks",
 	"pallet-timestamp/runtime-benchmarks",
 	"pallet-treasury/runtime-benchmarks",
 	"pallet-utility/runtime-benchmarks",
 	"pallet-vesting/runtime-benchmarks",
 	"pallet-xcm/runtime-benchmarks",
+	"pallet-tips/runtime-benchmarks",
+	"pallet-elections-phragmen/runtime-benchmarks",
 	"sp-runtime/runtime-benchmarks",
 	"xcm-builder/runtime-benchmarks",
 	"bifrost-flexible-fee/runtime-benchmarks",
@@ -222,12 +223,31 @@ runtime-benchmarks = [
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
+	"sp-api/disable-logging",
 ]
 
 try-runtime = [
 	"frame-executive/try-runtime",
 	"frame-try-runtime",
 	"frame-system/try-runtime",
+	"pallet-scheduler/try-runtime",
 	"pallet-vesting/try-runtime",
 	"bifrost-liquidity-mining/try-runtime",
 ]
+
+# When enabled, the runtime API will not be build.
+#
+# This is required by Cumulus to access certain types of the
+# runtime without clashing with the runtime API exported functions
+# in WASM.
+disable-runtime-api = []
+
+# A feature that should be enabled when the runtime should be build for on-chain
+# deployment. This will disable stuff that shouldn't be part of the on-chain wasm
+# to make it smaller like logging for example.
+on-chain-release-build = [
+	"sp-api/disable-logging",
+]
+
+# Set timing constants (e.g. session period) to faster versions to speed up testing.
+fast-runtime = []

@@ -84,3 +84,4 @@ try-runtime = [
 	"node-service/try-runtime",
 	"try-runtime-cli",
 ]
+fast-runtime = [ "node-service/fast-runtime" ]
