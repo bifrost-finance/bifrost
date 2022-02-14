@@ -197,7 +197,7 @@ std = [
 with-tracing = ["frame-executive/with-tracing"]
 
 runtime-benchmarks = [
-	"frame-benchmarking",
+	"frame-benchmarking/runtime-benchmarks",
 	"frame-system-benchmarking",
 	"frame-support/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
@@ -223,6 +223,7 @@ runtime-benchmarks = [
 	"bifrost-token-issuer/runtime-benchmarks",
 	"bifrost-lightening-redeem/runtime-benchmarks",
 	"bifrost-call-switchgear/runtime-benchmarks",
+	"parachain-staking/runtime-benchmarks",
 	"sp-api/disable-logging",
 ]
 

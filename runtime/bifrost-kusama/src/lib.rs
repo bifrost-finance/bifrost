@@ -1876,27 +1876,8 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	(parachain_staking::migrations::InitGenesisMigration<Runtime>, SchedulerMigrationV3),
+	parachain_staking::migrations::InitGenesisMigration<Runtime>,
 >;
-
-// Migration for scheduler pallet to move from a plain Call to a CallOrHash.
-pub struct SchedulerMigrationV3;
-impl frame_support::traits::OnRuntimeUpgrade for SchedulerMigrationV3 {
-	fn on_runtime_upgrade() -> frame_support::weights::Weight {
-		Scheduler::migrate_v2_to_v3();
-		<Runtime as frame_system::Config>::BlockWeights::get().max_block
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn pre_upgrade() -> Result<(), &'static str> {
-		Scheduler::pre_migrate_to_v3()
-	}
-
-	#[cfg(feature = "try-runtime")]
-	fn post_upgrade() -> Result<(), &'static str> {
-		Scheduler::post_migrate_to_v3()
-	}
-}
 
 impl_runtime_apis! {
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
@@ -2120,6 +2101,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, bifrost_token_issuer, TokenIssuer);
 			list_benchmark!(list, extra, bifrost_lightening_redeem, LighteningRedeem);
 			list_benchmark!(list, extra, bifrost_call_switchgear, CallSwitchgear);
+			list_benchmark!(list, extra, parachain_staking, ParachainStaking);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -2168,6 +2150,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, bifrost_token_issuer, TokenIssuer);
 			add_benchmark!(params, batches, bifrost_lightening_redeem, LighteningRedeem);
 			add_benchmark!(params, batches, bifrost_call_switchgear, CallSwitchgear);
+			add_benchmark!(params, batches, parachain_staking, ParachainStaking);
 
 			if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
 			Ok(batches)

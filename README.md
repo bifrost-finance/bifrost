@@ -52,7 +52,7 @@ make test-all
 if runtime logic change we may do the benchmarking to regenerate WeightInfo for dispatch calls
 
 ```bash
-make run-benchmarking
+make generate-all-weights
 ```
 
 ## Testing runtime migration
