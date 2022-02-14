@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    ignore:
+      - dependency-name: "cumulus-*"
+      - dependency-name: "substrate-*"
+      - dependency-name: "sc-*"
+      - dependency-name: "sp-*"
+      - dependency-name: "frame-*"
+      - dependency-name: "pallet-*"
+      - dependency-name: "try-runtime-*"
+    schedule:
+      interval: "daily"
