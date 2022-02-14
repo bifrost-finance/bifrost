@@ -14,7 +14,6 @@ members = [
 	"pallets/vesting",
 	"pallets/vsbond-auction",
 	"pallets/call-switchgear",
-	"pallets/parachain-staking",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 	"xcm-support",
@@ -103,4 +102,5 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
+parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "0811944396aea4bb755cfa4fa51d863269a5e9fe" }
 

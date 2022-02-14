@@ -96,7 +96,7 @@ bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features =
 bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
 xcm-support = { path = "../../xcm-support", default-features = false }
-parachain-staking = { path = "../../pallets/parachain-staking", default-features = false }
+parachain-staking = { version = "*", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
