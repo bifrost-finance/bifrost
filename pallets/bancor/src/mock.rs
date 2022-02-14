@@ -89,6 +89,7 @@ impl frame_system::Config for Test {
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 orml_traits::parameter_type_with_key! {

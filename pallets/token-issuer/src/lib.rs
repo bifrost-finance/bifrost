@@ -100,6 +100,7 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<AccountIdOf<T>>>;
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]

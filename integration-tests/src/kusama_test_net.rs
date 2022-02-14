@@ -32,7 +32,7 @@ use crate::integration_tests::*;
 decl_test_relay_chain! {
 	pub struct KusamaNet {
 		Runtime = kusama_runtime::Runtime,
-		XcmConfig = kusama_runtime::XcmConfig,
+		XcmConfig = kusama_runtime::xcm_config::XcmConfig,
 		new_ext = kusama_ext(),
 	}
 }
@@ -41,7 +41,7 @@ decl_test_parachain! {
 	pub struct Bifrost {
 		Runtime = Runtime,
 		Origin = Origin,
-		XcmpMessageHandler = bifrost_kusama_runtime::XcmpQueue,
+		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
 		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
 		new_ext = para_ext(2001),
 	}
@@ -51,7 +51,7 @@ decl_test_parachain! {
 	pub struct Sibling {
 		Runtime = Runtime,
 		Origin = Origin,
-		XcmpMessageHandler = bifrost_kusama_runtime::XcmpQueue,
+		XcmpMessageHandler = bifrost_kusama_runtime ::XcmpQueue,
 		DmpMessageHandler = bifrost_kusama_runtime::DmpQueue,
 		new_ext = para_ext(2000),
 	}
@@ -80,8 +80,9 @@ decl_test_network! {
 
 fn default_parachains_host_configuration() -> HostConfiguration<BlockNumber> {
 	HostConfiguration {
-		validation_upgrade_frequency: 1u32,
-		validation_upgrade_delay: 1,
+		minimum_validation_upgrade_delay: 5,
+		validation_upgrade_cooldown: 5u32,
+		validation_upgrade_delay: 5,
 		code_retention_period: 1200,
 		max_code_size: MAX_CODE_SIZE,
 		max_pov_size: MAX_POV_SIZE,

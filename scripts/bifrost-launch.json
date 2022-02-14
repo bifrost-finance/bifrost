@@ -44,7 +44,7 @@
 			"bin": "./target/release/bifrost",
 			"id": "3000",
 			"balance": "1000000000000000000000",
-			"chain": "asgard-local",
+			"chain": "bifrost-local",
 			"nodes": [
 				{
 					"wsPort": 18848,

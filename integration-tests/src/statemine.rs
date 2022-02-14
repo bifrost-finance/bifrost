@@ -19,10 +19,8 @@
 use frame_support::assert_ok;
 use polkadot_parachain::primitives::Sibling;
 use sp_runtime::traits::AccountIdConversion;
-use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
-use xcm_builder::AccountId32Aliases;
+use xcm::latest::prelude::*;
 use xcm_emulator::TestExt;
-use xcm_executor::traits::Convert;
 
 use crate::{integration_tests::*, kusama_test_net::*};
 #[test]

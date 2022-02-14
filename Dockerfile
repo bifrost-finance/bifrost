@@ -45,7 +45,6 @@ RUN rm -rf /usr/share  && \
 
 USER bifrost
 COPY --from=builder /app/target/production/bifrost /usr/local/bin
-COPY ./node/service/res/asgard.json /spec
 COPY ./node/service/res/bifrost-kusama.json /spec/bifrost.json
 COPY ./node/service/res/bifrost-kusama.json /spec
 COPY ./node/service/res/bifrost-polkadot.json /spec

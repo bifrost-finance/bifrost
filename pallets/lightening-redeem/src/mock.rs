@@ -94,6 +94,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -172,11 +173,15 @@ impl ExtBuilder {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		use frame_benchmarking::whitelisted_caller;
+		use sp_runtime::traits::AccountIdConversion;
 		let whitelist_caller: AccountId = whitelisted_caller();
-		let pool_account = LighteningRedeemPalletId::get().into_account();
+		let pool_account: AccountId = LighteningRedeemPalletId::get().into_account();
 
 		self.balances(vec![
 			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), vsKSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), vsBond, 100_000_000_000_000),
 			(pool_account.clone(), KSM, 100_000_000_000_000),
 		])
 	}

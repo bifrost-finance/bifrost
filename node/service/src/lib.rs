@@ -19,19 +19,16 @@
 #![warn(unused_extern_crates)]
 
 pub mod chain_spec;
-#[cfg(any(feature = "with-asgard-runtime", feature = "with-bifrost-kusama-runtime"))]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub mod collator_kusama;
 #[cfg(feature = "with-bifrost-polkadot-runtime")]
 pub mod collator_polkadot;
-#[cfg(feature = "with-asgard-runtime")]
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 pub mod dev;
 pub use node_rpc as rpc;
 
 /// Can be called for a `Configuration` to check if it is a configuration for the `Bifrost` network.
 pub trait IdentifyVariant {
-	/// Returns if this is a configuration for the `Asgard` network.
-	fn is_asgard(&self) -> bool;
-
 	/// Returns if this is a configuration for the `Bifrost-Kusama` network.
 	fn is_bifrost_kusama(&self) -> bool;
 
@@ -43,10 +40,6 @@ pub trait IdentifyVariant {
 }
 
 impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
-	fn is_asgard(&self) -> bool {
-		self.id().starts_with("asgard")
-	}
-
 	fn is_bifrost_kusama(&self) -> bool {
 		self.id().starts_with("bifrost") && !self.id().starts_with("bifrost_polkadot")
 	}
@@ -60,8 +53,6 @@ impl IdentifyVariant for Box<dyn sc_service::ChainSpec> {
 	}
 }
 
-pub const ASGARD_RUNTIME_NOT_AVAILABLE: &str =
-	"Asgard runtime is not available. Please compile the node with `--features with-asgard-runtime` to enable it.";
 pub const BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
 	"Bifrost runtime is not available. Please compile the node with `--features with-bifrost-kusama-runtime` to enable it.";
 pub const BIFROST_POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
