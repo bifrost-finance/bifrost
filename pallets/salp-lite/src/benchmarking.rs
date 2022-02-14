@@ -18,7 +18,7 @@
 
 // Ensure we're `no_std` when compiling for Wasm.
 #[cfg(feature = "runtime-benchmarks")]
-use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_support::assert_ok;
 use frame_system::RawOrigin;
 use node_primitives::ParaId;
@@ -49,7 +49,8 @@ fn create_fund<T: Config>(id: u32) -> ParaId {
 #[allow(dead_code)]
 fn contribute_fund<T: Config>(who: &T::AccountId, index: ParaId) {
 	let value = T::MinContribution::get();
-	let confirmer: T::Origin = RawOrigin::Signed(Salp::<T>::multisig_confirm_account()).into();
+	let confirmer: T::Origin =
+		RawOrigin::Signed(Salp::<T>::multisig_confirm_account().unwrap()).into();
 	assert_ok!(Salp::<T>::issue(confirmer, who.clone(), index, value, [0; 32]));
 }
 

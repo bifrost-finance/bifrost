@@ -87,7 +87,7 @@ fn bifrost_kusama_properties() -> Properties {
 }
 
 pub fn bifrost_genesis(
-	invulnerables: Vec<(AccountId, AuraId)>,
+	candidates: Vec<(AccountId, AuraId, Balance)>,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
@@ -121,15 +121,15 @@ pub fn bifrost_genesis(
 		phragmen_election: Default::default(),
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			invulnerables: candidates.iter().cloned().map(|(acc, _, _)| acc).collect(),
 			candidacy_bond: Zero::zero(),
 			..Default::default()
 		},
 		session: SessionConfig {
-			keys: invulnerables
+			keys: candidates
 				.iter()
 				.cloned()
-				.map(|(acc, aura)| {
+				.map(|(acc, aura, _)| {
 					(
 						acc.clone(),                                  // account id
 						acc.clone(),                                  // validator id
@@ -186,6 +186,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 		vec![(
 			get_account_id_from_seed::<sr25519::Public>("Alice"),
 			get_from_seed::<AuraId>("Alice"),
+			ENDOWMENT() / 4,
 		)],
 		balances,
 		vestings,
@@ -198,17 +199,18 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn development_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Development",
-		"bifrost_dev",
+		"dev",
 		ChainType::Development,
-		move || development_config_genesis(id),
+		move || development_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
-		RelayExtensions { relay_chain: "kusama-dev".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "westend-dev".into(), para_id: PARA_ID },
 	))
 }
 
@@ -270,8 +272,13 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 			(
 				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				get_from_seed::<AuraId>("Alice"),
+				ENDOWMENT() / 4,
 			),
-			(get_account_id_from_seed::<sr25519::Public>("Bob"), get_from_seed::<AuraId>("Bob")),
+			(
+				get_account_id_from_seed::<sr25519::Public>("Bob"),
+				get_from_seed::<AuraId>("Bob"),
+				ENDOWMENT() / 4,
+			),
 		],
 		balances,
 		vestings,
@@ -293,30 +300,37 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
 	))
 }
 
 fn stage_config_genesis(id: ParaId) -> GenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
 			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
 			hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"]
 				.unchecked_into(),
+			ENDOWMENT() / 4,
 		),
 		(
 			// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
 			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
 			hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"]
 				.unchecked_into(),
+			ENDOWMENT() / 4,
 		),
 	];
 
 	let endowed_accounts: Vec<AccountId> = vec![
 		// dEmQ58Mi6YKd16XifjaX9jPg13C1HHV1EdeEQqQn3GwLueP
 		hex!["42f80d01d23a66a9429362a8e4f253a2a02e16c10de83a8ac1eaf6bbb7c9cb1b"].into(),
+		// e2s2dTSWe9kHebF2FCbPGbXftDT7fY5AMDfib3j86zSi3v7
+		hex!["66204aeda74f07f77a4b6945681296763706f98d0f8aebb1b9ccdf6e9b7ac13f"].into(),
+		// fFjUFbokagaDRQUDzVhDcMZQaDwQvvha74RMZnyoSWNpiBQ
+		hex!["9c2d45edb30d4bf0c285d6809e28c55e871f10578c5a3ea62da152d03761d266"].into(),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 
@@ -356,6 +370,7 @@ pub fn stage_testnet_config() -> Result<ChainSpec, String> {
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama-local".into(), para_id: PARA_ID },
 	))
@@ -370,36 +385,41 @@ pub fn chainspec_config() -> ChainSpec {
 		vec![],
 		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
+		None,
 		Some(bifrost_kusama_properties()),
 		RelayExtensions { relay_chain: "kusama".into(), para_id: PARA_ID },
 	)
 }
 
 fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
-	let invulnerables: Vec<(AccountId, AuraId)> = vec![
+	let invulnerables: Vec<(AccountId, AuraId, Balance)> = vec![
 		(
 			// eunwjK45qDugPXhnjxGUcMbifgdtgefzoW7PgMMpr39AXwh
 			hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
 			hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 		(
 			// dBkoWVdQCccH1xNAeR1Y4vrETt3a4j4iU8Ct2ewY1FUjasL
 			hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
 			hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 		(
 			// dwrEwfj2RFU4DS6EiTCfmxMpQ1sAsaHykftzwoptFe4a8aH
 			hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
 			hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 		(
 			// fAjW6bwT4GKgW88sjZfNLRr5hWyMM9T9ZwqHYkFiSxw4Yhp
 			hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
 			hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"]
 				.unchecked_into(),
+			ENDOWMENT(),
 		),
 	];
 

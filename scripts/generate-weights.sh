@@ -2,12 +2,8 @@
 
 ## EXAMPLE
 ##
-## Generate the weightInfo files of `asgard-runtimes`;
-# sh ./script/generate-weights.sh asgard
 ## Generate the weightInfo files of `bifrost-runtimes`;
 # sh ./script/generate-weights.sh bifrost
-## Generate the weightInfo files of `asgard-runtimes` and that of `asgard-runtime`;
-# sh ./script/generate-weights.sh asgard bifrost
 
 # 1. Build all-release which is added with "runtime-benchmarks" feature;
 make build-bifrost-release-with-bench

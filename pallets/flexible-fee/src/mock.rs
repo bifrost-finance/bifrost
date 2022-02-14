@@ -28,7 +28,7 @@ use frame_support::{
 	parameter_types,
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
-	traits::{Contains, EnsureOrigin, Nothing},
+	traits::{Contains, Nothing},
 	weights::{
 		constants::ExtrinsicBaseWeight, IdentityFee, Weight, WeightToFeeCoefficients,
 		WeightToFeePolynomial,
@@ -36,7 +36,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system as system;
-use frame_system::RawOrigin;
+use frame_system::EnsureRoot;
 use node_primitives::{
 	CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType, TokenSymbol,
 	TransferOriginType, XcmBaseWeight,
@@ -121,6 +121,7 @@ impl system::Config for Test {
 	type SS58Prefix = ();
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 thread_local! {
@@ -481,24 +482,6 @@ parameter_types! {
 
 pub const XCM_WEIGHT: u64 = 1_000_000_000;
 
-pub struct EnsureConfirmAsMultiSig;
-impl EnsureOrigin<Origin> for EnsureConfirmAsMultiSig {
-	type Success = AccountId;
-
-	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
-		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
-			RawOrigin::Signed(who) => Ok(who),
-			RawOrigin::Root => Ok(Default::default()),
-			r => Err(Origin::from(r)),
-		})
-	}
-
-	#[cfg(feature = "runtime-benchmarks")]
-	fn successful_origin() -> Origin {
-		Origin::from(RawOrigin::Signed(ALICE))
-	}
-}
-
 pub struct MockXTokens;
 
 impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
@@ -543,8 +526,7 @@ impl bifrost_salp::Config for Test {
 	type SelfParaId = SelfParaId;
 	type BaseXcmWeight = BaseXcmWeight;
 	type ContributionWeight = ContributionWeight;
-	type EnsureConfirmAsMultiSig = EnsureConfirmAsMultiSig;
-	type EnsureConfirmAsGovernance = EnsureConfirmAsMultiSig;
+	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
 	type AddProxyWeight = AddProxyWeight;
 	type XcmTransfer = MockXTokens;
 	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
