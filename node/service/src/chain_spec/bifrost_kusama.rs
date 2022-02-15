@@ -22,11 +22,11 @@ use std::{
 };
 
 use bifrost_kusama_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CollatorSelectionConfig,
-	CouncilConfig, CouncilMembershipConfig, DemocracyConfig, GenesisConfig, IndicesConfig,
-	ParachainInfoConfig, PolkadotXcmConfig, SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig,
-	SystemConfig, TechnicalCommitteeConfig, TechnicalMembershipConfig, TokensConfig, VestingConfig,
-	WASM_BINARY,
+	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CouncilConfig,
+	CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig,
+	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
+	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
+	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
 use bifrost_runtime_common::dollar;
 use cumulus_primitives_core::ParaId;
@@ -46,6 +46,8 @@ use crate::chain_spec::{get_account_id_from_seed, get_from_seed, RelayExtensions
 
 const DEFAULT_PROTOCOL_ID: &str = "bifrost";
 
+use sp_runtime::Perbill;
+
 /// Specialized `ChainSpec` for the bifrost runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, RelayExtensions>;
 
@@ -55,6 +57,33 @@ pub fn ENDOWMENT() -> u128 {
 }
 
 pub const PARA_ID: u32 = 2001;
+
+pub fn inflation_config() -> InflationInfo<Balance> {
+	fn to_round_inflation(annual: Range<Perbill>) -> Range<Perbill> {
+		use parachain_staking::inflation::{perbill_annual_to_perbill_round, BLOCKS_PER_YEAR};
+		perbill_annual_to_perbill_round(
+			annual,
+			// rounds per year
+			BLOCKS_PER_YEAR / DefaultBlocksPerRound::get(),
+		)
+	}
+	let annual = Range {
+		min: Perbill::from_percent(4),
+		ideal: Perbill::from_percent(5),
+		max: Perbill::from_percent(5),
+	};
+	InflationInfo {
+		// staking expectations
+		expect: Range {
+			min: 100_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
+			ideal: 200_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
+			max: 500_000 * dollar(CurrencyId::Native(TokenSymbol::BNC)),
+		},
+		// annual inflation
+		annual,
+		round: to_round_inflation(annual),
+	}
+}
 
 fn bifrost_kusama_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
@@ -88,6 +117,7 @@ fn bifrost_kusama_properties() -> Properties {
 
 pub fn bifrost_genesis(
 	candidates: Vec<(AccountId, AuraId, Balance)>,
+	delegations: Vec<(AccountId, AccountId, Balance)>,
 	balances: Vec<(AccountId, Balance)>,
 	vestings: Vec<(AccountId, BlockNumber, BlockNumber, Balance)>,
 	id: ParaId,
@@ -120,11 +150,6 @@ pub fn bifrost_genesis(
 		treasury: Default::default(),
 		phragmen_election: Default::default(),
 		parachain_info: ParachainInfoConfig { parachain_id: id },
-		collator_selection: CollatorSelectionConfig {
-			invulnerables: candidates.iter().cloned().map(|(acc, _, _)| acc).collect(),
-			candidacy_bond: Zero::zero(),
-			..Default::default()
-		},
 		session: SessionConfig {
 			keys: candidates
 				.iter()
@@ -146,6 +171,15 @@ pub fn bifrost_genesis(
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		salp: SalpConfig { initial_multisig_account: Some(salp_multisig_key) },
 		salp_lite: SalpLiteConfig { initial_multisig_account: Some(salp_lite_multisig_key_salp) },
+		parachain_staking: ParachainStakingConfig {
+			candidates: candidates
+				.iter()
+				.cloned()
+				.map(|(account, _, bond)| (account, bond))
+				.collect(),
+			delegations,
+			inflation_config: inflation_config(),
+		},
 	}
 }
 
@@ -188,6 +222,7 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 			get_from_seed::<AuraId>("Alice"),
 			ENDOWMENT() / 4,
 		)],
+		vec![],
 		balances,
 		vestings,
 		id,
@@ -280,6 +315,7 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 				ENDOWMENT() / 4,
 			),
 		],
+		vec![],
 		balances,
 		vestings,
 		id,
@@ -350,6 +386,7 @@ fn stage_config_genesis(id: ParaId) -> GenesisConfig {
 
 	bifrost_genesis(
 		invulnerables,
+		vec![],
 		balances,
 		vec![],
 		id,
@@ -471,6 +508,7 @@ fn bifrost_config_genesis(id: ParaId) -> GenesisConfig {
 	use sp_core::sp_std::collections::btree_map::BTreeMap;
 	bifrost_genesis(
 		invulnerables,
+		vec![],
 		balances,
 		vesting_configs.into_iter().flat_map(|vc| vc.vesting).collect(),
 		id,

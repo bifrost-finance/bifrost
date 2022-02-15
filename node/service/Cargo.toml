@@ -69,6 +69,8 @@ cumulus-relay-chain-local = { git = "https://github.com/paritytech/cumulus", bra
 # Polkadot dependencies
 polkadot-service = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16" }
 
+parachain-staking = { version = "*", default-features = false }
+
 # External Crates
 hex-literal = "0.3.4"
 serde = { version = "1.0.124", features = ["derive"] }

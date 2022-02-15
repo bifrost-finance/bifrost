@@ -22,8 +22,8 @@ build-bifrost-polkadot-release: copy-genesis-config-release
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
-.PHONY: build-bifrost-kusama-fast-release
-build-bifrost-kusama-fast-release:
+.PHONY: build-bifrost-rococo-fast-release
+build-bifrost-rococo-fast-release:
 	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime,fast-runtime" --release
 
 
@@ -63,11 +63,6 @@ generate-all-weights:
 .PHONY: build-all-release-with-bench
 build-all-release-with-bench: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
-
-# Deploy
-.PHONY: deploy-bifrost-live
-deploy-bifrost-live:
-	pm2 deploy scripts/bifrost-ecosystem.config.js production
 
 # Run dev chain
 .PHONY: run-dev-manual-seal
@@ -123,6 +118,6 @@ copy-genesis-config-production:
 	mkdir -p "target/production/res"
 	cp -r node/service/res/genesis_config target/production/res
 
-.PHONY: production-release
-production-release:
-	cargo build -p node-cli --locked --features "with-bifrost-runtime" --profile production
+.PHONY: production-release-bifrost-kusama
+production-release-bifrost-kusama:
+	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --profile production

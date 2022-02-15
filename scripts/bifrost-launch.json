@@ -34,15 +34,15 @@
 			"parachainsConfiguration": {
 				"config": {
 					"validation_upgrade_frequency": 1,
-					"validation_upgrade_delay": 1
+					"validation_upgrade_delay": 10
 				}
 			}
 		}
 	},
 	"parachains": [
 		{
-			"bin": "./target/release/bifrost",
-			"id": "3000",
+			"bin": "../target/release/bifrost",
+			"id": "2001",
 			"balance": "1000000000000000000000",
 			"chain": "bifrost-local",
 			"nodes": [
@@ -73,8 +73,7 @@
 			]
 		}
 	],
-	"hrmpChannels": [
-	],
+	"hrmpChannels": [],
 	"types": {},
 	"finalization": false
 }
