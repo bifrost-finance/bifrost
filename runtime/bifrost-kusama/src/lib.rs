@@ -902,7 +902,7 @@ parameter_types! {
 	/// Minimum round length is 2 minutes (10 * 12 second block times)
 	pub const MinBlocksPerRound: u32 = 10;
 	/// Blocks per round
-	pub const DefaultBlocksPerRound: u32 = 30 * MINUTES;
+	pub const DefaultBlocksPerRound: u32 = prod_or_test!(30 * MINUTES, 10);
 	/// Rounds before the collator leaving the candidates request can be executed
 	pub const LeaveCandidatesDelay: u32 = 24;
 	/// Rounds before the candidate bond increase/decrease can be executed
@@ -916,7 +916,7 @@ parameter_types! {
 	/// Rounds before the reward is paid
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
-	pub const MinSelectedCandidates: u32 = 16;
+	pub const MinSelectedCandidates: u32 = prod_or_test!(16,4);
 	/// Maximum delegators counted per candidate
 	pub const MaxDelegatorsPerCandidate: u32 = 100;
 	/// Maximum delegations per delegator
