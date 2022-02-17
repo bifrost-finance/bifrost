@@ -14,6 +14,7 @@ members = [
 	"pallets/vesting",
 	"pallets/vsbond-auction",
 	"pallets/call-switchgear",
+	"pallets/vtoken-minting",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
 	"xcm-support",

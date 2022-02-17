@@ -1647,6 +1647,10 @@ pub type ZenlinkLocationToAccountId = (
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
 
+impl vtoken_minting::Config for Runtime {
+	type Event = Event;
+}
+
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
 
@@ -1781,6 +1785,7 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
+		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>} = 114,
 	}
 }
 
