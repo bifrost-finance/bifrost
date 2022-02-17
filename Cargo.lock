@@ -966,6 +966,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "bifrost-slp"
+version = "0.8.0"
+dependencies = [
+ "bifrost-runtime-common",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "node-primitives",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-xcm",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-builder",
+ "xcm-support",
+]
+
+[[package]]
 name = "bifrost-token-issuer"
 version = "0.8.0"
 dependencies = [
