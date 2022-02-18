@@ -44,7 +44,7 @@ pub trait StakingAgent<DelegatorId, ValidatorId> {
 		+ scale_info::TypeInfo;
 
 	/// Delegator initialization work. Generate a new delegator and return its ID.
-	fn initialize_delegator(currency_id: Self::CurrencyId) -> DelegatorId;
+	fn initialize_delegator(currency_id: Self::CurrencyId) -> Option<DelegatorId>;
 
 	/// First time bonding some amount to a delegator.
 	fn bond(
@@ -164,7 +164,11 @@ pub trait DelegatorManager<DelegatorId, Ledger> {
 		+ scale_info::TypeInfo;
 
 	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(currency_id: Self::CurrencyId, who: &DelegatorId) -> DispatchResult;
+	fn add_delegator(
+		currency_id: Self::CurrencyId,
+		index: u16,
+		who: &DelegatorId,
+	) -> DispatchResult;
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(currency_id: Self::CurrencyId, who: &DelegatorId) -> DispatchResult;

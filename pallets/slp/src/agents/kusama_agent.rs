@@ -19,41 +19,52 @@
 use core::marker::PhantomData;
 
 use node_primitives::CurrencyId;
-use sp_runtime::DispatchResult;
+use sp_runtime::{traits::Convert, DispatchResult};
 use xcm::opaque::latest::MultiLocation;
 
 use crate::{
+	pallet::Error,
 	primitives::SubstrateLedger,
 	traits::{DelegatorManager, StakingAgent},
-	BalanceOf, Config,
+	BalanceOf, Config, DelegatorNextIndex, Delegators, Event, Pallet,
 };
 
 /// StakingAgent implementation for Kusama
-pub struct KusamaAgent<T>(PhantomData<T>);
+pub struct KusamaAgent<T, AccountConverter>(PhantomData<(T, AccountConverter)>);
 
-impl<T: Config> StakingAgent<MultiLocation, MultiLocation> for KusamaAgent<T> {
+impl<T, AccountConverter> StakingAgent<MultiLocation, MultiLocation>
+	for KusamaAgent<T, AccountConverter>
+where
+	T: Config,
+	AccountConverter: Convert<u16, MultiLocation>,
+{
 	type CurrencyId = CurrencyId;
 	type Balance = BalanceOf<T>;
 
-	fn initialize_delegator(currency_id: Self::CurrencyId) -> MultiLocation {
-		unimplemented!()
+	fn initialize_delegator(currency_id: Self::CurrencyId) -> Option<MultiLocation> {
+		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
+		let rs = DelegatorNextIndex::<T>::mutate(currency_id, |id| -> DispatchResult {
+			let option_new_id = id.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+			*id = option_new_id;
+			Ok(())
+		});
+
+		if let Ok(_) = rs {
+			// Generate multi-location by id.
+			let delegator_multilocation = AccountConverter::convert(new_delegator_id);
+
+			// Add the new delegator into storage
+			let _ = Self::add_delegator(currency_id, new_delegator_id, &delegator_multilocation);
+
+			Pallet::<T>::deposit_event(Event::DelegatorInitialized(
+				currency_id,
+				delegator_multilocation.clone(),
+			));
+			Some(delegator_multilocation)
+		} else {
+			None
+		}
 	}
-	// {
-	// 	let new_delegator_id = Self::get_delegator_next_index(currency_id);
-	// 	let rs = DelegatorNextIndex::<T>::mutate(currency_id, |id| -> DispatchResult {
-	// 		let option_new_id = id.checked_add(1);
-	// 		if let Some(new_id) = option_new_id {
-	// 			id = new_id;
-	// 			return Ok(());
-	// 		} else {
-	// 			return DispatchError;
-	// 		}
-	// 	});
-
-	// if let
-
-	// Self::add_delegator();
-	// }
 
 	/// First time bonding some amount to a delegator.
 	fn bond(
@@ -147,13 +158,22 @@ impl<T: Config> StakingAgent<MultiLocation, MultiLocation> for KusamaAgent<T> {
 }
 
 /// DelegatorManager implementation for Kusama
-impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
-	for KusamaAgent<T>
+impl<T, AccountConverter>
+	DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
+	for KusamaAgent<T, AccountConverter>
+where
+	T: Config,
+	AccountConverter: Convert<u16, MultiLocation>,
 {
 	type CurrencyId = CurrencyId;
 
 	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
+	fn add_delegator(
+		currency_id: Self::CurrencyId,
+		index: u16,
+		who: &MultiLocation,
+	) -> DispatchResult {
+		Delegators::<T>::insert(currency_id, index, who);
 		Ok(())
 	}
 

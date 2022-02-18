@@ -18,17 +18,14 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{pallet_prelude::*, transactional, weights::Weight, PalletId};
-use frame_system::pallet_prelude::*;
+use frame_support::{pallet_prelude::*, weights::Weight, PalletId};
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
-use sp_runtime::DispatchResult;
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
 use crate::{
-	agents::KusamaAgent,
 	primitives::SubstrateLedger,
 	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
 };
@@ -68,8 +65,7 @@ pub mod pallet {
 		type PalletId: Get<PalletId>;
 
 		/// Kusama agent
-		type KusamaAgent: Get<KusamaAgent<Self>>
-			+ StakingAgent<MultiLocation, MultiLocation>
+		type KusamaAgent: StakingAgent<MultiLocation, MultiLocation>
 			+ StakingFeeManager<AccountIdOf<Self>>
 			+ DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<Self>>>
 			+ ValidatorManager<MultiLocation>;
@@ -77,7 +73,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NotEnoughBalance,
+		OverFlow,
 	}
 
 	#[pallet::event]
@@ -120,7 +116,7 @@ pub mod pallet {
 	/// Next index of different currency delegators.
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_next_index)]
-	pub type DelegatorNextIndex<T> = StorageMap<_, Blake2_128Concat, CurrencyId, u16>;
+	pub type DelegatorNextIndex<T> = StorageMap<_, Blake2_128Concat, CurrencyId, u16, ValueQuery>;
 
 	/// Validator in service. A validator is identified in MultiLocation format.
 	#[pallet::storage]
