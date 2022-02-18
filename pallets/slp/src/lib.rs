@@ -27,8 +27,13 @@ use sp_runtime::DispatchResult;
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
-use crate::traits::StakingAgent;
+use crate::{
+	agents::KusamaAgent,
+	primitives::SubstrateLedger,
+	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
+};
 
+mod agents;
 mod mock;
 pub mod primitives;
 mod tests;
@@ -54,12 +59,20 @@ pub mod pallet {
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The only origin that can modify pallet params
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
+
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
 		/// ModuleID for creating sub account
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
+
+		/// Kusama agent
+		type KusamaAgent: Get<KusamaAgent<Self>>
+			+ StakingAgent<MultiLocation, MultiLocation>
+			+ StakingFeeManager<AccountIdOf<Self>>
+			+ DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<Self>>>
+			+ ValidatorManager<MultiLocation>;
 	}
 
 	#[pallet::error]
@@ -140,14 +153,4 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {}
-
-	// 	impl<T: Config> StakingAgent<MultiLocation, MultiLocation> for Pallet<T> {
-	// 		type CurrencyId = CurrencyId;
-	// 		type Balance = BalanceOf<T>;
-
-	// 		#[transactional]
-	// 		fn initialize_delegator(currency_id: Self::CurrencyId) -> MultiLocation {
-	// 			MultiLocation { parents: 0, interior: Here }
-	// 		}
-	// 	}
 }
