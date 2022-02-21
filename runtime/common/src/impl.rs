@@ -29,8 +29,7 @@ use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::latest::prelude::*;
 use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
 use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
-
-use crate::constants::parachains;
+use xcm_interface::traits::parachains;
 
 /// ********************************************************************
 // Below are for the common utilities for both of Polkadot and Kusama.

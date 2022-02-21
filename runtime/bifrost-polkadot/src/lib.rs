@@ -70,9 +70,7 @@ use frame_support::traits::Currency;
 use frame_system::EnsureRoot;
 pub use node_primitives::{
 	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
-	ParachainTransactType, PoolId, RpcContributionStatus, TokenSymbol, TransferOriginType,
-	XcmBaseWeight,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TokenSymbol,
 };
 use pallet_xcm::XcmPassthrough;
 // XCM imports

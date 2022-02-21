@@ -34,21 +34,6 @@ pub mod currency {
 			(bytes as Balance) * 6 * cent(CurrencyId::Native(TokenSymbol::BNC))
 	}
 
-	pub struct KsmWeightToFee;
-	impl WeightToFeePolynomial for KsmWeightToFee {
-		type Balance = Balance;
-		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			let p = ksm_base_tx_fee();
-			let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
-			smallvec![WeightToFeeCoefficient {
-				degree: 1,
-				negative: false,
-				coeff_frac: Perbill::from_rational(p % q, q),
-				coeff_integer: p / q,
-			}]
-		}
-	}
-
 	pub struct WeightToFee;
 	impl WeightToFeePolynomial for WeightToFee {
 		type Balance = Balance;

@@ -31,7 +31,6 @@ mod bridge;
 pub mod currency;
 mod salp;
 pub mod traits;
-mod xcm;
 pub use salp::*;
 
 #[cfg(test)]
@@ -41,7 +40,6 @@ pub use crate::{
 	bridge::*,
 	currency::{CurrencyId, TokenSymbol},
 	traits::*,
-	xcm::*,
 };
 
 /// An index to a block.

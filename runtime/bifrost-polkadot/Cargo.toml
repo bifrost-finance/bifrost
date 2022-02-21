@@ -82,7 +82,6 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "relea
 # Bifrost
 pallet-vesting = { package = "bifrost-vesting", path = "../../pallets/vesting", default-features = false }
 bifrost-runtime-common = { package = "bifrost-runtime-common", path = "../common", default-features = false }
-xcm-support = { path = "../../xcm-support", default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
@@ -142,7 +141,6 @@ std = [
 	"pallet-collator-selection/std",
 	"pallet-session/std",
 	"pallet-vesting/std",
-	"xcm-support/std",
 	"bifrost-runtime-common/std",
 	"pallet-xcm/std",
 ]
