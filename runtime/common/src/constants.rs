@@ -18,23 +18,6 @@
 
 //! A set of constant values used for all runtimes in common.
 
-#[allow(non_snake_case)]
-pub mod parachains {
-	pub mod karura {
-		pub const ID: u32 = 2000;
-		pub const KAR_KEY: &[u8] = &[0, 128];
-		pub const KUSD_KEY: &[u8] = &[0, 129];
-	}
-	pub mod Statemine {
-		pub const ID: u32 = 1000;
-		pub const PALLET_ID: u8 = 50;
-		pub const RMRK_ID: u32 = 8;
-	}
-	pub mod phala {
-		pub const ID: u32 = 2004;
-	}
-}
-
 /// Time.
 pub mod time {
 	use node_primitives::{BlockNumber, Moment};
