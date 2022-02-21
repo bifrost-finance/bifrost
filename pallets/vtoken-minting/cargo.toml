@@ -13,6 +13,8 @@ scale-info = { version = "1.0.0", default-features = false, features = ["derive"
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 frame-benchmarking = {  git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false, optional = true }
+node-primitives = { path = "../../node/primitives", default-features = false }
+orml-traits = { version = "0.4.1-dev", default-features = false }
 
 [dev-dependencies]
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
@@ -27,6 +29,8 @@ std = [
 	"frame-support/std",
 	"frame-system/std",
 	"frame-benchmarking/std",
+	"node-primitives/std",
+	"orml-traits/std",
 ]
 
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
