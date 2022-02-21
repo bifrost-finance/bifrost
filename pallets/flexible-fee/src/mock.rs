@@ -20,8 +20,6 @@
 
 use std::convert::TryInto;
 
-// pub use polkadot_parachain::primitives::Id;
-pub use cumulus_primitives_core::ParaId;
 #[cfg(feature = "runtime-benchmarks")]
 use frame_benchmarking::whitelisted_caller;
 use frame_support::{
@@ -29,36 +27,26 @@ use frame_support::{
 	sp_runtime::{DispatchError, DispatchResult},
 	sp_std::marker::PhantomData,
 	traits::{Contains, Nothing},
-	weights::{
-		constants::ExtrinsicBaseWeight, IdentityFee, Weight, WeightToFeeCoefficients,
-		WeightToFeePolynomial,
-	},
+	weights::IdentityFee,
 	PalletId,
 };
 use frame_system as system;
 use frame_system::EnsureRoot;
-use node_primitives::{
-	CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType, TokenSymbol,
-	TransferOriginType, XcmBaseWeight,
-};
-use orml_traits::{MultiCurrency, XcmTransfer};
-use smallvec::smallvec;
+use node_primitives::{CurrencyId, MessageId, ParaId, TokenSymbol};
+use orml_traits::MultiCurrency;
 use sp_arithmetic::Percent;
 use sp_core::H256;
 use sp_runtime::{
 	generic,
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
-	AccountId32, Perbill, SaturatedConversion,
+	AccountId32, SaturatedConversion,
 };
-use sp_std::cell::RefCell;
-use xcm::{latest::prelude::*, DoubleEncoded};
-use xcm_support::BifrostXcmExecutor;
+use xcm_interface::traits::XcmHelper;
 use zenlink_protocol::{AssetId as ZenlinkAssetId, LocalAssetHandler, ZenlinkMultiAssets};
 
 use super::*;
 use crate as flexible_fee;
-// use node_primitives::Balance;
 use crate::{
 	fee_dealer::FixedCurrencyFeeRate,
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
@@ -122,25 +110,6 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type Version = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
-}
-
-thread_local! {
-	static WEIGHT_TO_FEE: RefCell<u64> = RefCell::new(1);
-}
-
-pub struct WeightToFee;
-impl WeightToFeePolynomial for WeightToFee {
-	type Balance = Balance;
-	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-		let p = 1_000_000_000_000 / 30_000; // RELAY_CENTS
-		let q = 10 * Balance::from(ExtrinsicBaseWeight::get()); // ExtrinsicBaseWeight = 125 * 1_000_000_000_000 / 1000 / 1000 = 125_000_000
-		smallvec![frame_support::weights::WeightToFeeCoefficient {
-			degree: 1,
-			negative: false,
-			coeff_frac: Perbill::from_rational(p % q, q),
-			coeff_integer: p / q,
-		}]
-	}
 }
 
 parameter_types! {
@@ -234,7 +203,7 @@ parameter_types! {
 	pub const AlternativeFeeCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
 	pub const TreasuryAccount: AccountId32 = TREASURY_ACCOUNT;
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(4 * XCM_WEIGHT + ContributionWeight::get()) + u64::pow(2, 24).into();
+	pub const SalpContributeFee: Balance = 100_000_000;
 }
 
 impl crate::Config for Test {
@@ -251,13 +220,8 @@ impl crate::Config for Test {
 	type OnUnbalanced = ();
 	type WeightInfo = ();
 	type ExtraFeeMatcher = ExtraFeeMatcher<Test, FeeNameGetter, AggregateExtraFeeFilter>;
-	type MiscFeeHandler = MiscFeeHandler<
-		Test,
-		AlternativeFeeCurrencyId,
-		WeightToFee,
-		SalpWeightHolder,
-		ContributeFeeFilter,
-	>;
+	type MiscFeeHandler =
+		MiscFeeHandler<Test, AlternativeFeeCurrencyId, SalpContributeFee, ContributeFeeFilter>;
 }
 
 parameter_types! {
@@ -413,45 +377,19 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 // To control the result returned by `MockXcmExecutor`
 pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
 
+#[allow(type_alias_bounds)]
+pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+
 // Mock XcmExecutor
 pub struct MockXcmExecutor;
 
-impl BifrostXcmExecutor for MockXcmExecutor {
-	fn transact_weight(_: u64, _: u32) -> u64 {
-		return 0;
-	}
-
-	fn transact_id(_data: &[u8]) -> MessageId {
-		return [0; 32];
-	}
-
-	fn ump_transact(
-		_origin: MultiLocation,
-		_call: DoubleEncoded<()>,
-		_weight: u64,
-		_relayer: bool,
-		_nonce: u32,
-	) -> Result<[u8; 32], XcmError> {
+impl XcmHelper<AccountIdOf<Test>, crate::pallet::PalletBalanceOf<Test>> for MockXcmExecutor {
+	fn contribute(_index: ParaId, _value: Balance) -> Result<MessageId, DispatchError> {
 		let result = unsafe { MOCK_XCM_RESULT.0 };
 
 		match result {
 			true => Ok([0; 32]),
-			false => Err(XcmError::Unimplemented),
-		}
-	}
-
-	fn ump_transfer_asset(
-		_origin: MultiLocation,
-		_dest: MultiLocation,
-		_amount: u128,
-		_relay: bool,
-		_nonce: u32,
-	) -> Result<MessageId, XcmError> {
-		let result = unsafe { MOCK_XCM_RESULT.1 };
-
-		match result {
-			true => Ok([0; 32]),
-			false => Err(XcmError::Unimplemented),
+			false => Err(DispatchError::BadOrigin),
 		}
 	}
 }
@@ -467,49 +405,12 @@ parameter_types! {
 	pub const VSBondValidPeriod: BlockNumber = 8u32 as BlockNumber;
 	pub const ReleaseCycle: BlockNumber = 8u32 as BlockNumber;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
-	pub ContributionWeight:u64 = 1_000_000_000 as u64;
-	pub AddProxyWeight:u64 = 1_000_000_000 as u64;
-	pub PrimaryAccount: AccountId = ALICE;
 	pub ConfirmMuitiSigAccount: AccountId = ALICE;
-	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::parent();
-	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
 	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
-	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 }
-
-pub const XCM_WEIGHT: u64 = 1_000_000_000;
-
-pub struct MockXTokens;
-
-impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
-	fn transfer(
-		_who: AccountId,
-		_currency_id: CurrencyId,
-		_amount: Balance,
-		_dest: MultiLocation,
-		_dest_weight: Weight,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn transfer_multi_asset(
-		_who: AccountId,
-		_asset: MultiAsset,
-		_dest: MultiLocation,
-		_dest_weight: Weight,
-	) -> DispatchResult {
-		Ok(())
-	}
-}
-
-use bifrost_runtime_common::r#impl::BifrostAccountIdToMultiLocation;
 
 impl bifrost_salp::Config for Test {
 	type BancorPool = ();
-	type BifrostXcmExecutor = MockXcmExecutor;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
@@ -521,20 +422,9 @@ impl bifrost_salp::Config for Test {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
-	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = ();
-	type SelfParaId = SelfParaId;
-	type BaseXcmWeight = BaseXcmWeight;
-	type ContributionWeight = ContributionWeight;
 	type EnsureConfirmAsGovernance = EnsureRoot<AccountId>;
-	type AddProxyWeight = AddProxyWeight;
-	type XcmTransfer = MockXTokens;
-	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
-	type TransactProxyType = SalpTransactProxyType;
-	type TransactType = SalpTransactType;
-	type RelayNetwork = RelayNetwork;
-	type XcmExecutor = ();
-	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type XcmInterface = MockXcmExecutor;
 }
 
 //************** Salp mock end *****************

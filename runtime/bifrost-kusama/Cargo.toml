@@ -95,7 +95,6 @@ bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-featur
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
 bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
 bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
-xcm-support = { path = "../../xcm-support", default-features = false }
 
 
 # orml
@@ -110,6 +109,8 @@ orml-xcm-support = { version = "0.4.1-dev", default-features = false }
 merkle-distributor = {version = "*", default-features = false }
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
+#parachain-staking = { version = "*", default-features = false }
+xcm-interface = { version = "*", default-features = false }
 
 
 [build-dependencies]
@@ -192,7 +193,8 @@ std = [
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",
-	"xcm-support/std",
+	#"parachain-staking/std",
+	"xcm-interface/std",
 ]
 with-tracing = ["frame-executive/with-tracing"]
 

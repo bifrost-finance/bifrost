@@ -1,7 +1,7 @@
 [package]
 name = "bifrost-salp"
 version = "0.8.0"
-authors = ["Edwin Wang <lark930@gmail.com>"]
+authors = ["Edwin Wang <lark930@gmail.com>","Ron yang<yrong1997@gmail.com>"]
 edition = "2021"
 
 [dependencies]
@@ -16,12 +16,8 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false  }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
-xcm-support = { path = "../../xcm-support", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16",default-features = false  }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16",default-features = false }
-bifrost-runtime-common = { path = "../../runtime/common",default-features = false }
+xcm-interface = { version = "*", default-features = false }
 
 [dev-dependencies]
 pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16"}
@@ -50,17 +46,11 @@ std = [
 	"sp-runtime/std",
 	"sp-arithmetic/std",
 	"orml-traits/std",
-	"xcm/std",
-	"xcm-builder/std",
-	"pallet-xcm/std",
-	"xcm-support/std",
-	"bifrost-runtime-common/std",
+	"xcm-interface/std"
 ]
 
 runtime-benchmarks = [
 	"frame-benchmarking",
 	"sp-runtime/runtime-benchmarks",
 	"frame-system/runtime-benchmarks",
-	"pallet-xcm/runtime-benchmarks",
-	"xcm-builder/runtime-benchmarks",
 ]

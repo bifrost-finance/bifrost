@@ -17,3 +17,5 @@ snapshot.bin
 *.wasm
 data
 runtime/bifrost
+parachain-staking
+xcm-interface

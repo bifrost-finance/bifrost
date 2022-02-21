@@ -93,7 +93,6 @@ bifrost-salp-rpc-runtime-api = { path = "../pallets/salp/rpc/runtime-api", defau
 bifrost-vsbond-auction = { path = "../pallets/vsbond-auction", default-features = false }
 bifrost-vtoken-mint = { path = "../pallets/vtoken-mint", default-features = false }
 pallet-vesting = { package = "bifrost-vesting", path = "../pallets/vesting", default-features = false }
-xcm-support = { path = "../xcm-support", default-features = false }
 bifrost-kusama-runtime = { path = "../runtime/bifrost-kusama", default-features = false }
 bifrost-polkadot-runtime = { path = "../runtime/bifrost-polkadot", default-features = false }
 
@@ -205,7 +204,6 @@ std = [
 	"bifrost-salp-rpc-runtime-api/std",
 	"bifrost-vsbond-auction/std",
 	"bifrost-vtoken-mint/std",
-	"xcm-support/std",
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",

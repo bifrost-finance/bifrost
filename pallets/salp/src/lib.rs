@@ -38,27 +38,6 @@ use node_primitives::{ContributionStatus, TokenInfo, TokenSymbol, TrieIndex};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use scale_info::TypeInfo;
-use xcm_support::*;
-
-macro_rules! use_relay {
-    ({ $( $code:tt )* }) => {
-        if T::RelayNetwork::get() == NetworkId::Polkadot {
-            use polkadot::RelaychainCall;
-
-			$( $code )*
-        } else if T::RelayNetwork::get() == NetworkId::Kusama {
-            use kusama::RelaychainCall;
-
-			$( $code )*
-        } else if T::RelayNetwork::get() == NetworkId::Any {
-            use rococo::RelaychainCall;
-
-			$( $code )*
-        } else {
-            unreachable!()
-        }
-    }
-}
 
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
@@ -119,20 +98,16 @@ pub mod pallet {
 		PalletId,
 	};
 	use frame_system::pallet_prelude::*;
-	use node_primitives::{
-		BancorHandler, CurrencyId, LeasePeriod, MessageId, Nonce, ParaId,
-		ParachainTransactProxyType, ParachainTransactType, TransferOriginType,
-	};
-	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency, XcmTransfer};
+	use node_primitives::{BancorHandler, CurrencyId, LeasePeriod, MessageId, Nonce, ParaId};
+	use orml_traits::{currency::TransferAll, MultiCurrency, MultiReservableCurrency};
 	use sp_arithmetic::Percent;
-	use sp_runtime::traits::Convert;
 	use sp_std::prelude::*;
-	use xcm::latest::prelude::*;
+	use xcm_interface::traits::XcmHelper;
 
 	use super::*;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> + TypeInfo {
+	pub trait Config: frame_system::Config<BlockNumber = LeasePeriod> {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// ModuleID for the crowdloan module. An appropriate value could be
@@ -179,48 +154,10 @@ pub mod pallet {
 
 		type EnsureConfirmAsGovernance: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
-		type BifrostXcmExecutor: BifrostXcmExecutor;
-
-		#[pallet::constant]
-		type XcmTransferOrigin: Get<TransferOriginType>;
-
-		/// Weight information for the extrinsics in this module.
 		type WeightInfo: WeightInfo;
 
-		/// Parachain Id
-		type SelfParaId: Get<u32>;
-
-		/// Xcm weight
-		#[pallet::constant]
-		type BaseXcmWeight: Get<u64>;
-
-		#[pallet::constant]
-		type ContributionWeight: Get<u64>;
-
-		#[pallet::constant]
-		type AddProxyWeight: Get<u64>;
-
-		/// The interface to Cross-chain transfer.
-		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
-
-		/// The sovereign sub-account for where the staking currencies are sent to.
-		#[pallet::constant]
-		type SovereignSubAccountLocation: Get<MultiLocation>;
-
-		#[pallet::constant]
-		type TransactProxyType: Get<ParachainTransactProxyType>;
-
-		#[pallet::constant]
-		type TransactType: Get<ParachainTransactType>;
-
-		#[pallet::constant]
-		type RelayNetwork: Get<NetworkId>;
-
-		/// XCM executor.
-		type XcmExecutor: ExecuteXcm<Self::Call>;
-
-		/// Convert `T::AccountId` to `MultiLocation`.
-		type AccountIdToMultiLocation: Convert<AccountIdOf<Self>, MultiLocation>;
+		/// The XcmInterface to manage the staking of sub-account on relaychain.
+		type XcmInterface: XcmHelper<AccountIdOf<Self>, BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -261,12 +198,6 @@ pub mod pallet {
 		End(ParaId),
 		Continued(ParaId, LeasePeriod, LeasePeriod),
 		RefundedDissolved(ParaId, LeasePeriod, LeasePeriod),
-		/// Proxy
-		ProxyAdded(AccountIdOf<T>),
-		ProxyRemoved(AccountIdOf<T>),
-		/// Mint
-		Minted(AccountIdOf<T>, BalanceOf<T>),
-		TransferredStatemineMultiAsset(AccountIdOf<T>, BalanceOf<T>),
 	}
 
 	#[pallet::error]
@@ -309,8 +240,6 @@ pub mod pallet {
 		NotEnoughFreeAssetsToRedeem,
 		/// Don't have enough token to redeem by users
 		NotEnoughBalanceInRedeemPool,
-		ConvertFailure,
-		XcmExecutionFailed,
 		NotEnoughBalanceInFund,
 		InvalidFundSameSlot,
 		InvalidFundNotExist,
@@ -331,7 +260,6 @@ pub mod pallet {
 	/// Tracker for the next nonce index
 	#[pallet::storage]
 	#[pallet::getter(fn current_nonce)]
-
 	pub(super) type CurrentNonce<T: Config> =
 		StorageMap<_, Blake2_128Concat, ParaId, Nonce, ValueQuery>;
 
@@ -648,10 +576,7 @@ pub mod pallet {
 				ContributionStatus::Contributing(value),
 			);
 
-			let nonce = Self::next_nonce_index(index)?;
-
-			let message_id = Self::xcm_ump_contribute(origin, index, value, nonce)
-				.map_err(|_e| Error::<T>::XcmFailed)?;
+			let message_id = T::XcmInterface::contribute(index, value)?;
 
 			Self::deposit_event(Event::Contributing(who.clone(), index, value.clone(), message_id));
 			Ok(())
@@ -1001,69 +926,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		/// transfer asset to statemine
-		#[pallet::weight(T::WeightInfo::contribute())]
-		pub fn transfer_statemine_assets(
-			origin: OriginFor<T>,
-			amount: BalanceOf<T>,
-			asset_id: u32,
-			dest: Option<AccountIdOf<T>>,
-		) -> DispatchResult {
-			use bifrost_runtime_common::constants::parachains;
-			let who = ensure_signed(origin)?;
-			let dest = match dest {
-				Some(account) => account,
-				None => who,
-			};
-			let origin_location = T::AccountIdToMultiLocation::convert(dest.clone());
-			let mut assets = MultiAssets::new(); // VersionedMultiAssets::V1(MultiAssets::new(MultiAsset))
-			let amount_128 =
-				TryInto::<u128>::try_into(amount).map_err(|_| Error::<T>::ConvertFailure)?;
-			let statemine_asset = MultiAsset {
-				id: AssetId::Concrete(MultiLocation::new(
-					1,
-					Junctions::X3(
-						Junction::Parachain(parachains::Statemine::ID),
-						Junction::PalletInstance(parachains::Statemine::PALLET_ID),
-						Junction::GeneralIndex(asset_id.into()),
-					),
-				)),
-				fun: Fungibility::Fungible(amount_128),
-			};
-			let dest_weight = 4 * T::BaseXcmWeight::get();
-			let fee_asset = MultiAsset {
-				id: AssetId::Concrete(MultiLocation::new(1, Junctions::Here)),
-				fun: Fungibility::Fungible(dest_weight.into()),
-			};
-			assets.push(statemine_asset);
-			assets.push(fee_asset.clone());
-			let msg = Xcm(vec![
-				WithdrawAsset(assets),
-				InitiateReserveWithdraw {
-					assets: All.into(),
-					reserve: MultiLocation::new(1, Junctions::X1(Junction::Parachain(1000))),
-					xcm: Xcm(vec![
-						BuyExecution {
-							fees: fee_asset,
-							weight_limit: WeightLimit::Limited(dest_weight),
-						},
-						DepositAsset {
-							assets: All.into(),
-							max_assets: 2,
-							beneficiary: origin_location.clone(),
-						},
-					]),
-				},
-			]);
-			T::XcmExecutor::execute_xcm_in_credit(origin_location, msg, dest_weight, dest_weight)
-				.ensure_complete()
-				.map_err(|_| Error::<T>::XcmExecutionFailed)?;
-
-			Self::deposit_event(Event::<T>::TransferredStatemineMultiAsset(dest, amount));
-
-			Ok(())
-		}
 	}
 
 	#[pallet::hooks]
@@ -1187,13 +1049,6 @@ pub mod pallet {
 			})
 		}
 
-		pub(crate) fn next_nonce_index(index: ParaId) -> Result<Nonce, Error<T>> {
-			CurrentNonce::<T>::try_mutate(index, |ni| {
-				*ni = ni.overflowing_add(1).0;
-				Ok(*ni)
-			})
-		}
-
 		#[allow(non_snake_case)]
 		pub(crate) fn vsAssets(
 			index: ParaId,
@@ -1226,30 +1081,6 @@ pub mod pallet {
 		#[allow(dead_code)]
 		pub(crate) fn set_balance(who: &AccountIdOf<T>, value: BalanceOf<T>) -> DispatchResult {
 			T::MultiCurrency::deposit(T::RelayChainToken::get(), who, value)
-		}
-
-		fn xcm_ump_contribute(
-			_origin: OriginFor<T>,
-			index: ParaId,
-			value: BalanceOf<T>,
-			nonce: Nonce,
-		) -> Result<MessageId, XcmError> {
-			use_relay!({
-				let contribute_call =
-					RelaychainCall::Crowdloan::<BalanceOf<T>, AccountIdOf<T>, BlockNumberFor<T>>(
-						ContributeCall::Contribute(Contribution { index, value, signature: None }),
-					)
-					.encode()
-					.into();
-
-				T::BifrostXcmExecutor::ump_transact(
-					MultiLocation::here(),
-					contribute_call,
-					T::ContributionWeight::get(),
-					false,
-					nonce,
-				)
-			})
 		}
 	}
 }
