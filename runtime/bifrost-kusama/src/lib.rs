@@ -1729,8 +1729,21 @@ pub type ZenlinkLocationToAccountId = (
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
 
+parameter_types! {
+	pub const MaximumMintId: u32 = 1_000;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+}
+
 impl vtoken_minting::Config for Runtime {
 	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MaximumMintId = MaximumMintId;
+	type EntranceAccount = BifrostEntranceAccount;
+	type ExitAccount = BifrostExitAccount;
+	type FeeAccount = BifrostFeeAccount;
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.

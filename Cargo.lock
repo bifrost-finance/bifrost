@@ -12002,6 +12002,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "node-primitives",
+ "orml-traits",
  "parity-scale-codec",
  "scale-info",
  "sp-core",
