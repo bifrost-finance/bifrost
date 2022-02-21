@@ -167,6 +167,7 @@ pub mod pallet {
 		InvalidVsbond,
 		Unexpected,
 		InvalidRateInput,
+		Overflow,
 	}
 
 	#[pallet::event]
@@ -455,7 +456,7 @@ pub mod pallet {
 			// Calculate the real quantity to clinch
 			let quantity_clinchd = min(order_info.remain, quantity);
 			// Calculate the total price that buyer need to pay
-			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price());
+			let price_to_pay = Self::price_to_pay(quantity_clinchd, order_info.unit_price())?;
 
 			let (token_to_get, amount_to_get, token_to_pay, amount_to_pay) = match order_info
 				.order_type
@@ -647,13 +648,12 @@ pub mod pallet {
 		pub(crate) fn price_to_pay(
 			quantity: BalanceOf<T, I>,
 			unit_price: FixedU128,
-		) -> BalanceOf<T, I> {
+		) -> Result<BalanceOf<T, I>, Error<T, I>> {
 			let quantity: u128 = quantity.saturated_into();
+			let total_price =
+				unit_price.checked_mul_int(quantity).ok_or(Error::<T, I>::Overflow)?;
 
-			let total_price = (unit_price.saturating_mul(quantity.into())).floor().into_inner() /
-				FixedU128::accuracy();
-
-			BalanceOf::<T, I>::saturated_from(total_price)
+			Ok(BalanceOf::<T, I>::saturated_from(total_price))
 		}
 
 		pub(crate) fn do_order_revoke(order_id: OrderId) -> DispatchResultWithPostInfo {
