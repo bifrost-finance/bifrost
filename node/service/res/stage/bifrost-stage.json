@@ -3,7 +3,10 @@
   "id": "bifrost_stage_testnet",
   "chainType": "Local",
   "bootNodes": [
-    "/ip4/43.155.81.228/tcp/39866/p2p/12D3KooWMMGDvYYzyxsVHxEhHf6tHSbPu4UkiZvjme4Gp62k3xxw"
+    "/ip4/43.155.81.228/tcp/39866/p2p/12D3KooWMMGDvYYzyxsVHxEhHf6tHSbPu4UkiZvjme4Gp62k3xxw",
+    "/ip4/43.155.111.235/tcp/39867/p2p/12D3KooWDg3i54E6mej7neMroQk2bvFAayNhWJErw2SG7GFpGxKB",
+    "/ip4/43.155.82.12/tcp/39867/p2p/12D3KooWB8vpWYmgE9446Uexe1kTaxVou4zfWWiyF29AdbmaH1sG",
+    "/ip4/43.155.63.170/tcp/39867/p2p/12D3KooWQXPqZgWx7jZgCp6Lg2UfyF3jBEq2oghxfiz9EPhesiG8"
   ],
   "telemetryEndpoints": [
     [
