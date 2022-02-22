@@ -30,6 +30,7 @@ xcm-support = { path = "../../xcm-support", default-features = false }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
 bifrost-runtime-common = { path = "../../runtime/common", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16", default-features = false }
 
 [features]
 default = ["std"]
@@ -52,6 +53,7 @@ std = [
     "pallet-xcm/std",
     "xcm-support/std",
     "bifrost-runtime-common/std",
+    "cumulus-primitives-core/std",
 ]
 
 runtime-benchmarks = [

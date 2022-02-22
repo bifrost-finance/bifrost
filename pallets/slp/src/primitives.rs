@@ -55,6 +55,7 @@ pub enum TimeUnit {
 	Era(u64),
 }
 
+/// Delays for different chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct Delays {
 	/// Payout delays once the staking calculation period has finished.
@@ -65,4 +66,15 @@ pub struct Delays {
 	redelegate_delay: TimeUnit,
 	/// Time delays to get its money back if a delegator unbonds.
 	unbond_delay: TimeUnit,
+}
+
+/// XCM operations list
+#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+pub enum XcmOperation {
+	// XTokens
+	XtokensTransfer,
+	Bond,
+	WithdrawUnbonded,
+	BondExtra,
+	Unbond,
 }

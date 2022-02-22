@@ -26,7 +26,7 @@ pub use weights::WeightInfo;
 use xcm::latest::*;
 
 use crate::{
-	primitives::SubstrateLedger,
+	primitives::{SubstrateLedger, XcmOperation},
 	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
 };
 
@@ -82,6 +82,22 @@ pub mod pallet {
 		/// [CurrencyId, DelegatorId]
 		DelegatorInitialized(CurrencyId, MultiLocation),
 	}
+
+	/// The dest weight limit and fee for execution XCM msg sended out. Must be
+	/// sufficient, otherwise the execution of XCM msg on the dest chain will fail.
+	///
+	/// XcmDestWeightAndFee: DoubleMap: CurrencyId, XcmOperation => (Weight, Balance)
+	#[pallet::storage]
+	#[pallet::getter(fn xcm_dest_weight_and_fee)]
+	pub type XcmDestWeightAndFee<T> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		CurrencyId,
+		Blake2_128Concat,
+		XcmOperation,
+		(Weight, BalanceOf<T>),
+		OptionQuery,
+	>;
 
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.

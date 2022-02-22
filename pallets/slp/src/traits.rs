@@ -23,6 +23,8 @@ use sp_runtime::{
 };
 use sp_std::fmt::Debug;
 
+use crate::{Weight, Xcm};
+
 /// Abstraction over a staking agent for a certain POS chain.
 pub trait StakingAgent<DelegatorId, ValidatorId> {
 	/// The currency identifier.
@@ -228,4 +230,16 @@ pub trait UserRefundManager<AccountId> {
 		who: &AccountId,
 		amount: Self::Balance,
 	) -> DispatchResult;
+}
+
+/// Helper to build xcm message
+pub trait XcmBuilder {
+	type Balance: FullCodec;
+	type ChainCallType: FullCodec;
+
+	fn construct_xcm_message(
+		call: Self::ChainCallType,
+		extra_fee: Self::Balance,
+		weight: Weight,
+	) -> Xcm<()>;
 }

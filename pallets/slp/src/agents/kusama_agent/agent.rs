@@ -18,25 +18,33 @@
 
 use core::marker::PhantomData;
 
+use codec::Encode;
+pub use cumulus_primitives_core::ParaId;
+use frame_support::{traits::Get, weights::Weight};
 use node_primitives::CurrencyId;
 use sp_runtime::{traits::Convert, DispatchResult};
-use xcm::opaque::latest::MultiLocation;
+use sp_std::prelude::*;
+use xcm::{latest::prelude::*, opaque::latest::MultiLocation};
 
 use crate::{
+	agents::KusamaCall,
 	pallet::Error,
 	primitives::SubstrateLedger,
-	traits::{DelegatorManager, StakingAgent},
+	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	BalanceOf, Config, DelegatorNextIndex, Delegators, Event, Pallet,
 };
 
 /// StakingAgent implementation for Kusama
-pub struct KusamaAgent<T, AccountConverter>(PhantomData<(T, AccountConverter)>);
+pub struct KusamaAgent<T, AccountConverter, ParachainId>(
+	PhantomData<(T, AccountConverter, ParachainId)>,
+);
 
-impl<T, AccountConverter> StakingAgent<MultiLocation, MultiLocation>
-	for KusamaAgent<T, AccountConverter>
+impl<T, AccountConverter, ParachainId> StakingAgent<MultiLocation, MultiLocation>
+	for KusamaAgent<T, AccountConverter, ParachainId>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
+	ParachainId: Get<ParaId>,
 {
 	type CurrencyId = CurrencyId;
 	type Balance = BalanceOf<T>;
@@ -158,12 +166,13 @@ where
 }
 
 /// DelegatorManager implementation for Kusama
-impl<T, AccountConverter>
+impl<T, AccountConverter, ParachainId>
 	DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
-	for KusamaAgent<T, AccountConverter>
+	for KusamaAgent<T, AccountConverter, ParachainId>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
+	ParachainId: Get<ParaId>,
 {
 	type CurrencyId = CurrencyId;
 
@@ -193,5 +202,44 @@ where
 		who: &MultiLocation,
 	) -> Option<SubstrateLedger<MultiLocation, BalanceOf<T>>> {
 		unimplemented!()
+	}
+}
+
+/// Trait XcmBuilder implementation for Kusama
+impl<T, AccountConverter, ParachainId> XcmBuilder for KusamaAgent<T, AccountConverter, ParachainId>
+where
+	T: Config,
+	AccountConverter: Convert<u16, MultiLocation>,
+	ParachainId: Get<ParaId>,
+{
+	type Balance = u128;
+	type ChainCallType = KusamaCall<T>;
+
+	fn construct_xcm_message(
+		call: Self::ChainCallType,
+		extra_fee: Self::Balance,
+		weight: Weight,
+	) -> Xcm<()> {
+		let asset = MultiAsset {
+			id: Concrete(MultiLocation::here()),
+			fun: Fungibility::Fungible(extra_fee),
+		};
+		Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: call.encode().into(),
+			},
+			DepositAsset {
+				assets: All.into(),
+				max_assets: u32::max_value(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(Parachain(ParachainId::get().into())),
+				},
+			},
+		])
 	}
 }

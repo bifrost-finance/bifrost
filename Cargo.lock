@@ -970,6 +970,7 @@ name = "bifrost-slp"
 version = "0.8.0"
 dependencies = [
  "bifrost-runtime-common",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
