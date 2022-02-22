@@ -28,11 +28,51 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
 	fn initialize_delegator() -> Weight;
+	fn set_xcm_dest_weight_and_fee() -> Weight;
+	fn set_operate_origin() -> Weight;
+	fn set_current_time_unit() -> Weight;
+	fn set_currency_delays() -> Weight;
+	fn set_fee_source() -> Weight;
+	fn set_delegators() -> Weight;
+	fn set_validators() -> Weight;
+	fn set_delegator_ledger() -> Weight;
 }
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
 	fn initialize_delegator() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_xcm_dest_weight_and_fee() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_operate_origin() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_current_time_unit() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_currency_delays() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_fee_source() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_delegators() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_validators() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_delegator_ledger() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

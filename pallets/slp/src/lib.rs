@@ -19,6 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{pallet_prelude::*, weights::Weight, PalletId};
+use frame_system::pallet_prelude::OriginFor;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
@@ -105,6 +106,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_operate_origin)]
 	pub type OperateOrigins<T> = StorageMap<_, Blake2_128Concat, CurrencyId, AccountIdOf<T>>;
 
+	/// Record current TimeUnit for a certain chain. For example, Kusama's current era is 808.
+	#[pallet::storage]
+	#[pallet::getter(fn get_current_time_unit)]
+	pub type CurrentTimeUnit<T> = StorageMap<_, Blake2_128Concat, CurrencyId, TimeUnit>;
+
 	/// Currency delays for payouts, delegate, unbond and so on.
 	#[pallet::storage]
 	#[pallet::getter(fn get_currency_delays)]
@@ -164,5 +170,90 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T: Config> Pallet<T> {}
+	impl<T: Config> Pallet<T> {
+		/// Update storage XcmDestWeightAndFee<T>.
+		#[pallet::weight(T::WeightInfo::set_xcm_dest_weight_and_fee())]
+		pub fn set_xcm_dest_weight_and_fee(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			operation: XcmOperation,
+			weight: Weight,
+			fee: BalanceOf<T>,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage OperateOrigins<T>.
+		#[pallet::weight(T::WeightInfo::set_operate_origin())]
+		pub fn set_operate_origin(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: AccountIdOf<T>,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage CurrentTimeUnit<T>.
+		#[pallet::weight(T::WeightInfo::set_current_time_unit())]
+		pub fn set_current_time_unit(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			time_unit: TimeUnit,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage CurrencyDelays<T>.
+		#[pallet::weight(T::WeightInfo::set_currency_delays())]
+		pub fn set_currency_delays(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			delays: Delays,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage FeeSources<T>.
+		#[pallet::weight(T::WeightInfo::set_fee_source())]
+		pub fn set_fee_source(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			fee: BalanceOf<T>,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage Delegators<T>.
+		#[pallet::weight(T::WeightInfo::set_delegators())]
+		pub fn set_delegators(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			index: u16,
+			who: MultiLocation,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage Validators<T>.
+		#[pallet::weight(T::WeightInfo::set_validators())]
+		pub fn set_validators(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			validators: Vec<MultiLocation>,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage DelegatorLedgers<T>.
+		#[pallet::weight(T::WeightInfo::set_delegator_ledger())]
+		pub fn set_delegator_ledger(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			ledger: Ledger<MultiLocation, BalanceOf<T>>,
+		) -> DispatchResult {
+			unimplemented!()
+		}
+	}
 }
