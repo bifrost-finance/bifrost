@@ -1820,7 +1820,6 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	SchedulerMigrationV3,
 >;
 
 // Migration for scheduler pallet to move from a plain Call to a CallOrHash.
