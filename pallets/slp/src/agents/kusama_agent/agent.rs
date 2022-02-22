@@ -31,7 +31,7 @@ use crate::{
 	pallet::Error,
 	primitives::SubstrateLedger,
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
-	BalanceOf, Config, DelegatorNextIndex, Delegators, Event, Pallet,
+	BalanceOf, Config, DelegatorNextIndex, Delegators, Event, Pallet, ValidatorManager,
 };
 
 /// StakingAgent implementation for Kusama
@@ -81,6 +81,15 @@ where
 		amount: Self::Balance,
 	) -> DispatchResult {
 		unimplemented!()
+		// Check if it is bonded already.
+
+		// Check if the amount exceeds the minimum requirement.
+
+		// Get the sub-account index
+
+		// Construct xcm message and send it out.
+
+		// Deposit event.
 	}
 
 	/// Bond extra amount to a delegator.
@@ -190,17 +199,24 @@ where
 	fn remove_delegator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
+}
 
-	/// Get the list of currently serving delegators for a particular currency.
-	fn get_delegators(currency_id: Self::CurrencyId) -> Vec<MultiLocation> {
+/// ValidatorManager implementation for Kusama
+impl<T, AccountConverter, ParachainId> ValidatorManager<MultiLocation>
+	for KusamaAgent<T, AccountConverter, ParachainId>
+where
+	T: Config,
+	AccountConverter: Convert<u16, MultiLocation>,
+	ParachainId: Get<ParaId>,
+{
+	type CurrencyId = CurrencyId;
+	/// Add a new serving delegator for a particular currency.
+	fn add_validator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 
-	/// Get the ledger for a particular currency delegator.
-	fn get_delegator_ledger(
-		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
-	) -> Option<SubstrateLedger<MultiLocation, BalanceOf<T>>> {
+	/// Remove an existing serving delegator for a particular currency.
+	fn remove_validator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 }

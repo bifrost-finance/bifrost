@@ -174,12 +174,6 @@ pub trait DelegatorManager<DelegatorId, Ledger> {
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(currency_id: Self::CurrencyId, who: &DelegatorId) -> DispatchResult;
-
-	/// Get the list of currently serving delegators for a particular currency.
-	fn get_delegators(currency_id: Self::CurrencyId) -> Vec<DelegatorId>;
-
-	/// Get the ledger for a particular currency delegator.
-	fn get_delegator_ledger(currency_id: Self::CurrencyId, who: &DelegatorId) -> Option<Ledger>;
 }
 
 /// Abstraction over a validator manager.
@@ -198,9 +192,6 @@ pub trait ValidatorManager<ValidatorId> {
 
 	/// Remove an existing serving validator for a particular currency.
 	fn remove_validator(currency_id: Self::CurrencyId, who: &ValidatorId) -> DispatchResult;
-
-	/// Get the list of currently serving validators for a particular currency.
-	fn get_validators(currency_id: Self::CurrencyId) -> Vec<ValidatorId>;
 }
 
 /// Abstraction over a user refund manager to refund user unlocking balance without waiting for the
