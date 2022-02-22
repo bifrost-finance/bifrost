@@ -427,7 +427,7 @@ pub fn stage_testnet_config() -> Result<ChainSpec, String> {
 		ChainType::Local,
 		move || stage_config_genesis(PARA_ID.into()),
 		vec![],
-		None,
+		TelemetryEndpoints::new(vec![(TELEMETRY_URL.into(), 0)]).ok(),
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_kusama_properties()),

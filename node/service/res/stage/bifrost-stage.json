@@ -5,7 +5,12 @@
   "bootNodes": [
     "/ip4/43.155.81.228/tcp/39866/p2p/12D3KooWMMGDvYYzyxsVHxEhHf6tHSbPu4UkiZvjme4Gp62k3xxw"
   ],
-  "telemetryEndpoints": null,
+  "telemetryEndpoints": [
+    [
+      "wss://telemetry.polkadot.io/submit/",
+      0
+    ]
+  ],
   "protocolId": "bifrost",
   "forkId": null,
   "properties": {
