@@ -27,7 +27,7 @@ pub use weights::WeightInfo;
 use xcm::latest::*;
 
 use crate::{
-	primitives::{SubstrateLedger, XcmOperation},
+	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation},
 	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
 };
 
@@ -157,6 +157,12 @@ pub mod pallet {
 		Ledger<MultiLocation, BalanceOf<T>>,
 		OptionQuery,
 	>;
+
+	/// Minimum and Maximum constraints for different chains.
+	#[pallet::storage]
+	#[pallet::getter(fn get_minimums_maximums)]
+	pub type MinimumsAndMaximums<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, MinimumsMaximums<BalanceOf<T>>>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
