@@ -261,5 +261,15 @@ pub mod pallet {
 		) -> DispatchResult {
 			unimplemented!()
 		}
+
+		/// Update storage MinimumsAndMaximums<T>.
+		#[pallet::weight(T::WeightInfo::set_delegator_ledger())]
+		pub fn set_minimums_and_maximums(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			constraints: MinimumsMaximums<BalanceOf<T>>,
+		) -> DispatchResult {
+			unimplemented!()
+		}
 	}
 }

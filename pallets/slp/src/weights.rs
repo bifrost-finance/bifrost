@@ -36,6 +36,7 @@ pub trait WeightInfo {
 	fn set_delegators() -> Weight;
 	fn set_validators() -> Weight;
 	fn set_delegator_ledger() -> Weight;
+	fn set_minimums_and_maximums() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -73,6 +74,10 @@ impl WeightInfo for () {
 	}
 
 	fn set_delegator_ledger() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_minimums_and_maximums() -> Weight {
 		(50_000_000 as Weight)
 	}
 }
