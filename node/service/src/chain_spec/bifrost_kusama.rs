@@ -266,6 +266,10 @@ fn local_config_genesis(id: ParaId) -> GenesisConfig {
 		whitelisted_caller(), // Benchmarking whitelist_account
 		account("bechmarking_account_1", 0, 0), /* Benchmarking account_1, used for interacting
 		                       * with whitelistted_caller */
+		// dKwyFv7RL79j1pAukZnZtAmxwG6a3USBmjZyFCLRSbghdiV
+		hex!["46ebddef8cd9bb167dc30878d7113b7e168e6f0646beffd77d69d39bad76b47a"].into(),
+		// eCSrvbA5gGNQr7VZ48fkCX5vkt1H16F8Np9g2hYssRXHZJF
+		hex!["6d6f646c62662f7374616b650000000000000000000000000000000000000000"].into(),
 	];
 	let balances = endowed_accounts.iter().cloned().map(|x| (x, ENDOWMENT())).collect();
 	let vestings = endowed_accounts
