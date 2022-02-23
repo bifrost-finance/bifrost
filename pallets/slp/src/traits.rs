@@ -51,57 +51,57 @@ pub trait StakingAgent<DelegatorId, ValidatorId> {
 	/// First time bonding some amount to a delegator.
 	fn bond(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		amount: Self::Balance,
 	) -> DispatchResult;
 
 	/// Bond extra amount to a delegator.
 	fn bond_extra(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		amount: Self::Balance,
 	) -> DispatchResult;
 
 	/// Decrease bonding amount to a delegator.
 	fn unbond(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		amount: Self::Balance,
 	) -> DispatchResult;
 
 	/// Cancel some unbonding amount.
 	fn rebond(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		amount: Self::Balance,
 	) -> DispatchResult;
 
 	/// Delegate to some validators.
 	fn delegate(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		targets: Vec<ValidatorId>,
 	) -> DispatchResult;
 
 	/// Remove delegation relationship with some validators.
 	fn undelegate(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		targets: Vec<ValidatorId>,
 	) -> DispatchResult;
 
 	/// Re-delegate existing delegation to a new validator set.
 	fn redelegate(
 		currency_id: Self::CurrencyId,
-		who: &DelegatorId,
+		who: DelegatorId,
 		targets: Vec<ValidatorId>,
 	) -> DispatchResult;
 
 	/// Initiate payout for a certain delegator.
-	fn payout(currency_id: Self::CurrencyId, who: &DelegatorId) -> Self::Balance;
+	fn payout(currency_id: Self::CurrencyId, who: DelegatorId) -> Self::Balance;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(currency_id: Self::CurrencyId, who: &DelegatorId) -> Self::Balance;
+	fn liquidize(currency_id: Self::CurrencyId, who: DelegatorId) -> Self::Balance;
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining module.
 	/// If the increase variable is true, then we increase token_pool by token_amount. If it is

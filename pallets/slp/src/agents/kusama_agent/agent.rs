@@ -18,33 +18,42 @@
 
 use core::marker::PhantomData;
 
-use codec::Encode;
+use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{traits::Get, weights::Weight};
+use frame_support::{ensure, traits::Get, weights::Weight};
 use node_primitives::CurrencyId;
-use sp_runtime::{traits::Convert, DispatchResult};
+use sp_runtime::{
+	traits::{Convert, UniqueSaturatedInto},
+	DispatchResult,
+};
 use sp_std::prelude::*;
-use xcm::{latest::prelude::*, opaque::latest::MultiLocation};
+use xcm::{
+	latest::prelude::*,
+	opaque::latest::{Junction::AccountId32, Junctions::X1, MultiLocation},
+};
 
 use crate::{
-	agents::KusamaCall,
+	agents::{KusamaCall, StakingCall},
 	pallet::Error,
-	primitives::SubstrateLedger,
+	primitives::{SubstrateLedger, XcmOperation},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
-	BalanceOf, Config, DelegatorNextIndex, Delegators, Event, Pallet, ValidatorManager,
+	BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
+	DelegatorsMultilocation2Index, Event, MinimumsAndMaximums, Pallet, ValidatorManager,
+	XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
-pub struct KusamaAgent<T, AccountConverter, ParachainId>(
-	PhantomData<(T, AccountConverter, ParachainId)>,
+pub struct KusamaAgent<T, AccountConverter, ParachainId, XcmSender>(
+	PhantomData<(T, AccountConverter, ParachainId, XcmSender)>,
 );
 
-impl<T, AccountConverter, ParachainId> StakingAgent<MultiLocation, MultiLocation>
-	for KusamaAgent<T, AccountConverter, ParachainId>
+impl<T, AccountConverter, ParachainId, XcmSender> StakingAgent<MultiLocation, MultiLocation>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
+	XcmSender: SendXcm,
 {
 	type CurrencyId = CurrencyId;
 	type Balance = BalanceOf<T>;
@@ -77,25 +86,53 @@ where
 	/// First time bonding some amount to a delegator.
 	fn bond(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		amount: Self::Balance,
 	) -> DispatchResult {
-		unimplemented!()
 		// Check if it is bonded already.
+		let ledger = DelegatorLedgers::<T>::get(currency_id, who.clone());
+		if let Some(_) = ledger {
+			Err(Error::<T>::AlreadyBonded)?
+		} else {
+			// Check if the amount exceeds the minimum requirement.
+			let mins_maxs =
+				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
-		// Check if the amount exceeds the minimum requirement.
+			// Get the delegator account id in Kusama network
+			let delegator_account_32 = match who.clone() {
+				MultiLocation {
+					parents: 1,
+					interior: X1(AccountId32 { network: NetworkId, id: account_id }),
+				} => account_id,
+				_ => Err(Error::<T>::DelegatorNotExist)?,
+			};
+			let delegator_account = T::AccountId::decode(&mut &delegator_account_32[..])
+				.expect("32 bytes can always construct an AccountId32");
 
-		// Get the sub-account index
+			// Construct xcm message and send it out.
+			let call = KusamaCall::Staking(StakingCall::Bond(
+				delegator_account.clone(),
+				amount,
+				delegator_account,
+			));
 
-		// Construct xcm message and send it out.
+			let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::Bond);
 
-		// Deposit event.
+			let xcm_message = Self::construct_xcm_message(call, fee, weight);
+			XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorBonded(currency_id, who, amount));
+
+			Ok(())
+		}
 	}
 
 	/// Bond extra amount to a delegator.
 	fn bond_extra(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		amount: Self::Balance,
 	) -> DispatchResult {
 		unimplemented!()
@@ -104,7 +141,7 @@ where
 	/// Decrease bonding amount to a delegator.
 	fn unbond(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		amount: Self::Balance,
 	) -> DispatchResult {
 		unimplemented!()
@@ -113,7 +150,7 @@ where
 	/// Cancel some unbonding amount.
 	fn rebond(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		amount: Self::Balance,
 	) -> DispatchResult {
 		unimplemented!()
@@ -122,7 +159,7 @@ where
 	/// Delegate to some validators.
 	fn delegate(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		targets: Vec<MultiLocation>,
 	) -> DispatchResult {
 		unimplemented!()
@@ -131,7 +168,7 @@ where
 	/// Remove delegation relationship with some validators.
 	fn undelegate(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		targets: Vec<MultiLocation>,
 	) -> DispatchResult {
 		unimplemented!()
@@ -140,19 +177,19 @@ where
 	/// Re-delegate existing delegation to a new validator set.
 	fn redelegate(
 		currency_id: Self::CurrencyId,
-		who: &MultiLocation,
+		who: MultiLocation,
 		targets: Vec<MultiLocation>,
 	) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Initiate payout for a certain delegator.
-	fn payout(currency_id: Self::CurrencyId, who: &MultiLocation) -> Self::Balance {
+	fn payout(currency_id: Self::CurrencyId, who: MultiLocation) -> Self::Balance {
 		unimplemented!()
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(currency_id: Self::CurrencyId, who: &MultiLocation) -> Self::Balance {
+	fn liquidize(currency_id: Self::CurrencyId, who: MultiLocation) -> Self::Balance {
 		unimplemented!()
 	}
 
@@ -175,13 +212,14 @@ where
 }
 
 /// DelegatorManager implementation for Kusama
-impl<T, AccountConverter, ParachainId>
+impl<T, AccountConverter, ParachainId, XcmSender>
 	DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
-	for KusamaAgent<T, AccountConverter, ParachainId>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
+	XcmSender: SendXcm,
 {
 	type CurrencyId = CurrencyId;
 
@@ -191,7 +229,8 @@ where
 		index: u16,
 		who: &MultiLocation,
 	) -> DispatchResult {
-		Delegators::<T>::insert(currency_id, index, who);
+		DelegatorsIndex2Multilocation::<T>::insert(currency_id, index, who);
+		DelegatorsMultilocation2Index::<T>::insert(currency_id, who, index);
 		Ok(())
 	}
 
@@ -202,12 +241,13 @@ where
 }
 
 /// ValidatorManager implementation for Kusama
-impl<T, AccountConverter, ParachainId> ValidatorManager<MultiLocation>
-	for KusamaAgent<T, AccountConverter, ParachainId>
+impl<T, AccountConverter, ParachainId, XcmSender> ValidatorManager<MultiLocation>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
+	XcmSender: SendXcm,
 {
 	type CurrencyId = CurrencyId;
 	/// Add a new serving delegator for a particular currency.
@@ -222,13 +262,15 @@ where
 }
 
 /// Trait XcmBuilder implementation for Kusama
-impl<T, AccountConverter, ParachainId> XcmBuilder for KusamaAgent<T, AccountConverter, ParachainId>
+impl<T, AccountConverter, ParachainId, XcmSender> XcmBuilder
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
+	XcmSender: SendXcm,
 {
-	type Balance = u128;
+	type Balance = BalanceOf<T>;
 	type ChainCallType = KusamaCall<T>;
 
 	fn construct_xcm_message(
@@ -238,7 +280,7 @@ where
 	) -> Xcm<()> {
 		let asset = MultiAsset {
 			id: Concrete(MultiLocation::here()),
-			fun: Fungibility::Fungible(extra_fee),
+			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
 		Xcm(vec![
 			WithdrawAsset(asset.clone().into()),

@@ -72,13 +72,13 @@ pub struct Delays {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct MinimumsMaximums<Balance> {
 	/// The minimum bonded amount for a delegator at any time.
-	delegator_bonded_minimum: Balance,
+	pub delegator_bonded_minimum: Balance,
 	/// The minimum amount each time a delegator needs to bond for extra
-	bond_extra_minimum: Balance,
+	pub bond_extra_minimum: Balance,
 	/// The minimum unbond amount each time a delegator to unbond.
-	unbond_minimum: Balance,
+	pub unbond_minimum: Balance,
 	/// The maximum number of unbond records at the same time.
-	unbond_record_maximum: u64,
+	pub unbond_record_maximum: u64,
 }
 
 /// XCM operations list

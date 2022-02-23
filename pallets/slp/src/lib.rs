@@ -18,11 +18,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{pallet_prelude::*, weights::Weight, PalletId};
+use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::pallet_prelude::OriginFor;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
+use sp_runtime::traits::UniqueSaturatedFrom;
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
@@ -61,10 +62,6 @@ pub mod pallet {
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
-		/// ModuleID for creating sub account
-		#[pallet::constant]
-		type PalletId: Get<PalletId>;
-
 		/// Kusama agent
 		type KusamaAgent: StakingAgent<MultiLocation, MultiLocation>
 			+ StakingFeeManager<AccountIdOf<Self>>
@@ -75,6 +72,11 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		OverFlow,
+		NotExist,
+		LowerThanMinimum,
+		AlreadyBonded,
+		DelegatorNotExist,
+		XcmFailure,
 	}
 
 	#[pallet::event]
@@ -82,6 +84,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// [CurrencyId, DelegatorId]
 		DelegatorInitialized(CurrencyId, MultiLocation),
+		DelegatorBonded(CurrencyId, MultiLocation, BalanceOf<T>),
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -97,8 +100,15 @@ pub mod pallet {
 		Blake2_128Concat,
 		XcmOperation,
 		(Weight, BalanceOf<T>),
-		OptionQuery,
+		ValueQuery,
+		DefaultXcmDestWeightAndFee<T>,
 	>;
+
+	// Default Xcm Dest Weight And Fee if not found.
+	#[pallet::type_value]
+	pub fn DefaultXcmDestWeightAndFee<T: Config>() -> (Weight, BalanceOf<T>) {
+		(5_000_000_000 as Weight, BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128))
+	}
 
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.
@@ -123,15 +133,29 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, CurrencyId, (MultiLocation, BalanceOf<T>)>;
 
 	/// Delegators in service. A delegator is identified in MultiLocation format.
+	/// Currency Id + Sub-account index => MultiLocation
 	#[pallet::storage]
-	#[pallet::getter(fn get_delegator)]
-	pub type Delegators<T> = StorageDoubleMap<
+	#[pallet::getter(fn get_delegator_multilocation_by_index)]
+	pub type DelegatorsIndex2Multilocation<T> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		CurrencyId,
 		Blake2_128Concat,
 		u16,
 		MultiLocation,
+		OptionQuery,
+	>;
+
+	/// Delegators in service. Currency Id + MultiLocation => Sub-account index
+	#[pallet::storage]
+	#[pallet::getter(fn get_delegator_index_by_multilocation)]
+	pub type DelegatorsMultilocation2Index<T> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		CurrencyId,
+		Blake2_128Concat,
+		MultiLocation,
+		u16,
 		OptionQuery,
 	>;
 
@@ -230,7 +254,7 @@ pub mod pallet {
 			unimplemented!()
 		}
 
-		/// Update storage Delegators<T>.
+		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
 		#[pallet::weight(T::WeightInfo::set_delegators())]
 		pub fn set_delegators(
 			origin: OriginFor<T>,
