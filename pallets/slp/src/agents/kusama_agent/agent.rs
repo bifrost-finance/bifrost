@@ -33,7 +33,7 @@ use xcm::{
 };
 
 use crate::{
-	agents::{KusamaCall, StakingCall},
+	agents::{KusamaCall, StakingCall, UtilityCall},
 	pallet::Error,
 	primitives::{SubstrateLedger, XcmOperation},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
@@ -99,6 +99,11 @@ where
 				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
+			// Get the delegator sub-account index.
+			let sub_account_index =
+				DelegatorsMultilocation2Index::<T>::get(currency_id, who.clone())
+					.ok_or(Error::<T>::DelegatorNotExist)?;
+
 			// Get the delegator account id in Kusama network
 			let delegator_account_32 = match who.clone() {
 				MultiLocation {
@@ -116,10 +121,12 @@ where
 				amount,
 				delegator_account,
 			));
+			let call_as_subaccount =
+				KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
 
 			let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::Bond);
 
-			let xcm_message = Self::construct_xcm_message(call, fee, weight);
+			let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
 			XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 			// Deposit event.
@@ -290,6 +297,7 @@ where
 				require_weight_at_most: weight,
 				call: call.encode().into(),
 			},
+			RefundSurplus,
 			DepositAsset {
 				assets: All.into(),
 				max_assets: u32::max_value(),
