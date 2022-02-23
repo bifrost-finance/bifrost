@@ -86,10 +86,52 @@ pub mod pallet {
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {}
+	pub enum Event<T: Config> {
+		minted {
+			token_amount: BalanceOf<T>,
+		},
+		Redeemed {
+			token_amount: BalanceOf<T>,
+		},
+		Rebonded {
+			token: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+		},
+		UnlockDurationSet {
+			token: CurrencyIdOf<T>,
+			era_count: u32,
+		},
+		MinimumMintSet {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		},
+		MinimumRedeemSet {
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		},
+		SupportRebondTokenAdded {
+			token: CurrencyIdOf<T>,
+		},
+		SupportRebondTokenRemoved {
+			token: CurrencyIdOf<T>,
+		},
+		/// Several fees has been set.
+		FeeSet {
+			mint_fee: BalanceOf<T>,
+			redeem_fee: BalanceOf<T>,
+			hosting_fee: BalanceOf<T>,
+		},
+	}
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		/// Number of user unlocking chunks exceed MaxUserUnlockingChunks
+		TooManyUserUnlockingChunks,
+		/// Number of era unlocking chunks exceed MaxEraUnlockingChunks
+		TooManyEraUnlockingChunks,
+		/// Invalid token to rebond.
+		InvalidRebondToken,
+	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn fees)]
