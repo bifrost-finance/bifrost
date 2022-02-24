@@ -173,6 +173,19 @@ pub mod pallet {
 	#[pallet::getter(fn get_validators)]
 	pub type Validators<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<MultiLocation>>;
 
+	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
+	#[pallet::storage]
+	#[pallet::getter(fn get_validators_by_delegator)]
+	pub type ValidatorsByDelegator<T> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		CurrencyId,
+		Blake2_128Concat,
+		MultiLocation,
+		Vec<MultiLocation>,
+		OptionQuery,
+	>;
+
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_ledger)]
@@ -276,6 +289,16 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			validators: Vec<MultiLocation>,
 		) -> DispatchResult {
+			unimplemented!()
+		}
+
+		/// Update storage ValidatorsByDelegator<T>.
+		#[pallet::weight(T::WeightInfo::set_validators_by_delegator())]
+		pub fn set_validators_by_delegator(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			validators: Vec<MultiLocation>,) -> DispatchResult {
 			unimplemented!()
 		}
 

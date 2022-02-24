@@ -35,6 +35,7 @@ pub trait WeightInfo {
 	fn set_fee_source() -> Weight;
 	fn set_delegators() -> Weight;
 	fn set_validators() -> Weight;
+	fn set_validators_by_delegator() -> Weight;
 	fn set_delegator_ledger() -> Weight;
 	fn set_minimums_and_maximums() -> Weight;
 }
@@ -70,6 +71,10 @@ impl WeightInfo for () {
 	}
 
 	fn set_validators() -> Weight {
+		(50_000_000 as Weight)
+	}
+	
+	fn set_validators_by_delegator() -> Weight {
 		(50_000_000 as Weight)
 	}
 

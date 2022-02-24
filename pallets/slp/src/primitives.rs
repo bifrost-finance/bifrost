@@ -78,7 +78,11 @@ pub struct MinimumsMaximums<Balance> {
 	/// The minimum unbond amount each time a delegator to unbond.
 	pub unbond_minimum: Balance,
 	/// The maximum number of unbond records at the same time.
-	pub unbond_record_maximum: u64,
+	pub unbond_record_maximum: u32,
+	/// The maximum number of validators for a delegator to support at the same time.
+	pub validators_back_maximum: u32,
+	/// The maximum amount of active staking for a delegator. It is used to control ROI.
+	pub delegator_active_staking_maximum: Balance,
 }
 
 /// XCM operations list
