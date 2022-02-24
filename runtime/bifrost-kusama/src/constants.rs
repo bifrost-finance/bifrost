@@ -20,7 +20,7 @@
 
 /// Money matters.
 pub mod currency {
-	use bifrost_runtime_common::{cent, dollar, milli};
+	use bifrost_runtime_common::{cent, milli};
 	use frame_support::weights::{
 		constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial,
@@ -32,21 +32,6 @@ pub mod currency {
 	pub fn deposit(items: u32, bytes: u32) -> Balance {
 		items as Balance * 15 * cent(CurrencyId::Native(TokenSymbol::BNC)) +
 			(bytes as Balance) * 6 * cent(CurrencyId::Native(TokenSymbol::BNC))
-	}
-
-	pub struct KsmWeightToFee;
-	impl WeightToFeePolynomial for KsmWeightToFee {
-		type Balance = Balance;
-		fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-			let p = ksm_base_tx_fee();
-			let q = 10 * Balance::from(ExtrinsicBaseWeight::get());
-			smallvec![WeightToFeeCoefficient {
-				degree: 1,
-				negative: false,
-				coeff_frac: Perbill::from_rational(p % q, q),
-				coeff_integer: p / q,
-			}]
-		}
 	}
 
 	pub struct WeightToFee;
@@ -63,10 +48,6 @@ pub mod currency {
 				coeff_integer: p / q,
 			}]
 		}
-	}
-
-	fn ksm_base_tx_fee() -> Balance {
-		dollar(CurrencyId::Token(TokenSymbol::KSM)) / 10_000
 	}
 
 	fn base_tx_fee() -> Balance {

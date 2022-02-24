@@ -17,21 +17,19 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
+
+#![cfg(test)]
+
 use frame_support::{
 	construct_runtime,
-	dispatch::DispatchResult,
+	dispatch::DispatchError,
 	parameter_types,
 	traits::{EnsureOrigin, GenesisBuild, Nothing},
-	weights::{WeightToFeeCoefficient, WeightToFeeCoefficients, WeightToFeePolynomial},
+	weights::Weight,
 	PalletId,
 };
 use frame_system::RawOrigin;
-use node_primitives::{
-	Amount, Balance, CurrencyId, MessageId, ParachainTransactProxyType, ParachainTransactType,
-	TokenSymbol, TransferOriginType,
-};
-use orml_traits::XcmTransfer;
-use smallvec::smallvec;
+use node_primitives::{Amount, Balance, CurrencyId, MessageId, ParaId, TokenSymbol};
 use sp_arithmetic::Percent;
 use sp_core::H256;
 pub use sp_runtime::Perbill;
@@ -39,8 +37,7 @@ use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-use xcm::{latest::prelude::*, DoubleEncoded};
-use xcm_support::{BifrostXcmExecutor, Weight};
+use xcm_interface::traits::XcmHelper;
 
 use crate as salp;
 use crate::WeightInfo;
@@ -202,25 +199,11 @@ parameter_types! {
 	pub const VSBondValidPeriod: BlockNumber = 30 * DAYS;
 	pub const ReleaseCycle: BlockNumber = 1 * DAYS;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub BaseXcmWeight:u64 = 1_000_000_000 as u64;
-	pub ContributionWeight:u64 = 1_000_000_000 as u64;
-	pub AddProxyWeight:u64 = 1_000_000_000 as u64;
-	pub const SelfParaId: u32 = 2001;
-	pub PrimaryAccount: AccountId = ALICE;
 	pub ConfirmMuitiSigAccount: AccountId = Multisig::multi_account_id(&vec![
 		ALICE,
 		BRUCE,
 		CATHI
 	],2);
-	pub RelaychainSovereignSubAccount: MultiLocation = MultiLocation::parent();
-	pub SalpTransactProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
-	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
-}
-
-parameter_types! {
-	pub const AnyNetwork: NetworkId = NetworkId::Any;
 }
 
 pub struct EnsureConfirmAsGovernance;
@@ -241,47 +224,25 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsGovernance {
 	}
 }
 
-pub struct WeightToFee;
-impl WeightToFeePolynomial for WeightToFee {
-	type Balance = Balance;
-	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-		smallvec![WeightToFeeCoefficient {
-			degree: 1,
-			negative: false,
-			coeff_frac: Perbill::from_rational(90u32, 100u32),
-			coeff_integer: 1,
-		}]
+// To control the result returned by `MockXcmExecutor`
+pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
+
+// Mock XcmExecutor
+pub struct MockXcmExecutor;
+
+impl XcmHelper<crate::AccountIdOf<Test>, crate::BalanceOf<Test>> for MockXcmExecutor {
+	fn contribute(_index: ParaId, _value: Balance) -> Result<MessageId, DispatchError> {
+		let result = unsafe { MOCK_XCM_RESULT.0 };
+
+		match result {
+			true => Ok([0; 32]),
+			false => Err(DispatchError::BadOrigin),
+		}
 	}
 }
-
-pub struct MockXTokens;
-
-impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
-	fn transfer(
-		_who: AccountId,
-		_currency_id: CurrencyId,
-		_amount: Balance,
-		_dest: MultiLocation,
-		_dest_weight: Weight,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn transfer_multi_asset(
-		_who: AccountId,
-		_asset: MultiAsset,
-		_dest: MultiLocation,
-		_dest_weight: Weight,
-	) -> DispatchResult {
-		Ok(())
-	}
-}
-
-use bifrost_runtime_common::r#impl::BifrostAccountIdToMultiLocation;
 
 impl salp::Config for Test {
 	type BancorPool = Bancor;
-	type BifrostXcmExecutor = MockXcmExecutor;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
@@ -293,20 +254,9 @@ impl salp::Config for Test {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
-	type XcmTransferOrigin = XcmTransferOrigin;
-	type WeightInfo = SalpWeightInfo;
-	type SelfParaId = SelfParaId;
-	type BaseXcmWeight = BaseXcmWeight;
-	type ContributionWeight = ContributionWeight;
 	type EnsureConfirmAsGovernance = EnsureConfirmAsGovernance;
-	type AddProxyWeight = AddProxyWeight;
-	type XcmTransfer = MockXTokens;
-	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
-	type TransactProxyType = SalpTransactProxyType;
-	type TransactType = SalpTransactType;
-	type RelayNetwork = RelayNetwork;
-	type XcmExecutor = ();
-	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type WeightInfo = SalpWeightInfo;
+	type XcmInterface = MockXcmExecutor;
 }
 
 pub struct SalpWeightInfo;
@@ -329,52 +279,6 @@ impl WeightInfo for SalpWeightInfo {
 
 	fn batch_unlock(_k: u32) -> Weight {
 		0
-	}
-}
-
-// To control the result returned by `MockXcmExecutor`
-pub(crate) static mut MOCK_XCM_RESULT: (bool, bool) = (true, true);
-
-// Mock XcmExecutor
-pub struct MockXcmExecutor;
-
-impl BifrostXcmExecutor for MockXcmExecutor {
-	fn transact_weight(_: u64, _: u32) -> u64 {
-		return 0;
-	}
-
-	fn transact_id(_data: &[u8]) -> MessageId {
-		return [0; 32];
-	}
-
-	fn ump_transact(
-		_origin: MultiLocation,
-		_call: DoubleEncoded<()>,
-		_weight: u64,
-		_relayer: bool,
-		_nonce: u32,
-	) -> Result<[u8; 32], XcmError> {
-		let result = unsafe { MOCK_XCM_RESULT.0 };
-
-		match result {
-			true => Ok([0; 32]),
-			false => Err(XcmError::Unimplemented),
-		}
-	}
-
-	fn ump_transfer_asset(
-		_origin: MultiLocation,
-		_dest: MultiLocation,
-		_amount: u128,
-		_relay: bool,
-		_nonce: u32,
-	) -> Result<MessageId, XcmError> {
-		let result = unsafe { MOCK_XCM_RESULT.1 };
-
-		match result {
-			true => Ok([0; 32]),
-			false => Err(XcmError::Unimplemented),
-		}
 	}
 }
 

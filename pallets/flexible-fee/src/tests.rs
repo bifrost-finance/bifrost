@@ -466,7 +466,7 @@ fn deduct_salp_fee_should_work() {
 		// fee is: 133780717
 		assert_eq!(
 			<Test as crate::Config>::MultiCurrency::free_balance(CURRENCY_ID_4, &CHARLIE),
-			66219283
+			100000000
 		);
 		// treasury account has the fee
 		assert_eq!(
@@ -474,7 +474,7 @@ fn deduct_salp_fee_should_work() {
 				CURRENCY_ID_4,
 				&<Test as crate::Config>::TreasuryAccount::get()
 			),
-			133780717
+			100000000
 		);
 	});
 }

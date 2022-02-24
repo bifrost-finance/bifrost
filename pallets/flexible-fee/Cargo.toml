@@ -27,13 +27,10 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
 smallvec = "1.4.1"
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "polkadot-v0.9.16" }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16"  }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16" }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16"}
-xcm-support = { path = "../../xcm-support"}
 bifrost-salp = { path = "../salp" }
 bifrost-kusama-runtime = { path = "../../runtime/bifrost-kusama" }
 bifrost-runtime-common = { path = "../../runtime/common" }
+xcm-interface = {version = "*"}
 
 [features]
 default = ["std"]

@@ -74,7 +74,7 @@ use bifrost_flexible_fee::{
 };
 use bifrost_runtime_common::{
 	cent,
-	constants::{parachains, time::*},
+	constants::time::*,
 	dollar, micro, milli, millicent, prod_or_test,
 	r#impl::{
 		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
@@ -88,15 +88,13 @@ use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
 use frame_support::{
 	sp_runtime::traits::Convert,
-	traits::{EnsureOneOf, LockIdentifier},
+	traits::{EnsureOneOf, Get, LockIdentifier},
 };
 use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
 	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
-	ParachainTransactType, PoolId, RpcContributionStatus, TokenSymbol, TransferOriginType,
-	XcmBaseWeight,
+	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -117,7 +115,7 @@ use xcm_builder::{
 	TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_support::{BifrostXcmAdaptor, Get};
+pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 // zenlink imports
 use zenlink_protocol::{
 	make_x2_location, AssetBalance, AssetId as ZenlinkAssetId, LocalAssetHandler,
@@ -138,7 +136,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("bifrost"),
 	impl_name: create_runtime_str!("bifrost"),
 	authoring_version: 1,
-	spec_version: 926,
+	spec_version: 927,
 	impl_version: 0,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -1348,7 +1346,7 @@ impl NameGetter<Call> for FeeNameGetter {
 	fn get_name(c: &Call) -> ExtraFeeName {
 		match *c {
 			Call::Salp(bifrost_salp::Call::contribute { .. }) => ExtraFeeName::SalpContribute,
-			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) =>
+			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) =>
 				ExtraFeeName::StatemineTransfer,
 			_ => ExtraFeeName::NoExtraFee,
 		}
@@ -1362,7 +1360,7 @@ impl Contains<Call> for AggregateExtraFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
 			Call::Salp(bifrost_salp::Call::contribute { .. }) => true,
-			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) => true,
+			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) => true,
 			_ => false,
 		}
 	}
@@ -1382,7 +1380,7 @@ pub struct StatemineTransferFeeFilter;
 impl Contains<Call> for StatemineTransferFeeFilter {
 	fn contains(c: &Call) -> bool {
 		match *c {
-			Call::Salp(bifrost_salp::Call::transfer_statemine_assets { .. }) => true,
+			Call::XcmInterface(xcm_interface::Call::transfer_statemine_assets { .. }) => true,
 			_ => false,
 		}
 	}
@@ -1390,19 +1388,12 @@ impl Contains<Call> for StatemineTransferFeeFilter {
 
 parameter_types! {
 	pub const AltFeeCurrencyExchangeRate: (u32, u32) = (1, 100);
-	pub SalpWeightHolder: XcmBaseWeight = XcmBaseWeight::from(6 * milli(RelayCurrencyId::get()) as u64) + ContributionWeight::get() + u64::pow(2, 24).into();
-	pub StatemineTransferWeightHolder: XcmBaseWeight = XcmBaseWeight::from(6 * milli(RelayCurrencyId::get()) as u64);
+	pub UmpContributeFee: Balance = UmpTransactFee::get();
 }
 
 pub type MiscFeeHandlers = (
-	MiscFeeHandler<Runtime, RelayCurrencyId, KsmWeightToFee, SalpWeightHolder, ContributeFeeFilter>,
-	MiscFeeHandler<
-		Runtime,
-		RelayCurrencyId,
-		KsmWeightToFee,
-		StatemineTransferWeightHolder,
-		StatemineTransferFeeFilter,
-	>,
+	MiscFeeHandler<Runtime, RelayCurrencyId, UmpContributeFee, ContributeFeeFilter>,
+	MiscFeeHandler<Runtime, RelayCurrencyId, StatemineTransferFee, StatemineTransferFeeFilter>,
 );
 
 impl bifrost_flexible_fee::Config for Runtime {
@@ -1440,21 +1431,11 @@ parameter_types! {
 	pub const LeasePeriod: BlockNumber = KUSAMA_LEASE_PERIOD;
 	pub const ReleaseRatio: Percent = Percent::from_percent(50);
 	pub const SlotLength: BlockNumber = 8u32 as BlockNumber;
-	pub const XcmTransferOrigin: TransferOriginType = TransferOriginType::FromRelayChain;
-	pub XcmWeight: XcmBaseWeight = RelayXcmBaseWeight::get().into();
-	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
-	pub AddProxyWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
 	pub ConfirmMuitiSigAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
-	pub RelaychainSovereignSubAccount: MultiLocation = create_x2_multilocation(ParachainDerivedProxyAccountType::Salp as u16);
-	pub SalpTransactType: ParachainTransactType = ParachainTransactType::Xcm;
-	pub SalpProxyType: ParachainTransactProxyType = ParachainTransactProxyType::Derived;
-	pub XcmTransactFee: Balance = dollar(RelayCurrencyId::get()) / 10;
 }
 
 impl bifrost_salp::Config for Runtime {
 	type BancorPool = ();
-	type BifrostXcmExecutor =
-		BifrostXcmAdaptor<XcmRouter, XcmWeight, KsmWeightToFee, SelfParaId, XcmTransactFee>;
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;
@@ -1466,21 +1447,10 @@ impl bifrost_salp::Config for Runtime {
 	type RemoveKeysLimit = RemoveKeysLimit;
 	type SlotLength = SlotLength;
 	type VSBondValidPeriod = VSBondValidPeriod;
-	type XcmTransferOrigin = XcmTransferOrigin;
 	type WeightInfo = ();
-	type SelfParaId = SelfParaId;
-	type ContributionWeight = ContributionWeight;
-	type BaseXcmWeight = XcmWeight;
 	type EnsureConfirmAsGovernance =
 		EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type AddProxyWeight = AddProxyWeight;
-	type XcmTransfer = XTokens;
-	type SovereignSubAccountLocation = RelaychainSovereignSubAccount;
-	type TransactProxyType = SalpProxyType;
-	type TransactType = SalpTransactType;
-	type RelayNetwork = RelayNetwork;
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type XcmInterface = XcmInterface;
 }
 
 parameter_types! {
@@ -1583,6 +1553,29 @@ impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
 	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub ParachainAccount: AccountId = ParachainInfo::get().into_account();
+	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
+	pub UmpTransactFee: Balance = prod_or_test!(milli(RelayCurrencyId::get()),milli(RelayCurrencyId::get()) * 100);
+	pub StatemineTransferFee: Balance = milli(RelayCurrencyId::get()) * 4;
+	pub StatemineTransferWeight:XcmBaseWeight = (RelayXcmBaseWeight::get() * 4).into();
+}
+
+impl xcm_interface::Config for Runtime {
+	type Event = Event;
+	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MultiCurrency = Currencies;
+	type RelayNetwork = RelayNetwork;
+	type RelaychainCurrencyId = RelayCurrencyId;
+	type ParachainSovereignAccount = ParachainAccount;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type AccountIdToMultiLocation = BifrostAccountIdToMultiLocation;
+	type StatemineTransferWeight = StatemineTransferWeight;
+	type StatemineTransferFee = StatemineTransferFee;
+	type ContributionWeight = ContributionWeight;
+	type ContributionFee = UmpTransactFee;
 }
 
 // Bifrost modules end
@@ -1781,6 +1774,7 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
+		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 	}
 }
 
@@ -1826,7 +1820,6 @@ pub type Executive = frame_executive::Executive<
 	frame_system::ChainContext<Runtime>,
 	Runtime,
 	AllPalletsWithSystem,
-	SchedulerMigrationV3,
 >;
 
 // Migration for scheduler pallet to move from a plain Call to a CallOrHash.

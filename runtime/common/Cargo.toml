@@ -64,10 +64,11 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 orml-currencies = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
-xcm-support = { path = "../../xcm-support", default-features = false }
 
 zenlink-protocol = { version = "*", default-features = false }
 zenlink-protocol-runtime-api = { version = "*", default-features = false }
+
+xcm-interface = { version = "*", default-features = false }
 
 [features]
 default = ["std"]
@@ -112,7 +113,7 @@ std = [
 	"orml-currencies/std",
 	"orml-traits/std",
 	"orml-tokens/std",
-	"xcm-support/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
+	"xcm-interface/std",
 ]
