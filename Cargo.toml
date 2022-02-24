@@ -1,6 +1,6 @@
 [workspace]
 members = [
-	#"integration-tests",
+	"integration-tests",
 	"node/cli",
 	"node/primitives",
 	"node/rpc",
@@ -16,8 +16,6 @@ members = [
 	"pallets/call-switchgear",
 	"runtime/bifrost-kusama",
 	"runtime/bifrost-polkadot",
-	#"parachain-staking",
-	#"xcm-interface",
 ]
 
 [profile.dev]
@@ -104,7 +102,4 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
-#parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "1e8b2931aae8ca9e218e678017c1069b4cdff858" }
-#parachain-staking = { path = "./parachain-staking"}
 xcm-interface = { git = "https://github.com/bifrost-finance/xcm-interface", rev = "873860a2363186af2527018e89e543379f06772e"}
-#xcm-interface = { path = "./xcm-interface"}
