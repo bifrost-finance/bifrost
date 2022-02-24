@@ -19,26 +19,22 @@
 // The swap pool algorithm implements Balancer protocol
 // For more details, refer to https://balancer.finance/whitepaper/
 
-use frame_support::{
-	traits::Contains,
-	weights::{Weight, WeightToFeePolynomial},
-};
+use frame_support::traits::Contains;
 use node_primitives::ExtraFeeName;
 
 use super::*;
 use crate::Config;
 
-pub struct MiscFeeHandler<T, FeeCurrency, WeightToFee, WeightHolder, FeeFilter>(
-	PhantomData<(T, FeeCurrency, WeightToFee, WeightHolder, FeeFilter)>,
+pub struct MiscFeeHandler<T, FeeCurrency, FeeAmount, FeeFilter>(
+	PhantomData<(T, FeeCurrency, FeeAmount, FeeFilter)>,
 );
 
-impl<T: Config, FeeCurrency, WeightToFee, WeightHolder, FeeFilter>
+impl<T: Config, FeeCurrency, FeeAmount, FeeFilter>
 	FeeDeductor<T::AccountId, CurrencyIdOf<T>, PalletBalanceOf<T>, T::Call>
-	for MiscFeeHandler<T, FeeCurrency, WeightToFee, WeightHolder, FeeFilter>
+	for MiscFeeHandler<T, FeeCurrency, FeeAmount, FeeFilter>
 where
 	FeeCurrency: Get<CurrencyIdOf<T>>,
-	WeightToFee: WeightToFeePolynomial<Balance = PalletBalanceOf<T>>,
-	WeightHolder: Get<Weight>,
+	FeeAmount: Get<PalletBalanceOf<T>>,
 	FeeFilter: Contains<CallOf<T>>,
 {
 	fn deduct_fee(
@@ -48,7 +44,7 @@ where
 	) -> Result<(CurrencyIdOf<T>, PalletBalanceOf<T>), DispatchError> {
 		// If this call matches a specific extra-fee call
 		if FeeFilter::contains(call) {
-			let total_fee = WeightToFee::calc(&WeightHolder::get());
+			let total_fee = FeeAmount::get();
 			let fee_currency = FeeCurrency::get();
 
 			<T as pallet::Config>::MultiCurrency::transfer(fee_currency, who, receiver, total_fee)?;

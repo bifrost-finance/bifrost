@@ -102,17 +102,15 @@ pub mod pallet {
 		type AltFeeCurrencyExchangeRate: Get<(u32, u32)>;
 	}
 
-	pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
-		<T as frame_system::Config>::AccountId,
-	>>::CurrencyId;
-	pub type PalletBalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	pub type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::NegativeImbalance;
-	pub type PositiveImbalanceOf<T> = <<T as Config>::Currency as Currency<
-		<T as frame_system::Config>::AccountId,
-	>>::PositiveImbalance;
+	pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+	pub type CurrencyIdOf<T> =
+		<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::CurrencyId;
+	pub type PalletBalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+	pub type NegativeImbalanceOf<T> =
+		<<T as Config>::Currency as Currency<AccountIdOf<T>>>::NegativeImbalance;
+	pub type PositiveImbalanceOf<T> =
+		<<T as Config>::Currency as Currency<AccountIdOf<T>>>::PositiveImbalance;
+
 	pub type CallOf<T> = <T as frame_system::Config>::Call;
 
 	#[pallet::hooks]
@@ -121,7 +119,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		FlexibleFeeExchanged(CurrencyIdOf<T>, u128), // token and amount
+		FlexibleFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>), // token and amount
 		FixedRateFeeExchanged(CurrencyIdOf<T>, PalletBalanceOf<T>),
 		ExtraFeeDeducted(ExtraFeeName, CurrencyIdOf<T>, PalletBalanceOf<T>),
 	}
@@ -383,7 +381,10 @@ impl<T: Config> FeeDealer<T::AccountId, PalletBalanceOf<T>, CurrencyIdOf<T>> for
 				)
 				.is_ok()
 				{
-					Self::deposit_event(Event::FlexibleFeeExchanged(currency_id, amounts[0]));
+					Self::deposit_event(Event::FlexibleFeeExchanged(
+						currency_id,
+						PalletBalanceOf::<T>::saturated_from(amounts[0]),
+					));
 					// successfully swap, break iteration
 					break;
 				}
