@@ -46,74 +46,40 @@ pub trait StakingAgent<DelegatorId, ValidatorId> {
 		+ scale_info::TypeInfo;
 
 	/// Delegator initialization work. Generate a new delegator and return its ID.
-	fn initialize_delegator(currency_id: Self::CurrencyId) -> Option<DelegatorId>;
+	fn initialize_delegator() -> Option<DelegatorId>;
 
 	/// First time bonding some amount to a delegator.
-	fn bond(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		amount: Self::Balance,
-	) -> DispatchResult;
+	fn bond(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		amount: Self::Balance,
-	) -> DispatchResult;
+	fn bond_extra(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		amount: Self::Balance,
-	) -> DispatchResult;
+	fn unbond(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
 
 	/// Cancel some unbonding amount.
-	fn rebond(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		amount: Self::Balance,
-	) -> DispatchResult;
+	fn rebond(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
 
 	/// Delegate to some validators.
-	fn delegate(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		targets: Vec<ValidatorId>,
-	) -> DispatchResult;
+	fn delegate(who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
 
 	/// Remove delegation relationship with some validators.
-	fn undelegate(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		targets: Vec<ValidatorId>,
-	) -> DispatchResult;
+	fn undelegate(who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(
-		currency_id: Self::CurrencyId,
-		who: DelegatorId,
-		targets: Vec<ValidatorId>,
-	) -> DispatchResult;
+	fn redelegate(who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
 
 	/// Initiate payout for a certain delegator.
-	fn payout(currency_id: Self::CurrencyId, who: DelegatorId) -> Self::Balance;
+	fn payout(who: DelegatorId) -> Self::Balance;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(currency_id: Self::CurrencyId, who: DelegatorId) -> Self::Balance;
+	fn liquidize(who: DelegatorId) -> Self::Balance;
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining module.
 	/// If the increase variable is true, then we increase token_pool by token_amount. If it is
 	/// false, then we decrease token_pool by token_amount.
-	fn increase_token_pool(
-		currency_id: Self::CurrencyId,
-		token_amount: Self::Balance,
-	) -> DispatchResult;
-	fn decrease_token_pool(
-		currency_id: Self::CurrencyId,
-		token_amount: Self::Balance,
-	) -> DispatchResult;
+	fn increase_token_pool(token_amount: Self::Balance) -> DispatchResult;
+	fn decrease_token_pool(token_amount: Self::Balance) -> DispatchResult;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
@@ -166,14 +132,10 @@ pub trait DelegatorManager<DelegatorId, Ledger> {
 		+ scale_info::TypeInfo;
 
 	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		currency_id: Self::CurrencyId,
-		index: u16,
-		who: &DelegatorId,
-	) -> DispatchResult;
+	fn add_delegator(index: u16, who: &DelegatorId) -> DispatchResult;
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_delegator(currency_id: Self::CurrencyId, who: &DelegatorId) -> DispatchResult;
+	fn remove_delegator(who: &DelegatorId) -> DispatchResult;
 }
 
 /// Abstraction over a validator manager.
@@ -188,10 +150,10 @@ pub trait ValidatorManager<ValidatorId> {
 		+ scale_info::TypeInfo;
 
 	/// Add a new serving validator for a particular currency.
-	fn add_validator(currency_id: Self::CurrencyId, who: &ValidatorId) -> DispatchResult;
+	fn add_validator(who: &ValidatorId) -> DispatchResult;
 
 	/// Remove an existing serving validator for a particular currency.
-	fn remove_validator(currency_id: Self::CurrencyId, who: &ValidatorId) -> DispatchResult;
+	fn remove_validator(who: &ValidatorId) -> DispatchResult;
 }
 
 /// Abstraction over a user refund manager to refund user unlocking balance without waiting for the
@@ -216,11 +178,7 @@ pub trait UserRefundManager<AccountId> {
 		+ scale_info::TypeInfo;
 
 	/// Refund user unlocking balance without waiting for the maximum amount of time.
-	fn refund_user_unbond(
-		currency_id: Self::CurrencyId,
-		who: &AccountId,
-		amount: Self::Balance,
-	) -> DispatchResult;
+	fn refund_user_unbond(who: &AccountId, amount: Self::Balance) -> DispatchResult;
 }
 
 /// Helper to build xcm message

@@ -21,9 +21,9 @@ use core::marker::PhantomData;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, TokenSymbol};
 use sp_runtime::{
-	traits::{Convert, UniqueSaturatedInto},
+	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -35,11 +35,11 @@ use xcm::{
 use crate::{
 	agents::{KusamaCall, StakingCall, UtilityCall},
 	pallet::Error,
-	primitives::{SubstrateLedger, XcmOperation},
+	primitives::{Ledger, SubstrateLedger, XcmOperation},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Event, MinimumsAndMaximums, Pallet, ValidatorManager,
-	XcmDestWeightAndFee,
+	XcmDestWeightAndFee, KSM,
 };
 
 /// StakingAgent implementation for Kusama
@@ -58,9 +58,9 @@ where
 	type CurrencyId = CurrencyId;
 	type Balance = BalanceOf<T>;
 
-	fn initialize_delegator(currency_id: Self::CurrencyId) -> Option<MultiLocation> {
-		let new_delegator_id = DelegatorNextIndex::<T>::get(currency_id);
-		let rs = DelegatorNextIndex::<T>::mutate(currency_id, |id| -> DispatchResult {
+	fn initialize_delegator() -> Option<MultiLocation> {
+		let new_delegator_id = DelegatorNextIndex::<T>::get(KSM);
+		let rs = DelegatorNextIndex::<T>::mutate(KSM, |id| -> DispatchResult {
 			let option_new_id = id.checked_add(1).ok_or(Error::<T>::OverFlow)?;
 			*id = option_new_id;
 			Ok(())
@@ -71,10 +71,10 @@ where
 			let delegator_multilocation = AccountConverter::convert(new_delegator_id);
 
 			// Add the new delegator into storage
-			let _ = Self::add_delegator(currency_id, new_delegator_id, &delegator_multilocation);
+			let _ = Self::add_delegator(new_delegator_id, &delegator_multilocation);
 
 			Pallet::<T>::deposit_event(Event::DelegatorInitialized(
-				currency_id,
+				KSM,
 				delegator_multilocation.clone(),
 			));
 			Some(delegator_multilocation)
@@ -84,20 +84,21 @@ where
 	}
 
 	/// First time bonding some amount to a delegator.
-	fn bond(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn bond(who: MultiLocation, amount: Self::Balance) -> DispatchResult {
 		// Check if it is bonded already.
-		let ledger = DelegatorLedgers::<T>::get(currency_id, who.clone());
+		let ledger = DelegatorLedgers::<T>::get(KSM, who.clone());
 		if let Some(_) = ledger {
 			Err(Error::<T>::AlreadyBonded)?
 		} else {
 			// Check if the amount exceeds the minimum requirement.
-			let mins_maxs =
-				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
+
+			// Ensure the bond doesn't exceeds delegator_active_staking_maximum
+			ensure!(
+				amount <= mins_maxs.delegator_active_staking_maximum,
+				Error::<T>::ExceedActiveMaximum
+			);
 
 			// Get the delegator account id in Kusama network
 			let delegator_account_32 = match who.clone() {
@@ -119,121 +120,132 @@ where
 
 			// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 			// send it out.
-			Self::construct_xcm_and_send_as_subaccount(
-				currency_id,
-				XcmOperation::Bond,
-				call,
-				who.clone(),
-			)?;
+			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Bond, call, who.clone())?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorBonded(currency_id, who, amount));
+			Pallet::<T>::deposit_event(Event::DelegatorBonded(KSM, who, amount));
 
 			Ok(())
 		}
 	}
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn bond_extra(who: MultiLocation, amount: Self::Balance) -> DispatchResult {
 		// Check if it is bonded already.
-		let ledger = DelegatorLedgers::<T>::get(currency_id, who.clone())
-			.ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if the amount exceeds the minimum requirement.
-		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
+		// Check if the new_add_amount + active_staking_amount doesn't exceeds
+		// delegator_active_staking_maximum
+		let active_staking = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger.active
+		} else {
+			Err(Error::<T>::ProblematicLedger)?
+		};
+
+		let total = amount.checked_add(&active_staking).ok_or(Error::<T>::OverFlow)?;
+		ensure!(
+			total <= mins_maxs.delegator_active_staking_maximum,
+			Error::<T>::ExceedActiveMaximum
+		);
 		// Construct xcm message..
 		let call = KusamaCall::Staking(StakingCall::BondExtra(amount));
 
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and send
-		// it out.
-		Self::construct_xcm_and_send_as_subaccount(
-			currency_id,
-			XcmOperation::BondExtra,
-			call,
-			who.clone(),
-		)?;
-
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::BondExtra, call, who.clone())?;
 		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorBondExtra(currency_id, who, amount));
+		Pallet::<T>::deposit_event(Event::DelegatorBondExtra(KSM, who, amount));
 
 		Ok(())
 	}
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		amount: Self::Balance,
-	) -> DispatchResult {
-		unimplemented!()
+	fn unbond(who: MultiLocation, amount: Self::Balance) -> DispatchResult {
+		// Check if it is bonded already.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// Check if the unbonding amount exceeds minimum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
+
+		// Get the delegator ledger
+		let substrate_ledger = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger
+		} else {
+			Err(Error::<T>::ProblematicLedger)?
+		};
+
+		// Check if the remaining active balance is enough for (unbonding amount + minimum bonded
+		// amount)
+		let active_staking = substrate_ledger.active;
+		let remaining = active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
+		ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
+
+		// Check if this unbonding will exceed the maximum unlocking records bound for a single
+		// delegator.
+		let unlocking_num = substrate_ledger.unlocking.len() as u32;
+		ensure!(
+			unlocking_num < mins_maxs.unbond_record_maximum,
+			Error::<T>::ExceedUnlockingRecords
+		);
+
+		// Check if the unbonding will exceed the maximum unlocking records bound for the unlocking
+		// due era.
+		// let due_era = CurrentTimeUnit::<T>::
+
+		// Construct unbonding xcm message.
+
+		// Send out the xcm message.
+
+		// Deposit event.
+
+		Ok(())
 	}
 
 	/// Cancel some unbonding amount.
-	fn rebond(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		amount: Self::Balance,
-	) -> DispatchResult {
+	fn rebond(who: MultiLocation, amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Delegate to some validators.
-	fn delegate(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		targets: Vec<MultiLocation>,
-	) -> DispatchResult {
+	fn delegate(who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Remove delegation relationship with some validators.
-	fn undelegate(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		targets: Vec<MultiLocation>,
-	) -> DispatchResult {
+	fn undelegate(who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(
-		currency_id: Self::CurrencyId,
-		who: MultiLocation,
-		targets: Vec<MultiLocation>,
-	) -> DispatchResult {
+	fn redelegate(who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Initiate payout for a certain delegator.
-	fn payout(currency_id: Self::CurrencyId, who: MultiLocation) -> Self::Balance {
+	fn payout(who: MultiLocation) -> Self::Balance {
 		unimplemented!()
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(currency_id: Self::CurrencyId, who: MultiLocation) -> Self::Balance {
+	fn liquidize(who: MultiLocation) -> Self::Balance {
 		unimplemented!()
 	}
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining
 	/// module. If the increase variable is true, then we increase token_pool by token_amount.
 	/// If it is false, then we decrease token_pool by token_amount.
-	fn increase_token_pool(
-		currency_id: Self::CurrencyId,
-		token_amount: Self::Balance,
-	) -> DispatchResult {
+	fn increase_token_pool(token_amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 	///
-	fn decrease_token_pool(
-		currency_id: Self::CurrencyId,
-		token_amount: Self::Balance,
-	) -> DispatchResult {
+	fn decrease_token_pool(token_amount: Self::Balance) -> DispatchResult {
 		unimplemented!()
 	}
 }
@@ -251,18 +263,14 @@ where
 	type CurrencyId = CurrencyId;
 
 	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(
-		currency_id: Self::CurrencyId,
-		index: u16,
-		who: &MultiLocation,
-	) -> DispatchResult {
-		DelegatorsIndex2Multilocation::<T>::insert(currency_id, index, who);
-		DelegatorsMultilocation2Index::<T>::insert(currency_id, who, index);
+	fn add_delegator(index: u16, who: &MultiLocation) -> DispatchResult {
+		DelegatorsIndex2Multilocation::<T>::insert(KSM, index, who);
+		DelegatorsMultilocation2Index::<T>::insert(KSM, who, index);
 		Ok(())
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_delegator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
+	fn remove_delegator(who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 }
@@ -278,12 +286,12 @@ where
 {
 	type CurrencyId = CurrencyId;
 	/// Add a new serving delegator for a particular currency.
-	fn add_validator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
+	fn add_validator(who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(currency_id: Self::CurrencyId, who: &MultiLocation) -> DispatchResult {
+	fn remove_validator(who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 }
@@ -340,19 +348,18 @@ where
 	XcmSender: SendXcm,
 {
 	fn construct_xcm_and_send_as_subaccount(
-		currency_id: CurrencyId,
 		operation: XcmOperation,
 		call: KusamaCall<T>,
 		who: MultiLocation,
 	) -> DispatchResult {
 		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who.clone())
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who.clone())
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		let call_as_subaccount =
 			KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation);
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation);
 
 		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
 		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;

@@ -20,12 +20,13 @@
 
 use frame_support::{pallet_prelude::*, weights::Weight};
 use frame_system::pallet_prelude::OriginFor;
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
 use sp_runtime::traits::UniqueSaturatedFrom;
 pub use weights::WeightInfo;
 use xcm::latest::*;
+use frame_system::{ensure_signed, ensure_root};
 
 use crate::{
 	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation},
@@ -46,6 +47,9 @@ pub use pallet::*;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
+
+/// Simplify the CurrencyId.
+const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -71,6 +75,10 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		OperateOriginNotSet,
+		NotAuthorized,
+		NotSupportedCurrencyId,
+		FailToInitializeDelegator,
 		OverFlow,
 		NotExist,
 		LowerThanMinimum,
@@ -78,6 +86,10 @@ pub mod pallet {
 		DelegatorNotExist,
 		XcmFailure,
 		DelegatorNotBonded,
+		ExceedActiveMaximum,
+		ProblematicLedger,
+		NotEnoughToUnbond,
+		ExceedUnlockingRecords,
 	}
 
 	#[pallet::event]
@@ -218,6 +230,35 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
+		/// *****************************/
+		/// ****** Outer Calls ******/
+		/// *****************************/
+		///
+		/// Delegator initialization work. Generate a new delegator and return its ID.
+		#[pallet::weight(T::WeightInfo::initialize_delegator())]
+		pub fn initialize_delegator(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let delegator_id = match currency_id {
+				KSM => <T::KusamaAgent as StakingAgent<MultiLocation,MultiLocation>>::initialize_delegator(), 
+				_ => Err(Error::<T>::NotSupportedCurrencyId)?
+			}.ok_or(Error::<T>::FailToInitializeDelegator)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorInitialized(currency_id, delegator_id));
+
+			Ok(())
+		}
+
+		/// *****************************/
+		/// ****** Storage Setters ******/
+		/// *****************************/
+		///
 		/// Update storage XcmDestWeightAndFee<T>.
 		#[pallet::weight(T::WeightInfo::set_xcm_dest_weight_and_fee())]
 		pub fn set_xcm_dest_weight_and_fee(
@@ -298,7 +339,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			validators: Vec<MultiLocation>,) -> DispatchResult {
+			validators: Vec<MultiLocation>,
+		) -> DispatchResult {
 			unimplemented!()
 		}
 
@@ -321,6 +363,19 @@ pub mod pallet {
 			constraints: MinimumsMaximums<BalanceOf<T>>,
 		) -> DispatchResult {
 			unimplemented!()
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		/// Ensure privileged origin
+		fn ensure_authorized(origin: OriginFor<T>, currency_id: CurrencyId) -> bool {
+			let operator = ensure_signed(origin.clone()).ok();
+			let privileged = OperateOrigins::<T>::get(currency_id);
+
+			let cond1 = operator == privileged;
+			let cond2 = ensure_root(origin.clone()).is_ok();
+
+			cond1 & cond2
 		}
 	}
 }

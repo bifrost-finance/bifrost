@@ -27,7 +27,10 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for the pallet.
 pub trait WeightInfo {
+	// Outer calls
 	fn initialize_delegator() -> Weight;
+
+	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
 	fn set_operate_origin() -> Weight;
 	fn set_current_time_unit() -> Weight;
@@ -73,7 +76,6 @@ impl WeightInfo for () {
 	fn set_validators() -> Weight {
 		(50_000_000 as Weight)
 	}
-	
 	fn set_validators_by_delegator() -> Weight {
 		(50_000_000 as Weight)
 	}
