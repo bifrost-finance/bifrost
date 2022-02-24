@@ -77,6 +77,7 @@ pub mod pallet {
 		AlreadyBonded,
 		DelegatorNotExist,
 		XcmFailure,
+		DelegatorNotBonded,
 	}
 
 	#[pallet::event]
@@ -84,7 +85,10 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// [CurrencyId, DelegatorId]
 		DelegatorInitialized(CurrencyId, MultiLocation),
+		/// [CurrencyId, DelegatorId, BondAmount]
 		DelegatorBonded(CurrencyId, MultiLocation, BalanceOf<T>),
+		/// [CurrencyId, DelegatorId, BondExtraAmount]
+		DelegatorBondExtra(CurrencyId, MultiLocation, BalanceOf<T>),
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be

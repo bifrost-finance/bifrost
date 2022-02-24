@@ -142,7 +142,32 @@ where
 		who: MultiLocation,
 		amount: Self::Balance,
 	) -> DispatchResult {
-		unimplemented!()
+		// Check if it is bonded already.
+		let ledger = DelegatorLedgers::<T>::get(currency_id, who.clone())
+			.ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// Check if the amount exceeds the minimum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
+		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
+
+		// Get the delegator sub-account index.
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who.clone())
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Construct xcm message and send it out.
+		let call = KusamaCall::Staking(StakingCall::BondExtra(amount));
+		let call_as_subaccount =
+			KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
+
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::BondExtra);
+
+		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
+		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::DelegatorBondExtra(currency_id, who, amount));
+
+		Ok(())
 	}
 
 	/// Decrease bonding amount to a delegator.
