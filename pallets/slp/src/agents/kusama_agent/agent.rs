@@ -99,11 +99,6 @@ where
 				MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
-			// Get the delegator sub-account index.
-			let sub_account_index =
-				DelegatorsMultilocation2Index::<T>::get(currency_id, who.clone())
-					.ok_or(Error::<T>::DelegatorNotExist)?;
-
 			// Get the delegator account id in Kusama network
 			let delegator_account_32 = match who.clone() {
 				MultiLocation {
@@ -115,19 +110,21 @@ where
 			let delegator_account = T::AccountId::decode(&mut &delegator_account_32[..])
 				.expect("32 bytes can always construct an AccountId32");
 
-			// Construct xcm message and send it out.
+			// Construct xcm message.
 			let call = KusamaCall::Staking(StakingCall::Bond(
 				delegator_account.clone(),
 				amount,
 				delegator_account,
 			));
-			let call_as_subaccount =
-				KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
 
-			let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::Bond);
-
-			let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
-			XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+			// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+			// send it out.
+			Self::construct_xcm_and_send_as_subaccount(
+				currency_id,
+				XcmOperation::Bond,
+				call,
+				who.clone(),
+			)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded(currency_id, who, amount));
@@ -150,19 +147,17 @@ where
 		let mins_maxs = MinimumsAndMaximums::<T>::get(currency_id).ok_or(Error::<T>::NotExist)?;
 		ensure!(amount >= mins_maxs.bond_extra_minimum, Error::<T>::LowerThanMinimum);
 
-		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who.clone())
-			.ok_or(Error::<T>::DelegatorNotExist)?;
-
-		// Construct xcm message and send it out.
+		// Construct xcm message..
 		let call = KusamaCall::Staking(StakingCall::BondExtra(amount));
-		let call_as_subaccount =
-			KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, XcmOperation::BondExtra);
-
-		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
-		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and send
+		// it out.
+		Self::construct_xcm_and_send_as_subaccount(
+			currency_id,
+			XcmOperation::BondExtra,
+			call,
+			who.clone(),
+		)?;
 
 		// Deposit event.
 		Pallet::<T>::deposit_event(Event::DelegatorBondExtra(currency_id, who, amount));
@@ -332,5 +327,36 @@ where
 				},
 			},
 		])
+	}
+}
+
+/// Internal functions.
+impl<T, AccountConverter, ParachainId, XcmSender>
+	KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
+where
+	T: Config,
+	AccountConverter: Convert<u16, MultiLocation>,
+	ParachainId: Get<ParaId>,
+	XcmSender: SendXcm,
+{
+	fn construct_xcm_and_send_as_subaccount(
+		currency_id: CurrencyId,
+		operation: XcmOperation,
+		call: KusamaCall<T>,
+		who: MultiLocation,
+	) -> DispatchResult {
+		// Get the delegator sub-account index.
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(currency_id, who.clone())
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		let call_as_subaccount =
+			KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
+
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(currency_id, operation);
+
+		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
+		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(())
 	}
 }
