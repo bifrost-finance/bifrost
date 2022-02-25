@@ -287,6 +287,32 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Bond extra amount to a delegator.
+		#[pallet::weight(T::WeightInfo::bond_extra())]
+		pub fn bond_extra(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let _ = match currency_id {
+				KSM => <T::KusamaAgent as StakingAgent<
+					MultiLocation,
+					MultiLocation,
+					BalanceOf<T>,
+				>>::bond_extra(who.clone(), amount),
+				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
+			};
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorBondExtra(currency_id, who, amount));
+			Ok(())
+		}
+
 		/// *****************************/
 		/// ****** Storage Setters ******/
 		/// *****************************/
