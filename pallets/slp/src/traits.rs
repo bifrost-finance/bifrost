@@ -16,49 +16,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use codec::FullCodec;
-use sp_runtime::{
-	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize},
-	DispatchResult,
-};
-use sp_std::fmt::Debug;
+use sp_runtime::DispatchResult;
 
 use crate::{Weight, Xcm};
 
 /// Abstraction over a staking agent for a certain POS chain.
-pub trait StakingAgent<DelegatorId, ValidatorId> {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ scale_info::TypeInfo;
-
-	/// The balance of an account.
-	type Balance: AtLeast32BitUnsigned
-		+ FullCodec
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ Default
-		+ scale_info::TypeInfo;
-
+pub trait StakingAgent<DelegatorId, ValidatorId, Balance> {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
 	fn initialize_delegator() -> Option<DelegatorId>;
 
 	/// First time bonding some amount to a delegator.
-	fn bond(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
+	fn bond(who: DelegatorId, amount: Balance) -> DispatchResult;
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
+	fn bond_extra(who: DelegatorId, amount: Balance) -> DispatchResult;
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
+	fn unbond(who: DelegatorId, amount: Balance) -> DispatchResult;
 
 	/// Cancel some unbonding amount.
-	fn rebond(who: DelegatorId, amount: Self::Balance) -> DispatchResult;
+	fn rebond(who: DelegatorId, amount: Balance) -> DispatchResult;
 
 	/// Delegate to some validators.
 	fn delegate(who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
@@ -70,67 +47,30 @@ pub trait StakingAgent<DelegatorId, ValidatorId> {
 	fn redelegate(who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
 
 	/// Initiate payout for a certain delegator.
-	fn payout(who: DelegatorId) -> Self::Balance;
+	fn payout(who: DelegatorId) -> Balance;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(who: DelegatorId) -> Self::Balance;
+	fn liquidize(who: DelegatorId) -> Balance;
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining module.
 	/// If the increase variable is true, then we increase token_pool by token_amount. If it is
 	/// false, then we decrease token_pool by token_amount.
-	fn increase_token_pool(token_amount: Self::Balance) -> DispatchResult;
-	fn decrease_token_pool(token_amount: Self::Balance) -> DispatchResult;
+	fn increase_token_pool(token_amount: Balance) -> DispatchResult;
+	fn decrease_token_pool(token_amount: Balance) -> DispatchResult;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
 /// or deposit fee reserves for the destination chain nominator accounts.
-pub trait StakingFeeManager<AccountId> {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ scale_info::TypeInfo;
-
-	/// The balance of an account.
-	type Balance: AtLeast32BitUnsigned
-		+ FullCodec
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ Default
-		+ scale_info::TypeInfo;
-
+pub trait StakingFeeManager<AccountId, Balance> {
 	/// Charge hosting fee from an account in Bifrost chain.
-	fn charge_hosting_fee(
-		currency_id: Self::CurrencyId,
-		amount: Self::Balance,
-		from: &AccountId,
-		to: &AccountId,
-	) -> DispatchResult;
+	fn charge_hosting_fee(amount: Balance, from: &AccountId, to: &AccountId) -> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
-	fn fill_cost_reserve(
-		currency_id: Self::CurrencyId,
-		amount: Self::Balance,
-		from: &AccountId,
-		to: &AccountId,
-	) -> DispatchResult;
+	fn fill_cost_reserve(amount: Balance, from: &AccountId, to: &AccountId) -> DispatchResult;
 }
 
 /// Abstraction over a delegator manager.
 pub trait DelegatorManager<DelegatorId, Ledger> {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ scale_info::TypeInfo;
-
 	/// Add a new serving delegator for a particular currency.
 	fn add_delegator(index: u16, who: &DelegatorId) -> DispatchResult;
 
@@ -140,15 +80,6 @@ pub trait DelegatorManager<DelegatorId, Ledger> {
 
 /// Abstraction over a validator manager.
 pub trait ValidatorManager<ValidatorId> {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ scale_info::TypeInfo;
-
 	/// Add a new serving validator for a particular currency.
 	fn add_validator(who: &ValidatorId) -> DispatchResult;
 
@@ -157,38 +88,17 @@ pub trait ValidatorManager<ValidatorId> {
 }
 
 /// Abstraction over a user refund manager to refund user unlocking balance without waiting for the
-/// maximum amount of time.
-pub trait UserRefundManager<AccountId> {
-	/// The currency identifier.
-	type CurrencyId: FullCodec
-		+ Eq
-		+ PartialEq
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ scale_info::TypeInfo;
-
-	/// The balance of an account.
-	type Balance: AtLeast32BitUnsigned
-		+ FullCodec
-		+ Copy
-		+ MaybeSerializeDeserialize
-		+ Debug
-		+ Default
-		+ scale_info::TypeInfo;
-
+/// maximum amount of time. It it for being called by other pallets such as VtokenMinting.
+pub trait UserRefundManager<AccountId, CurrencyId, Balance> {
 	/// Refund user unlocking balance without waiting for the maximum amount of time.
-	fn refund_user_unbond(who: &AccountId, amount: Self::Balance) -> DispatchResult;
+	fn refund_user_unbond(
+		currency_id: CurrencyId,
+		who: &AccountId,
+		amount: Balance,
+	) -> DispatchResult;
 }
 
 /// Helper to build xcm message
-pub trait XcmBuilder {
-	type Balance: FullCodec;
-	type ChainCallType: FullCodec;
-
-	fn construct_xcm_message(
-		call: Self::ChainCallType,
-		extra_fee: Self::Balance,
-		weight: Weight,
-	) -> Xcm<()>;
+pub trait XcmBuilder<Balance, ChainCallType> {
+	fn construct_xcm_message(call: ChainCallType, extra_fee: Balance, weight: Weight) -> Xcm<()>;
 }

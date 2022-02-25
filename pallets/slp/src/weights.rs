@@ -29,6 +29,7 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	// Outer calls
 	fn initialize_delegator() -> Weight;
+	fn bond() -> Weight;
 
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
@@ -45,10 +46,16 @@ pub trait WeightInfo {
 
 // For backwards compatibility and tests
 impl WeightInfo for () {
+	// Outer calls
 	fn initialize_delegator() -> Weight {
 		(50_000_000 as Weight)
 	}
 
+	fn bond() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight {
 		(50_000_000 as Weight)
 	}

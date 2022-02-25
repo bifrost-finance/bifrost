@@ -19,14 +19,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{pallet_prelude::*, weights::Weight};
-use frame_system::pallet_prelude::OriginFor;
+use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
 use sp_runtime::traits::UniqueSaturatedFrom;
 pub use weights::WeightInfo;
 use xcm::latest::*;
-use frame_system::{ensure_signed, ensure_root};
 
 use crate::{
 	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation},
@@ -67,8 +66,8 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		/// Kusama agent
-		type KusamaAgent: StakingAgent<MultiLocation, MultiLocation>
-			+ StakingFeeManager<AccountIdOf<Self>>
+		type KusamaAgent: StakingAgent<MultiLocation, MultiLocation, BalanceOf<Self>>
+			+ StakingFeeManager<AccountIdOf<Self>, BalanceOf<Self>>
 			+ DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<Self>>>
 			+ ValidatorManager<MultiLocation>;
 	}
@@ -79,6 +78,7 @@ pub mod pallet {
 		NotAuthorized,
 		NotSupportedCurrencyId,
 		FailToInitializeDelegator,
+		FailToBond,
 		OverFlow,
 		NotExist,
 		LowerThanMinimum,
@@ -245,12 +245,44 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let delegator_id = match currency_id {
-				KSM => <T::KusamaAgent as StakingAgent<MultiLocation,MultiLocation>>::initialize_delegator(), 
-				_ => Err(Error::<T>::NotSupportedCurrencyId)?
-			}.ok_or(Error::<T>::FailToInitializeDelegator)?;
+				KSM => <T::KusamaAgent as StakingAgent<
+					MultiLocation,
+					MultiLocation,
+					BalanceOf<T>,
+				>>::initialize_delegator(),
+				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
+			}
+			.ok_or(Error::<T>::FailToInitializeDelegator)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorInitialized(currency_id, delegator_id));
+
+			Ok(())
+		}
+
+		/// First time bonding some amount to a delegator.
+		#[pallet::weight(T::WeightInfo::bond())]
+		pub fn bond(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let _ = match currency_id {
+				KSM => <T::KusamaAgent as StakingAgent<
+					MultiLocation,
+					MultiLocation,
+					BalanceOf<T>,
+				>>::bond(who.clone(), amount),
+				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
+			};
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorBonded(currency_id, who, amount));
 
 			Ok(())
 		}
