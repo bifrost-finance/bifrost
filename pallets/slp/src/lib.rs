@@ -101,6 +101,8 @@ pub mod pallet {
 		DelegatorBonded(CurrencyId, MultiLocation, BalanceOf<T>),
 		/// [CurrencyId, DelegatorId, BondExtraAmount]
 		DelegatorBondExtra(CurrencyId, MultiLocation, BalanceOf<T>),
+		/// [CurrencyId, DelegatorId, UnbondAmount]
+		DelegatorUnbond(CurrencyId, MultiLocation, BalanceOf<T>),
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -310,6 +312,32 @@ pub mod pallet {
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra(currency_id, who, amount));
+			Ok(())
+		}
+
+		/// Bond extra amount to a delegator.
+		#[pallet::weight(T::WeightInfo::unbond())]
+		pub fn unbond(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let _ = match currency_id {
+				KSM => <T::KusamaAgent as StakingAgent<
+					MultiLocation,
+					MultiLocation,
+					BalanceOf<T>,
+				>>::unbond(who.clone(), amount),
+				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
+			};
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorUnbond(currency_id, who, amount));
 			Ok(())
 		}
 

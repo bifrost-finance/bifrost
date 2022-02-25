@@ -148,8 +148,6 @@ where
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::BondExtra, call, who.clone())?;
-		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorBondExtra(KSM, who, amount));
 
 		Ok(())
 	}
@@ -181,15 +179,12 @@ where
 			Error::<T>::ExceedUnlockingRecords
 		);
 
-		// Check if the unbonding will exceed the maximum unlocking records bound for the unlocking
-		// due era.
-		// let due_era = CurrentTimeUnit::<T>::
+		// Construct xcm message..
+		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
 
-		// Construct unbonding xcm message.
-
-		// Send out the xcm message.
-
-		// Deposit event.
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Unbond, call, who.clone())?;
 
 		Ok(())
 	}
