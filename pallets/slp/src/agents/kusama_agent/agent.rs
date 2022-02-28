@@ -34,17 +34,24 @@ use xcm::{
 use crate::{
 	agents::{KusamaCall, StakingCall, UtilityCall},
 	pallet::Error,
-	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation},
+	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, Event, MinimumsAndMaximums, Pallet, ValidatorManager,
-	XcmDestWeightAndFee, KSM,
+	DelegatorsMultilocation2Index, MinimumsAndMaximums, ValidatorManager, XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
 pub struct KusamaAgent<T, AccountConverter, ParachainId, XcmSender>(
 	PhantomData<(T, AccountConverter, ParachainId, XcmSender)>,
 );
+
+impl<T, AccountConverter, ParachainId, XcmSender>
+	KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
+{
+	pub fn new() -> Self {
+		KusamaAgent(PhantomData::<(T, AccountConverter, ParachainId, XcmSender)>)
+	}
+}
 
 impl<T, AccountConverter, ParachainId, XcmSender>
 	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>>
@@ -55,7 +62,7 @@ where
 	ParachainId: Get<ParaId>,
 	XcmSender: SendXcm,
 {
-	fn initialize_delegator() -> Option<MultiLocation> {
+	fn initialize_delegator(&self) -> Option<MultiLocation> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(KSM);
 		let rs = DelegatorNextIndex::<T>::mutate(KSM, |id| -> DispatchResult {
 			let option_new_id = id.checked_add(1).ok_or(Error::<T>::OverFlow)?;
@@ -68,7 +75,7 @@ where
 			let delegator_multilocation = AccountConverter::convert(new_delegator_id);
 
 			// Add the new delegator into storage
-			Self::add_delegator(new_delegator_id, &delegator_multilocation).ok()?;
+			Self::add_delegator(&self, new_delegator_id, &delegator_multilocation).ok()?;
 
 			Some(delegator_multilocation)
 		} else {
@@ -77,7 +84,7 @@ where
 	}
 
 	/// First time bonding some amount to a delegator.
-	fn bond(who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
+	fn bond(&self, who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
 		// Check if it is bonded already.
 		DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::AlreadyBonded)?;
 
@@ -117,7 +124,7 @@ where
 	}
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
+	fn bond_extra(&self, who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
 		// Check if it is bonded already.
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -146,7 +153,7 @@ where
 	}
 
 	/// Decrease bonding amount to a delegator.
-	fn unbond(who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
+	fn unbond(&self, who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
 		// Check if it is bonded already.
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -183,7 +190,7 @@ where
 	}
 
 	/// Cancel some unbonding amount.
-	fn rebond(who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
+	fn rebond(&self, who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
 		// Check if it is bonded already.
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -210,38 +217,38 @@ where
 	}
 
 	/// Delegate to some validators.
-	fn delegate(who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
+	fn delegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Remove delegation relationship with some validators.
-	fn undelegate(who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
+	fn undelegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
+	fn redelegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Initiate payout for a certain delegator.
-	fn payout(who: MultiLocation) -> BalanceOf<T> {
+	fn payout(&self, who: MultiLocation) -> BalanceOf<T> {
 		unimplemented!()
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(who: MultiLocation) -> BalanceOf<T> {
+	fn liquidize(&self, who: MultiLocation) -> BalanceOf<T> {
 		unimplemented!()
 	}
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining
 	/// module. If the increase variable is true, then we increase token_pool by token_amount.
 	/// If it is false, then we decrease token_pool by token_amount.
-	fn increase_token_pool(token_amount: BalanceOf<T>) -> DispatchResult {
+	fn increase_token_pool(&self, token_amount: BalanceOf<T>) -> DispatchResult {
 		unimplemented!()
 	}
 	///
-	fn decrease_token_pool(token_amount: BalanceOf<T>) -> DispatchResult {
+	fn decrease_token_pool(&self, token_amount: BalanceOf<T>) -> DispatchResult {
 		unimplemented!()
 	}
 }
@@ -257,14 +264,14 @@ where
 	XcmSender: SendXcm,
 {
 	/// Add a new serving delegator for a particular currency.
-	fn add_delegator(index: u16, who: &MultiLocation) -> DispatchResult {
+	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
 		DelegatorsIndex2Multilocation::<T>::insert(KSM, index, who);
 		DelegatorsMultilocation2Index::<T>::insert(KSM, who, index);
 		Ok(())
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_delegator(who: &MultiLocation) -> DispatchResult {
+	fn remove_delegator(&self, who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 }
@@ -279,12 +286,12 @@ where
 	XcmSender: SendXcm,
 {
 	/// Add a new serving delegator for a particular currency.
-	fn add_validator(who: &MultiLocation) -> DispatchResult {
+	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
-	fn remove_validator(who: &MultiLocation) -> DispatchResult {
+	fn remove_validator(&self, who: &MultiLocation) -> DispatchResult {
 		unimplemented!()
 	}
 }

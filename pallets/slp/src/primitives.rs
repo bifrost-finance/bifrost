@@ -18,7 +18,11 @@
 
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
+use node_primitives::{CurrencyId, TokenSymbol};
 use scale_info::TypeInfo;
+
+/// Simplify the CurrencyId.
+pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum Ledger<DelegatorId, Balance> {

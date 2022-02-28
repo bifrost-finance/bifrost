@@ -18,18 +18,20 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::{pallet_prelude::*, weights::Weight};
+pub use agents::KusamaAgent;
+use cumulus_primitives_core::ParaId;
+use frame_support::{dispatch::result::Result, pallet_prelude::*, weights::Weight};
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
-use sp_runtime::traits::UniqueSaturatedFrom;
+use sp_runtime::traits::{Convert, UniqueSaturatedFrom};
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
 use crate::{
-	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation},
-	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
+	primitives::{MinimumsMaximums, XcmOperation, KSM},
+	traits::{StakingAgent, ValidatorManager},
 };
 
 mod agents;
@@ -46,9 +48,7 @@ pub use pallet::*;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-
-/// Simplify the CurrencyId.
-const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+type BoxType<T> = Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -65,11 +65,15 @@ pub mod pallet {
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
 
-		/// Kusama agent
-		type KusamaAgent: StakingAgent<MultiLocation, MultiLocation, BalanceOf<Self>>
-			+ StakingFeeManager<AccountIdOf<Self>, BalanceOf<Self>>
-			+ DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<Self>>>
-			+ ValidatorManager<MultiLocation>;
+		/// Substrate account converter, which can convert a u16 number into a sub-account with
+		/// MultiLocation format.
+		type AccountConverter: Convert<u16, MultiLocation>;
+
+		/// Parachain Id which is gotten from the runtime.
+		type ParachainId: Get<ParaId>;
+
+		/// Routes the XCM message outbound.
+		type XcmSender: SendXcm;
 	}
 
 	#[pallet::error]
@@ -96,14 +100,30 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (crate) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// [CurrencyId, DelegatorId]
-		DelegatorInitialized(CurrencyId, MultiLocation),
-		/// [CurrencyId, DelegatorId, BondAmount]
-		DelegatorBonded(CurrencyId, MultiLocation, BalanceOf<T>),
-		/// [CurrencyId, DelegatorId, BondExtraAmount]
-		DelegatorBondExtra(CurrencyId, MultiLocation, BalanceOf<T>),
-		/// [CurrencyId, DelegatorId, UnbondAmount]
-		DelegatorUnbond(CurrencyId, MultiLocation, BalanceOf<T>),
+		DelegatorInitialized {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+		},
+		DelegatorBonded {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+			bonded_amount: BalanceOf<T>,
+		},
+		DelegatorBondExtra {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+			extra_bonded_amount: BalanceOf<T>,
+		},
+		DelegatorUnbond {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+			unbond_amount: BalanceOf<T>,
+		},
+		DelegatorRebond {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+			rebond_amount: BalanceOf<T>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -247,19 +267,13 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let delegator_id = match currency_id {
-				KSM => <T::KusamaAgent as StakingAgent<
-					MultiLocation,
-					MultiLocation,
-					BalanceOf<T>,
-				>>::initialize_delegator(),
-				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
-			}
-			.ok_or(Error::<T>::FailToInitializeDelegator)?;
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			let delegator_id = kusama_agent
+				.initialize_delegator()
+				.ok_or(Error::<T>::FailToInitializeDelegator)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorInitialized(currency_id, delegator_id));
-
+			Pallet::<T>::deposit_event(Event::DelegatorInitialized { currency_id, delegator_id });
 			Ok(())
 		}
 
@@ -275,18 +289,15 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let _ = match currency_id {
-				KSM => <T::KusamaAgent as StakingAgent<
-					MultiLocation,
-					MultiLocation,
-					BalanceOf<T>,
-				>>::bond(who.clone(), amount),
-				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
-			};
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.bond(who.clone(), amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorBonded(currency_id, who, amount));
-
+			Pallet::<T>::deposit_event(Event::DelegatorBonded {
+				currency_id,
+				delegator_id: who,
+				bonded_amount: amount,
+			});
 			Ok(())
 		}
 
@@ -302,17 +313,15 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let _ = match currency_id {
-				KSM => <T::KusamaAgent as StakingAgent<
-					MultiLocation,
-					MultiLocation,
-					BalanceOf<T>,
-				>>::bond_extra(who.clone(), amount),
-				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
-			};
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.bond_extra(who.clone(), amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorBondExtra(currency_id, who, amount));
+			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
+				currency_id,
+				delegator_id: who,
+				extra_bonded_amount: amount,
+			});
 			Ok(())
 		}
 
@@ -328,17 +337,39 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let _ = match currency_id {
-				KSM => <T::KusamaAgent as StakingAgent<
-					MultiLocation,
-					MultiLocation,
-					BalanceOf<T>,
-				>>::unbond(who.clone(), amount),
-				_ => Err(Error::<T>::NotSupportedCurrencyId)?,
-			};
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.unbond(who.clone(), amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorUnbond(currency_id, who, amount));
+			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
+				currency_id,
+				delegator_id: who,
+				unbond_amount: amount,
+			});
+			Ok(())
+		}
+
+		/// Bond extra amount to a delegator.
+		#[pallet::weight(T::WeightInfo::rebond())]
+		pub fn rebond(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.rebond(who.clone(), amount)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorRebond {
+				currency_id,
+				delegator_id: who,
+				rebond_amount: amount,
+			});
 			Ok(())
 		}
 
@@ -463,6 +494,16 @@ pub mod pallet {
 			let cond2 = ensure_root(origin.clone()).is_ok();
 
 			cond1 & cond2
+		}
+
+		fn get_currency_staking_agent(currency_id: CurrencyId) -> Result<BoxType<T>, Error<T>> {
+			match currency_id {
+				KSM =>
+					Ok(Box::new(
+						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
+					)),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}
 		}
 	}
 }
