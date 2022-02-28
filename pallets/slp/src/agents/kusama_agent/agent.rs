@@ -107,7 +107,7 @@ where
 			_ => Err(Error::<T>::DelegatorNotExist)?,
 		};
 		let delegator_account = T::AccountId::decode(&mut &delegator_account_32[..])
-			.expect("32 bytes can always construct an AccountId32");
+			.map_err(|_| Error::<T>::DecodingError)?;
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Bond(

@@ -95,6 +95,7 @@ pub mod pallet {
 		NotEnoughToUnbond,
 		ExceedUnlockingRecords,
 		RebondExceedUnlockingAmount,
+		DecodingError,
 	}
 
 	#[pallet::event]
