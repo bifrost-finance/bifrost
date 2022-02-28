@@ -44,9 +44,9 @@ pub struct SubstrateLedger<DelegatorId, Balance> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct UnlockChunk<Balance> {
 	/// Amount of funds to be unlocked.
-	value: Balance,
+	pub value: Balance,
 	/// Era number at which point it'll be unlocked.
-	unlock_time: TimeUnit,
+	pub unlock_time: TimeUnit,
 }
 
 /// Timing units for different chains.
@@ -94,4 +94,5 @@ pub enum XcmOperation {
 	WithdrawUnbonded,
 	BondExtra,
 	Unbond,
+	Rebond,
 }

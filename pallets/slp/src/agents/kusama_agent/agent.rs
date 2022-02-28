@@ -22,7 +22,7 @@ use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto},
+	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -34,7 +34,7 @@ use xcm::{
 use crate::{
 	agents::{KusamaCall, StakingCall, UtilityCall},
 	pallet::Error,
-	primitives::{Ledger, SubstrateLedger, XcmOperation},
+	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, Event, MinimumsAndMaximums, Pallet, ValidatorManager,
@@ -63,17 +63,13 @@ where
 			Ok(())
 		});
 
-		if let Ok(_) = rs {
+		if rs.is_ok() {
 			// Generate multi-location by id.
 			let delegator_multilocation = AccountConverter::convert(new_delegator_id);
 
 			// Add the new delegator into storage
-			let _ = Self::add_delegator(new_delegator_id, &delegator_multilocation);
+			Self::add_delegator(new_delegator_id, &delegator_multilocation).ok()?;
 
-			Pallet::<T>::deposit_event(Event::DelegatorInitialized(
-				KSM,
-				delegator_multilocation.clone(),
-			));
 			Some(delegator_multilocation)
 		} else {
 			None
@@ -83,44 +79,41 @@ where
 	/// First time bonding some amount to a delegator.
 	fn bond(who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
 		// Check if it is bonded already.
-		let ledger = DelegatorLedgers::<T>::get(KSM, who.clone());
-		if let Some(_) = ledger {
-			Err(Error::<T>::AlreadyBonded)?
-		} else {
-			// Check if the amount exceeds the minimum requirement.
-			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
-			ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
+		DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::AlreadyBonded)?;
 
-			// Ensure the bond doesn't exceeds delegator_active_staking_maximum
-			ensure!(
-				amount <= mins_maxs.delegator_active_staking_maximum,
-				Error::<T>::ExceedActiveMaximum
-			);
+		// Check if the amount exceeds the minimum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+		ensure!(amount >= mins_maxs.delegator_bonded_minimum, Error::<T>::LowerThanMinimum);
 
-			// Get the delegator account id in Kusama network
-			let delegator_account_32 = match who.clone() {
-				MultiLocation {
-					parents: 1,
-					interior: X1(AccountId32 { network: NetworkId, id: account_id }),
-				} => account_id,
-				_ => Err(Error::<T>::DelegatorNotExist)?,
-			};
-			let delegator_account = T::AccountId::decode(&mut &delegator_account_32[..])
-				.expect("32 bytes can always construct an AccountId32");
+		// Ensure the bond doesn't exceeds delegator_active_staking_maximum
+		ensure!(
+			amount <= mins_maxs.delegator_active_staking_maximum,
+			Error::<T>::ExceedActiveMaximum
+		);
 
-			// Construct xcm message.
-			let call = KusamaCall::Staking(StakingCall::Bond(
-				delegator_account.clone(),
-				amount,
-				delegator_account,
-			));
+		// Get the delegator account id in Kusama network
+		let delegator_account_32 = match who.clone() {
+			MultiLocation {
+				parents: 1,
+				interior: X1(AccountId32 { network: NetworkId, id: account_id }),
+			} => account_id,
+			_ => Err(Error::<T>::DelegatorNotExist)?,
+		};
+		let delegator_account = T::AccountId::decode(&mut &delegator_account_32[..])
+			.expect("32 bytes can always construct an AccountId32");
 
-			// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-			// send it out.
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Bond, call, who.clone())?;
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Bond(
+			delegator_account.clone(),
+			amount,
+			delegator_account,
+		));
 
-			Ok(())
-		}
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Bond, call, who.clone())?;
+
+		Ok(())
 	}
 
 	/// Bond extra amount to a delegator.
@@ -179,7 +172,7 @@ where
 			Error::<T>::ExceedUnlockingRecords
 		);
 
-		// Construct xcm message..
+		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
@@ -191,7 +184,29 @@ where
 
 	/// Cancel some unbonding amount.
 	fn rebond(who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
-		unimplemented!()
+		// Check if it is bonded already.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// Get the delegator ledger
+		let Ledger::Substrate(substrate_ledger) = ledger;
+
+		// Check if the delegator unlocking amount is greater than or equal to the rebond amount.
+		let unlock_chunk_list = substrate_ledger.unlocking;
+		let mut total_unlocking: BalanceOf<T> = Zero::zero();
+		for UnlockChunk { value, unlock_time } in unlock_chunk_list.iter() {
+			total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
+		}
+		ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
+
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Rebond(amount));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Rebond, call, who.clone())?;
+
+		Ok(())
 	}
 
 	/// Delegate to some validators.

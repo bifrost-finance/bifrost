@@ -90,6 +90,7 @@ pub mod pallet {
 		ProblematicLedger,
 		NotEnoughToUnbond,
 		ExceedUnlockingRecords,
+		RebondExceedUnlockingAmount,
 	}
 
 	#[pallet::event]
