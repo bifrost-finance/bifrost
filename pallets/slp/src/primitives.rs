@@ -81,6 +81,8 @@ pub struct MinimumsMaximums<Balance> {
 	pub bond_extra_minimum: Balance,
 	/// The minimum unbond amount each time a delegator to unbond.
 	pub unbond_minimum: Balance,
+	/// The minimum amount each time a delegator needs to rebond
+	pub rebond_minimum: Balance,
 	/// The maximum number of unbond records at the same time.
 	pub unbond_record_maximum: u32,
 	/// The maximum number of validators for a delegator to support at the same time.
@@ -99,4 +101,5 @@ pub enum XcmOperation {
 	BondExtra,
 	Unbond,
 	Rebond,
+	Delegate,
 }

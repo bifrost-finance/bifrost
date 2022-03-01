@@ -36,8 +36,9 @@ use crate::{
 	pallet::Error,
 	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
-	BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, MinimumsAndMaximums, ValidatorManager, XcmDestWeightAndFee,
+	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums,
+	ValidatorManager, XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
@@ -99,15 +100,7 @@ where
 		);
 
 		// Get the delegator account id in Kusama network
-		let delegator_account_32 = match who.clone() {
-			MultiLocation {
-				parents: 1,
-				interior: X1(AccountId32 { network: NetworkId, id: account_id }),
-			} => account_id,
-			_ => Err(Error::<T>::DelegatorNotExist)?,
-		};
-		let delegator_account = T::AccountId::decode(&mut &delegator_account_32[..])
-			.map_err(|_| Error::<T>::DecodingError)?;
+		let delegator_account = Self::multilocation_to_account(&who)?;
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Bond(
@@ -195,6 +188,10 @@ where
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
 
+		// Check if the rebonding amount exceeds minimum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+		ensure!(amount >= mins_maxs.rebond_minimum, Error::<T>::LowerThanMinimum);
+
 		// Get the delegator ledger
 		let Ledger::Substrate(substrate_ledger) = ledger;
 
@@ -216,9 +213,35 @@ where
 		Ok(())
 	}
 
-	/// Delegate to some validators.
+	/// Delegate to some validators. For Kusama, it equals function Nominate.
 	fn delegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
-		unimplemented!()
+		// Check if it is bonded already.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// Check if targets vec is empty.
+		let vec_len = targets.len() as u32;
+		ensure!(vec_len > Zero::zero(), Error::<T>::AmountZero);
+
+		// Check if targets exceeds validators_back_maximum requirement.
+		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+		ensure!(vec_len <= mins_maxs.validators_back_maximum, Error::<T>::GreaterThanMaximum);
+
+		// Convert vec of multilocations into accounts.
+		let mut accounts = vec![];
+		for multilocation_account in targets.iter() {
+			let account = Self::multilocation_to_account(multilocation_account)?;
+			accounts.push(account);
+		}
+
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Nominate(accounts));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
+
+		Ok(())
 	}
 
 	/// Remove delegation relationship with some validators.
@@ -350,7 +373,7 @@ where
 		who: MultiLocation,
 	) -> DispatchResult {
 		// Get the delegator sub-account index.
-		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who.clone())
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		let call_as_subaccount =
@@ -362,5 +385,20 @@ where
 		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
+	}
+
+	fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
+		// Get the delegator account id in Kusama network
+		let account_32 = match who {
+			MultiLocation {
+				parents: 1,
+				interior: X1(AccountId32 { network: NetworkId, id: account_id }),
+			} => account_id,
+			_ => Err(Error::<T>::AccountNotExist)?,
+		};
+		let account =
+			T::AccountId::decode(&mut &account_32[..]).map_err(|_| Error::<T>::DecodingError)?;
+
+		Ok(account)
 	}
 }

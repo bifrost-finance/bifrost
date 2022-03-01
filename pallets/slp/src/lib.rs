@@ -86,7 +86,9 @@ pub mod pallet {
 		OverFlow,
 		NotExist,
 		LowerThanMinimum,
+		GreaterThanMaximum,
 		AlreadyBonded,
+		AccountNotExist,
 		DelegatorNotExist,
 		XcmFailure,
 		DelegatorNotBonded,
@@ -96,6 +98,7 @@ pub mod pallet {
 		ExceedUnlockingRecords,
 		RebondExceedUnlockingAmount,
 		DecodingError,
+		AmountZero,
 	}
 
 	#[pallet::event]
@@ -124,6 +127,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			rebond_amount: BalanceOf<T>,
+		},
+		Delegated {
+			currency_id: CurrencyId,
+			targets: Vec<MultiLocation>,
 		},
 	}
 
@@ -350,7 +357,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Bond extra amount to a delegator.
+		/// Rebond some unlocking amount to a delegator.
 		#[pallet::weight(T::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -371,6 +378,26 @@ pub mod pallet {
 				delegator_id: who,
 				rebond_amount: amount,
 			});
+			Ok(())
+		}
+
+		///
+		#[pallet::weight(T::WeightInfo::delegate())]
+		pub fn delegate(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			targets: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.delegate(who, targets.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::Delegated { currency_id, targets });
 			Ok(())
 		}
 
