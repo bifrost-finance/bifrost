@@ -28,7 +28,14 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
-use frame_support::{pallet_prelude::*, PalletId};
+use frame_support::{
+	pallet_prelude::*,
+	sp_runtime::{
+		traits::{AccountIdConversion, Saturating},
+		SaturatedConversion,
+	},
+	PalletId,
+};
 use frame_system::pallet_prelude::*;
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
@@ -131,6 +138,12 @@ pub mod pallet {
 		TooManyEraUnlockingChunks,
 		/// Invalid token to rebond.
 		InvalidRebondToken,
+		/// Invalid token.
+		InvalidToken,
+		/// Token type not support.
+		NotSupportTokenType,
+		NotEnoughBalanceToUnlock,
+		TokenToRebondNotZero,
 	}
 
 	#[pallet::storage]
@@ -154,12 +167,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn minimum_mint)]
-	pub type MinimumMint<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>;
+	pub type MinimumMint<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn minimum_redeem)]
 	pub type MinimumRedeem<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>;
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_unlock_next_id)]
@@ -213,11 +227,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_deduct)]
-	pub type TokenToDeduct<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
+	pub type TokenToDeduct<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_add)]
-	pub type TokenToAdd<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
+	pub type TokenToAdd<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_rebond)]
@@ -240,21 +256,79 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		// #[pallet::weight(T::WeightInfo::mint())]
 		#[pallet::weight(10000)]
-		pub fn mint(origin: OriginFor<T>, token_amount: BalanceOf<T>) -> DispatchResult {
+		pub fn mint(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+			let token_pool_amount = Self::token_pool(token_id);
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
+				token_pool_amount.into();
+			// Transfer the user's token to EntranceAccount.
+			T::MultiCurrency::transfer(
+				token_id,
+				&exchanger,
+				&T::EntranceAccount::get().into_account(),
+				token_amount,
+			);
+			// Issue the corresponding vtoken to the user's account.
+			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
+			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+			TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+
 			Ok(())
 		}
 
 		#[pallet::weight(10000)]
-		pub fn redeem(origin: OriginFor<T>, vtoken_amount: BalanceOf<T>) -> DispatchResult {
+		pub fn redeem(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			vtoken_amount: BalanceOf<T>,
+		) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+			let token_pool_amount = Self::token_pool(token_id);
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+
+			// let token_pool_amount = Self::user_unlock_ledger(&exchanger, token_id);
+
+			// ensure!(
+			// 	counts <= T::MaxUserUnlockingChunks::get(token_id),
+			// 	Error::<T>::TooManyUserUnlockingChunks
+			// );
+			// ensure!(
+			// 	counts <= T::MaxEraUnlockingChunks::get(token_id),
+			// 	Error::<T>::TooManyEraUnlockingChunks
+			// );
+
+			T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount);
+			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(token_pool_amount));
+			TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+
 			Ok(())
 		}
 
 		#[pallet::weight(10000)]
 		pub fn rebond(
 			origin: OriginFor<T>,
-			token: CurrencyIdOf<T>,
+			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+
+			let token_amount_to_rebond =
+				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
+			if let Some((user_unlock_amount, ledger_list)) =
+				Self::user_unlock_ledger(&exchanger, token_id)
+			{
+				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
+				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
+				for index in ledger_list.iter() {}
+			}
 			Ok(())
 		}
 
@@ -264,6 +338,18 @@ pub mod pallet {
 			token: CurrencyIdOf<T>,
 			era_count: u32,
 		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if !UnlockDuration::<T>::contains_key(token) {
+				UnlockDuration::<T>::insert(token, era_count);
+			} else {
+				UnlockDuration::<T>::mutate(token, |old_era_count| {
+					*old_era_count = era_count;
+				});
+			}
+
+			Self::deposit_event(Event::UnlockDurationSet { token, era_count });
+
 			Ok(())
 		}
 
@@ -273,11 +359,38 @@ pub mod pallet {
 			token: CurrencyIdOf<T>,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if !MinimumMint::<T>::contains_key(token) {
+				MinimumMint::<T>::insert(token, amount);
+			} else {
+				MinimumMint::<T>::mutate(token, |old_amount| {
+					*old_amount = amount;
+				});
+			}
+
+			Self::deposit_event(Event::MinimumMintSet { token, amount });
+
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
-		pub fn set_minimum_redeem(origin: OriginFor<T>, token: CurrencyIdOf<T>) -> DispatchResult {
+		pub fn set_minimum_redeem(
+			origin: OriginFor<T>,
+			token: CurrencyIdOf<T>,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if !MinimumRedeem::<T>::contains_key(token) {
+				MinimumRedeem::<T>::insert(token, amount);
+			} else {
+				MinimumRedeem::<T>::mutate(token, |old_amount| {
+					*old_amount = amount;
+				});
+			}
+
+			Self::deposit_event(Event::MinimumRedeemSet { token, amount });
 			Ok(())
 		}
 
@@ -285,8 +398,14 @@ pub mod pallet {
 		pub fn add_support_rebond_token(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
-			amount: BalanceOf<T>,
 		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if !TokenToRebond::<T>::contains_key(token) {
+				TokenToRebond::<T>::insert(token, Some(BalanceOf::<T>::zero()));
+				Self::deposit_event(Event::SupportRebondTokenAdded { token });
+			}
+
 			Ok(())
 		}
 
@@ -294,8 +413,20 @@ pub mod pallet {
 		pub fn remove_support_rebond_token(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
-			amount: BalanceOf<T>,
 		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			if TokenToRebond::<T>::contains_key(token) {
+				let token_amount_to_rebond =
+					Self::token_to_rebond(token).ok_or(Error::<T>::InvalidRebondToken)?;
+				ensure!(
+					token_amount_to_rebond == Some(BalanceOf::<T>::zero()),
+					Error::<T>::TokenToRebondNotZero
+				);
+
+				TokenToRebond::<T>::remove(token);
+				Self::deposit_event(Event::SupportRebondTokenRemoved { token });
+			}
 			Ok(())
 		}
 
@@ -306,6 +437,11 @@ pub mod pallet {
 			redeem_fee: BalanceOf<T>,
 			hosting_fee: BalanceOf<T>,
 		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee, hosting_fee));
+
+			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee, hosting_fee });
 			Ok(())
 		}
 	}
