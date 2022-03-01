@@ -34,6 +34,7 @@ pub trait WeightInfo {
 	fn unbond() -> Weight;
 	fn rebond() -> Weight;
 	fn delegate() -> Weight;
+	fn redelegate() -> Weight;
 
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
@@ -72,6 +73,10 @@ impl WeightInfo for () {
 	}
 
 	fn delegate() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn redelegate() -> Weight {
 		(50_000_000 as Weight)
 	}
 

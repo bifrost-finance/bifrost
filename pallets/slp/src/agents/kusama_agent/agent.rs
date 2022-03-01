@@ -251,7 +251,8 @@ where
 
 	/// Re-delegate existing delegation to a new validator set.
 	fn redelegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
-		unimplemented!()
+		Self::delegate(&self, who, targets)?;
+		Ok(())
 	}
 
 	/// Initiate payout for a certain delegator.

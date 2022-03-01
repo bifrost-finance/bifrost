@@ -130,6 +130,7 @@ pub mod pallet {
 		},
 		Delegated {
 			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
 		},
 	}
@@ -381,7 +382,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		///
+		/// Delegate to some validator set.
 		#[pallet::weight(T::WeightInfo::delegate())]
 		pub fn delegate(
 			origin: OriginFor<T>,
@@ -394,10 +395,38 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.delegate(who, targets.clone())?;
+			kusama_agent.delegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::Delegated { currency_id, targets });
+			Pallet::<T>::deposit_event(Event::Delegated {
+				currency_id,
+				delegator_id: who,
+				targets,
+			});
+			Ok(())
+		}
+
+		/// Re-delegate existing delegation to a new validator set.
+		#[pallet::weight(T::WeightInfo::redelegate())]
+		pub fn redelegate(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			targets: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.redelegate(who.clone(), targets.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::Delegated {
+				currency_id,
+				delegator_id: who,
+				targets,
+			});
 			Ok(())
 		}
 
