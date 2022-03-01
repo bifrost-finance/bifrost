@@ -48,7 +48,7 @@ pub use pallet::*;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-type BoxType<T> = Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>>>;
+type BoxType<T> = Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -100,6 +100,7 @@ pub mod pallet {
 		DecodingError,
 		VectorEmpty,
 		ValidatorSetNotExist,
+		InvalidTimeUnit,
 	}
 
 	#[pallet::event]
@@ -138,6 +139,16 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+		},
+		Payout {
+			currency_id: CurrencyId,
+			validator: MultiLocation,
+			time_unit: Option<TimeUnit>,
+		},
+		Liquidize {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+			time_unit: Option<TimeUnit>,
 		},
 	}
 
@@ -282,8 +293,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			let delegator_id = kusama_agent
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			let delegator_id = staking_agent
 				.initialize_delegator()
 				.ok_or(Error::<T>::FailToInitializeDelegator)?;
 
@@ -304,8 +315,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.bond(who.clone(), amount)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.bond(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
@@ -328,8 +339,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.bond_extra(who.clone(), amount)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.bond_extra(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
@@ -352,8 +363,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.unbond(who.clone(), amount)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.unbond(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
@@ -376,8 +387,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.rebond(who.clone(), amount)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.rebond(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
@@ -400,8 +411,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.delegate(who.clone(), targets.clone())?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.delegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -424,8 +435,8 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.undelegate(who.clone(), targets.clone())?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.undelegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
@@ -448,14 +459,59 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
-			kusama_agent.redelegate(who.clone(), targets.clone())?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.redelegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
 				delegator_id: who,
 				targets,
+			});
+			Ok(())
+		}
+
+		/// Initiate payout for a certain delegator.
+		#[pallet::weight(T::WeightInfo::payout())]
+		pub fn payout(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			validator: MultiLocation,
+			when: Option<TimeUnit>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.payout(who, validator.clone(), when.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::Payout { currency_id, validator, time_unit: when });
+			Ok(())
+		}
+
+		/// Initiate payout for a certain delegator.
+		#[pallet::weight(T::WeightInfo::liquidize())]
+		pub fn liquidize(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			when: Option<TimeUnit>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.liquidize(who.clone(), when.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::Liquidize {
+				currency_id,
+				delegator_id: who,
+				time_unit: when,
 			});
 			Ok(())
 		}

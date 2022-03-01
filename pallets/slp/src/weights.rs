@@ -36,6 +36,8 @@ pub trait WeightInfo {
 	fn delegate() -> Weight;
 	fn redelegate() -> Weight;
 	fn undelegate() -> Weight;
+	fn payout() -> Weight;
+	fn liquidize() -> Weight;
 
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
@@ -82,6 +84,14 @@ impl WeightInfo for () {
 	}
 
 	fn undelegate() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn payout() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn liquidize() -> Weight {
 		(50_000_000 as Weight)
 	}
 

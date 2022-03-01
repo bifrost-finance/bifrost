@@ -56,7 +56,10 @@ pub struct UnlockChunk<Balance> {
 /// Timing units for different chains.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub enum TimeUnit {
-	Era(u64),
+	// EraIndex for Kusama
+	Era(u32),
+	// Slashing span for Kusama
+	SlashingSpan(u32),
 }
 
 /// Delays for different chain
@@ -102,4 +105,6 @@ pub enum XcmOperation {
 	Unbond,
 	Rebond,
 	Delegate,
+	Payout,
+	Liquidize,
 }

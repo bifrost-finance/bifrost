@@ -37,7 +37,7 @@ use crate::{
 	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums, TimeUnit,
 	ValidatorManager, ValidatorsByDelegator, XcmDestWeightAndFee,
 };
 
@@ -55,7 +55,7 @@ impl<T, AccountConverter, ParachainId, XcmSender>
 }
 
 impl<T, AccountConverter, ParachainId, XcmSender>
-	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>>
+	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit>
 	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
 where
 	T: Config,
@@ -293,13 +293,50 @@ where
 	}
 
 	/// Initiate payout for a certain delegator.
-	fn payout(&self, who: MultiLocation) -> BalanceOf<T> {
-		unimplemented!()
+	fn payout(
+		&self,
+		who: MultiLocation,
+		validator: MultiLocation,
+		when: Option<TimeUnit>,
+	) -> DispatchResult {
+		// Get the validator account
+		let validator_account = Self::multilocation_to_account(&validator)?;
+
+		// Get the payout era
+		let payout_era = if let Some(TimeUnit::Era(payout_era)) = when {
+			payout_era
+		} else {
+			Err(Error::<T>::InvalidTimeUnit)?
+		};
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::PayoutStakers(validator_account, payout_era));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Payout, call, who)?;
+		Ok(())
 	}
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: MultiLocation) -> BalanceOf<T> {
-		unimplemented!()
+	fn liquidize(&self, who: MultiLocation, when: Option<TimeUnit>) -> DispatchResult {
+		// Check if it is bonded already.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// Get the slashing span param.
+		let num_slashing_spans = if let Some(TimeUnit::SlashingSpan(num_slashing_spans)) = when {
+			num_slashing_spans
+		} else {
+			Err(Error::<T>::InvalidTimeUnit)?
+		};
+
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::WithdrawUnbonded(num_slashing_spans));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Liquidize, call, who)?;
+		Ok(())
 	}
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining

@@ -61,6 +61,8 @@ pub enum StakingCall<T: Config> {
 	Nominate(Vec<T::AccountId>),
 	#[codec(index = 6)]
 	Chill,
+	#[codec(index = 18)]
+	PayoutStakers(T::AccountId, u32),
 	#[codec(index = 19)]
 	Rebond(#[codec(compact)] BalanceOf<T>),
 }

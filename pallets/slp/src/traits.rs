@@ -21,7 +21,7 @@ use sp_runtime::DispatchResult;
 use crate::{Weight, Xcm};
 
 /// Abstraction over a staking agent for a certain POS chain.
-pub trait StakingAgent<DelegatorId, ValidatorId, Balance> {
+pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit> {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
 	fn initialize_delegator(&self) -> Option<DelegatorId>;
 
@@ -47,10 +47,15 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance> {
 	fn redelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
 
 	/// Initiate payout for a certain delegator.
-	fn payout(&self, who: DelegatorId) -> Balance;
+	fn payout(
+		&self,
+		who: DelegatorId,
+		validator: ValidatorId,
+		when: Option<TimeUnit>,
+	) -> DispatchResult;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: DelegatorId) -> Balance;
+	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> DispatchResult;
 
 	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining module.
 	/// If the increase variable is true, then we increase token_pool by token_amount. If it is
