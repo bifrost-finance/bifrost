@@ -56,12 +56,6 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit> {
 
 	/// Withdraw the due payout into free balance.
 	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> DispatchResult;
-
-	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining module.
-	/// If the increase variable is true, then we increase token_pool by token_amount. If it is
-	/// false, then we decrease token_pool by token_amount.
-	fn increase_token_pool(&self, token_amount: Balance) -> DispatchResult;
-	fn decrease_token_pool(&self, token_amount: Balance) -> DispatchResult;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
@@ -116,4 +110,19 @@ pub trait UserRefundManager<AccountId, CurrencyId, Balance> {
 /// Helper to build xcm message
 pub trait XcmBuilder<Balance, ChainCallType> {
 	fn construct_xcm_message(call: ChainCallType, extra_fee: Balance, weight: Weight) -> Xcm<()>;
+}
+
+/// The interface to call VtokneMinting module functions.
+pub trait VtokenMintingOperator<CurrencyId, Balance, TimeUnit> {
+	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
+	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+
+	/// Decrease the token amount for the storage "token_pool" in the VtokenMining module.
+	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+
+	// Update the ongoing era for a CurrencyId.
+	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult;
+
+	// Get the current era of a CurrencyId.
+	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit>;
 }

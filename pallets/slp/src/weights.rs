@@ -38,6 +38,9 @@ pub trait WeightInfo {
 	fn undelegate() -> Weight;
 	fn payout() -> Weight;
 	fn liquidize() -> Weight;
+	fn increase_token_pool() -> Weight;
+	fn decrease_token_pool() -> Weight;
+	fn update_ongoing_time_unit() -> Weight;
 
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
@@ -92,6 +95,18 @@ impl WeightInfo for () {
 	}
 
 	fn liquidize() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn increase_token_pool() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn decrease_token_pool() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn update_ongoing_time_unit() -> Weight {
 		(50_000_000 as Weight)
 	}
 

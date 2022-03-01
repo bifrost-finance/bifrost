@@ -338,17 +338,6 @@ where
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Liquidize, call, who)?;
 		Ok(())
 	}
-
-	/// Increase/decrease the token amount for the storage "token_pool" in the VtokenMining
-	/// module. If the increase variable is true, then we increase token_pool by token_amount.
-	/// If it is false, then we decrease token_pool by token_amount.
-	fn increase_token_pool(&self, token_amount: BalanceOf<T>) -> DispatchResult {
-		unimplemented!()
-	}
-	///
-	fn decrease_token_pool(&self, token_amount: BalanceOf<T>) -> DispatchResult {
-		unimplemented!()
-	}
 }
 
 /// DelegatorManager implementation for Kusama

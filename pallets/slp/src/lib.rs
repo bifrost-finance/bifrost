@@ -25,13 +25,14 @@ use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
+use sp_arithmetic::traits::Zero;
 use sp_runtime::traits::{Convert, UniqueSaturatedFrom};
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
 use crate::{
 	primitives::{MinimumsMaximums, XcmOperation, KSM},
-	traits::{StakingAgent, ValidatorManager},
+	traits::{StakingAgent, ValidatorManager, VtokenMintingOperator},
 };
 
 mod agents;
@@ -64,6 +65,9 @@ pub mod pallet {
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
+
+		/// The interface to call VtokenMinting module functions.
+		type VtokenMinting: VtokenMintingOperator<CurrencyId, BalanceOf<Self>, TimeUnit>;
 
 		/// Substrate account converter, which can convert a u16 number into a sub-account with
 		/// MultiLocation format.
@@ -101,6 +105,7 @@ pub mod pallet {
 		VectorEmpty,
 		ValidatorSetNotExist,
 		InvalidTimeUnit,
+		AmountZero,
 	}
 
 	#[pallet::event]
@@ -180,11 +185,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_operate_origin)]
 	pub type OperateOrigins<T> = StorageMap<_, Blake2_128Concat, CurrencyId, AccountIdOf<T>>;
-
-	/// Record current TimeUnit for a certain chain. For example, Kusama's current era is 808.
-	#[pallet::storage]
-	#[pallet::getter(fn get_current_time_unit)]
-	pub type CurrentTimeUnit<T> = StorageMap<_, Blake2_128Concat, CurrencyId, TimeUnit>;
 
 	/// Currency delays for payouts, delegate, unbond and so on.
 	#[pallet::storage]
@@ -516,6 +516,54 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(T::WeightInfo::increase_token_pool())]
+		pub fn increase_token_pool(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the amount is valid.
+			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+			T::VtokenMinting::increase_token_pool(currency_id, amount)?;
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::decrease_token_pool())]
+		pub fn decrease_token_pool(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the amount is valid.
+			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+			T::VtokenMinting::decrease_token_pool(currency_id, amount)?;
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::update_ongoing_time_unit())]
+		pub fn update_ongoing_time_unit(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			time_unit: TimeUnit,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit)?;
+			Ok(())
+		}
+
 		/// *****************************/
 		/// ****** Storage Setters ******/
 		/// *****************************/
@@ -538,16 +586,6 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: AccountIdOf<T>,
-		) -> DispatchResult {
-			unimplemented!()
-		}
-
-		/// Update storage CurrentTimeUnit<T>.
-		#[pallet::weight(T::WeightInfo::set_current_time_unit())]
-		pub fn set_current_time_unit(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			time_unit: TimeUnit,
 		) -> DispatchResult {
 			unimplemented!()
 		}
