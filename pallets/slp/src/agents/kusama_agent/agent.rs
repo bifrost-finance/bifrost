@@ -38,7 +38,7 @@ use crate::{
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
 	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums,
-	ValidatorManager, XcmDestWeightAndFee,
+	ValidatorManager, ValidatorsByDelegator, XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
@@ -221,7 +221,7 @@ where
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
-		ensure!(vec_len > Zero::zero(), Error::<T>::AmountZero);
+		ensure!(vec_len > Zero::zero(), Error::<T>::VectorEmpty);
 
 		// Check if targets exceeds validators_back_maximum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
@@ -246,7 +246,44 @@ where
 
 	/// Remove delegation relationship with some validators.
 	fn undelegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
-		unimplemented!()
+		// Check if it is bonded already.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// Check if targets vec is empty.
+		let vec_len = targets.len() as u32;
+		ensure!(vec_len > Zero::zero(), Error::<T>::VectorEmpty);
+
+		// Get the original delegated validators.
+		let original_set = ValidatorsByDelegator::<T>::get(KSM, who.clone())
+			.ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+		// Remove targets from the original set to make a new set.
+		let mut new_set: Vec<MultiLocation> = vec![];
+		for acc in original_set.iter() {
+			if !targets.contains(acc) {
+				new_set.push(acc.clone())
+			}
+		}
+
+		// Ensure new set is not empty.
+		ensure!(new_set.len() > Zero::zero(), Error::<T>::VectorEmpty);
+
+		// Convert new targets into account vec.
+		let mut accounts = vec![];
+		for multilocation_account in new_set.iter() {
+			let account = Self::multilocation_to_account(multilocation_account)?;
+			accounts.push(account);
+		}
+
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Nominate(accounts));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
+
+		Ok(())
 	}
 
 	/// Re-delegate existing delegation to a new validator set.

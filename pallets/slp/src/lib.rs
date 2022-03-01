@@ -98,7 +98,8 @@ pub mod pallet {
 		ExceedUnlockingRecords,
 		RebondExceedUnlockingAmount,
 		DecodingError,
-		AmountZero,
+		VectorEmpty,
+		ValidatorSetNotExist,
 	}
 
 	#[pallet::event]
@@ -129,6 +130,11 @@ pub mod pallet {
 			rebond_amount: BalanceOf<T>,
 		},
 		Delegated {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+			targets: Vec<MultiLocation>,
+		},
+		Undelegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
@@ -407,6 +413,30 @@ pub mod pallet {
 		}
 
 		/// Re-delegate existing delegation to a new validator set.
+		#[pallet::weight(T::WeightInfo::undelegate())]
+		pub fn undelegate(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+			targets: Vec<MultiLocation>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let kusama_agent = Self::get_currency_staking_agent(currency_id)?;
+			kusama_agent.undelegate(who.clone(), targets.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::Undelegated {
+				currency_id,
+				delegator_id: who,
+				targets,
+			});
+			Ok(())
+		}
+
+		/// Re-delegate existing delegation to a new validator set.
 		#[pallet::weight(T::WeightInfo::redelegate())]
 		pub fn redelegate(
 			origin: OriginFor<T>,
@@ -516,6 +546,7 @@ pub mod pallet {
 			who: MultiLocation,
 			validators: Vec<MultiLocation>,
 		) -> DispatchResult {
+			// need to be sorted and remove duplicates
 			unimplemented!()
 		}
 
