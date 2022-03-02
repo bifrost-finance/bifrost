@@ -106,6 +106,8 @@ pub mod pallet {
 		ValidatorSetNotExist,
 		InvalidTimeUnit,
 		AmountZero,
+		AmountNotZero,
+		AlreadyExist,
 	}
 
 	#[pallet::event]

@@ -352,6 +352,10 @@ where
 {
 	/// Add a new serving delegator for a particular currency.
 	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
+		// Check if the delegator already exists. If yes, return error.
+		DelegatorsIndex2Multilocation::<T>::get(KSM, index).ok_or(Error::<T>::AlreadyExist)?;
+
+		// Revise two delegator storages.
 		DelegatorsIndex2Multilocation::<T>::insert(KSM, index, who);
 		DelegatorsMultilocation2Index::<T>::insert(KSM, who, index);
 		Ok(())
@@ -359,7 +363,23 @@ where
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &MultiLocation) -> DispatchResult {
-		unimplemented!()
+		// Check if the delegator exists.
+		let index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Get the delegator ledger
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let Ledger::Substrate(substrate_ledger) = ledger;
+
+		// Check if ledger total amount is zero. If not, return error.
+		ensure!(substrate_ledger.total == Zero::zero(), Error::<T>::AmountNotZero);
+
+		// Remove corresponding storage.
+		DelegatorsIndex2Multilocation::<T>::remove(KSM, index);
+		DelegatorsMultilocation2Index::<T>::remove(KSM, who);
+
+		Ok(())
 	}
 }
 
