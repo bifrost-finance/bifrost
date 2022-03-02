@@ -21,6 +21,7 @@ use core::marker::PhantomData;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
+use sp_core::{Blake2Hasher, Hasher};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
@@ -38,7 +39,7 @@ use crate::{
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
 	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums, TimeUnit,
-	ValidatorManager, ValidatorsByDelegator, XcmDestWeightAndFee,
+	ValidatorManager, Validators, ValidatorsByDelegator, XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
@@ -55,7 +56,7 @@ impl<T, AccountConverter, ParachainId, XcmSender>
 }
 
 impl<T, AccountConverter, ParachainId, XcmSender>
-	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit>
+	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit, AccountIdOf<T>>
 	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
 where
 	T: Config,
@@ -338,6 +339,36 @@ where
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Liquidize, call, who)?;
 		Ok(())
 	}
+
+	/// Make token transferred back to Bifrost chain account.
+	fn transfer_back(
+		&self,
+		from: MultiLocation,
+		to: AccountIdOf<T>,
+		amount: BalanceOf<T>,
+	) -> DispatchResult {
+		// // Ensure amount is greater than zero.
+
+		// // Check if it is bonded already.
+		// let ledger =
+		// DelegatorLedgers::<T>::get(KSM, from.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		// // Check if from is one of our delegators. If no, return error.
+		// let dest: Box<VersionedMultiLocation> =
+		// let beneficiary: Box<VersionedMultiLocation> =
+		// let assets: Box<VersionedMultiAssets> =
+		// let fee_asset_item: u32 =
+
+		// // Construct xcm message.
+		// let call = KusamaCall::Xcm(XcmCall::ReserveTransferAssets(dest, beneficiary, assets,
+		// fee_asset_item));
+
+		// // Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// // send it out.
+		// Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, from.clone())?;
+
+		Ok(())
+	}
 }
 
 /// DelegatorManager implementation for Kusama
@@ -394,12 +425,52 @@ where
 {
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
-		unimplemented!()
+		// Check if the validator already exists.
+		let validators_set = Validators::<T>::get(KSM).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+		let multi_hash = who.using_encoded(Blake2Hasher::hash);
+		ensure!(!validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::AlreadyExist);
+
+		// Change corresponding storage.
+		Validators::<T>::mutate(KSM, |validator_vec| {
+			if let Some(ref mut validator_list) = validator_vec {
+				let rs = validator_list.binary_search_by_key(&multi_hash, |(multi, hash)| *hash);
+
+				if let Err(index) = rs {
+					validator_list.push((who.clone(), multi_hash));
+				}
+			}
+		});
+
+		Ok(())
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_validator(&self, who: &MultiLocation) -> DispatchResult {
-		unimplemented!()
+		// Check if the validator already exists.
+		let validators_set = Validators::<T>::get(KSM).ok_or(Error::<T>::ValidatorSetNotExist)?;
+
+		let multi_hash = who.using_encoded(Blake2Hasher::hash);
+		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
+
+		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
+		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(KSM) {
+			if validator_list.contains(who) {
+				Err(Error::<T>::ValidatorStillInUse)?;
+			}
+		}
+		// Update corresponding storage.
+		Validators::<T>::mutate(KSM, |validator_vec| {
+			if let Some(ref mut validator_list) = validator_vec {
+				let rs = validator_list.binary_search_by_key(&multi_hash, |(multi, hash)| *hash);
+
+				if let Ok(index) = rs {
+					validator_list.remove(index);
+				}
+			}
+		});
+
+		Ok(())
 	}
 }
 

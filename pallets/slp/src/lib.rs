@@ -26,6 +26,7 @@ use node_primitives::CurrencyId;
 use orml_traits::MultiCurrency;
 pub use primitives::{Delays, Ledger, TimeUnit};
 use sp_arithmetic::traits::Zero;
+use sp_core::H256;
 use sp_runtime::traits::{Convert, UniqueSaturatedFrom};
 pub use weights::WeightInfo;
 use xcm::latest::*;
@@ -50,9 +51,10 @@ pub use pallet::*;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type StakingAgentBoxType<T> =
-	Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit>>;
+	Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit, AccountIdOf<T>>>;
 type DelegatorManagerBoxType<T> =
 	Box<dyn DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>>;
+type ValidatorManagerBoxType = Box<dyn ValidatorManager<MultiLocation>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -107,10 +109,12 @@ pub mod pallet {
 		DecodingError,
 		VectorEmpty,
 		ValidatorSetNotExist,
+		ValidatorNotExist,
 		InvalidTimeUnit,
 		AmountZero,
 		AmountNotZero,
 		AlreadyExist,
+		ValidatorStillInUse,
 	}
 
 	#[pallet::event]
@@ -160,10 +164,22 @@ pub mod pallet {
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
 		},
-		DelegatorSet {
+		DelegatorAdded {
 			currency_id: CurrencyId,
 			index: u16,
 			delegator_id: MultiLocation,
+		},
+		DelegatorRemoved {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+		},
+		ValidatorsAdded {
+			currency_id: CurrencyId,
+			validator_id: MultiLocation,
+		},
+		ValidatorsRemoved {
+			currency_id: CurrencyId,
+			validator_id: MultiLocation,
 		},
 	}
 
@@ -242,7 +258,8 @@ pub mod pallet {
 	/// Validator in service. A validator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators)]
-	pub type Validators<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Vec<MultiLocation>>;
+	pub type Validators<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, H256)>>;
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
@@ -622,8 +639,8 @@ pub mod pallet {
 		}
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
-		#[pallet::weight(T::WeightInfo::set_delegators())]
-		pub fn set_delegators(
+		#[pallet::weight(T::WeightInfo::add_delegator())]
+		pub fn add_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			index: u16,
@@ -637,7 +654,7 @@ pub mod pallet {
 			delegator_manager.add_delegator(index, &who)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorSet {
+			Pallet::<T>::deposit_event(Event::DelegatorAdded {
 				currency_id,
 				index,
 				delegator_id: who,
@@ -645,14 +662,61 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Update storage Validators<T>.
-		#[pallet::weight(T::WeightInfo::set_validators())]
-		pub fn set_validators(
+		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
+		#[pallet::weight(T::WeightInfo::remove_delegator())]
+		pub fn remove_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			validators: Vec<MultiLocation>,
+			who: MultiLocation,
 		) -> DispatchResult {
-			unimplemented!()
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
+			delegator_manager.remove_delegator(&who)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: who });
+			Ok(())
+		}
+
+		/// Update storage Validators<T>.
+		#[pallet::weight(T::WeightInfo::add_validator())]
+		pub fn add_validator(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
+			validator_manager.add_validator(&who)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: who });
+			Ok(())
+		}
+
+		/// Update storage Validators<T>.
+		#[pallet::weight(T::WeightInfo::remove_validator())]
+		pub fn remove_validator(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
+			validator_manager.remove_validator(&who)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsRemoved { currency_id, validator_id: who });
+			Ok(())
 		}
 
 		/// Update storage ValidatorsByDelegator<T>.
@@ -716,6 +780,18 @@ pub mod pallet {
 		fn get_currency_delegator_manager(
 			currency_id: CurrencyId,
 		) -> Result<DelegatorManagerBoxType<T>, Error<T>> {
+			match currency_id {
+				KSM =>
+					Ok(Box::new(
+						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
+					)),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}
+		}
+
+		fn get_currency_validator_manager(
+			currency_id: CurrencyId,
+		) -> Result<ValidatorManagerBoxType, Error<T>> {
 			match currency_id {
 				KSM =>
 					Ok(Box::new(
