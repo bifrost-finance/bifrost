@@ -89,7 +89,7 @@ check-try-runtime:
 
 .PHONY: try-bifrost-runtime-upgrade
 try-bifrost-runtime-upgrade:
-	./scripts/try-runtime.sh bifrost
+	./scripts/try-runtime.sh bifrost-kusama
 
 .PHONY: resources
 resources:

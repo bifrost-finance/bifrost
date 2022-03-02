@@ -914,7 +914,7 @@ parameter_types! {
 	/// Rounds before the reward is paid
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
-	pub const MinSelectedCandidates: u32 = prod_or_test!(16,4);
+	pub const MinSelectedCandidates: u32 = prod_or_test!(16,6);
 	/// Maximum delegators counted per candidate
 	pub const MaxDelegatorsPerCandidate: u32 = 100;
 	/// Maximum delegations per delegator
@@ -930,13 +930,17 @@ parameter_types! {
 	/// Minimum stake required to be reserved to be a delegator
 	pub MinDelegatorStk: u128 = 5 * dollar(NativeCurrencyId::get());
 	pub AllowInflation: bool = false;
-	pub ToMigrateInvulnables: Vec<AccountId> = vec![
+	pub ToMigrateInvulnables: Vec<AccountId> = prod_or_test!(vec![
 		hex!["8cf80f0bafcd0a3d80ca61cb688e4400e275b39d3411b4299b47e712e9dab809"].into(),
 		hex!["40ac4effe39181731a8feb8a8ee0780e177bdd0d752b09c8fd71047e67189022"].into(),
 		hex!["624d6a004c72a1abcf93131e185515ebe1410e43a301fe1f25d20d8da345376e"].into(),
 		hex!["985d2738e512909c81289e6055e60a6824818964535ecfbf10e4d69017084756"].into(),
-	];
+	],vec![
+		hex!["d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d"].into(),
+		hex!["8eaf04151687736326c9fea17e25fc5287613693c912909cb226aa4794f26a48"].into(),
+	]);
 	pub PaymentInRound: u128 = 45 * dollar(NativeCurrencyId::get());
+	pub InitSeedStk: u128 = 50_000 * dollar(NativeCurrencyId::get());
 }
 impl parachain_staking::Config for Runtime {
 	type Event = Event;
@@ -964,6 +968,7 @@ impl parachain_staking::Config for Runtime {
 	type PaymentInRound = PaymentInRound;
 	type ToMigrateInvulnables = ToMigrateInvulnables;
 	type PalletId = ParachainStakingPalletId;
+	type InitSeedStk = InitSeedStk;
 	type WeightInfo = parachain_staking::weights::SubstrateWeight<Runtime>;
 }
 
