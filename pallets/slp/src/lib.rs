@@ -31,8 +31,8 @@ pub use weights::WeightInfo;
 use xcm::latest::*;
 
 use crate::{
-	primitives::{MinimumsMaximums, XcmOperation, KSM},
-	traits::{StakingAgent, ValidatorManager, VtokenMintingOperator},
+	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
+	traits::{DelegatorManager, StakingAgent, ValidatorManager, VtokenMintingOperator},
 };
 
 mod agents;
@@ -49,7 +49,10 @@ pub use pallet::*;
 
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-type BoxType<T> = Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit>>;
+type StakingAgentBoxType<T> =
+	Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit>>;
+type DelegatorManagerBoxType<T> =
+	Box<dyn DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -156,6 +159,11 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
+		},
+		DelegatorSet {
+			currency_id: CurrencyId,
+			index: u16,
+			delegator_id: MultiLocation,
 		},
 	}
 
@@ -621,7 +629,20 @@ pub mod pallet {
 			index: u16,
 			who: MultiLocation,
 		) -> DispatchResult {
-			unimplemented!()
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
+			delegator_manager.add_delegator(index, &who)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorSet {
+				currency_id,
+				index,
+				delegator_id: who,
+			});
+			Ok(())
 		}
 
 		/// Update storage Validators<T>.
@@ -680,7 +701,21 @@ pub mod pallet {
 			cond1 & cond2
 		}
 
-		fn get_currency_staking_agent(currency_id: CurrencyId) -> Result<BoxType<T>, Error<T>> {
+		fn get_currency_staking_agent(
+			currency_id: CurrencyId,
+		) -> Result<StakingAgentBoxType<T>, Error<T>> {
+			match currency_id {
+				KSM =>
+					Ok(Box::new(
+						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
+					)),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}
+		}
+
+		fn get_currency_delegator_manager(
+			currency_id: CurrencyId,
+		) -> Result<DelegatorManagerBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM =>
 					Ok(Box::new(
