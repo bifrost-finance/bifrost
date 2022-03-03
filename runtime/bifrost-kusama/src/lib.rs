@@ -915,8 +915,10 @@ parameter_types! {
 	pub const RewardPaymentDelay: u32 = 2;
 	/// Minimum collators selected per round, default at genesis and minimum forever after
 	pub const MinSelectedCandidates: u32 = prod_or_test!(16,6);
-	/// Maximum delegators counted per candidate
-	pub const MaxDelegatorsPerCandidate: u32 = 100;
+	/// Maximum top delegations per candidate
+	pub const MaxTopDelegationsPerCandidate: u32 = 100;
+	/// Maximum bottom delegations per candidate
+	pub const MaxBottomDelegationsPerCandidate: u32 = 50;
 	/// Maximum delegations per delegator
 	pub const MaxDelegationsPerDelegator: u32 = 100;
 	/// Default fixed percent a collator takes off the top of due rewards
@@ -956,7 +958,8 @@ impl parachain_staking::Config for Runtime {
 	type DelegationBondLessDelay = DelegationBondLessDelay;
 	type RewardPaymentDelay = RewardPaymentDelay;
 	type MinSelectedCandidates = MinSelectedCandidates;
-	type MaxDelegatorsPerCandidate = MaxDelegatorsPerCandidate;
+	type MaxTopDelegationsPerCandidate = MaxTopDelegationsPerCandidate;
+	type MaxBottomDelegationsPerCandidate = MaxBottomDelegationsPerCandidate;
 	type MaxDelegationsPerDelegator = MaxDelegationsPerDelegator;
 	type DefaultCollatorCommission = DefaultCollatorCommission;
 	type DefaultParachainBondReservePercent = DefaultParachainBondReservePercent;
