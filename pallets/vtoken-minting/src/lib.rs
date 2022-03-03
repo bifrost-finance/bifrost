@@ -95,13 +95,13 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		minted {
+		Minted {
 			token: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		},
 		Redeemed {
 			token: CurrencyIdOf<T>,
-			token_amount: BalanceOf<T>,
+			vtoken_amount: BalanceOf<T>,
 		},
 		Rebonded {
 			token: CurrencyIdOf<T>,
@@ -147,6 +147,9 @@ pub mod pallet {
 		NotSupportTokenType,
 		NotEnoughBalanceToUnlock,
 		TokenToRebondNotZero,
+		MaxUserUnlockingChunksNotSet,
+		MaxEraUnlockingChunksNotSet,
+		OngoingEraNotSet,
 	}
 
 	#[pallet::storage]
@@ -225,8 +228,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn max_era_unlocking_chuncks)]
-	pub type MaxEraUnlockingChunks<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
+	pub type MaxEraUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_deduct)]
@@ -283,7 +285,7 @@ pub mod pallet {
 			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 			TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 
-			Self::deposit_event(Event::minted { token: token_id, token_amount });
+			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 			Ok(())
 		}
 
@@ -298,21 +300,61 @@ pub mod pallet {
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			// let token_pool_amount = Self::user_unlock_ledger(&exchanger, token_id);
+			if let Some((user_unlock_amount, ledger_list)) =
+				Self::user_unlock_ledger(&exchanger, token_id)
+			{
+				if let Some(user_chunks) = MaxUserUnlockingChunks::<T>::get(token_id) {
+					ensure!(
+						ledger_list.len() as u32 <= user_chunks,
+						Error::<T>::TooManyUserUnlockingChunks
+					);
+				} else {
+					return Err(Error::<T>::MaxUserUnlockingChunksNotSet.into());
+				}
+			}
 
-			// ensure!(
-			// 	counts <= T::MaxUserUnlockingChunks::get(token_id),
-			// 	Error::<T>::TooManyUserUnlockingChunks
-			// );
-			// ensure!(
-			// 	counts <= T::MaxEraUnlockingChunks::get(token_id),
-			// 	Error::<T>::TooManyEraUnlockingChunks
-			// );
+			if let Some(era) = OngoingEra::<T>::get(token_id) {
+				if let Some((era_unlock_amount, ledger_list)) =
+					Self::era_unlock_ledger(&era, token_id)
+				{
+					if let Some(era_chunks) = MaxEraUnlockingChunks::<T>::get(token_id) {
+						ensure!(
+							ledger_list.len() as u32 <= era_chunks,
+							Error::<T>::TooManyUserUnlockingChunks
+						);
+					} else {
+						return Err(Error::<T>::MaxEraUnlockingChunksNotSet.into());
+					}
+				}
+				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
+				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(token_pool_amount));
+				TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 
-			T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(token_pool_amount));
-			TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+				let next_id = Self::token_unlock_next_id(token_id);
+				TokenUnlockLedger::<T>::insert(
+					&token_id,
+					&next_id,
+					(&exchanger, vtoken_amount, &era),
+				);
 
+				UserUnlockLedger::<T>::mutate(&exchanger, &token_id, |value| {
+					if let Some((total_locked, ledger_list)) = value {
+						total_locked.saturating_add(vtoken_amount);
+						ledger_list.try_push(next_id);
+					}
+				});
+
+				EraUnlockLedger::<T>::mutate(&era, &token_id, |value| {
+					if let Some((total_locked, ledger_list)) = value {
+						total_locked.saturating_add(vtoken_amount);
+						ledger_list.try_push(next_id);
+					}
+				});
+			} else {
+				return Err(Error::<T>::OngoingEraNotSet.into());
+			}
+
+			Self::deposit_event(Event::Redeemed { token: token_id, vtoken_amount });
 			Ok(())
 		}
 
