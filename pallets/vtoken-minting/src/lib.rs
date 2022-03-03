@@ -31,13 +31,13 @@ mod benchmarking;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, Saturating},
+		traits::{AccountIdConversion, Saturating, Zero},
 		SaturatedConversion,
 	},
 	PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::CurrencyId;
+use node_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 
@@ -57,7 +57,8 @@ pub type MintId = u32;
 
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum TimeUnit {
-	Era(u64),
+	Era(u32),
+	SlashingSpan(u32),
 }
 #[frame_support::pallet]
 pub mod pallet {
@@ -95,9 +96,11 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		minted {
+			token: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		},
 		Redeemed {
+			token: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 		},
 		Rebonded {
@@ -280,6 +283,7 @@ pub mod pallet {
 			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 			TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 
+			Self::deposit_event(Event::minted { token: token_id, token_amount });
 			Ok(())
 		}
 
@@ -305,7 +309,7 @@ pub mod pallet {
 			// 	Error::<T>::TooManyEraUnlockingChunks
 			// );
 
-			T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount);
+			T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(token_pool_amount));
 			TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 
@@ -444,5 +448,53 @@ pub mod pallet {
 			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee, hosting_fee });
 			Ok(())
 		}
+	}
+}
+
+/// The interface to call VtokneMinting module functions.
+pub trait VtokenMintingOperator<CurrencyId, Balance> {
+	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
+	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+
+	/// Decrease the token amount for the storage "token_pool" in the VtokenMining module.
+	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
+
+	// Update the ongoing era for a CurrencyId.
+	fn update_ongoing_era(currency_id: CurrencyId, era: TimeUnit) -> DispatchResult;
+
+	// Get the current era of a CurrencyId.
+	fn get_ongoing_era(currency_id: CurrencyId) -> Option<TimeUnit>;
+}
+
+impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>> for Pallet<T> {
+	fn increase_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
+		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
+			*pool = pool.saturating_add(token_amount);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	fn decrease_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
+		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
+			*pool = pool.saturating_sub(token_amount);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	fn update_ongoing_era(currency_id: CurrencyId, era: TimeUnit) -> DispatchResult {
+		OngoingEra::<T>::mutate(currency_id, |time_unit| -> Result<(), Error<T>> {
+			*time_unit = Some(era);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	fn get_ongoing_era(currency_id: CurrencyId) -> Option<TimeUnit> {
+		Self::ongoing_era(currency_id)
 	}
 }
