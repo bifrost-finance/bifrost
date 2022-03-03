@@ -368,12 +368,51 @@ pub mod pallet {
 
 			let token_amount_to_rebond =
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
-			if let Some((user_unlock_amount, ledger_list)) =
+			if let Some((user_unlock_amount, mut ledger_list)) =
 				Self::user_unlock_ledger(&exchanger, token_id)
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
-				for index in ledger_list.iter() {}
+				let mut tmp_amount = token_amount;
+				ledger_list.retain(|index| {
+					if let Some((account, unlock_amount, time_unit)) =
+						Self::token_unlock_ledger(token_id, index)
+					{
+						if tmp_amount >= unlock_amount {
+							tmp_amount.saturating_sub(unlock_amount);
+							// TokenUnlockLedger::<T>::take(&token_id, &index);
+							if let Some((_, total_locked, time_unit)) =
+								TokenUnlockLedger::<T>::take(&token_id, &index)
+							{
+								EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
+									if let Some((total_locked, ledger_list)) = value {
+										total_locked.saturating_sub(unlock_amount);
+										ledger_list.retain(|x| x != index);
+									}
+								});
+							}
+
+							return true;
+						} else {
+							unlock_amount.saturating_sub(tmp_amount);
+							TokenUnlockLedger::<T>::mutate(&token_id, &index, |value| {
+								if let Some((_, total_locked, _)) = value {
+									total_locked.saturating_sub(tmp_amount);
+								}
+							});
+							return false;
+						}
+					} else {
+						return false;
+					}
+				});
+
+				UserUnlockLedger::<T>::mutate(&exchanger, &token_id, |value| {
+					if let Some((total_locked_old, ledger_list_old)) = value {
+						total_locked_old.saturating_sub(token_amount);
+						*ledger_list_old = ledger_list;
+					}
+				});
 			}
 			Ok(())
 		}
