@@ -56,6 +56,19 @@ format:
 test-benchmarking:
 	cargo test --features runtime-benchmarks --features with-bifrost-kusama-runtime --features --all benchmarking
 
+.PHONY: benchmarking-staking
+benchmarking-staking:
+	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime,runtime-benchmarks" --release \
+			-- benchmark --chain=bifrost-local --steps=50 \
+			--repeat=20 \
+            --pallet=parachain_staking \
+            --extrinsic="*" \
+            --execution=wasm \
+            --wasm-execution=compiled \
+            --heap-pages=4096 \
+            --header=./HEADER-GPL3
+			--output="./runtime/bifrost-kusama/src/weights/parachain_staking.rs"
+
 .PHONY: generate-all-weights
 generate-all-weights:
 	bash ./scripts/generate-weights.sh bifrost

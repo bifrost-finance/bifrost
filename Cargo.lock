@@ -5277,7 +5277,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.30"
+version = "0.9.31"
 dependencies = [
  "cumulus-client-cli",
  "cumulus-client-service",
@@ -6713,7 +6713,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/bifrost-finance/parachain-staking?rev=1d364446fb814b08ce70615605ddd9cbc34bd70f#1d364446fb814b08ce70615605ddd9cbc34bd70f"
+source = "git+https://github.com/bifrost-finance/parachain-staking?rev=6695260c683613c60bb7f0465c2beb99624580cf#6695260c683613c60bb7f0465c2beb99624580cf"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
