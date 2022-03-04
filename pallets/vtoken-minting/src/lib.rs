@@ -149,7 +149,7 @@ pub mod pallet {
 		TokenToRebondNotZero,
 		MaxUserUnlockingChunksNotSet,
 		MaxEraUnlockingChunksNotSet,
-		OngoingEraNotSet,
+		OngoingTimeUnitNotSet,
 	}
 
 	#[pallet::storage]
@@ -168,8 +168,8 @@ pub mod pallet {
 		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn ongoing_era)]
-	pub type OngoingEra<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
+	#[pallet::getter(fn ongoing_time_unit)]
+	pub type OngoingTimeUnit<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn minimum_mint)]
@@ -313,7 +313,7 @@ pub mod pallet {
 				}
 			}
 
-			if let Some(era) = OngoingEra::<T>::get(token_id) {
+			if let Some(era) = OngoingTimeUnit::<T>::get(token_id) {
 				if let Some((era_unlock_amount, ledger_list)) =
 					Self::era_unlock_ledger(&era, token_id)
 				{
@@ -351,7 +351,7 @@ pub mod pallet {
 					}
 				});
 			} else {
-				return Err(Error::<T>::OngoingEraNotSet.into());
+				return Err(Error::<T>::OngoingTimeUnitNotSet.into());
 			}
 
 			Self::deposit_event(Event::Redeemed { token: token_id, vtoken_amount });
@@ -541,10 +541,10 @@ pub trait VtokenMintingOperator<CurrencyId, Balance> {
 	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
 
 	// Update the ongoing era for a CurrencyId.
-	fn update_ongoing_era(currency_id: CurrencyId, era: TimeUnit) -> DispatchResult;
+	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult;
 
 	// Get the current era of a CurrencyId.
-	fn get_ongoing_era(currency_id: CurrencyId) -> Option<TimeUnit>;
+	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit>;
 }
 
 impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>> for Pallet<T> {
@@ -566,16 +566,16 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>> for Pallet<T> {
 		Ok(())
 	}
 
-	fn update_ongoing_era(currency_id: CurrencyId, era: TimeUnit) -> DispatchResult {
-		OngoingEra::<T>::mutate(currency_id, |time_unit| -> Result<(), Error<T>> {
-			*time_unit = Some(era);
+	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult {
+		OngoingTimeUnit::<T>::mutate(currency_id, |time_unit_old| -> Result<(), Error<T>> {
+			*time_unit_old = Some(time_unit);
 			Ok(())
 		})?;
 
 		Ok(())
 	}
 
-	fn get_ongoing_era(currency_id: CurrencyId) -> Option<TimeUnit> {
-		Self::ongoing_era(currency_id)
+	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit> {
+		Self::ongoing_time_unit(currency_id)
 	}
 }
