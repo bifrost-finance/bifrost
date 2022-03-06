@@ -21,7 +21,7 @@ use sp_runtime::DispatchResult;
 use crate::{Weight, Xcm};
 
 /// Abstraction over a staking agent for a certain POS chain.
-pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit> {
+pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId> {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
 	fn initialize_delegator(&self) -> Option<DelegatorId>;
 
@@ -56,6 +56,15 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit> {
 
 	/// Withdraw the due payout into free balance.
 	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> DispatchResult;
+
+	/// Cancel the identity of delegator.
+	fn kill(&self, who: DelegatorId) -> DispatchResult;
+
+	/// Make token transferred back to Bifrost chain account.
+	fn transfer_back(&self, from: DelegatorId, to: AccountId, amount: Balance) -> DispatchResult;
+
+	/// Make token from Bifrost chain account to the staking chain account.
+	fn transfer_to(&self, from: AccountId, to: DelegatorId, amount: Balance) -> DispatchResult;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
@@ -70,7 +79,7 @@ pub trait StakingFeeManager<AccountId, Balance> {
 	) -> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
-	fn fill_cost_reserve(
+	fn supplement_fee_reserve(
 		&self,
 		amount: Balance,
 		from: &AccountId,
@@ -98,7 +107,7 @@ pub trait ValidatorManager<ValidatorId> {
 
 /// Abstraction over a user refund manager to refund user unlocking balance without waiting for the
 /// maximum amount of time. It it for being called by other pallets such as VtokenMinting.
-pub trait UserRefundManager<AccountId, CurrencyId, Balance> {
+pub trait RefundManager<AccountId, CurrencyId, Balance> {
 	/// Refund user unlocking balance without waiting for the maximum amount of time.
 	fn refund_user_unbond(
 		currency_id: CurrencyId,
@@ -113,16 +122,32 @@ pub trait XcmBuilder<Balance, ChainCallType> {
 }
 
 /// The interface to call VtokneMinting module functions.
-pub trait VtokenMintingOperator<CurrencyId, Balance, TimeUnit> {
+pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
 
 	/// Decrease the token amount for the storage "token_pool" in the VtokenMining module.
 	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
 
-	// Update the ongoing era for a CurrencyId.
+	/// Update the ongoing era for a CurrencyId.
 	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult;
 
-	// Get the current era of a CurrencyId.
+	/// Get the current era of a CurrencyId.
 	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit>;
+
+	/// Get the the unlocking records of a certain time unit.
+	fn get_unlock_records(
+		currency_id: CurrencyId,
+		time_unit: TimeUnit,
+	) -> Option<(Balance, Vec<u32>)>;
+
+	/// Revise the currency indexed unlocking record by some amount.
+	fn deduct_unlock_amount(
+		currency_id: CurrencyId,
+		index: u32,
+		deduct_amount: Balance,
+	) -> DispatchResult;
+
+	/// Get currency Entrance and Exit accounts.【entrance_account, exit_account】
+	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId);
 }

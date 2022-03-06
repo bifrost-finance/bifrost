@@ -29,11 +29,16 @@ use sp_runtime::{
 use sp_std::prelude::*;
 use xcm::{
 	latest::prelude::*,
-	opaque::latest::{Junction::AccountId32, Junctions::X1, MultiLocation},
+	opaque::latest::{
+		Junction::{AccountId32, Parachain},
+		Junctions::{X1, X2},
+		MultiLocation,
+	},
+	VersionedMultiAssets, VersionedMultiLocation,
 };
 
 use crate::{
-	agents::{KusamaCall, StakingCall, UtilityCall},
+	agents::{KusamaCall, StakingCall, UtilityCall, XcmCall},
 	pallet::Error,
 	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
 	traits::{DelegatorManager, StakingAgent, XcmBuilder},
@@ -320,9 +325,9 @@ where
 
 	/// Withdraw the due payout into free balance.
 	fn liquidize(&self, who: MultiLocation, when: Option<TimeUnit>) -> DispatchResult {
-		// Check if it is bonded already.
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+		// Check if it is in the delegator set.
+		DelegatorsMultilocation2Index::<T>::get(KSM, who.clone())
+			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Get the slashing span param.
 		let num_slashing_spans = if let Some(TimeUnit::SlashingSpan(num_slashing_spans)) = when {
@@ -340,6 +345,15 @@ where
 		Ok(())
 	}
 
+	/// Cancel the identity of delegator in the Relay chain side.
+	fn kill(&self, who: MultiLocation) -> DispatchResult {
+		// unbond all the active amount
+
+		// chill self
+
+		Ok(())
+	}
+
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(
 		&self,
@@ -347,27 +361,61 @@ where
 		to: AccountIdOf<T>,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		// // Ensure amount is greater than zero.
+		// Ensure amount is greater than zero.
+		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
-		// // Check if it is bonded already.
-		// let ledger =
-		// DelegatorLedgers::<T>::get(KSM, from.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+		// Check if from is one of our delegators. If no, return error.
+		DelegatorsMultilocation2Index::<T>::get(KSM, from.clone())
+			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// // Check if from is one of our delegators. If no, return error.
-		// let dest: Box<VersionedMultiLocation> =
-		// let beneficiary: Box<VersionedMultiLocation> =
-		// let assets: Box<VersionedMultiAssets> =
-		// let fee_asset_item: u32 =
+		// Prepare parameter dest.
+		let from_account_32 = Self::multilocation_to_account_32(&from)?;
+		let from_location =
+			VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: from_account_32 }));
+		let dest: Box<VersionedMultiLocation> = Box::new(from_location);
 
-		// // Construct xcm message.
-		// let call = KusamaCall::Xcm(XcmCall::ReserveTransferAssets(dest, beneficiary, assets,
-		// fee_asset_item));
+		// Prepare parameter beneficiary.
+		let to_32: [u8; 32] =
+			T::AccountId::encode(&to).try_into().map_err(|_| Error::<T>::EncodingError)?;
+		let to_location = VersionedMultiLocation::from(X2(
+			Parachain(ParachainId::get().into()),
+			AccountId32 { network: Any, id: to_32 },
+		));
+		let beneficiary: Box<VersionedMultiLocation> = Box::new(to_location);
 
-		// // Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// // send it out.
-		// Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, from.clone())?;
+		// Prepare parameter assets.
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
+		};
+		let assets: Box<VersionedMultiAssets> =
+			Box::new(VersionedMultiAssets::from(MultiAssets::from(asset)));
+
+		// Prepare parameter fee_asset_item.
+		let fee_asset_item: u32 = 0;
+
+		// Construct xcm message.
+		let call = KusamaCall::Xcm(XcmCall::ReserveTransferAssets(
+			dest,
+			beneficiary,
+			assets,
+			fee_asset_item,
+		));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, from.clone())?;
 
 		Ok(())
+	}
+
+	fn transfer_to(
+		&self,
+		from: AccountIdOf<T>,
+		to: MultiLocation,
+		amount: BalanceOf<T>,
+	) -> DispatchResult {
+		unimplemented!()
 	}
 }
 
@@ -544,6 +592,15 @@ where
 
 	fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
 		// Get the delegator account id in Kusama network
+		let account_32 = Self::multilocation_to_account_32(who)?;
+		let account =
+			T::AccountId::decode(&mut &account_32[..]).map_err(|_| Error::<T>::DecodingError)?;
+
+		Ok(account)
+	}
+
+	fn multilocation_to_account_32(who: &MultiLocation) -> Result<[u8; 32], Error<T>> {
+		// Get the delegator account id in Kusama network
 		let account_32 = match who {
 			MultiLocation {
 				parents: 1,
@@ -551,9 +608,6 @@ where
 			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
-		let account =
-			T::AccountId::decode(&mut &account_32[..]).map_err(|_| Error::<T>::DecodingError)?;
-
-		Ok(account)
+		Ok(*account_32)
 	}
 }

@@ -19,6 +19,7 @@
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use sp_runtime::traits::StaticLookup;
+use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 
 use crate::{BalanceOf, Config};
 
@@ -30,6 +31,8 @@ pub enum KusamaCall<T: Config> {
 	Staking(StakingCall<T>),
 	#[codec(index = 24)]
 	Utility(Box<UtilityCall<Self>>),
+	#[codec(index = 99)]
+	Xcm(XcmCall),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
@@ -65,4 +68,15 @@ pub enum StakingCall<T: Config> {
 	PayoutStakers(T::AccountId, u32),
 	#[codec(index = 19)]
 	Rebond(#[codec(compact)] BalanceOf<T>),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum XcmCall {
+	#[codec(index = 2)]
+	ReserveTransferAssets(
+		Box<VersionedMultiLocation>,
+		Box<VersionedMultiLocation>,
+		Box<VersionedMultiAssets>,
+		u32,
+	),
 }

@@ -72,7 +72,12 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		/// The interface to call VtokenMinting module functions.
-		type VtokenMinting: VtokenMintingOperator<CurrencyId, BalanceOf<Self>, TimeUnit>;
+		type VtokenMinting: VtokenMintingOperator<
+			CurrencyId,
+			BalanceOf<Self>,
+			AccountIdOf<Self>,
+			TimeUnit,
+		>;
 
 		/// Substrate account converter, which can convert a u16 number into a sub-account with
 		/// MultiLocation format.
@@ -107,6 +112,7 @@ pub mod pallet {
 		ExceedUnlockingRecords,
 		RebondExceedUnlockingAmount,
 		DecodingError,
+		EncodingError,
 		VectorEmpty,
 		ValidatorSetNotExist,
 		ValidatorNotExist,
@@ -588,6 +594,66 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit)?;
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::refund_currency_due_unbond())]
+		pub fn refund_currency_due_unbond(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Get the currency due unlocking records
+
+			// Get the exit_account and its free balance.
+
+			// Refund due unlocking records one by one.
+
+			// Deposit event.
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::move_fund_from_exit_to_entrance_account())]
+		pub fn move_fund_from_exit_to_entrance_account(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Get the reserved fee amount
+
+			// Transfer the (exit account balance - reserved fee amount) from exit_account to
+			// entrance_account.
+
+			// Deposit event.
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::supplement_fee_reserve())]
+		pub fn supplement_fee_reserve(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			dest: MultiLocation,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
+
+			// If currency is BNC, transfer directly.
+
+			// Otherwise, call supplement_fee_reserve of StakingFeeManager trait
+
+			// Deposit event.
+
 			Ok(())
 		}
 
