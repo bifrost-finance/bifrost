@@ -346,11 +346,20 @@ where
 		Ok(())
 	}
 
-	/// Cancel the identity of delegator in the Relay chain side.
-	fn kill(&self, who: MultiLocation) -> DispatchResult {
-		// unbond all the active amount
+	/// Chill self. Cancel the identity of delegator in the Relay chain side.
+	/// Unbonding all the active amount should be done before or after chill,
+	/// so that we can collect back all the bonded amount.
+	fn chill(&self, who: MultiLocation) -> DispatchResult {
+		// Check if it is in the delegator set.
+		DelegatorsMultilocation2Index::<T>::get(KSM, who.clone())
+			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// chill self
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Chill);
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Chill, call, who)?;
 
 		Ok(())
 	}

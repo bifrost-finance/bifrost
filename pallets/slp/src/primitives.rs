@@ -109,4 +109,5 @@ pub enum XcmOperation {
 	Liquidize,
 	TransferBack,
 	TransferTo,
+	Chill,
 }

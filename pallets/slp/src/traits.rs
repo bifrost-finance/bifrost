@@ -58,7 +58,7 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId> {
 	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> DispatchResult;
 
 	/// Cancel the identity of delegator.
-	fn kill(&self, who: DelegatorId) -> DispatchResult;
+	fn chill(&self, who: DelegatorId) -> DispatchResult;
 
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(&self, from: DelegatorId, to: AccountId, amount: Balance) -> DispatchResult;
