@@ -17,16 +17,17 @@ do
         while IFS= read -r line
         do
             pallet=$line;
-
-            target/release/bifrost benchmark --chain=$chain \
-            --steps=50 \
-            --repeat=20 \
-            --pallet=$pallet \
-            --extrinsic="*" \
-            --execution=wasm \
-            --wasm-execution=compiled \
-            --heap-pages=4096 \
-            --header=./HEADER-GPL3 \
-            --output="./runtime/${runtime}-kusama/src/weights/${pallet}.rs";
+            if [ "$pallet" != "parachain_staking" ]; then
+                target/release/bifrost benchmark --chain=$chain \
+                --steps=50 \
+                --repeat=20 \
+                --pallet=$pallet \
+                --extrinsic="*" \
+                --execution=wasm \
+                --wasm-execution=compiled \
+                --heap-pages=4096 \
+                --header=./HEADER-GPL3 \
+                --output="./runtime/${runtime}-kusama/src/weights/${pallet}.rs";
+            fi
         done
 done

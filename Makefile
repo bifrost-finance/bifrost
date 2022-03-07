@@ -66,7 +66,7 @@ benchmarking-staking:
             --execution=wasm \
             --wasm-execution=compiled \
             --heap-pages=4096 \
-            --header=./HEADER-GPL3
+            --header=./HEADER-GPL3 \
 			--output="./runtime/bifrost-kusama/src/weights/parachain_staking.rs"
 
 .PHONY: generate-all-weights
