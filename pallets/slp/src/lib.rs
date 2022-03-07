@@ -126,6 +126,8 @@ pub mod pallet {
 		AlreadyExist,
 		ValidatorStillInUse,
 		TimeUnitNotExist,
+		FeeSourceNotExist,
+		BalanceLow,
 	}
 
 	#[pallet::event]
@@ -196,7 +198,24 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			time_unit: TimeUnit,
 			index: u32,
-			deduct_amount: BalanceOf<T>,
+			amount: BalanceOf<T>,
+		},
+		FundMoveFromExitToEntrance {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		},
+		TimeUnitUpdated {
+			currency_id: CurrencyId,
+			old: TimeUnit,
+			new: TimeUnit,
+		},
+		PoolTokenIncreased {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		},
+		PoolTokenDecreased {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
 		},
 	}
 
@@ -574,6 +593,9 @@ pub mod pallet {
 			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
 
 			T::VtokenMinting::increase_token_pool(currency_id, amount)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::PoolTokenIncreased { currency_id, amount });
 			Ok(())
 		}
 
@@ -591,6 +613,9 @@ pub mod pallet {
 			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
 
 			T::VtokenMinting::decrease_token_pool(currency_id, amount)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::PoolTokenDecreased { currency_id, amount });
 			Ok(())
 		}
 
@@ -604,7 +629,13 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit)?;
+			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+				.ok_or(Error::<T>::InvalidTimeUnit)?;
+			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TimeUnitUpdated { currency_id, old, new: time_unit });
+
 			Ok(())
 		}
 
@@ -660,7 +691,7 @@ pub mod pallet {
 							currency_id,
 							time_unit: time_unit.clone(),
 							index: *idx,
-							deduct_amount,
+							amount: deduct_amount,
 						});
 
 						exit_account_balance = exit_account_balance
@@ -686,11 +717,30 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			// Get the reserved fee amount
+			let (_source_account, reserved_fee) =
+				FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
+			// Get entrance_account, exit_account and exit_account's currency balance.
+			let (entrance_account, exit_account) =
+				T::VtokenMinting::get_entrance_and_exit_accounts();
+			let exit_account_balance = T::MultiCurrency::free_balance(currency_id, &exit_account);
 
 			// Transfer the (exit account balance - reserved fee amount) from exit_account to
 			// entrance_account.
+			let transfer_amount =
+				exit_account_balance.checked_sub(&reserved_fee).ok_or(Error::<T>::UnderFlow)?;
+
+			T::MultiCurrency::transfer(
+				currency_id,
+				&exit_account,
+				&entrance_account,
+				transfer_amount,
+			)?;
 
 			// Deposit event.
+			Pallet::<T>::deposit_event(Event::FundMoveFromExitToEntrance {
+				currency_id,
+				amount: transfer_amount,
+			});
 
 			Ok(())
 		}
