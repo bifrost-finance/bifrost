@@ -27,7 +27,7 @@ use orml_traits::{MultiCurrency, XcmTransfer};
 pub use primitives::{Delays, Ledger, TimeUnit};
 use sp_arithmetic::traits::Zero;
 use sp_core::H256;
-use sp_runtime::traits::{Convert, UniqueSaturatedFrom};
+use sp_runtime::traits::{CheckedSub, Convert, UniqueSaturatedFrom};
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
@@ -101,6 +101,7 @@ pub mod pallet {
 		FailToInitializeDelegator,
 		FailToBond,
 		OverFlow,
+		UnderFlow,
 		NotExist,
 		LowerThanMinimum,
 		GreaterThanMaximum,
@@ -124,6 +125,7 @@ pub mod pallet {
 		AmountNotZero,
 		AlreadyExist,
 		ValidatorStillInUse,
+		TimeUnitNotExist,
 	}
 
 	#[pallet::event]
@@ -189,6 +191,12 @@ pub mod pallet {
 		ValidatorsRemoved {
 			currency_id: CurrencyId,
 			validator_id: MultiLocation,
+		},
+		Refund {
+			currency_id: CurrencyId,
+			time_unit: TimeUnit,
+			index: u32,
+			deduct_amount: BalanceOf<T>,
 		},
 	}
 
@@ -609,13 +617,61 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			// Get the currency due unlocking records
+			// Get exit_account and its currency balance
+			let exit_account = T::VtokenMinting::get_entrance_and_exit_accounts().1;
+			let mut exit_account_balance =
+				T::MultiCurrency::free_balance(currency_id, &exit_account);
+			let ed = T::MultiCurrency::minimum_balance(currency_id);
 
-			// Get the exit_account and its free balance.
+			// Get the currency due unlocking records
+			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+				.ok_or(Error::<T>::TimeUnitNotExist)?;
+			let rs = T::VtokenMinting::get_unlock_records(currency_id, time_unit.clone());
 
 			// Refund due unlocking records one by one.
+			if let Some((_locked_amount, idx_vec)) = rs {
+				for idx in idx_vec.iter() {
+					let checked_remain =
+						exit_account_balance.checked_sub(&ed).ok_or(Error::<T>::UnderFlow)?;
 
-			// Deposit event.
+					// get idx record amount
+					let idx_record_amount_op =
+						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
+
+					if let Some((user_account, idx_record_amount, _unlock_era)) =
+						idx_record_amount_op
+					{
+						let mut deduct_amount = idx_record_amount;
+						if checked_remain < idx_record_amount {
+							deduct_amount = checked_remain;
+						}
+						// Transfer some amount from the exit_account to the user's account
+						T::MultiCurrency::transfer(
+							KSM,
+							&exit_account,
+							&user_account,
+							deduct_amount,
+						)?;
+						// Delete the corresponding unlocking record storage.
+						T::VtokenMinting::deduct_unlock_amount(currency_id, *idx, deduct_amount)?;
+
+						// Deposit event.
+						Pallet::<T>::deposit_event(Event::Refund {
+							currency_id,
+							time_unit: time_unit.clone(),
+							index: *idx,
+							deduct_amount,
+						});
+
+						exit_account_balance = exit_account_balance
+							.checked_sub(&deduct_amount)
+							.ok_or(Error::<T>::UnderFlow)?;
+						if exit_account_balance <= ed {
+							break;
+						}
+					}
+				}
+			}
 
 			Ok(())
 		}
