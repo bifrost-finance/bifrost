@@ -107,4 +107,6 @@ pub enum XcmOperation {
 	Delegate,
 	Payout,
 	Liquidize,
+	TransferBack,
+	TransferTo,
 }

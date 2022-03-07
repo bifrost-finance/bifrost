@@ -23,7 +23,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{dispatch::result::Result, pallet_prelude::*, weights::Weight};
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::CurrencyId;
-use orml_traits::MultiCurrency;
+use orml_traits::{MultiCurrency, XcmTransfer};
 pub use primitives::{Delays, Ledger, TimeUnit};
 use sp_arithmetic::traits::Zero;
 use sp_core::H256;
@@ -88,6 +88,9 @@ pub mod pallet {
 
 		/// Routes the XCM message outbound.
 		type XcmSender: SendXcm;
+
+		/// The interface to Cross-chain transfer.
+		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
 	}
 
 	#[pallet::error]

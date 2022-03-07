@@ -21,6 +21,7 @@ use core::marker::PhantomData;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
+use orml_traits::XcmTransfer;
 use sp_core::{Blake2Hasher, Hasher};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
@@ -364,7 +365,7 @@ where
 		// Ensure amount is greater than zero.
 		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
-		// Check if from is one of our delegators. If no, return error.
+		// Check if from is one of our delegators. If not, return error.
 		DelegatorsMultilocation2Index::<T>::get(KSM, from.clone())
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
@@ -404,18 +405,24 @@ where
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, from.clone())?;
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::TransferBack, call, from.clone())?;
 
 		Ok(())
 	}
 
+	/// Make token from Bifrost chain account to the staking chain account.
 	fn transfer_to(
 		&self,
 		from: AccountIdOf<T>,
 		to: MultiLocation,
 		amount: BalanceOf<T>,
 	) -> DispatchResult {
-		unimplemented!()
+		// Ensure amount is greater than zero.
+		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
+
+		let (weight, _fee) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo);
+
+		T::XcmTransfer::transfer(from, KSM, amount, to, weight)
 	}
 }
 
