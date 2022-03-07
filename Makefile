@@ -96,6 +96,10 @@ build-bifrost-kusama-wasm:
 build-bifrost-polkadot-wasm:
 	.maintain/build-wasm.sh bifrost-polkadot
 
+.PHONY: build-bifrost-rococo-fast-wasm
+build-bifrost-rococo-fast-wasm:
+	.maintain/build-wasm.sh bifrost-kusama fast	
+
 .PHONY: check-try-runtime
 check-try-runtime:
 	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
