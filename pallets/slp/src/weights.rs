@@ -38,6 +38,7 @@ pub trait WeightInfo {
 	fn undelegate() -> Weight;
 	fn payout() -> Weight;
 	fn liquidize() -> Weight;
+	fn chill() -> Weight;
 	fn transfer_back() -> Weight;
 	fn increase_token_pool() -> Weight;
 	fn decrease_token_pool() -> Weight;
@@ -101,6 +102,10 @@ impl WeightInfo for () {
 	}
 
 	fn liquidize() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn chill() -> Weight {
 		(50_000_000 as Weight)
 	}
 

@@ -182,6 +182,10 @@ pub mod pallet {
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
 		},
+		Chill {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+		},
 		TransferBack {
 			currency_id: CurrencyId,
 			from: MultiLocation,
@@ -593,6 +597,25 @@ pub mod pallet {
 				delegator_id: who,
 				time_unit: when,
 			});
+			Ok(())
+		}
+
+		/// Initiate payout for a certain delegator.
+		#[pallet::weight(T::WeightInfo::chill())]
+		pub fn chill(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.chill(who.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::Chill { currency_id, delegator_id: who });
 			Ok(())
 		}
 
