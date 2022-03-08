@@ -182,6 +182,12 @@ pub mod pallet {
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
 		},
+		TransferBack {
+			currency_id: CurrencyId,
+			from: MultiLocation,
+			to: AccountIdOf<T>,
+			amount: BalanceOf<T>,
+		},
 		DelegatorAdded {
 			currency_id: CurrencyId,
 			index: u16,
@@ -587,6 +593,27 @@ pub mod pallet {
 				delegator_id: who,
 				time_unit: when,
 			});
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::transfer_back())]
+		pub fn transfer_back(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			from: MultiLocation,
+			to: AccountIdOf<T>,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.transfer_back(from.clone(), to.clone(), amount)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TransferBack { currency_id, from, to, amount });
+
 			Ok(())
 		}
 

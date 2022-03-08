@@ -32,7 +32,7 @@ use xcm::{
 	latest::prelude::*,
 	opaque::latest::{
 		Junction::{AccountId32, Parachain},
-		Junctions::{X1, X2},
+		Junctions::X1,
 		MultiLocation,
 	},
 	VersionedMultiAssets, VersionedMultiLocation,
@@ -378,20 +378,13 @@ where
 		DelegatorsMultilocation2Index::<T>::get(KSM, from.clone())
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		// Prepare parameter dest.
-		let from_account_32 = Self::multilocation_to_account_32(&from)?;
-		let from_location =
-			VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: from_account_32 }));
-		let dest: Box<VersionedMultiLocation> = Box::new(from_location);
-
-		// Prepare parameter beneficiary.
+		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] =
 			T::AccountId::encode(&to).try_into().map_err(|_| Error::<T>::EncodingError)?;
-		let to_location = VersionedMultiLocation::from(X2(
-			Parachain(ParachainId::get().into()),
-			AccountId32 { network: Any, id: to_32 },
-		));
-		let beneficiary: Box<VersionedMultiLocation> = Box::new(to_location);
+
+		let dest = Box::new(VersionedMultiLocation::from(X1(Parachain(ParachainId::get().into()))));
+		let beneficiary =
+			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {
