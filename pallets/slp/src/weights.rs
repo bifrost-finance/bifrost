@@ -40,6 +40,7 @@ pub trait WeightInfo {
 	fn liquidize() -> Weight;
 	fn chill() -> Weight;
 	fn transfer_back() -> Weight;
+	fn transfer_to() -> Weight;
 	fn increase_token_pool() -> Weight;
 	fn decrease_token_pool() -> Weight;
 	fn update_ongoing_time_unit() -> Weight;
@@ -110,6 +111,10 @@ impl WeightInfo for () {
 	}
 
 	fn transfer_back() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn transfer_to() -> Weight {
 		(50_000_000 as Weight)
 	}
 

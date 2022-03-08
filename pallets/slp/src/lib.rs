@@ -192,6 +192,12 @@ pub mod pallet {
 			to: AccountIdOf<T>,
 			amount: BalanceOf<T>,
 		},
+		TransferTo {
+			currency_id: CurrencyId,
+			from: AccountIdOf<T>,
+			to: MultiLocation,
+			amount: BalanceOf<T>,
+		},
 		DelegatorAdded {
 			currency_id: CurrencyId,
 			index: u16,
@@ -636,6 +642,27 @@ pub mod pallet {
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferBack { currency_id, from, to, amount });
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::transfer_to())]
+		pub fn transfer_to(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			from: AccountIdOf<T>,
+			to: MultiLocation,
+			amount: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.transfer_to(from.clone(), to.clone(), amount)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TransferTo { currency_id, from, to, amount });
 
 			Ok(())
 		}
