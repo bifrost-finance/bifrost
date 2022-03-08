@@ -42,7 +42,7 @@ use crate::{
 	agents::{KusamaCall, StakingCall, UtilityCall, XcmCall},
 	pallet::Error,
 	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
-	traits::{DelegatorManager, StakingAgent, XcmBuilder},
+	traits::{DelegatorManager, StakingAgent, StakingFeeManager, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
 	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums, TimeUnit,
 	ValidatorManager, Validators, ValidatorsByDelegator, XcmDestWeightAndFee,
@@ -533,6 +533,45 @@ where
 				}
 			}
 		});
+
+		Ok(())
+	}
+}
+
+/// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
+/// or deposit fee reserves for the destination chain nominator accounts.
+impl<T, AccountConverter, ParachainId, XcmSender> StakingFeeManager<MultiLocation, BalanceOf<T>>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender>
+where
+	T: Config,
+	AccountConverter: Convert<u16, MultiLocation>,
+	ParachainId: Get<ParaId>,
+	XcmSender: SendXcm,
+{
+	/// Charge hosting fee.
+	fn charge_hosting_fee(
+		&self,
+		amount: BalanceOf<T>,
+		from: MultiLocation,
+		to: MultiLocation,
+	) -> DispatchResult {
+		// No need to implement this method for Kusama. The hosting fee deduction will be calculated
+		// in the backend service.alloc
+		Ok(())
+	}
+
+	/// Deposit some amount as fee to nominator accounts.
+	fn supplement_fee_reserve(
+		&self,
+		amount: BalanceOf<T>,
+		from: MultiLocation,
+		to: MultiLocation,
+	) -> DispatchResult {
+		// Ensure amount is greater than zero.
+		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
+
+		let source_account = Self::multilocation_to_account(&from)?;
+		self.transfer_to(source_account, to, amount)?;
 
 		Ok(())
 	}

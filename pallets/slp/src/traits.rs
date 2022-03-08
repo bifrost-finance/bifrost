@@ -70,20 +70,16 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId> {
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
 /// or deposit fee reserves for the destination chain nominator accounts.
 pub trait StakingFeeManager<AccountId, Balance> {
-	/// Charge hosting fee from an account in Bifrost chain.
-	fn charge_hosting_fee(
-		&self,
-		amount: Balance,
-		from: &AccountId,
-		to: &AccountId,
-	) -> DispatchResult;
+	/// Charge hosting fee.
+	fn charge_hosting_fee(&self, amount: Balance, from: AccountId, to: AccountId)
+		-> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
 	fn supplement_fee_reserve(
 		&self,
 		amount: Balance,
-		from: &AccountId,
-		to: &AccountId,
+		from: AccountId,
+		to: AccountId,
 	) -> DispatchResult;
 }
 
@@ -103,17 +99,6 @@ pub trait ValidatorManager<ValidatorId> {
 
 	/// Remove an existing serving validator for a particular currency.
 	fn remove_validator(&self, who: &ValidatorId) -> DispatchResult;
-}
-
-/// Abstraction over a user refund manager to refund user unlocking balance without waiting for the
-/// maximum amount of time. It it for being called by other pallets such as VtokenMinting.
-pub trait RefundManager<AccountId, CurrencyId, Balance> {
-	/// Refund user unlocking balance without waiting for the maximum amount of time.
-	fn refund_user_unbond(
-		currency_id: CurrencyId,
-		who: &AccountId,
-		amount: Balance,
-	) -> DispatchResult;
 }
 
 /// Helper to build xcm message

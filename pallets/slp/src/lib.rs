@@ -22,7 +22,7 @@ pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
 use frame_support::{dispatch::result::Result, pallet_prelude::*, weights::Weight};
 use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
-use node_primitives::CurrencyId;
+use node_primitives::{CurrencyId, CurrencyIdExt};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use primitives::{Delays, Ledger, TimeUnit};
 use sp_arithmetic::traits::Zero;
@@ -33,7 +33,11 @@ use xcm::latest::*;
 
 use crate::{
 	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
-	traits::{DelegatorManager, StakingAgent, ValidatorManager, VtokenMintingOperator},
+	traits::{
+		DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager, VtokenMintingOperator,
+	},
+	Junction::AccountId32,
+	Junctions::X1,
 };
 
 mod agents;
@@ -55,6 +59,7 @@ type StakingAgentBoxType<T> =
 type DelegatorManagerBoxType<T> =
 	Box<dyn DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>>;
 type ValidatorManagerBoxType = Box<dyn ValidatorManager<MultiLocation>>;
+type StakingFeeManagerBoxType<T> = Box<dyn StakingFeeManager<MultiLocation, BalanceOf<T>>>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -216,6 +221,12 @@ pub mod pallet {
 		PoolTokenDecreased {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
+		},
+		FeeSupplemented {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+			from: MultiLocation,
+			to: MultiLocation,
 		},
 	}
 
@@ -756,12 +767,36 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
+			let (source_location, reserved_fee) =
+				FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
 
 			// If currency is BNC, transfer directly.
-
-			// Otherwise, call supplement_fee_reserve of StakingFeeManager trait
+			// Otherwise, call supplement_fee_reserve of StakingFeeManager trait.
+			if currency_id.is_native() {
+				let source_account = Self::native_multilocation_to_account(&source_location)?;
+				let dest_account = Self::native_multilocation_to_account(&dest)?;
+				T::MultiCurrency::transfer(
+					currency_id,
+					&source_account,
+					&dest_account,
+					reserved_fee,
+				);
+			} else {
+				let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
+				fee_manager_agent.supplement_fee_reserve(
+					reserved_fee,
+					source_location.clone(),
+					dest.clone(),
+				)?;
+			}
 
 			// Deposit event.
+			Pallet::<T>::deposit_event(Event::FeeSupplemented {
+				currency_id,
+				amount: reserved_fee,
+				from: source_location,
+				to: dest,
+			});
 
 			Ok(())
 		}
@@ -940,6 +975,25 @@ pub mod pallet {
 			cond1 & cond2
 		}
 
+		/// Convert native multiLocation to account.
+		fn native_multilocation_to_account(
+			who: &MultiLocation,
+		) -> Result<AccountIdOf<T>, Error<T>> {
+			// Get the delegator account id in Kusama network
+			let account_32 = match who {
+				MultiLocation {
+					parents: 0,
+					interior: X1(AccountId32 { network: NetworkId, id: account_id }),
+				} => account_id,
+				_ => Err(Error::<T>::AccountNotExist)?,
+			};
+
+			let account = T::AccountId::decode(&mut &account_32[..])
+				.map_err(|_| Error::<T>::DecodingError)?;
+
+			Ok(account)
+		}
+
 		fn get_currency_staking_agent(
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
@@ -967,6 +1021,18 @@ pub mod pallet {
 		fn get_currency_validator_manager(
 			currency_id: CurrencyId,
 		) -> Result<ValidatorManagerBoxType, Error<T>> {
+			match currency_id {
+				KSM =>
+					Ok(Box::new(
+						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
+					)),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}
+		}
+
+		fn get_currency_staking_fee_manager(
+			currency_id: CurrencyId,
+		) -> Result<StakingFeeManagerBoxType<T>, Error<T>> {
 			match currency_id {
 				KSM =>
 					Ok(Box::new(
