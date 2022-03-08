@@ -780,7 +780,7 @@ pub mod pallet {
 					&source_account,
 					&dest_account,
 					reserved_fee,
-				);
+				)?;
 			} else {
 				let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
 				fee_manager_agent.supplement_fee_reserve(
@@ -983,7 +983,7 @@ pub mod pallet {
 			let account_32 = match who {
 				MultiLocation {
 					parents: 0,
-					interior: X1(AccountId32 { network: NetworkId, id: account_id }),
+					interior: X1(AccountId32 { network: _network_id, id: account_id }),
 				} => account_id,
 				_ => Err(Error::<T>::AccountNotExist)?,
 			};

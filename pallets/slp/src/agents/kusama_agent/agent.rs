@@ -39,7 +39,7 @@ use xcm::{
 };
 
 use crate::{
-	agents::{KusamaCall, StakingCall, UtilityCall, XcmCall},
+	agents::{KusamaCall, RewardDestination, StakingCall, UtilityCall, XcmCall},
 	pallet::Error,
 	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
 	traits::{DelegatorManager, StakingAgent, StakingFeeManager, XcmBuilder},
@@ -113,7 +113,7 @@ where
 		let call = KusamaCall::Staking(StakingCall::Bond(
 			delegator_account.clone(),
 			amount,
-			delegator_account,
+			RewardDestination::<AccountIdOf<T>>::Staked,
 		));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
@@ -205,7 +205,7 @@ where
 		// Check if the delegator unlocking amount is greater than or equal to the rebond amount.
 		let unlock_chunk_list = substrate_ledger.unlocking;
 		let mut total_unlocking: BalanceOf<T> = Zero::zero();
-		for UnlockChunk { value, unlock_time } in unlock_chunk_list.iter() {
+		for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
 			total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
 		}
 		ensure!(total_unlocking >= amount, Error::<T>::RebondExceedUnlockingAmount);
@@ -223,7 +223,7 @@ where
 	/// Delegate to some validators. For Kusama, it equals function Nominate.
 	fn delegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		// Check if it is bonded already.
-		let ledger =
+		let _ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if targets vec is empty.
@@ -254,7 +254,7 @@ where
 	/// Remove delegation relationship with some validators.
 	fn undelegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		// Check if it is bonded already.
-		let ledger =
+		let _ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if targets vec is empty.
@@ -498,10 +498,10 @@ where
 		// Change corresponding storage.
 		Validators::<T>::mutate(KSM, |validator_vec| {
 			if let Some(ref mut validator_list) = validator_vec {
-				let rs = validator_list.binary_search_by_key(&multi_hash, |(multi, hash)| *hash);
+				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 				if let Err(index) = rs {
-					validator_list.push((who.clone(), multi_hash));
+					validator_list.insert(index, (who.clone(), multi_hash));
 				}
 			}
 		});
@@ -526,7 +526,7 @@ where
 		// Update corresponding storage.
 		Validators::<T>::mutate(KSM, |validator_vec| {
 			if let Some(ref mut validator_list) = validator_vec {
-				let rs = validator_list.binary_search_by_key(&multi_hash, |(multi, hash)| *hash);
+				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 				if let Ok(index) = rs {
 					validator_list.remove(index);
@@ -551,9 +551,9 @@ where
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,
-		amount: BalanceOf<T>,
-		from: MultiLocation,
-		to: MultiLocation,
+		_amount: BalanceOf<T>,
+		_from: MultiLocation,
+		_to: MultiLocation,
 	) -> DispatchResult {
 		// No need to implement this method for Kusama. The hosting fee deduction will be calculated
 		// in the backend service.alloc
@@ -659,7 +659,7 @@ where
 		let account_32 = match who {
 			MultiLocation {
 				parents: 1,
-				interior: X1(AccountId32 { network: NetworkId, id: account_id }),
+				interior: X1(AccountId32 { network: _network_id, id: account_id }),
 			} => account_id,
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};

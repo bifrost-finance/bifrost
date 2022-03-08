@@ -18,6 +18,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
+use scale_info::TypeInfo;
 use sp_runtime::traits::StaticLookup;
 use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 
@@ -53,7 +54,7 @@ pub enum UtilityCall<KusamaCall> {
 pub enum StakingCall<T: Config> {
 	/// Kusama has the same account Id type as Bifrost.
 	#[codec(index = 0)]
-	Bond(T::AccountId, #[codec(compact)] BalanceOf<T>, T::AccountId),
+	Bond(T::AccountId, #[codec(compact)] BalanceOf<T>, RewardDestination<T::AccountId>),
 	#[codec(index = 1)]
 	BondExtra(#[codec(compact)] BalanceOf<T>),
 	#[codec(index = 2)]
@@ -79,4 +80,19 @@ pub enum XcmCall {
 		Box<VersionedMultiAssets>,
 		u32,
 	),
+}
+
+/// A destination account for payment.
+#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum RewardDestination<AccountId> {
+	/// Pay into the stash account, increasing the amount at stake accordingly.
+	Staked,
+	/// Pay into the stash account, not increasing the amount at stake.
+	Stash,
+	/// Pay into the controller account.
+	Controller,
+	/// Pay into a specified account.
+	Account(AccountId),
+	/// Receive no reward.
+	None,
 }
