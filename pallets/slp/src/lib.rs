@@ -244,6 +244,22 @@ pub mod pallet {
 			from: MultiLocation,
 			to: MultiLocation,
 		},
+		TokenToAddIncreased {
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		},
+		TokenToAddDecreased {
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		},
+		TokenToDeductIncreased {
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		},
+		TokenToDeductDecreased {
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -830,6 +846,86 @@ pub mod pallet {
 				amount: transfer_amount,
 			});
 
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::increase_token_to_add())]
+		/// Increase token_to_add storage by value in VtokenMinting module.
+		pub fn increase_token_to_add(
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the value is valid.
+			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
+
+			T::VtokenMinting::increase_token_to_add(currency_id, value)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TokenToAddIncreased { currency_id, value });
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::decrease_token_to_add())]
+		/// Decrease token_to_add storage by value in VtokenMinting module.
+		pub fn decrease_token_to_add(
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the value is valid.
+			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
+
+			T::VtokenMinting::decrease_token_to_add(currency_id, value)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TokenToAddDecreased { currency_id, value });
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::increase_token_to_deduct())]
+		/// Increase token_to_deduct storage by value in VtokenMinting module.
+		pub fn increase_token_to_deduct(
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the value is valid.
+			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
+
+			T::VtokenMinting::increase_token_to_deduct(currency_id, value)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TokenToDeductIncreased { currency_id, value });
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::decrease_token_to_deduct())]
+		/// Decrease token_to_deduct storage by value in VtokenMinting module.
+		pub fn decrease_token_to_deduct(
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the value is valid.
+			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
+
+			T::VtokenMinting::decrease_token_to_deduct(currency_id, value)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::TokenToDeductDecreased { currency_id, value });
 			Ok(())
 		}
 

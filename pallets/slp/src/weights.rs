@@ -46,6 +46,10 @@ pub trait WeightInfo {
 	fn update_ongoing_time_unit() -> Weight;
 	fn refund_currency_due_unbond() -> Weight;
 	fn move_fund_from_exit_to_entrance_account() -> Weight;
+	fn increase_token_to_add() -> Weight;
+	fn decrease_token_to_add() -> Weight;
+	fn increase_token_to_deduct() -> Weight;
+	fn decrease_token_to_deduct() -> Weight;
 	fn supplement_fee_reserve() -> Weight;
 
 	// Storage setters
@@ -135,6 +139,22 @@ impl WeightInfo for () {
 	}
 
 	fn move_fund_from_exit_to_entrance_account() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn increase_token_to_add() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn decrease_token_to_add() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn increase_token_to_deduct() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn decrease_token_to_deduct() -> Weight {
 		(50_000_000 as Weight)
 	}
 

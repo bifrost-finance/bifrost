@@ -106,7 +106,7 @@ pub trait XcmBuilder<Balance, ChainCallType> {
 	fn construct_xcm_message(call: ChainCallType, extra_fee: Balance, weight: Weight) -> Xcm<()>;
 }
 
-/// The interface to call VtokneMinting module functions.
+/// The interface to call VtokenMinting module functions.
 pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
@@ -141,4 +141,16 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		currency_id: CurrencyId,
 		index: u32,
 	) -> Option<(AccountId, Balance, TimeUnit)>;
+
+	/// Increase token_to_add storage by value in VtokenMinting module.
+	fn increase_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
+
+	/// Decrease token_to_add storage by value in VtokenMinting module.
+	fn decrease_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
+
+	/// Increase token_to_deduct storage by value in VtokenMinting module.
+	fn increase_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
+
+	/// Decrease token_to_deduct storage by value in VtokenMinting module.
+	fn decrease_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
 }
