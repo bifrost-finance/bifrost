@@ -852,6 +852,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::increase_token_to_add())]
 		/// Increase token_to_add storage by value in VtokenMinting module.
 		pub fn increase_token_to_add(
+			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
@@ -872,6 +873,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::decrease_token_to_add())]
 		/// Decrease token_to_add storage by value in VtokenMinting module.
 		pub fn decrease_token_to_add(
+			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
@@ -892,6 +894,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::increase_token_to_deduct())]
 		/// Increase token_to_deduct storage by value in VtokenMinting module.
 		pub fn increase_token_to_deduct(
+			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
@@ -912,6 +915,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::decrease_token_to_deduct())]
 		/// Decrease token_to_deduct storage by value in VtokenMinting module.
 		pub fn decrease_token_to_deduct(
+			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
