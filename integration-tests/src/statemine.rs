@@ -25,7 +25,6 @@ use xcm_emulator::TestExt;
 use crate::{integration_tests::*, kusama_test_net::*};
 #[test]
 fn statemine() {
-	env_logger::init();
 	Statemine::execute_with(|| {
 		use frame_support::traits::Currency;
 		use westmint_runtime::*;
@@ -56,7 +55,7 @@ fn statemine() {
 			origin.clone(),
 			Box::new(MultiLocation::new(1, X1(Parachain(2001))).into()),
 			Box::new(Junction::AccountId32 { id: BOB, network: NetworkId::Any }.into().into()),
-			Box::new((GeneralIndex(0), 100).into()),
+			Box::new((X2(PalletInstance(50), GeneralIndex(0)), 100).into()),
 			0
 		));
 		println!("{:?}", System::events());
