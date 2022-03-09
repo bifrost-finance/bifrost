@@ -34,13 +34,13 @@ use frame_support::{
 		traits::{AccountIdConversion, Saturating, Zero},
 		SaturatedConversion,
 	},
-	PalletId,
+	BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-
+use sp_std::vec::Vec;
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -150,6 +150,7 @@ pub mod pallet {
 		MaxUserUnlockingChunksNotSet,
 		MaxEraUnlockingChunksNotSet,
 		OngoingTimeUnitNotSet,
+		UserUnlockLedgerNotFound,
 	}
 
 	#[pallet::storage]
@@ -380,7 +381,6 @@ pub mod pallet {
 					{
 						if tmp_amount >= unlock_amount {
 							tmp_amount.saturating_sub(unlock_amount);
-							// TokenUnlockLedger::<T>::take(&token_id, &index);
 							if let Some((_, total_locked, time_unit)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
@@ -392,7 +392,7 @@ pub mod pallet {
 								});
 							}
 
-							return true;
+							return false;
 						} else {
 							unlock_amount.saturating_sub(tmp_amount);
 							TokenUnlockLedger::<T>::mutate(&token_id, &index, |value| {
@@ -400,10 +400,10 @@ pub mod pallet {
 									total_locked.saturating_sub(tmp_amount);
 								}
 							});
-							return false;
+							return true;
 						}
 					} else {
-						return false;
+						return true;
 					}
 				});
 
@@ -413,7 +413,10 @@ pub mod pallet {
 						*ledger_list_old = ledger_list;
 					}
 				});
+			} else {
+				return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 			}
+
 			Ok(())
 		}
 
@@ -533,21 +536,45 @@ pub mod pallet {
 }
 
 /// The interface to call VtokneMinting module functions.
-pub trait VtokenMintingOperator<CurrencyId, Balance> {
+pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
 
 	/// Decrease the token amount for the storage "token_pool" in the VtokenMining module.
 	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
 
-	// Update the ongoing era for a CurrencyId.
+	/// Update the ongoing era for a CurrencyId.
 	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult;
 
-	// Get the current era of a CurrencyId.
+	/// Get the current era of a CurrencyId.
 	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit>;
+
+	/// Get the the unlocking records of a certain time unit.
+	fn get_unlock_records(
+		currency_id: CurrencyId,
+		time_unit: TimeUnit,
+	) -> Option<(Balance, Vec<u32>)>;
+
+	/// Revise the currency indexed unlocking record by some amount.
+	fn deduct_unlock_amount(
+		currency_id: CurrencyId,
+		index: u32,
+		deduct_amount: Balance,
+	) -> DispatchResult;
+
+	/// Get currency Entrance and Exit accounts.【entrance_account, exit_account】
+	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId);
+
+	/// Get the token_unlock_ledger storage info to refund to the due era unlocking users.
+	fn get_token_unlock_ledger(
+		currency_id: CurrencyId,
+		index: u32,
+	) -> Option<(AccountId, Balance, TimeUnit)>;
 }
 
-impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>> for Pallet<T> {
+impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, TimeUnit>
+	for Pallet<T>
+{
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
 		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
 			*pool = pool.saturating_add(token_amount);
@@ -577,5 +604,57 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>> for Pallet<T> {
 
 	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit> {
 		Self::ongoing_time_unit(currency_id)
+	}
+
+	fn get_unlock_records(
+		currency_id: CurrencyId,
+		time_unit: TimeUnit,
+	) -> Option<(BalanceOf<T>, Vec<u32>)> {
+		if let Some((balance, list)) = Self::era_unlock_ledger(&time_unit, currency_id) {
+			Some((balance, list.into_inner()))
+		} else {
+			None
+		}
+	}
+
+	fn deduct_unlock_amount(
+		currency_id: CurrencyId,
+		index: u32,
+		deduct_amount: BalanceOf<T>,
+	) -> DispatchResult {
+		if let Some((who, unlock_amount, time_unit)) = Self::token_unlock_ledger(currency_id, index)
+		{
+			ensure!(unlock_amount <= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
+
+			TokenPool::<T>::mutate(currency_id, |pool| pool.saturating_add(deduct_amount));
+
+			EraUnlockLedger::<T>::mutate(&time_unit, &currency_id, |value| {
+				if let Some((total_locked, ledger_list)) = value {
+					total_locked.saturating_sub(unlock_amount);
+					ledger_list.retain(|&x| x != index);
+				}
+			});
+
+			UserUnlockLedger::<T>::mutate(&who, &currency_id, |value| {
+				if let Some((total_locked, ledger_list)) = value {
+					total_locked.saturating_sub(deduct_amount);
+					ledger_list.retain(|&x| x != index);
+				}
+			});
+
+			TokenUnlockLedger::<T>::remove(&currency_id, &index);
+		}
+		Ok(())
+	}
+
+	fn get_entrance_and_exit_accounts() -> (AccountIdOf<T>, AccountIdOf<T>) {
+		(T::EntranceAccount::get().into_account(), T::ExitAccount::get().into_account())
+	}
+
+	fn get_token_unlock_ledger(
+		currency_id: CurrencyId,
+		index: u32,
+	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit)> {
+		Self::token_unlock_ledger(currency_id, index)
 	}
 }
