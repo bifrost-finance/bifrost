@@ -243,8 +243,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_rebond)]
-	pub type TokenToRebond<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, Option<BalanceOf<T>>>;
+	pub type TokenToRebond<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn minter)]
@@ -367,13 +366,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
 
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let token_amount_to_rebond =
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 			if let Some((user_unlock_amount, mut ledger_list)) =
 				Self::user_unlock_ledger(&exchanger, token_id)
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
-				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
 				let mut tmp_amount = token_amount;
 				ledger_list.retain(|index| {
 					if let Some((account, unlock_amount, time_unit)) =
@@ -416,6 +415,25 @@ pub mod pallet {
 			} else {
 				return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 			}
+
+			let token_pool_amount = Self::token_pool(token_id);
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
+				token_pool_amount.into();
+			// Issue the corresponding vtoken to the user's account.
+			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
+			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+			// TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+
+			// Self::deposit_event(Event::Minted { token: token_id, token_amount });
+
+			TokenToRebond::<T>::mutate(&token_id, |value| {
+				if let Some(value_info) = value {
+					*value_info = value_info.saturating_add(token_amount);
+				}
+			});
+			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
+			Self::deposit_event(Event::Rebonded { token: token_id, token_amount });
 
 			Ok(())
 		}
@@ -490,7 +508,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			if !TokenToRebond::<T>::contains_key(token) {
-				TokenToRebond::<T>::insert(token, Some(BalanceOf::<T>::zero()));
+				TokenToRebond::<T>::insert(token, BalanceOf::<T>::zero());
 				Self::deposit_event(Event::SupportRebondTokenAdded { token });
 			}
 
@@ -508,7 +526,7 @@ pub mod pallet {
 				let token_amount_to_rebond =
 					Self::token_to_rebond(token).ok_or(Error::<T>::InvalidRebondToken)?;
 				ensure!(
-					token_amount_to_rebond == Some(BalanceOf::<T>::zero()),
+					token_amount_to_rebond == BalanceOf::<T>::zero(),
 					Error::<T>::TokenToRebondNotZero
 				);
 
