@@ -16,6 +16,7 @@ scale-info = { version = "1.0.0", default-features = false, features = [
 serde = { version = "1.0.124", optional = true }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
 node-primitives = { path = "../../node/primitives", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false, optional = true }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
@@ -26,11 +27,11 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
-xcm-support = { path = "../../xcm-support", default-features = false }
-xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
-bifrost-runtime-common = { path = "../../runtime/common", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+
 
 [features]
 default = ["std"]
@@ -44,16 +45,16 @@ std = [
     "serde/std",
     "orml-traits/std",
     "orml-tokens/std",
+    "orml-currencies/std",
     "node-primitives/std",
     "sp-core/std",
     "sp-io/std",
     "sp-std/std",
     "xcm/std",
-    "xcm-builder/std",
     "pallet-xcm/std",
-    "xcm-support/std",
-    "bifrost-runtime-common/std",
     "cumulus-primitives-core/std",
+    "pallet-balances/std",
+    "pallet-utility/std",
 ]
 
 runtime-benchmarks = [
@@ -61,5 +62,4 @@ runtime-benchmarks = [
     "frame-support/runtime-benchmarks",
     "frame-system/runtime-benchmarks",
     "pallet-xcm/runtime-benchmarks",
-    "xcm-builder/runtime-benchmarks",
 ]
