@@ -62,19 +62,6 @@ pub enum TimeUnit {
 	SlashingSpan(u32),
 }
 
-/// Delays for different chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct Delays {
-	/// Payout delays once the staking calculation period has finished.
-	payout_delay: TimeUnit,
-	/// Time delays to take effect after a delegator submit its supporting validators.
-	delegate_delay: TimeUnit,
-	/// Time delays to take effect if a delegator change its supporting validators.
-	redelegate_delay: TimeUnit,
-	/// Time delays to get its money back if a delegator unbonds.
-	unbond_delay: TimeUnit,
-}
-
 /// Different minimum and maximum requirements for different chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct MinimumsMaximums<Balance> {

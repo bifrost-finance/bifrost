@@ -20,9 +20,9 @@ use core::marker::PhantomData;
 
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get, weights::Weight};
+use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use orml_traits::XcmTransfer;
-use sp_core::{Blake2Hasher, Hasher};
+use sp_core::{Blake2Hasher, Hasher, H256};
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
@@ -44,8 +44,8 @@ use crate::{
 	primitives::{Ledger, SubstrateLedger, UnlockChunk, XcmOperation, KSM},
 	traits::{DelegatorManager, StakingAgent, StakingFeeManager, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums, TimeUnit,
-	ValidatorManager, Validators, ValidatorsByDelegator, XcmDestWeightAndFee,
+	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, MinimumsAndMaximums, Pallet,
+	TimeUnit, ValidatorManager, Validators, ValidatorsByDelegator, XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
@@ -234,9 +234,13 @@ where
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 		ensure!(vec_len <= mins_maxs.validators_back_maximum, Error::<T>::GreaterThanMaximum);
 
+		// Sort validators and remove duplicates
+		let sorted_dedup_list =
+			Pallet::<T>::sort_validators_and_remove_duplicates(KSM, &who, &targets)?;
+
 		// Convert vec of multilocations into accounts.
 		let mut accounts = vec![];
-		for multilocation_account in targets.iter() {
+		for (multilocation_account, _hash) in sorted_dedup_list.clone().iter() {
 			let account = Self::multilocation_to_account(multilocation_account)?;
 			accounts.push(account);
 		}
@@ -248,10 +252,14 @@ where
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
 
+		// Update ValidatorsByDelegator storage
+		ValidatorsByDelegator::<T>::insert(KSM, who.clone(), sorted_dedup_list);
+
 		Ok(())
 	}
 
 	/// Remove delegation relationship with some validators.
+	#[transactional]
 	fn undelegate(&self, who: MultiLocation, targets: Vec<MultiLocation>) -> DispatchResult {
 		// Check if it is bonded already.
 		let _ledger =
@@ -266,10 +274,10 @@ where
 			.ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		// Remove targets from the original set to make a new set.
-		let mut new_set: Vec<MultiLocation> = vec![];
-		for acc in original_set.iter() {
+		let mut new_set: Vec<(MultiLocation, H256)> = vec![];
+		for (acc, acc_hash) in original_set.iter() {
 			if !targets.contains(acc) {
-				new_set.push(acc.clone())
+				new_set.push((acc.clone(), acc_hash.clone()))
 			}
 		}
 
@@ -278,7 +286,7 @@ where
 
 		// Convert new targets into account vec.
 		let mut accounts = vec![];
-		for multilocation_account in new_set.iter() {
+		for (multilocation_account, _hash) in new_set.iter() {
 			let account = Self::multilocation_to_account(multilocation_account)?;
 			accounts.push(account);
 		}
@@ -289,6 +297,9 @@ where
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
+
+		// Update ValidatorsByDelegator storage
+		ValidatorsByDelegator::<T>::insert(KSM, who.clone(), new_set.clone());
 
 		Ok(())
 	}
@@ -422,7 +433,8 @@ where
 		// Ensure amount is greater than zero.
 		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
-		let (weight, _fee) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo);
+		let (weight, _fee) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		T::XcmTransfer::transfer(from, KSM, amount, to, weight)
 	}
@@ -439,6 +451,7 @@ where
 	XcmSender: SendXcm,
 {
 	/// Add a new serving delegator for a particular currency.
+	#[transactional]
 	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
 		// Check if the delegator already exists. If yes, return error.
 		DelegatorsIndex2Multilocation::<T>::get(KSM, index).ok_or(Error::<T>::AlreadyExist)?;
@@ -450,6 +463,7 @@ where
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
+	#[transactional]
 	fn remove_delegator(&self, who: &MultiLocation) -> DispatchResult {
 		// Check if the delegator exists.
 		let index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
@@ -512,7 +526,7 @@ where
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
 		for validator_list in ValidatorsByDelegator::<T>::iter_prefix_values(KSM) {
-			if validator_list.contains(who) {
+			if validator_list.contains(&(who.clone(), multi_hash)) {
 				Err(Error::<T>::ValidatorStillInUse)?;
 			}
 		}
@@ -630,7 +644,8 @@ where
 		let call_as_subaccount =
 			KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
 
-		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation);
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
 		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;

@@ -20,14 +20,14 @@
 
 pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
-use frame_support::{dispatch::result::Result, pallet_prelude::*, weights::Weight};
-use frame_system::{ensure_root, ensure_signed, pallet_prelude::OriginFor};
+use frame_support::{dispatch::result::Result, pallet_prelude::*, transactional, weights::Weight};
+use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{CurrencyId, CurrencyIdExt};
 use orml_traits::{MultiCurrency, XcmTransfer};
-pub use primitives::{Delays, Ledger, TimeUnit};
+pub use primitives::{Ledger, TimeUnit};
 use sp_arithmetic::traits::Zero;
-use sp_core::H256;
-use sp_runtime::traits::{CheckedSub, Convert, UniqueSaturatedFrom};
+use sp_core::{Blake2Hasher, Hasher, H256};
+use sp_runtime::traits::{CheckedSub, Convert};
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
@@ -133,6 +133,9 @@ pub mod pallet {
 		TimeUnitNotExist,
 		FeeSourceNotExist,
 		BalanceLow,
+		WeightAndFeeNotExists,
+		OperateOriginNotExists,
+		MinimumsAndMaximumsNotExist,
 	}
 
 	#[pallet::event]
@@ -260,6 +263,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		},
+		ValidatorsByDelegatorSet {
+			currency_id: CurrencyId,
+			validators_list: Vec<(MultiLocation, H256)>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -275,15 +282,8 @@ pub mod pallet {
 		Blake2_128Concat,
 		XcmOperation,
 		(Weight, BalanceOf<T>),
-		ValueQuery,
-		DefaultXcmDestWeightAndFee<T>,
+		OptionQuery,
 	>;
-
-	// Default Xcm Dest Weight And Fee if not found.
-	#[pallet::type_value]
-	pub fn DefaultXcmDestWeightAndFee<T: Config>() -> (Weight, BalanceOf<T>) {
-		(5_000_000_000 as Weight, BalanceOf::<T>::unique_saturated_from(1_000_000_000_000u128))
-	}
 
 	/// One operate origin(can be a multisig account) for a currency. An operating origins are
 	/// normal account in Bifrost chain.
@@ -291,10 +291,6 @@ pub mod pallet {
 	#[pallet::getter(fn get_operate_origin)]
 	pub type OperateOrigins<T> = StorageMap<_, Blake2_128Concat, CurrencyId, AccountIdOf<T>>;
 
-	/// Currency delays for payouts, delegate, unbond and so on.
-	#[pallet::storage]
-	#[pallet::getter(fn get_currency_delays)]
-	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
 	/// Origins and Amounts for the staking operating account fee supplement. An operating account
 	/// is identified in MultiLocation format.
 	#[pallet::storage]
@@ -349,7 +345,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Vec<MultiLocation>,
+		Vec<(MultiLocation, H256)>,
 		OptionQuery,
 	>;
 
@@ -743,6 +739,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::refund_currency_due_unbond())]
 		pub fn refund_currency_due_unbond(
 			origin: OriginFor<T>,
@@ -988,10 +985,18 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			operation: XcmOperation,
-			weight: Weight,
-			fee: BalanceOf<T>,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
 		) -> DispatchResult {
-			unimplemented!()
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
+			// storage to the new value if exists, or insert a new record if not exists before.
+			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, operation, |wt_n_f| {
+				*wt_n_f = weight_and_fee;
+			});
+
+			Ok(())
 		}
 
 		/// Update storage OperateOrigins<T>.
@@ -999,19 +1004,16 @@ pub mod pallet {
 		pub fn set_operate_origin(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: AccountIdOf<T>,
+			who: Option<AccountIdOf<T>>,
 		) -> DispatchResult {
-			unimplemented!()
-		}
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
-		/// Update storage CurrencyDelays<T>.
-		#[pallet::weight(T::WeightInfo::set_currency_delays())]
-		pub fn set_currency_delays(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			delays: Delays,
-		) -> DispatchResult {
-			unimplemented!()
+			OperateOrigins::<T>::mutate_exists(currency_id, |operator| {
+				*operator = who;
+			});
+
+			Ok(())
 		}
 
 		/// Update storage FeeSources<T>.
@@ -1019,10 +1021,16 @@ pub mod pallet {
 		pub fn set_fee_source(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
-			fee: BalanceOf<T>,
+			who_and_fee: Option<(MultiLocation, BalanceOf<T>)>,
 		) -> DispatchResult {
-			unimplemented!()
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			FeeSources::<T>::mutate_exists(currency_id, |w_n_f| {
+				*w_n_f = who_and_fee;
+			});
+
+			Ok(())
 		}
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
@@ -1114,8 +1122,35 @@ pub mod pallet {
 			who: MultiLocation,
 			validators: Vec<MultiLocation>,
 		) -> DispatchResult {
-			// need to be sorted and remove duplicates
-			unimplemented!()
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			// Check the length of validators
+			let minimums_and_maximums = MinimumsAndMaximums::<T>::get(currency_id)
+				.ok_or(Error::<T>::MinimumsAndMaximumsNotExist)?;
+			ensure!(
+				validators.len() as u32 <= minimums_and_maximums.validators_back_maximum,
+				Error::<T>::GreaterThanMaximum
+			);
+
+			// check delegator
+			// Check if it is bonded already.
+			let _ledger = DelegatorLedgers::<T>::get(KSM, who.clone())
+				.ok_or(Error::<T>::DelegatorNotBonded)?;
+
+			let validators_list =
+				Self::sort_validators_and_remove_duplicates(currency_id, &who, &validators)?;
+
+			// Update ValidatorsByDelegator storage
+			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
+				currency_id,
+				validators_list,
+			});
+
+			Ok(())
 		}
 
 		/// Update storage DelegatorLedgers<T>.
@@ -1146,10 +1181,14 @@ pub mod pallet {
 			let operator = ensure_signed(origin.clone()).ok();
 			let privileged = OperateOrigins::<T>::get(currency_id);
 
+			// It is from the privileged group.
+			let cond0 = operator.is_some();
 			let cond1 = operator == privileged;
-			let cond2 = ensure_root(origin.clone()).is_ok();
 
-			cond1 & cond2
+			// It is from ControlOrigin.
+			let cond2 = T::ControlOrigin::ensure_origin(origin).is_ok();
+
+			(cond0 & cond1) || cond2
 		}
 
 		/// Convert native multiLocation to account.
@@ -1217,6 +1256,33 @@ pub mod pallet {
 					)),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
+		}
+
+		pub fn sort_validators_and_remove_duplicates(
+			currency_id: CurrencyId,
+			who: &MultiLocation,
+			validators: &Vec<MultiLocation>,
+		) -> Result<Vec<(MultiLocation, H256)>, Error<T>> {
+			let validators_set =
+				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
+			let mut validators_list: Vec<(MultiLocation, H256)> = vec![];
+			for validator in validators.iter() {
+				// Check if the validator is in the validator whitelist
+				let multi_hash = validator.using_encoded(Blake2Hasher::hash);
+				ensure!(
+					validators_set.contains(&(validator.clone(), multi_hash)),
+					Error::<T>::ValidatorNotExist
+				);
+
+				// sort the validators and remove duplicates
+				let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
+
+				if let Err(index) = rs {
+					validators_list.insert(index, (who.clone(), multi_hash));
+				}
+			}
+
+			Ok(validators_list)
 		}
 	}
 }

@@ -56,7 +56,6 @@ pub trait WeightInfo {
 	fn set_xcm_dest_weight_and_fee() -> Weight;
 	fn set_operate_origin() -> Weight;
 	fn set_current_time_unit() -> Weight;
-	fn set_currency_delays() -> Weight;
 	fn set_fee_source() -> Weight;
 	fn add_delegator() -> Weight;
 	fn remove_delegator() -> Weight;
@@ -172,10 +171,6 @@ impl WeightInfo for () {
 	}
 
 	fn set_current_time_unit() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn set_currency_delays() -> Weight {
 		(50_000_000 as Weight)
 	}
 
