@@ -78,8 +78,8 @@ use bifrost_runtime_common::{
 	constants::time::*,
 	dollar, micro, milli, millicent, prod_or_test,
 	r#impl::{
-		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets,
+		AllowRelayedPaidExecutionFromParent, BifrostAccountIdToMultiLocation, BifrostAssetMatcher,
+		BifrostCurrencyIdConvert, BifrostFilteredAssets, RelayChainAccountId32Aliases,
 	},
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
@@ -993,6 +993,7 @@ pub type LocationToAccountId = (
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<RelayNetwork, AccountId>,
+	RelayChainAccountId32Aliases<RelayNetwork, AccountId>,
 );
 
 /// Means for transacting assets on this chain.
@@ -1051,6 +1052,7 @@ pub type Barrier = (
 	AllowTopLevelPaidExecutionFrom<Everything>,
 	AllowKnownQueryResponses<PolkadotXcm>,
 	AllowSubscriptionsFrom<Everything>,
+	AllowRelayedPaidExecutionFromParent<RelayNetwork>,
 );
 
 pub type BifrostAssetTransactor = MultiCurrencyAdapter<
