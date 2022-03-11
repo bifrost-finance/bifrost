@@ -16,14 +16,82 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use frame_support::assert_ok;
+use frame_support::{assert_ok, traits::Currency};
 use xcm::latest::prelude::*;
 use xcm_emulator::TestExt;
 
 use crate::{integration_tests::*, kusama_test_net::*};
 
+pub type ParaBalances = pallet_balances::Pallet<Runtime>;
+
+pub type ParaTokens = orml_tokens::Pallet<Runtime>;
+
+pub type RelayChainPalletXcm = pallet_xcm::Pallet<kusama_runtime::Runtime>;
+
+use crate::{integration_tests::*, kusama_test_net::*};
+
 #[test]
-fn relaychain_transact_works() {
+fn transact_from_relaychain_works() {
+	Bifrost::execute_with(|| {
+		let _ = ParaBalances::deposit_creating(
+			&AccountId::from(ALICE),
+			1000 * dollar(NativeCurrencyId::get()),
+		);
+	});
+
+	let alice = Junctions::X1(Junction::AccountId32 { network: NetworkId::Kusama, id: ALICE });
+	let call = Call::Balances(pallet_balances::Call::<Runtime>::transfer {
+		dest: MultiAddress::Id(AccountId::from(BOB)),
+		value: 500 * dollar(NativeCurrencyId::get()),
+	});
+	let assets: MultiAsset = (Parent, dollar(RelayCurrencyId::get())).into();
+
+	KusamaNet::execute_with(|| {
+		let xcm = vec![
+			WithdrawAsset(assets.clone().into()),
+			BuyExecution {
+				fees: assets,
+				weight_limit: Limited(dollar(RelayCurrencyId::get()) as u64),
+			},
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: (dollar(RelayCurrencyId::get()) as u64) / 10 as u64,
+				call: call.encode().into(),
+			},
+			DepositAsset {
+				assets: All.into(),
+				max_assets: 1,
+				beneficiary: { (1, alice.clone()).into() },
+			},
+		];
+		assert_ok!(RelayChainPalletXcm::send_xcm(alice, Parachain(2001).into(), Xcm(xcm),));
+	});
+
+	Bifrost::execute_with(|| {
+		use Event;
+		use System;
+		assert_eq!(
+			9991920000000,
+			ParaTokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE))
+		);
+		assert_eq!(
+			500 * dollar(NativeCurrencyId::get()),
+			ParaBalances::free_balance(&AccountId::from(ALICE))
+		);
+		assert_eq!(
+			500 * dollar(NativeCurrencyId::get()),
+			ParaBalances::free_balance(&AccountId::from(BOB))
+		);
+		System::assert_has_event(Event::Balances(pallet_balances::Event::Transfer {
+			from: AccountId::from(ALICE),
+			to: AccountId::from(BOB),
+			amount: 500 * dollar(NativeCurrencyId::get()),
+		}));
+	});
+}
+
+#[test]
+fn transact_to_relaychain_works() {
 	let remark = kusama_runtime::Call::System(
 		frame_system::Call::<kusama_runtime::Runtime>::remark_with_event {
 			remark: "Hello from Bifrost!".as_bytes().to_vec(),

@@ -35,7 +35,6 @@ pub const BOB: [u8; 32] = [1u8; 32];
 
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 pub use bifrost_imports::*;
-use bifrost_kusama_runtime::{ExistentialDeposit, NativeCurrencyId};
 
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod bifrost_imports {
