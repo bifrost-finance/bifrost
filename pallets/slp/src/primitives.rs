@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TokenSymbol};
 use scale_info::TypeInfo;
+use sp_std::vec::Vec;
 
 /// Simplify the CurrencyId.
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);

@@ -17,6 +17,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Ensure we're `no_std` when compiling for Wasm.
+
+#![cfg(test)]
+
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
@@ -37,6 +40,7 @@ use sp_runtime::{
 	traits::{AccountIdConversion, Convert, IdentityLookup, TrailingZeroInput},
 	AccountId32,
 };
+use sp_std::{boxed::Box, vec::Vec};
 use xcm::latest::prelude::*;
 
 use crate as bifrost_slp;

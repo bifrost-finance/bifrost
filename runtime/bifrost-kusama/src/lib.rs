@@ -83,6 +83,7 @@ use bifrost_runtime_common::{
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
+use bifrost_slp::{traits::VtokenMintingOperator, TimeUnit};
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -1432,6 +1433,13 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 	)
 }
 
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<u16, MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert(sub_account_index: u16) -> MultiLocation {
+		create_x2_multilocation(sub_account_index)
+	}
+}
+
 parameter_types! {
 	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
 	pub const RemoveKeysLimit: u32 = 500;
@@ -1583,6 +1591,80 @@ impl bifrost_call_switchgear::Config for Runtime {
 	type Event = Event;
 	type UpdateOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
+}
+
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+	type VtokenMinting = MockVtokenMintingOperator;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = SelfParaChainId;
+	type XcmSender = XcmRouter;
+	type XcmTransfer = XTokens;
+}
+
+// To be replaced by the real VtokenMinting moudle.
+pub struct MockVtokenMintingOperator;
+impl VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> for MockVtokenMintingOperator {
+	fn increase_token_pool(_currency_id: CurrencyId, _token_amount: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn decrease_token_pool(_currency_id: CurrencyId, _token_amount: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn update_ongoing_time_unit(_currency_id: CurrencyId, _time_unit: TimeUnit) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_ongoing_time_unit(_currency_id: CurrencyId) -> Option<TimeUnit> {
+		Some(TimeUnit::Era(2))
+	}
+
+	fn get_unlock_records(
+		_currency_id: CurrencyId,
+		_time_unit: TimeUnit,
+	) -> Option<(Balance, Vec<u32>)> {
+		None
+	}
+
+	fn deduct_unlock_amount(
+		_currency_id: CurrencyId,
+		_index: u32,
+		_deduct_amount: Balance,
+	) -> DispatchResult {
+		Ok(())
+	}
+
+	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId) {
+		(TreasuryPalletId::get().into_account(), TreasuryPalletId::get().into_account())
+	}
+
+	fn get_token_unlock_ledger(
+		_currency_id: CurrencyId,
+		_index: u32,
+	) -> Option<(AccountId, Balance, TimeUnit)> {
+		None
+	}
+
+	fn increase_token_to_add(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn decrease_token_to_add(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn increase_token_to_deduct(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn decrease_token_to_deduct(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
+		Ok(())
+	}
 }
 
 // Bifrost modules end
@@ -1781,6 +1863,7 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 114,
 	}
 }
 

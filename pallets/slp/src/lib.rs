@@ -25,9 +25,11 @@ use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{CurrencyId, CurrencyIdExt};
 use orml_traits::{MultiCurrency, XcmTransfer};
 pub use primitives::{Ledger, TimeUnit};
+use sha3::{Digest, Keccak256};
 use sp_arithmetic::traits::Zero;
-use sp_core::{Blake2Hasher, Hasher, H256};
+use sp_core::H256;
 use sp_runtime::traits::{CheckedSub, Convert};
+use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
@@ -1359,7 +1361,7 @@ pub mod pallet {
 			let mut validators_list: Vec<(MultiLocation, H256)> = vec![];
 			for validator in validators.iter() {
 				// Check if the validator is in the validator whitelist
-				let multi_hash = validator.using_encoded(Blake2Hasher::hash);
+				let multi_hash = Self::get_hash(&validator);
 				ensure!(
 					validators_set.contains(&(validator.clone(), multi_hash)),
 					Error::<T>::ValidatorNotExist
@@ -1374,6 +1376,11 @@ pub mod pallet {
 			}
 
 			Ok(validators_list)
+		}
+
+		pub fn get_hash(who: &MultiLocation) -> H256 {
+			let encoded = who.encode();
+			H256::from_slice(Keccak256::digest(&encoded).as_slice())
 		}
 	}
 }

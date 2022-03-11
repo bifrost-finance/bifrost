@@ -17,6 +17,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use sp_runtime::DispatchResult;
+use sp_std::vec::Vec;
 
 use crate::{Weight, Xcm};
 

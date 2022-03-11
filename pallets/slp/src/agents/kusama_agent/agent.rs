@@ -22,7 +22,7 @@ use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use orml_traits::XcmTransfer;
-use sp_core::{Blake2Hasher, Hasher, H256};
+use sp_core::H256;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
 	DispatchResult,
@@ -521,7 +521,7 @@ where
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(KSM).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-		let multi_hash = who.using_encoded(Blake2Hasher::hash);
+		let multi_hash = Pallet::<T>::get_hash(&who);
 		ensure!(!validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::AlreadyExist);
 
 		// Change corresponding storage.
@@ -543,7 +543,7 @@ where
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(KSM).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-		let multi_hash = who.using_encoded(Blake2Hasher::hash);
+		let multi_hash = Pallet::<T>::get_hash(&who);
 		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.

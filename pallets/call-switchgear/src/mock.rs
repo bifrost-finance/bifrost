@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! Mocks for the transaction pause module.
-
 #![cfg(test)]
 
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types};

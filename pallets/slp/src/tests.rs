@@ -16,11 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#![cfg(test)]
+
 use frame_support::assert_ok;
+use mock::{Event, *};
 use orml_traits::MultiCurrency;
 
 use super::*;
-use crate::{mock::*, KSM};
+use crate::KSM;
 
 #[test]
 fn set_xcm_dest_weight_and_fee_should_work() {
@@ -50,4 +53,24 @@ fn set_xcm_dest_weight_and_fee_should_work() {
 
 		assert_eq!(XcmDestWeightAndFee::<Runtime>::get(KSM, XcmOperation::Bond), None);
 	});
+}
+
+#[test]
+fn construct_xcm_and_send_as_subaccount_should_work() {
+	let para_chain_account: AccountId =
+		hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
+			.into();
+
+	let sub_account_id = SubAccountIndexMultiLocationConvertor::derivative_account_id(
+		para_chain_account.clone(),
+		0u16,
+	);
+
+	// parachain_account 2001: 5Ec4AhPV91i9yNuiWuNunPf6AQCYDhFTTA4G5QCbtqYApH9E
+	// hex: 70617261d1070000000000000000000000000000000000000000000000000000
+	println!("para_string: {:?}", para_chain_account);
+	// sub_account index:0(sub_account_id.to_string()))
+	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
+	// hex: 5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28
+	println!("sub_string: {:?}", sub_account_id);
 }

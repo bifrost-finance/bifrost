@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use scale_info::TypeInfo;
 use sp_runtime::traits::StaticLookup;
+use sp_std::{boxed::Box, vec::Vec};
 use xcm::{VersionedMultiAssets, VersionedMultiLocation};
 
 use crate::{BalanceOf, Config};
