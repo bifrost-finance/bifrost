@@ -32,6 +32,7 @@ pub trait WeightInfo {
 	fn bond() -> Weight;
 	fn bond_extra() -> Weight;
 	fn unbond() -> Weight;
+	fn unbond_all() -> Weight;
 	fn rebond() -> Weight;
 	fn delegate() -> Weight;
 	fn redelegate() -> Weight;
@@ -82,6 +83,10 @@ impl WeightInfo for () {
 	}
 
 	fn unbond() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn unbond_all() -> Weight {
 		(50_000_000 as Weight)
 	}
 

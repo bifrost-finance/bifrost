@@ -31,8 +31,11 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId> {
 	/// Bond extra amount to a delegator.
 	fn bond_extra(&self, who: DelegatorId, amount: Balance) -> DispatchResult;
 
-	/// Decrease bonding amount to a delegator.
+	/// Decrease the bonding amount of a delegator.
 	fn unbond(&self, who: DelegatorId, amount: Balance) -> DispatchResult;
+
+	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
+	fn unbond_all(&self, who: DelegatorId) -> DispatchResult;
 
 	/// Cancel some unbonding amount.
 	fn rebond(&self, who: DelegatorId, amount: Balance) -> DispatchResult;

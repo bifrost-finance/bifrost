@@ -94,7 +94,7 @@ where
 	/// First time bonding some amount to a delegator.
 	fn bond(&self, who: MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
 		// Check if it is bonded already.
-		DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::AlreadyBonded)?;
+		ensure!(DelegatorLedgers::<T>::get(KSM, who.clone()).is_none(), Error::<T>::AlreadyBonded);
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
@@ -119,6 +119,18 @@ where
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Bond, call, who.clone())?;
+
+		// Create a new delegator ledger
+		// The real bonded amount will be updated by services once the xcm transaction succeeds.
+		let ledger = SubstrateLedger::<MultiLocation, BalanceOf<T>> {
+			account: who.clone(),
+			total: Zero::zero(),
+			active: Zero::zero(),
+			unlocking: vec![],
+		};
+		let sub_ledger = Ledger::<MultiLocation, BalanceOf<T>>::Substrate(ledger);
+
+		DelegatorLedgers::<T>::insert(KSM, who.clone(), sub_ledger);
 
 		Ok(())
 	}
@@ -157,17 +169,15 @@ where
 		// Check if it is bonded already.
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let Ledger::Substrate(substrate_ledger) = ledger;
+		let active_staking = substrate_ledger.active;
 
 		// Check if the unbonding amount exceeds minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 		ensure!(amount >= mins_maxs.unbond_minimum, Error::<T>::LowerThanMinimum);
 
-		// Get the delegator ledger
-		let Ledger::Substrate(substrate_ledger) = ledger;
-
-		// Check if the remaining active balance is enough for (unbonding amount + minimum bonded
-		// amount)
-		let active_staking = substrate_ledger.active;
+		// Check if the remaining active balance is enough for (unbonding amount + minimum
+		// bonded amount)
 		let remaining = active_staking.checked_sub(&amount).ok_or(Error::<T>::NotEnoughToUnbond)?;
 		ensure!(remaining >= mins_maxs.delegator_bonded_minimum, Error::<T>::NotEnoughToUnbond);
 
@@ -179,12 +189,22 @@ where
 			Error::<T>::ExceedUnlockingRecords
 		);
 
-		// Construct xcm message.
-		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
+		// Send unbond xcm message
+		Self::do_unbond(&who, amount)?;
 
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Unbond, call, who.clone())?;
+		Ok(())
+	}
+
+	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
+	fn unbond_all(&self, who: MultiLocation) -> DispatchResult {
+		// Get the active amount of a delegator.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let Ledger::Substrate(substrate_ledger) = ledger;
+		let amount = substrate_ledger.active;
+
+		// Send unbond xcm message
+		Self::do_unbond(&who, amount)?;
 
 		Ok(())
 	}
@@ -459,6 +479,7 @@ where
 		// Revise two delegator storages.
 		DelegatorsIndex2Multilocation::<T>::insert(KSM, index, who);
 		DelegatorsMultilocation2Index::<T>::insert(KSM, who, index);
+
 		Ok(())
 	}
 
@@ -479,7 +500,8 @@ where
 
 		// Remove corresponding storage.
 		DelegatorsIndex2Multilocation::<T>::remove(KSM, index);
-		DelegatorsMultilocation2Index::<T>::remove(KSM, who);
+		DelegatorsMultilocation2Index::<T>::remove(KSM, who.clone());
+		DelegatorLedgers::<T>::remove(KSM, who);
 
 		Ok(())
 	}
@@ -672,5 +694,16 @@ where
 			_ => Err(Error::<T>::AccountNotExist)?,
 		};
 		Ok(*account_32)
+	}
+
+	fn do_unbond(who: &MultiLocation, amount: BalanceOf<T>) -> DispatchResult {
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Unbond, call, who.clone())?;
+
+		Ok(())
 	}
 }

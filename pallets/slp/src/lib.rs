@@ -160,6 +160,10 @@ pub mod pallet {
 			delegator_id: MultiLocation,
 			unbond_amount: BalanceOf<T>,
 		},
+		DelegatorUnbondAll {
+			currency_id: CurrencyId,
+			delegator_id: MultiLocation,
+		},
 		DelegatorRebond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
@@ -266,6 +270,24 @@ pub mod pallet {
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
 			validators_list: Vec<(MultiLocation, H256)>,
+		},
+		XcmDestWeightAndFeeSet {
+			currency_id: CurrencyId,
+			operation: XcmOperation,
+			weight_and_fee: Option<(Weight, BalanceOf<T>)>,
+		},
+		OperateOriginSet {
+			currency_id: CurrencyId,
+			operator: Option<AccountIdOf<T>>,
+		},
+		FeeSourceSet {
+			currency_id: CurrencyId,
+			who_and_fee: Option<(MultiLocation, BalanceOf<T>)>,
+		},
+		DelegatorLedgerSet {
+			currency_id: CurrencyId,
+			delegator: MultiLocation,
+			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		},
 	}
 
@@ -453,7 +475,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Bond extra amount to a delegator.
+		/// Decrease some amount to a delegator. Leave no less than the minimum delegator
+		/// requirement.
 		#[pallet::weight(T::WeightInfo::unbond())]
 		pub fn unbond(
 			origin: OriginFor<T>,
@@ -473,6 +496,28 @@ pub mod pallet {
 				currency_id,
 				delegator_id: who,
 				unbond_amount: amount,
+			});
+			Ok(())
+		}
+
+		/// Unbond all the active amount of a delegator.
+		#[pallet::weight(T::WeightInfo::unbond_all())]
+		pub fn unbond_all(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			who: MultiLocation,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.unbond_all(who.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
+				currency_id,
+				delegator_id: who,
 			});
 			Ok(())
 		}
@@ -992,8 +1037,15 @@ pub mod pallet {
 
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
 			// storage to the new value if exists, or insert a new record if not exists before.
-			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, operation, |wt_n_f| {
-				*wt_n_f = weight_and_fee;
+			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, operation.clone(), |wt_n_f| {
+				*wt_n_f = weight_and_fee.clone();
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::XcmDestWeightAndFeeSet {
+				currency_id,
+				operation,
+				weight_and_fee,
 			});
 
 			Ok(())
@@ -1010,8 +1062,11 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			OperateOrigins::<T>::mutate_exists(currency_id, |operator| {
-				*operator = who;
+				*operator = who.clone();
 			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::OperateOriginSet { currency_id, operator: who });
 
 			Ok(())
 		}
@@ -1027,8 +1082,11 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			FeeSources::<T>::mutate_exists(currency_id, |w_n_f| {
-				*w_n_f = who_and_fee;
+				*w_n_f = who_and_fee.clone();
 			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::FeeSourceSet { currency_id, who_and_fee });
 
 			Ok(())
 		}
@@ -1159,19 +1217,52 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			ledger: Ledger<MultiLocation, BalanceOf<T>>,
+			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		) -> DispatchResult {
-			unimplemented!()
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
+			// Check the new ledger must has at lease minimum active amount.
+			if let Some(ref ldgr) = ledger {
+				if let Ledger::Substrate(lg) = ldgr {
+					ensure!(
+						lg.active >= mins_maxs.delegator_bonded_minimum,
+						Error::<T>::LowerThanMinimum
+					);
+				}
+			}
+
+			// Update the ledger.
+			DelegatorLedgers::<T>::mutate_exists(currency_id, who.clone(), |old_ledger| {
+				*old_ledger = ledger.clone();
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorLedgerSet {
+				currency_id,
+				delegator: who,
+				ledger,
+			});
+
+			Ok(())
 		}
 
 		/// Update storage MinimumsAndMaximums<T>.
-		#[pallet::weight(T::WeightInfo::set_delegator_ledger())]
+		#[pallet::weight(T::WeightInfo::set_minimums_and_maximums())]
 		pub fn set_minimums_and_maximums(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			constraints: MinimumsMaximums<BalanceOf<T>>,
+			constraints: Option<MinimumsMaximums<BalanceOf<T>>>,
 		) -> DispatchResult {
-			unimplemented!()
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			MinimumsAndMaximums::<T>::mutate_exists(currency_id, |minimums_maximums| {
+				*minimums_maximums = constraints;
+			});
+
+			Ok(())
 		}
 	}
 
