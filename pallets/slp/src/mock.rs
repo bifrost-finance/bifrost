@@ -25,7 +25,7 @@ use frame_support::{
 	ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{GenesisBuild, Nothing},
+	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
 	weights::Weight,
 };
 use frame_system::EnsureSignedBy;
@@ -43,14 +43,22 @@ use crate as bifrost_slp;
 use crate::{Config, TimeUnit, VtokenMintingOperator};
 
 pub type AccountId = AccountId32;
-pub type Block = frame_system::mocking::MockBlock<Test>;
-pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
+pub type Block = frame_system::mocking::MockBlock<Runtime>;
+pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 
 pub const EXIT_ACCOUNT: AccountId = AccountId32::new([5u8; 32]);
 pub const ENTRANCE_ACCOUNT: AccountId = AccountId32::new([6u8; 32]);
 
+pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
+pub const BOB: AccountId = AccountId32::new([2u8; 32]);
+pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+
+pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
+pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const VKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
+
 construct_runtime!(
-	pub enum Test where
+	pub enum Runtime where
 		Block = Block,
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
@@ -64,15 +72,15 @@ construct_runtime!(
 );
 
 parameter_types! {
-	pub const NativeCurrencyId: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
-	pub const RelayCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+	pub const NativeCurrencyId: CurrencyId = BNC;
+	pub const RelayCurrencyId: CurrencyId = KSM;
 }
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 }
 
-impl frame_system::Config for Test {
+impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Index = u64;
 	type BlockNumber = u64;
@@ -105,7 +113,7 @@ parameter_types! {
 	pub const MaxReserves: u32 = 999_999;
 }
 
-impl pallet_balances::Config for Test {
+impl pallet_balances::Config for Runtime {
 	type AccountStore = System;
 	/// The type for recording an account's balance.
 	type Balance = Balance;
@@ -116,7 +124,7 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = MaxLocks;
 	type MaxReserves = MaxReserves;
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = pallet_balances::weights::SubstrateWeight<Test>;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
 orml_traits::parameter_type_with_key! {
@@ -125,7 +133,7 @@ orml_traits::parameter_type_with_key! {
 	};
 }
 
-impl orml_tokens::Config for Test {
+impl orml_tokens::Config for Runtime {
 	type Amount = Amount;
 	type Balance = Balance;
 	type CurrencyId = CurrencyId;
@@ -137,9 +145,9 @@ impl orml_tokens::Config for Test {
 	type WeightInfo = ();
 }
 
-pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Test, Balances, Amount, u64>;
+pub type BifrostToken = orml_currencies::BasicCurrencyAdapter<Runtime, Balances, Amount, u64>;
 
-impl orml_currencies::Config for Test {
+impl orml_currencies::Config for Runtime {
 	type Event = Event;
 	type GetNativeCurrencyId = NativeCurrencyId;
 	type MultiCurrency = Tokens;
@@ -189,7 +197,7 @@ impl Get<ParaId> for ParachainId {
 	}
 }
 
-impl Config for Test {
+impl Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
@@ -285,27 +293,65 @@ impl VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> for MockVto
 	}
 }
 
-pub fn new_test_ext() -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-
-	orml_tokens::GenesisConfig::<Test> {
-		balances: vec![
-			(ALICE, NativeCurrencyId::get(), INIT_BALANCE),
-			(ALICE, RelayCurrencyId::get(), INIT_BALANCE),
-			(BOB, NativeCurrencyId::get(), INIT_BALANCE),
-			(BOB, RelayCurrencyId::get(), INIT_BALANCE),
-			(CHARLIE, NativeCurrencyId::get(), INIT_BALANCE),
-			(CHARLIE, RelayCurrencyId::get(), INIT_BALANCE),
-		],
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
-
-	t.into()
+pub struct ExtBuilder {
+	endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>,
 }
 
-pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
-pub const BOB: AccountId = AccountId32::new([2u8; 32]);
-pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+impl Default for ExtBuilder {
+	fn default() -> Self {
+		Self { endowed_accounts: vec![] }
+	}
+}
 
-pub const INIT_BALANCE: Balance = 100_000;
+impl ExtBuilder {
+	pub fn balances(mut self, endowed_accounts: Vec<(AccountId, CurrencyId, Balance)>) -> Self {
+		self.endowed_accounts = endowed_accounts;
+		self
+	}
+
+	pub fn one_hundred_for_alice_n_bob(self) -> Self {
+		self.balances(vec![(ALICE, KSM, 100), (ALICE, VKSM, 100), (BOB, VKSM, 100)])
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	pub fn one_hundred_precision_for_each_currency_type_for_whitelist_account(self) -> Self {
+		use frame_benchmarking::whitelisted_caller;
+		use sp_runtime::traits::AccountIdConversion;
+		let whitelist_caller: AccountId = whitelisted_caller();
+		let pool_account: AccountId = LighteningRedeemPalletId::get().into_account();
+
+		self.balances(vec![
+			(whitelist_caller.clone(), KSM, 100_000_000_000_000),
+			(whitelist_caller.clone(), VKSM, 100_000_000_000_000),
+			(pool_account.clone(), KSM, 100_000_000_000_000),
+		])
+	}
+
+	pub fn build(self) -> sp_io::TestExternalities {
+		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+		orml_tokens::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id != BNC)
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
+
+		t.into()
+	}
+}
+
+// simulate block production
+pub(crate) fn run_to_block(n: u64) {
+	while System::block_number() < n {
+		Slp::on_finalize(System::block_number());
+		System::on_finalize(System::block_number());
+		System::set_block_number(System::block_number() + 1);
+		System::on_initialize(System::block_number());
+		Slp::on_initialize(System::block_number());
+	}
+}

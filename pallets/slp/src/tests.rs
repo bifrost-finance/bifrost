@@ -15,3 +15,39 @@
 
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+use frame_support::assert_ok;
+use orml_traits::MultiCurrency;
+
+use super::*;
+use crate::{mock::*, KSM};
+
+#[test]
+fn set_xcm_dest_weight_and_fee_should_work() {
+	ExtBuilder::default().build().execute_with(|| {
+		System::set_block_number(1);
+
+		// Insert a new record.
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::signed(ALICE),
+			KSM,
+			XcmOperation::Bond,
+			Some((5_000_000_000, 5_000_000_000))
+		));
+
+		assert_eq!(
+			XcmDestWeightAndFee::<Runtime>::get(KSM, XcmOperation::Bond),
+			Some((5_000_000_000, 5_000_000_000))
+		);
+
+		// Delete a record.
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::signed(ALICE),
+			KSM,
+			XcmOperation::Bond,
+			None
+		));
+
+		assert_eq!(XcmDestWeightAndFee::<Runtime>::get(KSM, XcmOperation::Bond), None);
+	});
+}
