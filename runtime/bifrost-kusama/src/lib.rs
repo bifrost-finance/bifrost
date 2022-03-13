@@ -1662,6 +1662,7 @@ impl vtoken_minting::Config for Runtime {
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
+	type WeightInfo = ();
 }
 
 // Below is the implementation of tokens manipulation functions other than native token.
