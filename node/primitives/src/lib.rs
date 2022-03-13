@@ -38,7 +38,7 @@ mod tests;
 
 pub use crate::{
 	bridge::*,
-	currency::{CurrencyId, TokenSymbol},
+	currency::{CurrencyId, ForeignAssetId, TokenSymbol},
 	traits::*,
 };
 
