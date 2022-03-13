@@ -28,19 +28,23 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod weights;
+
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, Saturating, Zero},
+		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
 		SaturatedConversion,
 	},
-	BoundedVec, PalletId,
+	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{Balance, CurrencyId};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::vec::Vec;
+pub use weights::WeightInfo;
+
 #[allow(type_alias_bounds)]
 pub type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 
@@ -58,10 +62,20 @@ pub type MintId = u32;
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum TimeUnit {
 	Era(u32),
-	SlashingSpan(u32),
+	// SlashingSpan(u32),
+}
+
+impl Default for TimeUnit {
+	fn default() -> Self {
+		TimeUnit::Era(1u32)
+	}
 }
 #[frame_support::pallet]
 pub mod pallet {
+	// use sp_runtime::traits::CheckedAdd;
+	// use orml_traits::arithmetic::CheckedSub;
+	use frame_support::traits::tokens::currency;
+
 	use super::*;
 
 	#[pallet::pallet]
@@ -90,6 +104,9 @@ pub mod pallet {
 
 		#[pallet::constant]
 		type FeeAccount: Get<Self::AccountId>;
+
+		/// Set default weight.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -129,7 +146,7 @@ pub mod pallet {
 		FeeSet {
 			mint_fee: BalanceOf<T>,
 			redeem_fee: BalanceOf<T>,
-			hosting_fee: BalanceOf<T>,
+			// hosting_fee: BalanceOf<T>,
 		},
 	}
 
@@ -151,12 +168,12 @@ pub mod pallet {
 		MaxEraUnlockingChunksNotSet,
 		OngoingTimeUnitNotSet,
 		UserUnlockLedgerNotFound,
+		Unexpected,
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn fees)]
-	pub type Fees<T: Config> =
-		StorageValue<_, (BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+	pub type Fees<T: Config> = StorageValue<_, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_pool)]
@@ -166,7 +183,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn unlock_duration)]
 	pub type UnlockDuration<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>;
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>; // time_unit
 
 	#[pallet::storage]
 	#[pallet::getter(fn ongoing_time_unit)]
@@ -219,17 +236,19 @@ pub mod pallet {
 		TimeUnit,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
-		(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>),
+		(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>, CurrencyIdOf<T>),
 		OptionQuery,
 	>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn max_user_unlocking_chunks)]
-	pub type MaxUserUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn max_user_unlocking_chunks)]
+	// pub type MaxUserUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>,
+	// u32>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn max_era_unlocking_chuncks)]
-	pub type MaxEraUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn max_era_unlocking_chuncks)]
+	// pub type MaxEraUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>,
+	// u32>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_deduct)]
@@ -246,20 +265,63 @@ pub mod pallet {
 	pub type TokenToRebond<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn minter)]
-	pub(crate) type Minter<T: Config> = StorageDoubleMap<
-		_,
-		Blake2_128Concat,
-		T::AccountId,
-		Blake2_128Concat,
-		CurrencyIdOf<T>,
-		BalanceOf<T>,
-		ValueQuery,
-	>;
+	#[pallet::getter(fn min_time_unit)]
+	pub type MinTimeUnit<T: Config> = StorageValue<_, TimeUnit, ValueQuery>; // ValueQuery
+
+	#[pallet::hooks]
+	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_initialize(n: T::BlockNumber) -> Weight {
+			// let mut entrance_account_balance =
+			// 	T::MultiCurrency::free_balance(token_id, T::EntranceAccount::get().into_account());
+
+			let time_unit = MinTimeUnit::<T>::get();
+			EraUnlockLedger::<T>::iter_prefix_values(time_unit).for_each(
+				|(total_locked, ledger_list, token_id)| {
+					let mut entrance_account_balance = T::MultiCurrency::free_balance(
+						token_id,
+						&T::EntranceAccount::get().into_account(),
+					);
+					for index in ledger_list.iter() {
+						if let Some((account, unlock_amount, time_unit)) =
+							Self::token_unlock_ledger(token_id, index)
+						{
+							if entrance_account_balance >= unlock_amount {
+								entrance_account_balance.saturating_sub(unlock_amount);
+							};
+							T::MultiCurrency::transfer(
+								token_id,
+								&T::EntranceAccount::get().into_account(),
+								&account,
+								unlock_amount,
+							);
+
+							EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
+								if let Some((total_locked, ledger_list, token_id)) = value {
+									total_locked.saturating_sub(unlock_amount);
+									ledger_list.retain(|x| x != index);
+								}
+							});
+
+							TokenUnlockLedger::<T>::remove(&token_id, &index);
+
+							UserUnlockLedger::<T>::mutate(&account, &token_id, |value| {
+								if let Some((total_locked, ledger_list)) = value {
+									total_locked.saturating_sub(unlock_amount);
+									ledger_list.retain(|x| x != index);
+								}
+							});
+						}
+					}
+				},
+			); // .collect::<Vec<_>>();
+			T::WeightInfo::on_initialize()
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		// #[pallet::weight(T::WeightInfo::mint())]
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn mint(
 			origin: OriginFor<T>,
@@ -279,7 +341,7 @@ pub mod pallet {
 				&exchanger,
 				&T::EntranceAccount::get().into_account(),
 				token_amount,
-			);
+			)?;
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
@@ -289,6 +351,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn redeem(
 			origin: OriginFor<T>,
@@ -300,32 +363,32 @@ pub mod pallet {
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			if let Some((user_unlock_amount, ledger_list)) =
-				Self::user_unlock_ledger(&exchanger, token_id)
-			{
-				if let Some(user_chunks) = MaxUserUnlockingChunks::<T>::get(token_id) {
-					ensure!(
-						ledger_list.len() as u32 <= user_chunks,
-						Error::<T>::TooManyUserUnlockingChunks
-					);
-				} else {
-					return Err(Error::<T>::MaxUserUnlockingChunksNotSet.into());
-				}
-			}
+			// if let Some((user_unlock_amount, ledger_list)) =
+			// 	Self::user_unlock_ledger(&exchanger, token_id)
+			// {
+			// 	if let Some(user_chunks) = MaxUserUnlockingChunks::<T>::get(token_id) {
+			// 		ensure!(
+			// 			ledger_list.len() as u32 <= user_chunks,
+			// 			Error::<T>::TooManyUserUnlockingChunks
+			// 		);
+			// 	} else {
+			// 		return Err(Error::<T>::MaxUserUnlockingChunksNotSet.into());
+			// 	}
+			// }
 
 			if let Some(era) = OngoingTimeUnit::<T>::get(token_id) {
-				if let Some((era_unlock_amount, ledger_list)) =
-					Self::era_unlock_ledger(&era, token_id)
-				{
-					if let Some(era_chunks) = MaxEraUnlockingChunks::<T>::get(token_id) {
-						ensure!(
-							ledger_list.len() as u32 <= era_chunks,
-							Error::<T>::TooManyUserUnlockingChunks
-						);
-					} else {
-						return Err(Error::<T>::MaxEraUnlockingChunksNotSet.into());
-					}
-				}
+				// if let Some((era_unlock_amount, ledger_list)) =
+				// 	Self::era_unlock_ledger(&era, token_id)
+				// {
+				// 	if let Some(era_chunks) = MaxEraUnlockingChunks::<T>::get(token_id) {
+				// 		ensure!(
+				// 			ledger_list.len() as u32 <= era_chunks,
+				// 			Error::<T>::TooManyUserUnlockingChunks
+				// 		);
+				// 	} else {
+				// 		return Err(Error::<T>::MaxEraUnlockingChunksNotSet.into());
+				// 	}
+				// }
 				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
 				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(token_pool_amount));
 				TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
@@ -345,7 +408,7 @@ pub mod pallet {
 				});
 
 				EraUnlockLedger::<T>::mutate(&era, &token_id, |value| {
-					if let Some((total_locked, ledger_list)) = value {
+					if let Some((total_locked, ledger_list, token_id)) = value {
 						total_locked.saturating_add(vtoken_amount);
 						ledger_list.try_push(next_id);
 					}
@@ -358,6 +421,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -375,6 +439,7 @@ pub mod pallet {
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
 				ledger_list.retain(|index| {
+					// todo: order
 					if let Some((account, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
@@ -384,12 +449,13 @@ pub mod pallet {
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
 								EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
-									if let Some((total_locked, ledger_list)) = value {
-										total_locked.saturating_sub(unlock_amount);
+									if let Some((total_locked, ledger_list, token_id)) = value {
+										total_locked.saturating_sub(unlock_amount); // checked_add checked_sub
 										ledger_list.retain(|x| x != index);
 									}
 								});
 							}
+							// *tmp_amount = tmp_amount.checked_sub()
 
 							return false;
 						} else {
@@ -399,6 +465,7 @@ pub mod pallet {
 									total_locked.saturating_sub(tmp_amount);
 								}
 							});
+							// EraUnlockLedger
 							return true;
 						}
 					} else {
@@ -423,9 +490,9 @@ pub mod pallet {
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
-			// TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+			TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
 
-			// Self::deposit_event(Event::Minted { token: token_id, token_amount });
+			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 
 			TokenToRebond::<T>::mutate(&token_id, |value| {
 				if let Some(value_info) = value {
@@ -468,6 +535,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			if !MinimumMint::<T>::contains_key(token) {
+				// mutate_exists
 				MinimumMint::<T>::insert(token, amount);
 			} else {
 				MinimumMint::<T>::mutate(token, |old_amount| {
@@ -541,13 +609,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			mint_fee: BalanceOf<T>,
 			redeem_fee: BalanceOf<T>,
-			hosting_fee: BalanceOf<T>,
+			// hosting_fee: BalanceOf<T>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee, hosting_fee));
+			Fees::<T>::mutate(|fees| *fees = (mint_fee, redeem_fee));
 
-			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee, hosting_fee });
+			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee });
 			Ok(())
 		}
 	}
@@ -628,7 +696,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		currency_id: CurrencyId,
 		time_unit: TimeUnit,
 	) -> Option<(BalanceOf<T>, Vec<u32>)> {
-		if let Some((balance, list)) = Self::era_unlock_ledger(&time_unit, currency_id) {
+		if let Some((balance, list, _)) = Self::era_unlock_ledger(&time_unit, currency_id) {
 			Some((balance, list.into_inner()))
 		} else {
 			None
@@ -647,7 +715,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 			TokenPool::<T>::mutate(currency_id, |pool| pool.saturating_add(deduct_amount));
 
 			EraUnlockLedger::<T>::mutate(&time_unit, &currency_id, |value| {
-				if let Some((total_locked, ledger_list)) = value {
+				if let Some((total_locked, ledger_list, token_id)) = value {
 					total_locked.saturating_sub(unlock_amount);
 					ledger_list.retain(|&x| x != index);
 				}
