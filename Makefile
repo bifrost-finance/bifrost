@@ -112,7 +112,7 @@ insert-session-key:
 
 .PHONY: generate-node-key
 generate-node-key:
-	subkey generate-node-key --file ./resources/node-key	
+	subkey generate-node-key --file ./resources/node-key
 
 .PHONY: view-key
 view-key:

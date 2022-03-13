@@ -75,8 +75,8 @@ fn bifrost_kusama_properties() -> Properties {
 	]
 	.iter()
 	.for_each(|token| {
-		token_symbol.push(token.symbol().to_string());
-		token_decimals.push(token.decimals() as u32);
+		token_symbol.push(token.symbol().expect("Token symbol expected").to_string());
+		token_decimals.push(token.decimals().expect("Token decimals expected") as u32);
 	});
 
 	properties.insert("tokenSymbol".into(), token_symbol.into());

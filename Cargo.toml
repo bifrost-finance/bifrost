@@ -5,6 +5,7 @@ members = [
 	"node/primitives",
 	"node/rpc",
 	"node/service",
+	"pallets/asset-registry",
 	"pallets/flexible-fee",
 	"pallets/lightening-redeem",
 	"pallets/liquidity-mining",
