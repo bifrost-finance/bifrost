@@ -236,6 +236,7 @@ try-runtime = [
 	"pallet-scheduler/try-runtime",
 	"pallet-vesting/try-runtime",
 	"bifrost-liquidity-mining/try-runtime",
+	"parachain-staking/try-runtime",
 ]
 
 # When enabled, the runtime API will not be build.
