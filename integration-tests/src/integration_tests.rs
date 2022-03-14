@@ -43,8 +43,8 @@ mod bifrost_imports {
 		create_x2_multilocation, AccountId, Balance, Balances, BifrostCrowdloanId, BlockNumber,
 		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
-		RelayCurrencyId, RelaychainSovereignSubAccount, Runtime, Salp, Scheduler, Session,
-		SlotLength, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
+		RelayCurrencyId, Runtime, Salp, Scheduler, Session, SlotLength, System, Tokens,
+		TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
 	};
 	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
@@ -181,8 +181,6 @@ fn parachain_subaccounts_are_unique() {
 			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
 				.into()
 		);
-
-		assert_eq!(RelaychainSovereignSubAccount::get(), create_x2_multilocation(0));
 	});
 }
 

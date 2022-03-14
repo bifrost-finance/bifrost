@@ -9,7 +9,7 @@ BIN_PATH=$(dirname $(readlink -f $0))
 WORK_PATH=${BIN_PATH}/../
 
 ###### build binary
-make build-bifrost-release
+make build-bifrost-kusama-release
 
 cp target/release/bifrost ${WORK_PATH}/resources
 chmod +x ${WORK_PATH}/resources/bifrost
