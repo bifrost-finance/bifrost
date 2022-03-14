@@ -458,13 +458,9 @@ where
 		// "from" AccountId to MultiLocation
 		let from_32: [u8; 32] =
 			T::AccountId::encode(&from).try_into().map_err(|_| Error::<T>::EncodingError)?;
-		let from_location = MultiLocation {
-			parents: 0,
-			interior: X2(
-				Parachain(ParachainId::get().into()),
-				AccountId32 { network: Any, id: from_32 },
-			),
-		};
+
+		let from_location =
+			MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: from_32 }) };
 
 		// Prepare parameter dest and beneficiary.
 		let dest = MultiLocation::parent();
