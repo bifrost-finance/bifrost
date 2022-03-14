@@ -23,7 +23,7 @@ use cumulus_primitives_core::ParaId;
 use frame_support::{dispatch::result::Result, pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 use node_primitives::{CurrencyId, CurrencyIdExt};
-use orml_traits::{MultiCurrency, XcmTransfer};
+use orml_traits::MultiCurrency;
 pub use primitives::{Ledger, TimeUnit};
 use sha3::{Digest, Keccak256};
 use sp_arithmetic::traits::Zero;
@@ -33,7 +33,7 @@ use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
 use xcm::latest::*;
 
-use crate::{
+pub use crate::{
 	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
 	traits::{
 		DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager, VtokenMintingOperator,
@@ -96,8 +96,8 @@ pub mod pallet {
 		/// Routes the XCM message outbound.
 		type XcmSender: SendXcm;
 
-		/// The interface to Cross-chain transfer.
-		type XcmTransfer: XcmTransfer<AccountIdOf<Self>, BalanceOf<Self>, CurrencyId>;
+		/// XCM executor.
+		type XcmExecutor: ExecuteXcm<Self::Call>;
 	}
 
 	#[pallet::error]
@@ -138,6 +138,7 @@ pub mod pallet {
 		WeightAndFeeNotExists,
 		OperateOriginNotExists,
 		MinimumsAndMaximumsNotExist,
+		XcmExecutionFailed,
 	}
 
 	#[pallet::event]

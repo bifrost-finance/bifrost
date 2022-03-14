@@ -210,30 +210,7 @@ impl Config for Runtime {
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type XcmSender = ();
-	type XcmTransfer = MockXTokens;
-}
-
-pub struct MockXTokens;
-
-impl XcmTransfer<AccountId, Balance, CurrencyId> for MockXTokens {
-	fn transfer(
-		_who: AccountId,
-		_currency_id: CurrencyId,
-		_amount: Balance,
-		_dest: MultiLocation,
-		_dest_weight: Weight,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn transfer_multi_asset(
-		_who: AccountId,
-		_asset: MultiAsset,
-		_dest: MultiLocation,
-		_dest_weight: Weight,
-	) -> DispatchResult {
-		Ok(())
-	}
+	type XcmExecutor = ();
 }
 
 pub struct MockVtokenMintingOperator;

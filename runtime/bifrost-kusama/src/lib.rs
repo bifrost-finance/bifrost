@@ -1602,7 +1602,7 @@ impl bifrost_slp::Config for Runtime {
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type XcmSender = XcmRouter;
-	type XcmTransfer = XTokens;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
 }
 
 // To be replaced by the real VtokenMinting moudle.

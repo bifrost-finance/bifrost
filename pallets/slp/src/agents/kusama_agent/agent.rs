@@ -21,7 +21,6 @@ use core::marker::PhantomData;
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
-use orml_traits::XcmTransfer;
 use sp_core::H256;
 use sp_runtime::{
 	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
@@ -453,10 +452,57 @@ where
 		// Ensure amount is greater than zero.
 		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
-		let (weight, _fee) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
+		let (weight, fee_amount) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
-		T::XcmTransfer::transfer(from, KSM, amount, to, weight)
+		// "from" AccountId to MultiLocation
+		let from_32: [u8; 32] =
+			T::AccountId::encode(&from).try_into().map_err(|_| Error::<T>::EncodingError)?;
+		let from_location = MultiLocation {
+			parents: 0,
+			interior: X2(
+				Parachain(ParachainId::get().into()),
+				AccountId32 { network: Any, id: from_32 },
+			),
+		};
+
+		// Prepare parameter dest and beneficiary.
+		let dest = MultiLocation::parent();
+		let to_32: [u8; 32] = Self::multilocation_to_account_32(&to)?;
+		let beneficiary =
+			MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: to_32 }) };
+
+		// Prepare parameter assets.
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(MultiLocation::parent()),
+		};
+		let assets = MultiAssets::from(asset);
+
+		// Prepare fee asset.
+		let fee_asset = MultiAsset {
+			fun: Fungible(fee_amount.unique_saturated_into()),
+			id: Concrete(MultiLocation::parent()),
+		};
+
+		// prepare for xcm message
+		let msg = Xcm(vec![
+			WithdrawAsset(assets.clone()),
+			InitiateReserveWithdraw {
+				assets: All.into(),
+				reserve: dest,
+				xcm: Xcm(vec![
+					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
+					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+				]),
+			},
+		]);
+
+		T::XcmExecutor::execute_xcm_in_credit(from_location, msg, weight, weight)
+			.ensure_complete()
+			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+
+		Ok(())
 	}
 }
 
@@ -474,7 +520,10 @@ where
 	#[transactional]
 	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
 		// Check if the delegator already exists. If yes, return error.
-		DelegatorsIndex2Multilocation::<T>::get(KSM, index).ok_or(Error::<T>::AlreadyExist)?;
+		ensure!(
+			DelegatorsIndex2Multilocation::<T>::get(KSM, index).is_none(),
+			Error::<T>::AlreadyExist
+		);
 
 		// Revise two delegator storages.
 		DelegatorsIndex2Multilocation::<T>::insert(KSM, index, who);
