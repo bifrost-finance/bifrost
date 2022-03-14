@@ -6713,7 +6713,7 @@ dependencies = [
 [[package]]
 name = "parachain-staking"
 version = "3.0.0"
-source = "git+https://github.com/bifrost-finance/parachain-staking?rev=6695260c683613c60bb7f0465c2beb99624580cf#6695260c683613c60bb7f0465c2beb99624580cf"
+source = "git+https://github.com/bifrost-finance/parachain-staking?rev=f31949182871bf01d10a710e2274b7095196e3a5#f31949182871bf01d10a710e2274b7095196e3a5"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
