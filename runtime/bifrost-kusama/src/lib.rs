@@ -916,7 +916,7 @@ parameter_types! {
 	/// Minimum collators selected per round, default at genesis and minimum forever after
 	pub const MinSelectedCandidates: u32 = prod_or_test!(16,6);
 	/// Maximum top delegations per candidate
-	pub const MaxTopDelegationsPerCandidate: u32 = 100;
+	pub const MaxTopDelegationsPerCandidate: u32 = 300;
 	/// Maximum bottom delegations per candidate
 	pub const MaxBottomDelegationsPerCandidate: u32 = 50;
 	/// Maximum delegations per delegator
