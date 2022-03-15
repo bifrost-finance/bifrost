@@ -456,15 +456,12 @@ where
 
 		// "from" AccountId to MultiLocation
 		let from_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(from)?;
-
-		let from_location =
-			MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: from_32 }) };
+		let from_location = Pallet::<T>::account_32_to_local_location(from_32)?;
 
 		// Prepare parameter dest and beneficiary.
 		let dest = MultiLocation::parent();
 		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
-		let beneficiary =
-			MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: to_32 }) };
+		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
 
 		// Prepare parameter assets.
 		let asset = MultiAsset {

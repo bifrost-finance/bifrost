@@ -18,9 +18,10 @@
 
 //! Cross-chain transfer tests within Kusama network.
 
-use bifrost_slp::XcmOperation;
+use bifrost_slp::{MinimumsMaximums, XcmOperation};
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
+use pallet_staking::StakingLedger;
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
@@ -75,13 +76,37 @@ fn register_subaccount_index_0() {
 			XcmOperation::TransferTo,
 			Some((5_000_000_000, 5_000_000_000)),
 		));
+
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::Bond,
+			Some((5_000_000_000, 5_000_000_000)),
+		));
+
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 0,
+			unbond_minimum: 0,
+			rebond_minimum: 0,
+			unbond_record_maximum: 32,
+			validators_back_maximum: 36,
+			delegator_active_staking_maximum: 200_000_000_000_000,
+		};
+
+		// Set minimums and maximums
+		assert_ok!(Slp::set_minimums_and_maximums(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Some(mins_and_maxs)
+		));
 	});
 }
 
 // Preparation: transfer 1 KSM from Alice in Kusama to Bob in Bifrost.
 // Bob has a balance of
 #[test]
-fn transfer_1_KSM_to_BOB_in_Bifrost() {
+fn transfer_2_KSM_to_BOB_in_Bifrost() {
 	let para_account_2001 = para_account_2001();
 
 	// Cross-chain transfer some KSM to Bob account in Bifrost
@@ -92,14 +117,14 @@ fn transfer_1_KSM_to_BOB_in_Bifrost() {
 			Box::new(VersionedMultiLocation::V1(
 				X1(Junction::AccountId32 { id: BOB, network: NetworkId::Any }).into()
 			)),
-			Box::new(VersionedMultiAssets::V1((Here, dollar(RelayCurrencyId::get())).into())),
+			Box::new(VersionedMultiAssets::V1((Here, 2 * dollar(RelayCurrencyId::get())).into())),
 			0,
 		));
 
-		// predefined 2 dollars + 1 dollar from cross-chain transfer = 3 dollars
+		// predefined 2 dollars + 2 dollar from cross-chain transfer = 3 dollars
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			3 * dollar(RelayCurrencyId::get())
+			4 * dollar(RelayCurrencyId::get())
 		);
 	});
 
@@ -107,7 +132,27 @@ fn transfer_1_KSM_to_BOB_in_Bifrost() {
 		//  Bob get the cross-transferred 1 dollar KSM.
 		assert_eq!(
 			Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-			999936000000
+			1999936000000
+		);
+	});
+}
+
+// Preparation: transfer 1 KSM from Alice in Kusama to Bob in Bifrost.
+// Bob has a balance of
+#[test]
+fn transfer_2_KSM_to_subaccount_in_Kusama() {
+	let subaccount_0 = subaccount_0();
+
+	KusamaNet::execute_with(|| {
+		assert_ok!(kusama_runtime::Balances::transfer(
+			kusama_runtime::Origin::signed(ALICE.into()),
+			MultiAddress::Id(subaccount_0.clone()),
+			2 * dollar(RelayCurrencyId::get())
+		));
+
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2 * dollar(RelayCurrencyId::get())
 		);
 	});
 }
@@ -119,10 +164,14 @@ fn transfer_1_KSM_to_BOB_in_Bifrost() {
 #[test]
 fn transfer_to_works() {
 	register_subaccount_index_0();
+	transfer_2_KSM_to_BOB_in_Bifrost();
+	transfer_2_KSM_to_subaccount_in_Kusama();
 	let subaccount_0 = subaccount_0();
+	let para_account_2001 = para_account_2001();
 
 	Bifrost::execute_with(|| {
-		let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
 
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
@@ -131,28 +180,59 @@ fn transfer_to_works() {
 		assert_ok!(Slp::transfer_to(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			AccountId::from(ALICE),
+			AccountId::from(BOB),
 			subaccount_0_location,
 			dollar(RelayCurrencyId::get()),
 		));
 	});
 
-	// // Send some KSM to subaccount_0
-	// KusamaNet::execute_with(|| {
-	// 	kusama_runtime::Staking::trigger_new_era(0, vec![]);
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
+			3 * dollar(RelayCurrencyId::get())
+		);
 
-	// 	// Transfer some KSM into the parachain.
-	// 	assert_ok!(kusama_runtime::Balances::transfer(
-	// 		kusama_runtime::Origin::signed(ALICE.into()),
-	// 		MultiAddress::Id(subaccount_0.clone()),
-	// 		1_001_000_000_000_000
-	// 	));
-	// });
+		// Why not the transferred amount reach the sub-account?
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			3 * dollar(RelayCurrencyId::get())
+		);
+	});
+}
 
-	// Bifrost::execute_with(|| {
-	// 	assert_eq!(
-	// 		Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(BOB)),
-	// 		999936000000
-	// 	);
-	// });
+#[test]
+fn bond_works() {
+	register_subaccount_index_0();
+	transfer_2_KSM_to_subaccount_in_Kusama();
+	let subaccount_0 = subaccount_0();
+	let para_account_2001 = para_account_2001();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Bond 1 ksm for sub-account index 0
+		assert_ok!(Slp::bond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			dollar(RelayCurrencyId::get()),
+		));
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::ledger(&subaccount_0),
+			Some(StakingLedger {
+				stash: subaccount_0.clone(),
+				total: 500 * dollar(RelayCurrencyId::get()),
+				active: 500 * dollar(RelayCurrencyId::get()),
+				unlocking: vec![],
+				claimed_rewards: vec![],
+			})
+		);
+	});
 }
