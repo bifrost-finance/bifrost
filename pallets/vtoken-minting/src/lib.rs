@@ -62,7 +62,7 @@ pub type MintId = u32;
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum TimeUnit {
 	Era(u32),
-	// SlashingSpan(u32),
+	SlashingSpan(u32),
 }
 
 impl Default for TimeUnit {
@@ -266,14 +266,11 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn min_time_unit)]
-	pub type MinTimeUnit<T: Config> = StorageValue<_, TimeUnit, ValueQuery>; // ValueQuery
+	pub type MinTimeUnit<T: Config> = StorageValue<_, TimeUnit, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
-			// let mut entrance_account_balance =
-			// 	T::MultiCurrency::free_balance(token_id, T::EntranceAccount::get().into_account());
-
 			let time_unit = MinTimeUnit::<T>::get();
 			EraUnlockLedger::<T>::iter_prefix_values(time_unit).for_each(
 				|(total_locked, ledger_list, token_id)| {
@@ -287,33 +284,39 @@ pub mod pallet {
 						{
 							if entrance_account_balance >= unlock_amount {
 								entrance_account_balance.saturating_sub(unlock_amount);
-							};
-							T::MultiCurrency::transfer(
-								token_id,
-								&T::EntranceAccount::get().into_account(),
-								&account,
-								unlock_amount,
-							);
+								T::MultiCurrency::transfer(
+									token_id,
+									&T::EntranceAccount::get().into_account(),
+									&account,
+									unlock_amount,
+								);
 
-							EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
-								if let Some((total_locked, ledger_list, token_id)) = value {
-									total_locked.saturating_sub(unlock_amount);
-									ledger_list.retain(|x| x != index);
-								}
-							});
+								EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
+									if let Some((total_locked, ledger_list, token_id)) = value {
+										total_locked.saturating_sub(unlock_amount);
+										ledger_list.retain(|x| x != index);
+									}
+								});
 
-							TokenUnlockLedger::<T>::remove(&token_id, &index);
+								TokenUnlockLedger::<T>::remove(&token_id, &index);
 
-							UserUnlockLedger::<T>::mutate(&account, &token_id, |value| {
-								if let Some((total_locked, ledger_list)) = value {
-									total_locked.saturating_sub(unlock_amount);
-									ledger_list.retain(|x| x != index);
-								}
-							});
+								UserUnlockLedger::<T>::mutate(&account, &token_id, |value| {
+									if let Some((total_locked, ledger_list)) = value {
+										total_locked.saturating_sub(unlock_amount);
+										ledger_list.retain(|x| x != index);
+									}
+								});
+							} else {
+								break;
+							}
 						}
 					}
 				},
-			); // .collect::<Vec<_>>();
+			);
+			MinTimeUnit::<T>::mutate(move |time_unit| match time_unit {
+				TimeUnit::Era(era) => era.saturating_add(1u32),
+				TimeUnit::SlashingSpan(slashing_span) => *slashing_span,
+			});
 			T::WeightInfo::on_initialize()
 		}
 	}
@@ -444,7 +447,6 @@ pub mod pallet {
 						Self::token_unlock_ledger(token_id, index)
 					{
 						if tmp_amount >= unlock_amount {
-							tmp_amount.saturating_sub(unlock_amount);
 							if let Some((_, total_locked, time_unit)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
@@ -455,7 +457,7 @@ pub mod pallet {
 									}
 								});
 							}
-							// *tmp_amount = tmp_amount.checked_sub()
+							tmp_amount.saturating_sub(unlock_amount);
 
 							return false;
 						} else {
@@ -621,7 +623,7 @@ pub mod pallet {
 	}
 }
 
-/// The interface to call VtokneMinting module functions.
+/// The interface to call VtokenMinting module functions.
 pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
@@ -656,6 +658,18 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		currency_id: CurrencyId,
 		index: u32,
 	) -> Option<(AccountId, Balance, TimeUnit)>;
+
+	/// Increase token_to_add storage by value in VtokenMinting module.
+	fn increase_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
+
+	/// Decrease token_to_add storage by value in VtokenMinting module.
+	fn decrease_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
+
+	/// Increase token_to_deduct storage by value in VtokenMinting module.
+	fn increase_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
+
+	/// Decrease token_to_deduct storage by value in VtokenMinting module.
+	fn decrease_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
 }
 
 impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, TimeUnit>
@@ -742,5 +756,41 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		index: u32,
 	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit)> {
 		Self::token_unlock_ledger(currency_id, index)
+	}
+
+	fn increase_token_to_add(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
+		TokenToAdd::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
+			*pool = pool.saturating_add(value);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	fn decrease_token_to_add(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
+		TokenToAdd::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
+			*pool = pool.saturating_sub(value);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	fn increase_token_to_deduct(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
+		TokenToDeduct::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
+			*pool = pool.saturating_add(value);
+			Ok(())
+		})?;
+
+		Ok(())
+	}
+
+	fn decrease_token_to_deduct(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
+		TokenToDeduct::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
+			*pool = pool.saturating_sub(value);
+			Ok(())
+		})?;
+
+		Ok(())
 	}
 }
