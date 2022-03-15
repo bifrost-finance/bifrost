@@ -107,6 +107,15 @@ fn register_subaccount_index_0() {
 			RelayCurrencyId::get(),
 			Some(mins_and_maxs)
 		));
+	});
+}
+
+fn register_delegator_ledger() {
+	let subaccount_0 = subaccount_0();
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
 		let sb_ledger = SubstrateLedger {
 			account: subaccount_0_location.clone(),
@@ -291,6 +300,7 @@ fn bond_extra_works() {
 	// bond 1 ksm for sub-account index 0
 	locally_bond_subaccount_0_1ksm_in_kusama();
 	register_subaccount_index_0();
+	register_delegator_ledger();
 	let subaccount_0 = subaccount_0();
 	let para_account_2001 = para_account_2001();
 
