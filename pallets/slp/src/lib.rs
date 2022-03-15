@@ -31,7 +31,10 @@ use sp_core::H256;
 use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
-use xcm::latest::*;
+use xcm::{
+	latest::*,
+	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
+};
 
 pub use crate::{
 	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
@@ -1403,13 +1406,47 @@ pub mod pallet {
 			};
 			Ok(*account_32)
 		}
-		
+
 		pub fn account_id_to_account_32(account_id: AccountIdOf<T>) -> Result<[u8; 32], Error<T>> {
 			let account_32 = T::AccountId::encode(&account_id)
 				.try_into()
 				.map_err(|_| Error::<T>::EncodingError)?;
 
 			Ok(account_32)
+		}
+
+		pub fn account_32_to_local_location(
+			account_32: [u8; 32],
+		) -> Result<MultiLocation, Error<T>> {
+			let local_location = MultiLocation {
+				parents: 0,
+				interior: X1(AccountId32 { network: Any, id: account_32 }),
+			};
+
+			Ok(local_location)
+		}
+
+		pub fn account_32_to_parent_location(
+			account_32: [u8; 32],
+		) -> Result<MultiLocation, Error<T>> {
+			let parent_location = MultiLocation {
+				parents: 1,
+				interior: X1(AccountId32 { network: Any, id: account_32 }),
+			};
+
+			Ok(parent_location)
+		}
+
+		pub fn account_32_to_parachain_location(
+			account_32: [u8; 32],
+			chain_id: u32,
+		) -> Result<MultiLocation, Error<T>> {
+			let parachain_location = MultiLocation {
+				parents: 1,
+				interior: X2(Parachain(chain_id), AccountId32 { network: Any, id: account_32 }),
+			};
+
+			Ok(parachain_location)
 		}
 	}
 }

@@ -18,7 +18,7 @@
 
 use core::marker::PhantomData;
 
-use codec::{Decode, Encode};
+use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use sp_core::H256;

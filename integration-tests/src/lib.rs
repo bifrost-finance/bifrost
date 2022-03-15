@@ -26,4 +26,6 @@ mod kusama_cross_chain_transfer;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
 mod kusama_test_net;
 #[cfg(feature = "with-bifrost-kusama-runtime")]
+mod slp_tests;
+#[cfg(feature = "with-bifrost-kusama-runtime")]
 mod statemine;

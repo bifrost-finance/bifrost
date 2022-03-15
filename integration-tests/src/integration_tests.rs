@@ -44,7 +44,7 @@ mod bifrost_imports {
 		Call, Currencies, CurrencyId, Event, ExistentialDeposit, ExistentialDeposits,
 		NativeCurrencyId, Origin, OriginCaller, ParachainInfo, ParachainSystem, Proxy,
 		RelayCurrencyId, RelaychainSovereignSubAccount, Runtime, Salp, Scheduler, Session,
-		SlotLength, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
+		SlotLength, Slp, System, Tokens, TreasuryPalletId, Utility, Vesting, XTokens, XcmConfig,
 	};
 	pub use bifrost_runtime_common::dollar;
 	pub use frame_support::parameter_types;
