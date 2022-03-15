@@ -191,7 +191,7 @@ macro_rules! create_currency_id {
 						(((*token_symbol_2 as u64) << 32) & 0x0000_00ff_0000_0000) + (((*token_type_2 as u64) << 40) & 0x0000_ff00_0000_0000) + discr
 					},
 					Self::ForeignAsset(asset_token_id) => {
-						(((*asset_token_id as u64) << 16) & 0x0000_0000_00ff_0000) + discr
+						(((*asset_token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
 					}
 				}
 			}
@@ -284,7 +284,7 @@ impl Default for TokenSymbol {
 	}
 }
 
-pub type ForeignAssetId = u16;
+pub type ForeignAssetId = u32;
 
 /// Currency ID, it might be extended with more variants in the future.
 #[derive(
@@ -453,7 +453,7 @@ impl TryFrom<u64> for CurrencyId {
 				Ok(Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2))
 			},
 			7 => {
-				let foreign_asset_id = ((id & 0x0000_0000_ffff_0000) >> 16) as ForeignAssetId;
+				let foreign_asset_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as ForeignAssetId;
 				Ok(Self::ForeignAsset(foreign_asset_id))
 			},
 			_ => Err(()),
