@@ -106,7 +106,7 @@ where
 		);
 
 		// Get the delegator account id in Kusama network
-		let delegator_account = Self::multilocation_to_account(&who)?;
+		let delegator_account = Pallet::<T>::multilocation_to_account(&who)?;
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Bond(
@@ -260,7 +260,7 @@ where
 		// Convert vec of multilocations into accounts.
 		let mut accounts = vec![];
 		for (multilocation_account, _hash) in sorted_dedup_list.clone().iter() {
-			let account = Self::multilocation_to_account(multilocation_account)?;
+			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
 			accounts.push(account);
 		}
 
@@ -306,7 +306,7 @@ where
 		// Convert new targets into account vec.
 		let mut accounts = vec![];
 		for (multilocation_account, _hash) in new_set.iter() {
-			let account = Self::multilocation_to_account(multilocation_account)?;
+			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
 			accounts.push(account);
 		}
 
@@ -337,7 +337,7 @@ where
 		when: Option<TimeUnit>,
 	) -> DispatchResult {
 		// Get the validator account
-		let validator_account = Self::multilocation_to_account(&validator)?;
+		let validator_account = Pallet::<T>::multilocation_to_account(&validator)?;
 
 		// Get the payout era
 		let payout_era = if let Some(TimeUnit::Era(payout_era)) = when {
@@ -409,8 +409,7 @@ where
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] =
-			T::AccountId::encode(&to).try_into().map_err(|_| Error::<T>::EncodingError)?;
+		let to_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(to)?;
 
 		let dest = Box::new(VersionedMultiLocation::from(X1(Parachain(ParachainId::get().into()))));
 		let beneficiary =
@@ -456,15 +455,14 @@ where
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		// "from" AccountId to MultiLocation
-		let from_32: [u8; 32] =
-			T::AccountId::encode(&from).try_into().map_err(|_| Error::<T>::EncodingError)?;
+		let from_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(from)?;
 
 		let from_location =
 			MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: from_32 }) };
 
 		// Prepare parameter dest and beneficiary.
 		let dest = MultiLocation::parent();
-		let to_32: [u8; 32] = Self::multilocation_to_account_32(&to)?;
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
 		let beneficiary =
 			MultiLocation { parents: 0, interior: X1(AccountId32 { network: Any, id: to_32 }) };
 
@@ -644,7 +642,7 @@ where
 		// Ensure amount is greater than zero.
 		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
 
-		let source_account = Self::multilocation_to_account(&from)?;
+		let source_account = Pallet::<T>::multilocation_to_account(&from)?;
 		self.transfer_to(source_account, to, amount)?;
 
 		Ok(())
@@ -718,27 +716,6 @@ where
 		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
-	}
-
-	fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
-		// Get the delegator account id in Kusama network
-		let account_32 = Self::multilocation_to_account_32(who)?;
-		let account =
-			T::AccountId::decode(&mut &account_32[..]).map_err(|_| Error::<T>::DecodingError)?;
-
-		Ok(account)
-	}
-
-	fn multilocation_to_account_32(who: &MultiLocation) -> Result<[u8; 32], Error<T>> {
-		// Get the delegator account id in Kusama network
-		let account_32 = match who {
-			MultiLocation {
-				parents: 1,
-				interior: X1(AccountId32 { network: _network_id, id: account_id }),
-			} => account_id,
-			_ => Err(Error::<T>::AccountNotExist)?,
-		};
-		Ok(*account_32)
 	}
 
 	fn do_unbond(who: &MultiLocation, amount: BalanceOf<T>) -> DispatchResult {

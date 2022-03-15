@@ -1383,5 +1383,33 @@ pub mod pallet {
 			let encoded = who.encode();
 			H256::from_slice(Keccak256::digest(&encoded).as_slice())
 		}
+
+		pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {
+			// Get the delegator account id in Kusama network
+			let account_32 = Self::multilocation_to_account_32(who)?;
+			let account = T::AccountId::decode(&mut &account_32[..])
+				.map_err(|_| Error::<T>::DecodingError)?;
+			Ok(account)
+		}
+
+		pub fn multilocation_to_account_32(who: &MultiLocation) -> Result<[u8; 32], Error<T>> {
+			// Get the delegator account id in Kusama network
+			let account_32 = match who {
+				MultiLocation {
+					parents: 1,
+					interior: X1(AccountId32 { network: _network_id, id: account_id }),
+				} => account_id,
+				_ => Err(Error::<T>::AccountNotExist)?,
+			};
+			Ok(*account_32)
+		}
+		
+		pub fn account_id_to_account_32(account_id: AccountIdOf<T>) -> Result<[u8; 32], Error<T>> {
+			let account_32 = T::AccountId::encode(&account_id)
+				.try_into()
+				.map_err(|_| Error::<T>::EncodingError)?;
+
+			Ok(account_32)
+		}
 	}
 }
