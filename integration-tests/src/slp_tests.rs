@@ -18,7 +18,9 @@
 
 //! Cross-chain transfer tests within Kusama network.
 
-use bifrost_slp::{Ledger, MinimumsMaximums, SubstrateLedger, XcmOperation};
+use bifrost_slp::{
+	primitives::UnlockChunk, Ledger, MinimumsMaximums, SubstrateLedger, TimeUnit, XcmOperation,
+};
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
 use pallet_staking::StakingLedger;
@@ -95,6 +97,13 @@ fn register_subaccount_index_0() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Unbond,
+			Some((20_000_000_000, 10_000_000_000)),
+		));
+
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::Rebond,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
@@ -352,7 +361,7 @@ fn unbond_works() {
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-		// Bond_extra 1 ksm for sub-account index 0
+		// Unbond 0.5 ksm, 0.5 ksm left.
 		assert_ok!(Slp::unbond(
 			Origin::root(),
 			RelayCurrencyId::get(),
@@ -377,4 +386,104 @@ fn unbond_works() {
 	// 		})
 	// 	);
 	// });
+}
+
+#[test]
+fn unbond_all_works() {
+	// bond 1 ksm for sub-account index 0
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Unbond the only bonded 1 ksm.
+		assert_ok!(Slp::unbond_all(Origin::root(), RelayCurrencyId::get(), subaccount_0_location,));
+	});
+
+	// Can be uncommented to check if the result is correct.
+	// Due to the reason of private fields for struct UnlockChunk,
+	// it is not able to construct an instance of UnlockChunk directly.
+	// KusamaNet::execute_with(|| {
+	// 	assert_eq!(
+	// 		kusama_runtime::Staking::ledger(&subaccount_0),
+	// 		Some(StakingLedger {
+	// 			stash: subaccount_0.clone(),
+	// 			total: dollar(RelayCurrencyId::get()),
+	// 			active: 0,
+	// 			unlocking: vec![UnlockChunk { value: 1000000000000, era: 28 }],
+	// 			claimed_rewards: vec![],
+	// 		})
+	// 	);
+	// });
+}
+
+#[test]
+fn rebond_works() {
+	// bond 1 ksm for sub-account index 0
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Unbond 0.5 ksm, 0.5 ksm left.
+		assert_ok!(Slp::unbond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			500_000_000_000,
+		));
+
+		// Update Bifrost local ledger. This should be done by backend services.
+		let chunk = UnlockChunk { value: 500_000_000_000, unlock_time: TimeUnit::Era(8) };
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: dollar(RelayCurrencyId::get()),
+			active: 500_000_000_000,
+			unlocking: vec![chunk],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+
+		assert_ok!(Slp::set_delegator_ledger(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			Some(ledger)
+		));
+
+		// rebond 0.5 ksm.
+		assert_ok!(Slp::rebond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			500_000_000_000,
+		));
+	});
+
+	// So the bonded amount should be 1 ksm
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::ledger(&subaccount_0),
+			Some(StakingLedger {
+				stash: subaccount_0.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: dollar(RelayCurrencyId::get()),
+				unlocking: vec![],
+				claimed_rewards: vec![],
+			})
+		);
+	});
 }
