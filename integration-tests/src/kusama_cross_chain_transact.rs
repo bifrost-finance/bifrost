@@ -26,12 +26,17 @@ pub type ParaBalances = pallet_balances::Pallet<Runtime>;
 
 pub type ParaTokens = orml_tokens::Pallet<Runtime>;
 
+pub type Salp = bifrost_salp::Pallet<Runtime>;
+
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<kusama_runtime::Runtime>;
+
+pub use bifrost_kusama_runtime::SlotLength;
+use frame_system::RawOrigin;
 
 use crate::{integration_tests::*, kusama_test_net::*};
 
 #[test]
-fn transact_from_relaychain_works() {
+fn transact_transfer_call_from_relaychain_works() {
 	Bifrost::execute_with(|| {
 		let _ = ParaBalances::deposit_creating(
 			&AccountId::from(ALICE),
@@ -87,6 +92,48 @@ fn transact_from_relaychain_works() {
 			to: AccountId::from(BOB),
 			amount: 500 * dollar(NativeCurrencyId::get()),
 		}));
+	});
+}
+
+#[test]
+fn transact_salp_contribute_call_from_relaychain_works() {
+	Bifrost::execute_with(|| {
+		assert_ok!(Salp::create(
+			RawOrigin::Root.into(),
+			3_000,
+			100 * dollar(RelayCurrencyId::get()),
+			1,
+			SlotLength::get()
+		));
+		assert_ok!(Salp::funds(3_000).ok_or(()));
+	});
+
+	let alice = Junctions::X1(Junction::AccountId32 { network: NetworkId::Kusama, id: ALICE });
+	let call = Call::Salp(bifrost_salp::Call::<Runtime>::contribute {
+		index: 3000,
+		value: 1 * dollar(RelayCurrencyId::get()),
+	});
+	let assets: MultiAsset = (Parent, dollar(RelayCurrencyId::get())).into();
+
+	KusamaNet::execute_with(|| {
+		let xcm = vec![
+			WithdrawAsset(assets.clone().into()),
+			BuyExecution {
+				fees: assets,
+				weight_limit: Limited(dollar(RelayCurrencyId::get()) as u64),
+			},
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: (dollar(RelayCurrencyId::get()) as u64) / 10 as u64,
+				call: call.encode().into(),
+			},
+			DepositAsset {
+				assets: All.into(),
+				max_assets: 1,
+				beneficiary: { (1, alice.clone()).into() },
+			},
+		];
+		assert_ok!(RelayChainPalletXcm::send_xcm(alice, Parachain(2001).into(), Xcm(xcm),));
 	});
 }
 
