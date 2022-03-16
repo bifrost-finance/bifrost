@@ -1203,7 +1203,7 @@ pub mod pallet {
 				.ok_or(Error::<T>::DelegatorNotBonded)?;
 
 			let validators_list =
-				Self::sort_validators_and_remove_duplicates(currency_id, &who, &validators)?;
+				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
 			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
@@ -1357,7 +1357,6 @@ pub mod pallet {
 
 		pub fn sort_validators_and_remove_duplicates(
 			currency_id: CurrencyId,
-			who: &MultiLocation,
 			validators: &Vec<MultiLocation>,
 		) -> Result<Vec<(MultiLocation, H256)>, Error<T>> {
 			let validators_set =
@@ -1375,7 +1374,7 @@ pub mod pallet {
 				let rs = validators_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
 				if let Err(index) = rs {
-					validators_list.insert(index, (who.clone(), multi_hash));
+					validators_list.insert(index, (validator.clone(), multi_hash));
 				}
 			}
 

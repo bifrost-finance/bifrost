@@ -254,14 +254,14 @@ where
 		ensure!(vec_len <= mins_maxs.validators_back_maximum, Error::<T>::GreaterThanMaximum);
 
 		// Sort validators and remove duplicates
-		let sorted_dedup_list =
-			Pallet::<T>::sort_validators_and_remove_duplicates(KSM, &who, &targets)?;
+		let sorted_dedup_list = Pallet::<T>::sort_validators_and_remove_duplicates(KSM, &targets)?;
 
 		// Convert vec of multilocations into accounts.
 		let mut accounts = vec![];
 		for (multilocation_account, _hash) in sorted_dedup_list.clone().iter() {
 			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
-			accounts.push(account);
+			let unlookup_account = T::Lookup::unlookup(account);
+			accounts.push(unlookup_account);
 		}
 
 		// Construct xcm message.
@@ -307,7 +307,8 @@ where
 		let mut accounts = vec![];
 		for (multilocation_account, _hash) in new_set.iter() {
 			let account = Pallet::<T>::multilocation_to_account(multilocation_account)?;
-			accounts.push(account);
+			let unlookup_account = T::Lookup::unlookup(account);
+			accounts.push(unlookup_account);
 		}
 
 		// Construct xcm message.

@@ -67,7 +67,7 @@ pub enum StakingCall<T: Config> {
 	#[codec(index = 3)]
 	WithdrawUnbonded(u32),
 	#[codec(index = 5)]
-	Nominate(Vec<T::AccountId>),
+	Nominate(Vec<<T::Lookup as StaticLookup>::Source>),
 	#[codec(index = 6)]
 	Chill,
 	#[codec(index = 18)]
