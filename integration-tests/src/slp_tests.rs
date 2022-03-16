@@ -106,6 +106,13 @@ fn register_subaccount_index_0() {
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::Delegate,
+			Some((20_000_000_000, 10_000_000_000)),
+		));
+
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
 			bond_extra_minimum: 0,
@@ -532,29 +539,68 @@ fn rebond_works() {
 	});
 }
 
-// #[test]
-// fn delegate_works() {
-// 	// bond 1 ksm for sub-account index 0
-// 	locally_bond_subaccount_0_1ksm_in_kusama();
-// 	register_subaccount_index_0();
-// 	register_delegator_ledger();
-// 	let subaccount_0 = subaccount_0();
+#[test]
+fn delegate_works() {
+	// bond 1 ksm for sub-account index 0
+	register_validators();
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
 
-// 	Bifrost::execute_with(|| {
-// 		let subaccount_0_32: [u8; 32] =
-// 			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	let validator_0: AccountId =
+		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+			.into();
 
-// 		let subaccount_0_location: MultiLocation =
-// 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
+	let validator_1: AccountId =
+		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
+			.into();
 
-// 		let targets =
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
 
-// 		// delegate
-// 		assert_ok!(Slp::delegate(
-// 			Origin::root(),
-// 			RelayCurrencyId::get(),
-// 			subaccount_0_location,
-// 			targets,
-// 		));
-// 	});
-// }
+		let mut targets = vec![];
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+		targets.push(validator_0_location.clone());
+
+		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1).unwrap();
+		let validator_1_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_1_32).unwrap();
+		targets.push(validator_1_location.clone());
+
+		// delegate
+		assert_ok!(Slp::delegate(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			targets,
+		));
+	});
+
+	KusamaNet::execute_with(|| {
+		// assert_eq!(
+		// 	kusama_runtime::Staking::ledger(&subaccount_0),
+		// 	Some(StakingLedger {
+		// 		stash: subaccount_0.clone(),
+		// 		total: dollar(RelayCurrencyId::get()),
+		// 		active: dollar(RelayCurrencyId::get()),
+		// 		unlocking: vec![],
+		// 		claimed_rewards: vec![],
+		// 	})
+		// );
+
+		// for va in kusama_runtime::Staking::Validators::<kusama_runtime::Runtime>::iter() {
+		for va in pallet_staking::Pallet::<kusama_runtime::Runtime>::Validators::iter() {
+			// for va in kusama_runtime::Staking::nominators().iter() {
+			println!("va: {:?}", va);
+		}
+	});
+}
