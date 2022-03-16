@@ -55,7 +55,11 @@ pub enum UtilityCall<KusamaCall> {
 pub enum StakingCall<T: Config> {
 	/// Kusama has the same account Id type as Bifrost.
 	#[codec(index = 0)]
-	Bond(T::AccountId, #[codec(compact)] BalanceOf<T>, RewardDestination<T::AccountId>),
+	Bond(
+		<T::Lookup as StaticLookup>::Source,
+		#[codec(compact)] BalanceOf<T>,
+		RewardDestination<T::AccountId>,
+	),
 	#[codec(index = 1)]
 	BondExtra(#[codec(compact)] BalanceOf<T>),
 	#[codec(index = 2)]

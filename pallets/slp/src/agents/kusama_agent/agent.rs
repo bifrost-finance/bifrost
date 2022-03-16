@@ -23,7 +23,9 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Convert, UniqueSaturatedInto, Zero},
+	traits::{
+		AccountIdLookup, CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero,
+	},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -110,7 +112,7 @@ where
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Bond(
-			delegator_account.clone(),
+			T::Lookup::unlookup(delegator_account.clone()),
 			amount,
 			RewardDestination::<AccountIdOf<T>>::Staked,
 		));
