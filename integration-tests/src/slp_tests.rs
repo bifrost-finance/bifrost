@@ -23,7 +23,7 @@ use bifrost_slp::{
 };
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use pallet_staking::StakingLedger;
+use pallet_staking::{Nominations, StakingLedger};
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
@@ -566,12 +566,12 @@ fn delegate_works() {
 
 		let mut targets = vec![];
 
-		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0).unwrap();
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
 		targets.push(validator_0_location.clone());
 
-		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1).unwrap();
+		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
 		targets.push(validator_1_location.clone());
@@ -581,26 +581,18 @@ fn delegate_works() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			subaccount_0_location,
-			targets,
+			targets.clone(),
 		));
 	});
 
 	KusamaNet::execute_with(|| {
-		// assert_eq!(
-		// 	kusama_runtime::Staking::ledger(&subaccount_0),
-		// 	Some(StakingLedger {
-		// 		stash: subaccount_0.clone(),
-		// 		total: dollar(RelayCurrencyId::get()),
-		// 		active: dollar(RelayCurrencyId::get()),
-		// 		unlocking: vec![],
-		// 		claimed_rewards: vec![],
-		// 	})
-		// );
-
-		// for va in kusama_runtime::Staking::Validators::<kusama_runtime::Runtime>::iter() {
-		for va in pallet_staking::Pallet::<kusama_runtime::Runtime>::Validators::iter() {
-			// for va in kusama_runtime::Staking::nominators().iter() {
-			println!("va: {:?}", va);
-		}
+		assert_eq!(
+			kusama_runtime::Staking::nominators(&subaccount_0),
+			Some(Nominations {
+				targets: vec![validator_0, validator_1],
+				submitted_in: 0,
+				suppressed: false
+			},)
+		);
 	});
 }
