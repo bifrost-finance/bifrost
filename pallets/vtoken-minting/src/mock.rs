@@ -50,6 +50,7 @@ pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::ASG);
 pub const DOT: CurrencyId = CurrencyId::Token(TokenSymbol::DOT);
 pub const vDOT: CurrencyId = CurrencyId::VToken(TokenSymbol::DOT);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
+pub const vKSM: CurrencyId = CurrencyId::VToken(TokenSymbol::KSM);
 pub const ZLK: CurrencyId = CurrencyId::Token(TokenSymbol::ZLK);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
@@ -191,15 +192,14 @@ impl ExtBuilder {
 	}
 
 	pub fn one_hundred_for_alice_n_bob(self) -> Self {
-		// Self::increase_token_pool(KSM, 1000);
 		self.balances(vec![
 			(ALICE, BNC, 100),
 			(BOB, BNC, 100),
 			(CHARLIE, BNC, 100),
 			(ALICE, DOT, 100),
 			(ALICE, vDOT, 400),
-			(BOB, DOT, 100),
-			(BOB, KSM, 100),
+			(BOB, vKSM, 100),
+			(BOB, KSM, 1000),
 		])
 	}
 

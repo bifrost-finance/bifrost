@@ -156,6 +156,8 @@ pub mod pallet {
 		TooManyUserUnlockingChunks,
 		/// Number of era unlocking chunks exceed MaxEraUnlockingChunks
 		TooManyEraUnlockingChunks,
+		BelowMinimumMint,
+		BelowMinimumRedeem,
 		/// Invalid token to rebond.
 		InvalidRebondToken,
 		/// Invalid token.
@@ -333,6 +335,8 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
+			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
+
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
@@ -347,8 +351,14 @@ pub mod pallet {
 			)?;
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
-			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
-			TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+			TokenPool::<T>::mutate(token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			});
+			TokenToAdd::<T>::mutate(token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			});
 
 			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 			Ok(())
@@ -362,6 +372,11 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
+			ensure!(
+				vtoken_amount >= MinimumRedeem::<T>::get(token_id),
+				Error::<T>::BelowMinimumRedeem
+			);
+
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
@@ -393,8 +408,8 @@ pub mod pallet {
 				// 	}
 				// }
 				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(token_pool_amount));
-				TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
+				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(vtoken_amount));
+				TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(vtoken_amount));
 
 				let next_id = Self::token_unlock_next_id(token_id);
 				TokenUnlockLedger::<T>::insert(

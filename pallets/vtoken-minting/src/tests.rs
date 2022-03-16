@@ -25,30 +25,60 @@ use frame_support::{assert_noop, assert_ok};
 use crate::{mock::*, *};
 
 #[test]
-fn initialize_mint() {
+fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		VtokenMinting::increase_token_pool(KSM, 1000);
-		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 10));
+		assert_ok!(VtokenMinting::set_minimum_mint(Origin::root(), KSM, 1000));
+		assert_noop!(
+			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
+			Error::<Runtime>::BelowMinimumMint
+		);
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
+		assert_eq!(VtokenMinting::token_pool(KSM), 2000);
+		assert_eq!(VtokenMinting::token_to_add(KSM), 1000);
+		assert_eq!(VtokenMinting::minimum_mint(KSM), 1000);
+		let (entrance_account, exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
+		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 1000);
 	});
 }
 
-// #[test]
-// fn add_to_issue_whitelist_should_work() {
-// 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-// 		// Charlie is not allowed to issue ZLK.
-// 		assert_noop!(
-// 			TokenIssuer::issue(Origin::signed(CHARLIE), ALICE, ZLK, 800),
-// 			Error::<Runtime>::NotAllowed
-// 		);
-// 		// Chalie is added to the issue whitelist to have the ability of issuing ZLK.
-// 		assert_ok!(TokenIssuer::add_to_issue_whitelist(
-// 			pallet_collective::RawOrigin::Members(2, 3).into(),
-// 			ZLK,
-// 			CHARLIE
-// 		));
-// 		assert_eq!(TokenIssuer::get_issue_whitelist(ZLK), Some(vec![CHARLIE]));
-// 		// Charlie succuessfully issue 800 unit of ZLK to Alice account
-// 		assert_ok!(TokenIssuer::issue(Origin::signed(CHARLIE), ALICE, ZLK, 800));
-// 		assert_eq!(Tokens::free_balance(ZLK, &ALICE), 800);
-// 	});
-// }
+#[test]
+fn redeem() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		VtokenMinting::increase_token_pool(KSM, 1000);
+		// assert_eq!(VtokenMinting::token_pool(KSM), 1100);
+		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1));
+		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::root(), KSM, 90));
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_noop!(
+			VtokenMinting::redeem(Some(BOB).into(), KSM, 80),
+			Error::<Runtime>::BelowMinimumRedeem
+		);
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 100));
+		assert_eq!(VtokenMinting::token_pool(KSM), 1100);
+		assert_eq!(VtokenMinting::token_to_add(KSM), 100);
+		let (entrance_account, exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
+		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 100);
+	});
+}
+
+#[test]
+fn rebond() {
+	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
+		VtokenMinting::increase_token_pool(KSM, 1000);
+		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1));
+
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 100));
+		assert_noop!(
+			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
+			Error::<Runtime>::InvalidRebondToken
+		);
+		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::root(), KSM));
+		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), KSM, 100));
+		assert_eq!(VtokenMinting::token_pool(KSM), 1100);
+		assert_eq!(VtokenMinting::token_to_add(KSM), 100);
+		let (entrance_account, exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
+		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 100);
+	});
+}
