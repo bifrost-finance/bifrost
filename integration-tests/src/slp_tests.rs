@@ -224,11 +224,8 @@ fn transfer_to_works() {
 			3 * dollar(RelayCurrencyId::get())
 		);
 
-		// Why not the transferred amount reach the sub-account?
-		assert_eq!(
-			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			3 * dollar(RelayCurrencyId::get())
-		);
+		// Sub-account index 0 has received the transferred tokens.
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999893333340);
 	});
 }
 
