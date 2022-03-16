@@ -558,22 +558,27 @@ where
 {
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
-		// Check if the validator already exists.
-		let validators_set = Validators::<T>::get(KSM).ok_or(Error::<T>::ValidatorSetNotExist)?;
-
 		let multi_hash = Pallet::<T>::get_hash(&who);
-		ensure!(!validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::AlreadyExist);
+		// Check if the validator already exists.
+		let validators_set = Validators::<T>::get(KSM);
+		if validators_set.is_none() {
+			Validators::<T>::insert(KSM, vec![(who.clone(), multi_hash)]);
+		} else {
+			// Change corresponding storage.
+			Validators::<T>::mutate(KSM, |validator_vec| -> Result<(), Error<T>> {
+				if let Some(ref mut validator_list) = validator_vec {
+					let rs =
+						validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
 
-		// Change corresponding storage.
-		Validators::<T>::mutate(KSM, |validator_vec| {
-			if let Some(ref mut validator_list) = validator_vec {
-				let rs = validator_list.binary_search_by_key(&multi_hash, |(_multi, hash)| *hash);
-
-				if let Err(index) = rs {
-					validator_list.insert(index, (who.clone(), multi_hash));
+					if let Err(index) = rs {
+						validator_list.insert(index, (who.clone(), multi_hash));
+					} else {
+						Err(Error::<T>::AlreadyExist)?
+					}
 				}
-			}
-		});
+				Ok(())
+			})?;
+		}
 
 		Ok(())
 	}
