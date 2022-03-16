@@ -23,9 +23,7 @@ pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use sp_core::H256;
 use sp_runtime::{
-	traits::{
-		AccountIdLookup, CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero,
-	},
+	traits::{CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero},
 	DispatchResult,
 };
 use sp_std::prelude::*;
