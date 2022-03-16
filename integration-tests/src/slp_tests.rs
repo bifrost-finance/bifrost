@@ -212,7 +212,7 @@ fn transfer_to_works() {
 		assert_ok!(Slp::transfer_to(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			AccountId::from(BOB),
+			AccountId::from(ALICE),
 			subaccount_0_location,
 			dollar(RelayCurrencyId::get()),
 		));
@@ -225,10 +225,7 @@ fn transfer_to_works() {
 		);
 
 		// Why not the transferred amount reach the sub-account?
-		assert_eq!(
-			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			3 * dollar(RelayCurrencyId::get())
-		);
+		assert_eq!(kusama_runtime::Balances::free_balance(&subaccount_0.clone()), 2999893333340);
 	});
 }
 

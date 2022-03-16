@@ -473,7 +473,7 @@ where
 		// Prepare fee asset.
 		let fee_asset = MultiAsset {
 			fun: Fungible(fee_amount.unique_saturated_into()),
-			id: Concrete(MultiLocation::parent()),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
 		};
 
 		// prepare for xcm message
