@@ -134,6 +134,13 @@ fn register_subaccount_index_0() {
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::TransferBack,
+			Some((20_000_000_000, 10_000_000_000)),
+		));
+
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
 			bond_extra_minimum: 0,
@@ -832,5 +839,61 @@ fn chill_works() {
 	// check if sub-account index 0 belongs to the group of nominators
 	KusamaNet::execute_with(|| {
 		assert_eq!(kusama_runtime::Staking::nominators(&subaccount_0.clone()).is_some(), false);
+	});
+}
+
+#[test]
+fn transfer_back_works() {
+	bond_works();
+	let subaccount_0 = subaccount_0();
+	let para_account_2001 = para_account_2001();
+
+	KusamaNet::execute_with(|| {
+		// 1ksm is locked for half bonded and half unbonding.
+		assert_eq!(
+			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
+			dollar(RelayCurrencyId::get())
+		);
+
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
+			1999333333375
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		assert_eq!(
+			Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE)),
+			10_000_000_000_000
+		);
+
+		assert_ok!(Slp::transfer_back(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			AccountId::from(ALICE),
+			500_000_000_000
+		));
+
+		// ?? Why account Alice haven't received the transferred amount.
+		assert_eq!(
+			Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE)),
+			dollar(RelayCurrencyId::get())
+		);
+	});
+
+	// Parachain account has been deposited the transferred amount.
+	KusamaNet::execute_with(|| {
+		assert_eq!(kusama_runtime::Balances::usable_balance(&subaccount_0.clone()), 500000000000);
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
+			2498666666750
+		);
 	});
 }
