@@ -596,3 +596,49 @@ fn delegate_works() {
 		);
 	});
 }
+
+#[test]
+fn undelegate_works() {
+	delegate_works();
+
+	let subaccount_0 = subaccount_0();
+
+	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	let validator_0: AccountId =
+		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+			.into();
+
+	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
+	let validator_1: AccountId =
+		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
+			.into();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let mut targets = vec![];
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+		targets.push(validator_0_location.clone());
+
+		// Undelegate validator 0. Only validator 1 left.
+		assert_ok!(Slp::undelegate(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			targets.clone(),
+		));
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::nominators(&subaccount_0),
+			Some(Nominations { targets: vec![validator_1], submitted_in: 0, suppressed: false },)
+		);
+	});
+}
