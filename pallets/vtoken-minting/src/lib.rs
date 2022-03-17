@@ -152,10 +152,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Number of user unlocking chunks exceed MaxUserUnlockingChunks
-		TooManyUserUnlockingChunks,
-		/// Number of era unlocking chunks exceed MaxEraUnlockingChunks
-		TooManyEraUnlockingChunks,
 		BelowMinimumMint,
 		BelowMinimumRedeem,
 		/// Invalid token to rebond.
@@ -231,8 +227,8 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn era_unlock_ledger)]
-	pub(crate) type EraUnlockLedger<T: Config> = StorageDoubleMap<
+	#[pallet::getter(fn time_unit_unlock_ledger)]
+	pub(crate) type TimeUnitUnlockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		TimeUnit,
@@ -241,16 +237,6 @@ pub mod pallet {
 		(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>, CurrencyIdOf<T>),
 		OptionQuery,
 	>;
-
-	// #[pallet::storage]
-	// #[pallet::getter(fn max_user_unlocking_chunks)]
-	// pub type MaxUserUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>,
-	// u32>;
-
-	// #[pallet::storage]
-	// #[pallet::getter(fn max_era_unlocking_chuncks)]
-	// pub type MaxEraUnlockingChunks<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>,
-	// u32>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_deduct)]
@@ -274,7 +260,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let time_unit = MinTimeUnit::<T>::get();
-			EraUnlockLedger::<T>::iter_prefix_values(time_unit).for_each(
+			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).for_each(
 				|(total_locked, ledger_list, token_id)| {
 					let mut entrance_account_balance = T::MultiCurrency::free_balance(
 						token_id,
@@ -293,7 +279,7 @@ pub mod pallet {
 									unlock_amount,
 								);
 
-								EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
+								TimeUnitUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
 									if let Some((total_locked, ledger_list, token_id)) = value {
 										total_locked.saturating_sub(unlock_amount);
 										ledger_list.retain(|x| x != index);
@@ -381,32 +367,7 @@ pub mod pallet {
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			// if let Some((user_unlock_amount, ledger_list)) =
-			// 	Self::user_unlock_ledger(&exchanger, token_id)
-			// {
-			// 	if let Some(user_chunks) = MaxUserUnlockingChunks::<T>::get(token_id) {
-			// 		ensure!(
-			// 			ledger_list.len() as u32 <= user_chunks,
-			// 			Error::<T>::TooManyUserUnlockingChunks
-			// 		);
-			// 	} else {
-			// 		return Err(Error::<T>::MaxUserUnlockingChunksNotSet.into());
-			// 	}
-			// }
-
-			if let Some(era) = OngoingTimeUnit::<T>::get(token_id) {
-				// if let Some((era_unlock_amount, ledger_list)) =
-				// 	Self::era_unlock_ledger(&era, token_id)
-				// {
-				// 	if let Some(era_chunks) = MaxEraUnlockingChunks::<T>::get(token_id) {
-				// 		ensure!(
-				// 			ledger_list.len() as u32 <= era_chunks,
-				// 			Error::<T>::TooManyUserUnlockingChunks
-				// 		);
-				// 	} else {
-				// 		return Err(Error::<T>::MaxEraUnlockingChunksNotSet.into());
-				// 	}
-				// }
+			if let Some(time_unit) = OngoingTimeUnit::<T>::get(token_id) {
 				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
 				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(vtoken_amount));
 				TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(vtoken_amount));
@@ -415,25 +376,68 @@ pub mod pallet {
 				TokenUnlockLedger::<T>::insert(
 					&token_id,
 					&next_id,
-					(&exchanger, vtoken_amount, &era),
+					(&exchanger, vtoken_amount, &time_unit),
 				);
 
-				UserUnlockLedger::<T>::mutate(&exchanger, &token_id, |value| {
-					if let Some((total_locked, ledger_list)) = value {
-						total_locked.saturating_add(vtoken_amount);
-						ledger_list.try_push(next_id);
-					}
-				});
+				if let Some((total_locked, ledger_list)) =
+					UserUnlockLedger::<T>::get(&exchanger, &token_id)
+				{
+					UserUnlockLedger::<T>::mutate(
+						&exchanger,
+						&token_id,
+						|value| -> Result<(), Error<T>> {
+							if let Some((total_locked, ledger_list)) = value {
+								ledger_list.try_push(next_id);
+								*total_locked = total_locked
+									.checked_add(&vtoken_amount)
+									.ok_or(Error::<T>::Unexpected)?;
+							};
+							return Ok(());
+						},
+					);
+				} else {
+					let mut ledger_list_origin = BoundedVec::<MintId, T::MaximumMintId>::default();
+					ledger_list_origin.try_push(next_id);
+					UserUnlockLedger::<T>::insert(
+						&exchanger,
+						&token_id,
+						(vtoken_amount, ledger_list_origin),
+					);
+				}
 
-				EraUnlockLedger::<T>::mutate(&era, &token_id, |value| {
-					if let Some((total_locked, ledger_list, token_id)) = value {
-						total_locked.saturating_add(vtoken_amount);
-						ledger_list.try_push(next_id);
-					}
-				});
+				if let Some((total_locked, ledger_list, _token_id)) =
+					TimeUnitUnlockLedger::<T>::get(&time_unit, &token_id)
+				{
+					TimeUnitUnlockLedger::<T>::mutate(
+						&time_unit,
+						&token_id,
+						|value| -> Result<(), Error<T>> {
+							if let Some((total_locked, ledger_list, _token_id)) = value {
+								ledger_list.try_push(next_id);
+								*total_locked = total_locked
+									.checked_add(&vtoken_amount)
+									.ok_or(Error::<T>::Unexpected)?;
+							};
+							return Ok(());
+						},
+					);
+				} else {
+					let mut ledger_list_origin = BoundedVec::<MintId, T::MaximumMintId>::default();
+					ledger_list_origin.try_push(next_id);
+					TimeUnitUnlockLedger::<T>::insert(
+						&time_unit,
+						&token_id,
+						(vtoken_amount, ledger_list_origin, token_id),
+					);
+				}
 			} else {
 				return Err(Error::<T>::OngoingTimeUnitNotSet.into());
 			}
+
+			TokenUnlockNextId::<T>::mutate(&token_id, |unlock_id| -> Result<(), Error<T>> {
+				*unlock_id = unlock_id.checked_add(1).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			});
 
 			Self::deposit_event(Event::Redeemed { token: token_id, vtoken_amount });
 			Ok(())
@@ -456,6 +460,9 @@ pub mod pallet {
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
+				// let mut ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
+				// let mut ledger_list_rev: BoundedVec<MintId, T::MaximumMintId> =
+				// 	ledger_list.into_iter().rev().collect();
 				ledger_list.retain(|index| {
 					// todo: order
 					if let Some((account, unlock_amount, time_unit)) =
@@ -465,9 +472,9 @@ pub mod pallet {
 							if let Some((_, total_locked, time_unit)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
-								EraUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
+								TimeUnitUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
 									if let Some((total_locked, ledger_list, token_id)) = value {
-										total_locked.saturating_sub(unlock_amount); // checked_add checked_sub
+										total_locked.saturating_sub(unlock_amount);
 										ledger_list.retain(|x| x != index);
 									}
 								});
@@ -482,7 +489,7 @@ pub mod pallet {
 									total_locked.saturating_sub(tmp_amount);
 								}
 							});
-							// EraUnlockLedger
+							// TimeUnitUnlockLedger
 							return true;
 						}
 					} else {
@@ -725,7 +732,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		currency_id: CurrencyId,
 		time_unit: TimeUnit,
 	) -> Option<(BalanceOf<T>, Vec<u32>)> {
-		if let Some((balance, list, _)) = Self::era_unlock_ledger(&time_unit, currency_id) {
+		if let Some((balance, list, _)) = Self::time_unit_unlock_ledger(&time_unit, currency_id) {
 			Some((balance, list.into_inner()))
 		} else {
 			None
@@ -743,7 +750,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 			TokenPool::<T>::mutate(currency_id, |pool| pool.saturating_add(deduct_amount));
 
-			EraUnlockLedger::<T>::mutate(&time_unit, &currency_id, |value| {
+			TimeUnitUnlockLedger::<T>::mutate(&time_unit, &currency_id, |value| {
 				if let Some((total_locked, ledger_list, token_id)) = value {
 					total_locked.saturating_sub(unlock_amount);
 					ledger_list.retain(|&x| x != index);
