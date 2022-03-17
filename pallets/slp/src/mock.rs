@@ -290,8 +290,8 @@ impl ExtBuilder {
 		self
 	}
 
-	pub fn one_hundred_for_alice_n_bob(self) -> Self {
-		self.balances(vec![(ALICE, KSM, 100), (ALICE, VKSM, 100), (BOB, VKSM, 100)])
+	pub fn one_hundred_for_alice(self) -> Self {
+		self.balances(vec![(ALICE, BNC, 100), (ALICE, KSM, 100), (ALICE, VKSM, 100)])
 	}
 
 	#[cfg(feature = "runtime-benchmarks")]
@@ -310,6 +310,18 @@ impl ExtBuilder {
 
 	pub fn build(self) -> sp_io::TestExternalities {
 		let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
+
+		pallet_balances::GenesisConfig::<Runtime> {
+			balances: self
+				.endowed_accounts
+				.clone()
+				.into_iter()
+				.filter(|(_, currency_id, _)| *currency_id == BNC)
+				.map(|(account_id, _, initial_balance)| (account_id, initial_balance))
+				.collect::<Vec<_>>(),
+		}
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 		orml_tokens::GenesisConfig::<Runtime> {
 			balances: self

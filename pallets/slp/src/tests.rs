@@ -97,17 +97,26 @@ fn set_fee_source_works() {
 // test native token fee supplement. Non-native will be tested in the integration tests.
 #[test]
 fn supplement_fee_reserve_works() {
-	ExtBuilder::default().build().execute_with(|| {
+	ExtBuilder::default().one_hundred_for_alice().build().execute_with(|| {
 		// set fee source
 		let alice_32 = Pallet::<Runtime>::account_id_to_account_32(ALICE).unwrap();
 		let alice_location = Pallet::<Runtime>::account_32_to_local_location(alice_32).unwrap();
 		assert_ok!(Slp::set_fee_source(
 			Origin::signed(ALICE),
-			CurrencyId::Native(TokenSymbol::BNC),
-			Some((alice_location.clone(), 1_000_000_000_000))
+			BNC,
+			Some((alice_location.clone(), 10))
 		));
 
 		// supplement fee
+		let bob_32 = Pallet::<Runtime>::account_id_to_account_32(BOB).unwrap();
+		let bob_location = Pallet::<Runtime>::account_32_to_local_location(bob_32).unwrap();
+		assert_eq!(Balances::free_balance(&ALICE), 100);
+		assert_eq!(Balances::free_balance(&BOB), 0);
+
+		assert_ok!(Slp::supplement_fee_reserve(Origin::signed(ALICE), BNC, bob_location.clone()));
+
+		assert_eq!(Balances::free_balance(&ALICE), 90);
+		assert_eq!(Balances::free_balance(&BOB), 10);
 	});
 }
 
@@ -164,9 +173,6 @@ fn remove_delegator_works() {
 		assert_eq!(DelegatorLedgers::<Runtime>::get(KSM, subaccount_0_location), None);
 	});
 }
-
-#[test]
-fn set_validators_by_delegator_works() {}
 
 /// ****************************************
 // Below is the VtokenMinting api testing *
