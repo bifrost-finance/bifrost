@@ -541,7 +541,6 @@ pub mod pallet {
 							}
 							return false;
 						} else {
-							// unlock_amount.saturating_sub(tmp_amount);
 							TokenUnlockLedger::<T>::mutate(
 								&token_id,
 								&index,
@@ -616,12 +615,16 @@ pub mod pallet {
 			});
 			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 
-			TokenToRebond::<T>::mutate(&token_id, |value| {
+			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
 				if let Some(value_info) = value {
-					*value_info = value_info.saturating_add(token_amount);
+					*value_info =
+						value_info.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				} else {
+					return Err(Error::<T>::InvalidRebondToken.into());
 				}
+				return Ok(());
 			});
-			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
+			// TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
 			Self::deposit_event(Event::Rebonded { token: token_id, token_amount });
 
 			Ok(())
@@ -797,7 +800,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 {
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
 		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.saturating_add(token_amount);
+			*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+
 			Ok(())
 		})?;
 
@@ -806,7 +810,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 	fn decrease_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
 		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.saturating_sub(token_amount);
+			*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
 			Ok(())
 		})?;
 
@@ -844,22 +848,40 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	) -> DispatchResult {
 		if let Some((who, unlock_amount, time_unit)) = Self::token_unlock_ledger(currency_id, index)
 		{
-			ensure!(unlock_amount <= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
+			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
 
-			TokenPool::<T>::mutate(currency_id, |pool| pool.saturating_add(deduct_amount));
-
-			TimeUnitUnlockLedger::<T>::mutate(&time_unit, &currency_id, |value| {
-				if let Some((total_locked, ledger_list, token_id)) = value {
-					total_locked.saturating_sub(unlock_amount);
-					ledger_list.retain(|&x| x != index);
-				}
+			// TokenPool::<T>::mutate(currency_id, |pool| pool.saturating_add(deduct_amount));
+			TokenPool::<T>::mutate(&currency_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&deduct_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
 			});
 
-			UserUnlockLedger::<T>::mutate(&who, &currency_id, |value| {
-				if let Some((total_locked, ledger_list)) = value {
-					total_locked.saturating_sub(deduct_amount);
-					ledger_list.retain(|&x| x != index);
+			TimeUnitUnlockLedger::<T>::mutate(
+				&time_unit,
+				&currency_id,
+				|value| -> Result<(), Error<T>> {
+					if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+						*total_locked_origin = total_locked_origin
+							.checked_sub(&deduct_amount)
+							.ok_or(Error::<T>::Unexpected)?;
+						ledger_list_origin.retain(|&x| x != index);
+					} else {
+						return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
+					}
+					return Ok(());
+				},
+			);
+
+			UserUnlockLedger::<T>::mutate(&who, &currency_id, |value| -> Result<(), Error<T>> {
+				if let Some((total_locked_origin, ledger_list_origin)) = value {
+					ledger_list_origin.retain(|&x| x != index);
+					*total_locked_origin = total_locked_origin
+						.checked_sub(&deduct_amount)
+						.ok_or(Error::<T>::Unexpected)?;
+				} else {
+					return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 				}
+				return Ok(());
 			});
 
 			TokenUnlockLedger::<T>::remove(&currency_id, &index);
@@ -880,7 +902,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 	fn increase_token_to_add(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
 		TokenToAdd::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.saturating_add(value);
+			*pool = pool.checked_add(&value).ok_or(Error::<T>::Unexpected)?;
+
 			Ok(())
 		})?;
 
@@ -889,7 +912,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 	fn decrease_token_to_add(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
 		TokenToAdd::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.saturating_sub(value);
+			*pool = pool.checked_sub(&value).ok_or(Error::<T>::Unexpected)?;
+
 			Ok(())
 		})?;
 
@@ -898,7 +922,8 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 	fn increase_token_to_deduct(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
 		TokenToDeduct::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.saturating_add(value);
+			*pool = pool.checked_add(&value).ok_or(Error::<T>::Unexpected)?;
+
 			Ok(())
 		})?;
 
@@ -907,7 +932,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 	fn decrease_token_to_deduct(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
 		TokenToDeduct::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.saturating_sub(value);
+			*pool = pool.checked_sub(&value).ok_or(Error::<T>::Unexpected)?;
 			Ok(())
 		})?;
 
