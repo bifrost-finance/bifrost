@@ -55,7 +55,7 @@ fn redeem() {
 		);
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 200));
-		assert_eq!(VtokenMinting::token_pool(KSM), 2000);
+		assert_eq!(VtokenMinting::token_pool(KSM), 1700);
 		assert_eq!(VtokenMinting::token_to_add(KSM), 1000);
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 1000);
@@ -74,23 +74,36 @@ fn redeem() {
 	});
 }
 
-// #[test]
+#[test]
 fn rebond() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		VtokenMinting::increase_token_pool(KSM, 1000);
 		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1));
-
+		let mut ledger_list_origin = BoundedVec::default();
+		ledger_list_origin.try_push(0);
+		// ledger_list_origin.try_push(1);
+		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 100));
 		assert_noop!(
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
 		);
 		assert_ok!(VtokenMinting::add_support_rebond_token(Origin::root(), KSM));
-		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), KSM, 100));
-		assert_eq!(VtokenMinting::token_pool(KSM), 1100);
-		assert_eq!(VtokenMinting::token_to_add(KSM), 100);
+		assert_ok!(VtokenMinting::rebond(Some(BOB).into(), KSM, 200));
+		assert_eq!(
+			VtokenMinting::time_unit_unlock_ledger(TimeUnit::Era(1), KSM),
+			Some((100, ledger_list_origin.clone(), KSM))
+		);
+		assert_eq!(
+			VtokenMinting::user_unlock_ledger(BOB, KSM),
+			Some((100, ledger_list_origin.clone()))
+		);
+		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), Some((BOB, 100, TimeUnit::Era(1))));
+		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
+		assert_eq!(VtokenMinting::token_to_add(KSM), 500);
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
-		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 100);
+		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 300);
 	});
 }

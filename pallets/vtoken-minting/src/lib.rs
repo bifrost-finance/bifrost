@@ -165,7 +165,9 @@ pub mod pallet {
 		MaxUserUnlockingChunksNotSet,
 		MaxEraUnlockingChunksNotSet,
 		OngoingTimeUnitNotSet,
+		TokenUnlockLedgerNotFound,
 		UserUnlockLedgerNotFound,
+		TimeUnitUnlockLedgerNotFound,
 		Unexpected,
 	}
 
@@ -369,9 +371,16 @@ pub mod pallet {
 
 			if let Some(time_unit) = OngoingTimeUnit::<T>::get(token_id) {
 				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-				TokenPool::<T>::mutate(token_id, |pool| pool.saturating_sub(vtoken_amount));
-				TokenToDeduct::<T>::mutate(token_id, |pool| pool.saturating_add(vtoken_amount));
-
+				let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
+					vtoken_total_issuance.into();
+				TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+					*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
+					Ok(())
+				});
+				TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+					*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+					Ok(())
+				});
 				let next_id = Self::token_unlock_next_id(token_id);
 				TokenUnlockLedger::<T>::insert(
 					&token_id,
@@ -460,9 +469,9 @@ pub mod pallet {
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
-				// let mut ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
-				// let mut ledger_list_rev: BoundedVec<MintId, T::MaximumMintId> =
-				// 	ledger_list.into_iter().rev().collect();
+				let mut ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
+				ledger_list =
+					BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev).unwrap();
 				ledger_list.retain(|index| {
 					// todo: order
 					if let Some((account, unlock_amount, time_unit)) =
@@ -472,37 +481,86 @@ pub mod pallet {
 							if let Some((_, total_locked, time_unit)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
-								TimeUnitUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
-									if let Some((total_locked, ledger_list, token_id)) = value {
-										total_locked.saturating_sub(unlock_amount);
-										ledger_list.retain(|x| x != index);
-									}
-								});
+								TimeUnitUnlockLedger::<T>::mutate(
+									&time_unit,
+									&token_id,
+									|value| -> Result<(), Error<T>> {
+										if let Some((total_locked_origin, ledger_list_origin, _)) =
+											value
+										{
+											*total_locked_origin = total_locked_origin
+												.checked_sub(&unlock_amount)
+												.ok_or(Error::<T>::Unexpected)?;
+											ledger_list_origin.retain(|x| x != index);
+										} else {
+											return Err(
+												Error::<T>::TimeUnitUnlockLedgerNotFound.into()
+											);
+										}
+										return Ok(());
+									},
+								);
+								tmp_amount = tmp_amount.saturating_sub(unlock_amount);
+								// } else {
+								// 	return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
 							}
-							tmp_amount.saturating_sub(unlock_amount);
-
 							return false;
 						} else {
-							unlock_amount.saturating_sub(tmp_amount);
-							TokenUnlockLedger::<T>::mutate(&token_id, &index, |value| {
-								if let Some((_, total_locked, _)) = value {
-									total_locked.saturating_sub(tmp_amount);
-								}
-							});
-							// TimeUnitUnlockLedger
+							// unlock_amount.saturating_sub(tmp_amount);
+							TokenUnlockLedger::<T>::mutate(
+								&token_id,
+								&index,
+								|value| -> Result<(), Error<T>> {
+									if let Some((_, total_locked_origin, _)) = value {
+										*total_locked_origin = total_locked_origin
+											.checked_sub(&tmp_amount)
+											.ok_or(Error::<T>::Unexpected)?;
+									} else {
+										return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+									}
+									return Ok(());
+								},
+							);
+							TimeUnitUnlockLedger::<T>::mutate(
+								&time_unit,
+								&token_id,
+								|value| -> Result<(), Error<T>> {
+									if let Some((total_locked_origin, _, _)) = value {
+										*total_locked_origin = total_locked_origin
+											.checked_sub(&tmp_amount)
+											.ok_or(Error::<T>::Unexpected)?;
+									} else {
+										return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
+									}
+									return Ok(());
+								},
+							);
 							return true;
 						}
 					} else {
 						return true;
 					}
 				});
+				let mut ledger_list_tmp: Vec<MintId> = ledger_list.into_iter().rev().collect();
 
-				UserUnlockLedger::<T>::mutate(&exchanger, &token_id, |value| {
-					if let Some((total_locked_old, ledger_list_old)) = value {
-						total_locked_old.saturating_sub(token_amount);
-						*ledger_list_old = ledger_list;
-					}
-				});
+				ledger_list =
+					BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp).unwrap();
+
+				UserUnlockLedger::<T>::mutate(
+					&exchanger,
+					&token_id,
+					|value| -> Result<(), Error<T>> {
+						if let Some((total_locked_origin, ledger_list_origin)) = value {
+							*ledger_list_origin = ledger_list;
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&token_amount)
+								.ok_or(Error::<T>::Unexpected)?;
+						} else {
+							return Err(Error::<T>::UserUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				);
 			} else {
 				return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 			}
@@ -513,9 +571,14 @@ pub mod pallet {
 				token_pool_amount.into();
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
-			TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
-			TokenToAdd::<T>::mutate(token_id, |pool| pool.saturating_add(token_pool_amount));
-
+			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			});
+			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			});
 			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 
 			TokenToRebond::<T>::mutate(&token_id, |value| {
