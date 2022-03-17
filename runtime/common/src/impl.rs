@@ -253,14 +253,12 @@ impl<Network: Get<NetworkId>, AccountId: From<[u8; 32]> + Into<[u8; 32]> + Clone
 	for RelayChainAccountId32Aliases<Network, AccountId>
 {
 	fn convert(location: MultiLocation) -> Result<AccountId, MultiLocation> {
-		if let MultiLocation { parents: 1, interior: X1(AccountId32 { id, network }) } =
-			location.clone()
+		if let MultiLocation { parents: 1, interior: X1(AccountId32 { id, .. }) } = location.clone()
 		{
-			if network == NetworkId::Any || network == Network::get() {
-				return Ok(id.into());
-			}
-		};
-		Err(location)
+			Ok(id.into())
+		} else {
+			Err(location)
+		}
 	}
 
 	fn reverse(who: AccountId) -> Result<MultiLocation, AccountId> {
@@ -281,9 +279,7 @@ impl<Network: Get<NetworkId>> ShouldExecute for AllowRelayedPaidExecutionFromPar
 		let mut iter = message.0.iter_mut();
 		let i = iter.next().ok_or(())?;
 		match i {
-			DescendOrigin(X1(Junction::AccountId32 { network, .. }))
-				if network == &NetworkId::Any || network == &Network::get() =>
-				(),
+			DescendOrigin(X1(Junction::AccountId32 { .. })) => (),
 			_ => return Err(()),
 		}
 		let i = iter.next().ok_or(())?;
@@ -295,6 +291,10 @@ impl<Network: Get<NetworkId>> ShouldExecute for AllowRelayedPaidExecutionFromPar
 		match i {
 			BuyExecution { weight_limit: Limited(ref mut weight), .. } if *weight >= max_weight => {
 				*weight = max_weight;
+				()
+			},
+			BuyExecution { ref mut weight_limit, .. } if weight_limit == &Unlimited => {
+				*weight_limit = Limited(max_weight);
 				()
 			},
 			_ => return Err(()),
