@@ -262,7 +262,7 @@ pub mod pallet {
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(n: T::BlockNumber) -> Weight {
 			let time_unit = MinTimeUnit::<T>::get();
-			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).for_each(
+			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
 				|(total_locked, ledger_list, token_id)| {
 					let mut entrance_account_balance = T::MultiCurrency::free_balance(
 						token_id,
@@ -273,7 +273,8 @@ pub mod pallet {
 							Self::token_unlock_ledger(token_id, index)
 						{
 							if entrance_account_balance >= unlock_amount {
-								entrance_account_balance.saturating_sub(unlock_amount);
+								entrance_account_balance =
+									entrance_account_balance.saturating_sub(unlock_amount);
 								T::MultiCurrency::transfer(
 									token_id,
 									&T::EntranceAccount::get().into_account(),
@@ -281,21 +282,45 @@ pub mod pallet {
 									unlock_amount,
 								);
 
-								TimeUnitUnlockLedger::<T>::mutate(&time_unit, &token_id, |value| {
-									if let Some((total_locked, ledger_list, token_id)) = value {
-										total_locked.saturating_sub(unlock_amount);
-										ledger_list.retain(|x| x != index);
-									}
-								});
+								TimeUnitUnlockLedger::<T>::mutate(
+									&time_unit,
+									&token_id,
+									|value| -> Result<(), Error<T>> {
+										if let Some((total_locked_origin, ledger_list_origin, _)) =
+											value
+										{
+											*total_locked_origin = total_locked_origin
+												.checked_sub(&unlock_amount)
+												.ok_or(Error::<T>::Unexpected)?;
+											ledger_list_origin.retain(|x| x != index);
+										} else {
+											return Err(
+												Error::<T>::TimeUnitUnlockLedgerNotFound.into()
+											);
+										}
+										return Ok(());
+									},
+								);
 
 								TokenUnlockLedger::<T>::remove(&token_id, &index);
 
-								UserUnlockLedger::<T>::mutate(&account, &token_id, |value| {
-									if let Some((total_locked, ledger_list)) = value {
-										total_locked.saturating_sub(unlock_amount);
-										ledger_list.retain(|x| x != index);
-									}
-								});
+								UserUnlockLedger::<T>::mutate(
+									&account,
+									&token_id,
+									|value| -> Result<(), Error<T>> {
+										if let Some((total_locked_origin, ledger_list_origin)) =
+											value
+										{
+											ledger_list_origin.retain(|x| x != index);
+											*total_locked_origin = total_locked_origin
+												.checked_sub(&unlock_amount)
+												.ok_or(Error::<T>::Unexpected)?;
+										} else {
+											return Err(Error::<T>::UserUnlockLedgerNotFound.into());
+										}
+										return Ok(());
+									},
+								);
 							} else {
 								break;
 							}
@@ -303,10 +328,20 @@ pub mod pallet {
 					}
 				},
 			);
-			MinTimeUnit::<T>::mutate(move |time_unit| match time_unit {
-				TimeUnit::Era(era) => era.saturating_add(1u32),
-				TimeUnit::SlashingSpan(slashing_span) => *slashing_span,
-			});
+			let a: Vec<(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>, CurrencyIdOf<T>)> =
+				TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
+			if a.len() == 0 {
+				MinTimeUnit::<T>::mutate(|time_unit| -> Result<(), Error<T>> {
+					match time_unit {
+						TimeUnit::Era(era) => {
+							*era = era.checked_add(1).ok_or(Error::<T>::Unexpected)?;
+							Ok(())
+						},
+						_ => Ok(()),
+					}
+				});
+			}
+
 			T::WeightInfo::on_initialize()
 		}
 	}
