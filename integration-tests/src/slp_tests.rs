@@ -120,6 +120,13 @@ fn register_subaccount_index_0() {
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::Liquidize,
+			Some((20_000_000_000, 10_000_000_000)),
+		));
+
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
 			bond_extra_minimum: 0,
@@ -411,6 +418,10 @@ fn unbond_works() {
 	register_subaccount_index_0();
 	register_delegator_ledger();
 	let subaccount_0 = subaccount_0();
+
+	KusamaNet::execute_with(|| {
+		kusama_runtime::Staking::trigger_new_era(0, vec![]);
+	});
 
 	Bifrost::execute_with(|| {
 		let subaccount_0_32: [u8; 32] =
@@ -735,5 +746,59 @@ fn payout_works() {
 			validator_0_location,
 			Some(TimeUnit::Era(27))
 		));
+	});
+}
+
+#[test]
+fn liquidize_works() {
+	unbond_works();
+	let subaccount_0 = subaccount_0();
+
+	KusamaNet::execute_with(|| {
+
+		// Kusama's unbonding period is 27 days = 100_800 blocks
+		kusama_runtime::System::set_block_number(101_000);
+		for _i in 0..29 {
+			kusama_runtime::Staking::trigger_new_era(0, vec![]);
+		}
+
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2* dollar(RelayCurrencyId::get())
+		);
+
+		// 1ksm is locked for half bonded and half unbonding.
+		assert_eq!(
+			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
+			dollar(RelayCurrencyId::get())
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		assert_ok!(Slp::liquidize(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			Some(TimeUnit::SlashingSpan(5))
+		));
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2* dollar(RelayCurrencyId::get())
+		);
+
+		// half of 1ksm unlocking has been freed. So the usable balance should be 1.5 ksm
+		assert_eq!(
+			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
+			1_500_000_000_000
+		);
 	});
 }

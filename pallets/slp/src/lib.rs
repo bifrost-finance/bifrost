@@ -645,7 +645,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Initiate payout for a certain delegator.
+		/// Withdraw the due payout into free balance.
 		#[pallet::weight(T::WeightInfo::liquidize())]
 		pub fn liquidize(
 			origin: OriginFor<T>,
