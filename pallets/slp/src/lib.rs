@@ -1398,7 +1398,7 @@ pub mod pallet {
 			// Get the delegator account id in Kusama network
 			let account_32 = match who {
 				MultiLocation {
-					parents: 1,
+					parents: _,
 					interior: X1(AccountId32 { network: _network_id, id: account_id }),
 				} => account_id,
 				_ => Err(Error::<T>::AccountNotExist)?,

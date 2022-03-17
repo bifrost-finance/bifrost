@@ -897,3 +897,45 @@ fn transfer_back_works() {
 		);
 	});
 }
+
+#[test]
+fn supplement_fee_reserve_works() {
+	let subaccount_0 = subaccount_0();
+	delegate_works();
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2 * dollar(RelayCurrencyId::get())
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		// set fee source
+		let alice_location = Slp::account_32_to_local_location(ALICE).unwrap();
+		assert_ok!(Slp::set_fee_source(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			Some((alice_location.clone(), dollar(RelayCurrencyId::get())))
+		));
+
+		// We use supplement_fee_reserve to transfer some KSM to subaccount_0
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		assert_ok!(Slp::supplement_fee_reserve(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+		));
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2_999_893_333_340
+		);
+	});
+}
