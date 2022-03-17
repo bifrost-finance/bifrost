@@ -113,6 +113,13 @@ fn register_subaccount_index_0() {
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::Payout,
+			Some((20_000_000_000, 10_000_000_000)),
+		));
+
 		let mins_and_maxs = MinimumsMaximums {
 			delegator_bonded_minimum: 100_000_000_000,
 			bond_extra_minimum: 0,
@@ -695,5 +702,38 @@ fn redelegate_works() {
 				suppressed: false
 			},)
 		);
+	});
+}
+
+#[test]
+fn payout_works() {
+	register_subaccount_index_0();
+	transfer_2_ksm_to_subaccount_in_kusama();
+	let subaccount_0 = subaccount_0();
+
+	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	let validator_0: AccountId =
+		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+			.into();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+
+		// Bond 1 ksm for sub-account index 0
+		assert_ok!(Slp::payout(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location,
+			validator_0_location,
+			Some(TimeUnit::Era(27))
+		));
 	});
 }
