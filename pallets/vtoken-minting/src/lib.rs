@@ -356,17 +356,17 @@ pub mod pallet {
 		#[pallet::weight(10000)]
 		pub fn redeem(
 			origin: OriginFor<T>,
-			token_id: CurrencyIdOf<T>,
+			vtoken_id: CurrencyIdOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		) -> DispatchResult {
 			let exchanger = ensure_signed(origin)?;
+			let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			ensure!(
 				vtoken_amount >= MinimumRedeem::<T>::get(token_id),
 				Error::<T>::BelowMinimumRedeem
 			);
 
 			let token_pool_amount = Self::token_pool(token_id);
-			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
 			if let Some(time_unit) = OngoingTimeUnit::<T>::get(token_id) {

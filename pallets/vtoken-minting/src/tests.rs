@@ -50,11 +50,15 @@ fn redeem() {
 		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::root(), KSM, 90));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
 		assert_noop!(
-			VtokenMinting::redeem(Some(BOB).into(), KSM, 80),
+			VtokenMinting::redeem(Some(BOB).into(), vKSM, 80),
 			Error::<Runtime>::BelowMinimumRedeem
 		);
-		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 100));
-		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 200));
+		assert_noop!(
+			VtokenMinting::redeem(Some(BOB).into(), KSM, 80),
+			Error::<Runtime>::NotSupportTokenType
+		);
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_eq!(VtokenMinting::token_pool(KSM), 1700);
 		assert_eq!(VtokenMinting::token_to_add(KSM), 1000);
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
@@ -84,8 +88,8 @@ fn rebond() {
 		// ledger_list_origin.try_push(1);
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
-		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 200));
-		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), KSM, 100));
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
+		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
 		assert_noop!(
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
