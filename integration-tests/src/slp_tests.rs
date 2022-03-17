@@ -23,7 +23,7 @@ use bifrost_slp::{
 };
 use frame_support::assert_ok;
 use orml_traits::MultiCurrency;
-use pallet_staking::{Nominations, StakingLedger};
+use pallet_staking::{Nominations, Nominators, StakingLedger};
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
@@ -124,6 +124,13 @@ fn register_subaccount_index_0() {
 			Origin::root(),
 			RelayCurrencyId::get(),
 			XcmOperation::Liquidize,
+			Some((20_000_000_000, 10_000_000_000)),
+		));
+
+		assert_ok!(Slp::set_xcm_dest_weight_and_fee(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			XcmOperation::Chill,
 			Some((20_000_000_000, 10_000_000_000)),
 		));
 
@@ -755,7 +762,6 @@ fn liquidize_works() {
 	let subaccount_0 = subaccount_0();
 
 	KusamaNet::execute_with(|| {
-
 		// Kusama's unbonding period is 27 days = 100_800 blocks
 		kusama_runtime::System::set_block_number(101_000);
 		for _i in 0..29 {
@@ -764,7 +770,7 @@ fn liquidize_works() {
 
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			2* dollar(RelayCurrencyId::get())
+			2 * dollar(RelayCurrencyId::get())
 		);
 
 		// 1ksm is locked for half bonded and half unbonding.
@@ -792,7 +798,7 @@ fn liquidize_works() {
 	KusamaNet::execute_with(|| {
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
-			2* dollar(RelayCurrencyId::get())
+			2 * dollar(RelayCurrencyId::get())
 		);
 
 		// half of 1ksm unlocking has been freed. So the usable balance should be 1.5 ksm
@@ -800,5 +806,31 @@ fn liquidize_works() {
 			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
 			1_500_000_000_000
 		);
+	});
+}
+
+#[test]
+fn chill_works() {
+	delegate_works();
+	let subaccount_0 = subaccount_0();
+
+	// check if sub-account index 0 belongs to the group of nominators
+	KusamaNet::execute_with(|| {
+		assert_eq!(kusama_runtime::Staking::nominators(&subaccount_0.clone()).is_some(), true);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		assert_ok!(Slp::chill(Origin::root(), RelayCurrencyId::get(), subaccount_0_location,));
+	});
+
+	// check if sub-account index 0 belongs to the group of nominators
+	KusamaNet::execute_with(|| {
+		assert_eq!(kusama_runtime::Staking::nominators(&subaccount_0.clone()).is_some(), false);
 	});
 }
