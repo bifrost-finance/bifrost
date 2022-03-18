@@ -622,6 +622,7 @@ dependencies = [
  "bifrost-token-issuer",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
+ "bifrost-vtoken-minting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -691,7 +692,6 @@ dependencies = [
  "sp-version",
  "static_assertions",
  "substrate-wasm-builder",
- "vtoken-minting",
  "xcm",
  "xcm-builder",
  "xcm-executor",
@@ -1107,6 +1107,27 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "zenlink-protocol",
+]
+
+[[package]]
+name = "bifrost-vtoken-minting"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives 0.8.0",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -8867,6 +8888,7 @@ dependencies = [
  "bifrost-vesting",
  "bifrost-vsbond-auction",
  "bifrost-vtoken-mint",
+ "bifrost-vtoken-minting",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -11994,27 +12016,6 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
-
-[[package]]
-name = "vtoken-minting"
-version = "0.8.0"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "hex-literal",
- "node-primitives",
- "orml-currencies",
- "orml-tokens",
- "orml-traits",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
-]
 
 [[package]]
 name = "waker-fn"

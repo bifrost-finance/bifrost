@@ -1736,7 +1736,7 @@ parameter_types! {
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
 }
 
-impl vtoken_minting::Config for Runtime {
+impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
@@ -1882,7 +1882,7 @@ construct_runtime! {
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 114,
-		VtokenMinting: vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
 	}
 }
 
