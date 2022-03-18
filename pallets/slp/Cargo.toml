@@ -1,0 +1,70 @@
+[package]
+name = "bifrost-slp"
+version = "0.8.0"
+authors = ["Herry Ho <herry.heyi@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = [
+    "derive",
+] }
+scale-info = { version = "1.0.0", default-features = false, features = [
+    "derive",
+] }
+serde = { version = "1.0.124", optional = true }
+orml-traits = { version = "0.4.1-dev", default-features = false }
+orml-tokens = { version = "0.4.1-dev", default-features = false }
+orml-currencies = { version = "0.4.1-dev", default-features = false }
+node-primitives = { path = "../../node/primitives", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false, optional = true }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+sp-arithmetic = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
+sha3 = { version = "0.9.1", default-features = false }
+
+
+[dev-dependencies]
+hex-literal = "0.3.1"
+bifrost-vtoken-minting = { path = "../../pallets/vtoken-minting", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "scale-info/std",
+    "frame-system/std",
+    "frame-support/std",
+    "sp-runtime/std",
+    "sp-arithmetic/std",
+    "serde/std",
+    "orml-traits/std",
+    "orml-tokens/std",
+    "orml-currencies/std",
+    "node-primitives/std",
+    "sp-core/std",
+    "sp-io/std",
+    "sp-std/std",
+    "xcm/std",
+    "pallet-xcm/std",
+    "cumulus-primitives-core/std",
+    "pallet-balances/std",
+    "pallet-utility/std",
+]
+
+runtime-benchmarks = [
+    "frame-benchmarking",
+    "frame-support/runtime-benchmarks",
+    "frame-system/runtime-benchmarks",
+    "pallet-xcm/runtime-benchmarks",
+]

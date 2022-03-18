@@ -94,8 +94,9 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TokenSymbol,
+	traits::{CheckSubAccount, VtokenMintingOperator},
+	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
+	PoolId, RpcContributionStatus, TimeUnit, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -1481,6 +1482,13 @@ pub fn create_x2_multilocation(index: u16) -> MultiLocation {
 	)
 }
 
+pub struct SubAccountIndexMultiLocationConvertor;
+impl Convert<u16, MultiLocation> for SubAccountIndexMultiLocationConvertor {
+	fn convert(sub_account_index: u16) -> MultiLocation {
+		create_x2_multilocation(sub_account_index)
+	}
+}
+
 parameter_types! {
 	pub MinContribution: Balance = dollar(RelayCurrencyId::get()) / 10;
 	pub const RemoveKeysLimit: u32 = 500;
@@ -1636,6 +1644,18 @@ impl xcm_interface::Config for Runtime {
 	type ContributionFee = UmpTransactFee;
 }
 
+impl bifrost_slp::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type WeightInfo = ();
+	type VtokenMinting = VtokenMinting;
+	type AccountConverter = SubAccountIndexMultiLocationConvertor;
+	type ParachainId = SelfParaChainId;
+	type XcmSender = XcmRouter;
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1697,6 +1717,24 @@ pub type ZenlinkLocationToAccountId = (
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
 	AccountId32Aliases<AnyNetwork, AccountId>,
 );
+
+parameter_types! {
+	pub const MaximumMintId: u32 = 1_000;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+}
+
+impl bifrost_vtoken_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type MaximumMintId = MaximumMintId;
+	type EntranceAccount = BifrostEntranceAccount;
+	type ExitAccount = BifrostExitAccount;
+	type FeeAccount = BifrostFeeAccount;
+	type WeightInfo = ();
+}
 
 // Below is the implementation of tokens manipulation functions other than native token.
 pub struct LocalAssetAdaptor<Local>(PhantomData<Local>);
@@ -1832,6 +1870,8 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
+		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>} = 114,
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>} = 115,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 	}
 }
