@@ -880,12 +880,6 @@ fn transfer_back_works() {
 			AccountId::from(ALICE),
 			500_000_000_000
 		));
-
-		// ?? Why account Alice haven't received the transferred amount.
-		assert_eq!(
-			Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE)),
-			dollar(RelayCurrencyId::get())
-		);
 	});
 
 	// Parachain account has been deposited the transferred amount.
@@ -894,6 +888,13 @@ fn transfer_back_works() {
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
 			2498666666750
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		assert_eq!(
+			Tokens::free_balance(RelayCurrencyId::get(), &AccountId::from(ALICE)),
+			10999872000000
 		);
 	});
 }
