@@ -39,7 +39,7 @@ use frame_support::{
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{Balance, CurrencyId};
+use node_primitives::{CurrencyId, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::vec::Vec;
@@ -59,17 +59,6 @@ type BalanceOf<T: Config> =
 
 pub type MintId = u32;
 
-#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
-pub enum TimeUnit {
-	Era(u32),
-	SlashingSpan(u32),
-}
-
-impl Default for TimeUnit {
-	fn default() -> Self {
-		TimeUnit::Era(1u32)
-	}
-}
 #[frame_support::pallet]
 pub mod pallet {
 	// use sp_runtime::traits::CheckedAdd;
@@ -744,55 +733,6 @@ pub mod pallet {
 			Ok(())
 		}
 	}
-}
-
-/// The interface to call VtokenMinting module functions.
-pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
-	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
-	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
-
-	/// Decrease the token amount for the storage "token_pool" in the VtokenMining module.
-	fn decrease_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
-
-	/// Update the ongoing era for a CurrencyId.
-	fn update_ongoing_time_unit(currency_id: CurrencyId, time_unit: TimeUnit) -> DispatchResult;
-
-	/// Get the current era of a CurrencyId.
-	fn get_ongoing_time_unit(currency_id: CurrencyId) -> Option<TimeUnit>;
-
-	/// Get the the unlocking records of a certain time unit.
-	fn get_unlock_records(
-		currency_id: CurrencyId,
-		time_unit: TimeUnit,
-	) -> Option<(Balance, Vec<u32>)>;
-
-	/// Revise the currency indexed unlocking record by some amount.
-	fn deduct_unlock_amount(
-		currency_id: CurrencyId,
-		index: u32,
-		deduct_amount: Balance,
-	) -> DispatchResult;
-
-	/// Get currency Entrance and Exit accounts.【entrance_account, exit_account】
-	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId);
-
-	/// Get the token_unlock_ledger storage info to refund to the due era unlocking users.
-	fn get_token_unlock_ledger(
-		currency_id: CurrencyId,
-		index: u32,
-	) -> Option<(AccountId, Balance, TimeUnit)>;
-
-	/// Increase token_to_add storage by value in VtokenMinting module.
-	fn increase_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
-
-	/// Decrease token_to_add storage by value in VtokenMinting module.
-	fn decrease_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
-
-	/// Increase token_to_deduct storage by value in VtokenMinting module.
-	fn increase_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
-
-	/// Decrease token_to_deduct storage by value in VtokenMinting module.
-	fn decrease_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
 }
 
 impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, TimeUnit>

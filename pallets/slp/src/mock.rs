@@ -30,8 +30,10 @@ use frame_support::{
 	parameter_types,
 	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
 	weights::Weight,
+	PalletId,
 };
 use frame_system::EnsureSignedBy;
+use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
 use orml_traits::XcmTransfer;
 use sp_core::{blake2_256, H256};
@@ -72,6 +74,7 @@ construct_runtime!(
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
 		Slp: bifrost_slp::{Pallet, Call, Storage, Event<T>},
+		VtokenMinting: bifrost_vtoken_minting::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -159,6 +162,24 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const MaximumMintId: u32 = 1_000;
+	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
+	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
+	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
+}
+
+impl bifrost_vtoken_minting::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureSignedBy<One, AccountId>;
+	type MaximumMintId = MaximumMintId;
+	type EntranceAccount = BifrostEntranceAccount;
+	type ExitAccount = BifrostExitAccount;
+	type FeeAccount = BifrostFeeAccount;
+	type WeightInfo = ();
+}
+
 ord_parameter_types! {
 	pub const One: AccountId = AccountId32::new([1u8; 32]);
 }
@@ -206,72 +227,11 @@ impl Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureSignedBy<One, AccountId>;
 	type WeightInfo = ();
-	type VtokenMinting = MockVtokenMintingOperator;
+	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
 	type XcmSender = ();
 	type XcmExecutor = ();
-}
-
-pub struct MockVtokenMintingOperator;
-impl VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> for MockVtokenMintingOperator {
-	fn increase_token_pool(_currency_id: CurrencyId, _token_amount: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn decrease_token_pool(_currency_id: CurrencyId, _token_amount: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn update_ongoing_time_unit(_currency_id: CurrencyId, _time_unit: TimeUnit) -> DispatchResult {
-		Ok(())
-	}
-
-	fn get_ongoing_time_unit(_currency_id: CurrencyId) -> Option<TimeUnit> {
-		Some(TimeUnit::Era(2))
-	}
-
-	fn get_unlock_records(
-		_currency_id: CurrencyId,
-		_time_unit: TimeUnit,
-	) -> Option<(Balance, Vec<u32>)> {
-		None
-	}
-
-	fn deduct_unlock_amount(
-		_currency_id: CurrencyId,
-		_index: u32,
-		_deduct_amount: Balance,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId) {
-		(ENTRANCE_ACCOUNT, EXIT_ACCOUNT)
-	}
-
-	fn get_token_unlock_ledger(
-		_currency_id: CurrencyId,
-		_index: u32,
-	) -> Option<(AccountId, Balance, TimeUnit)> {
-		None
-	}
-
-	fn increase_token_to_add(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn decrease_token_to_add(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn increase_token_to_deduct(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn decrease_token_to_deduct(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
 }
 
 pub struct ExtBuilder {

@@ -22,9 +22,9 @@ pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
 use frame_support::{dispatch::result::Result, pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{ensure_signed, pallet_prelude::OriginFor};
-use node_primitives::{CurrencyId, CurrencyIdExt};
+use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
-pub use primitives::{Ledger, TimeUnit};
+pub use primitives::Ledger;
 use sha3::{Digest, Keccak256};
 use sp_arithmetic::traits::Zero;
 use sp_core::H256;
@@ -38,9 +38,7 @@ use xcm::{
 
 pub use crate::{
 	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
-	traits::{
-		DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager, VtokenMintingOperator,
-	},
+	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
 	Junction::AccountId32,
 	Junctions::X1,
 };

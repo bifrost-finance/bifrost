@@ -20,6 +20,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::MaxEncodedLen;
+use scale_info::TypeInfo;
 use sp_core::{Decode, Encode, RuntimeDebug};
 use sp_runtime::{
 	generic,
@@ -138,4 +140,17 @@ pub enum ExtraFeeName {
 	SalpContribute,
 	StatemineTransfer,
 	NoExtraFee,
+}
+
+// For vtoken-minting and slp modules
+#[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+pub enum TimeUnit {
+	Era(u32),
+	SlashingSpan(u32),
+}
+
+impl Default for TimeUnit {
+	fn default() -> Self {
+		TimeUnit::Era(1u32)
+	}
 }

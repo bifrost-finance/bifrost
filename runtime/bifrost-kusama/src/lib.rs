@@ -83,7 +83,6 @@ use bifrost_runtime_common::{
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
-use bifrost_slp::{traits::VtokenMintingOperator, TimeUnit};
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -94,10 +93,10 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, ParachainDerivedProxyAccountType, ParachainTransactProxyType,
-	ParachainTransactType, PoolId, RpcContributionStatus, TokenSymbol, TransferOriginType,
-	XcmBaseWeight,
+	traits::{CheckSubAccount, VtokenMintingOperator},
+	AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName, Moment, Nonce, ParaId,
+	ParachainDerivedProxyAccountType, ParachainTransactProxyType, ParachainTransactType, PoolId,
+	RpcContributionStatus, TimeUnit, TokenSymbol, TransferOriginType, XcmBaseWeight,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -1598,73 +1597,11 @@ impl bifrost_slp::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type WeightInfo = ();
-	type VtokenMinting = MockVtokenMintingOperator;
+	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
 	type XcmSender = XcmRouter;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-}
-
-// To be replaced by the real VtokenMinting moudle.
-pub struct MockVtokenMintingOperator;
-impl VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> for MockVtokenMintingOperator {
-	fn increase_token_pool(_currency_id: CurrencyId, _token_amount: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn decrease_token_pool(_currency_id: CurrencyId, _token_amount: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn update_ongoing_time_unit(_currency_id: CurrencyId, _time_unit: TimeUnit) -> DispatchResult {
-		Ok(())
-	}
-
-	fn get_ongoing_time_unit(_currency_id: CurrencyId) -> Option<TimeUnit> {
-		Some(TimeUnit::Era(2))
-	}
-
-	fn get_unlock_records(
-		_currency_id: CurrencyId,
-		_time_unit: TimeUnit,
-	) -> Option<(Balance, Vec<u32>)> {
-		None
-	}
-
-	fn deduct_unlock_amount(
-		_currency_id: CurrencyId,
-		_index: u32,
-		_deduct_amount: Balance,
-	) -> DispatchResult {
-		Ok(())
-	}
-
-	fn get_entrance_and_exit_accounts() -> (AccountId, AccountId) {
-		(TreasuryPalletId::get().into_account(), TreasuryPalletId::get().into_account())
-	}
-
-	fn get_token_unlock_ledger(
-		_currency_id: CurrencyId,
-		_index: u32,
-	) -> Option<(AccountId, Balance, TimeUnit)> {
-		None
-	}
-
-	fn increase_token_to_add(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn decrease_token_to_add(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn increase_token_to_deduct(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn decrease_token_to_deduct(_currency_id: CurrencyId, _value: Balance) -> DispatchResult {
-		Ok(())
-	}
 }
 
 // Bifrost modules end

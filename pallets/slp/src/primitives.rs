@@ -18,7 +18,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
-use node_primitives::{CurrencyId, TokenSymbol};
+use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
@@ -52,15 +52,6 @@ pub struct UnlockChunk<Balance> {
 	pub value: Balance,
 	/// Era number at which point it'll be unlocked.
 	pub unlock_time: TimeUnit,
-}
-
-/// Timing units for different chains.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum TimeUnit {
-	// EraIndex for Kusama
-	Era(u32),
-	// Slashing span for Kusama
-	SlashingSpan(u32),
 }
 
 /// Different minimum and maximum requirements for different chain
