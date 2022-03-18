@@ -1403,12 +1403,6 @@ dependencies = [
 
 [[package]]
 name = "bs58"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "476e9cd489f9e121e02ffa6014a8ef220ecb15c05ed23fc34cca13925dc283fb"
-
-[[package]]
-name = "bs58"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
@@ -4269,7 +4263,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86aad7d54df283db817becded03e611137698a6509d4237a96881976a162340c"
 dependencies = [
  "asn1_der",
- "bs58 0.4.0",
+ "bs58",
  "ed25519-dalek",
  "either",
  "fnv",
@@ -5141,7 +5135,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48ee4ea82141951ac6379f964f71b20876d43712bea8faf6dd1a375e08a46499"
 dependencies = [
  "arrayref",
- "bs58 0.4.0",
+ "bs58",
  "byteorder",
  "data-encoding",
  "multihash 0.14.0",
@@ -5387,7 +5381,7 @@ dependencies = [
  "bifrost-polkadot-runtime",
  "bifrost-runtime-common",
  "bifrost-salp-rpc-runtime-api",
- "bs58 0.3.1",
+ "bs58",
  "cumulus-client-consensus-aura",
  "cumulus-client-consensus-common",
  "cumulus-client-network",
@@ -7649,7 +7643,7 @@ name = "polkadot-node-metrics"
 version = "0.9.16"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.16#41ab002d7451766324a9f314fee11c9c53314350"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "futures 0.3.21",
  "futures-timer",
  "log",
@@ -8050,7 +8044,7 @@ name = "polkadot-runtime-metrics"
 version = "0.9.16"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.16#41ab002d7451766324a9f314fee11c9c53314350"
 dependencies = [
- "bs58 0.4.0",
+ "bs58",
  "parity-scale-codec 2.3.1",
  "polkadot-primitives",
  "sp-std",
