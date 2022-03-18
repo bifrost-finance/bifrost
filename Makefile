@@ -138,3 +138,6 @@ copy-genesis-config-production:
 .PHONY: production-release-bifrost-kusama
 production-release-bifrost-kusama:
 	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --profile production
+
+.PHONY: production-release
+production-release: production-release-bifrost-kusama
