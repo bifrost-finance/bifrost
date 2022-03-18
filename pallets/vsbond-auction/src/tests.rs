@@ -948,6 +948,6 @@ fn check_price_to_pay() {
 	let price_to_pays: [BalanceOf<Test>; 4] = [0, 10, 109, 1099];
 
 	for (quantity, price_to_pay) in quantities.iter().zip(price_to_pays.iter()) {
-		assert_eq!(Auction::price_to_pay(*quantity, unit_price), *price_to_pay);
+		assert_eq!(Auction::price_to_pay(*quantity, unit_price).unwrap(), *price_to_pay);
 	}
 }

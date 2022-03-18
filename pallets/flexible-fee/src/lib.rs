@@ -55,6 +55,8 @@ mod mock;
 mod tests;
 mod weights;
 
+const MAX_ORDER_LIST_LEN: u32 = 20;
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -147,6 +149,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		NotEnoughBalance,
+		ExceedMaxListLength,
 	}
 
 	#[pallet::call]
@@ -161,6 +164,11 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 
 			if let Some(mut asset_order_list) = asset_order_list_vec {
+				ensure!(
+					(asset_order_list.len()) as u32 <= MAX_ORDER_LIST_LEN,
+					Error::<T>::ExceedMaxListLength
+				);
+
 				asset_order_list.insert(0, T::NativeCurrencyId::get());
 				asset_order_list.dedup();
 				UserFeeChargeOrderList::<T>::insert(&who, asset_order_list);

@@ -107,7 +107,7 @@ benchmarks! {
 			[0; 32]
 		));
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-	}: _(RawOrigin::Root, caller.clone(),fund_index)
+	}: _(RawOrigin::Signed(caller.clone()), caller.clone(),fund_index)
 	verify {
 		let fund = Salp::<T>::funds(fund_index).unwrap();
 		let (_, status) = Salp::<T>::contribution(fund.trie_index, &caller);
@@ -155,7 +155,7 @@ benchmarks! {
 			[0; 32]
 		));
 		assert_ok!(Salp::<T>::fund_success(RawOrigin::Root.into(), fund_index));
-		assert_ok!(Salp::<T>::unlock(RawOrigin::Root.into(), caller.clone(), fund_index));
+		assert_ok!(Salp::<T>::unlock(caller_origin.clone(), caller.clone(), fund_index));
 		assert_ok!(Salp::<T>::fund_retire(RawOrigin::Root.into(), fund_index));
 		assert_ok!(Salp::<T>::withdraw(RawOrigin::Root.into(), fund_index));
 		assert_eq!(Salp::<T>::redeem_pool(), T::MinContribution::get());
