@@ -798,8 +798,9 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			// Get exit_account and its currency balance
-			let exit_account = T::VtokenMinting::get_entrance_and_exit_accounts().1;
+			// Get entrance_account and exit_account, as well as their currency balances.
+			let (entrance_account, exit_account) =
+				T::VtokenMinting::get_entrance_and_exit_accounts();
 			let mut exit_account_balance =
 				T::MultiCurrency::free_balance(currency_id, &exit_account);
 			let ed = T::MultiCurrency::minimum_balance(currency_id);
@@ -854,43 +855,16 @@ pub mod pallet {
 				}
 			}
 
-			Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::move_fund_from_exit_to_entrance_account())]
-		pub fn move_fund_from_exit_to_entrance_account(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-		) -> DispatchResult {
-			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
-
-			// Get the reserved fee amount
-			let (_source_account, reserved_fee) =
-				FeeSources::<T>::get(currency_id).ok_or(Error::<T>::FeeSourceNotExist)?;
-			// Get entrance_account, exit_account and exit_account's currency balance.
-			let (entrance_account, exit_account) =
-				T::VtokenMinting::get_entrance_and_exit_accounts();
-			let exit_account_balance = T::MultiCurrency::free_balance(currency_id, &exit_account);
-
-			// Transfer the (exit account balance - reserved fee amount) from exit_account to
-			// entrance_account.
-			let transfer_amount =
-				exit_account_balance.checked_sub(&reserved_fee).ok_or(Error::<T>::UnderFlow)?;
+			// Automatically move the rest amount in exit account to entrance account.
+			let new_exit_account_balance =
+				T::MultiCurrency::free_balance(currency_id, &exit_account);
 
 			T::MultiCurrency::transfer(
 				currency_id,
 				&exit_account,
 				&entrance_account,
-				transfer_amount,
+				new_exit_account_balance,
 			)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::FundMoveFromExitToEntrance {
-				currency_id,
-				amount: transfer_amount,
-			});
 
 			Ok(())
 		}
