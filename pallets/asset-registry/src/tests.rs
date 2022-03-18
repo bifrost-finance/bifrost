@@ -140,7 +140,7 @@ fn register_foreign_asset_should_not_work() {
 			Error::<Runtime>::MultiLocationExisted
 		);
 
-		NextForeignAssetId::<Runtime>::set(u16::MAX);
+		NextForeignAssetId::<Runtime>::set(ForeignAssetId::MAX);
 		assert_noop!(
 			AssetRegistry::register_foreign_asset(
 				Origin::signed(CouncilAccount::get()),

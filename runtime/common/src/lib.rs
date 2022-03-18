@@ -79,7 +79,7 @@ pub type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
 >;
 
 pub fn dollar(currency_id: CurrencyId) -> Balance {
-	10u128.saturating_pow(currency_id.decimals().into())
+	10u128.saturating_pow(currency_id.decimals().unwrap_or(12).into())
 }
 
 pub fn milli(currency_id: CurrencyId) -> Balance {

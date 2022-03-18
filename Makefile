@@ -22,8 +22,8 @@ build-bifrost-polkadot-release: copy-genesis-config-release
 build-all-release: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime" --release
 
-.PHONY: build-bifrost-kusama-fast-release
-build-bifrost-kusama-fast-release:
+.PHONY: build-bifrost-rococo-fast-release
+build-bifrost-rococo-fast-release:
 	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime,fast-runtime" --release
 
 
@@ -56,6 +56,19 @@ format:
 test-benchmarking:
 	cargo test --features runtime-benchmarks --features with-bifrost-kusama-runtime --features --all benchmarking
 
+.PHONY: benchmarking-staking
+benchmarking-staking:
+	cargo run -p node-cli --locked --features "with-bifrost-kusama-runtime,runtime-benchmarks" --release \
+			-- benchmark --chain=bifrost-local --steps=50 \
+			--repeat=20 \
+            --pallet=parachain_staking \
+            --extrinsic="*" \
+            --execution=wasm \
+            --wasm-execution=compiled \
+            --heap-pages=4096 \
+            --header=./HEADER-GPL3 \
+			--output="./runtime/bifrost-kusama/src/weights/parachain_staking.rs"
+
 .PHONY: generate-all-weights
 generate-all-weights:
 	bash ./scripts/generate-weights.sh bifrost
@@ -63,11 +76,6 @@ generate-all-weights:
 .PHONY: build-all-release-with-bench
 build-all-release-with-bench: copy-genesis-config-release
 	cargo build -p node-cli --locked --features "with-all-runtime,runtime-benchmarks" --release
-
-# Deploy
-.PHONY: deploy-bifrost-live
-deploy-bifrost-live:
-	pm2 deploy scripts/bifrost-ecosystem.config.js production
 
 # Run dev chain
 .PHONY: run-dev-manual-seal
@@ -88,13 +96,17 @@ build-bifrost-kusama-wasm:
 build-bifrost-polkadot-wasm:
 	.maintain/build-wasm.sh bifrost-polkadot
 
+.PHONY: build-bifrost-rococo-fast-wasm
+build-bifrost-rococo-fast-wasm:
+	.maintain/build-wasm.sh bifrost-kusama fast
+
 .PHONY: check-try-runtime
 check-try-runtime:
 	SKIP_WASM_BUILD= cargo check --features try-runtime --features with-bifrost-runtime
 
 .PHONY: try-bifrost-runtime-upgrade
 try-bifrost-runtime-upgrade:
-	./scripts/try-runtime.sh bifrost
+	./scripts/try-runtime.sh bifrost-kusama
 
 .PHONY: resources
 resources:
@@ -123,6 +135,9 @@ copy-genesis-config-production:
 	mkdir -p "target/production/res"
 	cp -r node/service/res/genesis_config target/production/res
 
+.PHONY: production-release-bifrost-kusama
+production-release-bifrost-kusama:
+	cargo build -p node-cli --locked --features "with-bifrost-kusama-runtime" --profile production
+
 .PHONY: production-release
-production-release:
-	cargo build -p node-cli --locked --features "with-bifrost-runtime" --profile production
+production-release: production-release-bifrost-kusama

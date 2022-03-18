@@ -91,7 +91,6 @@ yamux = { opt-level = 3 }
 zeroize = { opt-level = 3 }
 
 [patch.crates-io]
-
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "446c31ee35ebed2cd30bb566a5cccd58ca205f4c"}
 zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "446c31ee35ebed2cd30bb566a5cccd58ca205f4c" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "446c31ee35ebed2cd30bb566a5cccd58ca205f4c" }
@@ -103,4 +102,5 @@ orml-xtokens = { git = "https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
 orml-xcm = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
 orml-xcm-support = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "ec9a8d8521ca9b7b800dd36726bba7da7a169b9d" }
+parachain-staking = { git = "https://github.com/bifrost-finance/parachain-staking", rev = "f31949182871bf01d10a710e2274b7095196e3a5" }
 xcm-interface = { git = "https://github.com/bifrost-finance/xcm-interface", rev = "873860a2363186af2527018e89e543379f06772e"}
