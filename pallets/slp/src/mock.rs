@@ -23,19 +23,15 @@
 use codec::{Decode, Encode};
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{
-	construct_runtime,
-	dispatch::DispatchResult,
-	ord_parameter_types,
+	construct_runtime, ord_parameter_types,
 	pallet_prelude::Get,
 	parameter_types,
-	traits::{GenesisBuild, Nothing, OnFinalize, OnInitialize},
-	weights::Weight,
+	traits::{GenesisBuild, Nothing},
 	PalletId,
 };
 use frame_system::EnsureSignedBy;
 use hex_literal::hex;
 use node_primitives::{Amount, Balance, CurrencyId, TokenSymbol};
-use orml_traits::XcmTransfer;
 use sp_core::{blake2_256, H256};
 pub use sp_runtime::{testing::Header, Perbill};
 use sp_runtime::{
@@ -46,14 +42,11 @@ use sp_std::{boxed::Box, vec::Vec};
 use xcm::latest::prelude::*;
 
 use crate as bifrost_slp;
-use crate::{Config, TimeUnit, VtokenMintingOperator};
+use crate::Config;
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
 pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-
-pub const EXIT_ACCOUNT: AccountId = AccountId32::new([6u8; 32]);
-pub const ENTRANCE_ACCOUNT: AccountId = AccountId32::new([7u8; 32]);
 
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
@@ -297,16 +290,5 @@ impl ExtBuilder {
 		.unwrap();
 
 		t.into()
-	}
-}
-
-// simulate block production
-pub(crate) fn run_to_block(n: u64) {
-	while System::block_number() < n {
-		Slp::on_finalize(System::block_number());
-		System::on_finalize(System::block_number());
-		System::set_block_number(System::block_number() + 1);
-		System::on_initialize(System::block_number());
-		Slp::on_initialize(System::block_number());
 	}
 }

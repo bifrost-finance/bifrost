@@ -19,8 +19,7 @@
 #![cfg(test)]
 
 use frame_support::assert_ok;
-use mock::{Event, *};
-use node_primitives::{CurrencyId, TokenSymbol};
+use mock::*;
 use orml_traits::MultiCurrency;
 
 use super::*;
@@ -383,13 +382,69 @@ fn refund_currency_due_unbond_works() {
 }
 
 #[test]
-fn increase_token_to_add_works() {}
+fn increase_token_to_add_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// check token_to_add value
+		assert_eq!(VtokenMinting::token_to_add(KSM), 0);
+
+		// increase token_to_add value
+		assert_ok!(Slp::increase_token_to_add(Origin::signed(ALICE), KSM, 10));
+
+		// check token_to_add value after adding
+		assert_eq!(VtokenMinting::token_to_add(KSM), 10);
+
+		// increase token_to_add value
+		assert_ok!(Slp::increase_token_to_add(Origin::signed(ALICE), KSM, 10));
+
+		// check token_to_add value after adding
+		assert_eq!(VtokenMinting::token_to_add(KSM), 20);
+	});
+}
 
 #[test]
-fn decrease_token_to_add_works() {}
+fn decrease_token_to_add_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// set token_to_add value
+		bifrost_vtoken_minting::TokenToAdd::<Runtime>::insert(KSM, 100);
+
+		// decrease token_to_add value
+		assert_ok!(Slp::decrease_token_to_add(Origin::signed(ALICE), KSM, 20));
+
+		// check token_to_add value after adding
+		assert_eq!(VtokenMinting::token_to_add(KSM), 80);
+	});
+}
 
 #[test]
-fn increase_token_to_deduct_works() {}
+fn increase_token_to_deduct_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// check token_to_deduct value
+		assert_eq!(VtokenMinting::token_to_deduct(KSM), 0);
+
+		// increase token_to_deduct value
+		assert_ok!(Slp::increase_token_to_deduct(Origin::signed(ALICE), KSM, 10));
+
+		// check token_to_deduct value after adding
+		assert_eq!(VtokenMinting::token_to_deduct(KSM), 10);
+
+		// increase token_to_deduct value
+		assert_ok!(Slp::increase_token_to_deduct(Origin::signed(ALICE), KSM, 10));
+
+		// check token_to_deduct value after adding
+		assert_eq!(VtokenMinting::token_to_deduct(KSM), 20);
+	});
+}
 
 #[test]
-fn decrease_token_to_deduct_works() {}
+fn decrease_token_to_deduct_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// set token_to_deduct value
+		bifrost_vtoken_minting::TokenToDeduct::<Runtime>::insert(KSM, 100);
+
+		// decrease token_to_deduct value
+		assert_ok!(Slp::decrease_token_to_deduct(Origin::signed(ALICE), KSM, 20));
+
+		// check token_to_deduct value after adding
+		assert_eq!(VtokenMinting::token_to_deduct(KSM), 80);
+	});
+}
