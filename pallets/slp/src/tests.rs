@@ -218,7 +218,7 @@ fn refund_currency_due_unbond_works() {
 		// set current era to be 100.
 		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
 
-		// Set unlock records.
+		// Set TokenUnlockLedger records.
 		let record_bob = (BOB, 10, TimeUnit::Era(90));
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 0, record_bob);
 
@@ -228,8 +228,11 @@ fn refund_currency_due_unbond_works() {
 		let record_dave = (DAVE, 30, TimeUnit::Era(100));
 		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 2, record_dave);
 
-		let record_eddie = (EDDIE, 7, TimeUnit::Era(110));
-		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 3, record_eddie);
+		let record_eddie_1 = (EDDIE, 7, TimeUnit::Era(110));
+		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 3, record_eddie_1);
+
+		let record_eddie_2 = (EDDIE, 6, TimeUnit::Era(110));
+		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 4, record_eddie_2);
 
 		// insert TimeUnitUnlockLedger records
 		let bounded_vec_90 = BoundedVec::try_from(vec![0]).unwrap();
@@ -248,12 +251,41 @@ fn refund_currency_due_unbond_works() {
 			time_record_100,
 		);
 
-		let bounded_vec_110 = BoundedVec::try_from(vec![3]).unwrap();
-		let time_record_110 = (7, bounded_vec_110, KSM);
+		let bounded_vec_110 = BoundedVec::try_from(vec![3, 4]).unwrap();
+		let time_record_110 = (13, bounded_vec_110, KSM);
 		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
 			TimeUnit::Era(110),
 			KSM,
 			time_record_110.clone(),
+		);
+
+		// insert UserUnlockLedger records.
+		let bounded_vec_bob = BoundedVec::try_from(vec![0]).unwrap();
+		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
+			BOB,
+			KSM,
+			(10, bounded_vec_bob.clone()),
+		);
+
+		let bounded_vec_charlie = BoundedVec::try_from(vec![1]).unwrap();
+		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
+			CHARLIE,
+			KSM,
+			(28, bounded_vec_charlie.clone()),
+		);
+
+		let bounded_vec_dave = BoundedVec::try_from(vec![2]).unwrap();
+		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
+			DAVE,
+			KSM,
+			(30, bounded_vec_dave.clone()),
+		);
+
+		let bounded_vec_eddie = BoundedVec::try_from(vec![3, 4]).unwrap();
+		bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::insert(
+			EDDIE,
+			KSM,
+			(13, bounded_vec_eddie.clone()),
 		);
 
 		// check account balances before refund
@@ -279,6 +311,10 @@ fn refund_currency_due_unbond_works() {
 			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(90), KSM,),
 			Some(time_record_90)
 		);
+		assert_eq!(
+			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(BOB, KSM,),
+			Some((10, bounded_vec_bob.clone()))
+		);
 
 		// Unlocking records for era 100
 		let bounded_vec_100_new = BoundedVec::try_from(vec![2]).unwrap();
@@ -299,16 +335,52 @@ fn refund_currency_due_unbond_works() {
 			Some(time_record_100_new)
 		);
 
+		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(CHARLIE, KSM,), None);
+		assert_eq!(
+			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(DAVE, KSM,),
+			Some((8, bounded_vec_dave.clone()))
+		);
+
 		// Unlocking records for era 110
 		assert_eq!(
 			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(110), KSM,),
 			Some(time_record_110)
 		);
+
+		assert_eq!(
+			bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,),
+			Some((13, bounded_vec_eddie.clone()))
+		);
+
+		// Set some more balance to exit account.
+		assert_ok!(Tokens::set_balance(Origin::root(), exit_acc.clone(), KSM, 30, 0));
+
+		// set era to 110
+		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(110));
+
+		// Refund user
+		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+
+		// Check storages
+		assert_eq!(
+			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(110), KSM,),
+			None
+		);
+
+		assert_eq!(bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 3), None);
+		assert_eq!(bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 4), None);
+
+		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,), None);
+
+		// check account balances
+		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
+		assert_eq!(Tokens::free_balance(KSM, &entrance_acc), 17);
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
+		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
+		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 13);
 	});
 }
-
-#[test]
-fn move_fund_from_exit_to_entrance_account_works() {}
 
 #[test]
 fn increase_token_to_add_works() {}
