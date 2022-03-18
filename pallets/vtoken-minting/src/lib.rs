@@ -352,8 +352,8 @@ pub mod pallet {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-				token_pool_amount.into();
+			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into())
+				/ token_pool_amount.into();
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
 				token_id,
@@ -395,8 +395,8 @@ pub mod pallet {
 
 			if let Some(time_unit) = OngoingTimeUnit::<T>::get(token_id) {
 				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-				let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
-					vtoken_total_issuance.into();
+				let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into())
+					/ vtoken_total_issuance.into();
 				TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 					*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
 					Ok(())
@@ -590,8 +590,8 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-				token_pool_amount.into();
+			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into())
+				/ token_pool_amount.into();
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
@@ -790,7 +790,6 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 		{
 			ensure!(unlock_amount >= deduct_amount, Error::<T>::NotEnoughBalanceToUnlock);
 
-			// TokenPool::<T>::mutate(currency_id, |pool| pool.saturating_add(deduct_amount));
 			TokenPool::<T>::mutate(&currency_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_add(&deduct_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
@@ -804,7 +803,9 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 						*total_locked_origin = total_locked_origin
 							.checked_sub(&deduct_amount)
 							.ok_or(Error::<T>::Unexpected)?;
-						ledger_list_origin.retain(|&x| x != index);
+						if unlock_amount == deduct_amount {
+							ledger_list_origin.retain(|&x| x != index);
+						}
 					} else {
 						return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
 					}
@@ -814,17 +815,36 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 
 			UserUnlockLedger::<T>::mutate(&who, &currency_id, |value| -> Result<(), Error<T>> {
 				if let Some((total_locked_origin, ledger_list_origin)) = value {
-					ledger_list_origin.retain(|&x| x != index);
 					*total_locked_origin = total_locked_origin
 						.checked_sub(&deduct_amount)
 						.ok_or(Error::<T>::Unexpected)?;
+					if unlock_amount == deduct_amount {
+						ledger_list_origin.retain(|&x| x != index);
+					}
 				} else {
 					return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 				}
 				return Ok(());
 			});
 
-			TokenUnlockLedger::<T>::remove(&currency_id, &index);
+			if unlock_amount == deduct_amount {
+				TokenUnlockLedger::<T>::remove(&currency_id, &index);
+			} else {
+				TokenUnlockLedger::<T>::mutate(
+					&currency_id,
+					&index,
+					|value| -> Result<(), Error<T>> {
+						if let Some((_, total_locked_origin, _)) = value {
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&deduct_amount)
+								.ok_or(Error::<T>::Unexpected)?;
+						} else {
+							return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				);
+			}
 		}
 		Ok(())
 	}
