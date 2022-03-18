@@ -179,13 +179,127 @@ fn remove_delegator_works() {
 /// ****************************************
 
 #[test]
-fn decrease_token_pool_works() {}
+fn decrease_token_pool_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Set token pool as 100.
+		bifrost_vtoken_minting::TokenPool::<Runtime>::insert(KSM, 100);
+
+		// Decrease token pool by 10.
+		assert_ok!(Slp::decrease_token_pool(Origin::signed(ALICE), KSM, 10));
+
+		// Check the value after decreasing
+		assert_eq!(VtokenMinting::token_pool(KSM), 90);
+	});
+}
 
 #[test]
-fn update_ongoing_time_unit_works() {}
+fn update_ongoing_time_unit_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Set the era to be 8.
+		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(8));
+
+		// Update the era to be 9.
+		assert_ok!(Slp::update_ongoing_time_unit(Origin::signed(ALICE), KSM, TimeUnit::Era(9)));
+
+		// Check the value after updating.
+		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(9)));
+	});
+}
 
 #[test]
-fn refund_currency_due_unbond_works() {}
+fn refund_currency_due_unbond_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		// Preparations
+		// get entrance and exit accounts
+		let (entrance_acc, exit_acc) = VtokenMinting::get_entrance_and_exit_accounts();
+		// Set exit account balance to be 50.
+		assert_ok!(Tokens::set_balance(Origin::root(), exit_acc.clone(), KSM, 50, 0));
+
+		// set current era to be 100.
+		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(100));
+
+		// Set unlock records.
+		let record_bob = (BOB, 10, TimeUnit::Era(90));
+		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 0, record_bob);
+
+		let record_charlie = (CHARLIE, 28, TimeUnit::Era(100));
+		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 1, record_charlie);
+
+		let record_dave = (DAVE, 30, TimeUnit::Era(100));
+		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 2, record_dave);
+
+		let record_eddie = (EDDIE, 7, TimeUnit::Era(110));
+		bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::insert(KSM, 3, record_eddie);
+
+		// insert TimeUnitUnlockLedger records
+		let bounded_vec_90 = BoundedVec::try_from(vec![0]).unwrap();
+		let time_record_90 = (10, bounded_vec_90, KSM);
+		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
+			TimeUnit::Era(90),
+			KSM,
+			time_record_90.clone(),
+		);
+
+		let bounded_vec_100 = BoundedVec::try_from(vec![1, 2]).unwrap();
+		let time_record_100 = (58, bounded_vec_100, KSM);
+		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
+			TimeUnit::Era(100),
+			KSM,
+			time_record_100,
+		);
+
+		let bounded_vec_110 = BoundedVec::try_from(vec![3]).unwrap();
+		let time_record_110 = (7, bounded_vec_110, KSM);
+		bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::insert(
+			TimeUnit::Era(110),
+			KSM,
+			time_record_110.clone(),
+		);
+
+		// check account balances before refund
+		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 50);
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 0);
+		assert_eq!(Tokens::free_balance(KSM, &DAVE), 0);
+		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 0);
+
+		// Refund user
+		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+
+		// Check account balances after refund
+		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
+		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
+		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
+		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
+		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 0);
+
+		// Check storage
+		// Unlocking records for era 90
+		assert_eq!(
+			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(90), KSM,),
+			Some(time_record_90)
+		);
+
+		// Unlocking records for era 100
+		let bounded_vec_100_new = BoundedVec::try_from(vec![2]).unwrap();
+		let time_record_100_new = (8, bounded_vec_100_new, KSM);
+		assert_eq!(
+			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(100), KSM,),
+			Some(time_record_100_new)
+		);
+		let record_dave_new = (DAVE, 8, TimeUnit::Era(100));
+		assert_eq!(
+			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
+			Some(record_dave_new)
+		);
+
+		// Unlocking records for era 110
+		assert_eq!(
+			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(110), KSM,),
+			Some(time_record_110)
+		);
+	});
+}
 
 #[test]
 fn move_fund_from_exit_to_entrance_account_works() {}

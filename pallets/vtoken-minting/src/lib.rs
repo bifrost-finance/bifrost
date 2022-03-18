@@ -195,7 +195,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_unlock_ledger)]
-	pub(crate) type TokenUnlockLedger<T: Config> = StorageDoubleMap<
+	pub type TokenUnlockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
@@ -219,7 +219,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn time_unit_unlock_ledger)]
-	pub(crate) type TimeUnitUnlockLedger<T: Config> = StorageDoubleMap<
+	pub type TimeUnitUnlockLedger<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		TimeUnit,

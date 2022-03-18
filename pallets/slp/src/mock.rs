@@ -52,12 +52,14 @@ pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
 pub type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 
-pub const EXIT_ACCOUNT: AccountId = AccountId32::new([5u8; 32]);
-pub const ENTRANCE_ACCOUNT: AccountId = AccountId32::new([6u8; 32]);
+pub const EXIT_ACCOUNT: AccountId = AccountId32::new([6u8; 32]);
+pub const ENTRANCE_ACCOUNT: AccountId = AccountId32::new([7u8; 32]);
 
 pub const ALICE: AccountId = AccountId32::new([1u8; 32]);
 pub const BOB: AccountId = AccountId32::new([2u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
+pub const DAVE: AccountId = AccountId32::new([4u8; 32]);
+pub const EDDIE: AccountId = AccountId32::new([5u8; 32]);
 
 pub const BNC: CurrencyId = CurrencyId::Native(TokenSymbol::BNC);
 pub const KSM: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
