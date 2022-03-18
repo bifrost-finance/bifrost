@@ -19,11 +19,12 @@
 //! Cross-chain transfer tests within Kusama network.
 
 use bifrost_slp::{
-	primitives::UnlockChunk, Ledger, MinimumsMaximums, SubstrateLedger, TimeUnit, XcmOperation,
+	primitives::UnlockChunk, Ledger, MinimumsMaximums, SubstrateLedger, XcmOperation,
 };
 use frame_support::assert_ok;
+use node_primitives::TimeUnit;
 use orml_traits::MultiCurrency;
-use pallet_staking::{Nominations, Nominators, StakingLedger};
+use pallet_staking::{Nominations, StakingLedger};
 use xcm::{latest::prelude::*, VersionedMultiAssets, VersionedMultiLocation};
 use xcm_emulator::TestExt;
 
