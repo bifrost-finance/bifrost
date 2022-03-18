@@ -283,14 +283,20 @@ fn refund_currency_due_unbond_works() {
 		// Unlocking records for era 100
 		let bounded_vec_100_new = BoundedVec::try_from(vec![2]).unwrap();
 		let time_record_100_new = (8, bounded_vec_100_new, KSM);
-		assert_eq!(
-			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(100), KSM,),
-			Some(time_record_100_new)
-		);
 		let record_dave_new = (DAVE, 8, TimeUnit::Era(100));
 		assert_eq!(
 			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
+			Some(record_dave_new.clone())
+		);
+
+		assert_eq!(
+			bifrost_vtoken_minting::TokenUnlockLedger::<Runtime>::get(KSM, 2),
 			Some(record_dave_new)
+		);
+
+		assert_eq!(
+			bifrost_vtoken_minting::TimeUnitUnlockLedger::<Runtime>::get(TimeUnit::Era(100), KSM,),
+			Some(time_record_100_new)
 		);
 
 		// Unlocking records for era 110
