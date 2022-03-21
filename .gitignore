@@ -18,4 +18,3 @@ snapshot.bin
 data
 runtime/bifrost
 parachain-staking
-xcm-interface
