@@ -61,8 +61,6 @@ pub type MintId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
-	// use sp_runtime::traits::CheckedAdd;
-	// use orml_traits::arithmetic::CheckedSub;
 	use frame_support::traits::tokens::currency;
 
 	use super::*;
@@ -158,6 +156,7 @@ pub mod pallet {
 		UserUnlockLedgerNotFound,
 		TimeUnitUnlockLedgerNotFound,
 		Unexpected,
+		ExceedMaximumMintId,
 	}
 
 	#[pallet::storage]
@@ -494,10 +493,9 @@ pub mod pallet {
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
 				let mut ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
-				ledger_list =
-					BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev).unwrap();
+				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev)
+					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
 				ledger_list.retain(|index| {
-					// todo: order
 					if let Some((account, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
@@ -566,8 +564,8 @@ pub mod pallet {
 				});
 				let mut ledger_list_tmp: Vec<MintId> = ledger_list.into_iter().rev().collect();
 
-				ledger_list =
-					BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp).unwrap();
+				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp)
+					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
 
 				UserUnlockLedger::<T>::mutate(
 					&exchanger,
