@@ -1321,13 +1321,14 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::Token(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),  // DOT has a decimals of 10e10, 0.01 DOT
 			&CurrencyId::Token(TokenSymbol::ZLK) => 1 * micro(CurrencyId::Token(TokenSymbol::ZLK)),	// ZLK has a decimals of 10e18
 			&CurrencyId::Token(TokenSymbol::PHA) => 4 * cent(CurrencyId::Token(TokenSymbol::PHA)),	// 0.04 PHA, PHA has a decimals of 10e12.
+			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
 			&CurrencyId::VSToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSToken(TokenSymbol::DOT) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::BNC, ..) => 10 * millicent(NativeCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::KSM, ..) => 10 * millicent(RelayCurrencyId::get()),
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
-			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
+			&CurrencyId::VToken(TokenSymbol::KSM) => 10 * millicent(RelayCurrencyId::get()),  // 0.0001 vKSM
 			_ => Balance::max_value(), // unsupported
 		}
 	};
