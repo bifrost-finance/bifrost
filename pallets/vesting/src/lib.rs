@@ -587,6 +587,7 @@ mod tests {
 	use sp_runtime::{
 		testing::Header,
 		traits::{BadOrigin, BlakeTwo256, Identity, IdentityLookup},
+		ModuleError,
 	};
 
 	use super::*;
@@ -1074,7 +1075,11 @@ mod tests {
 
 			assert_eq!(
 				Vesting::set_vesting_per_block(RawOrigin::Root.into(), 1, 256),
-				Err(DispatchError::Module { index: 2, error: 3, message: Some("SamePerBlock") })
+				Err(DispatchError::Module(ModuleError {
+					index: 2,
+					error: 3,
+					message: Some("SamePerBlock")
+				})),
 			);
 
 			assert_ok!(Vesting::set_vesting_per_block(Origin::root(), 1, 10));
@@ -1096,7 +1101,11 @@ mod tests {
 
 			assert_eq!(
 				Vesting::set_vesting_per_block(Origin::root(), 1, 20),
-				Err(DispatchError::Module { index: 2, error: 0, message: Some("NotVesting") })
+				Err(DispatchError::Module(ModuleError {
+					index: 2,
+					error: 0,
+					message: Some("NotVesting")
+				})),
 			);
 		});
 	}

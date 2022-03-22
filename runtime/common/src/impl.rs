@@ -27,7 +27,7 @@ use orml_traits::location::Reserve;
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::latest::prelude::*;
-use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
+use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsPreset, SiblingParachainConvertsVia};
 use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
 use xcm_interface::traits::parachains;
 
@@ -58,8 +58,8 @@ where
 
 /// Bifrost Location Convert
 pub type BifrostLocationConvert = (
-	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsDefault<AccountId>,
+	// The parent (Relay-chain) origin converts to the parent `AccountId`.
+	ParentIsPreset<AccountId>,
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
