@@ -351,11 +351,14 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
-			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-				token_pool_amount.into();
+			let token_pool_amount = Self::token_pool(token_id);
+			let mut vtoken_amount = token_amount;
+			if token_pool_amount != BalanceOf::<T>::zero() {
+				vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
+					token_pool_amount.into();
+			}
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
 				token_id,
