@@ -180,13 +180,13 @@ impl<Balance> BancorHandler<Balance> for () {
 	}
 }
 
-pub trait CheckSubAccount<T: Encode + Decode + Default> {
+pub trait CheckSubAccount<T: Encode + Decode> {
 	fn check_sub_account<S: Decode>(&self, account: &T) -> bool;
 }
 
 impl<T, Id> CheckSubAccount<T> for Id
 where
-	T: Encode + Decode + Default,
+	T: Encode + Decode,
 	Id: Encode + Decode + TypeId + AccountIdConversion<T> + Eq,
 {
 	fn check_sub_account<S: Decode>(&self, account: &T) -> bool {
