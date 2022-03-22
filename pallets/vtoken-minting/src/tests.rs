@@ -27,14 +27,13 @@ use crate::{mock::*, *};
 #[test]
 fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		VtokenMinting::increase_token_pool(KSM, 1000);
 		assert_ok!(VtokenMinting::set_minimum_mint(Origin::root(), KSM, 1000));
 		assert_noop!(
 			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::BelowMinimumMint
 		);
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
-		assert_eq!(VtokenMinting::token_pool(KSM), 2000);
+		assert_eq!(VtokenMinting::token_pool(KSM), 1000);
 		assert_eq!(VtokenMinting::token_to_add(KSM), 1000);
 		assert_eq!(VtokenMinting::minimum_mint(KSM), 1000);
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();

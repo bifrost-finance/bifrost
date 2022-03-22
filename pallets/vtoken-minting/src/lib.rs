@@ -61,8 +61,6 @@ pub type MintId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
-	// use sp_runtime::traits::CheckedAdd;
-	// use orml_traits::arithmetic::CheckedSub;
 	use frame_support::traits::tokens::currency;
 
 	use super::*;
@@ -158,6 +156,7 @@ pub mod pallet {
 		UserUnlockLedgerNotFound,
 		TimeUnitUnlockLedgerNotFound,
 		Unexpected,
+		ExceedMaximumMintId,
 	}
 
 	#[pallet::storage]
@@ -317,9 +316,12 @@ pub mod pallet {
 					}
 				},
 			);
-			let a: Vec<(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>, CurrencyIdOf<T>)> =
-				TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
-			if a.len() == 0 {
+			let time_unit_ledger_list: Vec<(
+				BalanceOf<T>,
+				BoundedVec<MintId, T::MaximumMintId>,
+				CurrencyIdOf<T>,
+			)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
+			if time_unit_ledger_list.len() == 0 {
 				MinTimeUnit::<T>::mutate(|time_unit| -> Result<(), Error<T>> {
 					match time_unit {
 						TimeUnit::Era(era) => {
@@ -349,11 +351,14 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
-			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-				token_pool_amount.into();
+			let token_pool_amount = Self::token_pool(token_id);
+			let mut vtoken_amount = token_amount;
+			if token_pool_amount != BalanceOf::<T>::zero() {
+				vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
+					token_pool_amount.into();
+			}
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
 				token_id,
@@ -393,78 +398,81 @@ pub mod pallet {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 
-			if let Some(time_unit) = OngoingTimeUnit::<T>::get(token_id) {
-				T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-				let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
-					vtoken_total_issuance.into();
-				TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-					*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
-					Ok(())
-				});
-				TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-					*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
-					Ok(())
-				});
-				let next_id = Self::token_unlock_next_id(token_id);
-				TokenUnlockLedger::<T>::insert(
-					&token_id,
-					&next_id,
-					(&exchanger, vtoken_amount, &time_unit),
-				);
+			match OngoingTimeUnit::<T>::get(token_id) {
+				Some(time_unit) => {
+					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
+					let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
+						vtoken_total_issuance.into();
+					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+						*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
+						Ok(())
+					});
+					TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+						*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+						Ok(())
+					});
+					let next_id = Self::token_unlock_next_id(token_id);
+					TokenUnlockLedger::<T>::insert(
+						&token_id,
+						&next_id,
+						(&exchanger, vtoken_amount, &time_unit),
+					);
 
-				if let Some((total_locked, ledger_list)) =
-					UserUnlockLedger::<T>::get(&exchanger, &token_id)
-				{
-					UserUnlockLedger::<T>::mutate(
-						&exchanger,
-						&token_id,
-						|value| -> Result<(), Error<T>> {
-							if let Some((total_locked, ledger_list)) = value {
-								ledger_list.try_push(next_id);
-								*total_locked = total_locked
-									.checked_add(&vtoken_amount)
-									.ok_or(Error::<T>::Unexpected)?;
-							};
-							return Ok(());
-						},
-					);
-				} else {
-					let mut ledger_list_origin = BoundedVec::<MintId, T::MaximumMintId>::default();
-					ledger_list_origin.try_push(next_id);
-					UserUnlockLedger::<T>::insert(
-						&exchanger,
-						&token_id,
-						(vtoken_amount, ledger_list_origin),
-					);
-				}
+					if let Some((total_locked, ledger_list)) =
+						UserUnlockLedger::<T>::get(&exchanger, &token_id)
+					{
+						UserUnlockLedger::<T>::mutate(
+							&exchanger,
+							&token_id,
+							|value| -> Result<(), Error<T>> {
+								if let Some((total_locked, ledger_list)) = value {
+									ledger_list.try_push(next_id);
+									*total_locked = total_locked
+										.checked_add(&vtoken_amount)
+										.ok_or(Error::<T>::Unexpected)?;
+								};
+								return Ok(());
+							},
+						);
+					} else {
+						let mut ledger_list_origin =
+							BoundedVec::<MintId, T::MaximumMintId>::default();
+						ledger_list_origin.try_push(next_id);
+						UserUnlockLedger::<T>::insert(
+							&exchanger,
+							&token_id,
+							(vtoken_amount, ledger_list_origin),
+						);
+					}
 
-				if let Some((total_locked, ledger_list, _token_id)) =
-					TimeUnitUnlockLedger::<T>::get(&time_unit, &token_id)
-				{
-					TimeUnitUnlockLedger::<T>::mutate(
-						&time_unit,
-						&token_id,
-						|value| -> Result<(), Error<T>> {
-							if let Some((total_locked, ledger_list, _token_id)) = value {
-								ledger_list.try_push(next_id);
-								*total_locked = total_locked
-									.checked_add(&vtoken_amount)
-									.ok_or(Error::<T>::Unexpected)?;
-							};
-							return Ok(());
-						},
-					);
-				} else {
-					let mut ledger_list_origin = BoundedVec::<MintId, T::MaximumMintId>::default();
-					ledger_list_origin.try_push(next_id);
-					TimeUnitUnlockLedger::<T>::insert(
-						&time_unit,
-						&token_id,
-						(vtoken_amount, ledger_list_origin, token_id),
-					);
-				}
-			} else {
-				return Err(Error::<T>::OngoingTimeUnitNotSet.into());
+					if let Some((total_locked, ledger_list, _token_id)) =
+						TimeUnitUnlockLedger::<T>::get(&time_unit, &token_id)
+					{
+						TimeUnitUnlockLedger::<T>::mutate(
+							&time_unit,
+							&token_id,
+							|value| -> Result<(), Error<T>> {
+								if let Some((total_locked, ledger_list, _token_id)) = value {
+									ledger_list.try_push(next_id);
+									*total_locked = total_locked
+										.checked_add(&vtoken_amount)
+										.ok_or(Error::<T>::Unexpected)?;
+								};
+								return Ok(());
+							},
+						);
+					} else {
+						let mut ledger_list_origin =
+							BoundedVec::<MintId, T::MaximumMintId>::default();
+						ledger_list_origin.try_push(next_id);
+						TimeUnitUnlockLedger::<T>::insert(
+							&time_unit,
+							&token_id,
+							(vtoken_amount, ledger_list_origin, token_id),
+						);
+					}
+				},
+				None => return Err(Error::<T>::OngoingTimeUnitNotSet.into()),
 			}
 
 			TokenUnlockNextId::<T>::mutate(&token_id, |unlock_id| -> Result<(), Error<T>> {
@@ -494,10 +502,9 @@ pub mod pallet {
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
 				let mut ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
-				ledger_list =
-					BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev).unwrap();
+				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev)
+					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
 				ledger_list.retain(|index| {
-					// todo: order
 					if let Some((account, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
@@ -566,8 +573,8 @@ pub mod pallet {
 				});
 				let mut ledger_list_tmp: Vec<MintId> = ledger_list.into_iter().rev().collect();
 
-				ledger_list =
-					BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp).unwrap();
+				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp)
+					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
 
 				UserUnlockLedger::<T>::mutate(
 					&exchanger,
