@@ -22,7 +22,7 @@
 
 use frame_support::{construct_runtime, ord_parameter_types, parameter_types, traits::Everything};
 use frame_system::EnsureSignedBy;
-use primitives::{AccountId, Balance, CurrencyId, TokenSymbol};
+use primitives::{AccountId, Balance};
 
 use crate as asset_registry;
 
@@ -73,22 +73,8 @@ impl pallet_balances::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-	pub const MinimumPeriod: u64 = 1000;
-}
-impl pallet_timestamp::Config for Runtime {
-	type Moment = u64;
-	type OnTimestampSet = ();
-	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = ();
-}
-
 ord_parameter_types! {
 	pub const CouncilAccount: AccountId = AccountId::from([1u8; 32]);
-}
-
-parameter_types! {
-	pub const KSMCurrencyId: CurrencyId = CurrencyId::Token(TokenSymbol::KSM);
 }
 impl asset_registry::Config for Runtime {
 	type Event = Event;
