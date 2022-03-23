@@ -54,7 +54,6 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currencies: orml_currencies::{Pallet, Call, Event<T>},
 		Tokens: orml_tokens::{Pallet, Call, Storage, Event<T>},
-		Bancor: bifrost_bancor::{Pallet, Call, Config<T>, Storage, Event<T>},
 		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
 		Salp: salp::{Pallet, Call, Storage, Event<T>},
 	}
@@ -167,19 +166,6 @@ impl orml_currencies::Config for Test {
 }
 
 parameter_types! {
-	pub const InterventionPercentage: Percent = Percent::from_percent(75);
-	pub const DailyReleasePercentage: Percent = Percent::from_percent(5);
-}
-
-impl bifrost_bancor::Config for Test {
-	type Event = Event;
-	type InterventionPercentage = InterventionPercentage;
-	type DailyReleasePercentage = DailyReleasePercentage;
-	type MultiCurrency = Tokens;
-	type WeightInfo = ();
-}
-
-parameter_types! {
 	pub const MinContribution: Balance = 10;
 	pub const BifrostCrowdloanId: PalletId = PalletId(*b"bf/salp#");
 	pub const RemoveKeysLimit: u32 = 50;
@@ -203,7 +189,7 @@ impl EnsureOrigin<Origin> for EnsureConfirmAsGovernance {
 	fn try_origin(o: Origin) -> Result<Self::Success, Origin> {
 		Into::<Result<RawOrigin<AccountId>, Origin>>::into(o).and_then(|o| match o {
 			RawOrigin::Signed(who) => Ok(who),
-			RawOrigin::Root => Ok(Default::default()),
+			RawOrigin::Root => Ok(ConfirmMuitiSigAccount::get()),
 			r => Err(Origin::from(r)),
 		})
 	}
@@ -228,7 +214,7 @@ impl WeightToFeePolynomial for WeightToFee {
 }
 
 impl salp::Config for Test {
-	type BancorPool = Bancor;
+	type BancorPool = ();
 	type Event = Event;
 	type LeasePeriod = LeasePeriod;
 	type MinContribution = MinContribution;

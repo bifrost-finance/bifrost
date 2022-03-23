@@ -9,18 +9,18 @@ edition = "2021"
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.3.0", default-features = false, features = ["derive"] }
 scale-info = { version = "1.0.0", default-features = false, features = ["derive"] }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false }
-frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", default-features = false, optional = true }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false, optional = true }
 node-primitives = { path = "../../node/primitives", default-features = false }
 orml-traits = { version = "0.4.1-dev", default-features = false }
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.126", optional = true, features = ["derive"] }
 
 [dev-dependencies]
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
-pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
-pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 orml-tokens = "0.4.1-dev"
 orml-currencies = "0.4.1-dev"
 

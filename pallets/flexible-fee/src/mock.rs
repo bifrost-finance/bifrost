@@ -39,7 +39,7 @@ use sp_core::H256;
 use sp_runtime::{
 	generic,
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup, UniqueSaturatedInto},
 	AccountId32, SaturatedConversion,
 };
 use xcm_interface::traits::XcmHelper;
@@ -148,6 +148,7 @@ orml_traits::parameter_type_with_key! {
 }
 
 parameter_types! {
+	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
 	pub MaxLocks: u32 = 2;
 }
 
@@ -159,7 +160,7 @@ impl orml_tokens::Config for Test {
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
-	type OnDust = orml_tokens::TransferDust<Test, ()>;
+	type OnDust = orml_tokens::TransferDust<Test, DustAccount>;
 	type WeightInfo = ();
 }
 

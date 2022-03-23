@@ -1,6 +1,6 @@
 [package]
 name = "node-cli"
-version = "0.9.31"
+version = "0.9.30"
 authors = ["Liebi Technologies <bifrost@liebi.com>"]
 description = "Bifrost Parachain Node"
 build = "build.rs"
@@ -17,42 +17,42 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # third-party dependencies
+clap = { version = "3.1", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "2.3.0" }
 log = "0.4.8"
-structopt = { version = "0.3.8", optional = true }
 
 # primitives
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 # client dependencies
-sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
-sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
-sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16" }
+sc-service = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true }
+sc-telemetry = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+sc-tracing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
 
 # node-specific dependencies
 node-service = { path = "../service", default-features = false }
 node-primitives = { path = "../primitives" }
 
 # CLI-specific dependencies
-sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
-try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
-frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true  }
-frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
-node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
+sc-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true }
+try-runtime-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true }
+frame-try-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true  }
+frame-benchmarking-cli = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true }
+node-inspect = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true }
 
 # Cumulus dependencies
-cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.16" }
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.17" }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.17" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.17" }
 
 # Polkadot dependencies
-polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16" }
-polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16" }
-polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.16" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17" }
+polkadot-cli = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17" }
 
 [build-dependencies]
-substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.16", optional = true }
+substrate-build-script-utils = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", optional = true }
 
 [features]
 default = ["wasmtime", "cli"]
@@ -63,7 +63,6 @@ cli = [
 	"frame-benchmarking-cli",
 	'try-runtime-cli',
 	"sc-service",
-	"structopt",
 	"substrate-build-script-utils",
 ]
 runtime-benchmarks = [ "node-service/runtime-benchmarks" ]
