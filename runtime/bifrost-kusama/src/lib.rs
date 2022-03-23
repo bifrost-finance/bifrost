@@ -69,20 +69,15 @@ use static_assertions::const_assert;
 
 /// Constant values used within the runtime.
 pub mod constants;
+use bifrost_asset_registry::{AssetIdMaps, FixedRateOfForeignAsset};
 use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent,
-	constants::time::*,
-	dollar, micro, milli, millicent, prod_or_test,
-	r#impl::{
-		BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-		BifrostFilteredAssets,
-	},
-	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
-	SlowAdjustingFeeUpdate, TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, CouncilCollective,
+	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
+	TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
@@ -94,8 +89,8 @@ use frame_support::{
 use frame_system::EnsureRoot;
 use hex_literal::hex;
 pub use node_primitives::{
-	traits::CheckSubAccount, AccountId, Amount, Balance, BlockNumber, CurrencyId, ExtraFeeName,
-	Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TokenSymbol,
+	traits::CheckSubAccount, AccountId, Amount, AssetIdMapping, Balance, BlockNumber, CurrencyId,
+	ExtraFeeName, Moment, Nonce, ParaId, PoolId, RpcContributionStatus, TokenSymbol,
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -124,6 +119,13 @@ use zenlink_protocol::{
 };
 // Weights used in the runtime.
 mod weights;
+
+mod xcm_config;
+
+use xcm_config::{
+	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
+	BifrostFilteredAssets,
+};
 
 impl_opaque_keys! {
 	pub struct SessionKeys {
@@ -1154,6 +1156,8 @@ parameter_types! {
 		// rmrk:KSM = 10:1
 		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
 	);
+
+	pub ForeignAssetUnitsPerSecond: u128 = ksm_per_second();
 }
 
 pub struct ToTreasury;
@@ -1182,6 +1186,7 @@ pub type Trader = (
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
+	FixedRateOfForeignAsset<Runtime, ForeignAssetUnitsPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1329,6 +1334,10 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
+			CurrencyId::ForeignAsset(foreign_asset_id) => {
+				AssetIdMaps::<Runtime>::get_foreign_asset_metadata(*foreign_asset_id).
+					map_or(Balance::max_value(), |metatata| metatata.minimal_balance)
+			},
 			_ => Balance::max_value(), // unsupported
 		}
 	};
@@ -1615,6 +1624,12 @@ impl bifrost_call_switchgear::Config for Runtime {
 	type WeightInfo = ();
 }
 
+impl bifrost_asset_registry::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type RegisterOrigin = MoreThanHalfCouncil;
+}
+
 parameter_types! {
 	pub ParachainAccount: AccountId = ParachainInfo::get().into_account();
 	pub ContributionWeight:XcmBaseWeight = RelayXcmBaseWeight::get().into();
@@ -1834,6 +1849,7 @@ construct_runtime! {
 		SalpLite: bifrost_salp_lite::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
 		CallSwitchgear: bifrost_call_switchgear::{Pallet, Storage, Call, Event<T>} = 112,
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
+		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
 	}
 }
