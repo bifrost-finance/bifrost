@@ -18,24 +18,25 @@
 
 use std::path::PathBuf;
 
+use clap::Parser;
 use sc_cli::{KeySubcommand, SignCmd, VanityCmd, VerifyCmd};
-use structopt::StructOpt;
 
 /// Possible subcommands of the main binary.
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub enum Subcommand {
 	/// Key management cli utilities
+	#[clap(subcommand)]
 	Key(KeySubcommand),
 
 	/// The custom inspect subcommmand for decoding blocks and extrinsics.
-	#[structopt(
+	#[clap(
 		name = "inspect",
 		about = "Decode given block or extrinsic using current native runtime."
 	)]
 	Inspect(node_inspect::cli::InspectCmd),
 
 	/// The custom benchmark subcommmand benchmarking runtime pallets.
-	#[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+	#[clap(name = "benchmark", about = "Benchmark runtime pallets.")]
 	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 
 	/// Try some experimental command on the runtime. This includes migration and runtime-upgrade
@@ -74,64 +75,64 @@ pub enum Subcommand {
 	Revert(sc_cli::RevertCmd),
 
 	/// Export the genesis state of the parachain.
-	#[structopt(name = "export-genesis-state")]
+	#[clap(name = "export-genesis-state")]
 	ExportGenesisState(ExportGenesisStateCommand),
 
 	/// Export the genesis wasm of the parachain.
-	#[structopt(name = "export-genesis-wasm")]
+	#[clap(name = "export-genesis-wasm")]
 	ExportGenesisWasm(ExportGenesisWasmCommand),
 }
 
 /// Command for exporting the genesis state of the parachain
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct ExportGenesisStateCommand {
 	/// Output file name or stdout if unspecified.
-	#[structopt(parse(from_os_str))]
+	#[clap(parse(from_os_str))]
 	pub output: Option<PathBuf>,
 
 	/// Write output in binary. Default is to write in hex.
-	#[structopt(short, long)]
+	#[clap(short, long)]
 	pub raw: bool,
 
 	/// The name of the chain for that the genesis state should be exported.
-	#[structopt(long)]
+	#[clap(long)]
 	pub chain: Option<String>,
 }
 
 /// Command for exporting the genesis wasm file.
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 pub struct ExportGenesisWasmCommand {
 	/// Output file name or stdout if unspecified.
-	#[structopt(parse(from_os_str))]
+	#[clap(parse(from_os_str))]
 	pub output: Option<PathBuf>,
 
 	/// Write output in binary. Default is to write in hex.
-	#[structopt(short, long)]
+	#[clap(short, long)]
 	pub raw: bool,
 
 	/// The name of the chain for that the genesis wasm file should be exported.
-	#[structopt(long)]
+	#[clap(long)]
 	pub chain: Option<String>,
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(settings = &[
-	structopt::clap::AppSettings::GlobalVersion,
-	structopt::clap::AppSettings::ArgsNegateSubcommands,
-	structopt::clap::AppSettings::SubcommandsNegateReqs,
-])]
+#[derive(Debug, Parser)]
+#[clap(
+	propagate_version = true,
+	args_conflicts_with_subcommands = true,
+	subcommand_negates_reqs = true
+)]
 pub struct Cli {
-	#[structopt(subcommand)]
+	#[clap(subcommand)]
 	pub subcommand: Option<Subcommand>,
 
-	#[structopt(flatten)]
+	#[clap(flatten)]
 	pub run: cumulus_client_cli::RunCmd,
 
-	#[structopt(long)]
+	#[clap(long)]
 	pub sealing: Option<String>,
 
 	/// Relay chain arguments
-	#[structopt(raw = true)]
+	#[clap(raw = true)]
 	pub relay_chain_args: Vec<String>,
 }
 
@@ -157,6 +158,6 @@ impl RelayChainCli {
 			node_service::chain_spec::RelayExtensions::try_get(&*para_config.chain_spec);
 		let chain_id = extension.map(|e| e.relay_chain.clone());
 		let base_path = para_config.base_path.as_ref().map(|x| x.path().join("polkadot"));
-		Self { base_path, chain_id, base: polkadot_cli::RunCmd::from_iter(relay_chain_args) }
+		Self { base_path, chain_id, base: polkadot_cli::RunCmd::parse_from(relay_chain_args) }
 	}
 }
