@@ -207,7 +207,7 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
 				X2(Parachain(id), PalletInstance(index))
 					if ((id == parachains::moonriver::ID) &&
-						(index == parachains::moonriver::PALLET_ID.into())) =>
+						(index == parachains::moonriver::PALLET_ID)) =>
 					Some(Token(TokenSymbol::MOVR)),
 
 				_ => None,

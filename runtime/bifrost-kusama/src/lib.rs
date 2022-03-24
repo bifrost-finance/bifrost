@@ -1159,8 +1159,8 @@ parameter_types! {
 			1,
 			X2(Parachain(parachains::moonriver::ID), PalletInstance(parachains::moonriver::PALLET_ID.into()))
 		).into(),
-		// MOVR:KSM = 2:1
-		ksm_per_second() * 2 * 1_000_000 //movr currency decimal as 18
+		// MOVR:KSM = 2.67:1
+		ksm_per_second() * 267 * 10_000 //movr currency decimal as 18
 	);
 }
 
