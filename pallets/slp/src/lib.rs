@@ -779,7 +779,7 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-				.ok_or(Error::<T>::InvalidTimeUnit)?;
+				.unwrap_or_default();
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 
 			// Deposit event.
