@@ -1154,6 +1154,14 @@ parameter_types! {
 		// rmrk:KSM = 10:1
 		ksm_per_second() * 10 / 100 //rmrk currency decimal as 10
 	);
+	pub MovrPerSecond: (AssetId, u128) = (
+		MultiLocation::new(
+			1,
+			X2(Parachain(parachains::moonriver::ID), PalletInstance(parachains::moonriver::PALLET_ID.into()))
+		).into(),
+		// MOVR:KSM = 2.67:1
+		ksm_per_second() * 267 * 10_000 //movr currency decimal as 18
+	);
 }
 
 pub struct ToTreasury;
@@ -1182,6 +1190,7 @@ pub type Trader = (
 	FixedRateOfFungible<PhaPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkPerSecond, ToTreasury>,
 	FixedRateOfFungible<RmrkNewPerSecond, ToTreasury>,
+	FixedRateOfFungible<MovrPerSecond, ToTreasury>,
 );
 
 pub struct XcmConfig;
@@ -1329,6 +1338,7 @@ orml_traits::parameter_type_with_key! {
 			&CurrencyId::VSBond(TokenSymbol::DOT, ..) => 1 * cent(PolkadotCurrencyId::get()),
 			&CurrencyId::LPToken(..) => 10 * millicent(NativeCurrencyId::get()),
 			&CurrencyId::Token(TokenSymbol::RMRK) => 1 * micro(CurrencyId::Token(TokenSymbol::RMRK)),
+			&CurrencyId::Token(TokenSymbol::MOVR) => 1 * micro(CurrencyId::Token(TokenSymbol::MOVR)),	// MOVR has a decimals of 10e18
 			_ => Balance::max_value(), // unsupported
 		}
 	};
