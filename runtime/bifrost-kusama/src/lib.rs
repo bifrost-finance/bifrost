@@ -1662,6 +1662,18 @@ impl xcm_interface::Config for Runtime {
 	type ContributionFee = UmpTransactFee;
 }
 
+parameter_types! {
+	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
+}
+
+impl bifrost_vstoken_conversion::Config for Runtime {
+	type Event = Event;
+	type MultiCurrency = Currencies;
+	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
+	type VsbondAccount = BifrostVsbondAccount;
+	type WeightInfo = ();
+}
+
 // Bifrost modules end
 
 // zenlink runtime start
@@ -1860,6 +1872,7 @@ construct_runtime! {
 		VSBondAuction: bifrost_vsbond_auction::{Pallet, Call, Storage, Event<T>} = 113,
 		AssetRegistry: bifrost_asset_registry::{Pallet, Call, Storage, Event<T>} = 114,
 		XcmInterface: xcm_interface::{Pallet, Call, Storage, Event<T>} = 117,
+		VstokenConversion: bifrost_vstoken_conversion::{Pallet, Call, Storage, Event<T>} = 118,
 	}
 }
 
