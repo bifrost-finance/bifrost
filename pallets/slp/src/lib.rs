@@ -21,7 +21,10 @@
 pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
 use frame_support::{dispatch::result::Result, pallet_prelude::*, transactional, weights::Weight};
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+use frame_system::{
+	ensure_signed,
+	pallet_prelude::{BlockNumberFor, OriginFor},
+};
 use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
@@ -37,8 +40,14 @@ use xcm::{
 };
 
 pub use crate::{
-	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
-	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
+	primitives::{
+		LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger, ValidatorsByDelegatorUpdateEntry,
+		XcmOperation, KSM,
+	},
+	traits::{
+		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
+		StakingFeeManager, ValidatorManager,
+	},
 	Junction::AccountId32,
 	Junctions::X1,
 };
@@ -55,6 +64,7 @@ mod benchmarking;
 
 pub use pallet::*;
 
+type XcmQueryId = [u8; 32];
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type StakingAgentBoxType<T> =
@@ -63,6 +73,13 @@ type DelegatorManagerBoxType<T> =
 	Box<dyn DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>>;
 type ValidatorManagerBoxType = Box<dyn ValidatorManager<MultiLocation>>;
 type StakingFeeManagerBoxType<T> = Box<dyn StakingFeeManager<MultiLocation, BalanceOf<T>>>;
+type QueryResponseCheckerBoxType<T> = Box<
+	dyn QueryResponseChecker<
+		XcmQueryId,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+	>,
+>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -99,6 +116,18 @@ pub mod pallet {
 
 		/// XCM executor.
 		type XcmExecutor: ExecuteXcm<Self::Call>;
+
+		/// Substrate response manager.
+		type SubstrateResponseManager: QueryResponseManager<
+			XcmQueryId,
+			MultiLocation,
+			BlockNumberFor<Self>,
+		>;
+
+		/// The maximum number of entries to be confirmed in a block for each update queue in the
+		/// on_initialize queue.
+		#[pallet::constant]
+		type MaxTypeEntryPerBlock: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -375,6 +404,15 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_validators_by_delegator_update_entry)]
+	pub type ValidatorsByDelegatorXcmUpdateQueue<T> = StorageMap<
+		_,
+		Blake2_128Concat,
+		XcmQueryId,
+		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+	>;
+
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_ledger)]
@@ -388,6 +426,11 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_delegator_ledger_update_entry)]
+	pub type DelegatorLedgerXcmUpdateQueue<T> =
+		StorageMap<_, Blake2_128Concat, XcmQueryId, LedgerUpdateEntry<BalanceOf<T>, MultiLocation>>;
+
 	/// Minimum and Maximum constraints for different chains.
 	#[pallet::storage]
 	#[pallet::getter(fn get_minimums_maximums)]
@@ -399,9 +442,12 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			0
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+			// For queries in update entry queues, search responses in pallet_xcm Queries storage.
+			let _ = Self::process_query_entry_records();
+
+			1_000_000_000
 		}
 	}
 
@@ -778,8 +824,7 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-				.unwrap_or_default();
+			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 
 			// Deposit event.
@@ -1283,10 +1328,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<
+					T,
+					T::AccountConverter,
+					T::ParachainId,
+					T::XcmSender,
+					T::SubstrateResponseManager,
+				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1295,10 +1343,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<DelegatorManagerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<
+					T,
+					T::AccountConverter,
+					T::ParachainId,
+					T::XcmSender,
+					T::SubstrateResponseManager,
+				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1307,10 +1358,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<ValidatorManagerBoxType, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<
+					T,
+					T::AccountConverter,
+					T::ParachainId,
+					T::XcmSender,
+					T::SubstrateResponseManager,
+				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1319,10 +1373,28 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingFeeManagerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<
+					T,
+					T::AccountConverter,
+					T::ParachainId,
+					T::XcmSender,
+					T::SubstrateResponseManager,
+				>::new())),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}
+		}
+
+		fn get_currency_query_response_checker(
+			currency_id: CurrencyId,
+		) -> Result<QueryResponseCheckerBoxType<T>, Error<T>> {
+			match currency_id {
+				KSM => Ok(Box::new(KusamaAgent::<
+					T,
+					T::AccountConverter,
+					T::ParachainId,
+					T::XcmSender,
+					T::SubstrateResponseManager,
+				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1419,5 +1491,50 @@ pub mod pallet {
 
 			Ok(parachain_location)
 		}
+
+		/// **************************************/
+		/// ****** XCM confirming Functions ******/
+		/// **************************************/
+		pub fn process_query_entry_records() -> DispatchResult {
+			let mut counter = 0u32;
+
+			// Deal with DelegatorLedgerXcmUpdateQueue storage
+			for (query_id, query_entry) in DelegatorLedgerXcmUpdateQueue::<T>::iter() {
+				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
+
+				let query_response_agent = match query_entry.clone() {
+					LedgerUpdateEntry::Substrate(entry) =>
+						Self::get_currency_query_response_checker(entry.currency_id),
+					_ => Err(Error::<T>::NotSupportedCurrencyId),
+				}?;
+
+				query_response_agent
+					.check_delegator_ledger_query_response(query_id, query_entry)?;
+				counter = counter.saturating_add(1);
+			}
+
+			// Deal with ValidatorsByDelegator storage
+			for (query_id, query_entry) in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter() {
+				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
+
+				let query_response_agent = match query_entry.clone() {
+					ValidatorsByDelegatorUpdateEntry::Substrate(entry) =>
+						Self::get_currency_query_response_checker(entry.currency_id),
+					_ => Err(Error::<T>::NotSupportedCurrencyId),
+				}?;
+
+				query_response_agent
+					.check_validators_by_delegator_query_response(query_id, query_entry)?;
+				counter = counter.saturating_add(1);
+			}
+
+			Ok(())
+		}
+
+		// pub fn confirm_delegator_ledger_update_entry(
+		// 	query_id: XcmQueryId,
+		// ) -> Result<MultiLocation, Error<T>> {
+		// 	// Update corresponding storage if exist.
+		// }
 	}
 }
