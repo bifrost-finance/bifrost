@@ -32,18 +32,14 @@ pub mod weights;
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, CheckedMul, CheckedSub, Saturating, Zero},
-		SaturatedConversion,
-	},
-	transactional, BoundedVec, PalletId,
+	sp_runtime::traits::{AccountIdConversion, CheckedSub},
+	transactional, PalletId,
 };
 use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::per_things::{PerThing, Perbill, Percent};
-use sp_std::vec::Vec;
+use sp_arithmetic::per_things::Percent;
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
@@ -62,8 +58,6 @@ pub type MintId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::traits::tokens::currency;
-
 	use super::*;
 
 	#[pallet::pallet]
@@ -75,7 +69,6 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
-		// + MultiReservableCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
 		/// The only origin that can edit token issuer list
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
@@ -95,18 +88,18 @@ pub mod pallet {
 			vsbond_amount: BalanceOf<T>,
 			vsksm_amount: BalanceOf<T>,
 		},
-		/// Several fees has been set.
-		FeeSet {
-			mint_fee: BalanceOf<T>,
-			redeem_fee: BalanceOf<T>,
-			// hosting_fee: BalanceOf<T>,
+		VsksmConvertToVsbond {
+			currency_id: CurrencyIdOf<T>,
+			vsbond_amount: BalanceOf<T>,
+			vsksm_amount: BalanceOf<T>,
 		},
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		BelowMinimumMint,
-		Unexpected,
+		NotEnoughBalance,
+		NotSupportTokenType,
+		CalculationOverflow,
 	}
 
 	#[pallet::storage]
@@ -139,30 +132,38 @@ pub mod pallet {
 		) -> DispatchResult {
 			// Check origin
 			let exchanger = ensure_signed(origin)?;
-			let mut user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
-			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::BelowMinimumMint);
+			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
+			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
 				minimum_vsksm >=
 					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::KSM)),
-				Error::<T>::BelowMinimumMint
+				Error::<T>::NotEnoughBalance
 			);
+
+			// Calculate lease
 			let ksm_lease = KusamaLease::<T>::get();
 			let remaining_due_lease: u32 = match currency_id {
 				CurrencyId::VSBond(_, _, _, expire_lease) => {
-					let mut remaining_due_lease =
-						expire_lease.checked_sub(ksm_lease).ok_or(Error::<T>::Unexpected)?;
-					remaining_due_lease =
-						remaining_due_lease.checked_add(1u32).ok_or(Error::<T>::Unexpected)?;
+					let mut remaining_due_lease = expire_lease
+						.checked_sub(ksm_lease)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease = remaining_due_lease
+						.checked_add(1u32)
+						.ok_or(Error::<T>::CalculationOverflow)?;
 					remaining_due_lease
 				},
-				_ => return Err(Error::<T>::BelowMinimumMint.into()),
+				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			let (convert_to_vsksm, convert_to_vsbond) = ExchangeRate::<T>::get(remaining_due_lease);
+
+			// Get exchange rate, exchange fee
+			let (convert_to_vsksm, _) = ExchangeRate::<T>::get(remaining_due_lease);
 			let (kusama_exchange_fee, _) = ExchangeFee::<T>::get();
-			let vsbond_balance =
-				vsbond_amount.checked_sub(&kusama_exchange_fee).ok_or(Error::<T>::Unexpected)?;
+			let vsbond_balance = vsbond_amount
+				.checked_sub(&kusama_exchange_fee)
+				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsksm_balance = convert_to_vsksm * vsbond_balance;
-			ensure!(vsksm_balance >= minimum_vsksm, Error::<T>::BelowMinimumMint);
+			ensure!(vsksm_balance >= minimum_vsksm, Error::<T>::NotEnoughBalance);
+
 			T::MultiCurrency::transfer(
 				currency_id,
 				&exchanger,
@@ -178,6 +179,68 @@ pub mod pallet {
 			Self::deposit_event(Event::VsbondConvertToVsksm {
 				currency_id,
 				vsbond_amount,
+				vsksm_amount: vsksm_balance,
+			});
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn vsksm_convert_to_vsbond(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			vsksm_amount: BalanceOf<T>,
+			minimum_vsbond: BalanceOf<T>,
+		) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+			let user_vsksm_balance =
+				T::MultiCurrency::free_balance(CurrencyId::VSToken(TokenSymbol::KSM), &exchanger);
+			ensure!(user_vsksm_balance >= vsksm_amount, Error::<T>::NotEnoughBalance);
+			ensure!(
+				minimum_vsbond >= T::MultiCurrency::minimum_balance(currency_id),
+				Error::<T>::NotEnoughBalance
+			);
+
+			// Calculate lease
+			let ksm_lease = KusamaLease::<T>::get();
+			let remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(_, _, _, expire_lease) => {
+					let mut remaining_due_lease = expire_lease
+						.checked_sub(ksm_lease)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease = remaining_due_lease
+						.checked_add(1u32)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease
+				},
+				_ => return Err(Error::<T>::NotSupportTokenType.into()),
+			};
+
+			// Get exchange rate, exchange fee
+			let (_, convert_to_vsbond) = ExchangeRate::<T>::get(remaining_due_lease);
+			let (kusama_exchange_fee, _) = ExchangeFee::<T>::get();
+			let vsksm_balance = vsksm_amount
+				.checked_sub(&kusama_exchange_fee)
+				.ok_or(Error::<T>::CalculationOverflow)?;
+			let vsbond_balance = convert_to_vsbond * vsksm_balance;
+			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
+
+			T::MultiCurrency::transfer(
+				currency_id,
+				&T::VsbondAccount::get().into_account(),
+				&exchanger,
+				vsbond_balance,
+			)?;
+			T::MultiCurrency::withdraw(
+				CurrencyId::VSToken(TokenSymbol::KSM),
+				&exchanger,
+				vsksm_amount,
+			)?;
+
+			Self::deposit_event(Event::VsksmConvertToVsbond {
+				currency_id,
+				vsbond_amount: vsbond_balance,
 				vsksm_amount: vsksm_balance,
 			});
 			Ok(())
