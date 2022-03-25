@@ -73,6 +73,7 @@ use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
+use bifrost_slp::XcmQueryId;
 use bifrost_runtime_common::{
 	cent,
 	constants::time::*,
@@ -1643,6 +1644,17 @@ impl xcm_interface::Config for Runtime {
 	type StatemineTransferFee = StatemineTransferFee;
 	type ContributionWeight = ContributionWeight;
 	type ContributionFee = UmpTransactFee;
+}
+
+
+
+struct SubstrateResponseManager;
+impl QueryResponseManager<XcmQueryId, MultiLocation, BlockNumber> form SubstrateResponseManager {
+	fn get_query_response(query_id: XcmQueryId) -> DispatchResult{
+		PolkadotXcm::Queries::<Runtime>::get()
+	}
+	fn insert_query(query_id: XcmQueryId, responder: MultiLocation, match_querier: MultiLocation, timeout: BlockNumber,) -> DispatchResult;
+	fn remove_query(query_id: XcmQueryId) -> DispatchResult;
 }
 
 impl bifrost_slp::Config for Runtime {

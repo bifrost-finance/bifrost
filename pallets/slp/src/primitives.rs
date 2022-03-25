@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
+use sp_core::H256;
 use sp_std::vec::Vec;
 
 /// Simplify the CurrencyId.
@@ -52,6 +53,51 @@ pub struct UnlockChunk<Balance> {
 	pub value: Balance,
 	/// Era number at which point it'll be unlocked.
 	pub unlock_time: TimeUnit,
+}
+
+/// A type for accommodating delegator update entries for different kinds of currencies.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum LedgerUpdateEntry<Balance, DelegatorId> {
+	/// A type for substrate ledger updating entires
+	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
+}
+
+/// A type for substrate ledger updating entires
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
+	/// The currency id of the delegator that needs to be update
+	pub currency_id: CurrencyId,
+	/// The delegator id that needs to be update
+	pub delegator_id: DelegatorId,
+	/// If this is true, the we need to remove the delegator ledger, if not, it is an adding or
+	/// unlocking operation.
+	pub if_remove: bool,
+	/// If this is true, then this is an unlocking entry. If false, then it's a bonding entry.
+	pub if_unlock: Option<bool>,
+	/// The unlocking/bonding amount.
+	pub amount: Option<Balance>,
+	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
+	/// entry, this field should be None.
+	pub unlock_time: Option<TimeUnit>,
+}
+
+/// A type for accommodating validators by delegator update entries for different kinds of
+/// currencies.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
+	/// A type for substrate validators by delegator updating entires
+	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId>),
+}
+
+/// A type for substrate validators by delegator updating entires
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
+	/// The currency id of the delegator that needs to be update
+	pub currency_id: CurrencyId,
+	/// The delegator id that needs to be update
+	pub delegator_id: DelegatorId,
+	/// Validators vec to be updated
+	pub validators: Vec<(ValidatorId, H256)>,
 }
 
 /// Different minimum and maximum requirements for different chain

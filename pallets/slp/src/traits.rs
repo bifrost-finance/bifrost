@@ -109,3 +109,29 @@ pub trait ValidatorManager<ValidatorId> {
 pub trait XcmBuilder<Balance, ChainCallType> {
 	fn construct_xcm_message(call: ChainCallType, extra_fee: Balance, weight: Weight) -> Xcm<()>;
 }
+
+/// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
+pub trait QueryResponseManager<XcmQueryId, AccountId, BlockNumber> {
+	fn get_query_response_record(query_id: XcmQueryId) -> DispatchResult;
+	fn create_query_record(
+		query_id: XcmQueryId,
+		responder: AccountId,
+		match_querier: AccountId,
+		timeout: BlockNumber,
+	) -> DispatchResult;
+	fn remove_query_record(query_id: XcmQueryId) -> DispatchResult;
+}
+
+/// Abstraction over a QueryResponseChecker.
+pub trait QueryResponseChecker<XcmQueryId, LedgerUpdateEntry, ValidatorsByDelegatorUpdateEntry> {
+	fn check_delegator_ledger_query_response(
+		&self,
+		query_id: XcmQueryId,
+		query_entry: LedgerUpdateEntry,
+	) -> DispatchResult;
+	fn check_validators_by_delegator_query_response(
+		&self,
+		query_id: XcmQueryId,
+		query_entry: ValidatorsByDelegatorUpdateEntry,
+	) -> DispatchResult;
+}
