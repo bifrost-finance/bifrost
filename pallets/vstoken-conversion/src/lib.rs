@@ -91,6 +91,14 @@ pub mod pallet {
 			vsbond_amount: BalanceOf<T>,
 			vsksm_amount: BalanceOf<T>,
 		},
+		ExchangeFeeSet {
+			parachain_id: CurrencyIdOf<T>,
+			exchange_fee: (BalanceOf<T>, BalanceOf<T>),
+		},
+		ExchangeRateSet {
+			lease: u32,
+			exchange_rate: (Percent, Percent),
+		},
 	}
 
 	#[pallet::error]
@@ -245,6 +253,52 @@ pub mod pallet {
 				vsbond_amount: vsbond_balance,
 				vsksm_amount: vsksm_balance,
 			});
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_exchange_fee(
+			origin: OriginFor<T>,
+			parachain_id: CurrencyIdOf<T>,
+			vsksm_exchange_fee: BalanceOf<T>,
+			vsbond_exchange_fee: BalanceOf<T>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ExchangeFee::<T>::mutate(
+				parachain_id,
+				|(old_vsksm_exchange_fee, old_vsbond_exchange_fee)| {
+					*old_vsksm_exchange_fee = vsksm_exchange_fee;
+					*old_vsbond_exchange_fee = vsbond_exchange_fee;
+				},
+			);
+
+			Self::deposit_event(Event::ExchangeFeeSet {
+				parachain_id,
+				exchange_fee: (vsksm_exchange_fee, vsbond_exchange_fee),
+			});
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_exchange_rate(
+			origin: OriginFor<T>,
+			lease: u32,
+			exchange_rate: (Percent, Percent),
+		) -> DispatchResult {
+			ensure_root(origin)?;
+
+			ExchangeRate::<T>::mutate(lease, |(old_convert_to_vsksm, old_convert_to_vsbond)| {
+				*old_convert_to_vsksm = exchange_rate.0;
+				*old_convert_to_vsbond = exchange_rate.1;
+			});
+
+			Self::deposit_event(Event::ExchangeRateSet {
+				lease,
+				exchange_rate: (exchange_rate.0, exchange_rate.1),
+			});
+
 			Ok(())
 		}
 	}
