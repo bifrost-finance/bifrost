@@ -54,8 +54,6 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-pub type MintId = u32;
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -115,9 +113,11 @@ pub mod pallet {
 	pub type ExchangeRate<T: Config> =
 		StorageMap<_, Twox64Concat, u32, (Percent, Percent), ValueQuery>;
 
+	/// exchange fee [vsksm exchange fee,vsbond exchange fee]
 	#[pallet::storage]
 	#[pallet::getter(fn exchange_fee)]
-	pub type ExchangeFee<T: Config> = StorageValue<_, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+	pub type ExchangeFee<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -157,9 +157,10 @@ pub mod pallet {
 
 			// Get exchange rate, exchange fee
 			let (convert_to_vsksm, _) = ExchangeRate::<T>::get(remaining_due_lease);
-			let (kusama_exchange_fee, _) = ExchangeFee::<T>::get();
+			let (_, vsbond_exchange_fee) =
+				ExchangeFee::<T>::get(CurrencyId::VSToken(TokenSymbol::KSM));
 			let vsbond_balance = vsbond_amount
-				.checked_sub(&kusama_exchange_fee)
+				.checked_sub(&vsbond_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsksm_balance = convert_to_vsksm * vsbond_balance;
 			ensure!(vsksm_balance >= minimum_vsksm, Error::<T>::NotEnoughBalance);
@@ -219,9 +220,10 @@ pub mod pallet {
 
 			// Get exchange rate, exchange fee
 			let (_, convert_to_vsbond) = ExchangeRate::<T>::get(remaining_due_lease);
-			let (kusama_exchange_fee, _) = ExchangeFee::<T>::get();
+			let (vsksm_exchange_fee, _) =
+				ExchangeFee::<T>::get(CurrencyId::VSToken(TokenSymbol::KSM));
 			let vsksm_balance = vsksm_amount
-				.checked_sub(&kusama_exchange_fee)
+				.checked_sub(&vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsbond_balance = convert_to_vsbond * vsksm_balance;
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
