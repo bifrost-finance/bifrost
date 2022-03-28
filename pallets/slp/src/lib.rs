@@ -41,8 +41,8 @@ use xcm::{
 
 pub use crate::{
 	primitives::{
-		LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger, ValidatorsByDelegatorUpdateEntry,
-		XcmOperation, KSM,
+		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
 	},
 	traits::{
 		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
@@ -170,6 +170,9 @@ pub mod pallet {
 		MinimumsAndMaximumsNotExist,
 		XcmExecutionFailed,
 		QueryNotExist,
+		DelaysNotExist,
+		Unexpected,
+		UnlockingRecordNotExist,
 	}
 
 	#[pallet::event]
@@ -325,12 +328,10 @@ pub mod pallet {
 		},
 		DelegatorLedgerQueryResponseConfirmed {
 			query_id: XcmQueryId,
-			currency_id: CurrencyId,
 			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		},
 		ValidatorsByDelegatorQueryResponseConfirmed {
 			query_id: XcmQueryId,
-			currency_id: CurrencyId,
 			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 		},
 	}
@@ -447,6 +448,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_minimums_maximums)]
 	pub type MinimumsAndMaximums<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, MinimumsMaximums<BalanceOf<T>>>;
+
+	// TimeUnit delay params for different chains.
+	#[pallet::storage]
+	#[pallet::getter(fn get_currency_delays)]
+	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
 
 	/// Whether xcm v3 is ready. It decides how to confirm the xcm message storage update.
 	#[pallet::storage]
@@ -1307,6 +1313,23 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Update storage Delays<T>.
+		#[pallet::weight(T::WeightInfo::set_currency_delays())]
+		pub fn set_currency_delays(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_delays: Option<Delays>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			CurrencyDelays::<T>::mutate_exists(currency_id, |delays| {
+				*delays = maybe_delays;
+			});
+
+			Ok(())
+		}
+
 		/// Update storage IfXcmV3Ready<T>.
 		#[pallet::weight(T::WeightInfo::set_if_xcm_v3_ready())]
 		pub fn set_if_xcm_v3_ready(origin: OriginFor<T>, if_ready: bool) -> DispatchResult {
@@ -1586,13 +1609,6 @@ pub mod pallet {
 			ledger_query_response_agent
 				.check_delegator_ledger_query_response(query_id, entry.clone())?;
 
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
-				query_id,
-				currency_id,
-				entry,
-			});
-
 			Ok(())
 		}
 
@@ -1614,13 +1630,6 @@ pub mod pallet {
 				Self::get_currency_query_response_checker(currency_id)?;
 			validators_by_delegator_query_response_agent
 				.check_validators_by_delegator_query_response(query_id, entry.clone())?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseConfirmed {
-				query_id,
-				currency_id,
-				entry,
-			});
 
 			Ok(())
 		}

@@ -40,18 +40,20 @@ use xcm::{
 
 use crate::{
 	agents::{KusamaCall, RewardDestination, StakingCall, UtilityCall, XcmCall},
-	pallet::Error,
+	pallet::{Error, Event},
 	primitives::{
-		Ledger, SubstrateLedger, UnlockChunk, ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
+		Ledger, SubstrateLedger, SubstrateLedgerUpdateEntry,
+		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
+		XcmOperation, KSM,
 	},
 	traits::{
 		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
 		StakingFeeManager, XcmBuilder,
 	},
-	AccountIdOf, BalanceOf, Config, DelegatorLedgers, DelegatorNextIndex,
-	DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, LedgerUpdateEntry,
-	MinimumsAndMaximums, Pallet, TimeUnit, ValidatorManager, Validators, ValidatorsByDelegator,
-	XcmDestWeightAndFee, XcmQueryId,
+	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
+	DelegatorNextIndex, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, IfXcmV3Ready,
+	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorManager, Validators,
+	ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, XcmQueryId,
 };
 
 /// StakingAgent implementation for Kusama
@@ -724,15 +726,55 @@ where
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: XcmQueryId,
-		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 	) -> DispatchResult {
+		let mut should_update = false;
+
+		// First to confirm whether we got the response from Kusama. This is only for xcm v3. If xcm
+		// v3 is not ready, then we will skip this part.
+		if IfXcmV3Ready::<T>::get() {
+		} else {
+			should_update = true;
+		}
+
+		// Update corresponding storages.
+		if should_update {
+			Self::update_ledger_query_response_storage(query_id, entry.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
+				query_id,
+				entry,
+			});
+		}
+
 		Ok(())
 	}
 	fn check_validators_by_delegator_query_response(
 		&self,
 		query_id: XcmQueryId,
-		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 	) -> DispatchResult {
+		let mut should_update = false;
+
+		// First to confirm whether we got the response from Kusama. This is only for xcm v3. If xcm
+		// v3 is not ready, then we will skip this part.
+		if IfXcmV3Ready::<T>::get() {
+		} else {
+			should_update = true;
+		}
+
+		// Update corresponding storages.
+		if should_update {
+			Self::update_validators_by_delegator_query_response_storage(query_id, entry.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseConfirmed {
+				query_id,
+				entry,
+			});
+		}
+
 		Ok(())
 	}
 }
@@ -777,5 +819,115 @@ where
 		Self::construct_xcm_and_send_as_subaccount(XcmOperation::Unbond, call, who.clone())?;
 
 		Ok(())
+	}
+
+	fn update_ledger_query_response_storage(
+		query_id: XcmQueryId,
+		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+	) -> Result<(), Error<T>> {
+		// update DelegatorLedgers<T> storage
+		if let LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+			currency_id: _,
+			delegator_id,
+			if_unlock,
+			if_rebond,
+			amount,
+			unlock_time,
+		}) = query_entry
+		{
+			DelegatorLedgers::<T>::mutate(
+				KSM,
+				delegator_id.clone(),
+				|old_ledger| -> Result<(), Error<T>> {
+					if let Some(Ledger::Substrate(mut old_sub_ledger)) = old_ledger.clone() {
+						// If this an unlocking xcm message update record
+						// Decrease the active amount and add an unlocking record.
+						if if_unlock {
+							old_sub_ledger.active = old_sub_ledger
+								.active
+								.checked_sub(&amount)
+								.ok_or(Error::<T>::UnderFlow)?;
+
+							let unlock_time_unit =
+								unlock_time.ok_or(Error::<T>::TimeUnitNotExist)?;
+
+							let new_unlock_record =
+								UnlockChunk { value: amount, unlock_time: unlock_time_unit };
+
+							old_sub_ledger.unlocking.push(new_unlock_record);
+						} else {
+							if if_rebond {
+								// If it is a rebonding operation.
+								// Reduce the unlocking records.
+								let mut remaining_amount = amount;
+
+								loop {
+									let record = old_sub_ledger
+										.unlocking
+										.pop()
+										.ok_or(Error::<T>::UnlockingRecordNotExist)?;
+
+									if remaining_amount >= record.value {
+										remaining_amount = remaining_amount - record.value;
+									} else {
+										let remain_unlock_chunk = UnlockChunk {
+											value: record.value - remaining_amount,
+											unlock_time: record.unlock_time.clone(),
+										};
+										old_sub_ledger.unlocking.push(remain_unlock_chunk);
+										break;
+									}
+								}
+
+								// Increase the active amount.
+								old_sub_ledger.active = old_sub_ledger
+									.active
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+							} else {
+								// If this is a bonding operation.
+								// Increase both the active and total amount.
+								old_sub_ledger.active = old_sub_ledger
+									.active
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+
+								old_sub_ledger.total = old_sub_ledger
+									.total
+									.checked_add(&amount)
+									.ok_or(Error::<T>::OverFlow)?;
+							}
+						}
+					}
+					Ok(())
+				},
+			)?;
+
+			// Delete the DelegatorLedgerXcmUpdateQueue<T> query
+			DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
+
+			Ok(())
+		} else {
+			Err(Error::<T>::Unexpected)
+		}
+	}
+
+	fn update_validators_by_delegator_query_response_storage(
+		query_id: XcmQueryId,
+		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+	) -> Result<(), Error<T>> {
+		// update ValidatorsByDelegator<T> storage
+		if let ValidatorsByDelegatorUpdateEntry::Substrate(
+			SubstrateValidatorsByDelegatorUpdateEntry { currency_id, delegator_id, validators },
+		) = query_entry
+		{
+			ValidatorsByDelegator::<T>::insert(currency_id, delegator_id, validators);
+
+			// update ValidatorsByDelegatorXcmUpdateQueue<T> storage
+			ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
+			Ok(())
+		} else {
+			Err(Error::<T>::Unexpected)
+		}
 	}
 }

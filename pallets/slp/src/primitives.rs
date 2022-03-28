@@ -69,13 +69,13 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
 	pub delegator_id: DelegatorId,
-	/// If this is true, the we need to remove the delegator ledger, if not, it is an adding or
-	/// unlocking operation.
-	pub if_remove: bool,
-	/// If this is true, then this is an unlocking entry. If false, then it's a bonding entry.
-	pub if_unlock: Option<bool>,
+	/// If this is true, then this is an unlocking entry. If false, then it's a bonding/rebonding
+	/// entry.
+	pub if_unlock: bool,
+	/// If if_unlock is false and if_rebond is true. Then it is a rebonding operation
+	pub if_rebond: bool,
 	/// The unlocking/bonding amount.
-	pub amount: Option<Balance>,
+	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
 	/// entry, this field should be None.
 	pub unlock_time: Option<TimeUnit>,
@@ -117,6 +117,13 @@ pub struct MinimumsMaximums<Balance> {
 	pub validators_back_maximum: u32,
 	/// The maximum amount of active staking for a delegator. It is used to control ROI.
 	pub delegator_active_staking_maximum: Balance,
+}
+
+/// Different delay params for different chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct Delays {
+	/// The unlock delay for the unlocking amount to be able to be liquidized.
+	pub unlock_delay: TimeUnit,
 }
 
 /// XCM operations list
