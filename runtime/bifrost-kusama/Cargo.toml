@@ -93,9 +93,9 @@ bifrost-liquidity-mining = { path = "../../pallets/liquidity-mining", default-fe
 bifrost-liquidity-mining-rpc-runtime-api = { path = "../../pallets/liquidity-mining/rpc/runtime-api", default-features = false }
 bifrost-vsbond-auction = { path = "../../pallets/vsbond-auction", default-features = false }
 bifrost-token-issuer = { path = "../../pallets/token-issuer", default-features = false }
-bifrost-lightening-redeem= { path = "../../pallets/lightening-redeem", default-features = false }
-bifrost-call-switchgear= { path = "../../pallets/call-switchgear", default-features = false }
-
+bifrost-lightening-redeem = { path = "../../pallets/lightening-redeem", default-features = false }
+bifrost-call-switchgear = { path = "../../pallets/call-switchgear", default-features = false }
+bifrost-asset-registry = { path = "../../pallets/asset-registry", default-features = false }
 
 # orml
 orml-currencies = { version = "0.4.1-dev", default-features = false }
@@ -190,6 +190,7 @@ std = [
 	"bifrost-liquidity-mining-rpc-runtime-api/std",
 	"bifrost-token-issuer/std",
 	"bifrost-lightening-redeem/std",
+	"bifrost-asset-registry/std",
 	"zenlink-protocol/std",
 	"zenlink-protocol-runtime-api/std",
 	"merkle-distributor/std",

@@ -181,6 +181,8 @@ fn parachain_subaccounts_are_unique() {
 			hex_literal::hex!["70617261d1070000000000000000000000000000000000000000000000000000"]
 				.into()
 		);
+
+		assert_eq!(RelaychainSovereignSubAccount::get(), create_x2_multilocation(0));
 	});
 }
 

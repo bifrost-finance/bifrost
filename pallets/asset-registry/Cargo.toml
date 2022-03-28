@@ -1,0 +1,42 @@
+[package]
+name = "bifrost-asset-registry"
+version = "0.8.0"
+authors = ["Edwin Wang <lark930@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.124", optional = true }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false  }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17", default-features = false }
+primitives = { package = "node-primitives", path = "../../node/primitives", default-features = false }
+
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.17", default-features = false }
+
+[dev-dependencies]
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.17" }
+
+[features]
+default = ["std"]
+std = [
+	"serde",
+	"log/std",
+	"codec/std",
+	"scale-info/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"frame-support/std",
+	"frame-system/std",
+	"primitives/std",
+	"xcm/std",
+	"xcm-builder/std",
+	"xcm-executor/std",
+]
+try-runtime = ["frame-support/try-runtime"]
