@@ -68,7 +68,6 @@ pub mod pallet {
 
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 
-		/// The only origin that can edit token issuer list
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		#[pallet::constant]
@@ -166,7 +165,7 @@ pub mod pallet {
 			// Get exchange rate, exchange fee
 			let (convert_to_vsksm, _) = ExchangeRate::<T>::get(remaining_due_lease);
 			let (_, vsbond_exchange_fee) =
-				ExchangeFee::<T>::get(CurrencyId::VSToken(TokenSymbol::KSM));
+				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let vsbond_balance = vsbond_amount
 				.checked_sub(&vsbond_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
@@ -229,7 +228,7 @@ pub mod pallet {
 			// Get exchange rate, exchange fee
 			let (_, convert_to_vsbond) = ExchangeRate::<T>::get(remaining_due_lease);
 			let (vsksm_exchange_fee, _) =
-				ExchangeFee::<T>::get(CurrencyId::VSToken(TokenSymbol::KSM));
+				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let vsksm_balance = vsksm_amount
 				.checked_sub(&vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
