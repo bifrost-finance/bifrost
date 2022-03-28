@@ -50,7 +50,7 @@ pub const vsKSM: CurrencyId = CurrencyId::VSToken(TokenSymbol::KSM);
 pub const ALICE: AccountId = AccountId32::new([0u8; 32]);
 pub const BOB: AccountId = AccountId32::new([1u8; 32]);
 pub const CHARLIE: AccountId = AccountId32::new([3u8; 32]);
-pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 13, 20);
+pub const vsBond: CurrencyId = CurrencyId::VSBond(TokenSymbol::BNC, 2001, 0, 8);
 
 frame_support::construct_runtime!(
 	pub enum Runtime where

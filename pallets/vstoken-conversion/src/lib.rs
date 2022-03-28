@@ -98,6 +98,12 @@ pub mod pallet {
 			lease: u32,
 			exchange_rate: (Percent, Percent),
 		},
+		PolkadotLeaseSet {
+			lease: u32,
+		},
+		KusamaLeaseSet {
+			lease: u32,
+		},
 	}
 
 	#[pallet::error]
@@ -161,6 +167,7 @@ pub mod pallet {
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
+			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
 			let (convert_to_vsksm, _) = ExchangeRate::<T>::get(remaining_due_lease);
@@ -224,6 +231,7 @@ pub mod pallet {
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
+			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
 			let (_, convert_to_vsbond) = ExchangeRate::<T>::get(remaining_due_lease);
@@ -297,6 +305,32 @@ pub mod pallet {
 				lease,
 				exchange_rate: (exchange_rate.0, exchange_rate.1),
 			});
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_kusama_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
+			ensure_root(origin)?;
+
+			KusamaLease::<T>::mutate(|old_lease| {
+				*old_lease = lease;
+			});
+
+			Self::deposit_event(Event::KusamaLeaseSet { lease });
+
+			Ok(())
+		}
+
+		#[pallet::weight(0)]
+		pub fn set_polkadot_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
+			ensure_root(origin)?;
+
+			PolkadotLease::<T>::mutate(|old_lease| {
+				*old_lease = lease;
+			});
+
+			Self::deposit_event(Event::PolkadotLeaseSet { lease });
 
 			Ok(())
 		}

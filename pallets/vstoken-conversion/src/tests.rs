@@ -30,14 +30,14 @@ fn vsksm_convert_to_vsbond() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, 10, 10));
 		pub const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
-
+		assert_ok!(VstokenConversion::set_kusama_lease(Origin::root(), 1,));
 		assert_ok!(VstokenConversion::set_exchange_rate(
 			Origin::root(),
-			21,
+			8,
 			(EXCHANGE_RATE_PERCENTAGE, EXCHANGE_RATE_PERCENTAGE)
 		));
 		assert_eq!(
-			VstokenConversion::exchange_rate(21),
+			VstokenConversion::exchange_rate(8),
 			(EXCHANGE_RATE_PERCENTAGE, EXCHANGE_RATE_PERCENTAGE)
 		);
 		assert_noop!(
@@ -66,14 +66,14 @@ fn vsbond_convert_to_vsksm() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, 10, 10));
 		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
-
+		assert_ok!(VstokenConversion::set_kusama_lease(Origin::root(), 1,));
 		assert_ok!(VstokenConversion::set_exchange_rate(
 			Origin::root(),
-			21,
+			8,
 			(EXCHANGE_RATE_PERCENTAGE, EXCHANGE_RATE_PERCENTAGE)
 		));
 		assert_eq!(
-			VstokenConversion::exchange_rate(21),
+			VstokenConversion::exchange_rate(8),
 			(EXCHANGE_RATE_PERCENTAGE, EXCHANGE_RATE_PERCENTAGE)
 		);
 		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
