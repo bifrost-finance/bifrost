@@ -169,6 +169,7 @@ pub mod pallet {
 		OperateOriginNotExists,
 		MinimumsAndMaximumsNotExist,
 		XcmExecutionFailed,
+		QueryNotExist,
 	}
 
 	#[pallet::event]
@@ -322,6 +323,16 @@ pub mod pallet {
 			delegator: MultiLocation,
 			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		},
+		DelegatorLedgerQueryResponseConfirmed {
+			query_id: XcmQueryId,
+			currency_id: CurrencyId,
+			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		},
+		ValidatorsByDelegatorQueryResponseConfirmed {
+			query_id: XcmQueryId,
+			currency_id: CurrencyId,
+			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -437,6 +448,11 @@ pub mod pallet {
 	pub type MinimumsAndMaximums<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, MinimumsMaximums<BalanceOf<T>>>;
 
+	/// Whether xcm v3 is ready. It decides how to confirm the xcm message storage update.
+	#[pallet::storage]
+	#[pallet::getter(fn get_token_release_per_round)]
+	pub type IfXcmV3Ready<T: Config> = StorageValue<_, bool, ValueQuery>;
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -445,7 +461,10 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
 			// For queries in update entry queues, search responses in pallet_xcm Queries storage.
-			let _ = Self::process_query_entry_records();
+			let if_xcm_v3_ready = IfXcmV3Ready::<T>::get();
+			if if_xcm_v3_ready {
+				let _ = Self::process_query_entry_records();
+			}
 
 			1_000_000_000
 		}
@@ -1287,6 +1306,42 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		/// Update storage IfXcmV3Ready<T>.
+		#[pallet::weight(T::WeightInfo::set_if_xcm_v3_ready())]
+		pub fn set_if_xcm_v3_ready(origin: OriginFor<T>, if_ready: bool) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+			IfXcmV3Ready::<T>::put(if_ready);
+
+			Ok(())
+		}
+
+		/// ********************************************************************
+		/// *************Outer Confirming Xcm queries functions ****************
+		/// ********************************************************************
+		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
+		pub fn confirm_delegator_ledger_query_response(
+			origin: OriginFor<T>,
+			query_id: XcmQueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::get_ledger_update_agent_then_process(query_id)?;
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
+		pub fn confirm_validators_by_delegator_query_response(
+			origin: OriginFor<T>,
+			query_id: XcmQueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::get_validators_by_delegator_update_agent_then_process(query_id)?;
+
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
@@ -1499,42 +1554,75 @@ pub mod pallet {
 			let mut counter = 0u32;
 
 			// Deal with DelegatorLedgerXcmUpdateQueue storage
-			for (query_id, query_entry) in DelegatorLedgerXcmUpdateQueue::<T>::iter() {
+			for query_id in DelegatorLedgerXcmUpdateQueue::<T>::iter_keys() {
 				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
-
-				let query_response_agent = match query_entry.clone() {
-					LedgerUpdateEntry::Substrate(entry) =>
-						Self::get_currency_query_response_checker(entry.currency_id),
-					_ => Err(Error::<T>::NotSupportedCurrencyId),
-				}?;
-
-				query_response_agent
-					.check_delegator_ledger_query_response(query_id, query_entry)?;
+				Self::get_ledger_update_agent_then_process(query_id)?;
 				counter = counter.saturating_add(1);
 			}
 
 			// Deal with ValidatorsByDelegator storage
-			for (query_id, query_entry) in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter() {
+			for query_id in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter_keys() {
 				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
-
-				let query_response_agent = match query_entry.clone() {
-					ValidatorsByDelegatorUpdateEntry::Substrate(entry) =>
-						Self::get_currency_query_response_checker(entry.currency_id),
-					_ => Err(Error::<T>::NotSupportedCurrencyId),
-				}?;
-
-				query_response_agent
-					.check_validators_by_delegator_query_response(query_id, query_entry)?;
+				Self::get_validators_by_delegator_update_agent_then_process(query_id)?;
 				counter = counter.saturating_add(1);
 			}
 
 			Ok(())
 		}
 
-		// pub fn confirm_delegator_ledger_update_entry(
-		// 	query_id: XcmQueryId,
-		// ) -> Result<MultiLocation, Error<T>> {
-		// 	// Update corresponding storage if exist.
-		// }
+		pub fn get_ledger_update_agent_then_process(query_id: XcmQueryId) -> DispatchResult {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let entry = Self::get_delegator_ledger_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+			let currency_id = match entry.clone() {
+				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
+				_ => None,
+			}
+			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+			let ledger_query_response_agent =
+				Self::get_currency_query_response_checker(currency_id)?;
+			ledger_query_response_agent
+				.check_delegator_ledger_query_response(query_id, entry.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
+				query_id,
+				currency_id,
+				entry,
+			});
+
+			Ok(())
+		}
+
+		pub fn get_validators_by_delegator_update_agent_then_process(
+			query_id: XcmQueryId,
+		) -> DispatchResult {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let entry = Self::get_validators_by_delegator_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+			let currency_id = match entry.clone() {
+				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
+					Some(substrate_entry.currency_id),
+				_ => None,
+			}
+			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+			let validators_by_delegator_query_response_agent =
+				Self::get_currency_query_response_checker(currency_id)?;
+			validators_by_delegator_query_response_agent
+				.check_validators_by_delegator_query_response(query_id, entry.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseConfirmed {
+				query_id,
+				currency_id,
+				entry,
+			});
+
+			Ok(())
+		}
 	}
 }
