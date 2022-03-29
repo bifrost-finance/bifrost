@@ -6,10 +6,10 @@
 
 Welcome,
 
-Bifrost is a DeFi protocol to provide derivative for pledged assets.
+Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain liquidity for staked assets. By leveraging on the cross-consensus message (XCM) it can provide cross-chain liquid staking services for polkadot relay chains, parachains, and heterogeneous chains bridged with polkadot.
 
 👉 *Discover the Bifrost project at [bifrost.finance](https://bifrost.finance/).*  
-👉 *Learn to use the Bifrost network with our [technical docs](https://wiki.bifrost.finance/devops).*  
+👉 *Learn to use the Bifrost network with our [wiki](https://wiki.bifrost.finance/network).*  
 
 <h4>🐣 Supported by</h4>
 
@@ -24,7 +24,7 @@ Bifrost is a DeFi protocol to provide derivative for pledged assets.
 [![Substrate Version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
 [![Docker](https://img.shields.io/badge/Docker-v0.4.0-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
 [![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
-[![Telegram](https://img.shields.io/badge/-Telegram-5c5c5c?logo=Telegram)](https://t.me/bifrost_finance)
+[![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-finance)
 [![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_finance)
 [![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-finance)
 
