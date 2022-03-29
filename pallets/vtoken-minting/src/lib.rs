@@ -33,7 +33,9 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
+		},
 		SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
@@ -356,8 +358,13 @@ pub mod pallet {
 			let token_pool_amount = Self::token_pool(token_id);
 			let mut vtoken_amount = token_amount;
 			if token_pool_amount != BalanceOf::<T>::zero() {
-				vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-					token_pool_amount.into();
+				// vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
+				// 	token_pool_amount.into();
+				vtoken_amount = token_amount
+					.checked_mul(&vtoken_total_issuance.into())
+					.ok_or(Error::<T>::Unexpected)?
+					.checked_div(&token_pool_amount.into())
+					.ok_or(Error::<T>::Unexpected)?;
 			}
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
@@ -401,8 +408,13 @@ pub mod pallet {
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
 					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-					let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
-						vtoken_total_issuance.into();
+					// let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
+					// 	vtoken_total_issuance.into();
+					let token_amount = vtoken_amount
+						.checked_mul(&token_pool_amount.into())
+						.ok_or(Error::<T>::Unexpected)?
+						.checked_div(&vtoken_total_issuance.into())
+						.ok_or(Error::<T>::Unexpected)?;
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
 						Ok(())
@@ -415,7 +427,7 @@ pub mod pallet {
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
 						&next_id,
-						(&exchanger, vtoken_amount, &time_unit),
+						(&exchanger, token_amount, &time_unit),
 					);
 
 					if let Some((total_locked, ledger_list)) =
@@ -597,8 +609,14 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-				token_pool_amount.into();
+			// let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
+			// 	token_pool_amount.into();
+			let vtoken_amount = token_amount
+				.checked_mul(&vtoken_total_issuance.into())
+				.ok_or(Error::<T>::Unexpected)?
+				.checked_div(&token_pool_amount.into())
+				.ok_or(Error::<T>::Unexpected)?;
+
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
