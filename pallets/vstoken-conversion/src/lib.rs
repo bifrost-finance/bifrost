@@ -28,6 +28,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 
+pub mod primitives;
 pub mod weights;
 
 use frame_support::{
@@ -39,7 +40,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-use sp_arithmetic::per_things::Percent;
+pub use primitives::VstokenConversionExchangeRate;
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
@@ -90,13 +91,23 @@ pub mod pallet {
 			vsbond_amount: BalanceOf<T>,
 			vsksm_amount: BalanceOf<T>,
 		},
+		VsbondConvertToVsdot {
+			currency_id: CurrencyIdOf<T>,
+			vsbond_amount: BalanceOf<T>,
+			vsdot_amount: BalanceOf<T>,
+		},
+		VsdotConvertToVsbond {
+			currency_id: CurrencyIdOf<T>,
+			vsbond_amount: BalanceOf<T>,
+			vsdot_amount: BalanceOf<T>,
+		},
 		ExchangeFeeSet {
 			parachain_id: CurrencyIdOf<T>,
 			exchange_fee: (BalanceOf<T>, BalanceOf<T>),
 		},
 		ExchangeRateSet {
 			lease: u32,
-			exchange_rate: (Percent, Percent),
+			exchange_rate: VstokenConversionExchangeRate,
 		},
 		PolkadotLeaseSet {
 			lease: u32,
@@ -124,7 +135,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn exchange_rate)]
 	pub type ExchangeRate<T: Config> =
-		StorageMap<_, Twox64Concat, u32, (Percent, Percent), ValueQuery>;
+		StorageMap<_, Twox64Concat, u32, VstokenConversionExchangeRate, ValueQuery>;
 
 	/// exchange fee [vsksm exchange fee,vsbond exchange fee]
 	#[pallet::storage]
@@ -170,13 +181,13 @@ pub mod pallet {
 			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			let (convert_to_vsksm, _) = ExchangeRate::<T>::get(remaining_due_lease);
+			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let (_, vsbond_exchange_fee) =
 				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let vsbond_balance = vsbond_amount
 				.checked_sub(&vsbond_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
-			let vsksm_balance = convert_to_vsksm * vsbond_balance;
+			let vsksm_balance = exchange_rate.vsbond_convert_to_vsksm * vsbond_balance;
 			ensure!(vsksm_balance >= minimum_vsksm, Error::<T>::NotEnoughBalance);
 
 			T::MultiCurrency::transfer(
@@ -234,13 +245,13 @@ pub mod pallet {
 			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			let (_, convert_to_vsbond) = ExchangeRate::<T>::get(remaining_due_lease);
+			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let (vsksm_exchange_fee, _) =
 				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let vsksm_balance = vsksm_amount
 				.checked_sub(&vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
-			let vsbond_balance = convert_to_vsbond * vsksm_balance;
+			let vsbond_balance = exchange_rate.vsksm_convert_to_vsbond * vsksm_balance;
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
 
 			T::MultiCurrency::transfer(
@@ -259,6 +270,134 @@ pub mod pallet {
 				currency_id,
 				vsbond_amount: vsbond_balance,
 				vsksm_amount: vsksm_balance,
+			});
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn vsbond_convert_to_vsdot(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			vsbond_amount: BalanceOf<T>,
+			minimum_vsdot: BalanceOf<T>,
+		) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
+			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
+			ensure!(
+				minimum_vsdot >=
+					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::DOT)),
+				Error::<T>::NotEnoughBalance
+			);
+
+			// Calculate lease
+			let dot_lease = PolkadotLease::<T>::get();
+			let remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(_, _, _, expire_lease) => {
+					let mut remaining_due_lease = expire_lease
+						.checked_sub(dot_lease)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease = remaining_due_lease
+						.checked_add(1u32)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease
+				},
+				_ => return Err(Error::<T>::NotSupportTokenType.into()),
+			};
+			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
+
+			// Get exchange rate, exchange fee
+			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
+			let (_, vsbond_exchange_fee) =
+				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
+			let vsbond_balance = vsbond_amount
+				.checked_sub(&vsbond_exchange_fee)
+				.ok_or(Error::<T>::CalculationOverflow)?;
+			let vsdot_balance = exchange_rate.vsbond_convert_to_vsdot * vsbond_balance;
+			ensure!(vsdot_balance >= minimum_vsdot, Error::<T>::NotEnoughBalance);
+
+			T::MultiCurrency::transfer(
+				currency_id,
+				&exchanger,
+				&T::VsbondAccount::get().into_account(),
+				vsbond_amount,
+			)?;
+			T::MultiCurrency::deposit(
+				CurrencyId::VSToken(TokenSymbol::DOT),
+				&exchanger,
+				vsdot_balance,
+			)?;
+
+			Self::deposit_event(Event::VsbondConvertToVsdot {
+				currency_id,
+				vsbond_amount,
+				vsdot_amount: vsdot_balance,
+			});
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn vsdot_convert_to_vsbond(
+			origin: OriginFor<T>,
+			currency_id: CurrencyIdOf<T>,
+			vsdot_amount: BalanceOf<T>,
+			minimum_vsbond: BalanceOf<T>,
+		) -> DispatchResult {
+			// Check origin
+			let exchanger = ensure_signed(origin)?;
+			let user_vsdot_balance =
+				T::MultiCurrency::free_balance(CurrencyId::VSToken(TokenSymbol::DOT), &exchanger);
+			ensure!(user_vsdot_balance >= vsdot_amount, Error::<T>::NotEnoughBalance);
+			ensure!(
+				minimum_vsbond >= T::MultiCurrency::minimum_balance(currency_id),
+				Error::<T>::NotEnoughBalance
+			);
+
+			// Calculate lease
+			let dot_lease = PolkadotLease::<T>::get();
+			let remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(_, _, _, expire_lease) => {
+					let mut remaining_due_lease = expire_lease
+						.checked_sub(dot_lease)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease = remaining_due_lease
+						.checked_add(1u32)
+						.ok_or(Error::<T>::CalculationOverflow)?;
+					remaining_due_lease
+				},
+				_ => return Err(Error::<T>::NotSupportTokenType.into()),
+			};
+			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
+
+			// Get exchange rate, exchange fee
+			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
+			let (vsdot_exchange_fee, _) =
+				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
+			let vsdot_balance = vsdot_amount
+				.checked_sub(&vsdot_exchange_fee)
+				.ok_or(Error::<T>::CalculationOverflow)?;
+			let vsbond_balance = exchange_rate.vsdot_convert_to_vsbond * vsdot_balance;
+			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
+
+			T::MultiCurrency::transfer(
+				currency_id,
+				&T::VsbondAccount::get().into_account(),
+				&exchanger,
+				vsbond_balance,
+			)?;
+			T::MultiCurrency::withdraw(
+				CurrencyId::VSToken(TokenSymbol::DOT),
+				&exchanger,
+				vsdot_amount,
+			)?;
+
+			Self::deposit_event(Event::VsdotConvertToVsbond {
+				currency_id,
+				vsbond_amount: vsbond_balance,
+				vsdot_amount: vsdot_balance,
 			});
 			Ok(())
 		}
@@ -292,19 +431,15 @@ pub mod pallet {
 		pub fn set_exchange_rate(
 			origin: OriginFor<T>,
 			lease: u32,
-			exchange_rate: (Percent, Percent),
+			exchange_rate: VstokenConversionExchangeRate,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			ExchangeRate::<T>::mutate(lease, |(old_convert_to_vsksm, old_convert_to_vsbond)| {
-				*old_convert_to_vsksm = exchange_rate.0;
-				*old_convert_to_vsbond = exchange_rate.1;
+			ExchangeRate::<T>::mutate(lease, |old_exchange_rate| {
+				*old_exchange_rate = exchange_rate.clone();
 			});
 
-			Self::deposit_event(Event::ExchangeRateSet {
-				lease,
-				exchange_rate: (exchange_rate.0, exchange_rate.1),
-			});
+			Self::deposit_event(Event::ExchangeRateSet { lease, exchange_rate });
 
 			Ok(())
 		}
