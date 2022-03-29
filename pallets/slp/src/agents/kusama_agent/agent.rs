@@ -24,7 +24,9 @@ use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
 use sp_core::H256;
 use sp_runtime::{
-	traits::{CheckedAdd, CheckedSub, Convert, StaticLookup, UniqueSaturatedInto, Zero},
+	traits::{
+		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedInto, Zero,
+	},
 	DispatchResult,
 };
 use sp_std::prelude::*;
@@ -52,34 +54,34 @@ use crate::{
 	},
 	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
 	DelegatorNextIndex, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index, IfXcmV3Ready,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, TimeUnit, ValidatorManager, Validators,
-	ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, XcmQueryId,
+	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId, TimeUnit, ValidatorManager,
+	Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee,
 };
 
 /// StakingAgent implementation for Kusama
-pub struct KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>(
-	PhantomData<(T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager)>,
+pub struct KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>(
+	PhantomData<(T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager)>,
 );
 
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
-	KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
+	KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 {
 	pub fn new() -> Self {
 		KusamaAgent(
-			PhantomData::<(T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager)>,
+			PhantomData::<(T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager)>,
 		)
 	}
 }
 
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit, AccountIdOf<T>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	fn initialize_delegator(&self) -> Option<MultiLocation> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(KSM);
@@ -511,15 +513,15 @@ where
 }
 
 /// DelegatorManager implementation for Kusama
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 	DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	/// Add a new serving delegator for a particular currency.
 	#[transactional]
@@ -562,15 +564,15 @@ where
 }
 
 /// ValidatorManager implementation for Kusama
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 	ValidatorManager<MultiLocation>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
@@ -630,15 +632,15 @@ where
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
 /// or deposit fee reserves for the destination chain nominator accounts.
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 	StakingFeeManager<MultiLocation, BalanceOf<T>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
@@ -670,15 +672,15 @@ where
 }
 
 /// Trait XcmBuilder implementation for Kusama
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 	XcmBuilder<BalanceOf<T>, KusamaCall<T>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	fn construct_xcm_message(
 		call: KusamaCall<T>,
@@ -689,6 +691,37 @@ where
 			id: Concrete(MultiLocation::here()),
 			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
 		};
+
+		// if IfXcmV3Ready::<T>::get() {
+		// 	// Get the params for ReportTransactStatus instruction.
+		// 	// create query and get query_id
+		// 	let dest = MultiLocation::parent();
+		// 	let now = frame_system::Pallet::<T>::block_number();
+		// 	let time_out = T::BlockNumber::from(1_000u32).saturating_add(now);
+		// 	let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), time_out);
+		// 	let max_weight = 0;
+
+		// 	// Add one more field for reporting transact status
+		// 	Xcm(vec![
+		// 		WithdrawAsset(asset.clone().into()),
+		// 		BuyExecution { fees: asset, weight_limit: Unlimited },
+		// 		Transact {
+		// 			origin_type: OriginKind::SovereignAccount,
+		// 			require_weight_at_most: weight,
+		// 			call: call.encode().into(),
+		// 		},
+		// 		ReportTransactStatus(QueryResponseInfo { query_id, dest, max_weight }),
+		// 		RefundSurplus,
+		// 		DepositAsset {
+		// 			assets: All.into(),
+		// 			max_assets: u32::max_value(),
+		// 			beneficiary: MultiLocation {
+		// 				parents: 0,
+		// 				interior: X1(Parachain(ParachainId::get().into())),
+		// 			},
+		// 		},
+		// 	])
+		// } else {
 		Xcm(vec![
 			WithdrawAsset(asset.clone().into()),
 			BuyExecution { fees: asset, weight_limit: Unlimited },
@@ -707,35 +740,29 @@ where
 				},
 			},
 		])
+		// }
 	}
 }
 
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 	QueryResponseChecker<
-		XcmQueryId,
+		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
-	> for KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+	> for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	fn check_delegator_ledger_query_response(
 		&self,
-		query_id: XcmQueryId,
+		query_id: QueryId,
 		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 	) -> DispatchResult {
-		let mut should_update = false;
-
-		// First to confirm whether we got the response from Kusama. This is only for xcm v3. If xcm
-		// v3 is not ready, then we will skip this part.
-		if IfXcmV3Ready::<T>::get() {
-		} else {
-			should_update = true;
-		}
+		let should_update = Self::check_should_update(query_id)?;
 
 		// Update corresponding storages.
 		if should_update {
@@ -752,17 +779,10 @@ where
 	}
 	fn check_validators_by_delegator_query_response(
 		&self,
-		query_id: XcmQueryId,
+		query_id: QueryId,
 		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 	) -> DispatchResult {
-		let mut should_update = false;
-
-		// First to confirm whether we got the response from Kusama. This is only for xcm v3. If xcm
-		// v3 is not ready, then we will skip this part.
-		if IfXcmV3Ready::<T>::get() {
-		} else {
-			should_update = true;
-		}
+		let should_update = Self::check_should_update(query_id)?;
 
 		// Update corresponding storages.
 		if should_update {
@@ -780,14 +800,14 @@ where
 }
 
 /// Internal functions.
-impl<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
-	KusamaAgent<T, AccountConverter, ParachainId, XcmSender, SubstrateResponseManager>
+impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
+	KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
 where
 	T: Config,
 	AccountConverter: Convert<u16, MultiLocation>,
 	ParachainId: Get<ParaId>,
-	XcmSender: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<XcmQueryId, MultiLocation, BlockNumberFor<T>>,
+	XcmRouter: SendXcm,
+	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
 {
 	fn construct_xcm_and_send_as_subaccount(
 		operation: XcmOperation,
@@ -805,7 +825,7 @@ where
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
-		XcmSender::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
@@ -822,7 +842,7 @@ where
 	}
 
 	fn update_ledger_query_response_storage(
-		query_id: XcmQueryId,
+		query_id: QueryId,
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 	) -> Result<(), Error<T>> {
 		// update DelegatorLedgers<T> storage
@@ -906,6 +926,14 @@ where
 			// Delete the DelegatorLedgerXcmUpdateQueue<T> query
 			DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
+			// Delete the query in pallet_xcm, if xcm v3 is enabled.
+			if IfXcmV3Ready::<T>::get() {
+				ensure!(
+					T::SubstrateResponseManager::remove_query_record(query_id),
+					Error::<T>::QueryResponseRemoveError
+				);
+			}
+
 			Ok(())
 		} else {
 			Err(Error::<T>::Unexpected)
@@ -913,7 +941,7 @@ where
 	}
 
 	fn update_validators_by_delegator_query_response_storage(
-		query_id: XcmQueryId,
+		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 	) -> Result<(), Error<T>> {
 		// update ValidatorsByDelegator<T> storage
@@ -925,9 +953,32 @@ where
 
 			// update ValidatorsByDelegatorXcmUpdateQueue<T> storage
 			ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
+
+			// Delete the query in pallet_xcm, if xcm v3 is enabled.
+			if IfXcmV3Ready::<T>::get() {
+				ensure!(
+					T::SubstrateResponseManager::remove_query_record(query_id),
+					Error::<T>::QueryResponseRemoveError
+				);
+			}
+
 			Ok(())
 		} else {
 			Err(Error::<T>::Unexpected)
 		}
+	}
+
+	/// Check whether we should update corresponding query response storages.
+	fn check_should_update(query_id: QueryId) -> Result<bool, Error<T>> {
+		let mut should_update = true;
+
+		// First to confirm whether we got the response from Kusama. This is only for xcm v3. If xcm
+		// v3 is not ready, then we will skip this part.
+		if IfXcmV3Ready::<T>::get() {
+			// check whether we've got response back.
+			should_update = T::SubstrateResponseManager::get_query_response_record(query_id);
+		}
+
+		Ok(should_update)
 	}
 }

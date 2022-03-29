@@ -64,7 +64,7 @@ mod benchmarking;
 
 pub use pallet::*;
 
-type XcmQueryId = [u8; 32];
+pub type QueryId = u64;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type StakingAgentBoxType<T> =
@@ -75,7 +75,7 @@ type ValidatorManagerBoxType = Box<dyn ValidatorManager<MultiLocation>>;
 type StakingFeeManagerBoxType<T> = Box<dyn StakingFeeManager<MultiLocation, BalanceOf<T>>>;
 type QueryResponseCheckerBoxType<T> = Box<
 	dyn QueryResponseChecker<
-		XcmQueryId,
+		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 	>,
@@ -88,10 +88,11 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
 		/// Currency operations handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The only origin that can modify pallet params
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -112,19 +113,19 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		/// Routes the XCM message outbound.
-		type XcmSender: SendXcm;
+		type XcmRouter: SendXcm;
 
 		/// XCM executor.
 		type XcmExecutor: ExecuteXcm<Self::Call>;
 
 		/// Substrate response manager.
 		type SubstrateResponseManager: QueryResponseManager<
-			XcmQueryId,
+			QueryId,
 			MultiLocation,
 			BlockNumberFor<Self>,
 		>;
 
-		/// The maximum number of entries to be confirmed in a block for each update queue in the
+		/// The maximum number of entries to be confirmed in a block for update queue in the
 		/// on_initialize queue.
 		#[pallet::constant]
 		type MaxTypeEntryPerBlock: Get<u32>;
@@ -173,6 +174,7 @@ pub mod pallet {
 		DelaysNotExist,
 		Unexpected,
 		UnlockingRecordNotExist,
+		QueryResponseRemoveError,
 	}
 
 	#[pallet::event]
@@ -327,11 +329,11 @@ pub mod pallet {
 			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		},
 		DelegatorLedgerQueryResponseConfirmed {
-			query_id: XcmQueryId,
+			query_id: QueryId,
 			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		},
 		ValidatorsByDelegatorQueryResponseConfirmed {
-			query_id: XcmQueryId,
+			query_id: QueryId,
 			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 		},
 	}
@@ -421,7 +423,7 @@ pub mod pallet {
 	pub type ValidatorsByDelegatorXcmUpdateQueue<T> = StorageMap<
 		_,
 		Blake2_128Concat,
-		XcmQueryId,
+		QueryId,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 	>;
 
@@ -441,7 +443,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_ledger_update_entry)]
 	pub type DelegatorLedgerXcmUpdateQueue<T> =
-		StorageMap<_, Blake2_128Concat, XcmQueryId, LedgerUpdateEntry<BalanceOf<T>, MultiLocation>>;
+		StorageMap<_, Blake2_128Concat, QueryId, LedgerUpdateEntry<BalanceOf<T>, MultiLocation>>;
 
 	/// Minimum and Maximum constraints for different chains.
 	#[pallet::storage]
@@ -1346,7 +1348,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
-			query_id: XcmQueryId,
+			query_id: QueryId,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1357,7 +1359,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
-			query_id: XcmQueryId,
+			query_id: QueryId,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1410,7 +1412,7 @@ pub mod pallet {
 					T,
 					T::AccountConverter,
 					T::ParachainId,
-					T::XcmSender,
+					T::XcmRouter,
 					T::SubstrateResponseManager,
 				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
@@ -1425,7 +1427,7 @@ pub mod pallet {
 					T,
 					T::AccountConverter,
 					T::ParachainId,
-					T::XcmSender,
+					T::XcmRouter,
 					T::SubstrateResponseManager,
 				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
@@ -1440,7 +1442,7 @@ pub mod pallet {
 					T,
 					T::AccountConverter,
 					T::ParachainId,
-					T::XcmSender,
+					T::XcmRouter,
 					T::SubstrateResponseManager,
 				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
@@ -1455,7 +1457,7 @@ pub mod pallet {
 					T,
 					T::AccountConverter,
 					T::ParachainId,
-					T::XcmSender,
+					T::XcmRouter,
 					T::SubstrateResponseManager,
 				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
@@ -1470,7 +1472,7 @@ pub mod pallet {
 					T,
 					T::AccountConverter,
 					T::ParachainId,
-					T::XcmSender,
+					T::XcmRouter,
 					T::SubstrateResponseManager,
 				>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
@@ -1593,7 +1595,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn get_ledger_update_agent_then_process(query_id: XcmQueryId) -> DispatchResult {
+		pub fn get_ledger_update_agent_then_process(query_id: QueryId) -> DispatchResult {
 			// See if the query exists. If it exists, call corresponding chain storage update
 			// function.
 			let entry = Self::get_delegator_ledger_update_entry(query_id)
@@ -1613,7 +1615,7 @@ pub mod pallet {
 		}
 
 		pub fn get_validators_by_delegator_update_agent_then_process(
-			query_id: XcmQueryId,
+			query_id: QueryId,
 		) -> DispatchResult {
 			// See if the query exists. If it exists, call corresponding chain storage update
 			// function.
@@ -1634,4 +1636,25 @@ pub mod pallet {
 			Ok(())
 		}
 	}
+
+	// /// This is only for Substrate chains which can use xcm queries.
+	// impl<T: Config> QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>> for Pallet<T>
+	// { 	// If the query exists and we've already got the Response, then True is returned.
+	// Otherwise, 	// False is returned.
+	// 	fn get_query_response_record(query_id: QueryId) -> bool {
+	// 		pallet_xcm::Queries::<T>::get(query_id);
+	// 		true
+	// 	}
+	// 	fn create_query_record(
+	// 		query_id: QueryId,
+	// 		responder: MultiLocation,
+	// 		match_querier: MultiLocation,
+	// 		timeout: BlockNumberFor<T>,
+	// 	) -> DispatchResult {
+	// 		Ok(())
+	// 	}
+	// 	fn remove_query_record(query_id: QueryId) -> DispatchResult {
+	// 		Ok(())
+	// 	}
+	// }
 }

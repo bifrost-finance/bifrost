@@ -111,27 +111,27 @@ pub trait XcmBuilder<Balance, ChainCallType> {
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
-pub trait QueryResponseManager<XcmQueryId, AccountId, BlockNumber> {
-	fn get_query_response_record(query_id: XcmQueryId) -> DispatchResult;
+pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
+	// If the query exists and we've already got the Response, then True is returned. Otherwise,
+	// False is returned.
+	fn get_query_response_record(query_id: QueryId) -> bool;
 	fn create_query_record(
-		query_id: XcmQueryId,
 		responder: AccountId,
-		match_querier: AccountId,
 		timeout: BlockNumber,
-	) -> DispatchResult;
-	fn remove_query_record(query_id: XcmQueryId) -> DispatchResult;
+	) -> u64;
+	fn remove_query_record(query_id: QueryId) -> bool;
 }
 
 /// Abstraction over a QueryResponseChecker.
-pub trait QueryResponseChecker<XcmQueryId, LedgerUpdateEntry, ValidatorsByDelegatorUpdateEntry> {
+pub trait QueryResponseChecker<QueryId, LedgerUpdateEntry, ValidatorsByDelegatorUpdateEntry> {
 	fn check_delegator_ledger_query_response(
 		&self,
-		query_id: XcmQueryId,
+		query_id: QueryId,
 		query_entry: LedgerUpdateEntry,
 	) -> DispatchResult;
 	fn check_validators_by_delegator_query_response(
 		&self,
-		query_id: XcmQueryId,
+		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry,
 	) -> DispatchResult;
 }

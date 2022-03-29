@@ -29,6 +29,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use core::convert::TryInto;
 
 pub use bifrost_runtime_common::AuraId;
+use bifrost_slp::QueryResponseManager;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -44,6 +45,7 @@ pub use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
+use pallet_xcm::QueryStatus;
 pub use parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
 use sp_core::{
@@ -73,7 +75,6 @@ use bifrost_flexible_fee::{
 	fee_dealer::{FeeDealer, FixedCurrencyFeeRate},
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
-use bifrost_slp::XcmQueryId;
 use bifrost_runtime_common::{
 	cent,
 	constants::time::*,
@@ -85,6 +86,7 @@ use bifrost_runtime_common::{
 	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
 	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
+use bifrost_slp::QueryId;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -1646,15 +1648,29 @@ impl xcm_interface::Config for Runtime {
 	type ContributionFee = UmpTransactFee;
 }
 
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 50;
+}
 
-
-struct SubstrateResponseManager;
-impl QueryResponseManager<XcmQueryId, MultiLocation, BlockNumber> form SubstrateResponseManager {
-	fn get_query_response(query_id: XcmQueryId) -> DispatchResult{
-		PolkadotXcm::Queries::<Runtime>::get()
+pub struct SubstrateResponseManager;
+impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResponseManager {
+	fn get_query_response_record(query_id: QueryId) -> bool {
+		if let Some(QueryStatus::Ready { .. }) = PolkadotXcm::query(query_id) {
+			true
+		} else {
+			false
+		}
 	}
-	fn insert_query(query_id: XcmQueryId, responder: MultiLocation, match_querier: MultiLocation, timeout: BlockNumber,) -> DispatchResult;
-	fn remove_query(query_id: XcmQueryId) -> DispatchResult;
+
+	fn create_query_record(responder: MultiLocation, timeout: BlockNumber) -> u64 {
+		PolkadotXcm::new_query(responder, timeout)
+		// for xcm v3 version see the following
+		// PolkadotXcm::new_query(responder.clone(), timeout, responder)
+	}
+
+	fn remove_query_record(query_id: QueryId) -> bool {
+		PolkadotXcm::take_response(query_id).is_some()
+	}
 }
 
 impl bifrost_slp::Config for Runtime {
@@ -1665,8 +1681,10 @@ impl bifrost_slp::Config for Runtime {
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = SelfParaChainId;
-	type XcmSender = XcmRouter;
+	type XcmRouter = XcmRouter;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type SubstrateResponseManager = SubstrateResponseManager;
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 }
 
 // Bifrost modules end
