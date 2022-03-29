@@ -19,36 +19,36 @@
 use sp_runtime::DispatchResult;
 use sp_std::vec::Vec;
 
-use crate::{Weight, Xcm};
+use crate::{QueryId, Weight, Xcm};
 
 /// Abstraction over a staking agent for a certain POS chain.
-pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId> {
+pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, QueryId, Error> {
 	/// Delegator initialization work. Generate a new delegator and return its ID.
-	fn initialize_delegator(&self) -> Option<DelegatorId>;
+	fn initialize_delegator(&self) -> Result<DelegatorId, Error>;
 
 	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: DelegatorId, amount: Balance) -> DispatchResult;
+	fn bond(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(&self, who: DelegatorId, amount: Balance) -> DispatchResult;
+	fn bond_extra(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
-	fn unbond(&self, who: DelegatorId, amount: Balance) -> DispatchResult;
+	fn unbond(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
-	fn unbond_all(&self, who: DelegatorId) -> DispatchResult;
+	fn unbond_all(&self, who: DelegatorId) -> Result<QueryId, Error>;
 
 	/// Cancel some unbonding amount.
-	fn rebond(&self, who: DelegatorId, amount: Balance) -> DispatchResult;
+	fn rebond(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Delegate to some validators.
-	fn delegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
+	fn delegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Remove delegation relationship with some validators.
-	fn undelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
+	fn undelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> DispatchResult;
+	fn redelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
 	fn payout(
@@ -56,19 +56,29 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId> {
 		who: DelegatorId,
 		validator: ValidatorId,
 		when: Option<TimeUnit>,
-	) -> DispatchResult;
+	) -> Result<QueryId, Error>;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> DispatchResult;
+	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
-	fn chill(&self, who: DelegatorId) -> DispatchResult;
+	fn chill(&self, who: DelegatorId) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
-	fn transfer_back(&self, from: DelegatorId, to: AccountId, amount: Balance) -> DispatchResult;
+	fn transfer_back(
+		&self,
+		from: DelegatorId,
+		to: AccountId,
+		amount: Balance,
+	) -> Result<QueryId, Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	fn transfer_to(&self, from: AccountId, to: DelegatorId, amount: Balance) -> DispatchResult;
+	fn transfer_to(
+		&self,
+		from: AccountId,
+		to: DelegatorId,
+		amount: Balance,
+	) -> Result<QueryId, Error>;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
@@ -106,8 +116,16 @@ pub trait ValidatorManager<ValidatorId> {
 }
 
 /// Helper to build xcm message
+//【For xcm v3】
+// pub trait XcmBuilder<Balance, ChainCallType, AccountId> {
 pub trait XcmBuilder<Balance, ChainCallType> {
-	fn construct_xcm_message(call: ChainCallType, extra_fee: Balance, weight: Weight) -> Xcm<()>;
+	fn construct_xcm_message(
+		call: ChainCallType,
+		extra_fee: Balance,
+		weight: Weight,
+		query_id: QueryId,
+		// response_back_location: AccountId
+	) -> Xcm<()>;
 }
 
 /// Helper to communicate with pallet_xcm's Queries storage for Substrate chains in runtime.
@@ -115,23 +133,23 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 	// If the query exists and we've already got the Response, then True is returned. Otherwise,
 	// False is returned.
 	fn get_query_response_record(query_id: QueryId) -> bool;
-	fn create_query_record(
-		responder: AccountId,
-		timeout: BlockNumber,
-	) -> u64;
+	fn create_query_record(responder: AccountId, timeout: BlockNumber) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
 }
 
 /// Abstraction over a QueryResponseChecker.
-pub trait QueryResponseChecker<QueryId, LedgerUpdateEntry, ValidatorsByDelegatorUpdateEntry> {
+pub trait QueryResponseChecker<QueryId, LedgerUpdateEntry, ValidatorsByDelegatorUpdateEntry, Error>
+{
 	fn check_delegator_ledger_query_response(
 		&self,
 		query_id: QueryId,
 		query_entry: LedgerUpdateEntry,
-	) -> DispatchResult;
+		manual_mode: bool,
+	) -> Result<bool, Error>;
 	fn check_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry,
-	) -> DispatchResult;
+		manual_mode: bool,
+	) -> Result<bool, Error>;
 }
