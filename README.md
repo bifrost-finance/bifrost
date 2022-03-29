@@ -24,7 +24,7 @@ Bifrost is a Web3 derivatives protocol that provides decentralized cross-chain l
 [![Substrate Version](https://img.shields.io/badge/Substrate-3.0.0-brightgreen?logo=Parity%20Substrate)](https://github.com/paritytech/substrate)
 [![Docker](https://img.shields.io/badge/Docker-v0.4.0-brightgreen?logo=Docker)](https://hub.docker.com/repository/docker/bifrostnetwork/bifrost)
 [![License](https://img.shields.io/github/license/bifrost-finance/bifrost?color=blue)](https://github.com/bifrost-finance/bifrost/blob/master/LICENSE)
-[![Telegram](https://img.shields.io/badge/-Telegram-5c5c5c?logo=Telegram)](https://t.me/bifrost_finance)
+[![Discord](https://img.shields.io/badge/-Discord-5c5c5c?logo=Discord)](https://discord.gg/bifrost-finance)
 [![Twitter](https://img.shields.io/badge/-Twitter-5c5c5c?logo=Twitter)](https://twitter.com/bifrost_finance)
 [![Medium](https://img.shields.io/badge/-Medium-5c5c5c?logo=Medium)](https://medium.com/bifrost-finance)
 
