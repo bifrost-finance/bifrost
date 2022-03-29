@@ -40,7 +40,7 @@ use frame_system::pallet_prelude::*;
 use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
-pub use primitives::VstokenConversionExchangeRate;
+pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
@@ -103,7 +103,7 @@ pub mod pallet {
 		},
 		ExchangeFeeSet {
 			parachain_id: CurrencyIdOf<T>,
-			exchange_fee: (BalanceOf<T>, BalanceOf<T>),
+			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		},
 		ExchangeRateSet {
 			lease: u32,
@@ -137,11 +137,16 @@ pub mod pallet {
 	pub type ExchangeRate<T: Config> =
 		StorageMap<_, Twox64Concat, u32, VstokenConversionExchangeRate, ValueQuery>;
 
-	/// exchange fee [vsksm exchange fee,vsbond exchange fee]
+	/// exchange fee
 	#[pallet::storage]
 	#[pallet::getter(fn exchange_fee)]
-	pub type ExchangeFee<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+	pub type ExchangeFee<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		CurrencyIdOf<T>,
+		VstokenConversionExchangeFee<BalanceOf<T>>,
+		ValueQuery,
+	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -182,10 +187,9 @@ pub mod pallet {
 
 			// Get exchange rate, exchange fee
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let (_, vsbond_exchange_fee) =
-				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
+			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let vsbond_balance = vsbond_amount
-				.checked_sub(&vsbond_exchange_fee)
+				.checked_sub(&exchange_fee.vsbond_exchange_fee_of_vsksm)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsksm_balance = exchange_rate.vsbond_convert_to_vsksm * vsbond_balance;
 			ensure!(vsksm_balance >= minimum_vsksm, Error::<T>::NotEnoughBalance);
@@ -246,10 +250,9 @@ pub mod pallet {
 
 			// Get exchange rate, exchange fee
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let (vsksm_exchange_fee, _) =
-				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
+			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let vsksm_balance = vsksm_amount
-				.checked_sub(&vsksm_exchange_fee)
+				.checked_sub(&exchange_fee.vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsbond_balance = exchange_rate.vsksm_convert_to_vsbond * vsksm_balance;
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
@@ -310,10 +313,9 @@ pub mod pallet {
 
 			// Get exchange rate, exchange fee
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let (_, vsbond_exchange_fee) =
-				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
+			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
 			let vsbond_balance = vsbond_amount
-				.checked_sub(&vsbond_exchange_fee)
+				.checked_sub(&exchange_fee.vsbond_exchange_fee_of_vsdot)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsdot_balance = exchange_rate.vsbond_convert_to_vsdot * vsbond_balance;
 			ensure!(vsdot_balance >= minimum_vsdot, Error::<T>::NotEnoughBalance);
@@ -374,10 +376,9 @@ pub mod pallet {
 
 			// Get exchange rate, exchange fee
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let (vsdot_exchange_fee, _) =
-				ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
+			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
 			let vsdot_balance = vsdot_amount
-				.checked_sub(&vsdot_exchange_fee)
+				.checked_sub(&exchange_fee.vsdot_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
 			let vsbond_balance = exchange_rate.vsdot_convert_to_vsbond * vsdot_balance;
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
@@ -406,23 +407,20 @@ pub mod pallet {
 		pub fn set_exchange_fee(
 			origin: OriginFor<T>,
 			parachain_id: CurrencyIdOf<T>,
-			vsksm_exchange_fee: BalanceOf<T>,
-			vsbond_exchange_fee: BalanceOf<T>,
+			// vsksm_exchange_fee: BalanceOf<T>,
+			// vsbond_exchange_fee: BalanceOf<T>,
+			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			ExchangeFee::<T>::mutate(
-				parachain_id,
-				|(old_vsksm_exchange_fee, old_vsbond_exchange_fee)| {
-					*old_vsksm_exchange_fee = vsksm_exchange_fee;
-					*old_vsbond_exchange_fee = vsbond_exchange_fee;
-				},
-			);
+			ExchangeFee::<T>::mutate(parachain_id, |old_exchange_fee| {
+				*old_exchange_fee = exchange_fee.clone();
 
-			Self::deposit_event(Event::ExchangeFeeSet {
-				parachain_id,
-				exchange_fee: (vsksm_exchange_fee, vsbond_exchange_fee),
+				// *old_vsksm_exchange_fee = vsksm_exchange_fee;
+				// *old_vsbond_exchange_fee = vsbond_exchange_fee;
 			});
+
+			Self::deposit_event(Event::ExchangeFeeSet { parachain_id, exchange_fee });
 
 			Ok(())
 		}

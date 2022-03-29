@@ -21,7 +21,7 @@
 #![cfg(test)]
 
 use frame_support::{assert_noop, assert_ok};
-pub use primitives::VstokenConversionExchangeRate;
+pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
 use sp_arithmetic::per_things::Percent;
 
 use crate::{mock::*, *};
@@ -29,7 +29,14 @@ use crate::{mock::*, *};
 #[test]
 fn vsksm_convert_to_vsbond() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, 10, 10));
+		const EXCHANGE_FEE: VstokenConversionExchangeFee<BalanceOf<Runtime>> =
+			VstokenConversionExchangeFee {
+				vsksm_exchange_fee: 10,
+				vsdot_exchange_fee: 10,
+				vsbond_exchange_fee_of_vsksm: 10,
+				vsbond_exchange_fee_of_vsdot: 10,
+			};
+		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, EXCHANGE_FEE));
 		pub const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
@@ -64,7 +71,14 @@ fn vsksm_convert_to_vsbond() {
 #[test]
 fn vsbond_convert_to_vsksm() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, 10, 10));
+		const EXCHANGE_FEE: VstokenConversionExchangeFee<BalanceOf<Runtime>> =
+			VstokenConversionExchangeFee {
+				vsksm_exchange_fee: 10,
+				vsdot_exchange_fee: 10,
+				vsbond_exchange_fee_of_vsksm: 10,
+				vsbond_exchange_fee_of_vsdot: 10,
+			};
+		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, EXCHANGE_FEE));
 		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
