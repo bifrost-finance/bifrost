@@ -1408,13 +1408,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<
-					T,
-					T::AccountConverter,
-					T::ParachainId,
-					T::XcmRouter,
-					T::SubstrateResponseManager,
-				>::new())),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1423,13 +1417,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<DelegatorManagerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<
-					T,
-					T::AccountConverter,
-					T::ParachainId,
-					T::XcmRouter,
-					T::SubstrateResponseManager,
-				>::new())),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1438,13 +1426,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<ValidatorManagerBoxType, Error<T>> {
 			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<
-					T,
-					T::AccountConverter,
-					T::ParachainId,
-					T::XcmRouter,
-					T::SubstrateResponseManager,
-				>::new())),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1453,13 +1435,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingFeeManagerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<
-					T,
-					T::AccountConverter,
-					T::ParachainId,
-					T::XcmRouter,
-					T::SubstrateResponseManager,
-				>::new())),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1468,13 +1444,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<QueryResponseCheckerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<
-					T,
-					T::AccountConverter,
-					T::ParachainId,
-					T::XcmRouter,
-					T::SubstrateResponseManager,
-				>::new())),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}

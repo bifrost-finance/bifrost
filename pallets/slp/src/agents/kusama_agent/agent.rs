@@ -59,29 +59,16 @@ use crate::{
 };
 
 /// StakingAgent implementation for Kusama
-pub struct KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>(
-	PhantomData<(T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager)>,
-);
+pub struct KusamaAgent<T>(PhantomData<T>);
 
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-{
+impl<T> KusamaAgent<T> {
 	pub fn new() -> Self {
-		KusamaAgent(
-			PhantomData::<(T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager)>,
-		)
+		KusamaAgent(PhantomData::<T>)
 	}
 }
 
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit, AccountIdOf<T>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
+impl<T: Config> StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit, AccountIdOf<T>>
+	for KusamaAgent<T>
 {
 	fn initialize_delegator(&self) -> Option<MultiLocation> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(KSM);
@@ -93,7 +80,7 @@ where
 
 		if rs.is_ok() {
 			// Generate multi-location by id.
-			let delegator_multilocation = AccountConverter::convert(new_delegator_id);
+			let delegator_multilocation = T::AccountConverter::convert(new_delegator_id);
 
 			// Add the new delegator into storage
 			Self::add_delegator(&self, new_delegator_id, &delegator_multilocation).ok()?;
@@ -426,7 +413,8 @@ where
 		// Prepare parameter dest and beneficiary.
 		let to_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(to)?;
 
-		let dest = Box::new(VersionedMultiLocation::from(X1(Parachain(ParachainId::get().into()))));
+		let dest =
+			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
 		let beneficiary =
 			Box::new(VersionedMultiLocation::from(X1(AccountId32 { network: Any, id: to_32 })));
 
@@ -513,15 +501,8 @@ where
 }
 
 /// DelegatorManager implementation for Kusama
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
+impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
+	for KusamaAgent<T>
 {
 	/// Add a new serving delegator for a particular currency.
 	#[transactional]
@@ -564,16 +545,7 @@ where
 }
 
 /// ValidatorManager implementation for Kusama
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	ValidatorManager<MultiLocation>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
-{
+impl<T: Config> ValidatorManager<MultiLocation> for KusamaAgent<T> {
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
 		let multi_hash = Pallet::<T>::get_hash(&who);
@@ -632,16 +604,7 @@ where
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
 /// or deposit fee reserves for the destination chain nominator accounts.
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	StakingFeeManager<MultiLocation, BalanceOf<T>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
-{
+impl<T: Config> StakingFeeManager<MultiLocation, BalanceOf<T>> for KusamaAgent<T> {
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,
@@ -672,16 +635,7 @@ where
 }
 
 /// Trait XcmBuilder implementation for Kusama
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	XcmBuilder<BalanceOf<T>, KusamaCall<T>>
-	for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
-{
+impl<T: Config> XcmBuilder<BalanceOf<T>, KusamaCall<T>> for KusamaAgent<T> {
 	fn construct_xcm_message(
 		call: KusamaCall<T>,
 		extra_fee: BalanceOf<T>,
@@ -717,7 +671,7 @@ where
 		// 			max_assets: u32::max_value(),
 		// 			beneficiary: MultiLocation {
 		// 				parents: 0,
-		// 				interior: X1(Parachain(ParachainId::get().into())),
+		// 				interior: X1(Parachain(T::ParachainId::get().into())),
 		// 			},
 		// 		},
 		// 	])
@@ -736,7 +690,7 @@ where
 				max_assets: u32::max_value(),
 				beneficiary: MultiLocation {
 					parents: 0,
-					interior: X1(Parachain(ParachainId::get().into())),
+					interior: X1(Parachain(T::ParachainId::get().into())),
 				},
 			},
 		])
@@ -744,18 +698,12 @@ where
 	}
 }
 
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
+impl<T: Config>
 	QueryResponseChecker<
 		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
-	> for KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
+	> for KusamaAgent<T>
 {
 	fn check_delegator_ledger_query_response(
 		&self,
@@ -800,15 +748,7 @@ where
 }
 
 /// Internal functions.
-impl<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-	KusamaAgent<T, AccountConverter, ParachainId, XcmRouter, SubstrateResponseManager>
-where
-	T: Config,
-	AccountConverter: Convert<u16, MultiLocation>,
-	ParachainId: Get<ParaId>,
-	XcmRouter: SendXcm,
-	SubstrateResponseManager: QueryResponseManager<QueryId, MultiLocation, BlockNumberFor<T>>,
-{
+impl<T: Config> KusamaAgent<T> {
 	fn construct_xcm_and_send_as_subaccount(
 		operation: XcmOperation,
 		call: KusamaCall<T>,
@@ -825,7 +765,7 @@ where
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
 		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight);
-		XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(())
 	}
