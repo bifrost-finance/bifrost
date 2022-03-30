@@ -163,8 +163,8 @@ pub mod pallet {
 			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
 			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
-				minimum_vsksm
-					>= T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::KSM)),
+				minimum_vsksm >=
+					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::KSM)),
 				Error::<T>::NotEnoughBalance
 			);
 
@@ -289,8 +289,8 @@ pub mod pallet {
 			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
 			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
-				minimum_vsdot
-					>= T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::DOT)),
+				minimum_vsdot >=
+					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::DOT)),
 				Error::<T>::NotEnoughBalance
 			);
 
