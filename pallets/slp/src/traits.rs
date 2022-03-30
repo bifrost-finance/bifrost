@@ -146,10 +146,15 @@ pub trait QueryResponseChecker<QueryId, LedgerUpdateEntry, ValidatorsByDelegator
 		query_entry: LedgerUpdateEntry,
 		manual_mode: bool,
 	) -> Result<bool, Error>;
+
 	fn check_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry,
 		manual_mode: bool,
 	) -> Result<bool, Error>;
+
+	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error>;
+
+	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 }

@@ -454,7 +454,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		(ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>, BlockNumberFor<T>),
 	>;
 
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
@@ -472,8 +472,12 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_ledger_update_entry)]
-	pub type DelegatorLedgerXcmUpdateQueue<T> =
-		StorageMap<_, Blake2_128Concat, QueryId, LedgerUpdateEntry<BalanceOf<T>, MultiLocation>>;
+	pub type DelegatorLedgerXcmUpdateQueue<T> = StorageMap<
+		_,
+		Blake2_128Concat,
+		QueryId,
+		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation>, BlockNumberFor<T>),
+	>;
 
 	/// Minimum and Maximum constraints for different chains.
 	#[pallet::storage]
@@ -1393,6 +1397,18 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(T::WeightInfo::fail_delegator_ledger_query_response())]
+		pub fn fail_delegator_ledger_query_response(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			Self::do_fail_delegator_ledger_query_response(query_id)?;
+			Ok(())
+		}
+
 		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
@@ -1402,6 +1418,18 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 			Self::get_validators_by_delegator_update_agent_then_process(query_id, true)?;
 
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::fail_validators_by_delegator_query_response())]
+		pub fn fail_validators_by_delegator_query_response(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			Ok(())
 		}
 	}
@@ -1614,21 +1642,29 @@ pub mod pallet {
 		) -> Result<bool, Error<T>> {
 			// See if the query exists. If it exists, call corresponding chain storage update
 			// function.
-			let entry = Self::get_delegator_ledger_update_entry(query_id)
+			let (entry, timeout) = Self::get_delegator_ledger_update_entry(query_id)
 				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry.clone() {
-				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
-				_ => None,
-			}
-			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
-			let ledger_query_response_agent =
-				Self::get_currency_query_response_checker(currency_id)?;
-			let updated = ledger_query_response_agent.check_delegator_ledger_query_response(
-				query_id,
-				entry.clone(),
-				manual_mode,
-			)?;
+			let now = frame_system::Pallet::<T>::block_number();
+			let mut updated = true;
+			if now <= timeout {
+				let currency_id = match entry.clone() {
+					LedgerUpdateEntry::Substrate(substrate_entry) =>
+						Some(substrate_entry.currency_id),
+					_ => None,
+				}
+				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+				let ledger_query_response_agent =
+					Self::get_currency_query_response_checker(currency_id)?;
+				updated = ledger_query_response_agent.check_delegator_ledger_query_response(
+					query_id,
+					entry.clone(),
+					manual_mode,
+				)?;
+			} else {
+				Self::do_fail_delegator_ledger_query_response(query_id)?;
+			}
 
 			Ok(updated)
 		}
@@ -1639,7 +1675,57 @@ pub mod pallet {
 		) -> Result<bool, Error<T>> {
 			// See if the query exists. If it exists, call corresponding chain storage update
 			// function.
-			let entry = Self::get_validators_by_delegator_update_entry(query_id)
+			let (entry, timeout) = Self::get_validators_by_delegator_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+
+			let now = frame_system::Pallet::<T>::block_number();
+			let mut updated = true;
+			if now <= timeout {
+				let currency_id = match entry.clone() {
+					ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
+						Some(substrate_entry.currency_id),
+					_ => None,
+				}
+				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+				let validators_by_delegator_query_response_agent =
+					Self::get_currency_query_response_checker(currency_id)?;
+				updated = validators_by_delegator_query_response_agent
+					.check_validators_by_delegator_query_response(
+						query_id,
+						entry.clone(),
+						manual_mode,
+					)?;
+			} else {
+				Self::do_fail_validators_by_delegator_query_response(query_id)?;
+			}
+			Ok(updated)
+		}
+
+		fn do_fail_delegator_ledger_query_response(query_id: QueryId) -> Result<(), Error<T>> {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let (entry, _) = Self::get_delegator_ledger_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+			let currency_id = match entry.clone() {
+				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
+				_ => None,
+			}
+			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+			let ledger_query_response_agent =
+				Self::get_currency_query_response_checker(currency_id)?;
+			ledger_query_response_agent.fail_delegator_ledger_query_response(query_id)?;
+
+			Ok(())
+		}
+
+		fn do_fail_validators_by_delegator_query_response(
+			query_id: QueryId,
+		) -> Result<(), Error<T>> {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
 				.ok_or(Error::<T>::QueryNotExist)?;
 			let currency_id = match entry.clone() {
 				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
@@ -1650,14 +1736,10 @@ pub mod pallet {
 
 			let validators_by_delegator_query_response_agent =
 				Self::get_currency_query_response_checker(currency_id)?;
-			let updated = validators_by_delegator_query_response_agent
-				.check_validators_by_delegator_query_response(
-					query_id,
-					entry.clone(),
-					manual_mode,
-				)?;
+			validators_by_delegator_query_response_agent
+				.fail_validators_by_delegator_query_response(query_id)?;
 
-			Ok(updated)
+			Ok(())
 		}
 	}
 }

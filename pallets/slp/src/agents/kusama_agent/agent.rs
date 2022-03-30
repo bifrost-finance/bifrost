@@ -21,6 +21,7 @@ use core::marker::PhantomData;
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
+use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::VtokenMintingOperator;
 use sp_core::H256;
 use sp_runtime::{
@@ -124,7 +125,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Bond, call, who.clone())?;
 
 		// Create a new delegator ledger
@@ -140,7 +141,7 @@ impl<T: Config>
 		DelegatorLedgers::<T>::insert(KSM, who.clone(), sub_ledger);
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(who, false, false, amount, query_id)?;
+		Self::insert_delegator_ledger_update_entry(who, false, false, amount, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -173,11 +174,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::BondExtra, call, who.clone())?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(who, false, false, amount, query_id)?;
+		Self::insert_delegator_ledger_update_entry(who, false, false, amount, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -211,10 +212,10 @@ impl<T: Config>
 		);
 
 		// Send unbond xcm message
-		let query_id = Self::do_unbond(&who, amount)?;
+		let (query_id, timeout) = Self::do_unbond(&who, amount)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id)?;
+		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -232,10 +233,10 @@ impl<T: Config>
 		};
 
 		// Send unbond xcm message
-		let query_id = Self::do_unbond(&who, amount)?;
+		let (query_id, timeout) = Self::do_unbond(&who, amount)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id)?;
+		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -269,11 +270,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Rebond, call, who.clone())?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(who, false, true, amount, query_id)?;
+		Self::insert_delegator_ledger_update_entry(who, false, true, amount, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -312,11 +313,16 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
-		Self::insert_validators_by_delegator_update_entry(who, sorted_dedup_list, query_id)?;
+		Self::insert_validators_by_delegator_update_entry(
+			who,
+			sorted_dedup_list,
+			query_id,
+			timeout,
+		)?;
 
 		Ok(query_id)
 	}
@@ -364,11 +370,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
-		Self::insert_validators_by_delegator_update_entry(who, new_set, query_id)?;
+		Self::insert_validators_by_delegator_update_entry(who, new_set, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -404,7 +410,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id = Self::construct_xcm_and_send_as_subaccount(XcmOperation::Payout, call, who)?;
+		let (query_id, timeout) =
+			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Payout, call, who)?;
 
 		// Both tokenpool increment and delegator ledger update need to be conducted by backend
 		// services.
@@ -430,7 +437,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Liquidize, call, who)?;
 		// Delegator ledger update needs to be conducted by backend services.
 		Ok(query_id)
@@ -449,7 +456,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Chill, call, who.clone())?;
 
 		// Get active amount, if not zero, create an update entry.
@@ -463,7 +470,7 @@ impl<T: Config>
 		};
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
-		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id)?;
+		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id, timeout)?;
 
 		Ok(query_id)
 	}
@@ -511,7 +518,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id = Self::construct_xcm_and_send_as_subaccount(
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount(
 			XcmOperation::TransferBack,
 			call,
 			from.clone(),
@@ -854,6 +861,29 @@ impl<T: Config>
 
 		Ok(should_update)
 	}
+
+	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
+		// delete pallet_xcm query
+		T::SubstrateResponseManager::remove_query_record(query_id);
+
+		// delete update entry
+		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
+
+		Ok(())
+	}
+
+	fn fail_validators_by_delegator_query_response(
+		&self,
+		query_id: QueryId,
+	) -> Result<(), Error<T>> {
+		// delete pallet_xcm query
+		T::SubstrateResponseManager::remove_query_record(query_id);
+
+		// delete update entry
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
+
+		Ok(())
+	}
 }
 
 /// Internal functions.
@@ -862,7 +892,7 @@ impl<T: Config> KusamaAgent<T> {
 		operation: XcmOperation,
 		call: KusamaCall<T>,
 		who: MultiLocation,
-	) -> Result<QueryId, Error<T>> {
+	) -> Result<(QueryId, BlockNumberFor<T>), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -895,19 +925,22 @@ impl<T: Config> KusamaAgent<T> {
 		// );
 		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
-		Ok(query_id)
+		Ok((query_id, timeout))
 	}
 
-	fn do_unbond(who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
+	fn do_unbond(
+		who: &MultiLocation,
+		amount: BalanceOf<T>,
+	) -> Result<(QueryId, BlockNumberFor<T>), Error<T>> {
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id =
+		let (query_id, timeout) =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Unbond, call, who.clone())?;
 
-		Ok(query_id)
+		Ok((query_id, timeout))
 	}
 
 	fn update_ledger_query_response_storage(
@@ -1059,6 +1092,7 @@ impl<T: Config> KusamaAgent<T> {
 		if_rebond: bool,
 		amount: BalanceOf<T>,
 		query_id: QueryId,
+		timeout: BlockNumberFor<T>,
 	) -> Result<(), Error<T>> {
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		let unlock_time = if if_unlock { Self::get_unlocking_era_from_current()? } else { None };
@@ -1071,7 +1105,7 @@ impl<T: Config> KusamaAgent<T> {
 			amount,
 			unlock_time,
 		});
-		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, entry);
+		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
 
 		Ok(())
 	}
@@ -1080,6 +1114,7 @@ impl<T: Config> KusamaAgent<T> {
 		who: MultiLocation,
 		validator_list: Vec<(MultiLocation, H256)>,
 		query_id: QueryId,
+		timeout: BlockNumberFor<T>,
 	) -> Result<(), Error<T>> {
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		let entry = ValidatorsByDelegatorUpdateEntry::Substrate(
@@ -1089,7 +1124,7 @@ impl<T: Config> KusamaAgent<T> {
 				validators: validator_list,
 			},
 		);
-		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(query_id, entry);
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
 
 		Ok(())
 	}

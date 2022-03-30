@@ -52,7 +52,9 @@ pub trait WeightInfo {
 	fn decrease_token_to_deduct() -> Weight;
 	fn supplement_fee_reserve() -> Weight;
 	fn confirm_delegator_ledger_query_response() -> Weight;
+	fn fail_delegator_ledger_query_response() -> Weight;
 	fn confirm_validators_by_delegator_query_response() -> Weight;
+	fn fail_validators_by_delegator_query_response() -> Weight;
 
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
@@ -222,7 +224,15 @@ impl WeightInfo for () {
 		(50_000_000 as Weight)
 	}
 
+	fn fail_delegator_ledger_query_response() -> Weight {
+		(50_000_000 as Weight)
+	}
+
 	fn confirm_validators_by_delegator_query_response() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn fail_validators_by_delegator_query_response() -> Weight {
 		(50_000_000 as Weight)
 	}
 }
