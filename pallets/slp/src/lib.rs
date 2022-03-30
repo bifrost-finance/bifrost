@@ -778,8 +778,7 @@ pub mod pallet {
 			let authorized = Self::ensure_authorized(origin, currency_id);
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
-			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id)
-				.unwrap_or_default();
+			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
 
 			// Deposit event.

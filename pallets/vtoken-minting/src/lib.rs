@@ -172,7 +172,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn unlock_duration)]
-	pub type UnlockDuration<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>; // time_unit
+	pub type UnlockDuration<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn ongoing_time_unit)]
@@ -327,8 +327,6 @@ pub mod pallet {
 					Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
 					_ => 0,
 				};
-			// let ongoing_time_unit =
-			// OngoingTimeUnit::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
 			let ongoing_era = match OngoingTimeUnit::<T>::get(CurrencyId::Token(TokenSymbol::KSM)) {
 				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
 				_ => 0,
@@ -679,13 +677,6 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			// if !UnlockDuration::<T>::contains_key(token) {
-			// 	UnlockDuration::<T>::insert(token, unlock_duration.clone());
-			// } else {
-			// 	UnlockDuration::<T>::mutate_exists(token, |old_unlock_duration| {
-			// 		*old_unlock_duration = unlock_duration.clone();
-			// 	});
-			// }
 			UnlockDuration::<T>::mutate(token, |old_unlock_duration| {
 				*old_unlock_duration = Some(unlock_duration.clone());
 			});
@@ -807,6 +798,10 @@ pub mod pallet {
 impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, TimeUnit>
 	for Pallet<T>
 {
+	fn get_token_pool(currency_id: CurrencyId) -> BalanceOf<T> {
+		Self::token_pool(currency_id)
+	}
+
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
 		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
 			*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;

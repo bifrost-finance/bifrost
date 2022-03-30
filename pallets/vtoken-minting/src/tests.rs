@@ -44,9 +44,9 @@ fn mint() {
 #[test]
 fn redeem() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(1));
-		VtokenMinting::increase_token_pool(KSM, 1000);
-		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1));
+		assert_ok!(VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(1)));
+		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
 		assert_ok!(VtokenMinting::set_minimum_redeem(Origin::root(), KSM, 90));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
 		assert_noop!(
@@ -64,8 +64,8 @@ fn redeem() {
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 1000);
 		let mut ledger_list_origin = BoundedVec::default();
-		ledger_list_origin.try_push(0);
-		ledger_list_origin.try_push(1);
+		assert_ok!(ledger_list_origin.try_push(0));
+		assert_ok!(ledger_list_origin.try_push(1));
 		assert_eq!(
 			VtokenMinting::user_unlock_ledger(BOB, KSM),
 			Some((300, ledger_list_origin.clone()))
@@ -81,12 +81,11 @@ fn redeem() {
 #[test]
 fn rebond() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(0));
-		VtokenMinting::increase_token_pool(KSM, 1000);
-		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1));
+		assert_ok!(VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(0)));
+		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(1)));
 		let mut ledger_list_origin = BoundedVec::default();
-		ledger_list_origin.try_push(0);
-		// ledger_list_origin.try_push(1);
+		assert_ok!(ledger_list_origin.try_push(0));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
@@ -117,9 +116,9 @@ fn rebond() {
 fn hook() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
 		assert_eq!(VtokenMinting::min_time_unit(), TimeUnit::Era(1));
-		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(3));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(3)));
 		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(3)));
-		VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(1));
+		assert_ok!(VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(1)));
 		assert_eq!(VtokenMinting::unlock_duration(KSM), Some(TimeUnit::Era(1)));
 		VtokenMinting::on_initialize(100);
 		VtokenMinting::on_initialize(100);
@@ -127,7 +126,7 @@ fn hook() {
 		VtokenMinting::on_initialize(100);
 		VtokenMinting::on_initialize(100);
 		assert_eq!(VtokenMinting::min_time_unit(), TimeUnit::Era(4));
-		VtokenMinting::increase_token_pool(KSM, 1000);
+		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
 		let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
@@ -143,7 +142,6 @@ fn hook() {
 		VtokenMinting::on_initialize(100);
 		assert_eq!(VtokenMinting::min_time_unit(), TimeUnit::Era(4));
 		VtokenMinting::on_initialize(100);
-
 		assert_eq!(VtokenMinting::time_unit_unlock_ledger(TimeUnit::Era(4), KSM), None);
 		assert_eq!(
 			VtokenMinting::time_unit_unlock_ledger(TimeUnit::Era(5), KSM),
@@ -156,8 +154,7 @@ fn hook() {
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), None);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1000);
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 0);
-		VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(5));
-		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(5)));
+		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(5)));
 		VtokenMinting::on_initialize(100);
 		VtokenMinting::on_initialize(0);
 		VtokenMinting::on_initialize(1);
