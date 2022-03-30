@@ -36,7 +36,7 @@ fn vsksm_convert_to_vsbond() {
 				vsbond_exchange_fee_of_vsksm: 10,
 				vsbond_exchange_fee_of_vsdot: 10,
 			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, EXCHANGE_FEE));
+		assert_ok!(VstokenConversion::set_exchange_fee(Origin::signed(ALICE), KSM, EXCHANGE_FEE));
 		pub const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
@@ -44,8 +44,8 @@ fn vsksm_convert_to_vsbond() {
 			vsksm_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 			vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 		};
-		assert_ok!(VstokenConversion::set_kusama_lease(Origin::root(), 1,));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::root(), 8, EXCHANGE_RATE));
+		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 1,));
+		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		assert_noop!(
 			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 1000, 1),
@@ -78,7 +78,7 @@ fn vsbond_convert_to_vsksm() {
 				vsbond_exchange_fee_of_vsksm: 10,
 				vsbond_exchange_fee_of_vsdot: 10,
 			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), KSM, EXCHANGE_FEE));
+		assert_ok!(VstokenConversion::set_exchange_fee(Origin::signed(ALICE), KSM, EXCHANGE_FEE));
 		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
@@ -86,8 +86,8 @@ fn vsbond_convert_to_vsksm() {
 			vsksm_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 			vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 		};
-		assert_ok!(VstokenConversion::set_kusama_lease(Origin::root(), 1,));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::root(), 8, EXCHANGE_RATE));
+		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 1,));
+		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
 		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		let vsbond_account: AccountId = <Runtime as Config>::VsbondAccount::get().into_account();
 		assert_ok!(VstokenConversion::vsbond_convert_to_vsksm(Some(BOB).into(), vsBond, 100, 1));

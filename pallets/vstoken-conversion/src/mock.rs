@@ -155,6 +155,7 @@ parameter_types! {
 
 ord_parameter_types! {
 	pub const One: AccountId = ALICE;
+	// pub const One: AccountId = AccountId32::new([0u8; 32]);
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {

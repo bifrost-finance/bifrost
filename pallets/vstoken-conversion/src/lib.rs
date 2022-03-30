@@ -150,7 +150,6 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// #[pallet::weight(T::WeightInfo::mint())]
 		#[transactional]
 		#[pallet::weight(10000)]
 		pub fn vsbond_convert_to_vsksm(
@@ -164,8 +163,8 @@ pub mod pallet {
 			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
 			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
-				minimum_vsksm >=
-					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::KSM)),
+				minimum_vsksm
+					>= T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::KSM)),
 				Error::<T>::NotEnoughBalance
 			);
 
@@ -290,8 +289,8 @@ pub mod pallet {
 			let user_vsbond_balance = T::MultiCurrency::free_balance(currency_id, &exchanger);
 			ensure!(user_vsbond_balance >= vsbond_amount, Error::<T>::NotEnoughBalance);
 			ensure!(
-				minimum_vsdot >=
-					T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::DOT)),
+				minimum_vsdot
+					>= T::MultiCurrency::minimum_balance(CurrencyId::Token(TokenSymbol::DOT)),
 				Error::<T>::NotEnoughBalance
 			);
 
@@ -407,21 +406,15 @@ pub mod pallet {
 		pub fn set_exchange_fee(
 			origin: OriginFor<T>,
 			parachain_id: CurrencyIdOf<T>,
-			// vsksm_exchange_fee: BalanceOf<T>,
-			// vsbond_exchange_fee: BalanceOf<T>,
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			ExchangeFee::<T>::mutate(parachain_id, |old_exchange_fee| {
 				*old_exchange_fee = exchange_fee.clone();
-
-				// *old_vsksm_exchange_fee = vsksm_exchange_fee;
-				// *old_vsbond_exchange_fee = vsbond_exchange_fee;
 			});
 
 			Self::deposit_event(Event::ExchangeFeeSet { parachain_id, exchange_fee });
-
 			Ok(())
 		}
 
@@ -431,40 +424,37 @@ pub mod pallet {
 			lease: u32,
 			exchange_rate: VstokenConversionExchangeRate,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			ExchangeRate::<T>::mutate(lease, |old_exchange_rate| {
 				*old_exchange_rate = exchange_rate.clone();
 			});
 
 			Self::deposit_event(Event::ExchangeRateSet { lease, exchange_rate });
-
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
 		pub fn set_kusama_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			KusamaLease::<T>::mutate(|old_lease| {
 				*old_lease = lease;
 			});
 
 			Self::deposit_event(Event::KusamaLeaseSet { lease });
-
 			Ok(())
 		}
 
 		#[pallet::weight(0)]
 		pub fn set_polkadot_lease(origin: OriginFor<T>, lease: u32) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			PolkadotLease::<T>::mutate(|old_lease| {
 				*old_lease = lease;
 			});
 
 			Self::deposit_event(Event::PolkadotLeaseSet { lease });
-
 			Ok(())
 		}
 	}
