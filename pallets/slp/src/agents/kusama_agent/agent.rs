@@ -21,6 +21,7 @@ use core::marker::PhantomData;
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
+use node_primitives::VtokenMintingOperator;
 use sp_core::H256;
 use sp_runtime::{
 	traits::{
@@ -51,11 +52,11 @@ use crate::{
 		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
 		StakingFeeManager, XcmBuilder,
 	},
-	AccountIdOf, BalanceOf, Config, DelegatorLedgerXcmUpdateQueue, DelegatorLedgers,
-	DelegatorNextIndex, DelegatorsIndex2Multilocation, DelegatorsMultilocation2Index,
-	LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId, TimeUnit, ValidatorManager,
-	Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee,
-	TIMEOUT_BLOCKS,
+	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
+	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
+	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
+	TimeUnit, ValidatorManager, Validators, ValidatorsByDelegator,
+	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
 
 /// StakingAgent implementation for Kusama
@@ -139,6 +140,7 @@ impl<T: Config>
 		DelegatorLedgers::<T>::insert(KSM, who.clone(), sub_ledger);
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(who, false, false, amount, query_id)?;
 
 		Ok(query_id)
 	}
@@ -155,9 +157,13 @@ impl<T: Config>
 
 		// Check if the new_add_amount + active_staking_amount doesn't exceeds
 		// delegator_active_staking_maximum
-		let Ledger::Substrate(substrate_ledger) = ledger;
+		let active = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger.active
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
 
-		let total = amount.checked_add(&substrate_ledger.active).ok_or(Error::<T>::OverFlow)?;
+		let total = amount.checked_add(&active).ok_or(Error::<T>::OverFlow)?;
 		ensure!(
 			total <= mins_maxs.delegator_active_staking_maximum,
 			Error::<T>::ExceedActiveMaximum
@@ -170,6 +176,9 @@ impl<T: Config>
 		let query_id =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::BondExtra, call, who.clone())?;
 
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(who, false, false, amount, query_id)?;
+
 		Ok(query_id)
 	}
 
@@ -178,8 +187,12 @@ impl<T: Config>
 		// Check if it is bonded already.
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let active_staking = substrate_ledger.active;
+
+		let (active_staking, unlocking_num) = if let Ledger::Substrate(substrate_ledger) = ledger {
+			(substrate_ledger.active, substrate_ledger.unlocking.len() as u32)
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
 
 		// Check if the unbonding amount exceeds minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
@@ -192,7 +205,6 @@ impl<T: Config>
 
 		// Check if this unbonding will exceed the maximum unlocking records bound for a single
 		// delegator.
-		let unlocking_num = substrate_ledger.unlocking.len() as u32;
 		ensure!(
 			unlocking_num < mins_maxs.unbond_record_maximum,
 			Error::<T>::ExceedUnlockingRecords
@@ -200,6 +212,9 @@ impl<T: Config>
 
 		// Send unbond xcm message
 		let query_id = Self::do_unbond(&who, amount)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id)?;
 
 		Ok(query_id)
 	}
@@ -209,11 +224,18 @@ impl<T: Config>
 		// Get the active amount of a delegator.
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
-		let Ledger::Substrate(substrate_ledger) = ledger;
-		let amount = substrate_ledger.active;
+
+		let amount = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger.active
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
 
 		// Send unbond xcm message
 		let query_id = Self::do_unbond(&who, amount)?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id)?;
 
 		Ok(query_id)
 	}
@@ -229,10 +251,13 @@ impl<T: Config>
 		ensure!(amount >= mins_maxs.rebond_minimum, Error::<T>::LowerThanMinimum);
 
 		// Get the delegator ledger
-		let Ledger::Substrate(substrate_ledger) = ledger;
+		let unlock_chunk_list = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger.unlocking
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
 
 		// Check if the delegator unlocking amount is greater than or equal to the rebond amount.
-		let unlock_chunk_list = substrate_ledger.unlocking;
 		let mut total_unlocking: BalanceOf<T> = Zero::zero();
 		for UnlockChunk { value, unlock_time: _ } in unlock_chunk_list.iter() {
 			total_unlocking = total_unlocking.checked_add(value).ok_or(Error::<T>::OverFlow)?;
@@ -246,6 +271,9 @@ impl<T: Config>
 		// send it out.
 		let query_id =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Rebond, call, who.clone())?;
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(who, false, true, amount, query_id)?;
 
 		Ok(query_id)
 	}
@@ -287,8 +315,8 @@ impl<T: Config>
 		let query_id =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
 
-		// Update ValidatorsByDelegator storage
-		ValidatorsByDelegator::<T>::insert(KSM, who.clone(), sorted_dedup_list);
+		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
+		Self::insert_validators_by_delegator_update_entry(who, sorted_dedup_list, query_id)?;
 
 		Ok(query_id)
 	}
@@ -339,8 +367,8 @@ impl<T: Config>
 		let query_id =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
 
-		// Update ValidatorsByDelegator storage
-		ValidatorsByDelegator::<T>::insert(KSM, who.clone(), new_set.clone());
+		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
+		Self::insert_validators_by_delegator_update_entry(who, new_set, query_id)?;
 
 		Ok(query_id)
 	}
@@ -377,6 +405,10 @@ impl<T: Config>
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
 		let query_id = Self::construct_xcm_and_send_as_subaccount(XcmOperation::Payout, call, who)?;
+
+		// Both tokenpool increment and delegator ledger update need to be conducted by backend
+		// services.
+
 		Ok(query_id)
 	}
 
@@ -400,6 +432,7 @@ impl<T: Config>
 		// send it out.
 		let query_id =
 			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Liquidize, call, who)?;
+		// Delegator ledger update needs to be conducted by backend services.
 		Ok(query_id)
 	}
 
@@ -416,7 +449,21 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let query_id = Self::construct_xcm_and_send_as_subaccount(XcmOperation::Chill, call, who)?;
+		let query_id =
+			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Chill, call, who.clone())?;
+
+		// Get active amount, if not zero, create an update entry.
+		let ledger =
+			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
+
+		let amount = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger.active
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
+
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		Self::insert_delegator_ledger_update_entry(who, true, false, amount, query_id)?;
 
 		Ok(query_id)
 	}
@@ -576,10 +623,15 @@ impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, B
 		// Get the delegator ledger
 		let ledger =
 			DelegatorLedgers::<T>::get(KSM, who.clone()).ok_or(Error::<T>::DelegatorNotBonded)?;
-		let Ledger::Substrate(substrate_ledger) = ledger;
+
+		let total = if let Ledger::Substrate(substrate_ledger) = ledger {
+			substrate_ledger.total
+		} else {
+			Err(Error::<T>::Unexpected)?
+		};
 
 		// Check if ledger total amount is zero. If not, return error.
-		ensure!(substrate_ledger.total == Zero::zero(), Error::<T>::AmountNotZero);
+		ensure!(total == Zero::zero(), Error::<T>::AmountNotZero);
 
 		// Remove corresponding storage.
 		DelegatorsIndex2Multilocation::<T>::remove(KSM, index);
@@ -980,5 +1032,65 @@ impl<T: Config> KusamaAgent<T> {
 		} else {
 			Err(Error::<T>::Unexpected)
 		}
+	}
+
+	fn get_unlocking_era_from_current() -> Result<Option<TimeUnit>, Error<T>> {
+		let current_time_unit =
+			T::VtokenMinting::get_ongoing_time_unit(KSM).ok_or(Error::<T>::TimeUnitNotExist)?;
+		let delays = CurrencyDelays::<T>::get(KSM).ok_or(Error::<T>::DelaysNotExist)?;
+
+		let unlock_era = if let TimeUnit::Era(current_era) = current_time_unit {
+			if let TimeUnit::Era(delay_era) = delays.unlock_delay {
+				current_era.checked_add(delay_era).ok_or(Error::<T>::OverFlow)
+			} else {
+				Err(Error::<T>::InvalidTimeUnit)
+			}
+		} else {
+			Err(Error::<T>::InvalidTimeUnit)
+		}?;
+
+		let unlock_time_unit = TimeUnit::Era(unlock_era);
+		Ok(Some(unlock_time_unit))
+	}
+
+	fn insert_delegator_ledger_update_entry(
+		who: MultiLocation,
+		if_unlock: bool,
+		if_rebond: bool,
+		amount: BalanceOf<T>,
+		query_id: QueryId,
+	) -> Result<(), Error<T>> {
+		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
+		let unlock_time = if if_unlock { Self::get_unlocking_era_from_current()? } else { None };
+
+		let entry = LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+			currency_id: KSM,
+			delegator_id: who.clone(),
+			if_unlock,
+			if_rebond,
+			amount,
+			unlock_time,
+		});
+		DelegatorLedgerXcmUpdateQueue::<T>::insert(query_id, entry);
+
+		Ok(())
+	}
+
+	fn insert_validators_by_delegator_update_entry(
+		who: MultiLocation,
+		validator_list: Vec<(MultiLocation, H256)>,
+		query_id: QueryId,
+	) -> Result<(), Error<T>> {
+		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
+		let entry = ValidatorsByDelegatorUpdateEntry::Substrate(
+			SubstrateValidatorsByDelegatorUpdateEntry {
+				currency_id: KSM,
+				delegator_id: who,
+				validators: validator_list,
+			},
+		);
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(query_id, entry);
+
+		Ok(())
 	}
 }
