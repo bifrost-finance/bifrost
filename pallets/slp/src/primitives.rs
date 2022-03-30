@@ -69,15 +69,18 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
 	pub delegator_id: DelegatorId,
-	/// If this is true, then this is an unlocking entry. If false, then it's a bonding/rebonding
-	/// entry.
+	/// If this is true, then this is a bonding entry.
+	pub if_bond: bool,
+	/// If this is true and if_bond is false, then this is an unlocking entry.
 	pub if_unlock: bool,
-	/// If if_unlock is false and if_rebond is true. Then it is a rebonding operation
+	/// If if_bond and if_unlock is false but if_rebond is true. Then it is a rebonding operation.
+	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
 	pub if_rebond: bool,
 	/// The unlocking/bonding amount.
 	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
-	/// entry, this field should be None.
+	/// entry, this field should be None. If it is a liquidize entry, this filed is the ongoing
+	/// timeunit when the xcm message is sent.
 	pub unlock_time: Option<TimeUnit>,
 }
 
