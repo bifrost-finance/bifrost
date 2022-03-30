@@ -56,7 +56,7 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 		who: DelegatorId,
 		validator: ValidatorId,
 		when: Option<TimeUnit>,
-	) -> Result<QueryId, Error>;
+	) -> Result<(), Error>;
 
 	/// Withdraw the due payout into free balance.
 	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> Result<QueryId, Error>;
@@ -65,20 +65,11 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	fn chill(&self, who: DelegatorId) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
-	fn transfer_back(
-		&self,
-		from: DelegatorId,
-		to: AccountId,
-		amount: Balance,
-	) -> Result<QueryId, Error>;
+	fn transfer_back(&self, from: DelegatorId, to: AccountId, amount: Balance)
+		-> Result<(), Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	fn transfer_to(
-		&self,
-		from: AccountId,
-		to: DelegatorId,
-		amount: Balance,
-	) -> Result<QueryId, Error>;
+	fn transfer_to(&self, from: AccountId, to: DelegatorId, amount: Balance) -> Result<(), Error>;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
@@ -119,12 +110,18 @@ pub trait ValidatorManager<ValidatorId> {
 //【For xcm v3】
 // pub trait XcmBuilder<Balance, ChainCallType, AccountId> {
 pub trait XcmBuilder<Balance, ChainCallType> {
-	fn construct_xcm_message(
+	fn construct_xcm_message_with_query_id(
 		call: ChainCallType,
 		extra_fee: Balance,
 		weight: Weight,
 		query_id: QueryId,
 		// response_back_location: AccountId
+	) -> Xcm<()>;
+
+	fn construct_xcm_message_without_query_id(
+		call: ChainCallType,
+		extra_fee: Balance,
+		weight: Weight,
 	) -> Xcm<()>;
 }
 

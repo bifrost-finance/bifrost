@@ -248,7 +248,6 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			validator: MultiLocation,
 			time_unit: Option<TimeUnit>,
-			query_id: QueryId,
 		},
 		Liquidize {
 			currency_id: CurrencyId,
@@ -266,14 +265,12 @@ pub mod pallet {
 			from: MultiLocation,
 			to: AccountIdOf<T>,
 			amount: BalanceOf<T>,
-			query_id: QueryId,
 		},
 		TransferTo {
 			currency_id: CurrencyId,
 			from: AccountIdOf<T>,
 			to: MultiLocation,
 			amount: BalanceOf<T>,
-			query_id: QueryId,
 		},
 		DelegatorAdded {
 			currency_id: CurrencyId,
@@ -770,15 +767,10 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.payout(who, validator.clone(), when.clone())?;
+			staking_agent.payout(who, validator.clone(), when.clone())?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::Payout {
-				currency_id,
-				validator,
-				time_unit: when,
-				query_id,
-			});
+			Pallet::<T>::deposit_event(Event::Payout { currency_id, validator, time_unit: when });
 			Ok(())
 		}
 
@@ -839,16 +831,10 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.transfer_back(from.clone(), to.clone(), amount)?;
+			staking_agent.transfer_back(from.clone(), to.clone(), amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TransferBack {
-				currency_id,
-				from,
-				to,
-				amount,
-				query_id,
-			});
+			Pallet::<T>::deposit_event(Event::TransferBack { currency_id, from, to, amount });
 
 			Ok(())
 		}
@@ -866,16 +852,10 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.transfer_to(from.clone(), to.clone(), amount)?;
+			staking_agent.transfer_to(from.clone(), to.clone(), amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TransferTo {
-				currency_id,
-				from,
-				to,
-				amount,
-				query_id,
-			});
+			Pallet::<T>::deposit_event(Event::TransferTo { currency_id, from, to, amount });
 
 			Ok(())
 		}

@@ -127,8 +127,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Bond, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Bond,
+			call,
+			who.clone(),
+		)?;
 
 		// Create a new delegator ledger
 		// The real bonded amount will be updated by services once the xcm transaction succeeds.
@@ -178,8 +181,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::BondExtra, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::BondExtra,
+			call,
+			who.clone(),
+		)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -280,8 +286,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Rebond, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Rebond,
+			call,
+			who.clone(),
+		)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -325,8 +334,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Delegate,
+			call,
+			who.clone(),
+		)?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		Self::insert_validators_by_delegator_update_entry(
@@ -382,8 +394,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Delegate, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Delegate,
+			call,
+			who.clone(),
+		)?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		Self::insert_validators_by_delegator_update_entry(who, new_set, query_id, timeout)?;
@@ -407,7 +422,7 @@ impl<T: Config>
 		who: MultiLocation,
 		validator: MultiLocation,
 		when: Option<TimeUnit>,
-	) -> Result<QueryId, Error<T>> {
+	) -> Result<(), Error<T>> {
 		// Get the validator account
 		let validator_account = Pallet::<T>::multilocation_to_account(&validator)?;
 
@@ -422,13 +437,16 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Payout, call, who)?;
+		Self::construct_xcm_and_send_as_subaccount_without_query_id(
+			XcmOperation::Payout,
+			call,
+			who,
+		)?;
 
 		// Both tokenpool increment and delegator ledger update need to be conducted by backend
 		// services.
 
-		Ok(query_id)
+		Ok(())
 	}
 
 	/// Withdraw the due payout into free balance.
@@ -449,8 +467,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Liquidize, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Liquidize,
+			call,
+			who.clone(),
+		)?;
 		// Delegator ledger update needs to be conducted by backend services.
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
@@ -480,8 +501,11 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Chill, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Chill,
+			call,
+			who.clone(),
+		)?;
 
 		// Get active amount, if not zero, create an update entry.
 		let ledger =
@@ -507,7 +531,7 @@ impl<T: Config>
 		from: MultiLocation,
 		to: AccountIdOf<T>,
 		amount: BalanceOf<T>,
-	) -> Result<QueryId, Error<T>> {
+	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
@@ -544,13 +568,13 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount(
+		Self::construct_xcm_and_send_as_subaccount_without_query_id(
 			XcmOperation::TransferBack,
 			call,
 			from.clone(),
 		)?;
 
-		Ok(query_id)
+		Ok(())
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
@@ -559,7 +583,7 @@ impl<T: Config>
 		from: AccountIdOf<T>,
 		to: MultiLocation,
 		amount: BalanceOf<T>,
-	) -> Result<QueryId, Error<T>> {
+	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
@@ -603,9 +627,9 @@ impl<T: Config>
 
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-		let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), timeout);
 
 		//【For xcm v3】
+		// let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), timeout);
 		// // Report the Error message of the xcm.
 		// // from the responder's point of view to get Here's MultiLocation.
 		// let destination = T::UniversalLocation::get()
@@ -622,7 +646,7 @@ impl<T: Config>
 			.ensure_complete()
 			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
 
-		Ok(query_id)
+		Ok(())
 	}
 }
 
@@ -791,7 +815,7 @@ impl<T: Config>
 		KusamaCall<T>, // , MultiLocation,
 	> for KusamaAgent<T>
 {
-	fn construct_xcm_message(
+	fn construct_xcm_message_with_query_id(
 		call: KusamaCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: Weight,
@@ -844,6 +868,36 @@ impl<T: Config>
 			},
 		])
 		// }
+	}
+
+	fn construct_xcm_message_without_query_id(
+		call: KusamaCall<T>,
+		extra_fee: BalanceOf<T>,
+		weight: Weight,
+	) -> Xcm<()> {
+		let asset = MultiAsset {
+			id: Concrete(MultiLocation::here()),
+			fun: Fungibility::Fungible(extra_fee.unique_saturated_into()),
+		};
+
+		Xcm(vec![
+			WithdrawAsset(asset.clone().into()),
+			BuyExecution { fees: asset, weight_limit: Unlimited },
+			Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: weight,
+				call: call.encode().into(),
+			},
+			RefundSurplus,
+			DepositAsset {
+				assets: All.into(),
+				max_assets: u32::max_value(),
+				beneficiary: MultiLocation {
+					parents: 0,
+					interior: X1(Parachain(T::ParachainId::get().into())),
+				},
+			},
+		])
 	}
 }
 
@@ -943,11 +997,11 @@ impl<T: Config>
 
 /// Internal functions.
 impl<T: Config> KusamaAgent<T> {
-	fn construct_xcm_and_send_as_subaccount(
+	fn prepare_send_as_subaccount_call_params(
 		operation: XcmOperation,
 		call: KusamaCall<T>,
 		who: MultiLocation,
-	) -> Result<(QueryId, BlockNumberFor<T>), Error<T>> {
+	) -> Result<(KusamaCall<T>, BalanceOf<T>, Weight), Error<T>> {
 		// Get the delegator sub-account index.
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
@@ -958,13 +1012,25 @@ impl<T: Config> KusamaAgent<T> {
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
 
+		Ok((call_as_subaccount, fee, weight))
+	}
+
+	fn construct_xcm_and_send_as_subaccount_with_query_id(
+		operation: XcmOperation,
+		call: KusamaCall<T>,
+		who: MultiLocation,
+	) -> Result<(QueryId, BlockNumberFor<T>), Error<T>> {
+		let (call_as_subaccount, fee, weight) =
+			Self::prepare_send_as_subaccount_call_params(operation, call, who)?;
+
 		// prepare the query_id for reporting back transact status
 		let responder = MultiLocation::parent();
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(responder.clone(), timeout);
 
-		let xcm_message = Self::construct_xcm_message(call_as_subaccount, fee, weight, query_id);
+		let xcm_message =
+			Self::construct_xcm_message_with_query_id(call_as_subaccount, fee, weight, query_id);
 
 		//【For xcm v3】
 		// let response_back_location = T::UniversalLocation::get()
@@ -983,6 +1049,22 @@ impl<T: Config> KusamaAgent<T> {
 		Ok((query_id, timeout))
 	}
 
+	fn construct_xcm_and_send_as_subaccount_without_query_id(
+		operation: XcmOperation,
+		call: KusamaCall<T>,
+		who: MultiLocation,
+	) -> Result<(), Error<T>> {
+		let (call_as_subaccount, fee, weight) =
+			Self::prepare_send_as_subaccount_call_params(operation, call, who)?;
+
+		let xcm_message =
+			Self::construct_xcm_message_without_query_id(call_as_subaccount, fee, weight);
+
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
+		Ok(())
+	}
+
 	fn do_unbond(
 		who: &MultiLocation,
 		amount: BalanceOf<T>,
@@ -992,8 +1074,11 @@ impl<T: Config> KusamaAgent<T> {
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) =
-			Self::construct_xcm_and_send_as_subaccount(XcmOperation::Unbond, call, who.clone())?;
+		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+			XcmOperation::Unbond,
+			call,
+			who.clone(),
+		)?;
 
 		Ok((query_id, timeout))
 	}
