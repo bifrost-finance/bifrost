@@ -298,6 +298,7 @@ parameter_types! {
 	pub const MerkleDirtributorPalletId: PalletId = PalletId(*b"bf/mklds");
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
+	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
 }
 
 impl frame_system::Config for Runtime {
@@ -1363,7 +1364,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			.eq(a) || LiquidityMiningPalletId::get().check_sub_account::<PoolId>(a) ||
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
 			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
-				.eq(a)
+				.eq(a) || AccountIdConversion::<AccountId>::into_account(&BifrostVsbondPalletId::get())
+			.eq(a)
 	}
 }
 
@@ -1662,15 +1664,12 @@ impl xcm_interface::Config for Runtime {
 	type ContributionFee = UmpTransactFee;
 }
 
-parameter_types! {
-	pub BifrostVsbondAccount: PalletId = PalletId(*b"bf/salpb");
-}
-
 impl bifrost_vstoken_conversion::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
+	type TreasuryAccount = BifrostTreasuryAccount;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type VsbondAccount = BifrostVsbondAccount;
+	type VsbondAccount = BifrostVsbondPalletId;
 	type WeightInfo = ();
 }
 

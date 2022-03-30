@@ -72,6 +72,9 @@ pub mod pallet {
 		type ControlOrigin: EnsureOrigin<Self::Origin>;
 
 		#[pallet::constant]
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		#[pallet::constant]
 		type VsbondAccount: Get<PalletId>;
 
 		/// Set default weight.
@@ -204,6 +207,11 @@ pub mod pallet {
 				&exchanger,
 				vsksm_balance,
 			)?;
+			T::MultiCurrency::deposit(
+				currency_id,
+				&T::TreasuryAccount::get(),
+				exchange_fee.vsbond_exchange_fee_of_vsksm,
+			)?;
 
 			Self::deposit_event(Event::VsbondConvertToVsksm {
 				currency_id,
@@ -266,6 +274,11 @@ pub mod pallet {
 				CurrencyId::VSToken(TokenSymbol::KSM),
 				&exchanger,
 				vsksm_amount,
+			)?;
+			T::MultiCurrency::deposit(
+				CurrencyId::VSToken(TokenSymbol::KSM),
+				&T::TreasuryAccount::get(),
+				exchange_fee.vsksm_exchange_fee,
 			)?;
 
 			Self::deposit_event(Event::VsksmConvertToVsbond {
@@ -330,6 +343,11 @@ pub mod pallet {
 				&exchanger,
 				vsdot_balance,
 			)?;
+			T::MultiCurrency::deposit(
+				currency_id,
+				&T::TreasuryAccount::get(),
+				exchange_fee.vsbond_exchange_fee_of_vsdot,
+			)?;
 
 			Self::deposit_event(Event::VsbondConvertToVsdot {
 				currency_id,
@@ -392,6 +410,11 @@ pub mod pallet {
 				CurrencyId::VSToken(TokenSymbol::DOT),
 				&exchanger,
 				vsdot_amount,
+			)?;
+			T::MultiCurrency::deposit(
+				CurrencyId::VSToken(TokenSymbol::DOT),
+				&T::TreasuryAccount::get(),
+				exchange_fee.vsdot_exchange_fee,
 			)?;
 
 			Self::deposit_event(Event::VsdotConvertToVsbond {
