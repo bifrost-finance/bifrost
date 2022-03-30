@@ -198,6 +198,9 @@ where
 
 /// The interface to call VtokenMinting module functions.
 pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
+	/// Get the currency tokenpool amount.
+	fn get_token_pool(currency_id: CurrencyId) -> Balance;
+
 	/// Increase the token amount for the storage "token_pool" in the VtokenMining module.
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: Balance) -> DispatchResult;
 

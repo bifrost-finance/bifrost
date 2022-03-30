@@ -33,13 +33,15 @@ pub mod weights;
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
-		traits::{AccountIdConversion, CheckedAdd, CheckedSub, Saturating, Zero},
-		SaturatedConversion,
+		traits::{
+			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
+		},
+		DispatchError, SaturatedConversion,
 	},
 	transactional, BoundedVec, PalletId,
 };
 use frame_system::pallet_prelude::*;
-use node_primitives::{CurrencyId, TimeUnit, VtokenMintingOperator};
+use node_primitives::{CurrencyId, TimeUnit, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 use sp_std::vec::Vec;
@@ -113,7 +115,7 @@ pub mod pallet {
 		},
 		UnlockDurationSet {
 			token: CurrencyIdOf<T>,
-			era_count: u32,
+			unlock_duration: TimeUnit,
 		},
 		MinimumMintSet {
 			token: CurrencyIdOf<T>,
@@ -170,8 +172,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn unlock_duration)]
-	pub type UnlockDuration<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, u32, ValueQuery>; // time_unit
+	pub type UnlockDuration<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn ongoing_time_unit)]
@@ -270,13 +271,17 @@ pub mod pallet {
 									unlock_amount,
 								);
 
-								TimeUnitUnlockLedger::<T>::mutate(
+								TimeUnitUnlockLedger::<T>::mutate_exists(
 									&time_unit,
 									&token_id,
 									|value| -> Result<(), Error<T>> {
 										if let Some((total_locked_origin, ledger_list_origin, _)) =
 											value
 										{
+											if total_locked_origin == &unlock_amount {
+												*value = None;
+												return Ok(());
+											}
 											*total_locked_origin = total_locked_origin
 												.checked_sub(&unlock_amount)
 												.ok_or(Error::<T>::Unexpected)?;
@@ -292,7 +297,7 @@ pub mod pallet {
 
 								TokenUnlockLedger::<T>::remove(&token_id, &index);
 
-								UserUnlockLedger::<T>::mutate(
+								UserUnlockLedger::<T>::mutate_exists(
 									&account,
 									&token_id,
 									|value| -> Result<(), Error<T>> {
@@ -316,21 +321,37 @@ pub mod pallet {
 					}
 				},
 			);
-			let time_unit_ledger_list: Vec<(
-				BalanceOf<T>,
-				BoundedVec<MintId, T::MaximumMintId>,
-				CurrencyIdOf<T>,
-			)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
-			if time_unit_ledger_list.len() == 0 {
-				MinTimeUnit::<T>::mutate(|time_unit| -> Result<(), Error<T>> {
-					match time_unit {
-						TimeUnit::Era(era) => {
-							*era = era.checked_add(1).ok_or(Error::<T>::Unexpected)?;
-							Ok(())
-						},
-						_ => Ok(()),
-					}
-				});
+
+			let unlock_duration_era =
+				match UnlockDuration::<T>::get(CurrencyId::Token(TokenSymbol::KSM)) {
+					Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
+					_ => 0,
+				};
+			let ongoing_era = match OngoingTimeUnit::<T>::get(CurrencyId::Token(TokenSymbol::KSM)) {
+				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
+				_ => 0,
+			};
+			match time_unit {
+				TimeUnit::Era(min_era) =>
+					if ongoing_era + unlock_duration_era > min_era {
+						let time_unit_ledger_list: Vec<(
+							BalanceOf<T>,
+							BoundedVec<MintId, T::MaximumMintId>,
+							CurrencyIdOf<T>,
+						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
+						if time_unit_ledger_list.len() == 0 {
+							MinTimeUnit::<T>::mutate(|time_unit| -> Result<(), Error<T>> {
+								match time_unit {
+									TimeUnit::Era(era) => {
+										*era = era.checked_add(1).ok_or(Error::<T>::Unexpected)?;
+										Ok(())
+									},
+									_ => Ok(()),
+								}
+							});
+						}
+					},
+				_ => (),
 			}
 
 			T::WeightInfo::on_initialize()
@@ -355,9 +376,13 @@ pub mod pallet {
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 			let token_pool_amount = Self::token_pool(token_id);
 			let mut vtoken_amount = token_amount;
+			// If token_pool_amount is 0, skip this conditional statement, the exchange rate is 1
 			if token_pool_amount != BalanceOf::<T>::zero() {
-				vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-					token_pool_amount.into();
+				vtoken_amount = token_amount
+					.checked_mul(&vtoken_total_issuance.into())
+					.ok_or(Error::<T>::Unexpected)?
+					.checked_div(&token_pool_amount.into())
+					.ok_or(Error::<T>::Unexpected)?;
 			}
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
@@ -400,9 +425,23 @@ pub mod pallet {
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
+					// let unlock_duration = match Self::unlock_duration(token_id) {
+					// 	Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
+					// 	_ => return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into()),
+					// };
+					let result_time_unit = Self::add_time_unit(
+						Self::unlock_duration(token_id).ok_or(Error::<T>::Unexpected)?,
+						time_unit.clone(),
+					)
+					.map_err(|_| Error::<T>::NotSupportTokenType)?;
+					// .ok_or(Error::<T>::Unexpected)?;
+
 					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-					let token_amount = vtoken_amount.saturating_mul(token_pool_amount.into()) /
-						vtoken_total_issuance.into();
+					let token_amount = vtoken_amount
+						.checked_mul(&token_pool_amount.into())
+						.ok_or(Error::<T>::Unexpected)?
+						.checked_div(&vtoken_total_issuance.into())
+						.ok_or(Error::<T>::Unexpected)?;
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
 						Ok(())
@@ -415,7 +454,7 @@ pub mod pallet {
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
 						&next_id,
-						(&exchanger, vtoken_amount, &time_unit),
+						(&exchanger, token_amount, &result_time_unit),
 					);
 
 					if let Some((total_locked, ledger_list)) =
@@ -446,10 +485,10 @@ pub mod pallet {
 					}
 
 					if let Some((total_locked, ledger_list, _token_id)) =
-						TimeUnitUnlockLedger::<T>::get(&time_unit, &token_id)
+						TimeUnitUnlockLedger::<T>::get(&result_time_unit, &token_id)
 					{
 						TimeUnitUnlockLedger::<T>::mutate(
-							&time_unit,
+							&result_time_unit,
 							&token_id,
 							|value| -> Result<(), Error<T>> {
 								if let Some((total_locked, ledger_list, _token_id)) = value {
@@ -466,7 +505,7 @@ pub mod pallet {
 							BoundedVec::<MintId, T::MaximumMintId>::default();
 						ledger_list_origin.try_push(next_id);
 						TimeUnitUnlockLedger::<T>::insert(
-							&time_unit,
+							&result_time_unit,
 							&token_id,
 							(vtoken_amount, ledger_list_origin, token_id),
 						);
@@ -512,7 +551,7 @@ pub mod pallet {
 							if let Some((_, total_locked, time_unit)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
-								TimeUnitUnlockLedger::<T>::mutate(
+								TimeUnitUnlockLedger::<T>::mutate_exists(
 									&time_unit,
 									&token_id,
 									|value| -> Result<(), Error<T>> {
@@ -537,7 +576,7 @@ pub mod pallet {
 							}
 							return false;
 						} else {
-							TokenUnlockLedger::<T>::mutate(
+							TokenUnlockLedger::<T>::mutate_exists(
 								&token_id,
 								&index,
 								|value| -> Result<(), Error<T>> {
@@ -551,7 +590,7 @@ pub mod pallet {
 									return Ok(());
 								},
 							);
-							TimeUnitUnlockLedger::<T>::mutate(
+							TimeUnitUnlockLedger::<T>::mutate_exists(
 								&time_unit,
 								&token_id,
 								|value| -> Result<(), Error<T>> {
@@ -576,7 +615,7 @@ pub mod pallet {
 				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp)
 					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
 
-				UserUnlockLedger::<T>::mutate(
+				UserUnlockLedger::<T>::mutate_exists(
 					&exchanger,
 					&token_id,
 					|value| -> Result<(), Error<T>> {
@@ -597,8 +636,12 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let vtoken_amount = token_amount.saturating_mul(vtoken_total_issuance.into()) /
-				token_pool_amount.into();
+			let vtoken_amount = token_amount
+				.checked_mul(&vtoken_total_issuance.into())
+				.ok_or(Error::<T>::Unexpected)?
+				.checked_div(&token_pool_amount.into())
+				.ok_or(Error::<T>::Unexpected)?;
+
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
@@ -630,19 +673,15 @@ pub mod pallet {
 		pub fn set_unlock_duration(
 			origin: OriginFor<T>,
 			token: CurrencyIdOf<T>,
-			era_count: u32,
+			unlock_duration: TimeUnit,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			if !UnlockDuration::<T>::contains_key(token) {
-				UnlockDuration::<T>::insert(token, era_count);
-			} else {
-				UnlockDuration::<T>::mutate(token, |old_era_count| {
-					*old_era_count = era_count;
-				});
-			}
+			UnlockDuration::<T>::mutate(token, |old_unlock_duration| {
+				*old_unlock_duration = Some(unlock_duration.clone());
+			});
 
-			Self::deposit_event(Event::UnlockDurationSet { token, era_count });
+			Self::deposit_event(Event::UnlockDurationSet { token, unlock_duration });
 
 			Ok(())
 		}
@@ -677,13 +716,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
-			if !MinimumRedeem::<T>::contains_key(token) {
-				MinimumRedeem::<T>::insert(token, amount);
-			} else {
-				MinimumRedeem::<T>::mutate(token, |old_amount| {
-					*old_amount = amount;
-				});
-			}
+			MinimumRedeem::<T>::mutate(token, |old_amount| {
+				*old_amount = amount;
+			});
 
 			Self::deposit_event(Event::MinimumRedeemSet { token, amount });
 			Ok(())
@@ -740,11 +775,33 @@ pub mod pallet {
 			Ok(())
 		}
 	}
+
+	impl<T: Config> Pallet<T> {
+		fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
+			let result = match a {
+				TimeUnit::Era(era_a) => match b {
+					TimeUnit::Era(era_b) => TimeUnit::Era(era_a + era_b),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
+				TimeUnit::SlashingSpan(slashing_span_a) => match b {
+					TimeUnit::SlashingSpan(slashing_span_b) =>
+						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
+					_ => return Err(Error::<T>::Unexpected.into()),
+				},
+			};
+
+			Ok(result)
+		}
+	}
 }
 
 impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, TimeUnit>
 	for Pallet<T>
 {
+	fn get_token_pool(currency_id: CurrencyId) -> BalanceOf<T> {
+		Self::token_pool(currency_id)
+	}
+
 	fn increase_token_pool(currency_id: CurrencyId, token_amount: BalanceOf<T>) -> DispatchResult {
 		TokenPool::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
 			*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
