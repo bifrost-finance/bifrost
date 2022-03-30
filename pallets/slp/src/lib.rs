@@ -954,7 +954,6 @@ pub mod pallet {
 				T::VtokenMinting::get_entrance_and_exit_accounts();
 			let mut exit_account_balance =
 				T::MultiCurrency::free_balance(currency_id, &exit_account);
-			let ed = T::MultiCurrency::minimum_balance(currency_id);
 
 			// Get the currency due unlocking records
 			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
@@ -964,9 +963,6 @@ pub mod pallet {
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
 				for idx in idx_vec.iter() {
-					let checked_remain =
-						exit_account_balance.checked_sub(&ed).ok_or(Error::<T>::UnderFlow)?;
-
 					// get idx record amount
 					let idx_record_amount_op =
 						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
@@ -975,8 +971,8 @@ pub mod pallet {
 						idx_record_amount_op
 					{
 						let mut deduct_amount = idx_record_amount;
-						if checked_remain < idx_record_amount {
-							deduct_amount = checked_remain;
+						if exit_account_balance < idx_record_amount {
+							deduct_amount = exit_account_balance;
 						}
 						// Transfer some amount from the exit_account to the user's account
 						T::MultiCurrency::transfer(
@@ -999,7 +995,7 @@ pub mod pallet {
 						exit_account_balance = exit_account_balance
 							.checked_sub(&deduct_amount)
 							.ok_or(Error::<T>::UnderFlow)?;
-						if exit_account_balance <= ed {
+						if exit_account_balance == Zero::zero() {
 							break;
 						}
 					}
