@@ -21,12 +21,15 @@
 pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
 use frame_support::{dispatch::result::Result, pallet_prelude::*, transactional, weights::Weight};
-use frame_system::{ensure_signed, pallet_prelude::OriginFor};
+use frame_system::{
+	ensure_signed,
+	pallet_prelude::{BlockNumberFor, OriginFor},
+};
 use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
 use sha3::{Digest, Keccak256};
-use sp_arithmetic::traits::Zero;
+use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::H256;
 use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
@@ -37,8 +40,14 @@ use xcm::{
 };
 
 pub use crate::{
-	primitives::{MinimumsMaximums, SubstrateLedger, XcmOperation, KSM},
-	traits::{DelegatorManager, StakingAgent, StakingFeeManager, ValidatorManager},
+	primitives::{
+		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
+		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
+	},
+	traits::{
+		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
+		StakingFeeManager, ValidatorManager,
+	},
 	Junction::AccountId32,
 	Junctions::X1,
 };
@@ -55,14 +64,34 @@ mod benchmarking;
 
 pub use pallet::*;
 
+pub type QueryId = u64;
+pub const TIMEOUT_BLOCKS: u32 = 1000;
+pub const BASE_WEIGHT: Weight = 1000;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
-type StakingAgentBoxType<T> =
-	Box<dyn StakingAgent<MultiLocation, MultiLocation, BalanceOf<T>, TimeUnit, AccountIdOf<T>>>;
+type StakingAgentBoxType<T> = Box<
+	dyn StakingAgent<
+		MultiLocation,
+		MultiLocation,
+		BalanceOf<T>,
+		TimeUnit,
+		AccountIdOf<T>,
+		QueryId,
+		pallet::Error<T>,
+	>,
+>;
 type DelegatorManagerBoxType<T> =
 	Box<dyn DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>>;
 type ValidatorManagerBoxType = Box<dyn ValidatorManager<MultiLocation>>;
 type StakingFeeManagerBoxType<T> = Box<dyn StakingFeeManager<MultiLocation, BalanceOf<T>>>;
+type QueryResponseCheckerBoxType<T> = Box<
+	dyn QueryResponseChecker<
+		QueryId,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		pallet::Error<T>,
+	>,
+>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -71,10 +100,11 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
 		/// Currency operations handler
 		type MultiCurrency: MultiCurrency<AccountIdOf<Self>, CurrencyId = CurrencyId>;
 		/// The only origin that can modify pallet params
-		type ControlOrigin: EnsureOrigin<Self::Origin>;
+		type ControlOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		/// Set default weight.
 		type WeightInfo: WeightInfo;
@@ -95,10 +125,26 @@ pub mod pallet {
 		type ParachainId: Get<ParaId>;
 
 		/// Routes the XCM message outbound.
-		type XcmSender: SendXcm;
+		type XcmRouter: SendXcm;
 
 		/// XCM executor.
 		type XcmExecutor: ExecuteXcm<Self::Call>;
+
+		/// Substrate response manager.
+		type SubstrateResponseManager: QueryResponseManager<
+			QueryId,
+			MultiLocation,
+			BlockNumberFor<Self>,
+		>;
+
+		//【For xcm v3】
+		// /// This chain's Universal Location. Enabled only for xcm v3 version.
+		// type UniversalLocation: Get<InteriorMultiLocation>;
+
+		/// The maximum number of entries to be confirmed in a block for update queue in the
+		/// on_initialize queue.
+		#[pallet::constant]
+		type MaxTypeEntryPerBlock: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -106,7 +152,7 @@ pub mod pallet {
 		OperateOriginNotSet,
 		NotAuthorized,
 		NotSupportedCurrencyId,
-		FailToInitializeDelegator,
+		FailToAddDelegator,
 		FailToBond,
 		OverFlow,
 		UnderFlow,
@@ -140,6 +186,14 @@ pub mod pallet {
 		OperateOriginNotExists,
 		MinimumsAndMaximumsNotExist,
 		XcmExecutionFailed,
+		QueryNotExist,
+		DelaysNotExist,
+		Unexpected,
+		UnlockingRecordNotExist,
+		QueryResponseRemoveError,
+		ValidatorsByDelegatorResponseCheckError,
+		LedgerResponseCheckError,
+		InvalidHostingFee,
 	}
 
 	#[pallet::event]
@@ -153,35 +207,42 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			bonded_amount: BalanceOf<T>,
+			query_id: QueryId,
 		},
 		DelegatorBondExtra {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			extra_bonded_amount: BalanceOf<T>,
+			query_id: QueryId,
 		},
 		DelegatorUnbond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			unbond_amount: BalanceOf<T>,
+			query_id: QueryId,
 		},
 		DelegatorUnbondAll {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			query_id: QueryId,
 		},
 		DelegatorRebond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			rebond_amount: BalanceOf<T>,
+			query_id: QueryId,
 		},
 		Delegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+			query_id: QueryId,
 		},
 		Undelegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+			query_id: QueryId,
 		},
 		Payout {
 			currency_id: CurrencyId,
@@ -192,10 +253,12 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
+			query_id: QueryId,
 		},
 		Chill {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			query_id: QueryId,
 		},
 		TransferBack {
 			currency_id: CurrencyId,
@@ -242,6 +305,10 @@ pub mod pallet {
 			new: TimeUnit,
 		},
 		PoolTokenIncreased {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		},
+		HostingFeeCharged {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 		},
@@ -293,6 +360,32 @@ pub mod pallet {
 			delegator: MultiLocation,
 			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		},
+		DelegatorLedgerQueryResponseConfirmed {
+			query_id: QueryId,
+			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		},
+		DelegatorLedgerQueryResponseFailSuccessfully {
+			query_id: QueryId,
+		},
+		ValidatorsByDelegatorQueryResponseConfirmed {
+			query_id: QueryId,
+			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		},
+		ValidatorsByDelegatorQueryResponseFailSuccessfully {
+			query_id: QueryId,
+		},
+		MinimumsMaximumsSet {
+			currency_id: CurrencyId,
+			minimums_and_maximums: Option<MinimumsMaximums<BalanceOf<T>>>,
+		},
+		CurrencyDelaysSet {
+			currency_id: CurrencyId,
+			delays: Option<Delays>,
+		},
+		HostingFeesSet {
+			currency_id: CurrencyId,
+			fees: Option<(Percent, MultiLocation)>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -323,6 +416,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_fee_source)]
 	pub type FeeSources<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (MultiLocation, BalanceOf<T>)>;
+
+	/// Hosting fee percentage and beneficiary account for different chains
+	#[pallet::storage]
+	#[pallet::getter(fn get_hosting_fee)]
+	pub type HostingFees<T> = StorageMap<_, Blake2_128Concat, CurrencyId, (Percent, MultiLocation)>;
 
 	/// Delegators in service. A delegator is identified in MultiLocation format.
 	/// Currency Id + Sub-account index => MultiLocation
@@ -375,6 +473,15 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_validators_by_delegator_update_entry)]
+	pub type ValidatorsByDelegatorXcmUpdateQueue<T> = StorageMap<
+		_,
+		Blake2_128Concat,
+		QueryId,
+		(ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>, BlockNumberFor<T>),
+	>;
+
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
 	#[pallet::storage]
 	#[pallet::getter(fn get_delegator_ledger)]
@@ -388,20 +495,38 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn get_delegator_ledger_update_entry)]
+	pub type DelegatorLedgerXcmUpdateQueue<T> = StorageMap<
+		_,
+		Blake2_128Concat,
+		QueryId,
+		(LedgerUpdateEntry<BalanceOf<T>, MultiLocation>, BlockNumberFor<T>),
+	>;
+
 	/// Minimum and Maximum constraints for different chains.
 	#[pallet::storage]
 	#[pallet::getter(fn get_minimums_maximums)]
 	pub type MinimumsAndMaximums<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, MinimumsMaximums<BalanceOf<T>>>;
 
+	// TimeUnit delay params for different chains.
+	#[pallet::storage]
+	#[pallet::getter(fn get_currency_delays)]
+	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
+
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			0
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		fn on_initialize(_n: BlockNumberFor<T>) -> Weight {
+			// For queries in update entry queues, search responses in pallet_xcm Queries storage.
+			let counter = Self::process_query_entry_records().unwrap_or(0);
+
+			// Calculate weight
+			BASE_WEIGHT.saturating_mul(counter.into())
 		}
 	}
 
@@ -422,9 +547,7 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let delegator_id = staking_agent
-				.initialize_delegator()
-				.ok_or(Error::<T>::FailToInitializeDelegator)?;
+			let delegator_id = staking_agent.initialize_delegator()?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorInitialized { currency_id, delegator_id });
@@ -444,13 +567,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.bond(who.clone(), amount)?;
+			let query_id = staking_agent.bond(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
 				currency_id,
 				delegator_id: who,
 				bonded_amount: amount,
+				query_id,
 			});
 			Ok(())
 		}
@@ -468,13 +592,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.bond_extra(who.clone(), amount)?;
+			let query_id = staking_agent.bond_extra(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
 				currency_id,
 				delegator_id: who,
 				extra_bonded_amount: amount,
+				query_id,
 			});
 			Ok(())
 		}
@@ -493,13 +618,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.unbond(who.clone(), amount)?;
+			let query_id = staking_agent.unbond(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
 				currency_id,
 				delegator_id: who,
 				unbond_amount: amount,
+				query_id,
 			});
 			Ok(())
 		}
@@ -516,12 +642,13 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.unbond_all(who.clone())?;
+			let query_id = staking_agent.unbond_all(who.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
 				currency_id,
 				delegator_id: who,
+				query_id,
 			});
 			Ok(())
 		}
@@ -539,13 +666,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.rebond(who.clone(), amount)?;
+			let query_id = staking_agent.rebond(who.clone(), amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
 				currency_id,
 				delegator_id: who,
 				rebond_amount: amount,
+				query_id,
 			});
 			Ok(())
 		}
@@ -563,13 +691,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.delegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.delegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
 				delegator_id: who,
 				targets,
+				query_id,
 			});
 			Ok(())
 		}
@@ -587,13 +716,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.undelegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.undelegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
 				currency_id,
 				delegator_id: who,
 				targets,
+				query_id,
 			});
 			Ok(())
 		}
@@ -611,13 +741,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.redelegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.redelegate(who.clone(), targets.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
 				currency_id,
 				delegator_id: who,
 				targets,
+				query_id,
 			});
 			Ok(())
 		}
@@ -656,13 +787,14 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.liquidize(who.clone(), when.clone())?;
+			let query_id = staking_agent.liquidize(who.clone(), when.clone())?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Liquidize {
 				currency_id,
 				delegator_id: who,
 				time_unit: when,
+				query_id,
 			});
 			Ok(())
 		}
@@ -679,10 +811,10 @@ pub mod pallet {
 			ensure!(authorized, Error::<T>::NotAuthorized);
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.chill(who.clone())?;
+			let query_id = staking_agent.chill(who.clone())?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::Chill { currency_id, delegator_id: who });
+			Pallet::<T>::deposit_event(Event::Chill { currency_id, delegator_id: who, query_id });
 			Ok(())
 		}
 
@@ -802,7 +934,6 @@ pub mod pallet {
 				T::VtokenMinting::get_entrance_and_exit_accounts();
 			let mut exit_account_balance =
 				T::MultiCurrency::free_balance(currency_id, &exit_account);
-			let ed = T::MultiCurrency::minimum_balance(currency_id);
 
 			// Get the currency due unlocking records
 			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
@@ -812,9 +943,6 @@ pub mod pallet {
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
 				for idx in idx_vec.iter() {
-					let checked_remain =
-						exit_account_balance.checked_sub(&ed).ok_or(Error::<T>::UnderFlow)?;
-
 					// get idx record amount
 					let idx_record_amount_op =
 						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
@@ -823,8 +951,8 @@ pub mod pallet {
 						idx_record_amount_op
 					{
 						let mut deduct_amount = idx_record_amount;
-						if checked_remain < idx_record_amount {
-							deduct_amount = checked_remain;
+						if exit_account_balance < idx_record_amount {
+							deduct_amount = exit_account_balance;
 						}
 						// Transfer some amount from the exit_account to the user's account
 						T::MultiCurrency::transfer(
@@ -847,7 +975,7 @@ pub mod pallet {
 						exit_account_balance = exit_account_balance
 							.checked_sub(&deduct_amount)
 							.ok_or(Error::<T>::UnderFlow)?;
-						if exit_account_balance <= ed {
+						if exit_account_balance == Zero::zero() {
 							break;
 						}
 					}
@@ -994,6 +1122,49 @@ pub mod pallet {
 				to: dest,
 			});
 
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
+		/// Charge staking host fee and tune vtoken/token exchange rate.
+		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the value is valid.
+			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
+
+			// Get charged fee value
+			let (fee_percent, beneficiary) =
+				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
+			let fee_to_charge = fee_percent.mul_floor(value);
+
+			// Tune the vtoken exchange rate.
+			let amount_to_tune = value.checked_sub(&fee_to_charge).ok_or(Error::<T>::UnderFlow)?;
+			T::VtokenMinting::increase_token_pool(currency_id, amount_to_tune)?;
+
+			let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
+			fee_manager_agent.charge_hosting_fee(
+				fee_to_charge,
+				// Dummy value for 【from】account
+				beneficiary.clone(),
+				beneficiary.clone(),
+			)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::HostingFeeCharged {
+				currency_id,
+				amount: fee_to_charge,
+			});
+			Pallet::<T>::deposit_event(Event::PoolTokenIncreased {
+				currency_id,
+				amount: amount_to_tune,
+			});
 			Ok(())
 		}
 
@@ -1236,9 +1407,107 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			MinimumsAndMaximums::<T>::mutate_exists(currency_id, |minimums_maximums| {
-				*minimums_maximums = constraints;
+				*minimums_maximums = constraints.clone();
 			});
 
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::MinimumsMaximumsSet {
+				currency_id,
+				minimums_and_maximums: constraints,
+			});
+
+			Ok(())
+		}
+
+		/// Update storage Delays<T>.
+		#[pallet::weight(T::WeightInfo::set_currency_delays())]
+		pub fn set_currency_delays(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_delays: Option<Delays>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			CurrencyDelays::<T>::mutate_exists(currency_id, |delays| {
+				*delays = maybe_delays.clone();
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::CurrencyDelaysSet {
+				currency_id,
+				delays: maybe_delays,
+			});
+
+			Ok(())
+		}
+
+		/// Update storage Delays<T>.
+		#[pallet::weight(T::WeightInfo::set_hosting_fees())]
+		pub fn set_hosting_fees(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_fee_set: Option<(Percent, MultiLocation)>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			HostingFees::<T>::mutate_exists(currency_id, |fee_set| {
+				*fee_set = maybe_fee_set.clone();
+			});
+
+			Pallet::<T>::deposit_event(Event::HostingFeesSet { currency_id, fees: maybe_fee_set });
+
+			Ok(())
+		}
+
+		/// ********************************************************************
+		/// *************Outer Confirming Xcm queries functions ****************
+		/// ********************************************************************
+		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
+		pub fn confirm_delegator_ledger_query_response(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::get_ledger_update_agent_then_process(query_id, true)?;
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::fail_delegator_ledger_query_response())]
+		pub fn fail_delegator_ledger_query_response(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			Self::do_fail_delegator_ledger_query_response(query_id)?;
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
+		pub fn confirm_validators_by_delegator_query_response(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+			Self::get_validators_by_delegator_update_agent_then_process(query_id, true)?;
+
+			Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::fail_validators_by_delegator_query_response())]
+		pub fn fail_validators_by_delegator_query_response(
+			origin: OriginFor<T>,
+			query_id: QueryId,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			Ok(())
 		}
 	}
@@ -1282,10 +1551,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingAgentBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1294,10 +1560,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<DelegatorManagerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1306,10 +1569,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<ValidatorManagerBoxType, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1318,10 +1578,16 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> Result<StakingFeeManagerBoxType<T>, Error<T>> {
 			match currency_id {
-				KSM =>
-					Ok(Box::new(
-						KusamaAgent::<T, T::AccountConverter, T::ParachainId, T::XcmSender>::new(),
-					)),
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
+				_ => Err(Error::<T>::NotSupportedCurrencyId),
+			}
+		}
+
+		fn get_currency_query_response_checker(
+			currency_id: CurrencyId,
+		) -> Result<QueryResponseCheckerBoxType<T>, Error<T>> {
+			match currency_id {
+				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
 				_ => Err(Error::<T>::NotSupportedCurrencyId),
 			}
 		}
@@ -1417,6 +1683,141 @@ pub mod pallet {
 			};
 
 			Ok(parachain_location)
+		}
+
+		/// **************************************/
+		/// ****** XCM confirming Functions ******/
+		/// **************************************/
+		pub fn process_query_entry_records() -> Result<u32, Error<T>> {
+			let mut counter = 0u32;
+
+			// Deal with DelegatorLedgerXcmUpdateQueue storage
+			for query_id in DelegatorLedgerXcmUpdateQueue::<T>::iter_keys() {
+				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
+				let updated = Self::get_ledger_update_agent_then_process(query_id, false)?;
+				if updated {
+					counter = counter.saturating_add(1);
+				}
+			}
+
+			// Deal with ValidatorsByDelegator storage
+			for query_id in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter_keys() {
+				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
+				let updated =
+					Self::get_validators_by_delegator_update_agent_then_process(query_id, false)?;
+
+				if updated {
+					counter = counter.saturating_add(1);
+				}
+			}
+
+			Ok(counter)
+		}
+
+		pub fn get_ledger_update_agent_then_process(
+			query_id: QueryId,
+			manual_mode: bool,
+		) -> Result<bool, Error<T>> {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let (entry, timeout) = Self::get_delegator_ledger_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+
+			let now = frame_system::Pallet::<T>::block_number();
+			let mut updated = true;
+			if now <= timeout {
+				let currency_id = match entry.clone() {
+					LedgerUpdateEntry::Substrate(substrate_entry) =>
+						Some(substrate_entry.currency_id),
+					_ => None,
+				}
+				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+				let ledger_query_response_agent =
+					Self::get_currency_query_response_checker(currency_id)?;
+				updated = ledger_query_response_agent.check_delegator_ledger_query_response(
+					query_id,
+					entry.clone(),
+					manual_mode,
+				)?;
+			} else {
+				Self::do_fail_delegator_ledger_query_response(query_id)?;
+			}
+
+			Ok(updated)
+		}
+
+		pub fn get_validators_by_delegator_update_agent_then_process(
+			query_id: QueryId,
+			manual_mode: bool,
+		) -> Result<bool, Error<T>> {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let (entry, timeout) = Self::get_validators_by_delegator_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+
+			let now = frame_system::Pallet::<T>::block_number();
+			let mut updated = true;
+			if now <= timeout {
+				let currency_id = match entry.clone() {
+					ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
+						Some(substrate_entry.currency_id),
+					_ => None,
+				}
+				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+				let validators_by_delegator_query_response_agent =
+					Self::get_currency_query_response_checker(currency_id)?;
+				updated = validators_by_delegator_query_response_agent
+					.check_validators_by_delegator_query_response(
+						query_id,
+						entry.clone(),
+						manual_mode,
+					)?;
+			} else {
+				Self::do_fail_validators_by_delegator_query_response(query_id)?;
+			}
+			Ok(updated)
+		}
+
+		fn do_fail_delegator_ledger_query_response(query_id: QueryId) -> Result<(), Error<T>> {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let (entry, _) = Self::get_delegator_ledger_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+			let currency_id = match entry.clone() {
+				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
+				_ => None,
+			}
+			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+			let ledger_query_response_agent =
+				Self::get_currency_query_response_checker(currency_id)?;
+			ledger_query_response_agent.fail_delegator_ledger_query_response(query_id)?;
+
+			Ok(())
+		}
+
+		fn do_fail_validators_by_delegator_query_response(
+			query_id: QueryId,
+		) -> Result<(), Error<T>> {
+			// See if the query exists. If it exists, call corresponding chain storage update
+			// function.
+			let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
+				.ok_or(Error::<T>::QueryNotExist)?;
+			let currency_id = match entry.clone() {
+				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
+					Some(substrate_entry.currency_id),
+				_ => None,
+			}
+			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
+
+			let validators_by_delegator_query_response_agent =
+				Self::get_currency_query_response_checker(currency_id)?;
+			validators_by_delegator_query_response_agent
+				.fail_validators_by_delegator_query_response(query_id)?;
+
+			Ok(())
 		}
 	}
 }

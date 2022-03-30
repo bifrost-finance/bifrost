@@ -51,6 +51,11 @@ pub trait WeightInfo {
 	fn increase_token_to_deduct() -> Weight;
 	fn decrease_token_to_deduct() -> Weight;
 	fn supplement_fee_reserve() -> Weight;
+	fn charge_host_fee_and_tune_vtoken_exchange_rate() -> Weight;
+	fn confirm_delegator_ledger_query_response() -> Weight;
+	fn fail_delegator_ledger_query_response() -> Weight;
+	fn confirm_validators_by_delegator_query_response() -> Weight;
+	fn fail_validators_by_delegator_query_response() -> Weight;
 
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight;
@@ -64,6 +69,8 @@ pub trait WeightInfo {
 	fn set_validators_by_delegator() -> Weight;
 	fn set_delegator_ledger() -> Weight;
 	fn set_minimums_and_maximums() -> Weight;
+	fn set_currency_delays() -> Weight;
+	fn set_hosting_fees() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -161,6 +168,10 @@ impl WeightInfo for () {
 		(50_000_000 as Weight)
 	}
 
+	fn charge_host_fee_and_tune_vtoken_exchange_rate() -> Weight {
+		(50_000_000 as Weight)
+	}
+
 	// Storage setters
 	fn set_xcm_dest_weight_and_fee() -> Weight {
 		(50_000_000 as Weight)
@@ -203,6 +214,30 @@ impl WeightInfo for () {
 	}
 
 	fn set_minimums_and_maximums() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_currency_delays() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_hosting_fees() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn confirm_delegator_ledger_query_response() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn fail_delegator_ledger_query_response() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn confirm_validators_by_delegator_query_response() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn fail_validators_by_delegator_query_response() -> Weight {
 		(50_000_000 as Weight)
 	}
 }

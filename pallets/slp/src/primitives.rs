@@ -20,6 +20,7 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
+use sp_core::H256;
 use sp_std::vec::Vec;
 
 /// Simplify the CurrencyId.
@@ -54,6 +55,54 @@ pub struct UnlockChunk<Balance> {
 	pub unlock_time: TimeUnit,
 }
 
+/// A type for accommodating delegator update entries for different kinds of currencies.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum LedgerUpdateEntry<Balance, DelegatorId> {
+	/// A type for substrate ledger updating entires
+	Substrate(SubstrateLedgerUpdateEntry<Balance, DelegatorId>),
+}
+
+/// A type for substrate ledger updating entires
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
+	/// The currency id of the delegator that needs to be update
+	pub currency_id: CurrencyId,
+	/// The delegator id that needs to be update
+	pub delegator_id: DelegatorId,
+	/// If this is true, then this is a bonding entry.
+	pub if_bond: bool,
+	/// If this is true and if_bond is false, then this is an unlocking entry.
+	pub if_unlock: bool,
+	/// If if_bond and if_unlock is false but if_rebond is true. Then it is a rebonding operation.
+	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
+	pub if_rebond: bool,
+	/// The unlocking/bonding amount.
+	pub amount: Balance,
+	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
+	/// entry, this field should be None. If it is a liquidize entry, this filed is the ongoing
+	/// timeunit when the xcm message is sent.
+	pub unlock_time: Option<TimeUnit>,
+}
+
+/// A type for accommodating validators by delegator update entries for different kinds of
+/// currencies.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
+	/// A type for substrate validators by delegator updating entires
+	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId>),
+}
+
+/// A type for substrate validators by delegator updating entires
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
+	/// The currency id of the delegator that needs to be update
+	pub currency_id: CurrencyId,
+	/// The delegator id that needs to be update
+	pub delegator_id: DelegatorId,
+	/// Validators vec to be updated
+	pub validators: Vec<(ValidatorId, H256)>,
+}
+
 /// Different minimum and maximum requirements for different chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct MinimumsMaximums<Balance> {
@@ -71,6 +120,13 @@ pub struct MinimumsMaximums<Balance> {
 	pub validators_back_maximum: u32,
 	/// The maximum amount of active staking for a delegator. It is used to control ROI.
 	pub delegator_active_staking_maximum: Balance,
+}
+
+/// Different delay params for different chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
+pub struct Delays {
+	/// The unlock delay for the unlocking amount to be able to be liquidized.
+	pub unlock_delay: TimeUnit,
 }
 
 /// XCM operations list
