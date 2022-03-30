@@ -29,7 +29,7 @@ use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
 use sha3::{Digest, Keccak256};
-use sp_arithmetic::traits::Zero;
+use sp_arithmetic::{per_things::Percent, traits::Zero};
 use sp_core::H256;
 use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
@@ -193,6 +193,7 @@ pub mod pallet {
 		QueryResponseRemoveError,
 		ValidatorsByDelegatorResponseCheckError,
 		LedgerResponseCheckError,
+		InvalidHostingFee,
 	}
 
 	#[pallet::event]
@@ -310,6 +311,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 		},
+		HostingFeeCharged {
+			currency_id: CurrencyId,
+			amount: BalanceOf<T>,
+		},
 		PoolTokenDecreased {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
@@ -362,9 +367,27 @@ pub mod pallet {
 			query_id: QueryId,
 			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		},
+		DelegatorLedgerQueryResponseFailSuccessfully {
+			query_id: QueryId,
+		},
 		ValidatorsByDelegatorQueryResponseConfirmed {
 			query_id: QueryId,
 			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		},
+		ValidatorsByDelegatorQueryResponseFailSuccessfully {
+			query_id: QueryId,
+		},
+		MinimumsMaximumsSet {
+			currency_id: CurrencyId,
+			minimums_and_maximums: Option<MinimumsMaximums<BalanceOf<T>>>,
+		},
+		CurrencyDelaysSet {
+			currency_id: CurrencyId,
+			delays: Option<Delays>,
+		},
+		HostingFeesSet {
+			currency_id: CurrencyId,
+			fees: Option<(Percent, MultiLocation)>,
 		},
 	}
 
@@ -396,6 +419,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_fee_source)]
 	pub type FeeSources<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, (MultiLocation, BalanceOf<T>)>;
+
+	/// Hosting fee percentage and beneficiary account for different chains
+	#[pallet::storage]
+	#[pallet::getter(fn get_hosting_fee)]
+	pub type HostingFees<T> = StorageMap<_, Blake2_128Concat, CurrencyId, (Percent, MultiLocation)>;
 
 	/// Delegators in service. A delegator is identified in MultiLocation format.
 	/// Currency Id + Sub-account index => MultiLocation
@@ -1121,6 +1149,49 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[pallet::weight(T::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
+		/// Charge staking host fee and tune vtoken/token exchange rate.
+		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			value: BalanceOf<T>,
+		) -> DispatchResult {
+			// Ensure origin
+			let authorized = Self::ensure_authorized(origin, currency_id);
+			ensure!(authorized, Error::<T>::NotAuthorized);
+
+			// Ensure the value is valid.
+			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
+
+			// Get charged fee value
+			let (fee_percent, beneficiary) =
+				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
+			let fee_to_charge = fee_percent.mul_floor(value);
+
+			// Tune the vtoken exchange rate.
+			let amount_to_tune = value.checked_sub(&fee_to_charge).ok_or(Error::<T>::UnderFlow)?;
+			T::VtokenMinting::increase_token_pool(currency_id, amount_to_tune)?;
+
+			let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
+			fee_manager_agent.charge_hosting_fee(
+				fee_to_charge,
+				// Dummy value for 【from】account
+				beneficiary.clone(),
+				beneficiary.clone(),
+			)?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::HostingFeeCharged {
+				currency_id,
+				amount: fee_to_charge,
+			});
+			Pallet::<T>::deposit_event(Event::PoolTokenIncreased {
+				currency_id,
+				amount: amount_to_tune,
+			});
+			Ok(())
+		}
+
 		/// *****************************/
 		/// ****** Storage Setters ******/
 		/// *****************************/
@@ -1360,7 +1431,13 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			MinimumsAndMaximums::<T>::mutate_exists(currency_id, |minimums_maximums| {
-				*minimums_maximums = constraints;
+				*minimums_maximums = constraints.clone();
+			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::MinimumsMaximumsSet {
+				currency_id,
+				minimums_and_maximums: constraints,
 			});
 
 			Ok(())
@@ -1377,8 +1454,33 @@ pub mod pallet {
 			T::ControlOrigin::ensure_origin(origin)?;
 
 			CurrencyDelays::<T>::mutate_exists(currency_id, |delays| {
-				*delays = maybe_delays;
+				*delays = maybe_delays.clone();
 			});
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::CurrencyDelaysSet {
+				currency_id,
+				delays: maybe_delays,
+			});
+
+			Ok(())
+		}
+
+		/// Update storage Delays<T>.
+		#[pallet::weight(T::WeightInfo::set_hosting_fees())]
+		pub fn set_hosting_fees(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_fee_set: Option<(Percent, MultiLocation)>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			HostingFees::<T>::mutate_exists(currency_id, |fee_set| {
+				*fee_set = maybe_fee_set.clone();
+			});
+
+			Pallet::<T>::deposit_event(Event::HostingFeesSet { currency_id, fees: maybe_fee_set });
 
 			Ok(())
 		}

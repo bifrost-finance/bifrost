@@ -22,11 +22,13 @@ use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, transactional, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
-use node_primitives::VtokenMintingOperator;
-use sp_core::H256;
+use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
+use orml_traits::MultiCurrency;
+use sp_core::{H256, U256};
 use sp_runtime::{
 	traits::{
-		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedInto, Zero,
+		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedFrom,
+		UniqueSaturatedInto, Zero,
 	},
 	DispatchResult,
 };
@@ -737,12 +739,31 @@ impl<T: Config> StakingFeeManager<MultiLocation, BalanceOf<T>> for KusamaAgent<T
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,
-		_amount: BalanceOf<T>,
+		amount: BalanceOf<T>,
 		_from: MultiLocation,
-		_to: MultiLocation,
+		to: MultiLocation,
 	) -> DispatchResult {
-		// No need to implement this method for Kusama. The hosting fee deduction will be calculated
-		// in the backend service.alloc
+		// Get current VKSM/KSM exchange rate.
+		let vksm_issuance = T::MultiCurrency::total_issuance(KSM);
+		let ksm_pool = T::VtokenMinting::get_token_pool(KSM);
+		// Calculate how much vksm the beneficiary account can get.
+		let amount: u128 = amount.unique_saturated_into();
+		let vksm_issuance: u128 = vksm_issuance.unique_saturated_into();
+		let ksm_pool: u128 = ksm_pool.unique_saturated_into();
+		let can_get_vksm = U256::from(amount)
+			.checked_mul(U256::from(vksm_issuance))
+			.and_then(|n| n.checked_div(U256::from(ksm_pool)))
+			.and_then(|n| TryInto::<u128>::try_into(n).ok())
+			.unwrap_or_else(Zero::zero);
+
+		let beneficiary = Pallet::<T>::multilocation_to_account(&to)?;
+		// Issue corresponding vksm to beneficiary account.
+		T::MultiCurrency::deposit(
+			CurrencyId::VToken(TokenSymbol::KSM),
+			&beneficiary,
+			BalanceOf::<T>::unique_saturated_from(can_get_vksm),
+		)?;
+
 		Ok(())
 	}
 
@@ -893,6 +914,11 @@ impl<T: Config>
 		// delete update entry
 		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
 
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
+			query_id,
+		});
+
 		Ok(())
 	}
 
@@ -905,6 +931,11 @@ impl<T: Config>
 
 		// delete update entry
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseFailSuccessfully {
+			query_id,
+		});
 
 		Ok(())
 	}
