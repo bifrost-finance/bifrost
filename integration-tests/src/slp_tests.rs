@@ -19,7 +19,7 @@
 //! Cross-chain transfer tests within Kusama network.
 
 use bifrost_slp::{
-	primitives::UnlockChunk, Ledger, MinimumsMaximums, SubstrateLedger, XcmOperation,
+	primitives::UnlockChunk, Delays, Ledger, MinimumsMaximums, SubstrateLedger, XcmOperation,
 };
 use frame_support::assert_ok;
 use node_primitives::TimeUnit;
@@ -62,6 +62,17 @@ fn register_subaccount_index_0() {
 
 		let subaccount_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Initialize ongoing timeunit as 0.
+		assert_ok!(Slp::update_ongoing_time_unit(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			TimeUnit::Era(0)
+		));
+
+		// Initialize currency delays.
+		let delay = Delays { unlock_delay: TimeUnit::Era(10) };
+		assert_ok!(Slp::set_currency_delays(Origin::root(), RelayCurrencyId::get(), Some(delay)));
 
 		// First to setup index-multilocation relationship of subaccount_0
 		assert_ok!(Slp::add_delegator(
@@ -188,14 +199,14 @@ fn register_delegator_ledger() {
 
 #[test]
 fn register_validators() {
-	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
 	let validator_0: AccountId =
-		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
 			.into();
 
-	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
 	let validator_1: AccountId =
-		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
 			.into();
 
 	Bifrost::execute_with(|| {
@@ -581,14 +592,14 @@ fn delegate_works() {
 	register_delegator_ledger();
 	let subaccount_0 = subaccount_0();
 
-	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
 	let validator_0: AccountId =
-		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
 			.into();
 
-	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
 	let validator_1: AccountId =
-		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
 			.into();
 
 	Bifrost::execute_with(|| {
@@ -613,8 +624,15 @@ fn delegate_works() {
 		assert_ok!(Slp::delegate(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
+			subaccount_0_location.clone(),
 			targets.clone(),
+		));
+
+		assert_ok!(Slp::set_validators_by_delegator(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			targets,
 		));
 	});
 
@@ -636,14 +654,14 @@ fn undelegate_works() {
 
 	let subaccount_0 = subaccount_0();
 
-	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
 	let validator_0: AccountId =
-		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
 			.into();
 
-	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
 	let validator_1: AccountId =
-		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
 			.into();
 
 	Bifrost::execute_with(|| {
@@ -682,14 +700,14 @@ fn redelegate_works() {
 
 	let subaccount_0 = subaccount_0();
 
-	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
 	let validator_0: AccountId =
-		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
 			.into();
 
-	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
 	let validator_1: AccountId =
-		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
 			.into();
 
 	Bifrost::execute_with(|| {
@@ -737,9 +755,9 @@ fn payout_works() {
 	transfer_2_ksm_to_subaccount_in_kusama();
 	let subaccount_0 = subaccount_0();
 
-	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
 	let validator_0: AccountId =
-		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
 			.into();
 
 	Bifrost::execute_with(|| {
@@ -938,59 +956,6 @@ fn supplement_fee_reserve_works() {
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
 			2_999_893_333_340
-		);
-	});
-}
-
-#[test]
-fn set_validators_by_delegator_works() {
-	delegate_works();
-	let subaccount_0 = subaccount_0();
-
-	// 5FpewyS2VY8Cj3tKgSckq8ECkjd1HKHvBRnWhiHqRQsWfFC1
-	let validator_0: AccountId =
-		hex_literal::hex!["a639b507ee1585e0b6498ff141d6153960794523226866d1b44eba3f25f36356"]
-			.into();
-
-	// 5GvuM53k1Z4nAB5zXJFgkRSHv4Bqo4BsvgbQWNWkiWZTMwWY
-	let validator_1: AccountId =
-		hex_literal::hex!["765e46067adac4d1fe6c783aa2070dfa64a19f84376659e12705d1734b3eae01"]
-			.into();
-
-	Bifrost::execute_with(|| {
-		let subaccount_0_32: [u8; 32] =
-			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
-
-		let subaccount_0_location: MultiLocation =
-			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
-
-		let mut targets = vec![];
-		let mut tuple_targets = vec![];
-
-		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
-		let validator_0_location: MultiLocation =
-			Slp::account_32_to_parent_location(validator_0_32).unwrap();
-		targets.push(validator_0_location.clone());
-		let multi_hash_0 = Slp::get_hash(&validator_0_location.clone());
-		tuple_targets.push((validator_0_location.clone(), multi_hash_0));
-
-		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
-		let validator_1_location: MultiLocation =
-			Slp::account_32_to_parent_location(validator_1_32).unwrap();
-		targets.push(validator_1_location.clone());
-		let multi_hash_1 = Slp::get_hash(&validator_1_location.clone());
-		tuple_targets.push((validator_1_location.clone(), multi_hash_1));
-
-		assert_ok!(Slp::set_validators_by_delegator(
-			Origin::root(),
-			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			targets,
-		));
-
-		assert_eq!(
-			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
-			Some(tuple_targets)
 		);
 	});
 }

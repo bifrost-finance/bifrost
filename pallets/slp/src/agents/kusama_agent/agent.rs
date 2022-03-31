@@ -529,7 +529,7 @@ impl<T: Config>
 	fn transfer_back(
 		&self,
 		from: MultiLocation,
-		to: AccountIdOf<T>,
+		to: MultiLocation,
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
@@ -539,8 +539,13 @@ impl<T: Config>
 		DelegatorsMultilocation2Index::<T>::get(KSM, from.clone())
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
+		// Make sure the receiving account is the Exit_account from vtoken-minting module.
+		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
+		let (_, exit_account) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(to_account_id == exit_account, Error::<T>::InvalidAccount);
+
 		// Prepare parameter dest and beneficiary.
-		let to_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(to)?;
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
 
 		let dest =
 			Box::new(VersionedMultiLocation::from(X1(Parachain(T::ParachainId::get().into()))));
@@ -578,73 +583,23 @@ impl<T: Config>
 	}
 
 	/// Make token from Bifrost chain account to the staking chain account.
+	/// Receiving account must be one of the KSM delegators.
 	fn transfer_to(
 		&self,
-		from: AccountIdOf<T>,
+		from: MultiLocation,
 		to: MultiLocation,
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
-		// Ensure amount is greater than zero.
-		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
+		// Make sure receiving account is one of the KSM delegators.
+		DelegatorsMultilocation2Index::<T>::get(KSM, to.clone())
+			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		let (weight, fee_amount) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
-			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+		// Make sure from account is the entrance account of vtoken-minting module.
+		let from_account_id = Pallet::<T>::multilocation_to_account(&from)?;
+		let (entrance_account, _) = T::VtokenMinting::get_entrance_and_exit_accounts();
+		ensure!(from_account_id == entrance_account, Error::<T>::InvalidAccount);
 
-		// "from" AccountId to MultiLocation
-		let from_32: [u8; 32] = Pallet::<T>::account_id_to_account_32(from)?;
-		let from_location = Pallet::<T>::account_32_to_local_location(from_32)?;
-
-		// Prepare parameter dest and beneficiary.
-		let dest = MultiLocation::parent();
-		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
-		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
-
-		// Prepare parameter assets.
-		let asset = MultiAsset {
-			fun: Fungible(amount.unique_saturated_into()),
-			id: Concrete(MultiLocation::parent()),
-		};
-		let assets = MultiAssets::from(asset);
-
-		// Prepare fee asset.
-		let fee_asset = MultiAsset {
-			fun: Fungible(fee_amount.unique_saturated_into()),
-			id: Concrete(MultiLocation { parents: 0, interior: Here }),
-		};
-
-		// prepare for xcm message
-		let msg = Xcm(vec![
-			WithdrawAsset(assets.clone()),
-			InitiateReserveWithdraw {
-				assets: All.into(),
-				reserve: dest.clone(),
-				xcm: Xcm(vec![
-					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
-					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
-				]),
-			},
-		]);
-
-		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-
-		//【For xcm v3】
-		// let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), timeout);
-		// // Report the Error message of the xcm.
-		// // from the responder's point of view to get Here's MultiLocation.
-		// let destination = T::UniversalLocation::get()
-		// 	.invert_target(&dest)
-		// 	.map_err(|()| XcmError::MultiLocationNotInvertible)?;
-
-		// // Set the error reporting.
-		// let response_info = QueryResponseInfo { destination, query_id, max_weight: 0 };
-		// let report_error = Xcm(vec![ReportError(response_info)]);
-		// msg.0.insert(0, SetAppendix(report_error));
-
-		// Execute the xcm message.
-		T::XcmExecutor::execute_xcm_in_credit(from_location, msg, weight, weight)
-			.ensure_complete()
-			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
+		Self::do_transfer_to(from, to, amount)?;
 
 		Ok(())
 	}
@@ -798,11 +753,7 @@ impl<T: Config> StakingFeeManager<MultiLocation, BalanceOf<T>> for KusamaAgent<T
 		from: MultiLocation,
 		to: MultiLocation,
 	) -> DispatchResult {
-		// Ensure amount is greater than zero.
-		ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
-
-		let source_account = Pallet::<T>::multilocation_to_account(&from)?;
-		self.transfer_to(source_account, to, amount)?;
+		Self::do_transfer_to(from, to, amount)?;
 
 		Ok(())
 	}
@@ -1313,6 +1264,72 @@ impl<T: Config> KusamaAgent<T> {
 			},
 		);
 		ValidatorsByDelegatorXcmUpdateQueue::<T>::insert(query_id, (entry, timeout));
+
+		Ok(())
+	}
+
+	fn do_transfer_to(
+		from: MultiLocation,
+		to: MultiLocation,
+		amount: BalanceOf<T>,
+	) -> Result<(), Error<T>> {
+		// Ensure amount is greater than zero.
+		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
+
+		let (weight, fee_amount) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		// Prepare parameter dest and beneficiary.
+		let dest = MultiLocation::parent();
+		let to_32: [u8; 32] = Pallet::<T>::multilocation_to_account_32(&to)?;
+		let beneficiary = Pallet::<T>::account_32_to_local_location(to_32)?;
+
+		// Prepare parameter assets.
+		let asset = MultiAsset {
+			fun: Fungible(amount.unique_saturated_into()),
+			id: Concrete(MultiLocation::parent()),
+		};
+		let assets = MultiAssets::from(asset);
+
+		// Prepare fee asset.
+		let fee_asset = MultiAsset {
+			fun: Fungible(fee_amount.unique_saturated_into()),
+			id: Concrete(MultiLocation { parents: 0, interior: Here }),
+		};
+
+		// prepare for xcm message
+		let msg = Xcm(vec![
+			WithdrawAsset(assets.clone()),
+			InitiateReserveWithdraw {
+				assets: All.into(),
+				reserve: dest.clone(),
+				xcm: Xcm(vec![
+					BuyExecution { fees: fee_asset, weight_limit: WeightLimit::Limited(weight) },
+					DepositAsset { assets: All.into(), max_assets: 1, beneficiary },
+				]),
+			},
+		]);
+
+		let now = frame_system::Pallet::<T>::block_number();
+		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
+
+		//【For xcm v3】
+		// let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), timeout);
+		// // Report the Error message of the xcm.
+		// // from the responder's point of view to get Here's MultiLocation.
+		// let destination = T::UniversalLocation::get()
+		// 	.invert_target(&dest)
+		// 	.map_err(|()| XcmError::MultiLocationNotInvertible)?;
+
+		// // Set the error reporting.
+		// let response_info = QueryResponseInfo { destination, query_id, max_weight: 0 };
+		// let report_error = Xcm(vec![ReportError(response_info)]);
+		// msg.0.insert(0, SetAppendix(report_error));
+
+		// Execute the xcm message.
+		T::XcmExecutor::execute_xcm_in_credit(from, msg, weight, weight)
+			.ensure_complete()
+			.map_err(|_| Error::<T>::XcmExecutionFailed)?;
 
 		Ok(())
 	}

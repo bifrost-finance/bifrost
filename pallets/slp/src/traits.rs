@@ -65,11 +65,16 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	fn chill(&self, who: DelegatorId) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
-	fn transfer_back(&self, from: DelegatorId, to: AccountId, amount: Balance)
-		-> Result<(), Error>;
+	fn transfer_back(
+		&self,
+		from: DelegatorId,
+		to: DelegatorId,
+		amount: Balance,
+	) -> Result<(), Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	fn transfer_to(&self, from: AccountId, to: DelegatorId, amount: Balance) -> Result<(), Error>;
+	fn transfer_to(&self, from: DelegatorId, to: DelegatorId, amount: Balance)
+		-> Result<(), Error>;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
