@@ -105,7 +105,6 @@ pub mod pallet {
 			vsdot_amount: BalanceOf<T>,
 		},
 		ExchangeFeeSet {
-			parachain_id: CurrencyIdOf<T>,
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		},
 		ExchangeRateSet {
@@ -143,13 +142,8 @@ pub mod pallet {
 	/// exchange fee
 	#[pallet::storage]
 	#[pallet::getter(fn exchange_fee)]
-	pub type ExchangeFee<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		CurrencyIdOf<T>,
-		VstokenConversionExchangeFee<BalanceOf<T>>,
-		ValueQuery,
-	>;
+	pub type ExchangeFee<T: Config> =
+		StorageValue<_, VstokenConversionExchangeFee<BalanceOf<T>>, ValueQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -173,8 +167,12 @@ pub mod pallet {
 
 			// Calculate lease
 			let ksm_lease = KusamaLease::<T>::get();
-			let remaining_due_lease: u32 = match currency_id {
-				CurrencyId::VSBond(_, _, _, expire_lease) => {
+			let mut remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
+					ensure!(
+						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
+						Error::<T>::NotSupportTokenType
+					);
 					let mut remaining_due_lease = expire_lease
 						.checked_sub(ksm_lease)
 						.ok_or(Error::<T>::CalculationOverflow)?;
@@ -188,8 +186,11 @@ pub mod pallet {
 			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
+			if remaining_due_lease <= 0u32 {
+				remaining_due_lease = 0u32
+			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
+			let exchange_fee = ExchangeFee::<T>::get();
 			let vsbond_balance = vsbond_amount
 				.checked_sub(&exchange_fee.vsbond_exchange_fee_of_vsksm)
 				.ok_or(Error::<T>::CalculationOverflow)?;
@@ -241,8 +242,12 @@ pub mod pallet {
 
 			// Calculate lease
 			let ksm_lease = KusamaLease::<T>::get();
-			let remaining_due_lease: u32 = match currency_id {
-				CurrencyId::VSBond(_, _, _, expire_lease) => {
+			let mut remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
+					ensure!(
+						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
+						Error::<T>::NotSupportTokenType
+					);
 					let mut remaining_due_lease = expire_lease
 						.checked_sub(ksm_lease)
 						.ok_or(Error::<T>::CalculationOverflow)?;
@@ -256,8 +261,11 @@ pub mod pallet {
 			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
+			if remaining_due_lease <= 0u32 {
+				remaining_due_lease = 0u32
+			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::KSM));
+			let exchange_fee = ExchangeFee::<T>::get();
 			let vsksm_balance = vsksm_amount
 				.checked_sub(&exchange_fee.vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
@@ -309,8 +317,9 @@ pub mod pallet {
 
 			// Calculate lease
 			let dot_lease = PolkadotLease::<T>::get();
-			let remaining_due_lease: u32 = match currency_id {
-				CurrencyId::VSBond(_, _, _, expire_lease) => {
+			let mut remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
+					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
 					let mut remaining_due_lease = expire_lease
 						.checked_sub(dot_lease)
 						.ok_or(Error::<T>::CalculationOverflow)?;
@@ -324,8 +333,11 @@ pub mod pallet {
 			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
+			if remaining_due_lease <= 0u32 {
+				remaining_due_lease = 0u32
+			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
+			let exchange_fee = ExchangeFee::<T>::get();
 			let vsbond_balance = vsbond_amount
 				.checked_sub(&exchange_fee.vsbond_exchange_fee_of_vsdot)
 				.ok_or(Error::<T>::CalculationOverflow)?;
@@ -377,8 +389,9 @@ pub mod pallet {
 
 			// Calculate lease
 			let dot_lease = PolkadotLease::<T>::get();
-			let remaining_due_lease: u32 = match currency_id {
-				CurrencyId::VSBond(_, _, _, expire_lease) => {
+			let mut remaining_due_lease: u32 = match currency_id {
+				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
+					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
 					let mut remaining_due_lease = expire_lease
 						.checked_sub(dot_lease)
 						.ok_or(Error::<T>::CalculationOverflow)?;
@@ -392,8 +405,11 @@ pub mod pallet {
 			ensure!(remaining_due_lease <= 8u32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
+			if remaining_due_lease <= 0u32 {
+				remaining_due_lease = 0u32
+			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
-			let exchange_fee = ExchangeFee::<T>::get(CurrencyId::Token(TokenSymbol::DOT));
+			let exchange_fee = ExchangeFee::<T>::get();
 			let vsdot_balance = vsdot_amount
 				.checked_sub(&exchange_fee.vsdot_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
@@ -428,16 +444,15 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_exchange_fee(
 			origin: OriginFor<T>,
-			parachain_id: CurrencyIdOf<T>,
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		) -> DispatchResult {
-			T::ControlOrigin::ensure_origin(origin)?;
+			ensure_root(origin)?;
 
-			ExchangeFee::<T>::mutate(parachain_id, |old_exchange_fee| {
+			ExchangeFee::<T>::mutate(|old_exchange_fee| {
 				*old_exchange_fee = exchange_fee.clone();
 			});
 
-			Self::deposit_event(Event::ExchangeFeeSet { parachain_id, exchange_fee });
+			Self::deposit_event(Event::ExchangeFeeSet { exchange_fee });
 			Ok(())
 		}
 

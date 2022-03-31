@@ -36,7 +36,7 @@ fn vsksm_convert_to_vsbond() {
 				vsbond_exchange_fee_of_vsksm: 10,
 				vsbond_exchange_fee_of_vsdot: 10,
 			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::signed(ALICE), KSM, EXCHANGE_FEE));
+		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), EXCHANGE_FEE));
 		pub const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
@@ -78,7 +78,7 @@ fn vsbond_convert_to_vsksm() {
 				vsbond_exchange_fee_of_vsksm: 10,
 				vsbond_exchange_fee_of_vsdot: 10,
 			};
-		assert_ok!(VstokenConversion::set_exchange_fee(Origin::signed(ALICE), KSM, EXCHANGE_FEE));
+		assert_ok!(VstokenConversion::set_exchange_fee(Origin::root(), EXCHANGE_FEE));
 		const EXCHANGE_RATE_PERCENTAGE: Percent = Percent::from_percent(5);
 		const EXCHANGE_RATE: VstokenConversionExchangeRate = VstokenConversionExchangeRate {
 			vsbond_convert_to_vsdot: EXCHANGE_RATE_PERCENTAGE,
