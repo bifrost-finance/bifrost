@@ -42,7 +42,7 @@ use sp_std::{boxed::Box, vec::Vec};
 use xcm::latest::prelude::*;
 
 use crate as bifrost_slp;
-use crate::Config;
+use crate::{Config, QueryResponseManager};
 
 pub type AccountId = AccountId32;
 pub type Block = frame_system::mocking::MockBlock<Runtime>;
@@ -217,6 +217,22 @@ impl Get<ParaId> for ParachainId {
 	}
 }
 
+parameter_types! {
+	pub const MaxTypeEntryPerBlock: u32 = 50;
+}
+
+impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
+	fn get_query_response_record(query_id: QueryId) -> bool {
+		Default::default()
+	}
+	fn create_query_record(responder: MultiLocation, timeout: u64) -> u64 {
+		Default::default()
+	}
+	fn remove_query_record(query_id: QueryId) -> bool {
+		Default::default()
+	}
+}
+
 impl Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
@@ -225,8 +241,10 @@ impl Config for Runtime {
 	type VtokenMinting = VtokenMinting;
 	type AccountConverter = SubAccountIndexMultiLocationConvertor;
 	type ParachainId = ParachainId;
-	type XcmSender = ();
+	type XcmRouter = ();
 	type XcmExecutor = ();
+	type SubstrateResponseManager = ();
+	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
 }
 
 pub struct ExtBuilder {
