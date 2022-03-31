@@ -36,7 +36,7 @@ use frame_support::{
 		traits::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
 		},
-		DispatchError, SaturatedConversion,
+		DispatchError,
 	},
 	transactional, BoundedVec, PalletId,
 };
@@ -63,8 +63,6 @@ pub type MintId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::traits::tokens::currency;
-
 	use super::*;
 
 	#[pallet::pallet]
@@ -159,6 +157,7 @@ pub mod pallet {
 		TimeUnitUnlockLedgerNotFound,
 		Unexpected,
 		ExceedMaximumMintId,
+		TooManyRedeems,
 	}
 
 	#[pallet::storage]
@@ -249,10 +248,10 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(n: T::BlockNumber) -> Weight {
+		fn on_initialize(_n: T::BlockNumber) -> Weight {
 			let time_unit = MinTimeUnit::<T>::get();
 			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
-				|(total_locked, ledger_list, token_id)| {
+				|(_total_locked, ledger_list, token_id)| {
 					let mut entrance_account_balance = T::MultiCurrency::free_balance(
 						token_id,
 						&T::EntranceAccount::get().into_account(),
@@ -304,6 +303,10 @@ pub mod pallet {
 										if let Some((total_locked_origin, ledger_list_origin)) =
 											value
 										{
+											if total_locked_origin == &unlock_amount {
+												*value = None;
+												return Ok(());
+											}
 											ledger_list_origin.retain(|x| x != index);
 											*total_locked_origin = total_locked_origin
 												.checked_sub(&unlock_amount)
@@ -433,8 +436,7 @@ pub mod pallet {
 						Self::unlock_duration(token_id).ok_or(Error::<T>::Unexpected)?,
 						time_unit.clone(),
 					)
-					.map_err(|_| Error::<T>::NotSupportTokenType)?;
-					// .ok_or(Error::<T>::Unexpected)?;
+					.map_err(|_| Error::<T>::Unexpected)?;
 
 					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
 					let token_amount = vtoken_amount
@@ -445,11 +447,11 @@ pub mod pallet {
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
 						Ok(())
-					});
+					})?;
 					TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
 						Ok(())
-					});
+					})?;
 					let next_id = Self::token_unlock_next_id(token_id);
 					TokenUnlockLedger::<T>::insert(
 						&token_id,
@@ -457,26 +459,29 @@ pub mod pallet {
 						(&exchanger, token_amount, &result_time_unit),
 					);
 
-					if let Some((total_locked, ledger_list)) =
-						UserUnlockLedger::<T>::get(&exchanger, &token_id)
-					{
+					if let Some(_) = UserUnlockLedger::<T>::get(&exchanger, &token_id) {
 						UserUnlockLedger::<T>::mutate(
 							&exchanger,
 							&token_id,
 							|value| -> Result<(), Error<T>> {
 								if let Some((total_locked, ledger_list)) = value {
-									ledger_list.try_push(next_id);
+									ledger_list
+										.try_push(next_id)
+										.map_err(|_| Error::<T>::TooManyRedeems)?;
+
 									*total_locked = total_locked
 										.checked_add(&vtoken_amount)
 										.ok_or(Error::<T>::Unexpected)?;
 								};
 								return Ok(());
 							},
-						);
+						)?;
 					} else {
 						let mut ledger_list_origin =
 							BoundedVec::<MintId, T::MaximumMintId>::default();
-						ledger_list_origin.try_push(next_id);
+						ledger_list_origin
+							.try_push(next_id)
+							.map_err(|_| Error::<T>::TooManyRedeems)?;
 						UserUnlockLedger::<T>::insert(
 							&exchanger,
 							&token_id,
@@ -484,7 +489,7 @@ pub mod pallet {
 						);
 					}
 
-					if let Some((total_locked, ledger_list, _token_id)) =
+					if let Some((_, _, _token_id)) =
 						TimeUnitUnlockLedger::<T>::get(&result_time_unit, &token_id)
 					{
 						TimeUnitUnlockLedger::<T>::mutate(
@@ -492,18 +497,23 @@ pub mod pallet {
 							&token_id,
 							|value| -> Result<(), Error<T>> {
 								if let Some((total_locked, ledger_list, _token_id)) = value {
-									ledger_list.try_push(next_id);
+									ledger_list
+										.try_push(next_id)
+										.map_err(|_| Error::<T>::TooManyRedeems)?;
 									*total_locked = total_locked
 										.checked_add(&vtoken_amount)
 										.ok_or(Error::<T>::Unexpected)?;
 								};
-								return Ok(());
+								Ok(())
 							},
-						);
+						)?;
 					} else {
 						let mut ledger_list_origin =
 							BoundedVec::<MintId, T::MaximumMintId>::default();
-						ledger_list_origin.try_push(next_id);
+						ledger_list_origin
+							.try_push(next_id)
+							.map_err(|_| Error::<T>::TooManyRedeems)?;
+
 						TimeUnitUnlockLedger::<T>::insert(
 							&result_time_unit,
 							&token_id,
@@ -517,7 +527,7 @@ pub mod pallet {
 			TokenUnlockNextId::<T>::mutate(&token_id, |unlock_id| -> Result<(), Error<T>> {
 				*unlock_id = unlock_id.checked_add(1).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
-			});
+			})?;
 
 			Self::deposit_event(Event::Redeemed { token: token_id, vtoken_amount });
 			Ok(())
@@ -533,22 +543,22 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let token_amount_to_rebond =
+			let _token_amount_to_rebond =
 				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
 			if let Some((user_unlock_amount, mut ledger_list)) =
 				Self::user_unlock_ledger(&exchanger, token_id)
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
-				let mut ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
+				let ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
 				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev)
 					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
 				ledger_list.retain(|index| {
-					if let Some((account, unlock_amount, time_unit)) =
+					if let Some((_, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
 					{
 						if tmp_amount >= unlock_amount {
-							if let Some((_, total_locked, time_unit)) =
+							if let Some((_, _, time_unit)) =
 								TokenUnlockLedger::<T>::take(&token_id, &index)
 							{
 								TimeUnitUnlockLedger::<T>::mutate_exists(
@@ -558,6 +568,10 @@ pub mod pallet {
 										if let Some((total_locked_origin, ledger_list_origin, _)) =
 											value
 										{
+											if total_locked_origin == &unlock_amount {
+												*value = None;
+												return Ok(());
+											}
 											*total_locked_origin = total_locked_origin
 												.checked_sub(&unlock_amount)
 												.ok_or(Error::<T>::Unexpected)?;
@@ -581,6 +595,10 @@ pub mod pallet {
 								&index,
 								|value| -> Result<(), Error<T>> {
 									if let Some((_, total_locked_origin, _)) = value {
+										if total_locked_origin == &tmp_amount {
+											*value = None;
+											return Ok(());
+										}
 										*total_locked_origin = total_locked_origin
 											.checked_sub(&tmp_amount)
 											.ok_or(Error::<T>::Unexpected)?;
@@ -595,6 +613,10 @@ pub mod pallet {
 								&token_id,
 								|value| -> Result<(), Error<T>> {
 									if let Some((total_locked_origin, _, _)) = value {
+										if total_locked_origin == &tmp_amount {
+											*value = None;
+											return Ok(());
+										}
 										*total_locked_origin = total_locked_origin
 											.checked_sub(&tmp_amount)
 											.ok_or(Error::<T>::Unexpected)?;
@@ -610,7 +632,7 @@ pub mod pallet {
 						return true;
 					}
 				});
-				let mut ledger_list_tmp: Vec<MintId> = ledger_list.into_iter().rev().collect();
+				let ledger_list_tmp: Vec<MintId> = ledger_list.into_iter().rev().collect();
 
 				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp)
 					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
@@ -620,6 +642,10 @@ pub mod pallet {
 					&token_id,
 					|value| -> Result<(), Error<T>> {
 						if let Some((total_locked_origin, ledger_list_origin)) = value {
+							if total_locked_origin == &token_amount {
+								*value = None;
+								return Ok(());
+							}
 							*ledger_list_origin = ledger_list;
 							*total_locked_origin = total_locked_origin
 								.checked_sub(&token_amount)
@@ -629,7 +655,7 @@ pub mod pallet {
 						}
 						return Ok(());
 					},
-				);
+				)?;
 			} else {
 				return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 			}
@@ -647,11 +673,11 @@ pub mod pallet {
 			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
-			});
+			})?;
 			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
-			});
+			})?;
 			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 
 			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
@@ -661,8 +687,8 @@ pub mod pallet {
 				} else {
 					return Err(Error::<T>::InvalidRebondToken.into());
 				}
-				return Ok(());
-			});
+				Ok(())
+			})?;
 			// TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
 			Self::deposit_event(Event::Rebonded { token: token_id, token_amount });
 
@@ -857,13 +883,17 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 			TokenPool::<T>::mutate(&currency_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool.checked_add(&deduct_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
-			});
+			})?;
 
-			TimeUnitUnlockLedger::<T>::mutate(
+			TimeUnitUnlockLedger::<T>::mutate_exists(
 				&time_unit,
 				&currency_id,
 				|value| -> Result<(), Error<T>> {
 					if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+						if total_locked_origin == &deduct_amount {
+							*value = None;
+							return Ok(());
+						}
 						*total_locked_origin = total_locked_origin
 							.checked_sub(&deduct_amount)
 							.ok_or(Error::<T>::Unexpected)?;
@@ -875,30 +905,42 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 					}
 					return Ok(());
 				},
-			);
+			)?;
 
-			UserUnlockLedger::<T>::mutate(&who, &currency_id, |value| -> Result<(), Error<T>> {
-				if let Some((total_locked_origin, ledger_list_origin)) = value {
-					*total_locked_origin = total_locked_origin
-						.checked_sub(&deduct_amount)
-						.ok_or(Error::<T>::Unexpected)?;
-					if unlock_amount == deduct_amount {
-						ledger_list_origin.retain(|&x| x != index);
+			UserUnlockLedger::<T>::mutate_exists(
+				&who,
+				&currency_id,
+				|value| -> Result<(), Error<T>> {
+					if let Some((total_locked_origin, ledger_list_origin)) = value {
+						if total_locked_origin == &deduct_amount {
+							*value = None;
+							return Ok(());
+						}
+						*total_locked_origin = total_locked_origin
+							.checked_sub(&deduct_amount)
+							.ok_or(Error::<T>::Unexpected)?;
+						if unlock_amount == deduct_amount {
+							ledger_list_origin.retain(|&x| x != index);
+						}
+					} else {
+						return Err(Error::<T>::UserUnlockLedgerNotFound.into());
 					}
-				} else {
-					return Err(Error::<T>::UserUnlockLedgerNotFound.into());
-				}
-				return Ok(());
-			});
+					return Ok(());
+				},
+			)?;
 
 			if unlock_amount == deduct_amount {
 				TokenUnlockLedger::<T>::remove(&currency_id, &index);
 			} else {
-				TokenUnlockLedger::<T>::mutate(
+				TokenUnlockLedger::<T>::mutate_exists(
 					&currency_id,
 					&index,
 					|value| -> Result<(), Error<T>> {
 						if let Some((_, total_locked_origin, _)) = value {
+							if total_locked_origin == &deduct_amount {
+								*value = None;
+								return Ok(());
+							}
 							*total_locked_origin = total_locked_origin
 								.checked_sub(&deduct_amount)
 								.ok_or(Error::<T>::Unexpected)?;
@@ -907,7 +949,7 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 						}
 						return Ok(());
 					},
-				);
+				)?;
 			}
 		}
 		Ok(())

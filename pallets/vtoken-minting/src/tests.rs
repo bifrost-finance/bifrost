@@ -127,7 +127,7 @@ fn hook() {
 		VtokenMinting::on_initialize(100);
 		assert_eq!(VtokenMinting::min_time_unit(), TimeUnit::Era(4));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
-		let mut ledger_list_origin = BoundedVec::default();
+		// let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
@@ -149,7 +149,7 @@ fn hook() {
 		);
 		assert_eq!(
 			VtokenMinting::user_unlock_ledger(BOB, KSM),
-			Some((0, ledger_list_origin.clone()))
+			None // Some((0, ledger_list_origin.clone()))
 		);
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), None);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1000);
