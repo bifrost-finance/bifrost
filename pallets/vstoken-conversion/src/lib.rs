@@ -253,10 +253,6 @@ pub mod pallet {
 					let mut remaining_due_lease: i8 = (expire_lease as i64 - ksm_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
-					// .checked_sub(ksm_lease)
-					// .ok_or(Error::<T>::NotSupportTokenType)?
-					// .try_into()
-					// .map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
 						.checked_add(1i8)
 						.ok_or(Error::<T>::CalculationOverflow)?;
@@ -326,9 +322,7 @@ pub mod pallet {
 			let mut remaining_due_lease: i8 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
-					let mut remaining_due_lease: i8 = expire_lease
-						.checked_sub(dot_lease)
-						.ok_or(Error::<T>::CalculationOverflow)?
+					let mut remaining_due_lease: i8 = (expire_lease as i64 - dot_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
@@ -400,9 +394,7 @@ pub mod pallet {
 			let mut remaining_due_lease: i8 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
-					let mut remaining_due_lease: i8 = expire_lease
-						.checked_sub(dot_lease)
-						.ok_or(Error::<T>::CalculationOverflow)?
+					let mut remaining_due_lease: i8 = (expire_lease as i64 - dot_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
