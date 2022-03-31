@@ -194,6 +194,7 @@ pub mod pallet {
 		ValidatorsByDelegatorResponseCheckError,
 		LedgerResponseCheckError,
 		InvalidHostingFee,
+		InvalidAccount,
 	}
 
 	#[pallet::event]
@@ -263,12 +264,12 @@ pub mod pallet {
 		TransferBack {
 			currency_id: CurrencyId,
 			from: MultiLocation,
-			to: AccountIdOf<T>,
+			to: MultiLocation,
 			amount: BalanceOf<T>,
 		},
 		TransferTo {
 			currency_id: CurrencyId,
-			from: AccountIdOf<T>,
+			from: MultiLocation,
 			to: MultiLocation,
 			amount: BalanceOf<T>,
 		},
@@ -823,7 +824,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			from: MultiLocation,
-			to: AccountIdOf<T>,
+			to: MultiLocation,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -843,7 +844,7 @@ pub mod pallet {
 		pub fn transfer_to(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			from: AccountIdOf<T>,
+			from: MultiLocation,
 			to: MultiLocation,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
