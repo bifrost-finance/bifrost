@@ -108,7 +108,7 @@ pub mod pallet {
 			exchange_fee: VstokenConversionExchangeFee<BalanceOf<T>>,
 		},
 		ExchangeRateSet {
-			lease: i8,
+			lease: i32,
 			exchange_rate: VstokenConversionExchangeRate,
 		},
 		PolkadotLeaseSet {
@@ -137,7 +137,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn exchange_rate)]
 	pub type ExchangeRate<T: Config> =
-		StorageMap<_, Twox64Concat, i8, VstokenConversionExchangeRate, ValueQuery>;
+		StorageMap<_, Twox64Concat, i32, VstokenConversionExchangeRate, ValueQuery>;
 
 	/// exchange fee
 	#[pallet::storage]
@@ -167,29 +167,29 @@ pub mod pallet {
 
 			// Calculate lease
 			let ksm_lease = KusamaLease::<T>::get();
-			let mut remaining_due_lease: i8 = match currency_id {
+			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(
 						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
 						Error::<T>::NotSupportTokenType
 					);
-					let mut remaining_due_lease: i8 = expire_lease
+					let mut remaining_due_lease: i32 = expire_lease
 						.checked_sub(ksm_lease)
 						.ok_or(Error::<T>::CalculationOverflow)?
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
-						.checked_add(1i8)
+						.checked_add(1i32)
 						.ok_or(Error::<T>::CalculationOverflow)?;
 					remaining_due_lease
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			ensure!(remaining_due_lease <= 8i8, Error::<T>::NotSupportTokenType);
+			ensure!(remaining_due_lease <= 8i32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			if remaining_due_lease < 0i8 {
-				remaining_due_lease = 0i8
+			if remaining_due_lease < 0i32 {
+				remaining_due_lease = 0i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let exchange_fee = ExchangeFee::<T>::get();
@@ -244,27 +244,27 @@ pub mod pallet {
 
 			// Calculate lease
 			let ksm_lease = KusamaLease::<T>::get();
-			let mut remaining_due_lease: i8 = match currency_id {
+			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(
 						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
 						Error::<T>::NotSupportTokenType
 					);
-					let mut remaining_due_lease: i8 = (expire_lease as i64 - ksm_lease as i64)
+					let mut remaining_due_lease: i32 = (expire_lease as i64 - ksm_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
-						.checked_add(1i8)
+						.checked_add(1i32)
 						.ok_or(Error::<T>::CalculationOverflow)?;
 					remaining_due_lease
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			ensure!(remaining_due_lease <= 8i8, Error::<T>::NotSupportTokenType);
+			ensure!(remaining_due_lease <= 8i32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			if remaining_due_lease < 0i8 {
-				remaining_due_lease = 0i8
+			if remaining_due_lease < 0i32 {
+				remaining_due_lease = 0i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let exchange_fee = ExchangeFee::<T>::get();
@@ -319,24 +319,24 @@ pub mod pallet {
 
 			// Calculate lease
 			let dot_lease = PolkadotLease::<T>::get();
-			let mut remaining_due_lease: i8 = match currency_id {
+			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
-					let mut remaining_due_lease: i8 = (expire_lease as i64 - dot_lease as i64)
+					let mut remaining_due_lease: i32 = (expire_lease as i64 - dot_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
-						.checked_add(1i8)
+						.checked_add(1i32)
 						.ok_or(Error::<T>::CalculationOverflow)?;
 					remaining_due_lease
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			ensure!(remaining_due_lease <= 8i8, Error::<T>::NotSupportTokenType);
+			ensure!(remaining_due_lease <= 8i32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			if remaining_due_lease < 0i8 {
-				remaining_due_lease = 0i8
+			if remaining_due_lease < 0i32 {
+				remaining_due_lease = 0i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let exchange_fee = ExchangeFee::<T>::get();
@@ -391,24 +391,24 @@ pub mod pallet {
 
 			// Calculate lease
 			let dot_lease = PolkadotLease::<T>::get();
-			let mut remaining_due_lease: i8 = match currency_id {
+			let mut remaining_due_lease: i32 = match currency_id {
 				CurrencyId::VSBond(symbol, _, _, expire_lease) => {
 					ensure!(symbol == TokenSymbol::DOT, Error::<T>::NotSupportTokenType);
-					let mut remaining_due_lease: i8 = (expire_lease as i64 - dot_lease as i64)
+					let mut remaining_due_lease: i32 = (expire_lease as i64 - dot_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
-						.checked_add(1i8)
+						.checked_add(1i32)
 						.ok_or(Error::<T>::CalculationOverflow)?;
 					remaining_due_lease
 				},
 				_ => return Err(Error::<T>::NotSupportTokenType.into()),
 			};
-			ensure!(remaining_due_lease <= 8i8, Error::<T>::NotSupportTokenType);
+			ensure!(remaining_due_lease <= 8i32, Error::<T>::NotSupportTokenType);
 
 			// Get exchange rate, exchange fee
-			if remaining_due_lease <= 0i8 {
-				remaining_due_lease = 0i8
+			if remaining_due_lease <= 0i32 {
+				remaining_due_lease = 0i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
 			let exchange_fee = ExchangeFee::<T>::get();
@@ -461,7 +461,7 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_exchange_rate(
 			origin: OriginFor<T>,
-			lease: i8,
+			lease: i32,
 			exchange_rate: VstokenConversionExchangeRate,
 		) -> DispatchResult {
 			T::ControlOrigin::ensure_origin(origin)?;
