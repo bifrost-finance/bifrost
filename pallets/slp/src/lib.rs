@@ -1693,7 +1693,10 @@ pub mod pallet {
 
 			// Deal with DelegatorLedgerXcmUpdateQueue storage
 			for query_id in DelegatorLedgerXcmUpdateQueue::<T>::iter_keys() {
-				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
+				if counter >= T::MaxTypeEntryPerBlock::get() {
+					break;
+				}
+
 				let updated = Self::get_ledger_update_agent_then_process(query_id, false)?;
 				if updated {
 					counter = counter.saturating_add(1);
@@ -1702,7 +1705,9 @@ pub mod pallet {
 
 			// Deal with ValidatorsByDelegator storage
 			for query_id in ValidatorsByDelegatorXcmUpdateQueue::<T>::iter_keys() {
-				ensure!(counter <= T::MaxTypeEntryPerBlock::get(), Error::<T>::GreaterThanMaximum);
+				if counter >= T::MaxTypeEntryPerBlock::get() {
+					break;
+				}
 				let updated =
 					Self::get_validators_by_delegator_update_agent_then_process(query_id, false)?;
 
