@@ -20,10 +20,11 @@
 
 pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
-use frame_support::{dispatch::result::Result, pallet_prelude::*, transactional, weights::Weight};
+use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
 	ensure_signed,
 	pallet_prelude::{BlockNumberFor, OriginFor},
+	RawOrigin,
 };
 use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
@@ -63,6 +64,8 @@ pub mod weights;
 mod benchmarking;
 
 pub use pallet::*;
+
+pub type Result<T, E> = core::result::Result<T, E>;
 
 pub type QueryId = u64;
 pub const TIMEOUT_BLOCKS: u32 = 1000;
@@ -544,8 +547,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let delegator_id = staking_agent.initialize_delegator()?;
@@ -564,8 +566,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.bond(who.clone(), amount)?;
@@ -589,8 +590,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.bond_extra(who.clone(), amount)?;
@@ -615,8 +615,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.unbond(who.clone(), amount)?;
@@ -639,8 +638,7 @@ pub mod pallet {
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.unbond_all(who.clone())?;
@@ -663,8 +661,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.rebond(who.clone(), amount)?;
@@ -688,8 +685,7 @@ pub mod pallet {
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.delegate(who.clone(), targets.clone())?;
@@ -713,8 +709,7 @@ pub mod pallet {
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.undelegate(who.clone(), targets.clone())?;
@@ -738,8 +733,7 @@ pub mod pallet {
 			targets: Vec<MultiLocation>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.redelegate(who.clone(), targets.clone())?;
@@ -764,8 +758,7 @@ pub mod pallet {
 			when: Option<TimeUnit>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			staking_agent.payout(who, validator.clone(), when.clone())?;
@@ -784,8 +777,7 @@ pub mod pallet {
 			when: Option<TimeUnit>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.liquidize(who.clone(), when.clone())?;
@@ -808,8 +800,7 @@ pub mod pallet {
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.chill(who.clone())?;
@@ -828,8 +819,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			staking_agent.transfer_back(from.clone(), to.clone(), amount)?;
@@ -849,8 +839,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			staking_agent.transfer_to(from.clone(), to.clone(), amount)?;
@@ -868,8 +857,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the amount is valid.
 			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
@@ -888,8 +876,7 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the amount is valid.
 			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
@@ -908,8 +895,7 @@ pub mod pallet {
 			time_unit: TimeUnit,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let old = T::VtokenMinting::get_ongoing_time_unit(currency_id).unwrap_or_default();
 			T::VtokenMinting::update_ongoing_time_unit(currency_id, time_unit.clone())?;
@@ -927,8 +913,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Get entrance_account and exit_account, as well as their currency balances.
 			let (entrance_account, exit_account) =
@@ -1005,8 +990,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1026,8 +1010,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1047,8 +1030,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1068,8 +1050,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1088,8 +1069,7 @@ pub mod pallet {
 			dest: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Get the  fee source account and reserve amount from the FeeSources<T> storage.
 			let (source_location, reserved_fee) =
@@ -1134,8 +1114,7 @@ pub mod pallet {
 			value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1249,8 +1228,7 @@ pub mod pallet {
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
 			delegator_manager.add_delegator(index, &who)?;
@@ -1272,8 +1250,7 @@ pub mod pallet {
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
 			delegator_manager.remove_delegator(&who)?;
@@ -1291,8 +1268,7 @@ pub mod pallet {
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
 			validator_manager.add_validator(&who)?;
@@ -1310,8 +1286,7 @@ pub mod pallet {
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
-			let authorized = Self::ensure_authorized(origin, currency_id);
-			ensure!(authorized, Error::<T>::NotAuthorized);
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
 			validator_manager.remove_validator(&who)?;
@@ -1515,18 +1490,19 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 		/// Ensure privileged origin
-		fn ensure_authorized(origin: OriginFor<T>, currency_id: CurrencyId) -> bool {
-			let operator = ensure_signed(origin.clone()).ok();
-			let privileged = OperateOrigins::<T>::get(currency_id);
-
-			// It is from the privileged group.
-			let cond0 = operator.is_some();
-			let cond1 = operator == privileged;
-
-			// It is from ControlOrigin.
-			let cond2 = T::ControlOrigin::ensure_origin(origin).is_ok();
-
-			(cond0 & cond1) || cond2
+		fn ensure_authorized(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+		) -> Result<AccountIdOf<T>, Error<T>> {
+			match origin.clone().into() {
+				Ok(RawOrigin::Signed(ref signer))
+					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
+					Ok(signer.clone()),
+				Ok(RawOrigin::Signed(signer)) => T::ControlOrigin::ensure_origin(origin)
+					.map(|_| signer)
+					.map_err(|_| Error::<T>::NotAuthorized),
+				_ => Err(Error::<T>::NotAuthorized),
+			}
 		}
 
 		/// Convert native multiLocation to account.
