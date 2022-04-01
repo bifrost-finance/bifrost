@@ -45,12 +45,16 @@ fn vsksm_convert_to_vsbond() {
 			vsdot_convert_to_vsbond: EXCHANGE_RATE_PERCENTAGE,
 		};
 		assert_ok!(VstokenConversion::set_kusama_lease(Origin::signed(ALICE), 1));
-		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
-		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		assert_noop!(
 			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 1000, 1),
 			Error::<Runtime>::NotEnoughBalance
 		);
+		assert_noop!(
+			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
+			Error::<Runtime>::CalculationOverflow
+		);
+		assert_ok!(VstokenConversion::set_exchange_rate(Origin::signed(ALICE), 8, EXCHANGE_RATE));
+		assert_eq!(VstokenConversion::exchange_rate(8), EXCHANGE_RATE);
 		assert_noop!(
 			VstokenConversion::vsksm_convert_to_vsbond(Some(BOB).into(), vsBond, 100, 1),
 			orml_tokens::Error::<Runtime>::BalanceTooLow

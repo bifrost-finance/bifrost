@@ -41,6 +41,7 @@ use node_primitives::{CurrencyId, TokenSymbol};
 use orml_traits::MultiCurrency;
 pub use pallet::*;
 pub use primitives::{VstokenConversionExchangeFee, VstokenConversionExchangeRate};
+use sp_arithmetic::per_things::Percent;
 pub use weights::WeightInfo;
 
 #[allow(type_alias_bounds)]
@@ -265,6 +266,11 @@ pub mod pallet {
 				remaining_due_lease = 0i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
+			ensure!(
+				exchange_rate.vsksm_convert_to_vsbond != Percent::from_percent(0),
+				Error::<T>::CalculationOverflow
+			);
+
 			let exchange_fee = ExchangeFee::<T>::get();
 			let vsksm_balance = vsksm_amount
 				.checked_sub(&exchange_fee.vsksm_exchange_fee)
@@ -410,6 +416,11 @@ pub mod pallet {
 				remaining_due_lease = 0i32
 			}
 			let exchange_rate = ExchangeRate::<T>::get(remaining_due_lease);
+			ensure!(
+				exchange_rate.vsdot_convert_to_vsbond != Percent::from_percent(0),
+				Error::<T>::CalculationOverflow
+			);
+
 			let exchange_fee = ExchangeFee::<T>::get();
 			let vsdot_balance = vsdot_amount
 				.checked_sub(&exchange_fee.vsdot_exchange_fee)
