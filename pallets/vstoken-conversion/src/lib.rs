@@ -173,9 +173,7 @@ pub mod pallet {
 						symbol == TokenSymbol::KSM || symbol == TokenSymbol::BNC,
 						Error::<T>::NotSupportTokenType
 					);
-					let mut remaining_due_lease: i32 = expire_lease
-						.checked_sub(ksm_lease)
-						.ok_or(Error::<T>::CalculationOverflow)?
+					let mut remaining_due_lease: i32 = (expire_lease as i64 - ksm_lease as i64)
 						.try_into()
 						.map_err(|_| Error::<T>::CalculationOverflow)?;
 					remaining_due_lease = remaining_due_lease
