@@ -1443,6 +1443,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
+			currency_id: CurrencyId,
 			query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
@@ -1454,6 +1455,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::fail_delegator_ledger_query_response())]
 		pub fn fail_delegator_ledger_query_response(
 			origin: OriginFor<T>,
+			currency_id: CurrencyId,
 			query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
@@ -1466,6 +1468,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
+			currency_id: CurrencyId,
 			query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
@@ -1478,6 +1481,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::fail_validators_by_delegator_query_response())]
 		pub fn fail_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
+			currency_id: CurrencyId,
 			query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
@@ -1493,13 +1497,14 @@ pub mod pallet {
 		fn ensure_authorized(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-		) -> Result<AccountIdOf<T>, Error<T>> {
+		) -> Result<(), Error<T>> {
 			match origin.clone().into() {
+				Ok(RawOrigin::Root) => Ok(()),
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
-					Ok(signer.clone()),
+					Ok(()),
 				Ok(RawOrigin::Signed(signer)) => T::ControlOrigin::ensure_origin(origin)
-					.map(|_| signer)
+					.map(|_| ())
 					.map_err(|_| Error::<T>::NotAuthorized),
 				_ => Err(Error::<T>::NotAuthorized),
 			}
