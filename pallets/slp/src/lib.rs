@@ -1445,8 +1445,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			query_id: QueryId,
 		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
+			// Ensure origin
+			Self::ensure_authorized(origin, currency_id)?;
 			Self::get_ledger_update_agent_then_process(query_id, true)?;
 			Ok(())
 		}
@@ -1456,8 +1456,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			query_id: QueryId,
 		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
+			// Ensure origin
+			Self::ensure_authorized(origin, currency_id)?;
 
 			Self::do_fail_delegator_ledger_query_response(query_id)?;
 			Ok(())
@@ -1468,8 +1468,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			query_id: QueryId,
 		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
+			// Ensure origin
+			Self::ensure_authorized(origin, currency_id)?;
 			Self::get_validators_by_delegator_update_agent_then_process(query_id, true)?;
 
 			Ok(())
@@ -1480,8 +1480,8 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			query_id: QueryId,
 		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
+			// Ensure origin
+			Self::ensure_authorized(origin, currency_id)?;
 
 			Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			Ok(())
