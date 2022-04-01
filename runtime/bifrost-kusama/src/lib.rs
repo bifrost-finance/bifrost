@@ -1669,7 +1669,13 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 	}
 
 	fn remove_query_record(query_id: QueryId) -> bool {
-		PolkadotXcm::take_response(query_id).is_some()
+		// Temporarily banned. Querries from pallet_xcm cannot be removed unless it is in ready
+		// status. And we are not allowed to mannually change query status.
+		// So in the manual mode, it is not possible to remove the query at all.
+		// PolkadotXcm::take_response(query_id).is_some()
+
+		PolkadotXcm::take_response(query_id);
+		true
 	}
 }
 
