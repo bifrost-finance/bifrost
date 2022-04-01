@@ -269,7 +269,8 @@ pub mod pallet {
 			let vsksm_balance = vsksm_amount
 				.checked_sub(&exchange_fee.vsksm_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
-			let vsbond_balance = exchange_rate.vsksm_convert_to_vsbond * vsksm_balance;
+			let vsbond_balance =
+				exchange_rate.vsksm_convert_to_vsbond.saturating_reciprocal_mul(vsksm_balance);
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
 
 			T::MultiCurrency::transfer(
@@ -413,7 +414,8 @@ pub mod pallet {
 			let vsdot_balance = vsdot_amount
 				.checked_sub(&exchange_fee.vsdot_exchange_fee)
 				.ok_or(Error::<T>::CalculationOverflow)?;
-			let vsbond_balance = exchange_rate.vsdot_convert_to_vsbond * vsdot_balance;
+			let vsbond_balance =
+				exchange_rate.vsdot_convert_to_vsbond.saturating_reciprocal_mul(vsdot_balance);
 			ensure!(vsbond_balance >= minimum_vsbond, Error::<T>::NotEnoughBalance);
 
 			T::MultiCurrency::transfer(
