@@ -603,6 +603,7 @@ dependencies = [
  "bifrost-token-issuer",
  "bifrost-vesting",
  "bifrost-vsbond-auction",
+ "bifrost-vstoken-conversion",
  "cumulus-pallet-aura-ext",
  "cumulus-pallet-dmp-queue",
  "cumulus-pallet-parachain-system",
@@ -1002,6 +1003,28 @@ dependencies = [
  "node-primitives",
  "orml-tokens",
  "orml-traits",
+ "parity-scale-codec 2.3.1",
+ "scale-info 1.0.0",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "bifrost-vstoken-conversion"
+version = "0.8.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "hex-literal",
+ "node-primitives",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "pallet-balances",
  "parity-scale-codec 2.3.1",
  "scale-info 1.0.0",
  "sp-arithmetic",
@@ -5199,7 +5222,7 @@ dependencies = [
 
 [[package]]
 name = "node-cli"
-version = "0.9.30"
+version = "0.9.32"
 dependencies = [
  "clap",
  "cumulus-client-cli",
