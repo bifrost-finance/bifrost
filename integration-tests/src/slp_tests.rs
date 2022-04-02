@@ -1080,3 +1080,117 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
 	});
 }
+
+#[test]
+fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
+	// bond 1 ksm for sub-account index 0
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Bond_extra 1 ksm for sub-account index 0
+		assert_ok!(Slp::bond_extra(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			dollar(RelayCurrencyId::get()),
+		));
+
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: dollar(RelayCurrencyId::get()),
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the existence of query in the response update queue storage.
+		assert_eq!(
+			Slp::get_delegator_ledger_update_entry(0),
+			Some((
+				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+					currency_id: RelayCurrencyId::get(),
+					delegator_id: subaccount_0_location.clone(),
+					if_bond: true,
+					if_unlock: false,
+					if_rebond: false,
+					amount: dollar(RelayCurrencyId::get()),
+					unlock_time: None
+				}),
+				1001
+			))
+		);
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Staking::ledger(&subaccount_0),
+			Some(StakingLedger {
+				stash: subaccount_0.clone(),
+				total: 2 * dollar(RelayCurrencyId::get()),
+				active: 2 * dollar(RelayCurrencyId::get()),
+				unlocking: vec![],
+				claimed_rewards: vec![],
+			})
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Call confirm_delegator_ledger_query_response.
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			0
+		));
+
+		// Check the ledger update.
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: 2 * dollar(RelayCurrencyId::get()),
+				active: 2 * dollar(RelayCurrencyId::get()),
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the inexistence of query in the response update queue storage.
+		assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
+	});
+}
