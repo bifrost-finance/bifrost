@@ -22,7 +22,6 @@ pub use agents::KusamaAgent;
 use cumulus_primitives_core::ParaId;
 use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
-	ensure_signed,
 	pallet_prelude::{BlockNumberFor, OriginFor},
 	RawOrigin,
 };
@@ -198,6 +197,7 @@ pub mod pallet {
 		LedgerResponseCheckError,
 		InvalidHostingFee,
 		InvalidAccount,
+		IncreaseTokenPoolError,
 	}
 
 	#[pallet::event]
@@ -856,8 +856,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			// Ensure the amount is valid.
 			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
@@ -875,8 +875,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			amount: BalanceOf<T>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			// Ensure the amount is valid.
 			ensure!(amount > Zero::zero(), Error::<T>::AmountZero);
@@ -989,8 +989,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1009,8 +1009,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1029,8 +1029,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1049,8 +1049,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			value: BalanceOf<T>,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
@@ -1125,9 +1125,12 @@ pub mod pallet {
 				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
 			let fee_to_charge = fee_percent.mul_floor(value);
 
-			// Tune the vtoken exchange rate.
-			let amount_to_tune = value.checked_sub(&fee_to_charge).ok_or(Error::<T>::UnderFlow)?;
-			T::VtokenMinting::increase_token_pool(currency_id, amount_to_tune)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.tune_vtoken_exchange_rate(
+				value,
+				// Dummy value for vtoken amount
+				Zero::zero(),
+			)?;
 
 			let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
 			fee_manager_agent.charge_hosting_fee(
@@ -1142,10 +1145,7 @@ pub mod pallet {
 				currency_id,
 				amount: fee_to_charge,
 			});
-			Pallet::<T>::deposit_event(Event::PoolTokenIncreased {
-				currency_id,
-				amount: amount_to_tune,
-			});
+			Pallet::<T>::deposit_event(Event::PoolTokenIncreased { currency_id, amount: value });
 			Ok(())
 		}
 
@@ -1228,8 +1228,8 @@ pub mod pallet {
 			index: u16,
 			who: MultiLocation,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
 			delegator_manager.add_delegator(index, &who)?;
@@ -1250,8 +1250,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
 			delegator_manager.remove_delegator(&who)?;
@@ -1268,8 +1268,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
 			validator_manager.add_validator(&who)?;
@@ -1286,8 +1286,8 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			who: MultiLocation,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
 			validator_manager.remove_validator(&who)?;

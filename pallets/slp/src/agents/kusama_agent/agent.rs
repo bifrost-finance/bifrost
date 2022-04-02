@@ -652,6 +652,20 @@ impl<T: Config>
 
 		Ok(())
 	}
+
+	fn tune_vtoken_exchange_rate(
+		&self,
+		token_amount: BalanceOf<T>,
+		_vtoken_amount: BalanceOf<T>,
+	) -> Result<(), Error<T>> {
+		ensure!(token_amount >= Zero::zero(), Error::<T>::AmountZero);
+
+		// Tune the vtoken exchange rate.
+		T::VtokenMinting::increase_token_pool(KSM, token_amount)
+			.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+
+		Ok(())
+	}
 }
 
 /// DelegatorManager implementation for Kusama
@@ -1347,10 +1361,9 @@ impl<T: Config> KusamaAgent<T> {
 			},
 		]);
 
-		let now = frame_system::Pallet::<T>::block_number();
-		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
-
 		//【For xcm v3】
+		// let now = frame_system::Pallet::<T>::block_number();
+		// let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		// let query_id = T::SubstrateResponseManager::create_query_record(dest.clone(), timeout);
 		// // Report the Error message of the xcm.
 		// // from the responder's point of view to get Here's MultiLocation.
