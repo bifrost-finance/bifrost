@@ -1125,19 +1125,22 @@ pub mod pallet {
 				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
 			let fee_to_charge = fee_percent.mul_floor(value);
 
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.tune_vtoken_exchange_rate(
-				value,
-				// Dummy value for vtoken amount
-				Zero::zero(),
-			)?;
-
+			// Should first charge fee, and then tune exchange rate. Otherwise, the rate will be
+			// wrong.
 			let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
 			fee_manager_agent.charge_hosting_fee(
 				fee_to_charge,
 				// Dummy value for 【from】account
 				beneficiary.clone(),
 				beneficiary.clone(),
+			)?;
+
+			// Tune the new exchange rate.
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.tune_vtoken_exchange_rate(
+				value,
+				// Dummy value for vtoken amount
+				Zero::zero(),
 			)?;
 
 			// Deposit event.

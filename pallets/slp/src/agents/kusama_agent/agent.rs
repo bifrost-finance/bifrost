@@ -787,7 +787,7 @@ impl<T: Config> StakingFeeManager<MultiLocation, BalanceOf<T>> for KusamaAgent<T
 		to: MultiLocation,
 	) -> DispatchResult {
 		// Get current VKSM/KSM exchange rate.
-		let vksm_issuance = T::MultiCurrency::total_issuance(KSM);
+		let vksm_issuance = T::MultiCurrency::total_issuance(CurrencyId::VToken(TokenSymbol::KSM));
 		let ksm_pool = T::VtokenMinting::get_token_pool(KSM);
 		// Calculate how much vksm the beneficiary account can get.
 		let amount: u128 = amount.unique_saturated_into();
