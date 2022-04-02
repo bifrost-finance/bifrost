@@ -1103,7 +1103,7 @@ impl<T: Config> KusamaAgent<T> {
 				KSM,
 				delegator_id.clone(),
 				|old_ledger| -> Result<(), Error<T>> {
-					if let Some(Ledger::Substrate(mut old_sub_ledger)) = old_ledger.clone() {
+					if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
 						// If this an unlocking xcm message update record
 						// Decrease the active amount and add an unlocking record.
 						if if_bond {
@@ -1202,6 +1202,7 @@ impl<T: Config> KusamaAgent<T> {
 								.ok_or(Error::<T>::OverFlow)?;
 						}
 					}
+
 					Ok(())
 				},
 			)?;

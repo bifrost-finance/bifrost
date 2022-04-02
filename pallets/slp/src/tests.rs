@@ -493,3 +493,29 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		assert_eq!(treasury_vksm, 20);
 	});
 }
+
+#[test]
+fn set_hosting_fees_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		let treasury_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
+				.into();
+
+		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
+		let pct = Percent::from_percent(20);
+		let treasury_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+		};
+
+		assert_ok!(Slp::set_hosting_fees(
+			Origin::signed(ALICE),
+			KSM,
+			Some((pct, treasury_location.clone()))
+		));
+
+		let (fee, location) = Slp::get_hosting_fee(KSM).unwrap();
+		assert_eq!(fee, pct);
+		assert_eq!(location, treasury_location);
+	});
+}
