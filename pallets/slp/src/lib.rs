@@ -1106,6 +1106,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
 		/// Charge staking host fee and tune vtoken/token exchange rate.
 		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
@@ -1297,6 +1298,7 @@ pub mod pallet {
 		}
 
 		/// Update storage ValidatorsByDelegator<T>.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::set_validators_by_delegator())]
 		pub fn set_validators_by_delegator(
 			origin: OriginFor<T>,
@@ -1503,7 +1505,7 @@ pub mod pallet {
 				Ok(RawOrigin::Signed(ref signer))
 					if Some(signer) == <OperateOrigins<T>>::get(currency_id).as_ref() =>
 					Ok(()),
-				Ok(RawOrigin::Signed(signer)) => T::ControlOrigin::ensure_origin(origin)
+				Ok(RawOrigin::Signed(_)) => T::ControlOrigin::ensure_origin(origin)
 					.map(|_| ())
 					.map_err(|_| Error::<T>::NotAuthorized),
 				_ => Err(Error::<T>::NotAuthorized),

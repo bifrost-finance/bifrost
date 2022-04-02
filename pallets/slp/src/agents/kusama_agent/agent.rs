@@ -82,6 +82,7 @@ impl<T: Config>
 		Error<T>,
 	> for KusamaAgent<T>
 {
+	#[transactional]
 	fn initialize_delegator(&self) -> Result<MultiLocation, Error<T>> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(KSM);
 		DelegatorNextIndex::<T>::mutate(KSM, |id| -> Result<(), Error<T>> {
@@ -101,6 +102,7 @@ impl<T: Config>
 	}
 
 	/// First time bonding some amount to a delegator.
+	#[transactional]
 	fn bond(&self, who: MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(DelegatorLedgers::<T>::get(KSM, who.clone()).is_none(), Error::<T>::AlreadyBonded);
@@ -127,11 +129,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
-			XcmOperation::Bond,
-			call,
-			who.clone(),
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Bond, call, who.clone())?;
 
 		// Create a new delegator ledger
 		// The real bonded amount will be updated by services once the xcm transaction succeeds.
@@ -150,10 +149,14 @@ impl<T: Config>
 			who, true, false, false, amount, query_id, timeout,
 		)?;
 
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
 		Ok(query_id)
 	}
 
 	/// Bond extra amount to a delegator.
+	#[transactional]
 	fn bond_extra(&self, who: MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -181,7 +184,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::BondExtra,
 			call,
 			who.clone(),
@@ -192,10 +195,14 @@ impl<T: Config>
 			who, true, false, false, amount, query_id, timeout,
 		)?;
 
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
 		Ok(query_id)
 	}
 
 	/// Decrease bonding amount to a delegator.
+	#[transactional]
 	fn unbond(&self, who: MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -223,18 +230,30 @@ impl<T: Config>
 			Error::<T>::ExceedUnlockingRecords
 		);
 
-		// Send unbond xcm message
-		let (query_id, timeout) = Self::do_unbond(&who, amount)?;
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			XcmOperation::Unbond,
+			call,
+			who.clone(),
+		)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who, false, true, false, amount, query_id, timeout,
 		)?;
 
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
 		Ok(query_id)
 	}
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
+	#[transactional]
 	fn unbond_all(&self, who: MultiLocation) -> Result<QueryId, Error<T>> {
 		// Get the active amount of a delegator.
 		let ledger =
@@ -246,18 +265,30 @@ impl<T: Config>
 			Err(Error::<T>::Unexpected)?
 		};
 
-		// Send unbond xcm message
-		let (query_id, timeout) = Self::do_unbond(&who, amount)?;
+		// Construct xcm message.
+		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
+
+		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
+		// send it out.
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
+			XcmOperation::Unbond,
+			call,
+			who.clone(),
+		)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
 			who, false, true, false, amount, query_id, timeout,
 		)?;
 
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
 		Ok(query_id)
 	}
 
 	/// Cancel some unbonding amount.
+	#[transactional]
 	fn rebond(&self, who: MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger =
@@ -286,7 +317,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::Rebond,
 			call,
 			who.clone(),
@@ -297,10 +328,14 @@ impl<T: Config>
 			who, false, false, true, amount, query_id, timeout,
 		)?;
 
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
 		Ok(query_id)
 	}
 
 	/// Delegate to some validators. For Kusama, it equals function Nominate.
+	#[transactional]
 	fn delegate(
 		&self,
 		who: MultiLocation,
@@ -334,7 +369,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::Delegate,
 			call,
 			who.clone(),
@@ -347,6 +382,9 @@ impl<T: Config>
 			query_id,
 			timeout,
 		)?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -394,7 +432,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::Delegate,
 			call,
 			who.clone(),
@@ -402,6 +440,9 @@ impl<T: Config>
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		Self::insert_validators_by_delegator_update_entry(who, new_set, query_id, timeout)?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -450,6 +491,7 @@ impl<T: Config>
 	}
 
 	/// Withdraw the due payout into free balance.
+	#[transactional]
 	fn liquidize(&self, who: MultiLocation, when: Option<TimeUnit>) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		DelegatorsMultilocation2Index::<T>::get(KSM, who.clone())
@@ -467,7 +509,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::Liquidize,
 			call,
 			who.clone(),
@@ -485,12 +527,16 @@ impl<T: Config>
 			timeout,
 		)?;
 
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
+
 		Ok(query_id)
 	}
 
 	/// Chill self. Cancel the identity of delegator in the Relay chain side.
 	/// Unbonding all the active amount should be done before or after chill,
 	/// so that we can collect back all the bonded amount.
+	#[transactional]
 	fn chill(&self, who: MultiLocation) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		DelegatorsMultilocation2Index::<T>::get(KSM, who.clone())
@@ -501,7 +547,7 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
+		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
 			XcmOperation::Chill,
 			call,
 			who.clone(),
@@ -521,6 +567,9 @@ impl<T: Config>
 		Self::insert_delegator_ledger_update_entry(
 			who, false, true, false, amount, query_id, timeout,
 		)?;
+
+		// Send out the xcm message.
+		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
 		Ok(query_id)
 	}
@@ -657,6 +706,7 @@ impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, B
 /// ValidatorManager implementation for Kusama
 impl<T: Config> ValidatorManager<MultiLocation> for KusamaAgent<T> {
 	/// Add a new serving delegator for a particular currency.
+	#[transactional]
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
 		let multi_hash = Pallet::<T>::get_hash(&who);
 		// Check if the validator already exists.
@@ -886,6 +936,7 @@ impl<T: Config>
 
 		Ok(should_update)
 	}
+
 	fn check_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
@@ -912,6 +963,7 @@ impl<T: Config>
 		Ok(should_update)
 	}
 
+	#[transactional]
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
 		// delete pallet_xcm query
 		T::SubstrateResponseManager::remove_query_record(query_id);
@@ -927,6 +979,7 @@ impl<T: Config>
 		Ok(())
 	}
 
+	#[transactional]
 	fn fail_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
@@ -966,11 +1019,12 @@ impl<T: Config> KusamaAgent<T> {
 		Ok((call_as_subaccount, fee, weight))
 	}
 
-	fn construct_xcm_and_send_as_subaccount_with_query_id(
+	#[transactional]
+	fn construct_xcm_as_subaccount_with_query_id(
 		operation: XcmOperation,
 		call: KusamaCall<T>,
 		who: MultiLocation,
-	) -> Result<(QueryId, BlockNumberFor<T>), Error<T>> {
+	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
 		let (call_as_subaccount, fee, weight) =
 			Self::prepare_send_as_subaccount_call_params(operation, call, who)?;
 
@@ -995,9 +1049,8 @@ impl<T: Config> KusamaAgent<T> {
 		// 	query_id,
 		// 	response_back_location,
 		// );
-		T::XcmRouter::send_xcm(Parent, xcm_message).map_err(|_e| Error::<T>::XcmFailure)?;
 
-		Ok((query_id, timeout))
+		Ok((query_id, timeout, xcm_message))
 	}
 
 	fn construct_xcm_and_send_as_subaccount_without_query_id(
@@ -1016,24 +1069,7 @@ impl<T: Config> KusamaAgent<T> {
 		Ok(())
 	}
 
-	fn do_unbond(
-		who: &MultiLocation,
-		amount: BalanceOf<T>,
-	) -> Result<(QueryId, BlockNumberFor<T>), Error<T>> {
-		// Construct xcm message.
-		let call = KusamaCall::Staking(StakingCall::Unbond(amount));
-
-		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
-		// send it out.
-		let (query_id, timeout) = Self::construct_xcm_and_send_as_subaccount_with_query_id(
-			XcmOperation::Unbond,
-			call,
-			who.clone(),
-		)?;
-
-		Ok((query_id, timeout))
-	}
-
+	#[transactional]
 	fn update_ledger_query_response_storage(
 		query_id: QueryId,
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
@@ -1171,6 +1207,7 @@ impl<T: Config> KusamaAgent<T> {
 		}
 	}
 
+	#[transactional]
 	fn update_validators_by_delegator_query_response_storage(
 		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
