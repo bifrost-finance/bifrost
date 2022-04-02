@@ -59,7 +59,7 @@ pub type CurrencyIdOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<
 type BalanceOf<T: Config> =
 	<<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 
-pub type MintId = u32;
+pub type UnlockId = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -81,7 +81,7 @@ pub mod pallet {
 
 		/// The amount of mint
 		#[pallet::constant]
-		type MaximumMintId: Get<u32>;
+		type MaximumUnlockId: Get<u32>;
 
 		#[pallet::constant]
 		type EntranceAccount: Get<PalletId>;
@@ -102,6 +102,7 @@ pub mod pallet {
 		Minted {
 			token: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
+			vtoken_amount: BalanceOf<T>,
 		},
 		Redeemed {
 			token: CurrencyIdOf<T>,
@@ -109,6 +110,11 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 		},
 		Rebonded {
+			token: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+			vtoken_amount: BalanceOf<T>,
+		},
+		RebondedByUnlockId {
 			token: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
@@ -158,7 +164,7 @@ pub mod pallet {
 		UserUnlockLedgerNotFound,
 		TimeUnitUnlockLedgerNotFound,
 		Unexpected,
-		ExceedMaximumMintId,
+		ExceedMaximumUnlockId,
 		TooManyRedeems,
 	}
 
@@ -201,7 +207,7 @@ pub mod pallet {
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
 		Blake2_128Concat,
-		MintId,
+		UnlockId,
 		(T::AccountId, BalanceOf<T>, TimeUnit),
 		OptionQuery,
 	>;
@@ -214,7 +220,7 @@ pub mod pallet {
 		AccountIdOf<T>,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
-		(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>),
+		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockId>),
 		OptionQuery,
 	>;
 
@@ -226,7 +232,7 @@ pub mod pallet {
 		TimeUnit,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
-		(BalanceOf<T>, BoundedVec<MintId, T::MaximumMintId>, CurrencyIdOf<T>),
+		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockId>, CurrencyIdOf<T>),
 		OptionQuery,
 	>;
 
@@ -341,7 +347,7 @@ pub mod pallet {
 					if ongoing_era + unlock_duration_era > min_era {
 						let time_unit_ledger_list: Vec<(
 							BalanceOf<T>,
-							BoundedVec<MintId, T::MaximumMintId>,
+							BoundedVec<UnlockId, T::MaximumUnlockId>,
 							CurrencyIdOf<T>,
 						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
 						if time_unit_ledger_list.len() == 0 {
@@ -378,8 +384,9 @@ pub mod pallet {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
-			Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)
-				.map_err(|e| e)?;
+			let vtoken_amount =
+				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)
+					.map_err(|e| e)?;
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
 				token_id,
@@ -388,7 +395,7 @@ pub mod pallet {
 				token_amount,
 			)?;
 
-			Self::deposit_event(Event::Minted { token: token_id, token_amount });
+			Self::deposit_event(Event::Minted { token: token_id, token_amount, vtoken_amount });
 			Ok(())
 		}
 
@@ -461,7 +468,7 @@ pub mod pallet {
 						)?;
 					} else {
 						let mut ledger_list_origin =
-							BoundedVec::<MintId, T::MaximumMintId>::default();
+							BoundedVec::<UnlockId, T::MaximumUnlockId>::default();
 						ledger_list_origin
 							.try_push(next_id)
 							.map_err(|_| Error::<T>::TooManyRedeems)?;
@@ -492,7 +499,7 @@ pub mod pallet {
 						)?;
 					} else {
 						let mut ledger_list_origin =
-							BoundedVec::<MintId, T::MaximumMintId>::default();
+							BoundedVec::<UnlockId, T::MaximumUnlockId>::default();
 						ledger_list_origin
 							.try_push(next_id)
 							.map_err(|_| Error::<T>::TooManyRedeems)?;
@@ -533,9 +540,9 @@ pub mod pallet {
 			{
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
-				let ledger_list_rev: Vec<MintId> = ledger_list.into_iter().rev().collect();
-				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_rev)
-					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
+				let ledger_list_rev: Vec<UnlockId> = ledger_list.into_iter().rev().collect();
+				ledger_list = BoundedVec::<UnlockId, T::MaximumUnlockId>::try_from(ledger_list_rev)
+					.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
 				ledger_list.retain(|index| {
 					if let Some((_, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
@@ -615,10 +622,10 @@ pub mod pallet {
 						return true;
 					}
 				});
-				let ledger_list_tmp: Vec<MintId> = ledger_list.into_iter().rev().collect();
+				let ledger_list_tmp: Vec<UnlockId> = ledger_list.into_iter().rev().collect();
 
-				ledger_list = BoundedVec::<MintId, T::MaximumMintId>::try_from(ledger_list_tmp)
-					.map_err(|_| Error::<T>::ExceedMaximumMintId)?;
+				ledger_list = BoundedVec::<UnlockId, T::MaximumUnlockId>::try_from(ledger_list_tmp)
+					.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
 
 				UserUnlockLedger::<T>::mutate_exists(
 					&exchanger,
@@ -661,7 +668,6 @@ pub mod pallet {
 				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
 			})?;
-			// Self::deposit_event(Event::Minted { token: token_id, token_amount });
 
 			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
 				if let Some(value_info) = value {
@@ -672,9 +678,96 @@ pub mod pallet {
 				}
 				Ok(())
 			})?;
-			// TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
-			Self::deposit_event(Event::Rebonded { token: token_id, token_amount, vtoken_amount });
 
+			Self::deposit_event(Event::Rebonded { token: token_id, token_amount, vtoken_amount });
+			Ok(())
+		}
+
+		#[transactional]
+		#[pallet::weight(10000)]
+		pub fn rebond_by_unlock_id(
+			origin: OriginFor<T>,
+			token_id: CurrencyIdOf<T>,
+			unlock_id: UnlockId,
+		) -> DispatchResult {
+			let exchanger = ensure_signed(origin)?;
+
+			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
+			let _token_amount_to_rebond =
+				Self::token_to_rebond(token_id).ok_or(Error::<T>::InvalidRebondToken)?;
+
+			let unlock_amount = match Self::token_unlock_ledger(token_id, unlock_id) {
+				Some((who, unlock_amount, time_unit)) => {
+					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+						*pool = pool.checked_add(&unlock_amount).ok_or(Error::<T>::Unexpected)?;
+						Ok(())
+					})?;
+
+					TimeUnitUnlockLedger::<T>::mutate_exists(
+						&time_unit,
+						&token_id,
+						|value| -> Result<(), Error<T>> {
+							if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+								if total_locked_origin == &unlock_amount {
+									*value = None;
+									return Ok(());
+								}
+								*total_locked_origin = total_locked_origin
+									.checked_sub(&unlock_amount)
+									.ok_or(Error::<T>::Unexpected)?;
+								ledger_list_origin.retain(|&x| x != unlock_id);
+							} else {
+								return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
+							}
+							return Ok(());
+						},
+					)?;
+
+					UserUnlockLedger::<T>::mutate_exists(
+						&who,
+						&token_id,
+						|value| -> Result<(), Error<T>> {
+							if let Some((total_locked_origin, ledger_list_origin)) = value {
+								if total_locked_origin == &unlock_amount {
+									*value = None;
+									return Ok(());
+								}
+								*total_locked_origin = total_locked_origin
+									.checked_sub(&unlock_amount)
+									.ok_or(Error::<T>::Unexpected)?;
+								ledger_list_origin.retain(|&x| x != unlock_id);
+							} else {
+								return Err(Error::<T>::UserUnlockLedgerNotFound.into());
+							}
+							return Ok(());
+						},
+					)?;
+
+					TokenUnlockLedger::<T>::remove(&token_id, &unlock_id);
+					unlock_amount
+				},
+				_ => return Err(Error::<T>::TokenUnlockLedgerNotFound.into()),
+			};
+
+			let vtoken_amount =
+				Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, unlock_amount)
+					.map_err(|e| e)?;
+
+			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
+				if let Some(value_info) = value {
+					*value_info =
+						value_info.checked_add(&unlock_amount).ok_or(Error::<T>::Unexpected)?;
+				} else {
+					return Err(Error::<T>::InvalidRebondToken.into());
+				}
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::RebondedByUnlockId {
+				token: token_id,
+				token_amount: unlock_amount,
+				vtoken_amount,
+			});
 			Ok(())
 		}
 
@@ -807,7 +900,7 @@ pub mod pallet {
 			vtoken_id: CurrencyId,
 			token_id: CurrencyId,
 			token_amount: BalanceOf<T>,
-		) -> Result<(), DispatchError> {
+		) -> Result<BalanceOf<T>, DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
 			let mut vtoken_amount = token_amount;
@@ -828,7 +921,7 @@ pub mod pallet {
 				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
 			})?;
-			Ok(())
+			Ok(vtoken_amount)
 		}
 	}
 }
