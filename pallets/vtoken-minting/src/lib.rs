@@ -105,11 +105,13 @@ pub mod pallet {
 		},
 		Redeemed {
 			token: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
 		},
 		Rebonded {
 			token: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
+			vtoken_amount: BalanceOf<T>,
 		},
 		UnlockDurationSet {
 			token: CurrencyIdOf<T>,
@@ -376,17 +378,8 @@ pub mod pallet {
 			ensure!(token_amount >= MinimumMint::<T>::get(token_id), Error::<T>::BelowMinimumMint);
 
 			let vtoken_id = token_id.to_vtoken().map_err(|_| Error::<T>::NotSupportTokenType)?;
-			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let token_pool_amount = Self::token_pool(token_id);
-			let mut vtoken_amount = token_amount;
-			// If token_pool_amount is 0, skip this conditional statement, the exchange rate is 1
-			if token_pool_amount != BalanceOf::<T>::zero() {
-				vtoken_amount = token_amount
-					.checked_mul(&vtoken_total_issuance.into())
-					.ok_or(Error::<T>::Unexpected)?
-					.checked_div(&token_pool_amount.into())
-					.ok_or(Error::<T>::Unexpected)?;
-			}
+			Self::mint_without_tranfer(&exchanger, vtoken_id, token_id, token_amount)
+				.map_err(|e| e)?;
 			// Transfer the user's token to EntranceAccount.
 			T::MultiCurrency::transfer(
 				token_id,
@@ -394,16 +387,6 @@ pub mod pallet {
 				&T::EntranceAccount::get().into_account(),
 				token_amount,
 			)?;
-			// Issue the corresponding vtoken to the user's account.
-			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
-			TokenPool::<T>::mutate(token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
-				Ok(())
-			});
-			TokenToAdd::<T>::mutate(token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
-				Ok(())
-			});
 
 			Self::deposit_event(Event::Minted { token: token_id, token_amount });
 			Ok(())
@@ -425,6 +408,11 @@ pub mod pallet {
 
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+			let token_amount = vtoken_amount
+				.checked_mul(&token_pool_amount.into())
+				.ok_or(Error::<T>::Unexpected)?
+				.checked_div(&vtoken_total_issuance.into())
+				.ok_or(Error::<T>::Unexpected)?;
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
@@ -439,11 +427,6 @@ pub mod pallet {
 					.map_err(|_| Error::<T>::Unexpected)?;
 
 					T::MultiCurrency::withdraw(vtoken_id, &exchanger, vtoken_amount)?;
-					let token_amount = vtoken_amount
-						.checked_mul(&token_pool_amount.into())
-						.ok_or(Error::<T>::Unexpected)?
-						.checked_div(&vtoken_total_issuance.into())
-						.ok_or(Error::<T>::Unexpected)?;
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool.checked_sub(&token_amount).ok_or(Error::<T>::Unexpected)?;
 						Ok(())
@@ -529,7 +512,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::Redeemed { token: token_id, vtoken_amount });
+			Self::deposit_event(Event::Redeemed { token: token_id, vtoken_amount, token_amount });
 			Ok(())
 		}
 
@@ -678,7 +661,7 @@ pub mod pallet {
 				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
 				Ok(())
 			})?;
-			Self::deposit_event(Event::Minted { token: token_id, token_amount });
+			// Self::deposit_event(Event::Minted { token: token_id, token_amount });
 
 			TokenToRebond::<T>::mutate(&token_id, |value| -> Result<(), Error<T>> {
 				if let Some(value_info) = value {
@@ -690,7 +673,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 			// TokenPool::<T>::mutate(token_id, |pool| pool.saturating_add(token_amount));
-			Self::deposit_event(Event::Rebonded { token: token_id, token_amount });
+			Self::deposit_event(Event::Rebonded { token: token_id, token_amount, vtoken_amount });
 
 			Ok(())
 		}
@@ -817,6 +800,35 @@ pub mod pallet {
 			};
 
 			Ok(result)
+		}
+
+		fn mint_without_tranfer(
+			exchanger: &AccountIdOf<T>,
+			vtoken_id: CurrencyId,
+			token_id: CurrencyId,
+			token_amount: BalanceOf<T>,
+		) -> Result<(), DispatchError> {
+			let token_pool_amount = Self::token_pool(token_id);
+			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
+			let mut vtoken_amount = token_amount;
+			if token_pool_amount != BalanceOf::<T>::zero() {
+				vtoken_amount = token_amount
+					.checked_mul(&vtoken_total_issuance.into())
+					.ok_or(Error::<T>::Unexpected)?
+					.checked_div(&token_pool_amount.into())
+					.ok_or(Error::<T>::Unexpected)?;
+			}
+			// Issue the corresponding vtoken to the user's account.
+			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
+			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			})?;
+			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_add(&token_amount).ok_or(Error::<T>::Unexpected)?;
+				Ok(())
+			})?;
+			Ok(())
 		}
 	}
 }

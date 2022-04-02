@@ -36,6 +36,10 @@ fn mint() {
 		assert_eq!(VtokenMinting::token_pool(KSM), 1000);
 		assert_eq!(VtokenMinting::token_to_add(KSM), 1000);
 		assert_eq!(VtokenMinting::minimum_mint(KSM), 1000);
+		// let vtoken_total_issuance = MultiCurrency::<Runtime>::total_issuance(vKSM);
+		// BalanceOf::<Runtime>::zero()
+		assert_eq!(Tokens::total_issuance(vKSM), 2000);
+
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 1000);
 	});
