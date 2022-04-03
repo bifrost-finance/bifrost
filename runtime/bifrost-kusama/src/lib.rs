@@ -1756,7 +1756,7 @@ pub type ZenlinkLocationToAccountId = (
 );
 
 parameter_types! {
-	pub const MaximumMintId: u32 = 1_000;
+	pub const MaximumUnlockId: u32 = 1_000;
 	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
 	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = hex!["e4da05f08e89bf6c43260d96f26fffcfc7deae5b465da08669a9d008e64c2c63"].into();
@@ -1766,7 +1766,7 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
-	type MaximumMintId = MaximumMintId;
+	type MaximumUnlockId = MaximumUnlockId;
 	type EntranceAccount = BifrostEntranceAccount;
 	type ExitAccount = BifrostExitAccount;
 	type FeeAccount = BifrostFeeAccount;
