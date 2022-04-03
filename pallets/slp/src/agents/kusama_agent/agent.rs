@@ -514,7 +514,6 @@ impl<T: Config>
 			call,
 			who.clone(),
 		)?;
-		// Delegator ledger update needs to be conducted by backend services.
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -1137,19 +1136,18 @@ impl<T: Config> KusamaAgent<T> {
 							let mut remaining_amount = amount;
 
 							loop {
-								let record = old_sub_ledger
-									.unlocking
-									.pop()
-									.ok_or(Error::<T>::UnlockingRecordNotExist)?;
-
-								if remaining_amount >= record.value {
-									remaining_amount = remaining_amount - record.value;
+								if let Some(record) = old_sub_ledger.unlocking.pop() {
+									if remaining_amount >= record.value {
+										remaining_amount = remaining_amount - record.value;
+									} else {
+										let remain_unlock_chunk = UnlockChunk {
+											value: record.value - remaining_amount,
+											unlock_time: record.unlock_time.clone(),
+										};
+										old_sub_ledger.unlocking.push(remain_unlock_chunk);
+										break;
+									}
 								} else {
-									let remain_unlock_chunk = UnlockChunk {
-										value: record.value - remaining_amount,
-										unlock_time: record.unlock_time.clone(),
-									};
-									old_sub_ledger.unlocking.push(remain_unlock_chunk);
 									break;
 								}
 							}

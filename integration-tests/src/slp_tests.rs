@@ -20,8 +20,11 @@
 
 use bifrost_polkadot_runtime::PolkadotXcm;
 use bifrost_slp::{
-	primitives::{SubstrateLedgerUpdateEntry, UnlockChunk},
-	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger, XcmOperation,
+	primitives::{
+		SubstrateLedgerUpdateEntry, SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk,
+	},
+	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
+	ValidatorsByDelegatorUpdateEntry, XcmOperation,
 };
 use frame_support::assert_ok;
 use node_primitives::TimeUnit;
@@ -1067,6 +1070,9 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 		);
 
 		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
@@ -1181,6 +1187,9 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 		);
 
 		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
 		assert_eq!(
 			PolkadotXcm::query(0),
 			Some(QueryStatus::Pending {
@@ -1192,5 +1201,930 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 
 		// Check the inexistence of query in the response update queue storage.
 		assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
+	});
+}
+
+#[test]
+fn confirm_delegator_ledger_query_response_with_unbond_works() {
+	// bond 1 ksm for sub-account index 0
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Unbond 0.5 ksm, 0.5 ksm left.
+		assert_ok!(Slp::unbond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			500_000_000_000,
+		));
+
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: dollar(RelayCurrencyId::get()),
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the existence of query in the response update queue storage.
+		assert_eq!(
+			Slp::get_delegator_ledger_update_entry(0),
+			Some((
+				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+					currency_id: RelayCurrencyId::get(),
+					delegator_id: subaccount_0_location.clone(),
+					if_bond: false,
+					if_unlock: true,
+					if_rebond: false,
+					amount: 500_000_000_000,
+					unlock_time: Some(TimeUnit::Era(10))
+				}),
+				1001
+			))
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Call confirm_delegator_ledger_query_response.
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			0
+		));
+
+		// Check the ledger update.
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: 500_000_000_000,
+				unlocking: vec![UnlockChunk {
+					value: 500000000000,
+					unlock_time: TimeUnit::Era(10)
+				}]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the inexistence of query in the response update queue storage.
+		assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
+	});
+}
+
+#[test]
+fn confirm_delegator_ledger_query_response_with_unbond_all_works() {
+	// bond 1 ksm for sub-account index 0
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Unbond the only bonded 1 ksm.
+		assert_ok!(Slp::unbond_all(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+		));
+
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: dollar(RelayCurrencyId::get()),
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the existence of query in the response update queue storage.
+		assert_eq!(
+			Slp::get_delegator_ledger_update_entry(0),
+			Some((
+				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+					currency_id: RelayCurrencyId::get(),
+					delegator_id: subaccount_0_location.clone(),
+					if_bond: false,
+					if_unlock: true,
+					if_rebond: false,
+					amount: dollar(RelayCurrencyId::get()),
+					unlock_time: Some(TimeUnit::Era(10))
+				}),
+				1001
+			))
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Call confirm_delegator_ledger_query_response.
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			0
+		));
+
+		// Check the ledger update.
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: 0,
+				unlocking: vec![UnlockChunk {
+					value: dollar(RelayCurrencyId::get()),
+					unlock_time: TimeUnit::Era(10)
+				}]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the inexistence of query in the response update queue storage.
+		assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
+	});
+}
+
+#[test]
+fn confirm_delegator_ledger_query_response_with_rebond_works() {
+	// bond 1 ksm for sub-account index 0
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Unbond 0.5 ksm, 0.5 ksm left.
+		assert_ok!(Slp::unbond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			500_000_000_000,
+		));
+
+		// Update Bifrost local ledger. This should be done by backend services.
+		let chunk = UnlockChunk { value: 500_000_000_000, unlock_time: TimeUnit::Era(10) };
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: dollar(RelayCurrencyId::get()),
+			active: 500_000_000_000,
+			unlocking: vec![chunk],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+
+		assert_ok!(Slp::set_delegator_ledger(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			Some(ledger)
+		));
+
+		// rebond 0.5 ksm.
+		assert_ok!(Slp::rebond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			500_000_000_000,
+		));
+
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: 500_000_000_000,
+				unlocking: vec![UnlockChunk {
+					value: 500_000_000_000,
+					unlock_time: TimeUnit::Era(10)
+				}]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(1),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the existence of query in the response update queue storage.
+		assert_eq!(
+			Slp::get_delegator_ledger_update_entry(1),
+			Some((
+				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+					currency_id: RelayCurrencyId::get(),
+					delegator_id: subaccount_0_location.clone(),
+					if_bond: false,
+					if_unlock: false,
+					if_rebond: true,
+					amount: 500_000_000_000,
+					unlock_time: None
+				}),
+				1001
+			))
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Call confirm_delegator_ledger_query_response.
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			1
+		));
+
+		// Check the ledger update.
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: dollar(RelayCurrencyId::get()),
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
+		assert_eq!(
+			PolkadotXcm::query(1),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the inexistence of query in the response update queue storage.
+		assert_eq!(Slp::get_delegator_ledger_update_entry(1), None);
+	});
+}
+
+#[test]
+fn confirm_delegator_ledger_query_response_with_liquidize_works() {
+	confirm_delegator_ledger_query_response_with_unbond_works();
+	let subaccount_0 = subaccount_0();
+
+	KusamaNet::execute_with(|| {
+		// Kusama's unbonding period is 27 days = 100_800 blocks
+		kusama_runtime::System::set_block_number(101_000);
+		for _i in 0..29 {
+			kusama_runtime::Staking::trigger_new_era(0, vec![]);
+		}
+
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2 * dollar(RelayCurrencyId::get())
+		);
+
+		// 1ksm is locked for half bonded and half unbonding.
+		assert_eq!(
+			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
+			dollar(RelayCurrencyId::get())
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// set ongoing era to be 11 which is greater than due era 10.
+		assert_ok!(Slp::update_ongoing_time_unit(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			TimeUnit::Era(11)
+		));
+
+		assert_ok!(Slp::liquidize(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			Some(TimeUnit::SlashingSpan(5))
+		));
+
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: dollar(RelayCurrencyId::get()),
+				active: 500_000_000_000,
+				unlocking: vec![UnlockChunk {
+					value: 500_000_000_000,
+					unlock_time: TimeUnit::Era(10)
+				}]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(1),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the existence of query in the response update queue storage.
+		assert_eq!(
+			Slp::get_delegator_ledger_update_entry(1),
+			Some((
+				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+					currency_id: RelayCurrencyId::get(),
+					delegator_id: subaccount_0_location.clone(),
+					if_bond: false,
+					if_unlock: false,
+					if_rebond: false,
+					amount: 0,
+					unlock_time: Some(TimeUnit::Era(11))
+				}),
+				1001
+			))
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Call confirm_delegator_ledger_query_response.
+		assert_ok!(Slp::confirm_delegator_ledger_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			1
+		));
+
+		// Check the ledger update.
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: 500_000_000_000,
+				active: 500_000_000_000,
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
+		assert_eq!(
+			PolkadotXcm::query(1),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the inexistence of query in the response update queue storage.
+		assert_eq!(Slp::get_delegator_ledger_update_entry(1), None);
+	});
+
+	KusamaNet::execute_with(|| {
+		assert_eq!(
+			kusama_runtime::Balances::free_balance(&subaccount_0.clone()),
+			2 * dollar(RelayCurrencyId::get())
+		);
+
+		// half of 1ksm unlocking has been freed. So the usable balance should be 1.5 ksm
+		assert_eq!(
+			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
+			1_500_000_000_000
+		);
+	});
+}
+
+#[test]
+fn fail_delegator_ledger_query_response_works() {
+	register_subaccount_index_0();
+	transfer_2_ksm_to_subaccount_in_kusama();
+	let subaccount_0 = subaccount_0();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// First call bond function, it will insert a query.
+		// Bond 1 ksm for sub-account index 0
+		assert_ok!(Slp::bond(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			dollar(RelayCurrencyId::get()),
+		));
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the existence of query in the response update queue storage.
+		assert_eq!(
+			Slp::get_delegator_ledger_update_entry(0),
+			Some((
+				LedgerUpdateEntry::Substrate(SubstrateLedgerUpdateEntry {
+					currency_id: RelayCurrencyId::get(),
+					delegator_id: subaccount_0_location.clone(),
+					if_bond: true,
+					if_unlock: false,
+					if_rebond: false,
+					amount: dollar(RelayCurrencyId::get()),
+					unlock_time: None
+				}),
+				1001
+			))
+		);
+	});
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		// Call confirm_delegator_ledger_query_response.
+		assert_ok!(Slp::fail_delegator_ledger_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			0
+		));
+
+		// Check the ledger update.
+		assert_eq!(
+			Slp::get_delegator_ledger(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(Ledger::Substrate(SubstrateLedger {
+				account: subaccount_0_location.clone(),
+				total: 0,
+				active: 0,
+				unlocking: vec![]
+			}))
+		);
+
+		// Check the existence of the query in pallet_xcm Queries storage.
+		// If xcm version 3 is introduced. We'll add instruction ReportTransactStatus into the xcm
+		// message. And this query will be set to ready status after we received a query response.
+		// At that point, this check should be set to equal None.
+		assert_eq!(
+			PolkadotXcm::query(0),
+			Some(QueryStatus::Pending {
+				responder: V1(MultiLocation { parents: 1, interior: Here }),
+				maybe_notify: None,
+				timeout: 1001
+			})
+		);
+
+		// Check the inexistence of query in the response update queue storage.
+		assert_eq!(Slp::get_delegator_ledger_update_entry(0), None);
+	});
+}
+
+#[test]
+fn confirm_validators_by_delegator_query_response_with_delegate_works() {
+	// bond 1 ksm for sub-account index 0
+	register_validators();
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
+	let validator_0: AccountId =
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
+			.into();
+
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
+	let validator_1: AccountId =
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
+			.into();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let mut targets = vec![];
+		let mut valis = vec![];
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+		targets.push(validator_0_location.clone());
+		let multi_hash_0 = Slp::get_hash(&validator_0_location);
+		valis.push((validator_0_location.clone(), multi_hash_0));
+
+		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
+		let validator_1_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_1_32).unwrap();
+		targets.push(validator_1_location.clone());
+		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		valis.push((validator_1_location.clone(), multi_hash_1));
+
+		// delegate
+		assert_ok!(Slp::delegate(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			targets.clone(),
+		));
+
+		// Before data: Delegate nobody.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			None
+		);
+
+		assert_eq!(
+			Slp::get_validators_by_delegator_update_entry(0),
+			Some((
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: RelayCurrencyId::get(),
+						delegator_id: subaccount_0_location.clone(),
+						validators: valis.clone(),
+					}
+				),
+				1001
+			))
+		);
+
+		// confirm call
+		assert_ok!(Slp::confirm_validators_by_delegator_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			0
+		));
+
+		// After delegation data.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(valis)
+		);
+
+		assert_eq!(Slp::get_validators_by_delegator_update_entry(0), None);
+	});
+}
+
+#[test]
+fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
+	delegate_works();
+
+	let subaccount_0 = subaccount_0();
+
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
+	let validator_0: AccountId =
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
+			.into();
+
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
+	let validator_1: AccountId =
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
+			.into();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let mut targets = vec![];
+		let mut valis_1 = vec![];
+		let mut valis_2 = vec![];
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+		targets.push(validator_0_location.clone());
+		let multi_hash_0 = Slp::get_hash(&validator_0_location);
+		valis_2.push((validator_0_location.clone(), multi_hash_0));
+
+		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
+		let validator_1_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_1_32).unwrap();
+		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		valis_1.push((validator_1_location.clone(), multi_hash_1.clone()));
+		valis_2.push((validator_1_location.clone(), multi_hash_1));
+
+		// Undelegate validator 0. Only validator 1 left.
+		assert_ok!(Slp::undelegate(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			targets.clone(),
+		));
+
+		// Before data: Delegate 2 validators.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(valis_2)
+		);
+
+		assert_eq!(
+			Slp::get_validators_by_delegator_update_entry(1),
+			Some((
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: RelayCurrencyId::get(),
+						delegator_id: subaccount_0_location.clone(),
+						validators: valis_1.clone(),
+					}
+				),
+				1001
+			))
+		);
+
+		// confirm call
+		assert_ok!(Slp::confirm_validators_by_delegator_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			1,
+		));
+
+		// After delegation data: delegate only 1 validator.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(valis_1)
+		);
+
+		assert_eq!(Slp::get_validators_by_delegator_update_entry(1), None);
+	});
+}
+
+#[test]
+fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
+	confirm_validators_by_delegator_query_response_with_undelegate_works();
+
+	let subaccount_0 = subaccount_0();
+
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
+	let validator_0: AccountId =
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
+			.into();
+
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
+	let validator_1: AccountId =
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
+			.into();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let mut targets = vec![];
+		let mut valis_1 = vec![];
+		let mut valis_2 = vec![];
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+		targets.push(validator_0_location.clone());
+		let multi_hash_0 = Slp::get_hash(&validator_0_location);
+		valis_2.push((validator_0_location.clone(), multi_hash_0));
+
+		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
+		let validator_1_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_1_32).unwrap();
+		targets.push(validator_1_location.clone());
+		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		valis_1.push((validator_1_location.clone(), multi_hash_1.clone()));
+		valis_2.push((validator_1_location.clone(), multi_hash_1));
+
+		// Redelegate to a set of validator_0 and validator_1.
+		assert_ok!(Slp::redelegate(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			targets.clone(),
+		));
+
+		// Before data: Delegate only 1 validator.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(valis_1)
+		);
+
+		assert_eq!(
+			Slp::get_validators_by_delegator_update_entry(2),
+			Some((
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: RelayCurrencyId::get(),
+						delegator_id: subaccount_0_location.clone(),
+						validators: valis_2.clone(),
+					}
+				),
+				1001
+			))
+		);
+
+		// confirm call
+		assert_ok!(Slp::confirm_validators_by_delegator_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			2,
+		));
+
+		// After delegation data: delegate 2 validators.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			Some(valis_2)
+		);
+
+		assert_eq!(Slp::get_validators_by_delegator_update_entry(2), None);
+	});
+}
+
+#[test]
+fn fail_validators_by_delegator_query_response_works() {
+	// bond 1 ksm for sub-account index 0
+	register_validators();
+	locally_bond_subaccount_0_1ksm_in_kusama();
+	register_subaccount_index_0();
+	register_delegator_ledger();
+	let subaccount_0 = subaccount_0();
+
+	// GsvVmjr1CBHwQHw84pPHMDxgNY3iBLz6Qn7qS3CH8qPhrHz
+	let validator_0: AccountId =
+		hex_literal::hex!["be5ddb1579b72e84524fc29e78609e3caf42e85aa118ebfe0b0ad404b5bdd25f"]
+			.into();
+
+	// JKspFU6ohf1Grg3Phdzj2pSgWvsYWzSfKghhfzMbdhNBWs5
+	let validator_1: AccountId =
+		hex_literal::hex!["fe65717dad0447d715f660a0a58411de509b42e6efb8375f562f58a554d5860e"]
+			.into();
+
+	Bifrost::execute_with(|| {
+		let subaccount_0_32: [u8; 32] =
+			Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+		let subaccount_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
+		let mut targets = vec![];
+		let mut valis = vec![];
+
+		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
+		let validator_0_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_0_32).unwrap();
+		targets.push(validator_0_location.clone());
+		let multi_hash_0 = Slp::get_hash(&validator_0_location);
+		valis.push((validator_0_location.clone(), multi_hash_0));
+
+		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
+		let validator_1_location: MultiLocation =
+			Slp::account_32_to_parent_location(validator_1_32).unwrap();
+		targets.push(validator_1_location.clone());
+		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		valis.push((validator_1_location.clone(), multi_hash_1));
+
+		// delegate
+		assert_ok!(Slp::delegate(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			subaccount_0_location.clone(),
+			targets.clone(),
+		));
+
+		// check before data: delegate nobody.
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			None
+		);
+
+		assert_eq!(
+			Slp::get_validators_by_delegator_update_entry(0),
+			Some((
+				ValidatorsByDelegatorUpdateEntry::Substrate(
+					SubstrateValidatorsByDelegatorUpdateEntry {
+						currency_id: RelayCurrencyId::get(),
+						delegator_id: subaccount_0_location.clone(),
+						validators: valis,
+					}
+				),
+				1001
+			))
+		);
+
+		// call fail function
+		assert_ok!(Slp::fail_validators_by_delegator_query_response(
+			Origin::root(),
+			RelayCurrencyId::get(),
+			0
+		));
+
+		// check after data
+		assert_eq!(
+			Slp::get_validators_by_delegator(RelayCurrencyId::get(), subaccount_0_location.clone()),
+			None
+		);
+
+		assert_eq!(Slp::get_validators_by_delegator_update_entry(0), None);
 	});
 }
