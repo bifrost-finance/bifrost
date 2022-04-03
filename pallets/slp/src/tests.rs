@@ -448,3 +448,74 @@ fn decrease_token_to_deduct_works() {
 		assert_eq!(VtokenMinting::token_to_deduct(KSM), 80);
 	});
 }
+
+#[test]
+fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		let treasury_id: AccountId =
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
+				.into();
+		let treasury_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
+				.into();
+
+		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
+		let pct = Percent::from_percent(20);
+		let treasury_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+		};
+
+		assert_ok!(Slp::set_hosting_fees(
+			Origin::signed(ALICE),
+			KSM,
+			Some((pct, treasury_location))
+		));
+
+		// First set base vtoken exchange rate. Should be 1:1.
+		assert_ok!(Currencies::deposit(VKSM, &ALICE, 100));
+		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), KSM, 100));
+
+		// call the charge_host_fee_and_tune_vtoken_exchange_rate
+		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
+			Origin::signed(ALICE),
+			KSM,
+			100
+		));
+
+		// Tokenpool should have been added 100.
+		let new_token_pool_amount = <Runtime as Config>::VtokenMinting::get_token_pool(KSM);
+		assert_eq!(new_token_pool_amount, 200);
+
+		// Treasury account has been issued a fee of 20 vksm which equals to the value of 20 ksm
+		// before new exchange rate tuned.
+		let treasury_vksm = Currencies::free_balance(VKSM, &treasury_id);
+		assert_eq!(treasury_vksm, 20);
+	});
+}
+
+#[test]
+fn set_hosting_fees_works() {
+	ExtBuilder::default().build().execute_with(|| {
+		let treasury_32: [u8; 32] =
+			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
+				.into();
+
+		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
+		let pct = Percent::from_percent(20);
+		let treasury_location = MultiLocation {
+			parents: 0,
+			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
+		};
+
+		assert_ok!(Slp::set_hosting_fees(
+			Origin::signed(ALICE),
+			KSM,
+			Some((pct, treasury_location.clone()))
+		));
+
+		let (fee, location) = Slp::get_hosting_fee(KSM).unwrap();
+		assert_eq!(fee, pct);
+		assert_eq!(location, treasury_location);
+	});
+}

@@ -75,6 +75,13 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	/// Make token from Bifrost chain account to the staking chain account.
 	fn transfer_to(&self, from: DelegatorId, to: DelegatorId, amount: Balance)
 		-> Result<(), Error>;
+
+	/// Tune the vtoken exchage rate.
+	fn tune_vtoken_exchange_rate(
+		&self,
+		token_amount: Balance,
+		vtoken_amount: Balance,
+	) -> Result<(), Error>;
 }
 
 /// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
