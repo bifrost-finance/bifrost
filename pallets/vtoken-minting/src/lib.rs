@@ -254,12 +254,14 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn min_time_unit)]
-	pub type MinTimeUnit<T: Config> = StorageValue<_, TimeUnit, ValueQuery>;
+	pub type MinTimeUnit<T: Config> =
+		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, TimeUnit, ValueQuery>;
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			let time_unit = MinTimeUnit::<T>::get();
+			let KSM = CurrencyId::Token(TokenSymbol::KSM);
+			let time_unit = MinTimeUnit::<T>::get(KSM);
 			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
 				|(_total_locked, ledger_list, token_id)| {
 					let mut entrance_account_balance = T::MultiCurrency::free_balance(
@@ -335,12 +337,11 @@ pub mod pallet {
 				},
 			);
 
-			let unlock_duration_era =
-				match UnlockDuration::<T>::get(CurrencyId::Token(TokenSymbol::KSM)) {
-					Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
-					_ => 0,
-				};
-			let ongoing_era = match OngoingTimeUnit::<T>::get(CurrencyId::Token(TokenSymbol::KSM)) {
+			let unlock_duration_era = match UnlockDuration::<T>::get(KSM) {
+				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
+				_ => 0,
+			};
+			let ongoing_era = match OngoingTimeUnit::<T>::get(KSM) {
 				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
 				_ => 0,
 			};
@@ -353,7 +354,7 @@ pub mod pallet {
 							CurrencyIdOf<T>,
 						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
 						if time_unit_ledger_list.len() == 0 {
-							MinTimeUnit::<T>::mutate(|time_unit| -> Result<(), Error<T>> {
+							MinTimeUnit::<T>::mutate(KSM, |time_unit| -> Result<(), Error<T>> {
 								match time_unit {
 									TimeUnit::Era(era) => {
 										*era = era
