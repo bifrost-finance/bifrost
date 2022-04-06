@@ -304,13 +304,15 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
+			let collator_options = cli.run.collator_options();
+
 			runner.run_node_until_exit(|config| async move {
-				if config.chain_spec.is_dev() {
-					#[cfg(feature = "with-bifrost-kusama-runtime")]
-					{
-						return service::dev::start_node(config).map_err(Into::into);
-					}
-				}
+				// if config.chain_spec.is_dev() {
+				// 	#[cfg(feature = "with-bifrost-kusama-runtime")]
+				// 	{
+				// 		return service::dev::start_node(config).map_err(Into::into);
+				// 	}
+				// }
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id)
@@ -320,7 +322,7 @@ pub fn run() -> Result<()> {
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relay_chain_args.iter()),
+						.chain(cli.relaychain_args.iter()),
 				);
 
 				let id = ParaId::from(para_id);
@@ -341,7 +343,7 @@ pub fn run() -> Result<()> {
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+						start_node::<RuntimeApi>(config, polkadot_config, collator_options, id)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)
@@ -440,7 +442,7 @@ pub fn run() -> Result<()> {
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relay_chain_args.iter()),
+						.chain(cli.relaychain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(

@@ -253,7 +253,7 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 	]
 	.into();
 
-	let balances = vec![(root_key.clone(), 10_000 * DOLLARS)];
+	let balances = vec![(root_key.clone(), 1000 * DOLLARS)];
 
 	bifrost_polkadot_genesis(
 		invulnerables,
