@@ -210,42 +210,53 @@ pub mod pallet {
 		DelegatorBonded {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			bonded_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorBondExtra {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			extra_bonded_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorUnbond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			unbond_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorUnbondAll {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorRebond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			rebond_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Delegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Undelegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Payout {
@@ -257,27 +268,32 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Chill {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		TransferBack {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		TransferTo {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		DelegatorAdded {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			index: u16,
 			delegator_id: MultiLocation,
 		},
@@ -296,11 +312,14 @@ pub mod pallet {
 		Refund {
 			currency_id: CurrencyId,
 			time_unit: TimeUnit,
+			#[codec(compact)]
 			index: u32,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		FundMoveFromExitToEntrance {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		TimeUnitUpdated {
@@ -310,18 +329,22 @@ pub mod pallet {
 		},
 		PoolTokenIncreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		HostingFeeCharged {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		PoolTokenDecreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		FeeSupplemented {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 			from: MultiLocation,
 			to: MultiLocation,
@@ -332,14 +355,17 @@ pub mod pallet {
 		},
 		TokenToAddDecreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			value: BalanceOf<T>,
 		},
 		TokenToDeductIncreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			value: BalanceOf<T>,
 		},
 		TokenToDeductDecreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			value: BalanceOf<T>,
 		},
 		ValidatorsByDelegatorSet {
@@ -365,17 +391,21 @@ pub mod pallet {
 			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		},
 		DelegatorLedgerQueryResponseConfirmed {
+			#[codec(compact)]
 			query_id: QueryId,
 			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		},
 		DelegatorLedgerQueryResponseFailSuccessfully {
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		ValidatorsByDelegatorQueryResponseConfirmed {
+			#[codec(compact)]
 			query_id: QueryId,
 			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 		},
 		ValidatorsByDelegatorQueryResponseFailSuccessfully {
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		MinimumsMaximumsSet {
@@ -563,7 +593,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -587,7 +617,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -612,7 +642,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -658,7 +688,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -816,7 +846,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -836,7 +866,7 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -854,7 +884,7 @@ pub mod pallet {
 		pub fn increase_token_pool(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -873,7 +903,7 @@ pub mod pallet {
 		pub fn decrease_token_pool(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -987,7 +1017,7 @@ pub mod pallet {
 		pub fn increase_token_to_add(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			value: BalanceOf<T>,
+			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1007,7 +1037,7 @@ pub mod pallet {
 		pub fn decrease_token_to_add(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			value: BalanceOf<T>,
+			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1027,7 +1057,7 @@ pub mod pallet {
 		pub fn increase_token_to_deduct(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			value: BalanceOf<T>,
+			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1047,7 +1077,7 @@ pub mod pallet {
 		pub fn decrease_token_to_deduct(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			value: BalanceOf<T>,
+			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1108,7 +1138,7 @@ pub mod pallet {
 		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			value: BalanceOf<T>,
+			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1224,7 +1254,7 @@ pub mod pallet {
 		pub fn add_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			index: u16,
+			#[pallet::compact] index: u16,
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Check the validity of origin
@@ -1445,7 +1475,7 @@ pub mod pallet {
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1457,7 +1487,7 @@ pub mod pallet {
 		pub fn fail_delegator_ledger_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1470,7 +1500,7 @@ pub mod pallet {
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1483,7 +1513,7 @@ pub mod pallet {
 		pub fn fail_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;

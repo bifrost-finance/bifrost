@@ -37,9 +37,11 @@ pub struct SubstrateLedger<DelegatorId, Balance> {
 	pub account: DelegatorId,
 	/// The total amount of the delegator's balance that we are currently accounting for.
 	/// It's just `active` plus all the `unlocking` balances.
+	#[codec(compact)]
 	pub total: Balance,
 	/// The total amount of the delegator's balance that will be at stake in any forthcoming
 	/// rounds.
+	#[codec(compact)]
 	pub active: Balance,
 	/// Any balance that is becoming free, which may eventually be transferred out
 	/// of the delegator (assuming it doesn't get slashed first).
@@ -50,6 +52,7 @@ pub struct SubstrateLedger<DelegatorId, Balance> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct UnlockChunk<Balance> {
 	/// Amount of funds to be unlocked.
+	#[codec(compact)]
 	pub value: Balance,
 	/// Era number at which point it'll be unlocked.
 	pub unlock_time: TimeUnit,
@@ -77,6 +80,7 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 	/// If if_bond, if_unlock and if_rebond are all false, then it is a liquidize operation.
 	pub if_rebond: bool,
 	/// The unlocking/bonding amount.
+	#[codec(compact)]
 	pub amount: Balance,
 	/// If this entry is an unlocking entry, it should have unlock_time value. If it is a bonding
 	/// entry, this field should be None. If it is a liquidize entry, this filed is the ongoing
@@ -107,18 +111,25 @@ pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
 pub struct MinimumsMaximums<Balance> {
 	/// The minimum bonded amount for a delegator at any time.
+	#[codec(compact)]
 	pub delegator_bonded_minimum: Balance,
 	/// The minimum amount each time a delegator needs to bond for extra
+	#[codec(compact)]
 	pub bond_extra_minimum: Balance,
 	/// The minimum unbond amount each time a delegator to unbond.
+	#[codec(compact)]
 	pub unbond_minimum: Balance,
 	/// The minimum amount each time a delegator needs to rebond
+	#[codec(compact)]
 	pub rebond_minimum: Balance,
 	/// The maximum number of unbond records at the same time.
+	#[codec(compact)]
 	pub unbond_record_maximum: u32,
 	/// The maximum number of validators for a delegator to support at the same time.
+	#[codec(compact)]
 	pub validators_back_maximum: u32,
 	/// The maximum amount of active staking for a delegator. It is used to control ROI.
+	#[codec(compact)]
 	pub delegator_active_staking_maximum: Balance,
 }
 
