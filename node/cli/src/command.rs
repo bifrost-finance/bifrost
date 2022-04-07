@@ -307,12 +307,6 @@ pub fn run() -> Result<()> {
 			let collator_options = cli.run.collator_options();
 
 			runner.run_node_until_exit(|config| async move {
-				// if config.chain_spec.is_dev() {
-				// 	#[cfg(feature = "with-bifrost-kusama-runtime")]
-				// 	{
-				// 		return service::dev::start_node(config).map_err(Into::into);
-				// 	}
-				// }
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id)
@@ -330,6 +324,14 @@ pub fn run() -> Result<()> {
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
 
+				let state_version =
+					RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
+
+				let block: node_primitives::Block =
+					generate_genesis_block(&config.chain_spec, state_version)
+						.map_err(|e| format!("{:?}", e))?;
+				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+
 				let polkadot_config = SubstrateCli::create_configuration(
 					&polkadot_cli,
 					&polkadot_cli,
@@ -339,6 +341,7 @@ pub fn run() -> Result<()> {
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
+				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {

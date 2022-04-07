@@ -62,7 +62,7 @@ use sp_version::RuntimeVersion;
 
 /// Constant values used within the runtime.
 pub mod constants;
-use bifrost_runtime_common::{r#impl::BifrostFilteredAssets, SlowAdjustingFeeUpdate};
+use bifrost_runtime_common::SlowAdjustingFeeUpdate;
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::{currency::*, time::*};
 use cumulus_primitives_core::ParaId as CumulusParaId;
@@ -80,8 +80,8 @@ use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom,
 	AllowTopLevelPaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin,
-	FixedWeightBounds, IsConcrete, LocationInverter, ParentAsSuperuser, ParentIsPreset,
-	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	FixedWeightBounds, IsConcrete, LocationInverter, NativeAsset, ParentAsSuperuser,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 	UsingComponents,
 };
@@ -627,7 +627,7 @@ impl Config for XcmConfig {
 	type AssetTrap = PolkadotXcm;
 	type Barrier = Barrier;
 	type Call = Call;
-	type IsReserve = BifrostFilteredAssets;
+	type IsReserve = NativeAsset;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;

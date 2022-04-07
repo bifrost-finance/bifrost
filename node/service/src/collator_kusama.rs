@@ -61,15 +61,14 @@ use sp_storage::{ChildInfo, StorageData, StorageKey};
 use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
 
+use crate::{IdentifyVariant, UNKNOWN_RUNTIME};
+
 #[cfg(not(feature = "runtime-benchmarks"))]
 type HostFunctions = sp_io::SubstrateHostFunctions;
 
 #[cfg(feature = "runtime-benchmarks")]
 type HostFunctions =
 	(sp_io::SubstrateHostFunctions, frame_benchmarking::benchmarking::HostFunctions);
-
-#[allow(unused_imports)]
-use crate::{IdentifyVariant, BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE, UNKNOWN_RUNTIME};
 
 #[cfg(any(feature = "with-bifrost-kusama-runtime", feature = "with-bifrost-runtime"))]
 pub struct BifrostExecutor;
@@ -497,7 +496,7 @@ pub fn new_chain_ops(
 			feature = "with-bifrost-kusama-runtime",
 			feature = "with-bifrost-runtime"
 		)))]
-		Err(BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+		Err(crate::BIFROST_KUSAMA_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		Err(UNKNOWN_RUNTIME.into())
 	}
