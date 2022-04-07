@@ -81,9 +81,10 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
-
 		#[cfg(feature = "with-bifrost-kusama-runtime")]
 		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
+		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::development_config()?),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {

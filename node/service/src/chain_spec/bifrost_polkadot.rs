@@ -17,11 +17,11 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use bifrost_polkadot_runtime::{
-	constants::currency::DOLLARS, AccountId, AuraId, Balance, BalancesConfig, BlockNumber,
+	constants::currency::DOLLARS, AccountId, Balance, BalancesConfig, BlockNumber,
 	CollatorSelectionConfig, GenesisConfig, IndicesConfig, ParachainInfoConfig, PolkadotXcmConfig,
 	SS58Prefix, SessionConfig, SudoConfig, SystemConfig, VestingConfig, WASM_BINARY,
 };
-use bifrost_runtime_common::dollar;
+use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
@@ -134,18 +134,18 @@ fn development_config_genesis(id: ParaId) -> GenesisConfig {
 	)
 }
 
-pub fn development_config(id: ParaId) -> Result<ChainSpec, String> {
+pub fn development_config() -> Result<ChainSpec, String> {
 	Ok(ChainSpec::from_genesis(
 		"Bifrost Polkadot Development",
 		"bifrost_polkadot_dev",
 		ChainType::Development,
-		move || development_config_genesis(id),
+		move || development_config_genesis(PARA_ID.into()),
 		vec![],
 		None,
 		Some(DEFAULT_PROTOCOL_ID),
 		None,
 		Some(bifrost_polkadot_properties()),
-		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: id.into() },
+		RelayExtensions { relay_chain: "polkadot-dev".into(), para_id: PARA_ID },
 	))
 }
 
@@ -255,11 +255,5 @@ fn bifrost_polkadot_config_genesis(id: ParaId) -> GenesisConfig {
 
 	let balances = vec![(root_key.clone(), 1000 * DOLLARS)];
 
-	bifrost_polkadot_genesis(
-		invulnerables,
-		root_key,
-		balances,
-		vec![], // temporarily set vesting as blank
-		id,
-	)
+	bifrost_polkadot_genesis(invulnerables, root_key, balances, vec![], id)
 }

@@ -28,7 +28,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-pub use bifrost_runtime_common::AuraId;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -72,9 +71,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, CouncilCollective,
-	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
-	TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
+	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
