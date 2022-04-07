@@ -143,8 +143,8 @@ pub enum ExtraFeeName {
 // For vtoken-minting and slp modules
 #[derive(Encode, Decode, Clone, RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
 pub enum TimeUnit {
-	Era(u32),
-	SlashingSpan(u32),
+	Era(#[codec(compact)] u32),
+	SlashingSpan(#[codec(compact)] u32),
 }
 
 impl Default for TimeUnit {

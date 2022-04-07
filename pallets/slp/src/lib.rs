@@ -210,42 +210,53 @@ pub mod pallet {
 		DelegatorBonded {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			bonded_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorBondExtra {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			extra_bonded_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorUnbond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			unbond_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorUnbondAll {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		DelegatorRebond {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			rebond_amount: BalanceOf<T>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Delegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Undelegated {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			targets: Vec<MultiLocation>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Payout {
@@ -257,27 +268,32 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			time_unit: Option<TimeUnit>,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		Chill {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		TransferBack {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		TransferTo {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		DelegatorAdded {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			index: u16,
 			delegator_id: MultiLocation,
 		},
@@ -296,11 +312,14 @@ pub mod pallet {
 		Refund {
 			currency_id: CurrencyId,
 			time_unit: TimeUnit,
+			#[codec(compact)]
 			index: u32,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		FundMoveFromExitToEntrance {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		TimeUnitUpdated {
@@ -310,37 +329,25 @@ pub mod pallet {
 		},
 		PoolTokenIncreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		HostingFeeCharged {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		PoolTokenDecreased {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 		},
 		FeeSupplemented {
 			currency_id: CurrencyId,
+			#[codec(compact)]
 			amount: BalanceOf<T>,
 			from: MultiLocation,
 			to: MultiLocation,
-		},
-		TokenToAddIncreased {
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		},
-		TokenToAddDecreased {
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		},
-		TokenToDeductIncreased {
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		},
-		TokenToDeductDecreased {
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
 		},
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
@@ -365,17 +372,21 @@ pub mod pallet {
 			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		},
 		DelegatorLedgerQueryResponseConfirmed {
+			#[codec(compact)]
 			query_id: QueryId,
 			entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		},
 		DelegatorLedgerQueryResponseFailSuccessfully {
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		ValidatorsByDelegatorQueryResponseConfirmed {
+			#[codec(compact)]
 			query_id: QueryId,
 			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 		},
 		ValidatorsByDelegatorQueryResponseFailSuccessfully {
+			#[codec(compact)]
 			query_id: QueryId,
 		},
 		MinimumsMaximumsSet {
@@ -563,13 +574,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond(who.clone(), amount)?;
+			let query_id = staking_agent.bond(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
@@ -587,13 +598,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond_extra(who.clone(), amount)?;
+			let query_id = staking_agent.bond_extra(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
@@ -612,13 +623,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond(who.clone(), amount)?;
+			let query_id = staking_agent.unbond(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
@@ -641,7 +652,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond_all(who.clone())?;
+			let query_id = staking_agent.unbond_all(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
@@ -658,13 +669,13 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			who: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.rebond(who.clone(), amount)?;
+			let query_id = staking_agent.rebond(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
@@ -688,7 +699,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.delegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.delegate(&who, &targets)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -712,7 +723,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.undelegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.undelegate(&who, &targets)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
@@ -736,7 +747,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.redelegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.redelegate(&who, &targets)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -761,7 +772,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.payout(who, validator.clone(), when.clone())?;
+			staking_agent.payout(&who, &validator, &when)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Payout { currency_id, validator, time_unit: when });
@@ -780,7 +791,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(who.clone(), when.clone())?;
+			let query_id = staking_agent.liquidize(&who, &when)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Liquidize {
@@ -803,7 +814,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.chill(who.clone())?;
+			let query_id = staking_agent.chill(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Chill { currency_id, delegator_id: who, query_id });
@@ -816,13 +827,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_back(from.clone(), to.clone(), amount)?;
+			staking_agent.transfer_back(&from, &to, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferBack { currency_id, from, to, amount });
@@ -836,13 +847,13 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			from: MultiLocation,
 			to: MultiLocation,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_to(from.clone(), to.clone(), amount)?;
+			staking_agent.transfer_to(&from, &to, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferTo { currency_id, from, to, amount });
@@ -854,7 +865,7 @@ pub mod pallet {
 		pub fn increase_token_pool(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -873,7 +884,7 @@ pub mod pallet {
 		pub fn decrease_token_pool(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			amount: BalanceOf<T>,
+			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -982,86 +993,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(T::WeightInfo::increase_token_to_add())]
-		/// Increase token_to_add storage by value in VtokenMinting module.
-		pub fn increase_token_to_add(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// Ensure the value is valid.
-			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
-
-			T::VtokenMinting::increase_token_to_add(currency_id, value)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TokenToAddIncreased { currency_id, value });
-			Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::decrease_token_to_add())]
-		/// Decrease token_to_add storage by value in VtokenMinting module.
-		pub fn decrease_token_to_add(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// Ensure the value is valid.
-			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
-
-			T::VtokenMinting::decrease_token_to_add(currency_id, value)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TokenToAddDecreased { currency_id, value });
-			Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::increase_token_to_deduct())]
-		/// Increase token_to_deduct storage by value in VtokenMinting module.
-		pub fn increase_token_to_deduct(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// Ensure the value is valid.
-			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
-
-			T::VtokenMinting::increase_token_to_deduct(currency_id, value)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TokenToDeductIncreased { currency_id, value });
-			Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::decrease_token_to_deduct())]
-		/// Decrease token_to_deduct storage by value in VtokenMinting module.
-		pub fn decrease_token_to_deduct(
-			origin: OriginFor<T>,
-			currency_id: CurrencyId,
-			value: BalanceOf<T>,
-		) -> DispatchResult {
-			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
-
-			// Ensure the value is valid.
-			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
-
-			T::VtokenMinting::decrease_token_to_deduct(currency_id, value)?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TokenToDeductDecreased { currency_id, value });
-			Ok(())
-		}
-
 		#[pallet::weight(T::WeightInfo::supplement_fee_reserve())]
 		pub fn supplement_fee_reserve(
 			origin: OriginFor<T>,
@@ -1088,11 +1019,7 @@ pub mod pallet {
 				)?;
 			} else {
 				let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
-				fee_manager_agent.supplement_fee_reserve(
-					reserved_fee,
-					source_location.clone(),
-					dest.clone(),
-				)?;
+				fee_manager_agent.supplement_fee_reserve(reserved_fee, &source_location, &dest)?;
 			}
 
 			// Deposit event.
@@ -1112,7 +1039,7 @@ pub mod pallet {
 		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			value: BalanceOf<T>,
+			#[pallet::compact] value: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1131,8 +1058,8 @@ pub mod pallet {
 			fee_manager_agent.charge_hosting_fee(
 				fee_to_charge,
 				// Dummy value for 【from】account
-				beneficiary.clone(),
-				beneficiary.clone(),
+				&beneficiary,
+				&beneficiary,
 			)?;
 
 			// Tune the new exchange rate.
@@ -1169,7 +1096,7 @@ pub mod pallet {
 
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
 			// storage to the new value if exists, or insert a new record if not exists before.
-			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, operation.clone(), |wt_n_f| {
+			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
 				*wt_n_f = weight_and_fee.clone();
 			});
 
@@ -1228,7 +1155,7 @@ pub mod pallet {
 		pub fn add_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			index: u16,
+			#[pallet::compact] index: u16,
 			who: MultiLocation,
 		) -> DispatchResult {
 			// Check the validity of origin
@@ -1322,14 +1249,14 @@ pub mod pallet {
 
 			// check delegator
 			// Check if it is bonded already.
-			let _ledger = DelegatorLedgers::<T>::get(KSM, who.clone())
-				.ok_or(Error::<T>::DelegatorNotBonded)?;
+			let _ledger =
+				DelegatorLedgers::<T>::get(KSM, &who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 			let validators_list =
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
-			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
+			ValidatorsByDelegator::<T>::insert(currency_id, who, validators_list.clone());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
@@ -1363,7 +1290,7 @@ pub mod pallet {
 			}
 
 			// Update the ledger.
-			DelegatorLedgers::<T>::mutate_exists(currency_id, who.clone(), |old_ledger| {
+			DelegatorLedgers::<T>::mutate_exists(currency_id, &who, |old_ledger| {
 				*old_ledger = ledger.clone();
 			});
 
@@ -1449,7 +1376,7 @@ pub mod pallet {
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1461,7 +1388,7 @@ pub mod pallet {
 		pub fn fail_delegator_ledger_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1474,7 +1401,7 @@ pub mod pallet {
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1487,7 +1414,7 @@ pub mod pallet {
 		pub fn fail_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			query_id: QueryId,
+			#[pallet::compact] query_id: QueryId,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1729,7 +1656,7 @@ pub mod pallet {
 					Self::get_currency_query_response_checker(currency_id)?;
 				updated = ledger_query_response_agent.check_delegator_ledger_query_response(
 					query_id,
-					entry.clone(),
+					entry,
 					manual_mode,
 				)?;
 			} else {
@@ -1761,11 +1688,7 @@ pub mod pallet {
 				let validators_by_delegator_query_response_agent =
 					Self::get_currency_query_response_checker(currency_id)?;
 				updated = validators_by_delegator_query_response_agent
-					.check_validators_by_delegator_query_response(
-						query_id,
-						entry.clone(),
-						manual_mode,
-					)?;
+					.check_validators_by_delegator_query_response(query_id, entry, manual_mode)?;
 			} else {
 				Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			}
@@ -1777,7 +1700,7 @@ pub mod pallet {
 			// function.
 			let (entry, _) = Self::get_delegator_ledger_update_entry(query_id)
 				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry.clone() {
+			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 				_ => None,
 			}
@@ -1797,7 +1720,7 @@ pub mod pallet {
 			// function.
 			let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
 				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry.clone() {
+			let currency_id = match entry {
 				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
 					Some(substrate_entry.currency_id),
 				_ => None,

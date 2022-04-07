@@ -1662,8 +1662,8 @@ impl QueryResponseManager<QueryId, MultiLocation, BlockNumber> for SubstrateResp
 		}
 	}
 
-	fn create_query_record(responder: MultiLocation, timeout: BlockNumber) -> u64 {
-		PolkadotXcm::new_query(responder, timeout)
+	fn create_query_record(responder: &MultiLocation, timeout: BlockNumber) -> u64 {
+		PolkadotXcm::new_query(responder.clone(), timeout)
 		// for xcm v3 version see the following
 		// PolkadotXcm::new_query(responder, timeout, Here)
 	}

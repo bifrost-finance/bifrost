@@ -234,16 +234,4 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		currency_id: CurrencyId,
 		index: u32,
 	) -> Option<(AccountId, Balance, TimeUnit)>;
-
-	/// Increase token_to_add storage by value in VtokenMinting module.
-	fn increase_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
-
-	/// Decrease token_to_add storage by value in VtokenMinting module.
-	fn decrease_token_to_add(currency_id: CurrencyId, value: Balance) -> DispatchResult;
-
-	/// Increase token_to_deduct storage by value in VtokenMinting module.
-	fn increase_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
-
-	/// Decrease token_to_deduct storage by value in VtokenMinting module.
-	fn decrease_token_to_deduct(currency_id: CurrencyId, value: Balance) -> DispatchResult;
 }

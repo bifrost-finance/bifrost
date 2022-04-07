@@ -46,10 +46,6 @@ pub trait WeightInfo {
 	fn decrease_token_pool() -> Weight;
 	fn update_ongoing_time_unit() -> Weight;
 	fn refund_currency_due_unbond() -> Weight;
-	fn increase_token_to_add() -> Weight;
-	fn decrease_token_to_add() -> Weight;
-	fn increase_token_to_deduct() -> Weight;
-	fn decrease_token_to_deduct() -> Weight;
 	fn supplement_fee_reserve() -> Weight;
 	fn charge_host_fee_and_tune_vtoken_exchange_rate() -> Weight;
 	fn confirm_delegator_ledger_query_response() -> Weight;
@@ -145,22 +141,6 @@ impl WeightInfo for () {
 	}
 
 	fn refund_currency_due_unbond() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn increase_token_to_add() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn decrease_token_to_add() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn increase_token_to_deduct() -> Weight {
-		(50_000_000 as Weight)
-	}
-
-	fn decrease_token_to_deduct() -> Weight {
 		(50_000_000 as Weight)
 	}
 
