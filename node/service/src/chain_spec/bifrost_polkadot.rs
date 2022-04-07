@@ -45,7 +45,7 @@ pub fn ENDOWMENT() -> u128 {
 	1_000_000 * dollar(CurrencyId::Native(TokenSymbol::BNC))
 }
 
-pub const PARA_ID: u32 = 2001;
+pub const PARA_ID: u32 = 2030;
 
 fn bifrost_polkadot_properties() -> Properties {
 	let mut properties = sc_chain_spec::Properties::new();
