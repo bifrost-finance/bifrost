@@ -28,7 +28,6 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use core::convert::TryInto;
 
-pub use bifrost_runtime_common::AuraId;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, match_type, parameter_types,
@@ -46,10 +45,7 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 pub use parachain_staking::{InflationInfo, Range};
 use sp_api::impl_runtime_apis;
-use sp_core::{
-	u32_trait::{_1, _2, _3, _4, _5},
-	OpaqueMetadata,
-};
+use sp_core::OpaqueMetadata;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
@@ -75,9 +71,9 @@ use bifrost_flexible_fee::{
 	misc_fees::{ExtraFeeMatcher, MiscFeeHandler, NameGetter},
 };
 use bifrost_runtime_common::{
-	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, CouncilCollective,
-	EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil, SlowAdjustingFeeUpdate,
-	TechnicalCollective,
+	cent, constants::time::*, dollar, micro, milli, millicent, prod_or_test, AuraId,
+	CouncilCollective, EnsureRootOrAllTechnicalCommittee, MoreThanHalfCouncil,
+	SlowAdjustingFeeUpdate, TechnicalCollective,
 };
 use codec::{Decode, Encode, MaxEncodedLen};
 use constants::currency::*;
@@ -94,7 +90,7 @@ pub use node_primitives::{
 };
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::MultiCurrency;
+use orml_traits::{location::AbsoluteReserveProvider, parameter_type_with_key, MultiCurrency};
 use orml_xcm_support::{DepositToAlternative, MultiCurrencyAdapter};
 use pallet_xcm::XcmPassthrough;
 // XCM imports
@@ -110,7 +106,7 @@ use xcm_builder::{
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue,
 	TakeWeightCredit,
 };
-use xcm_executor::{Config, XcmExecutor};
+use xcm_executor::XcmExecutor;
 pub use xcm_interface::traits::{parachains, XcmBaseWeight};
 // zenlink imports
 use zenlink_protocol::{
@@ -124,7 +120,7 @@ mod xcm_config;
 
 use xcm_config::{
 	BifrostAccountIdToMultiLocation, BifrostAssetMatcher, BifrostCurrencyIdConvert,
-	BifrostFilteredAssets,
+	MultiNativeAsset,
 };
 
 impl_opaque_keys! {
@@ -705,11 +701,11 @@ impl pallet_democracy::Config for Runtime {
 	// Root must agree.
 	type CancelProposalOrigin = EnsureOneOf<
 		EnsureRoot<AccountId>,
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 	>;
 	// To cancel a proposal which has been passed, 2/3 of the council must agree to it.
 	type CancellationOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type CooloffPeriod = CooloffPeriod;
 	type Currency = Balances;
 	type EnactmentPeriod = EnactmentPeriod;
@@ -717,21 +713,21 @@ impl pallet_democracy::Config for Runtime {
 	/// A unanimous council can have the next scheduled referendum be a straight default-carries
 	/// (NTB) vote.
 	type ExternalDefaultOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 1>;
 	/// A super-majority can have the next scheduled referendum be a straight majority-carries vote.
 	type ExternalMajorityOrigin =
-		pallet_collective::EnsureProportionAtLeast<_3, _4, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 4>;
 	/// A straight majority of the council can decide what their next motion is.
 	type ExternalOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _2, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 1, 2>;
 	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
 	/// be tabled immediately and with a shorter voting/enactment period.
 	type FastTrackOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, TechnicalCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 2, 3>;
 	type FastTrackVotingPeriod = FastTrackVotingPeriod;
 	type InstantAllowed = InstantAllowed;
 	type InstantOrigin =
-		pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>;
 	type LaunchPeriod = LaunchPeriod;
 	type MaxProposals = MaxProposals;
 	type MaxVotes = MaxVotes;
@@ -771,7 +767,7 @@ parameter_types! {
 
 type ApproveOrigin = EnsureOneOf<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>,
+	pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 3, 5>,
 >;
 
 impl pallet_treasury::Config for Runtime {
@@ -1199,13 +1195,13 @@ pub type Trader = (
 );
 
 pub struct XcmConfig;
-impl Config for XcmConfig {
+impl xcm_executor::Config for XcmConfig {
 	type AssetClaims = PolkadotXcm;
 	type AssetTransactor = BifrostAssetTransactor;
 	type AssetTrap = PolkadotXcm;
 	type Barrier = Barrier;
 	type Call = Call;
-	type IsReserve = BifrostFilteredAssets;
+	type IsReserve = MultiNativeAsset<AbsoluteReserveProvider>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
@@ -1258,6 +1254,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type WeightInfo = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -1326,7 +1323,7 @@ impl orml_currencies::Config for Runtime {
 	type WeightInfo = ();
 }
 
-orml_traits::parameter_type_with_key! {
+parameter_type_with_key! {
 	pub ExistentialDeposits: |currency_id: CurrencyId| -> Balance {
 		match currency_id {
 			&CurrencyId::Native(TokenSymbol::BNC) => 10 * milli(NativeCurrencyId::get()),   // 0.01 BNC
@@ -1391,6 +1388,16 @@ parameter_types! {
 	pub const MaxAssetsForTransfer: usize = 2;
 }
 
+parameter_type_with_key! {
+	pub ParachainMinFee: |location: MultiLocation| -> u128 {
+		#[allow(clippy::match_ref_pats)] // false positive
+		match (location.parents, location.first_interior()) {
+			// (1, Some(Parachain(parachains::Statemine::ID))) => XcmInterface::get_parachain_fee(location.clone()),
+			_ => u128::MAX,
+		}
+	};
+}
+
 impl orml_xtokens::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
@@ -1403,6 +1410,9 @@ impl orml_xtokens::Config for Runtime {
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call, MaxInstructions>;
 	type BaseXcmWeight = RelayXcmBaseWeight;
 	type MaxAssetsForTransfer = MaxAssetsForTransfer;
+	type MinXcmFee = ParachainMinFee;
+	type MultiLocationsFilter = Everything;
+	type ReserveProvider = AbsoluteReserveProvider;
 }
 
 impl orml_unknown_tokens::Config for Runtime {

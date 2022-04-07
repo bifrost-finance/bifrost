@@ -132,8 +132,8 @@ pub struct Cli {
 	pub sealing: Option<String>,
 
 	/// Relay chain arguments
-	#[clap(raw = true)]
-	pub relay_chain_args: Vec<String>,
+	#[clap(raw = true, conflicts_with = "relay-chain-rpc-url")]
+	pub relaychain_args: Vec<String>,
 }
 
 #[derive(Debug)]

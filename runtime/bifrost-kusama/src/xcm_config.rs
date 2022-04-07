@@ -29,7 +29,6 @@ use node_primitives::{
 use orml_traits::location::Reserve;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::latest::prelude::*;
-use xcm_builder::NativeAsset;
 use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
 use xcm_interface::traits::parachains;
 
@@ -56,12 +55,15 @@ where
 	}
 }
 
-/// Bifrost Filtered Assets
-pub struct BifrostFilterAsset;
-
-impl FilterAssetLocation for BifrostFilterAsset {
+/// A `FilterAssetLocation` implementation. Filters multi native assets whose
+/// reserve is same with `origin`.
+pub struct MultiNativeAsset<ReserveProvider>(PhantomData<ReserveProvider>);
+impl<ReserveProvider> FilterAssetLocation for MultiNativeAsset<ReserveProvider>
+where
+	ReserveProvider: Reserve,
+{
 	fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-		if let Some(ref reserve) = asset.reserve() {
+		if let Some(ref reserve) = ReserveProvider::reserve(asset) {
 			if reserve == origin {
 				return true;
 			}
@@ -69,8 +71,6 @@ impl FilterAssetLocation for BifrostFilterAsset {
 		false
 	}
 }
-
-pub type BifrostFilteredAssets = (NativeAsset, BifrostFilterAsset);
 
 fn native_currency_location(id: CurrencyId, para_id: ParaId) -> MultiLocation {
 	MultiLocation::new(1, X2(Parachain(para_id.into()), GeneralKey(id.encode())))

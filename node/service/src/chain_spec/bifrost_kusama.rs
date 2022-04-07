@@ -22,13 +22,13 @@ use std::{
 };
 
 use bifrost_kusama_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CouncilConfig,
-	CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig,
-	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
-	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
+	AccountId, Balance, BalancesConfig, BlockNumber, CouncilConfig, CouncilMembershipConfig,
+	DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig, InflationInfo,
+	ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range, SS58Prefix, SalpConfig,
+	SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
 	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
-use bifrost_runtime_common::dollar;
+use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;

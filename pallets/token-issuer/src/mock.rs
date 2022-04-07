@@ -25,10 +25,7 @@ use frame_support::{
 	PalletId,
 };
 use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::{
-	u32_trait::{_2, _3},
-	H256,
-};
+use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
@@ -175,7 +172,7 @@ impl bifrost_token_issuer::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Currencies;
 	type ControlOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type WeightInfo = ();
 }
 

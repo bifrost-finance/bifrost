@@ -24,11 +24,9 @@ use frame_system::EnsureRoot;
 use node_primitives::{AccountId, Balance, BlockNumber, CurrencyId, TokenInfo};
 use pallet_transaction_payment::{Multiplier, TargetedFeeAdjustment};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::u32_trait::{_1, _2};
 use sp_runtime::{FixedPointNumber, Perquintill};
 
 pub mod constants;
-pub mod r#impl;
 
 #[cfg(test)]
 mod tests;
@@ -69,13 +67,13 @@ pub type TechnicalCollective = pallet_collective::Instance2;
 
 pub type MoreThanHalfCouncil = EnsureOneOf<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>,
+	pallet_collective::EnsureProportionMoreThan<AccountId, CouncilCollective, 1, 2>,
 >;
 
 // Technical Committee Council
 pub type EnsureRootOrAllTechnicalCommittee = EnsureOneOf<
 	EnsureRoot<AccountId>,
-	pallet_collective::EnsureProportionAtLeast<_1, _1, AccountId, TechnicalCollective>,
+	pallet_collective::EnsureProportionAtLeast<AccountId, TechnicalCollective, 1, 1>,
 >;
 
 pub fn dollar(currency_id: CurrencyId) -> Balance {

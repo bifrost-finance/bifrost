@@ -81,9 +81,10 @@ fn load_spec(id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, St
 		#[cfg(any(feature = "with-bifrost-polkadot-runtime", feature = "with-bifrost-runtime"))]
 		"bifrost-polkadot-local" =>
 			Box::new(service::chain_spec::bifrost_polkadot::local_testnet_config()?),
-
 		#[cfg(feature = "with-bifrost-kusama-runtime")]
 		"dev" => Box::new(service::chain_spec::bifrost_kusama::development_config()?),
+		#[cfg(feature = "with-bifrost-polkadot-runtime")]
+		"bifrost-polkadot-dev" => Box::new(service::chain_spec::bifrost_polkadot::development_config()?),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			if path.to_str().map(|s| s.contains("bifrost-polkadot")) == Some(true) {
@@ -304,13 +305,9 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
+			let collator_options = cli.run.collator_options();
+
 			runner.run_node_until_exit(|config| async move {
-				if config.chain_spec.is_dev() {
-					#[cfg(feature = "with-bifrost-kusama-runtime")]
-					{
-						return service::dev::start_node(config).map_err(Into::into);
-					}
-				}
 				let para_id =
 					node_service::chain_spec::RelayExtensions::try_get(&*config.chain_spec)
 						.map(|e| e.para_id)
@@ -320,13 +317,21 @@ pub fn run() -> Result<()> {
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relay_chain_args.iter()),
+						.chain(cli.relaychain_args.iter()),
 				);
 
 				let id = ParaId::from(para_id);
 
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
+
+				let state_version =
+					RelayChainCli::native_runtime_version(&config.chain_spec).state_version();
+
+				let block: node_primitives::Block =
+					generate_genesis_block(&config.chain_spec, state_version)
+						.map_err(|e| format!("{:?}", e))?;
+				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let polkadot_config = SubstrateCli::create_configuration(
 					&polkadot_cli,
@@ -337,11 +342,12 @@ pub fn run() -> Result<()> {
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
+				info!("Parachain genesis state: {}", genesis_state);
 				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime_or_err!(config.chain_spec, {
 					{
-						start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+						start_node::<RuntimeApi>(config, polkadot_config, collator_options, id)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)
@@ -440,7 +446,7 @@ pub fn run() -> Result<()> {
 					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
-						.chain(cli.relay_chain_args.iter()),
+						.chain(cli.relaychain_args.iter()),
 				);
 
 				let polkadot_config = SubstrateCli::create_configuration(
