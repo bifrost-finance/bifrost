@@ -569,7 +569,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond(who.clone(), amount)?;
+			let query_id = staking_agent.bond(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
@@ -593,7 +593,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.bond_extra(who.clone(), amount)?;
+			let query_id = staking_agent.bond_extra(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
@@ -618,7 +618,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond(who.clone(), amount)?;
+			let query_id = staking_agent.unbond(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
@@ -641,7 +641,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.unbond_all(who.clone())?;
+			let query_id = staking_agent.unbond_all(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
@@ -664,7 +664,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.rebond(who.clone(), amount)?;
+			let query_id = staking_agent.rebond(&who, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
@@ -688,7 +688,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.delegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.delegate(&who, &targets)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -712,7 +712,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.undelegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.undelegate(&who, &targets)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
@@ -736,7 +736,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.redelegate(who.clone(), targets.clone())?;
+			let query_id = staking_agent.redelegate(&who, &targets)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -761,7 +761,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.payout(who, validator.clone(), when.clone())?;
+			staking_agent.payout(&who, &validator, &when)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Payout { currency_id, validator, time_unit: when });
@@ -780,7 +780,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.liquidize(who.clone(), when.clone())?;
+			let query_id = staking_agent.liquidize(&who, &when)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Liquidize {
@@ -803,7 +803,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			let query_id = staking_agent.chill(who.clone())?;
+			let query_id = staking_agent.chill(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Chill { currency_id, delegator_id: who, query_id });
@@ -822,7 +822,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_back(from.clone(), to.clone(), amount)?;
+			staking_agent.transfer_back(&from, &to, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferBack { currency_id, from, to, amount });
@@ -842,7 +842,7 @@ pub mod pallet {
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
-			staking_agent.transfer_to(from.clone(), to.clone(), amount)?;
+			staking_agent.transfer_to(&from, &to, amount)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::TransferTo { currency_id, from, to, amount });
@@ -1088,11 +1088,7 @@ pub mod pallet {
 				)?;
 			} else {
 				let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
-				fee_manager_agent.supplement_fee_reserve(
-					reserved_fee,
-					source_location.clone(),
-					dest.clone(),
-				)?;
+				fee_manager_agent.supplement_fee_reserve(reserved_fee, &source_location, &dest)?;
 			}
 
 			// Deposit event.
@@ -1131,8 +1127,8 @@ pub mod pallet {
 			fee_manager_agent.charge_hosting_fee(
 				fee_to_charge,
 				// Dummy value for 【from】account
-				beneficiary.clone(),
-				beneficiary.clone(),
+				&beneficiary,
+				&beneficiary,
 			)?;
 
 			// Tune the new exchange rate.
@@ -1169,7 +1165,7 @@ pub mod pallet {
 
 			// If param weight_and_fee is a none, it will delete the storage. Otherwise, revise the
 			// storage to the new value if exists, or insert a new record if not exists before.
-			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, operation.clone(), |wt_n_f| {
+			XcmDestWeightAndFee::<T>::mutate_exists(currency_id, &operation, |wt_n_f| {
 				*wt_n_f = weight_and_fee.clone();
 			});
 
@@ -1322,14 +1318,14 @@ pub mod pallet {
 
 			// check delegator
 			// Check if it is bonded already.
-			let _ledger = DelegatorLedgers::<T>::get(KSM, who.clone())
-				.ok_or(Error::<T>::DelegatorNotBonded)?;
+			let _ledger =
+				DelegatorLedgers::<T>::get(KSM, &who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 			let validators_list =
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
 
 			// Update ValidatorsByDelegator storage
-			ValidatorsByDelegator::<T>::insert(currency_id, who.clone(), validators_list.clone());
+			ValidatorsByDelegator::<T>::insert(currency_id, who, validators_list.clone());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorSet {
@@ -1363,7 +1359,7 @@ pub mod pallet {
 			}
 
 			// Update the ledger.
-			DelegatorLedgers::<T>::mutate_exists(currency_id, who.clone(), |old_ledger| {
+			DelegatorLedgers::<T>::mutate_exists(currency_id, &who, |old_ledger| {
 				*old_ledger = ledger.clone();
 			});
 
@@ -1729,7 +1725,7 @@ pub mod pallet {
 					Self::get_currency_query_response_checker(currency_id)?;
 				updated = ledger_query_response_agent.check_delegator_ledger_query_response(
 					query_id,
-					entry.clone(),
+					entry,
 					manual_mode,
 				)?;
 			} else {
@@ -1761,11 +1757,7 @@ pub mod pallet {
 				let validators_by_delegator_query_response_agent =
 					Self::get_currency_query_response_checker(currency_id)?;
 				updated = validators_by_delegator_query_response_agent
-					.check_validators_by_delegator_query_response(
-						query_id,
-						entry.clone(),
-						manual_mode,
-					)?;
+					.check_validators_by_delegator_query_response(query_id, entry, manual_mode)?;
 			} else {
 				Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			}
@@ -1777,7 +1769,7 @@ pub mod pallet {
 			// function.
 			let (entry, _) = Self::get_delegator_ledger_update_entry(query_id)
 				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry.clone() {
+			let currency_id = match entry {
 				LedgerUpdateEntry::Substrate(substrate_entry) => Some(substrate_entry.currency_id),
 				_ => None,
 			}
@@ -1797,7 +1789,7 @@ pub mod pallet {
 			// function.
 			let (entry, _) = Self::get_validators_by_delegator_update_entry(query_id)
 				.ok_or(Error::<T>::QueryNotExist)?;
-			let currency_id = match entry.clone() {
+			let currency_id = match entry {
 				ValidatorsByDelegatorUpdateEntry::Substrate(substrate_entry) =>
 					Some(substrate_entry.currency_id),
 				_ => None,

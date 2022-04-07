@@ -27,53 +27,53 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	fn initialize_delegator(&self) -> Result<DelegatorId, Error>;
 
 	/// First time bonding some amount to a delegator.
-	fn bond(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn bond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Bond extra amount to a delegator.
-	fn bond_extra(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn bond_extra(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Decrease the bonding amount of a delegator.
-	fn unbond(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn unbond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
-	fn unbond_all(&self, who: DelegatorId) -> Result<QueryId, Error>;
+	fn unbond_all(&self, who: &DelegatorId) -> Result<QueryId, Error>;
 
 	/// Cancel some unbonding amount.
-	fn rebond(&self, who: DelegatorId, amount: Balance) -> Result<QueryId, Error>;
+	fn rebond(&self, who: &DelegatorId, amount: Balance) -> Result<QueryId, Error>;
 
 	/// Delegate to some validators.
-	fn delegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn delegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Remove delegation relationship with some validators.
-	fn undelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn undelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Re-delegate existing delegation to a new validator set.
-	fn redelegate(&self, who: DelegatorId, targets: Vec<ValidatorId>) -> Result<QueryId, Error>;
+	fn redelegate(&self, who: &DelegatorId, targets: &Vec<ValidatorId>) -> Result<QueryId, Error>;
 
 	/// Initiate payout for a certain delegator.
 	fn payout(
 		&self,
-		who: DelegatorId,
-		validator: ValidatorId,
-		when: Option<TimeUnit>,
+		who: &DelegatorId,
+		validator: &ValidatorId,
+		when: &Option<TimeUnit>,
 	) -> Result<(), Error>;
 
 	/// Withdraw the due payout into free balance.
-	fn liquidize(&self, who: DelegatorId, when: Option<TimeUnit>) -> Result<QueryId, Error>;
+	fn liquidize(&self, who: &DelegatorId, when: &Option<TimeUnit>) -> Result<QueryId, Error>;
 
 	/// Cancel the identity of delegator.
-	fn chill(&self, who: DelegatorId) -> Result<QueryId, Error>;
+	fn chill(&self, who: &DelegatorId) -> Result<QueryId, Error>;
 
 	/// Make token transferred back to Bifrost chain account.
 	fn transfer_back(
 		&self,
-		from: DelegatorId,
-		to: DelegatorId,
+		from: &DelegatorId,
+		to: &DelegatorId,
 		amount: Balance,
 	) -> Result<(), Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	fn transfer_to(&self, from: DelegatorId, to: DelegatorId, amount: Balance)
+	fn transfer_to(&self, from: &DelegatorId, to: &DelegatorId, amount: Balance)
 		-> Result<(), Error>;
 
 	/// Tune the vtoken exchage rate.
@@ -88,15 +88,15 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 /// or deposit fee reserves for the destination chain nominator accounts.
 pub trait StakingFeeManager<AccountId, Balance> {
 	/// Charge hosting fee.
-	fn charge_hosting_fee(&self, amount: Balance, from: AccountId, to: AccountId)
+	fn charge_hosting_fee(&self, amount: Balance, from: &AccountId, to: &AccountId)
 		-> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
 	fn supplement_fee_reserve(
 		&self,
 		amount: Balance,
-		from: AccountId,
-		to: AccountId,
+		from: &AccountId,
+		to: &AccountId,
 	) -> DispatchResult;
 }
 
@@ -142,7 +142,7 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 	// If the query exists and we've already got the Response, then True is returned. Otherwise,
 	// False is returned.
 	fn get_query_response_record(query_id: QueryId) -> bool;
-	fn create_query_record(responder: AccountId, timeout: BlockNumber) -> u64;
+	fn create_query_record(responder: &AccountId, timeout: BlockNumber) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
 }
 
