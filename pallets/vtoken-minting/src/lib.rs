@@ -1061,43 +1061,4 @@ impl<T: Config> VtokenMintingOperator<CurrencyId, BalanceOf<T>, AccountIdOf<T>, 
 	) -> Option<(AccountIdOf<T>, BalanceOf<T>, TimeUnit)> {
 		Self::token_unlock_ledger(currency_id, index)
 	}
-
-	fn increase_token_to_add(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
-		TokenToAdd::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.checked_add(&value).ok_or(Error::<T>::CalculationOverflow)?;
-
-			Ok(())
-		})?;
-
-		Ok(())
-	}
-
-	fn decrease_token_to_add(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
-		TokenToAdd::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.checked_sub(&value).ok_or(Error::<T>::CalculationOverflow)?;
-
-			Ok(())
-		})?;
-
-		Ok(())
-	}
-
-	fn increase_token_to_deduct(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
-		TokenToDeduct::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.checked_add(&value).ok_or(Error::<T>::CalculationOverflow)?;
-
-			Ok(())
-		})?;
-
-		Ok(())
-	}
-
-	fn decrease_token_to_deduct(currency_id: CurrencyId, value: BalanceOf<T>) -> DispatchResult {
-		TokenToDeduct::<T>::mutate(currency_id, |pool| -> Result<(), Error<T>> {
-			*pool = pool.checked_sub(&value).ok_or(Error::<T>::CalculationOverflow)?;
-			Ok(())
-		})?;
-
-		Ok(())
-	}
 }
