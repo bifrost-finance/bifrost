@@ -27,19 +27,22 @@ use crate::{mock::*, *};
 #[test]
 fn mint() {
 	ExtBuilder::default().one_hundred_for_alice_n_bob().build().execute_with(|| {
-		assert_ok!(VtokenMinting::set_minimum_mint(Origin::root(), KSM, 1000));
+		assert_ok!(VtokenMinting::set_minimum_mint(Origin::root(), KSM, 200));
+		assert_ok!(VtokenMinting::set_fees(Origin::root(), 600, 20));
 		assert_noop!(
 			VtokenMinting::mint(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::BelowMinimumMint
 		);
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
-		assert_eq!(VtokenMinting::token_pool(KSM), 1000);
-		assert_eq!(VtokenMinting::token_to_add(KSM), 1000);
-		assert_eq!(VtokenMinting::minimum_mint(KSM), 1000);
-		assert_eq!(Tokens::total_issuance(vKSM), 2000);
+		assert_eq!(VtokenMinting::token_pool(KSM), 400);
+		assert_eq!(VtokenMinting::token_to_add(KSM), 400);
+		assert_eq!(VtokenMinting::minimum_mint(KSM), 200);
+		assert_eq!(Tokens::total_issuance(vKSM), 1400);
 
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
-		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 1000);
+		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 400);
+		let fee_account: AccountId = <Runtime as Config>::FeeAccount::get();
+		assert_eq!(Tokens::free_balance(KSM, &fee_account), 600);
 	});
 }
 
@@ -131,11 +134,12 @@ fn hook() {
 		VtokenMinting::on_initialize(100);
 		assert_eq!(VtokenMinting::min_time_unit(KSM), TimeUnit::Era(4));
 		assert_ok!(VtokenMinting::increase_token_pool(KSM, 1000));
-		// let mut ledger_list_origin = BoundedVec::default();
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 200));
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
+		assert_eq!(VtokenMinting::token_to_add(KSM), 300);
+		assert_eq!(VtokenMinting::token_to_deduct(KSM), 300);
 		assert_noop!(
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
@@ -157,6 +161,8 @@ fn hook() {
 		VtokenMinting::on_initialize(0);
 		VtokenMinting::on_initialize(1);
 		assert_eq!(VtokenMinting::min_time_unit(KSM), TimeUnit::Era(6));
+		assert_eq!(VtokenMinting::token_to_add(KSM), 0);
+		assert_eq!(VtokenMinting::token_to_deduct(KSM), 0);
 	});
 }
 
