@@ -159,8 +159,7 @@ impl<T: Config>
 	#[transactional]
 	fn bond_extra(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if the amount exceeds the minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
@@ -184,11 +183,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::BondExtra,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::BondExtra, call, who)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -205,8 +201,7 @@ impl<T: Config>
 	#[transactional]
 	fn unbond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		let (active_staking, unlocking_num) = if let Ledger::Substrate(substrate_ledger) = ledger {
 			(substrate_ledger.active, substrate_ledger.unlocking.len() as u32)
@@ -235,11 +230,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Unbond,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -256,8 +248,7 @@ impl<T: Config>
 	#[transactional]
 	fn unbond_all(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		// Get the active amount of a delegator.
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		let amount = if let Ledger::Substrate(substrate_ledger) = ledger {
 			substrate_ledger.active
@@ -270,11 +261,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Unbond,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Unbond, call, who)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -291,8 +279,7 @@ impl<T: Config>
 	#[transactional]
 	fn rebond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if the rebonding amount exceeds minimum requirement.
 		let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
@@ -317,11 +304,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Rebond,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Rebond, call, who)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -342,8 +326,7 @@ impl<T: Config>
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let _ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let _ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
@@ -369,11 +352,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Delegate,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Delegate, call, who)?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		Self::insert_validators_by_delegator_update_entry(
@@ -397,16 +377,15 @@ impl<T: Config>
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let _ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let _ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
 		ensure!(vec_len > Zero::zero(), Error::<T>::VectorEmpty);
 
 		// Get the original delegated validators.
-		let original_set = ValidatorsByDelegator::<T>::get(KSM, who)
-			.ok_or(Error::<T>::ValidatorSetNotExist)?;
+		let original_set =
+			ValidatorsByDelegator::<T>::get(KSM, who).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		// Remove targets from the original set to make a new set.
 		let mut new_set: Vec<(MultiLocation, H256)> = vec![];
@@ -432,11 +411,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Delegate,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Delegate, call, who)?;
 
 		// Insert a query record to the ValidatorsByDelegatorXcmUpdateQueue<T> storage.
 		Self::insert_validators_by_delegator_update_entry(who, new_set, query_id, timeout)?;
@@ -494,8 +470,7 @@ impl<T: Config>
 	#[transactional]
 	fn liquidize(&self, who: &MultiLocation, when: &Option<TimeUnit>) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
-		DelegatorsMultilocation2Index::<T>::get(KSM, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
+		DelegatorsMultilocation2Index::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Get the slashing span param.
 		let num_slashing_spans = if let Some(TimeUnit::SlashingSpan(num_slashing_spans)) = *when {
@@ -509,11 +484,8 @@ impl<T: Config>
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Liquidize,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Liquidize, call, who)?;
 
 		// Insert a delegator ledger update record into DelegatorLedgerXcmUpdateQueue<T>.
 		Self::insert_delegator_ledger_update_entry(
@@ -538,23 +510,18 @@ impl<T: Config>
 	#[transactional]
 	fn chill(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
-		DelegatorsMultilocation2Index::<T>::get(KSM, who)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
+		DelegatorsMultilocation2Index::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Chill);
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
-		let (query_id, timeout, xcm_message) = Self::construct_xcm_as_subaccount_with_query_id(
-			XcmOperation::Chill,
-			call,
-			who,
-		)?;
+		let (query_id, timeout, xcm_message) =
+			Self::construct_xcm_as_subaccount_with_query_id(XcmOperation::Chill, call, who)?;
 
 		// Get active amount, if not zero, create an update entry.
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		let amount = if let Ledger::Substrate(substrate_ledger) = ledger {
 			substrate_ledger.active
@@ -584,8 +551,7 @@ impl<T: Config>
 		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
 
 		// Check if from is one of our delegators. If not, return error.
-		DelegatorsMultilocation2Index::<T>::get(KSM, from)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
+		DelegatorsMultilocation2Index::<T>::get(KSM, from).ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Make sure the receiving account is the Exit_account from vtoken-minting module.
 		let to_account_id = Pallet::<T>::multilocation_to_account(&to)?;
@@ -639,8 +605,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		// Make sure receiving account is one of the KSM delegators.
-		DelegatorsMultilocation2Index::<T>::get(KSM, to)
-			.ok_or(Error::<T>::DelegatorNotExist)?;
+		DelegatorsMultilocation2Index::<T>::get(KSM, to).ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account_id = Pallet::<T>::multilocation_to_account(&from)?;
@@ -695,8 +660,7 @@ impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, B
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Get the delegator ledger
-		let ledger =
-			DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
 
 		let total = if let Ledger::Substrate(substrate_ledger) = ledger {
 			substrate_ledger.total

@@ -73,8 +73,12 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	) -> Result<(), Error>;
 
 	/// Make token from Bifrost chain account to the staking chain account.
-	fn transfer_to(&self, from: &DelegatorId, to: &DelegatorId, amount: Balance)
-		-> Result<(), Error>;
+	fn transfer_to(
+		&self,
+		from: &DelegatorId,
+		to: &DelegatorId,
+		amount: Balance,
+	) -> Result<(), Error>;
 
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(
@@ -88,8 +92,12 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 /// or deposit fee reserves for the destination chain nominator accounts.
 pub trait StakingFeeManager<AccountId, Balance> {
 	/// Charge hosting fee.
-	fn charge_hosting_fee(&self, amount: Balance, from: &AccountId, to: &AccountId)
-		-> DispatchResult;
+	fn charge_hosting_fee(
+		&self,
+		amount: Balance,
+		from: &AccountId,
+		to: &AccountId,
+	) -> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
 	fn supplement_fee_reserve(
