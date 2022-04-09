@@ -22,7 +22,19 @@ use sp_std::vec::Vec;
 use crate::{QueryId, Weight, Xcm};
 
 /// Abstraction over a staking agent for a certain POS chain.
-pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, QueryId, Error> {
+pub trait StakingAgent<
+	DelegatorId,
+	ValidatorId,
+	Balance,
+	TimeUnit,
+	AccountId,
+	GenericAccountId,
+	QueryId,
+	LedgerUpdateEntry,
+	ValidatorsByDelegatorUpdateEntry,
+	Error,
+>
+{
 	/// Delegator initialization work. Generate a new delegator and return its ID.
 	fn initialize_delegator(&self) -> Result<DelegatorId, Error>;
 
@@ -83,47 +95,70 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(
 		&self,
+		who: &DelegatorId,
 		token_amount: Balance,
 		vtoken_amount: Balance,
 	) -> Result<(), Error>;
-}
 
-/// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
-/// or deposit fee reserves for the destination chain nominator accounts.
-pub trait StakingFeeManager<AccountId, Balance> {
+	/// ************************************
+	/// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
+	/// or deposit fee reserves for the destination chain nominator accounts.
+	/// ************************************
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,
 		amount: Balance,
-		from: &AccountId,
-		to: &AccountId,
+		from: &GenericAccountId,
+		to: &GenericAccountId,
 	) -> DispatchResult;
 
 	/// Deposit some amount as fee to nominator accounts.
 	fn supplement_fee_reserve(
 		&self,
 		amount: Balance,
-		from: &AccountId,
-		to: &AccountId,
+		from: &GenericAccountId,
+		to: &GenericAccountId,
 	) -> DispatchResult;
-}
 
-/// Abstraction over a delegator manager.
-pub trait DelegatorManager<DelegatorId, Ledger> {
+	/// ************************************
 	/// Add a new serving delegator for a particular currency.
+	/// ************************************
 	fn add_delegator(&self, index: u16, who: &DelegatorId) -> DispatchResult;
 
 	/// Remove an existing serving delegator for a particular currency.
 	fn remove_delegator(&self, who: &DelegatorId) -> DispatchResult;
-}
 
-/// Abstraction over a validator manager.
-pub trait ValidatorManager<ValidatorId> {
+	/// ************************************
+	/// Abstraction over a validator manager.
+	/// ************************************
+
 	/// Add a new serving validator for a particular currency.
 	fn add_validator(&self, who: &ValidatorId) -> DispatchResult;
 
 	/// Remove an existing serving validator for a particular currency.
 	fn remove_validator(&self, who: &ValidatorId) -> DispatchResult;
+
+	/// ************************************
+	/// Abstraction over a QueryResponseChecker.
+	/// ************************************
+
+	fn check_delegator_ledger_query_response(
+		&self,
+		query_id: QueryId,
+		query_entry: LedgerUpdateEntry,
+		manual_mode: bool,
+	) -> Result<bool, Error>;
+
+	fn check_validators_by_delegator_query_response(
+		&self,
+		query_id: QueryId,
+		query_entry: ValidatorsByDelegatorUpdateEntry,
+		manual_mode: bool,
+	) -> Result<bool, Error>;
+
+	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error>;
+
+	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 }
 
 /// Helper to build xcm message
@@ -152,26 +187,4 @@ pub trait QueryResponseManager<QueryId, AccountId, BlockNumber> {
 	fn get_query_response_record(query_id: QueryId) -> bool;
 	fn create_query_record(responder: &AccountId, timeout: BlockNumber) -> u64;
 	fn remove_query_record(query_id: QueryId) -> bool;
-}
-
-/// Abstraction over a QueryResponseChecker.
-pub trait QueryResponseChecker<QueryId, LedgerUpdateEntry, ValidatorsByDelegatorUpdateEntry, Error>
-{
-	fn check_delegator_ledger_query_response(
-		&self,
-		query_id: QueryId,
-		query_entry: LedgerUpdateEntry,
-		manual_mode: bool,
-	) -> Result<bool, Error>;
-
-	fn check_validators_by_delegator_query_response(
-		&self,
-		query_id: QueryId,
-		query_entry: ValidatorsByDelegatorUpdateEntry,
-		manual_mode: bool,
-	) -> Result<bool, Error>;
-
-	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error>;
-
-	fn fail_validators_by_delegator_query_response(&self, query_id: QueryId) -> Result<(), Error>;
 }
