@@ -1279,7 +1279,7 @@ pub mod pallet {
 			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
 		) -> DispatchResult {
 			// Check the validity of origin
-			T::ControlOrigin::ensure_origin(origin)?;
+			Self::ensure_authorized(origin, currency_id)?;
 
 			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 			// Check the new ledger must has at lease minimum active amount.
