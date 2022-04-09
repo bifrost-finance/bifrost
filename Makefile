@@ -98,7 +98,7 @@ build-bifrost-polkadot-wasm:
 
 .PHONY: build-bifrost-rococo-fast-wasm
 build-bifrost-rococo-fast-wasm:
-	.maintain/build-wasm.sh bifrost-kusama fast	
+	.maintain/build-wasm.sh bifrost-kusama fast
 
 .PHONY: check-try-runtime
 check-try-runtime:
@@ -124,7 +124,7 @@ insert-session-key:
 
 .PHONY: generate-node-key
 generate-node-key:
-	subkey generate-node-key --file ./resources/node-key	
+	subkey generate-node-key --file ./resources/node-key
 
 .PHONY: view-key
 view-key:

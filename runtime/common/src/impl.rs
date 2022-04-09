@@ -27,7 +27,7 @@ use orml_traits::location::Reserve;
 use polkadot_parachain::primitives::Sibling;
 use sp_std::{convert::TryFrom, marker::PhantomData};
 use xcm::latest::prelude::*;
-use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsDefault, SiblingParachainConvertsVia};
+use xcm_builder::{AccountId32Aliases, NativeAsset, ParentIsPreset, SiblingParachainConvertsVia};
 use xcm_executor::traits::{FilterAssetLocation, MatchesFungible};
 use xcm_interface::traits::parachains;
 
@@ -58,8 +58,8 @@ where
 
 /// Bifrost Location Convert
 pub type BifrostLocationConvert = (
-	// The parent (Relay-chain) origin converts to the default `AccountId`.
-	ParentIsDefault<AccountId>,
+	// The parent (Relay-chain) origin converts to the parent `AccountId`.
+	ParentIsPreset<AccountId>,
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
@@ -143,6 +143,14 @@ impl<T: Get<ParaId>> Convert<CurrencyId, Option<MultiLocation>> for BifrostCurre
 			// Phala Native token
 			Token(TokenSymbol::PHA) =>
 				Some(MultiLocation::new(1, X1(Parachain(parachains::phala::ID)))),
+			// Moonriver Native token
+			Token(TokenSymbol::MOVR) => Some(MultiLocation::new(
+				1,
+				X2(
+					Parachain(parachains::moonriver::ID),
+					PalletInstance(parachains::moonriver::PALLET_ID.into()),
+				),
+			)),
 			_ => None,
 		}
 	}
@@ -197,6 +205,11 @@ impl<T: Get<ParaId>> Convert<MultiLocation, Option<CurrencyId>> for BifrostCurre
 						None
 					},
 				X1(Parachain(id)) if id == parachains::phala::ID => Some(Token(TokenSymbol::PHA)),
+				X2(Parachain(id), PalletInstance(index))
+					if ((id == parachains::moonriver::ID) &&
+						(index == parachains::moonriver::PALLET_ID)) =>
+					Some(Token(TokenSymbol::MOVR)),
+
 				_ => None,
 			},
 			MultiLocation { parents, interior } if parents == 0 => match interior {

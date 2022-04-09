@@ -135,6 +135,18 @@ fn currency_id_to_u64_should_work() {
 	assert_eq!(0x0000_0103_0002_0600, e61.currency_id());
 	assert_eq!(0x0000_0205_0104_0600, e62.currency_id());
 	assert_eq!(0x0000_0406_0300_0600, e63.currency_id());
+
+	let e70 = CurrencyId::ForeignAsset(0);
+	let e71 = CurrencyId::ForeignAsset(1);
+	let e72 = CurrencyId::ForeignAsset(255);
+	let e73 = CurrencyId::ForeignAsset(256);
+	let e74 = CurrencyId::ForeignAsset(ForeignAssetId::MAX);
+
+	assert_eq!(0x0000_0000_0000_0700, e70.currency_id());
+	assert_eq!(0x0000_0000_0001_0700, e71.currency_id());
+	assert_eq!(0x0000_0000_00ff_0700, e72.currency_id());
+	assert_eq!(0x0000_0000_0100_0700, e73.currency_id());
+	assert_eq!(0x0000_ffff_ffff_0700, e74.currency_id());
 }
 
 #[test]
@@ -245,4 +257,16 @@ fn u64_to_currency_id_should_work() {
 	assert_eq!(e61, CurrencyId::try_from(0x0000_0103_0002_0600).unwrap());
 	assert_eq!(e62, CurrencyId::try_from(0x0000_0205_0104_0600).unwrap());
 	assert_eq!(e63, CurrencyId::try_from(0x0000_0406_0300_0600).unwrap());
+
+	let e70 = CurrencyId::ForeignAsset(0);
+	let e71 = CurrencyId::ForeignAsset(1);
+	let e72 = CurrencyId::ForeignAsset(255);
+	let e73 = CurrencyId::ForeignAsset(256);
+	let e74 = CurrencyId::ForeignAsset(ForeignAssetId::MAX);
+
+	assert_eq!(e70, CurrencyId::try_from(0x0000_0000_0000_0700).unwrap());
+	assert_eq!(e71, CurrencyId::try_from(0x0000_0000_0001_0700).unwrap());
+	assert_eq!(e72, CurrencyId::try_from(0x0000_0000_00ff_0700).unwrap());
+	assert_eq!(e73, CurrencyId::try_from(0x0000_0000_0100_0700).unwrap());
+	assert_eq!(e74, CurrencyId::try_from(0x0000_ffff_ffff_0700).unwrap());
 }

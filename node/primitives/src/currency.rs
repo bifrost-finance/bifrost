@@ -156,6 +156,7 @@ macro_rules! create_currency_id {
 					| Self::Stable(ts)
 					| Self::VSToken(ts)
 					| Self::VSBond(ts, ..) => ts as u8,
+					Self::ForeignAsset(..) => 0u8,
 					Self::LPToken(..) => 0u8
 				} as u64;
 
@@ -188,52 +189,56 @@ macro_rules! create_currency_id {
 					Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2) => {
 						(((*token_symbol_1 as u64) << 16) & 0x0000_0000_00ff_0000) + (((*token_type_1 as u64) << 24) & 0x0000_0000_ff00_0000) +
 						(((*token_symbol_2 as u64) << 32) & 0x0000_00ff_0000_0000) + (((*token_type_2 as u64) << 40) & 0x0000_ff00_0000_0000) + discr
+					},
+					Self::ForeignAsset(asset_token_id) => {
+						(((*asset_token_id as u64) << 16) & 0x0000_ffff_ffff_0000) + discr
 					}
 				}
 			}
 
-			fn name(&self) -> &str {
+			fn name(&self) -> Option<&str> {
 				match self {
-					$(CurrencyId::Native(TokenSymbol::$symbol) => $name,)*
-					$(CurrencyId::Stable(TokenSymbol::$symbol) => $name,)*
-					$(CurrencyId::Token(TokenSymbol::$symbol) => $name,)*
-					$(CurrencyId::VToken(TokenSymbol::$symbol) => $name,)*
-					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $name,)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $name,)*
+					$(CurrencyId::Native(TokenSymbol::$symbol) => Some($name),)*
+					$(CurrencyId::Stable(TokenSymbol::$symbol) => Some($name),)*
+					$(CurrencyId::Token(TokenSymbol::$symbol) => Some($name),)*
+					$(CurrencyId::VToken(TokenSymbol::$symbol) => Some($name),)*
+					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Some($name),)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => Some($name),)*
 					CurrencyId::LPToken(ts1, type1, ts2, type2) => {
 						let c1_u64: u64 = (((*type1 as u64) << 8) & 0x0000_0000_0000_ff00) + ((*ts1 as u64) & 0x0000_0000_0000_00ff);
 						let c2_u64: u64 = (((*type2 as u64) << 8) & 0x0000_0000_0000_ff00) + ((*ts2 as u64) & 0x0000_0000_0000_00ff);
 
 						let _c1: CurrencyId = c1_u64.try_into().unwrap_or_default();
 						let _c2: CurrencyId = c2_u64.try_into().unwrap_or_default();
-						stringify!(_c1.name(), ",", _c2.name())
-					}
+						Some(stringify!(_c1.name(), ",", _c2.name()))
+					},
+					_ => None
 				}
 			}
 
-			fn symbol(&self) -> &str {
+			fn symbol(&self) -> Option<&str> {
 				match self {
-					$(CurrencyId::Native(TokenSymbol::$symbol) => stringify!($symbol),)*
-					$(CurrencyId::Stable(TokenSymbol::$symbol) => stringify!($symbol),)*
-					$(CurrencyId::Token(TokenSymbol::$symbol) => stringify!($symbol),)*
-					$(CurrencyId::VToken(TokenSymbol::$symbol) => stringify!($symbol),)*
-					$(CurrencyId::VSToken(TokenSymbol::$symbol) => stringify!($symbol),)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => stringify!($symbol),)*
-					CurrencyId::LPToken(_ts1, _, _ts2, _) => {
-						stringify!(_ts1, ",", _ts2)
-					}
+					$(CurrencyId::Native(TokenSymbol::$symbol) => Some(stringify!($symbol)),)*
+					$(CurrencyId::Stable(TokenSymbol::$symbol) => Some(stringify!($symbol)),)*
+					$(CurrencyId::Token(TokenSymbol::$symbol) => Some(stringify!($symbol)),)*
+					$(CurrencyId::VToken(TokenSymbol::$symbol) => Some(stringify!($symbol)),)*
+					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Some(stringify!($symbol)),)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => Some(stringify!($symbol)),)*
+					CurrencyId::LPToken(_ts1, _, _ts2, _) => Some(stringify!(_ts1, ",", _ts2)),
+					_ => None
 				}
 			}
 
-			fn decimals(&self) -> u8 {
+			fn decimals(&self) -> Option<u8> {
 				match self {
-					$(CurrencyId::Native(TokenSymbol::$symbol) => $deci,)*
-					$(CurrencyId::Stable(TokenSymbol::$symbol) => $deci,)*
-					$(CurrencyId::Token(TokenSymbol::$symbol) => $deci,)*
-					$(CurrencyId::VToken(TokenSymbol::$symbol) => $deci,)*
-					$(CurrencyId::VSToken(TokenSymbol::$symbol) => $deci,)*
-					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => $deci,)*
-					CurrencyId::LPToken(..) => 1u8
+					$(CurrencyId::Native(TokenSymbol::$symbol) => Some($deci),)*
+					$(CurrencyId::Stable(TokenSymbol::$symbol) => Some($deci),)*
+					$(CurrencyId::Token(TokenSymbol::$symbol) => Some($deci),)*
+					$(CurrencyId::VToken(TokenSymbol::$symbol) => Some($deci),)*
+					$(CurrencyId::VSToken(TokenSymbol::$symbol) => Some($deci),)*
+					$(CurrencyId::VSBond(TokenSymbol::$symbol, ..) => Some($deci),)*
+					CurrencyId::LPToken(..) => Some(1u8),
+					_ => None
 				}
 			}
 		}
@@ -270,6 +275,7 @@ create_currency_id! {
 		ZLK("Zenlink Network Token", 18) = 7,
 		PHA("Phala Native Token", 12) = 8,
 		RMRK("RMRK Token",10) = 9,
+		MOVR("Moonriver Native Token",18) = 10,
 	}
 }
 
@@ -278,6 +284,8 @@ impl Default for TokenSymbol {
 		Self::BNC
 	}
 }
+
+pub type ForeignAssetId = u32;
 
 /// Currency ID, it might be extended with more variants in the future.
 #[derive(
@@ -304,6 +312,7 @@ pub enum CurrencyId {
 	VSBond(TokenSymbol, ParaId, LeasePeriod, LeasePeriod),
 	// [currency1 Tokensymbol, currency1 TokenType, currency2 TokenSymbol, currency2 TokenType]
 	LPToken(TokenSymbol, u8, TokenSymbol, u8),
+	ForeignAsset(ForeignAssetId),
 }
 
 impl Default for CurrencyId {
@@ -367,6 +376,7 @@ impl CurrencyId {
 			Self::VSToken(..) => 4,
 			Self::VSBond(..) => 5,
 			Self::LPToken(..) => 6,
+			Self::ForeignAsset(..) => 7,
 		}
 	}
 }
@@ -400,6 +410,10 @@ impl CurrencyIdExt for CurrencyId {
 
 	fn is_lptoken(&self) -> bool {
 		matches!(self, CurrencyId::LPToken(..))
+	}
+
+	fn is_foreign_asset(&self) -> bool {
+		matches!(self, CurrencyId::ForeignAsset(..))
 	}
 
 	fn into(symbol: Self::TokenSymbol) -> Self {
@@ -438,6 +452,10 @@ impl TryFrom<u64> for CurrencyId {
 				let token_symbol_2 = TokenSymbol::try_from(token_symbol_num_2).unwrap_or_default();
 
 				Ok(Self::LPToken(token_symbol_1, token_type_1, token_symbol_2, token_type_2))
+			},
+			7 => {
+				let foreign_asset_id = ((id & 0x0000_ffff_ffff_0000) >> 16) as ForeignAssetId;
+				Ok(Self::ForeignAsset(foreign_asset_id))
 			},
 			_ => Err(()),
 		}

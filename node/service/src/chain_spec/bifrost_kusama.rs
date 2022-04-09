@@ -22,13 +22,13 @@ use std::{
 };
 
 use bifrost_kusama_runtime::{
-	AccountId, AuraId, Balance, BalancesConfig, BlockNumber, CouncilConfig,
-	CouncilMembershipConfig, DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig,
-	InflationInfo, ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range,
-	SS58Prefix, SalpConfig, SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
+	AccountId, Balance, BalancesConfig, BlockNumber, CouncilConfig, CouncilMembershipConfig,
+	DefaultBlocksPerRound, DemocracyConfig, GenesisConfig, IndicesConfig, InflationInfo,
+	ParachainInfoConfig, ParachainStakingConfig, PolkadotXcmConfig, Range, SS58Prefix, SalpConfig,
+	SalpLiteConfig, SessionConfig, SystemConfig, TechnicalCommitteeConfig,
 	TechnicalMembershipConfig, TokensConfig, VestingConfig, WASM_BINARY,
 };
-use bifrost_runtime_common::dollar;
+use bifrost_runtime_common::{dollar, AuraId};
 use cumulus_primitives_core::ParaId;
 use frame_benchmarking::{account, whitelisted_caller};
 use hex_literal::hex;
@@ -101,11 +101,12 @@ fn bifrost_kusama_properties() -> Properties {
 		CurrencyId::Token(TokenSymbol::ZLK),
 		CurrencyId::Token(TokenSymbol::PHA),
 		CurrencyId::Token(TokenSymbol::RMRK),
+		CurrencyId::Token(TokenSymbol::MOVR),
 	]
 	.iter()
 	.for_each(|token| {
-		token_symbol.push(token.symbol().to_string());
-		token_decimals.push(token.decimals() as u32);
+		token_symbol.push(token.symbol().expect("Token symbol expected").to_string());
+		token_decimals.push(token.decimals().expect("Token decimals expected") as u32);
 	});
 
 	properties.insert("tokenSymbol".into(), token_symbol.into());
