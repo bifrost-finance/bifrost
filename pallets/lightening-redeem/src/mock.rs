@@ -25,13 +25,10 @@ use frame_support::{
 	PalletId,
 };
 use node_primitives::{CurrencyId, TokenSymbol};
-use sp_core::{
-	u32_trait::{_2, _3},
-	H256,
-};
+use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup},
+	traits::{AccountIdConversion, BlakeTwo256, IdentityLookup},
 	AccountId32,
 };
 
@@ -102,6 +99,10 @@ orml_traits::parameter_type_with_key! {
 		0
 	};
 }
+parameter_types! {
+	pub DustAccount: AccountId = PalletId(*b"orml/dst").into_account();
+	pub const MaxLocks: u32 = 100;
+}
 impl orml_tokens::Config for Runtime {
 	type Amount = i128;
 	type Balance = Balance;
@@ -109,8 +110,8 @@ impl orml_tokens::Config for Runtime {
 	type DustRemovalWhitelist = Nothing;
 	type Event = Event;
 	type ExistentialDeposits = ExistentialDeposits;
-	type MaxLocks = ();
-	type OnDust = orml_tokens::TransferDust<Runtime, ()>;
+	type MaxLocks = MaxLocks;
+	type OnDust = orml_tokens::TransferDust<Runtime, DustAccount>;
 	type WeightInfo = ();
 }
 
@@ -140,7 +141,7 @@ impl bifrost_lightening_redeem::Config for Runtime {
 	type Event = Event;
 	type MultiCurrency = Tokens;
 	type ControlOrigin =
-		pallet_collective::EnsureProportionAtLeast<_2, _3, AccountId, CouncilCollective>;
+		pallet_collective::EnsureProportionAtLeast<AccountId, CouncilCollective, 2, 3>;
 	type PalletId = LighteningRedeemPalletId;
 	type WeightInfo = ();
 }

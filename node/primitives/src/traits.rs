@@ -31,13 +31,13 @@ use sp_runtime::{
 };
 use sp_std::{fmt::Debug, vec::Vec};
 
-use crate::BridgeAssetBalance;
+use crate::{BridgeAssetBalance, CurrencyId};
 
 pub trait TokenInfo {
 	fn currency_id(&self) -> u64;
-	fn name(&self) -> &str;
-	fn symbol(&self) -> &str;
-	fn decimals(&self) -> u8;
+	fn name(&self) -> Option<&str>;
+	fn symbol(&self) -> Option<&str>;
+	fn decimals(&self) -> Option<u8>;
 }
 
 /// Extension trait for CurrencyId
@@ -50,6 +50,7 @@ pub trait CurrencyIdExt {
 	fn is_native(&self) -> bool;
 	fn is_stable(&self) -> bool;
 	fn is_lptoken(&self) -> bool;
+	fn is_foreign_asset(&self) -> bool;
 	fn into(symbol: Self::TokenSymbol) -> Self;
 }
 
@@ -179,13 +180,13 @@ impl<Balance> BancorHandler<Balance> for () {
 	}
 }
 
-pub trait CheckSubAccount<T: Encode + Decode + Default> {
+pub trait CheckSubAccount<T: Encode + Decode> {
 	fn check_sub_account<S: Decode>(&self, account: &T) -> bool;
 }
 
 impl<T, Id> CheckSubAccount<T> for Id
 where
-	T: Encode + Decode + Default,
+	T: Encode + Decode,
 	Id: Encode + Decode + TypeId + AccountIdConversion<T> + Eq,
 {
 	fn check_sub_account<S: Decode>(&self, account: &T) -> bool {
@@ -234,4 +235,14 @@ pub trait VtokenMintingOperator<CurrencyId, Balance, AccountId, TimeUnit> {
 		currency_id: CurrencyId,
 		index: u32,
 	) -> Option<(AccountId, Balance, TimeUnit)>;
+}
+
+/// A mapping between AssetId and AssetMetadata.
+pub trait AssetIdMapping<ForeignAssetId, MultiLocation, AssetMetadata> {
+	/// Returns the AssetMetadata associated with a given ForeignAssetId.
+	fn get_foreign_asset_metadata(foreign_asset_id: ForeignAssetId) -> Option<AssetMetadata>;
+	/// Returns the MultiLocation associated with a given ForeignAssetId.
+	fn get_multi_location(foreign_asset_id: ForeignAssetId) -> Option<MultiLocation>;
+	/// Returns the CurrencyId associated with a given MultiLocation.
+	fn get_currency_id(multi_location: MultiLocation) -> Option<CurrencyId>;
 }
