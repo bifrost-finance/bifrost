@@ -39,15 +39,13 @@ use xcm::{
 	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
 };
 
+use crate::traits::QueryResponseManager;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
 	},
-	traits::{
-		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
-		StakingFeeManager, ValidatorManager,
-	},
+	traits::StakingAgent,
 	Junction::AccountId32,
 	Junctions::X1,
 };
@@ -78,16 +76,7 @@ type StakingAgentBoxType<T> = Box<
 		BalanceOf<T>,
 		TimeUnit,
 		AccountIdOf<T>,
-		QueryId,
-		pallet::Error<T>,
-	>,
->;
-type DelegatorManagerBoxType<T> =
-	Box<dyn DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>>;
-type ValidatorManagerBoxType = Box<dyn ValidatorManager<MultiLocation>>;
-type StakingFeeManagerBoxType<T> = Box<dyn StakingFeeManager<MultiLocation, BalanceOf<T>>>;
-type QueryResponseCheckerBoxType<T> = Box<
-	dyn QueryResponseChecker<
+		MultiLocation,
 		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
 		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
@@ -1018,8 +1007,8 @@ pub mod pallet {
 					reserved_fee,
 				)?;
 			} else {
-				let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
-				fee_manager_agent.supplement_fee_reserve(reserved_fee, &source_location, &dest)?;
+				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+				staking_agent.supplement_fee_reserve(reserved_fee, &source_location, &dest)?;
 			}
 
 			// Deposit event.
@@ -1056,8 +1045,8 @@ pub mod pallet {
 
 			// Should first charge fee, and then tune exchange rate. Otherwise, the rate will be
 			// wrong.
-			let fee_manager_agent = Self::get_currency_staking_fee_manager(currency_id)?;
-			fee_manager_agent.charge_hosting_fee(
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.charge_hosting_fee(
 				fee_to_charge,
 				// Dummy value for 【from】account
 				&beneficiary,
@@ -1065,7 +1054,6 @@ pub mod pallet {
 			)?;
 
 			// Tune the new exchange rate.
-			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			staking_agent.tune_vtoken_exchange_rate(
 				&who,
 				value,
@@ -1164,8 +1152,8 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
-			delegator_manager.add_delegator(index, &who)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.add_delegator(index, &who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorAdded {
@@ -1186,8 +1174,8 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let delegator_manager = Self::get_currency_delegator_manager(currency_id)?;
-			delegator_manager.remove_delegator(&who)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.remove_delegator(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRemoved { currency_id, delegator_id: who });
@@ -1204,8 +1192,8 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
-			validator_manager.add_validator(&who)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.add_validator(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsAdded { currency_id, validator_id: who });
@@ -1222,8 +1210,8 @@ pub mod pallet {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
 
-			let validator_manager = Self::get_currency_validator_manager(currency_id)?;
-			validator_manager.remove_validator(&who)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.remove_validator(&who)?;
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::ValidatorsRemoved { currency_id, validator_id: who });
@@ -1473,42 +1461,6 @@ pub mod pallet {
 			}
 		}
 
-		fn get_currency_delegator_manager(
-			currency_id: CurrencyId,
-		) -> Result<DelegatorManagerBoxType<T>, Error<T>> {
-			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
-				_ => Err(Error::<T>::NotSupportedCurrencyId),
-			}
-		}
-
-		fn get_currency_validator_manager(
-			currency_id: CurrencyId,
-		) -> Result<ValidatorManagerBoxType, Error<T>> {
-			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
-				_ => Err(Error::<T>::NotSupportedCurrencyId),
-			}
-		}
-
-		fn get_currency_staking_fee_manager(
-			currency_id: CurrencyId,
-		) -> Result<StakingFeeManagerBoxType<T>, Error<T>> {
-			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
-				_ => Err(Error::<T>::NotSupportedCurrencyId),
-			}
-		}
-
-		fn get_currency_query_response_checker(
-			currency_id: CurrencyId,
-		) -> Result<QueryResponseCheckerBoxType<T>, Error<T>> {
-			match currency_id {
-				KSM => Ok(Box::new(KusamaAgent::<T>::new())),
-				_ => Err(Error::<T>::NotSupportedCurrencyId),
-			}
-		}
-
 		pub fn sort_validators_and_remove_duplicates(
 			currency_id: CurrencyId,
 			validators: &Vec<MultiLocation>,
@@ -1655,9 +1607,8 @@ pub mod pallet {
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
-				let ledger_query_response_agent =
-					Self::get_currency_query_response_checker(currency_id)?;
-				updated = ledger_query_response_agent.check_delegator_ledger_query_response(
+				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+				updated = staking_agent.check_delegator_ledger_query_response(
 					query_id,
 					entry,
 					manual_mode,
@@ -1688,10 +1639,12 @@ pub mod pallet {
 				}
 				.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
-				let validators_by_delegator_query_response_agent =
-					Self::get_currency_query_response_checker(currency_id)?;
-				updated = validators_by_delegator_query_response_agent
-					.check_validators_by_delegator_query_response(query_id, entry, manual_mode)?;
+				let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+				updated = staking_agent.check_validators_by_delegator_query_response(
+					query_id,
+					entry,
+					manual_mode,
+				)?;
 			} else {
 				Self::do_fail_validators_by_delegator_query_response(query_id)?;
 			}
@@ -1709,9 +1662,8 @@ pub mod pallet {
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
-			let ledger_query_response_agent =
-				Self::get_currency_query_response_checker(currency_id)?;
-			ledger_query_response_agent.fail_delegator_ledger_query_response(query_id)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.fail_delegator_ledger_query_response(query_id)?;
 
 			Ok(())
 		}
@@ -1730,10 +1682,8 @@ pub mod pallet {
 			}
 			.ok_or(Error::<T>::NotSupportedCurrencyId)?;
 
-			let validators_by_delegator_query_response_agent =
-				Self::get_currency_query_response_checker(currency_id)?;
-			validators_by_delegator_query_response_agent
-				.fail_validators_by_delegator_query_response(query_id)?;
+			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
+			staking_agent.fail_validators_by_delegator_query_response(query_id)?;
 
 			Ok(())
 		}

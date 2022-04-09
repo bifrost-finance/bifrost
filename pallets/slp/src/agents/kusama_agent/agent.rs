@@ -51,15 +51,12 @@ use crate::{
 		SubstrateValidatorsByDelegatorUpdateEntry, UnlockChunk, ValidatorsByDelegatorUpdateEntry,
 		XcmOperation, KSM,
 	},
-	traits::{
-		DelegatorManager, QueryResponseChecker, QueryResponseManager, StakingAgent,
-		StakingFeeManager, XcmBuilder,
-	},
+	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
 	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
-	TimeUnit, ValidatorManager, Validators, ValidatorsByDelegator,
-	ValidatorsByDelegatorXcmUpdateQueue, XcmDestWeightAndFee, TIMEOUT_BLOCKS,
+	TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
+	XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
 
 /// StakingAgent implementation for Kusama
@@ -78,7 +75,10 @@ impl<T: Config>
 		BalanceOf<T>,
 		TimeUnit,
 		AccountIdOf<T>,
+		MultiLocation,
 		QueryId,
+		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
 		Error<T>,
 	> for KusamaAgent<T>
 {
@@ -650,12 +650,7 @@ impl<T: Config>
 
 		Ok(())
 	}
-}
 
-/// DelegatorManager implementation for Kusama
-impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, BalanceOf<T>>>
-	for KusamaAgent<T>
-{
 	/// Add a new serving delegator for a particular currency.
 	#[transactional]
 	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
@@ -698,10 +693,7 @@ impl<T: Config> DelegatorManager<MultiLocation, SubstrateLedger<MultiLocation, B
 
 		Ok(())
 	}
-}
 
-/// ValidatorManager implementation for Kusama
-impl<T: Config> ValidatorManager<MultiLocation> for KusamaAgent<T> {
 	/// Add a new serving delegator for a particular currency.
 	#[transactional]
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
@@ -757,11 +749,7 @@ impl<T: Config> ValidatorManager<MultiLocation> for KusamaAgent<T> {
 
 		Ok(())
 	}
-}
 
-/// Abstraction over a fee manager for charging fee from the origin chain(Bifrost)
-/// or deposit fee reserves for the destination chain nominator accounts.
-impl<T: Config> StakingFeeManager<MultiLocation, BalanceOf<T>> for KusamaAgent<T> {
 	/// Charge hosting fee.
 	fn charge_hosting_fee(
 		&self,
@@ -801,6 +789,94 @@ impl<T: Config> StakingFeeManager<MultiLocation, BalanceOf<T>> for KusamaAgent<T
 		to: &MultiLocation,
 	) -> DispatchResult {
 		Self::do_transfer_to(from, to, amount)?;
+
+		Ok(())
+	}
+
+	fn check_delegator_ledger_query_response(
+		&self,
+		query_id: QueryId,
+		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
+		manual_mode: bool,
+	) -> Result<bool, Error<T>> {
+		// If this is manual mode, it is always updatable.
+		let should_update = if manual_mode {
+			true
+		} else {
+			T::SubstrateResponseManager::get_query_response_record(query_id)
+		};
+
+		// Update corresponding storages.
+		if should_update {
+			Self::update_ledger_query_response_storage(query_id, entry.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
+				query_id,
+				entry,
+			});
+		}
+
+		Ok(should_update)
+	}
+
+	fn check_validators_by_delegator_query_response(
+		&self,
+		query_id: QueryId,
+		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		manual_mode: bool,
+	) -> Result<bool, Error<T>> {
+		let should_update = if manual_mode {
+			true
+		} else {
+			T::SubstrateResponseManager::get_query_response_record(query_id)
+		};
+
+		// Update corresponding storages.
+		if should_update {
+			Self::update_validators_by_delegator_query_response_storage(query_id, entry.clone())?;
+
+			// Deposit event.
+			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseConfirmed {
+				query_id,
+				entry,
+			});
+		}
+
+		Ok(should_update)
+	}
+
+	#[transactional]
+	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
+		// delete pallet_xcm query
+		T::SubstrateResponseManager::remove_query_record(query_id);
+
+		// delete update entry
+		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
+			query_id,
+		});
+
+		Ok(())
+	}
+
+	#[transactional]
+	fn fail_validators_by_delegator_query_response(
+		&self,
+		query_id: QueryId,
+	) -> Result<(), Error<T>> {
+		// delete pallet_xcm query
+		T::SubstrateResponseManager::remove_query_record(query_id);
+
+		// delete update entry
+		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
+
+		// Deposit event.
+		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseFailSuccessfully {
+			query_id,
+		});
 
 		Ok(())
 	}
@@ -896,103 +972,6 @@ impl<T: Config>
 				},
 			},
 		])
-	}
-}
-
-impl<T: Config>
-	QueryResponseChecker<
-		QueryId,
-		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
-		Error<T>,
-	> for KusamaAgent<T>
-{
-	fn check_delegator_ledger_query_response(
-		&self,
-		query_id: QueryId,
-		entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
-		manual_mode: bool,
-	) -> Result<bool, Error<T>> {
-		// If this is manual mode, it is always updatable.
-		let should_update = if manual_mode {
-			true
-		} else {
-			T::SubstrateResponseManager::get_query_response_record(query_id)
-		};
-
-		// Update corresponding storages.
-		if should_update {
-			Self::update_ledger_query_response_storage(query_id, entry.clone())?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseConfirmed {
-				query_id,
-				entry,
-			});
-		}
-
-		Ok(should_update)
-	}
-
-	fn check_validators_by_delegator_query_response(
-		&self,
-		query_id: QueryId,
-		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
-		manual_mode: bool,
-	) -> Result<bool, Error<T>> {
-		let should_update = if manual_mode {
-			true
-		} else {
-			T::SubstrateResponseManager::get_query_response_record(query_id)
-		};
-
-		// Update corresponding storages.
-		if should_update {
-			Self::update_validators_by_delegator_query_response_storage(query_id, entry.clone())?;
-
-			// Deposit event.
-			Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseConfirmed {
-				query_id,
-				entry,
-			});
-		}
-
-		Ok(should_update)
-	}
-
-	#[transactional]
-	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
-		// delete pallet_xcm query
-		T::SubstrateResponseManager::remove_query_record(query_id);
-
-		// delete update entry
-		DelegatorLedgerXcmUpdateQueue::<T>::remove(query_id);
-
-		// Deposit event.
-		Pallet::<T>::deposit_event(Event::DelegatorLedgerQueryResponseFailSuccessfully {
-			query_id,
-		});
-
-		Ok(())
-	}
-
-	#[transactional]
-	fn fail_validators_by_delegator_query_response(
-		&self,
-		query_id: QueryId,
-	) -> Result<(), Error<T>> {
-		// delete pallet_xcm query
-		T::SubstrateResponseManager::remove_query_record(query_id);
-
-		// delete update entry
-		ValidatorsByDelegatorXcmUpdateQueue::<T>::remove(query_id);
-
-		// Deposit event.
-		Pallet::<T>::deposit_event(Event::ValidatorsByDelegatorQueryResponseFailSuccessfully {
-			query_id,
-		});
-
-		Ok(())
 	}
 }
 
