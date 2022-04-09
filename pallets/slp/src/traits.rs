@@ -83,6 +83,7 @@ pub trait StakingAgent<DelegatorId, ValidatorId, Balance, TimeUnit, AccountId, Q
 	/// Tune the vtoken exchage rate.
 	fn tune_vtoken_exchange_rate(
 		&self,
+		who: &DelegatorId,
 		token_amount: Balance,
 		vtoken_amount: Balance,
 	) -> Result<(), Error>;

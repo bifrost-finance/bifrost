@@ -617,16 +617,36 @@ impl<T: Config>
 		Ok(())
 	}
 
+	#[transactional]
 	fn tune_vtoken_exchange_rate(
 		&self,
+		who: &MultiLocation,
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		ensure!(token_amount >= Zero::zero(), Error::<T>::AmountZero);
 
+		// Check whether "who" is an existing delegator.
+		let _ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+
 		// Tune the vtoken exchange rate.
 		T::VtokenMinting::increase_token_pool(KSM, token_amount)
 			.map_err(|_| Error::<T>::IncreaseTokenPoolError)?;
+
+		// update delegator ledger
+		DelegatorLedgers::<T>::mutate(KSM, who, |old_ledger| -> Result<(), Error<T>> {
+			if let Some(Ledger::Substrate(ref mut old_sub_ledger)) = old_ledger {
+				// Increase both the active and total amount.
+				old_sub_ledger.active =
+					old_sub_ledger.active.checked_add(&token_amount).ok_or(Error::<T>::OverFlow)?;
+
+				old_sub_ledger.total =
+					old_sub_ledger.total.checked_add(&token_amount).ok_or(Error::<T>::OverFlow)?;
+				Ok(())
+			} else {
+				Err(Error::<T>::Unexpected)?
+			}
+		})?;
 
 		Ok(())
 	}

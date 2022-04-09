@@ -1035,11 +1035,13 @@ pub mod pallet {
 
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::charge_host_fee_and_tune_vtoken_exchange_rate())]
-		/// Charge staking host fee and tune vtoken/token exchange rate.
+		/// Charge staking host fee, tune vtoken/token exchange rate, and update delegator ledger
+		/// for single delegator.
 		pub fn charge_host_fee_and_tune_vtoken_exchange_rate(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 			#[pallet::compact] value: BalanceOf<T>,
+			who: MultiLocation,
 		) -> DispatchResult {
 			// Ensure origin
 			Self::ensure_authorized(origin, currency_id)?;
@@ -1065,6 +1067,7 @@ pub mod pallet {
 			// Tune the new exchange rate.
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			staking_agent.tune_vtoken_exchange_rate(
+				&who,
 				value,
 				// Dummy value for vtoken amount
 				Zero::zero(),
