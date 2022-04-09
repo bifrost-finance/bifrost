@@ -39,13 +39,12 @@ use xcm::{
 	opaque::latest::{Junction::Parachain, Junctions::X2, NetworkId::Any},
 };
 
-use crate::traits::QueryResponseManager;
 pub use crate::{
 	primitives::{
 		Delays, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 		ValidatorsByDelegatorUpdateEntry, XcmOperation, KSM,
 	},
-	traits::StakingAgent,
+	traits::{QueryResponseManager, StakingAgent},
 	Junction::AccountId32,
 	Junctions::X1,
 };
