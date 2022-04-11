@@ -1,4 +1,5 @@
 # Basic
+unstable_features = true
 hard_tabs = true
 use_small_heuristics = "Max"
 # Imports
