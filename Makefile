@@ -28,7 +28,7 @@ build-bifrost-rococo-fast-release:
 
 
 .PHONY: check-all
-check-all: format
+check-all: format clippy
 	SKIP_WASM_BUILD= cargo check -p node-cli --locked --features "with-all-runtime"
 
 .PHONY: test-all
@@ -51,6 +51,10 @@ copy-genesis-config-release:
 .PHONY: format
 format:
 	cargo +nightly fmt --all -- --check
+
+.PHONY: clippy
+clippy:
+	cargo +nightly clippy -p bifrost-slp -- --no-deps
 
 .PHONY: test-benchmarking
 test-benchmarking:
