@@ -567,13 +567,14 @@ pub mod pallet {
 		/// *****************************/
 		///
 		/// Delegator initialization work. Generate a new delegator and return its ID.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::initialize_delegator())]
 		pub fn initialize_delegator(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
 		) -> DispatchResult {
-			// Ensure origin
-			Self::ensure_authorized(origin, currency_id)?;
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let delegator_id = staking_agent.initialize_delegator()?;
@@ -584,6 +585,7 @@ pub mod pallet {
 		}
 
 		/// First time bonding some amount to a delegator.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::bond())]
 		pub fn bond(
 			origin: OriginFor<T>,
@@ -608,6 +610,7 @@ pub mod pallet {
 		}
 
 		/// Bond extra amount to a delegator.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::bond_extra())]
 		pub fn bond_extra(
 			origin: OriginFor<T>,
@@ -633,6 +636,7 @@ pub mod pallet {
 
 		/// Decrease some amount to a delegator. Leave no less than the minimum delegator
 		/// requirement.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::unbond())]
 		pub fn unbond(
 			origin: OriginFor<T>,
@@ -657,6 +661,7 @@ pub mod pallet {
 		}
 
 		/// Unbond all the active amount of a delegator.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::unbond_all())]
 		pub fn unbond_all(
 			origin: OriginFor<T>,
@@ -679,6 +684,7 @@ pub mod pallet {
 		}
 
 		/// Rebond some unlocking amount to a delegator.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::rebond())]
 		pub fn rebond(
 			origin: OriginFor<T>,
@@ -703,6 +709,7 @@ pub mod pallet {
 		}
 
 		/// Delegate to some validator set.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::delegate())]
 		pub fn delegate(
 			origin: OriginFor<T>,
@@ -727,6 +734,7 @@ pub mod pallet {
 		}
 
 		/// Re-delegate existing delegation to a new validator set.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::undelegate())]
 		pub fn undelegate(
 			origin: OriginFor<T>,
@@ -751,6 +759,7 @@ pub mod pallet {
 		}
 
 		/// Re-delegate existing delegation to a new validator set.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::redelegate())]
 		pub fn redelegate(
 			origin: OriginFor<T>,
@@ -775,6 +784,7 @@ pub mod pallet {
 		}
 
 		/// Initiate payout for a certain delegator.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::payout())]
 		pub fn payout(
 			origin: OriginFor<T>,
@@ -795,6 +805,7 @@ pub mod pallet {
 		}
 
 		/// Withdraw the due payout into free balance.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::liquidize())]
 		pub fn liquidize(
 			origin: OriginFor<T>,
@@ -819,6 +830,7 @@ pub mod pallet {
 		}
 
 		/// Initiate payout for a certain delegator.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::chill())]
 		pub fn chill(
 			origin: OriginFor<T>,
@@ -836,6 +848,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::transfer_back())]
 		pub fn transfer_back(
 			origin: OriginFor<T>,
@@ -856,6 +869,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::transfer_to())]
 		pub fn transfer_to(
 			origin: OriginFor<T>,
@@ -1008,6 +1022,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::supplement_fee_reserve())]
 		pub fn supplement_fee_reserve(
 			origin: OriginFor<T>,
@@ -1096,12 +1111,6 @@ pub mod pallet {
 			let (latest_time_unit, tune_num) =
 				Self::get_delegator_latest_tune_record(currency_id, &who)
 					.ok_or(Error::<T>::DelegatorLatestTuneRecordNotExist)?;
-
-			#[cfg(feature = "std")]
-			println!("latest_time_unit: {:?}", latest_time_unit.clone());
-
-			#[cfg(feature = "std")]
-			println!("current_time_unit: {:?}", current_time_unit.clone());
 
 			// See if exceeds tuning limit.
 			// If it has been tuned in the current time unit, ensure this tuning is within limit.
@@ -1222,6 +1231,7 @@ pub mod pallet {
 		}
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_delegator())]
 		pub fn add_delegator(
 			origin: OriginFor<T>,
@@ -1245,6 +1255,7 @@ pub mod pallet {
 		}
 
 		/// Update storage DelegatorsIndex2Multilocation<T> 和 DelegatorsMultilocation2Index<T>.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_delegator())]
 		pub fn remove_delegator(
 			origin: OriginFor<T>,
@@ -1263,6 +1274,7 @@ pub mod pallet {
 		}
 
 		/// Update storage Validators<T>.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::add_validator())]
 		pub fn add_validator(
 			origin: OriginFor<T>,
@@ -1281,6 +1293,7 @@ pub mod pallet {
 		}
 
 		/// Update storage Validators<T>.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::remove_validator())]
 		pub fn remove_validator(
 			origin: OriginFor<T>,
@@ -1320,8 +1333,7 @@ pub mod pallet {
 
 			// check delegator
 			// Check if it is bonded already.
-			let _ledger =
-				DelegatorLedgers::<T>::get(KSM, &who).ok_or(Error::<T>::DelegatorNotBonded)?;
+			ensure!(DelegatorLedgers::<T>::contains_key(KSM, &who), Error::<T>::DelegatorNotBonded);
 
 			let validators_list =
 				Self::sort_validators_and_remove_duplicates(currency_id, &validators)?;
@@ -1465,6 +1477,7 @@ pub mod pallet {
 		/// ********************************************************************
 		/// *************Outer Confirming Xcm queries functions ****************
 		/// ********************************************************************
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::confirm_delegator_ledger_query_response())]
 		pub fn confirm_delegator_ledger_query_response(
 			origin: OriginFor<T>,
@@ -1477,6 +1490,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::fail_delegator_ledger_query_response())]
 		pub fn fail_delegator_ledger_query_response(
 			origin: OriginFor<T>,
@@ -1490,6 +1504,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::confirm_validators_by_delegator_query_response())]
 		pub fn confirm_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
@@ -1503,6 +1518,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::fail_validators_by_delegator_query_response())]
 		pub fn fail_validators_by_delegator_query_response(
 			origin: OriginFor<T>,
@@ -1659,6 +1675,7 @@ pub mod pallet {
 		/// **************************************/
 		/// ****** XCM confirming Functions ******/
 		/// **************************************/
+		#[transactional]
 		pub fn process_query_entry_records() -> Result<u32, Error<T>> {
 			let mut counter = 0u32;
 

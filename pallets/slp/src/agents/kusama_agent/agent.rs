@@ -82,7 +82,6 @@ impl<T: Config>
 		Error<T>,
 	> for KusamaAgent<T>
 {
-	#[transactional]
 	fn initialize_delegator(&self) -> Result<MultiLocation, Error<T>> {
 		let new_delegator_id = DelegatorNextIndex::<T>::get(KSM);
 		DelegatorNextIndex::<T>::mutate(KSM, |id| -> Result<(), Error<T>> {
@@ -102,7 +101,6 @@ impl<T: Config>
 	}
 
 	/// First time bonding some amount to a delegator.
-	#[transactional]
 	fn bond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		ensure!(DelegatorLedgers::<T>::get(KSM, who).is_none(), Error::<T>::AlreadyBonded);
@@ -156,7 +154,6 @@ impl<T: Config>
 	}
 
 	/// Bond extra amount to a delegator.
-	#[transactional]
 	fn bond_extra(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -198,7 +195,6 @@ impl<T: Config>
 	}
 
 	/// Decrease bonding amount to a delegator.
-	#[transactional]
 	fn unbond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -245,7 +241,6 @@ impl<T: Config>
 	}
 
 	/// Unbonding all amount of a delegator. Differentiate from regular unbonding.
-	#[transactional]
 	fn unbond_all(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		// Get the active amount of a delegator.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -276,7 +271,6 @@ impl<T: Config>
 	}
 
 	/// Cancel some unbonding amount.
-	#[transactional]
 	fn rebond(&self, who: &MultiLocation, amount: BalanceOf<T>) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
 		let ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
@@ -319,7 +313,6 @@ impl<T: Config>
 	}
 
 	/// Delegate to some validators. For Kusama, it equals function Nominate.
-	#[transactional]
 	fn delegate(
 		&self,
 		who: &MultiLocation,
@@ -370,7 +363,6 @@ impl<T: Config>
 	}
 
 	/// Remove delegation relationship with some validators.
-	#[transactional]
 	fn undelegate(
 		&self,
 		who: &MultiLocation,
@@ -467,7 +459,6 @@ impl<T: Config>
 	}
 
 	/// Withdraw the due payout into free balance.
-	#[transactional]
 	fn liquidize(&self, who: &MultiLocation, when: &Option<TimeUnit>) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
@@ -510,7 +501,6 @@ impl<T: Config>
 	/// Chill self. Cancel the identity of delegator in the Relay chain side.
 	/// Unbonding all the active amount should be done before or after chill,
 	/// so that we can collect back all the bonded amount.
-	#[transactional]
 	fn chill(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
 		ensure!(
@@ -626,7 +616,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	#[transactional]
 	fn tune_vtoken_exchange_rate(
 		&self,
 		who: &MultiLocation,
@@ -661,7 +650,6 @@ impl<T: Config>
 	}
 
 	/// Add a new serving delegator for a particular currency.
-	#[transactional]
 	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
 		// Check if the delegator already exists. If yes, return error.
 		ensure!(
@@ -677,7 +665,6 @@ impl<T: Config>
 	}
 
 	/// Remove an existing serving delegator for a particular currency.
-	#[transactional]
 	fn remove_delegator(&self, who: &MultiLocation) -> DispatchResult {
 		// Check if the delegator exists.
 		let index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
@@ -704,7 +691,6 @@ impl<T: Config>
 	}
 
 	/// Add a new serving delegator for a particular currency.
-	#[transactional]
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
 		let multi_hash = Pallet::<T>::get_hash(&who);
 		// Check if the validator already exists.
@@ -855,7 +841,6 @@ impl<T: Config>
 		Ok(should_update)
 	}
 
-	#[transactional]
 	fn fail_delegator_ledger_query_response(&self, query_id: QueryId) -> Result<(), Error<T>> {
 		// delete pallet_xcm query
 		T::SubstrateResponseManager::remove_query_record(query_id);
@@ -871,7 +856,6 @@ impl<T: Config>
 		Ok(())
 	}
 
-	#[transactional]
 	fn fail_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
@@ -1004,7 +988,6 @@ impl<T: Config> KusamaAgent<T> {
 		Ok((call_as_subaccount, fee, weight))
 	}
 
-	#[transactional]
 	fn construct_xcm_as_subaccount_with_query_id(
 		operation: XcmOperation,
 		call: KusamaCall<T>,
@@ -1054,7 +1037,6 @@ impl<T: Config> KusamaAgent<T> {
 		Ok(())
 	}
 
-	#[transactional]
 	fn update_ledger_query_response_storage(
 		query_id: QueryId,
 		query_entry: LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
@@ -1192,7 +1174,6 @@ impl<T: Config> KusamaAgent<T> {
 		}
 	}
 
-	#[transactional]
 	fn update_validators_by_delegator_query_response_storage(
 		query_id: QueryId,
 		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
