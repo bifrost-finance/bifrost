@@ -98,7 +98,7 @@ zeroize = { opt-level = 3 }
 zenlink-protocol = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "30486888d4ae2621b87ab025fc16e47aad800f67" }
 zenlink-protocol-rpc = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "30486888d4ae2621b87ab025fc16e47aad800f67" }
 zenlink-protocol-runtime-api = { git = "https://github.com/zenlinkpro/Zenlink-DEX-Module", rev = "30486888d4ae2621b87ab025fc16e47aad800f67" }
-merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "7528a1723cb589c4124fdb3b028471974fc380a1" }
+merkle-distributor = { git = "https://github.com/zenlinkpro/merkle-distributor", rev = "72b1b16ae98b33bfaf14489f089302049d167130" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e" }
 orml-currencies = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", rev = "2b5d4ce1d08fb54c0007c2055653892d2c93a92e" }
