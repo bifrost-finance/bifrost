@@ -26,7 +26,7 @@ use bifrost_slp::{
 	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 	ValidatorsByDelegatorUpdateEntry, XcmOperation,
 };
-use frame_support::assert_ok;
+use frame_support::{assert_ok, BoundedVec};
 use node_primitives::TimeUnit;
 use orml_traits::MultiCurrency;
 use pallet_staking::{Nominations, StakingLedger};
@@ -326,7 +326,7 @@ fn locally_bond_subaccount_0_1ksm_in_kusama() {
 				stash: subaccount_0.clone(),
 				total: dollar(RelayCurrencyId::get()),
 				active: dollar(RelayCurrencyId::get()),
-				unlocking: vec![],
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
 				claimed_rewards: vec![],
 			})
 		);
@@ -410,7 +410,7 @@ fn bond_works() {
 				stash: subaccount_0.clone(),
 				total: dollar(RelayCurrencyId::get()),
 				active: dollar(RelayCurrencyId::get()),
-				unlocking: vec![],
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
 				claimed_rewards: vec![],
 			})
 		);
@@ -449,7 +449,7 @@ fn bond_extra_works() {
 				stash: subaccount_0.clone(),
 				total: 2 * dollar(RelayCurrencyId::get()),
 				active: 2 * dollar(RelayCurrencyId::get()),
-				unlocking: vec![],
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
 				claimed_rewards: vec![],
 			})
 		);
@@ -595,7 +595,7 @@ fn rebond_works() {
 				stash: subaccount_0.clone(),
 				total: dollar(RelayCurrencyId::get()),
 				active: dollar(RelayCurrencyId::get()),
-				unlocking: vec![],
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
 				claimed_rewards: vec![],
 			})
 		);
@@ -659,7 +659,7 @@ fn delegate_works() {
 		assert_eq!(
 			kusama_runtime::Staking::nominators(&subaccount_0),
 			Some(Nominations {
-				targets: vec![validator_0, validator_1],
+				targets: BoundedVec::try_from(vec![validator_0, validator_1]).unwrap(),
 				submitted_in: 0,
 				suppressed: false
 			},)
@@ -708,7 +708,11 @@ fn undelegate_works() {
 	KusamaNet::execute_with(|| {
 		assert_eq!(
 			kusama_runtime::Staking::nominators(&subaccount_0),
-			Some(Nominations { targets: vec![validator_1], submitted_in: 0, suppressed: false },)
+			Some(Nominations {
+				targets: BoundedVec::try_from(vec![validator_1]).unwrap(),
+				submitted_in: 0,
+				suppressed: false
+			},)
 		);
 	});
 }
@@ -760,7 +764,7 @@ fn redelegate_works() {
 		assert_eq!(
 			kusama_runtime::Staking::nominators(&subaccount_0),
 			Some(Nominations {
-				targets: vec![validator_0, validator_1],
+				targets: BoundedVec::try_from(vec![validator_0, validator_1]).unwrap(),
 				submitted_in: 0,
 				suppressed: false
 			},)
@@ -927,15 +931,18 @@ fn transfer_back_works() {
 
 	// Parachain account has been deposited the transferred amount.
 	KusamaNet::execute_with(|| {
-		assert_eq!(kusama_runtime::Balances::usable_balance(&subaccount_0.clone()), 500000000000);
+		assert_eq!(
+			kusama_runtime::Balances::usable_balance(&subaccount_0.clone()),
+			500_000_000_000
+		);
 		assert_eq!(
 			kusama_runtime::Balances::free_balance(&para_account_2001.clone()),
-			2498666666750
+			2_498_666_666_750
 		);
 	});
 
 	Bifrost::execute_with(|| {
-		assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 999872000000);
+		assert_eq!(Tokens::free_balance(RelayCurrencyId::get(), &exit_account), 499_936_000_000);
 	});
 }
 
@@ -1038,7 +1045,7 @@ fn confirm_delegator_ledger_query_response_with_bond_works() {
 				stash: subaccount_0.clone(),
 				total: dollar(RelayCurrencyId::get()),
 				active: dollar(RelayCurrencyId::get()),
-				unlocking: vec![],
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
 				claimed_rewards: vec![],
 			})
 		);
@@ -1155,7 +1162,7 @@ fn confirm_delegator_ledger_query_response_with_bond_extra_works() {
 				stash: subaccount_0.clone(),
 				total: 2 * dollar(RelayCurrencyId::get()),
 				active: 2 * dollar(RelayCurrencyId::get()),
-				unlocking: vec![],
+				unlocking: BoundedVec::try_from(vec![]).unwrap(),
 				claimed_rewards: vec![],
 			})
 		);

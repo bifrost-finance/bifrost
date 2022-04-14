@@ -67,6 +67,7 @@ pub trait WeightInfo {
 	fn set_minimums_and_maximums() -> Weight;
 	fn set_currency_delays() -> Weight;
 	fn set_hosting_fees() -> Weight;
+	fn set_currency_tune_exchange_rate_limit() -> Weight;
 }
 
 // For backwards compatibility and tests
@@ -202,6 +203,10 @@ impl WeightInfo for () {
 	}
 
 	fn set_hosting_fees() -> Weight {
+		(50_000_000 as Weight)
+	}
+
+	fn set_currency_tune_exchange_rate_limit() -> Weight {
 		(50_000_000 as Weight)
 	}
 

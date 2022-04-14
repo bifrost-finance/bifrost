@@ -385,6 +385,14 @@ fn refund_currency_due_unbond_works() {
 
 #[test]
 fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
+	// 5E78xTBiaN3nAGYtcNnqTJQJqYAkSDGggKqaDfpNsKyPpbcb
+	let subaccount_0: AccountId =
+		hex_literal::hex!["5a53736d8e96f1c007cf0d630acf5209b20611617af23ce924c8e25328eb5d28"]
+			.into();
+	let subaccount_0_32: [u8; 32] = Slp::account_id_to_account_32(subaccount_0.clone()).unwrap();
+	let subaccount_0_location: MultiLocation =
+		Slp::account_32_to_parent_location(subaccount_0_32).unwrap();
+
 	ExtBuilder::default().build().execute_with(|| {
 		let treasury_id: AccountId =
 			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
@@ -392,6 +400,35 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		let treasury_32: [u8; 32] =
 			hex_literal::hex!["6d6f646c62662f74727372790000000000000000000000000000000000000000"]
 				.into();
+
+		bifrost_vtoken_minting::OngoingTimeUnit::<Runtime>::insert(KSM, TimeUnit::Era(1));
+
+		DelegatorsIndex2Multilocation::<Runtime>::insert(KSM, 0, subaccount_0_location.clone());
+		DelegatorsMultilocation2Index::<Runtime>::insert(KSM, subaccount_0_location.clone(), 0);
+
+		let mins_and_maxs = MinimumsMaximums {
+			delegator_bonded_minimum: 100_000_000_000,
+			bond_extra_minimum: 0,
+			unbond_minimum: 0,
+			rebond_minimum: 0,
+			unbond_record_maximum: 32,
+			validators_back_maximum: 36,
+			delegator_active_staking_maximum: 200_000_000_000_000,
+		};
+
+		// Set minimums and maximums
+		MinimumsAndMaximums::<Runtime>::insert(KSM, mins_and_maxs);
+
+		let sb_ledger = SubstrateLedger {
+			account: subaccount_0_location.clone(),
+			total: 0,
+			active: 0,
+			unlocking: vec![],
+		};
+		let ledger = Ledger::Substrate(sb_ledger);
+
+		// Set delegator ledger
+		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location.clone(), ledger);
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
 		let pct = Percent::from_percent(20);
@@ -406,6 +443,13 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			Some((pct, treasury_location))
 		));
 
+		let pct_100 = Percent::from_percent(100);
+		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
+			Origin::signed(ALICE),
+			KSM,
+			Some((1, pct_100))
+		));
+
 		// First set base vtoken exchange rate. Should be 1:1.
 		assert_ok!(Currencies::deposit(VKSM, &ALICE, 100));
 		assert_ok!(Slp::increase_token_pool(Origin::signed(ALICE), KSM, 100));
@@ -414,7 +458,8 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		assert_ok!(Slp::charge_host_fee_and_tune_vtoken_exchange_rate(
 			Origin::signed(ALICE),
 			KSM,
-			100
+			100,
+			subaccount_0_location
 		));
 
 		// Tokenpool should have been added 100.

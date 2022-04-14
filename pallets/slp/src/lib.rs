@@ -186,6 +186,8 @@ pub mod pallet {
 		InvalidHostingFee,
 		InvalidAccount,
 		IncreaseTokenPoolError,
+		TuneExchangeRateLimitNotSet,
+		DelegatorLatestTuneRecordNotExist,
 	}
 
 	#[pallet::event]
@@ -389,6 +391,10 @@ pub mod pallet {
 			currency_id: CurrencyId,
 			fees: Option<(Percent, MultiLocation)>,
 		},
+		CurrencyTuneExchangeRateLimitSet {
+			currency_id: CurrencyId,
+			tune_exchange_rate_limit: Option<(u32, Percent)>,
+		},
 	}
 
 	/// The dest weight limit and fee for execution XCM msg sended out. Must be
@@ -513,10 +519,31 @@ pub mod pallet {
 	pub type MinimumsAndMaximums<T> =
 		StorageMap<_, Blake2_128Concat, CurrencyId, MinimumsMaximums<BalanceOf<T>>>;
 
-	// TimeUnit delay params for different chains.
+	/// TimeUnit delay params for different chains.
 	#[pallet::storage]
 	#[pallet::getter(fn get_currency_delays)]
 	pub type CurrencyDelays<T> = StorageMap<_, Blake2_128Concat, CurrencyId, Delays>;
+
+	/// A delegator's tuning record of exchange rate for the current time unit.
+	/// Currency Id + Delegator Id => (latest tuned TimeUnit, number of tuning times)
+	#[pallet::storage]
+	#[pallet::getter(fn get_delegator_latest_tune_record)]
+	pub type DelegatorLatestTuneRecord<T> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		CurrencyId,
+		Blake2_128Concat,
+		MultiLocation,
+		(TimeUnit, u32),
+		OptionQuery,
+	>;
+
+	/// For each currencyId: how many times that a delegator can tune the exchange rate for a single
+	/// time unit, and how much at most each time a delegator can tune the exchange rate
+	#[pallet::storage]
+	#[pallet::getter(fn get_currency_tune_exchange_rate_limit)]
+	pub type CurrencyTuneExchangeRateLimit<T> =
+		StorageMap<_, Blake2_128Concat, CurrencyId, (u32, Percent)>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -1037,6 +1064,53 @@ pub mod pallet {
 			// Ensure the value is valid.
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
 
+			// Ensure the value is valid.
+			let (limit_num, max_percent) = Self::get_currency_tune_exchange_rate_limit(currency_id)
+				.ok_or(Error::<T>::TuneExchangeRateLimitNotSet)?;
+			// Get pool token value
+			let pool_token = T::VtokenMinting::get_token_pool(currency_id);
+			// Calculate max increase allowed.
+			let max_to_increase = max_percent.mul_floor(pool_token);
+			ensure!(value <= max_to_increase, Error::<T>::GreaterThanMaximum);
+
+			// Ensure this tune is within limit.
+			// Get current TimeUnit.
+			let current_time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
+				.ok_or(Error::<T>::TimeUnitNotExist)?;
+			// If this is the first time.
+			if !DelegatorLatestTuneRecord::<T>::contains_key(currency_id, &who) {
+				// ensure who is a valid delegator
+				ensure!(
+					DelegatorsMultilocation2Index::<T>::contains_key(currency_id, &who),
+					Error::<T>::DelegatorNotExist
+				);
+				// Insert an empty record into DelegatorLatestTuneRecord storage.
+				DelegatorLatestTuneRecord::<T>::insert(
+					currency_id,
+					who.clone(),
+					(current_time_unit.clone(), 0),
+				);
+			}
+
+			// Get DelegatorLatestTuneRecord for the currencyId.
+			let (latest_time_unit, tune_num) =
+				Self::get_delegator_latest_tune_record(currency_id, &who)
+					.ok_or(Error::<T>::DelegatorLatestTuneRecordNotExist)?;
+
+			#[cfg(feature = "std")]
+			println!("latest_time_unit: {:?}", latest_time_unit.clone());
+
+			#[cfg(feature = "std")]
+			println!("current_time_unit: {:?}", current_time_unit.clone());
+
+			// See if exceeds tuning limit.
+			// If it has been tuned in the current time unit, ensure this tuning is within limit.
+			if latest_time_unit == current_time_unit {
+				ensure!(tune_num < limit_num, Error::<T>::GreaterThanMaximum);
+			}
+
+			let new_tune_num = tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
+
 			// Get charged fee value
 			let (fee_percent, beneficiary) =
 				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
@@ -1059,6 +1133,13 @@ pub mod pallet {
 				// Dummy value for vtoken amount
 				Zero::zero(),
 			)?;
+
+			// Update the DelegatorLatestTuneRecord<T> storage.
+			DelegatorLatestTuneRecord::<T>::insert(
+				currency_id,
+				who.clone(),
+				(current_time_unit, new_tune_num),
+			);
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::HostingFeeCharged {
@@ -1340,7 +1421,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Update storage Delays<T>.
+		/// Set HostingFees storage.
 		#[pallet::weight(T::WeightInfo::set_hosting_fees())]
 		pub fn set_hosting_fees(
 			origin: OriginFor<T>,
@@ -1355,6 +1436,28 @@ pub mod pallet {
 			});
 
 			Pallet::<T>::deposit_event(Event::HostingFeesSet { currency_id, fees: maybe_fee_set });
+
+			Ok(())
+		}
+
+		/// Set  CurrencyTuneExchangeRateLimit<T> storage.
+		#[pallet::weight(T::WeightInfo::set_currency_tune_exchange_rate_limit())]
+		pub fn set_currency_tune_exchange_rate_limit(
+			origin: OriginFor<T>,
+			currency_id: CurrencyId,
+			maybe_tune_exchange_rate_limit: Option<(u32, Percent)>,
+		) -> DispatchResult {
+			// Check the validity of origin
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			CurrencyTuneExchangeRateLimit::<T>::mutate_exists(currency_id, |exchange_rate_limit| {
+				*exchange_rate_limit = maybe_tune_exchange_rate_limit.clone();
+			});
+
+			Pallet::<T>::deposit_event(Event::CurrencyTuneExchangeRateLimitSet {
+				currency_id,
+				tune_exchange_rate_limit: maybe_tune_exchange_rate_limit,
+			});
 
 			Ok(())
 		}
