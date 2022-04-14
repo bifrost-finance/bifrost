@@ -326,7 +326,7 @@ impl<T: Config>
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let _ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		ensure!(DelegatorLedgers::<T>::contains_key(KSM, who), Error::<T>::DelegatorNotBonded);
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
@@ -377,7 +377,7 @@ impl<T: Config>
 		targets: &Vec<MultiLocation>,
 	) -> Result<QueryId, Error<T>> {
 		// Check if it is bonded already.
-		let _ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		ensure!(DelegatorLedgers::<T>::contains_key(KSM, who), Error::<T>::DelegatorNotBonded);
 
 		// Check if targets vec is empty.
 		let vec_len = targets.len() as u32;
@@ -470,7 +470,10 @@ impl<T: Config>
 	#[transactional]
 	fn liquidize(&self, who: &MultiLocation, when: &Option<TimeUnit>) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
-		DelegatorsMultilocation2Index::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotExist)?;
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(KSM, who),
+			Error::<T>::DelegatorNotExist
+		);
 
 		// Get the slashing span param.
 		let num_slashing_spans = if let Some(TimeUnit::SlashingSpan(num_slashing_spans)) = *when {
@@ -510,7 +513,10 @@ impl<T: Config>
 	#[transactional]
 	fn chill(&self, who: &MultiLocation) -> Result<QueryId, Error<T>> {
 		// Check if it is in the delegator set.
-		DelegatorsMultilocation2Index::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotExist)?;
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(KSM, who),
+			Error::<T>::DelegatorNotExist
+		);
 
 		// Construct xcm message.
 		let call = KusamaCall::Staking(StakingCall::Chill);
@@ -548,7 +554,7 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
-		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
 		// Check if from is one of our delegators. If not, return error.
 		DelegatorsMultilocation2Index::<T>::get(KSM, from).ok_or(Error::<T>::DelegatorNotExist)?;
@@ -605,7 +611,10 @@ impl<T: Config>
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		// Make sure receiving account is one of the KSM delegators.
-		DelegatorsMultilocation2Index::<T>::get(KSM, to).ok_or(Error::<T>::DelegatorNotExist)?;
+		ensure!(
+			DelegatorsMultilocation2Index::<T>::contains_key(KSM, to),
+			Error::<T>::DelegatorNotExist
+		);
 
 		// Make sure from account is the entrance account of vtoken-minting module.
 		let from_account_id = Pallet::<T>::multilocation_to_account(&from)?;
@@ -624,10 +633,10 @@ impl<T: Config>
 		token_amount: BalanceOf<T>,
 		_vtoken_amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
-		ensure!(token_amount >= Zero::zero(), Error::<T>::AmountZero);
+		ensure!(!token_amount.is_zero(), Error::<T>::AmountZero);
 
 		// Check whether "who" is an existing delegator.
-		let _ledger = DelegatorLedgers::<T>::get(KSM, who).ok_or(Error::<T>::DelegatorNotBonded)?;
+		ensure!(DelegatorLedgers::<T>::contains_key(KSM, who), Error::<T>::DelegatorNotBonded);
 
 		// Tune the vtoken exchange rate.
 		T::VtokenMinting::increase_token_pool(KSM, token_amount)
@@ -656,7 +665,7 @@ impl<T: Config>
 	fn add_delegator(&self, index: u16, who: &MultiLocation) -> DispatchResult {
 		// Check if the delegator already exists. If yes, return error.
 		ensure!(
-			DelegatorsIndex2Multilocation::<T>::get(KSM, index).is_none(),
+			!DelegatorsIndex2Multilocation::<T>::contains_key(KSM, index),
 			Error::<T>::AlreadyExist
 		);
 
@@ -684,7 +693,7 @@ impl<T: Config>
 		};
 
 		// Check if ledger total amount is zero. If not, return error.
-		ensure!(total == Zero::zero(), Error::<T>::AmountNotZero);
+		ensure!(total.is_zero(), Error::<T>::AmountNotZero);
 
 		// Remove corresponding storage.
 		DelegatorsIndex2Multilocation::<T>::remove(KSM, index);
@@ -893,7 +902,7 @@ impl<T: Config>
 		call: KusamaCall<T>,
 		extra_fee: BalanceOf<T>,
 		weight: Weight,
-		query_id: QueryId,
+		_query_id: QueryId,
 		// response_back_location: MultiLocation
 	) -> Xcm<()> {
 		let asset = MultiAsset {
@@ -1287,7 +1296,7 @@ impl<T: Config> KusamaAgent<T> {
 		amount: BalanceOf<T>,
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
-		ensure!(amount >= Zero::zero(), Error::<T>::AmountZero);
+		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
 
 		let (weight, fee_amount) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
