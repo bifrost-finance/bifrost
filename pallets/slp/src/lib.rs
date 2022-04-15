@@ -188,6 +188,7 @@ pub mod pallet {
 		IncreaseTokenPoolError,
 		TuneExchangeRateLimitNotSet,
 		DelegatorLatestTuneRecordNotExist,
+		InvalidTransferSource,
 	}
 
 	#[pallet::event]

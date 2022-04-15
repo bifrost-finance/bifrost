@@ -20,7 +20,7 @@ use core::marker::PhantomData;
 
 use codec::Encode;
 pub use cumulus_primitives_core::ParaId;
-use frame_support::{ensure, traits::Get, transactional, weights::Weight};
+use frame_support::{ensure, traits::Get, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
@@ -1278,6 +1278,10 @@ impl<T: Config> KusamaAgent<T> {
 	) -> Result<(), Error<T>> {
 		// Ensure amount is greater than zero.
 		ensure!(!amount.is_zero(), Error::<T>::AmountZero);
+
+		// Ensure the from account is located within Bifrost chain. Otherwise, the xcm massage will
+		// not succeed.
+		ensure!(from.parents.is_zero(), Error::<T>::InvalidTransferSource);
 
 		let (weight, fee_amount) = XcmDestWeightAndFee::<T>::get(KSM, XcmOperation::TransferTo)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;

@@ -459,12 +459,15 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			Origin::signed(ALICE),
 			KSM,
 			100,
-			subaccount_0_location
+			subaccount_0_location.clone()
 		));
 
 		// Tokenpool should have been added 100.
 		let new_token_pool_amount = <Runtime as Config>::VtokenMinting::get_token_pool(KSM);
 		assert_eq!(new_token_pool_amount, 200);
+
+		let tune_record = DelegatorLatestTuneRecord::<Runtime>::get(KSM, &subaccount_0_location);
+		assert_eq!(tune_record, Some((TimeUnit::Era(1), 1)));
 
 		// Treasury account has been issued a fee of 20 vksm which equals to the value of 20 ksm
 		// before new exchange rate tuned.
