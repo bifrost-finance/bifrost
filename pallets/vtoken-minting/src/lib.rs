@@ -111,6 +111,10 @@ pub mod pallet {
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
 		},
+		RedeemSuccess {
+			token_id: CurrencyIdOf<T>,
+			token_amount: BalanceOf<T>,
+		},
 		Rebonded {
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
@@ -147,6 +151,9 @@ pub mod pallet {
 			redeem_fee: BalanceOf<T>,
 			// hosting_fee: BalanceOf<T>,
 		},
+		HookIterationLimitSet {
+			limit: u32,
+		},
 	}
 
 	#[pallet::error]
@@ -155,14 +162,10 @@ pub mod pallet {
 		BelowMinimumRedeem,
 		/// Invalid token to rebond.
 		InvalidRebondToken,
-		/// Invalid token.
-		InvalidToken,
 		/// Token type not support.
 		NotSupportTokenType,
 		NotEnoughBalanceToUnlock,
 		TokenToRebondNotZero,
-		MaxUserUnlockingChunksNotSet,
-		MaxEraUnlockingChunksNotSet,
 		OngoingTimeUnitNotSet,
 		TokenUnlockLedgerNotFound,
 		UserUnlockLedgerNotFound,
@@ -265,152 +268,21 @@ pub mod pallet {
 	#[pallet::getter(fn currency_unlocking_total)]
 	pub type CurrencyUnlockingTotal<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn hook_iteration_limit)]
+	pub type HookIterationLimit<T: Config> = StorageValue<_, u32, ValueQuery>;
+
 	#[pallet::hooks]
 	impl<T: Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> Weight {
-			let KSM = CurrencyId::Token(TokenSymbol::KSM);
-			let time_unit = MinTimeUnit::<T>::get(KSM);
-			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
-				|(_total_locked, ledger_list, token_id)| {
-					let mut entrance_account_balance = T::MultiCurrency::free_balance(
-						token_id,
-						&T::EntranceAccount::get().into_account(),
-					);
-					for index in ledger_list.iter() {
-						if let Some((account, unlock_amount, time_unit)) =
-							Self::token_unlock_ledger(token_id, index)
-						{
-							if entrance_account_balance >= unlock_amount {
-								entrance_account_balance =
-									entrance_account_balance.saturating_sub(unlock_amount);
-								T::MultiCurrency::transfer(
-									token_id,
-									&T::EntranceAccount::get().into_account(),
-									&account,
-									unlock_amount,
-								);
-
-								TimeUnitUnlockLedger::<T>::mutate_exists(
-									&time_unit,
-									&token_id,
-									|value| -> Result<(), Error<T>> {
-										if let Some((total_locked_origin, ledger_list_origin, _)) =
-											value
-										{
-											if total_locked_origin == &unlock_amount {
-												*value = None;
-												return Ok(());
-											}
-											*total_locked_origin = total_locked_origin
-												.checked_sub(&unlock_amount)
-												.ok_or(Error::<T>::CalculationOverflow)?;
-											ledger_list_origin.retain(|x| x != index);
-										} else {
-											return Err(
-												Error::<T>::TimeUnitUnlockLedgerNotFound.into()
-											);
-										}
-										return Ok(());
-									},
-								)
-								.map_err(|e| e);
-
-								TokenUnlockLedger::<T>::remove(&token_id, &index);
-
-								UserUnlockLedger::<T>::mutate_exists(
-									&account,
-									&token_id,
-									|value| -> Result<(), Error<T>> {
-										if let Some((total_locked_origin, ledger_list_origin)) =
-											value
-										{
-											if total_locked_origin == &unlock_amount {
-												*value = None;
-												return Ok(());
-											}
-											ledger_list_origin.retain(|x| x != index);
-											*total_locked_origin = total_locked_origin
-												.checked_sub(&unlock_amount)
-												.ok_or(Error::<T>::CalculationOverflow)?;
-										} else {
-											return Err(Error::<T>::UserUnlockLedgerNotFound.into());
-										}
-										return Ok(());
-									},
-								)
-								.map_err(|e| e);
-
-								CurrencyUnlockingTotal::<T>::mutate(
-									|pool| -> Result<(), Error<T>> {
-										*pool = pool
-											.checked_sub(&unlock_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-										Ok(())
-									},
-								)
-								.map_err(|e| e);
-
-								TokenToAdd::<T>::mutate(
-									&token_id,
-									|pool| -> Result<(), Error<T>> {
-										*pool = pool
-											.checked_sub(&unlock_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-										Ok(())
-									},
-								)
-								.map_err(|e| e);
-
-								TokenToDeduct::<T>::mutate(
-									&token_id,
-									|pool| -> Result<(), Error<T>> {
-										*pool = pool
-											.checked_sub(&unlock_amount)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-										Ok(())
-									},
-								)
-								.map_err(|e| e);
-							} else {
-								break;
-							}
-						}
-					}
-				},
-			);
-
-			let unlock_duration_era = match UnlockDuration::<T>::get(KSM) {
-				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
-				_ => 0,
-			};
-			let ongoing_era = match OngoingTimeUnit::<T>::get(KSM) {
-				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
-				_ => 0,
-			};
-			match time_unit {
-				TimeUnit::Era(min_era) =>
-					if ongoing_era + unlock_duration_era > min_era {
-						let time_unit_ledger_list: Vec<(
-							BalanceOf<T>,
-							BoundedVec<UnlockId, T::MaximumUnlockId>,
-							CurrencyIdOf<T>,
-						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
-						if time_unit_ledger_list.len() == 0 {
-							MinTimeUnit::<T>::mutate(KSM, |time_unit| -> Result<(), Error<T>> {
-								match time_unit {
-									TimeUnit::Era(era) => {
-										*era = era
-											.checked_add(1)
-											.ok_or(Error::<T>::CalculationOverflow)?;
-										Ok(())
-									},
-									_ => Ok(()),
-								}
-							});
-						}
-					},
-				_ => (),
-			}
+			Self::handle_on_initialize().map_err(|e| {
+				log::error!(
+					target: "runtime::vtoken-minting",
+					"Received invalid justification for {:?}",
+					e,
+				);
+				e
+			});
 
 			T::WeightInfo::on_initialize()
 		}
@@ -475,10 +347,6 @@ pub mod pallet {
 
 			match OngoingTimeUnit::<T>::get(token_id) {
 				Some(time_unit) => {
-					// let unlock_duration = match Self::unlock_duration(token_id) {
-					// 	Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
-					// 	_ => return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into()),
-					// };
 					let result_time_unit = Self::add_time_unit(
 						Self::unlock_duration(token_id)
 							.ok_or(Error::<T>::UnlockDurationNotFound)?,
@@ -938,9 +806,22 @@ pub mod pallet {
 			Self::deposit_event(Event::FeeSet { mint_fee, redeem_fee });
 			Ok(())
 		}
+
+		#[pallet::weight(0)]
+		pub fn set_hook_iteration_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
+			T::ControlOrigin::ensure_origin(origin)?;
+
+			HookIterationLimit::<T>::mutate(|old_limit| {
+				*old_limit = limit;
+			});
+
+			Self::deposit_event(Event::HookIterationLimitSet { limit });
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[transactional]
 		fn add_time_unit(a: TimeUnit, b: TimeUnit) -> Result<TimeUnit, DispatchError> {
 			let result = match a {
 				TimeUnit::Era(era_a) => match b {
@@ -957,6 +838,7 @@ pub mod pallet {
 			Ok(result)
 		}
 
+		#[transactional]
 		fn mint_without_tranfer(
 			exchanger: &AccountIdOf<T>,
 			vtoken_id: CurrencyId,
@@ -994,6 +876,172 @@ pub mod pallet {
 				Ok(())
 			})?;
 			Ok((token_amount_excluding_fee, vtoken_amount, mint_fee))
+		}
+
+		#[transactional]
+		fn on_initialize_update_ledger(
+			token_id: CurrencyId,
+			account: AccountIdOf<T>,
+			index: &UnlockId,
+			mut unlock_amount: BalanceOf<T>,
+			mut entrance_account_balance: BalanceOf<T>,
+			time_unit: TimeUnit,
+		) -> DispatchResult {
+			if entrance_account_balance >= unlock_amount {
+				TokenUnlockLedger::<T>::remove(&token_id, &index);
+			} else {
+				unlock_amount = entrance_account_balance;
+				TokenUnlockLedger::<T>::mutate_exists(
+					&token_id,
+					&index,
+					|value| -> Result<(), Error<T>> {
+						if let Some((_, total_locked_origin, _)) = value {
+							if total_locked_origin == &unlock_amount {
+								*value = None;
+								return Ok(());
+							}
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&unlock_amount)
+								.ok_or(Error::<T>::CalculationOverflow)?;
+						} else {
+							return Err(Error::<T>::TokenUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				)?;
+			}
+
+			entrance_account_balance = entrance_account_balance
+				.checked_sub(&unlock_amount)
+				.ok_or(Error::<T>::CalculationOverflow)?;
+
+			T::MultiCurrency::transfer(
+				token_id,
+				&T::EntranceAccount::get().into_account(),
+				&account,
+				unlock_amount,
+			)?;
+
+			TimeUnitUnlockLedger::<T>::mutate_exists(
+				&time_unit,
+				&token_id,
+				|value| -> Result<(), Error<T>> {
+					if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+						if total_locked_origin == &unlock_amount {
+							*value = None;
+							return Ok(());
+						}
+						*total_locked_origin = total_locked_origin
+							.checked_sub(&unlock_amount)
+							.ok_or(Error::<T>::CalculationOverflow)?;
+						ledger_list_origin.retain(|x| x != index);
+					} else {
+						return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
+					}
+					return Ok(());
+				},
+			)?;
+
+			UserUnlockLedger::<T>::mutate_exists(
+				&account,
+				&token_id,
+				|value| -> Result<(), Error<T>> {
+					if let Some((total_locked_origin, ledger_list_origin)) = value {
+						if total_locked_origin == &unlock_amount {
+							*value = None;
+							return Ok(());
+						}
+						ledger_list_origin.retain(|x| x != index);
+						*total_locked_origin = total_locked_origin
+							.checked_sub(&unlock_amount)
+							.ok_or(Error::<T>::CalculationOverflow)?;
+					} else {
+						return Err(Error::<T>::UserUnlockLedgerNotFound.into());
+					}
+					return Ok(());
+				},
+			)?;
+
+			CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
+				Ok(())
+			})?;
+
+			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
+				Ok(())
+			})?;
+
+			TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
+				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::RedeemSuccess { token_id, token_amount: unlock_amount });
+			Ok(())
+		}
+
+		#[transactional]
+		fn handle_on_initialize() -> DispatchResult {
+			let ksm = CurrencyId::Token(TokenSymbol::KSM);
+			let time_unit = MinTimeUnit::<T>::get(ksm);
+			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
+				|(_total_locked, ledger_list, token_id)| {
+					let mut entrance_account_balance = T::MultiCurrency::free_balance(
+						token_id,
+						&T::EntranceAccount::get().into_account(),
+					);
+					for index in ledger_list.iter().take(Self::hook_iteration_limit() as usize) {
+						if let Some((account, unlock_amount, time_unit)) =
+							Self::token_unlock_ledger(token_id, index)
+						{
+							Self::on_initialize_update_ledger(
+								token_id,
+								account,
+								index,
+								unlock_amount,
+								entrance_account_balance,
+								time_unit,
+							)
+							.map_err(|e| e);
+						}
+					}
+				},
+			);
+
+			let unlock_duration_era = match UnlockDuration::<T>::get(ksm) {
+				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
+				_ => 0,
+			};
+			let ongoing_era = match OngoingTimeUnit::<T>::get(ksm) {
+				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
+				_ => 0,
+			};
+			match time_unit {
+				TimeUnit::Era(min_era) =>
+					if ongoing_era + unlock_duration_era > min_era {
+						let time_unit_ledger_list: Vec<(
+							BalanceOf<T>,
+							BoundedVec<UnlockId, T::MaximumUnlockId>,
+							CurrencyIdOf<T>,
+						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
+						if time_unit_ledger_list.len() == 0 {
+							MinTimeUnit::<T>::mutate(ksm, |time_unit| -> Result<(), Error<T>> {
+								match time_unit {
+									TimeUnit::Era(era) => {
+										*era = era
+											.checked_add(1)
+											.ok_or(Error::<T>::CalculationOverflow)?;
+										Ok(())
+									},
+									_ => Ok(()),
+								}
+							})?;
+						}
+					},
+				_ => (),
+			}
+			Ok(())
 		}
 	}
 }
