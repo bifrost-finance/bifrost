@@ -809,7 +809,7 @@ pub mod pallet {
 
 		#[pallet::weight(0)]
 		pub fn set_hook_iteration_limit(origin: OriginFor<T>, limit: u32) -> DispatchResult {
-			ensure_root(origin)?;
+			T::ControlOrigin::ensure_origin(origin)?;
 
 			HookIterationLimit::<T>::mutate(|old_limit| {
 				*old_limit = limit;
@@ -983,8 +983,8 @@ pub mod pallet {
 
 		#[transactional]
 		fn handle_on_initialize() -> DispatchResult {
-			let KSM = CurrencyId::Token(TokenSymbol::KSM);
-			let time_unit = MinTimeUnit::<T>::get(KSM);
+			let ksm = CurrencyId::Token(TokenSymbol::KSM);
+			let time_unit = MinTimeUnit::<T>::get(ksm);
 			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
 				|(_total_locked, ledger_list, token_id)| {
 					let mut entrance_account_balance = T::MultiCurrency::free_balance(
@@ -1002,17 +1002,18 @@ pub mod pallet {
 								unlock_amount,
 								entrance_account_balance,
 								time_unit,
-							);
+							)
+							.map_err(|e| e);
 						}
 					}
 				},
 			);
 
-			let unlock_duration_era = match UnlockDuration::<T>::get(KSM) {
+			let unlock_duration_era = match UnlockDuration::<T>::get(ksm) {
 				Some(TimeUnit::Era(unlock_duration_era)) => unlock_duration_era,
 				_ => 0,
 			};
-			let ongoing_era = match OngoingTimeUnit::<T>::get(KSM) {
+			let ongoing_era = match OngoingTimeUnit::<T>::get(ksm) {
 				Some(TimeUnit::Era(ongoing_era)) => ongoing_era,
 				_ => 0,
 			};
@@ -1025,7 +1026,7 @@ pub mod pallet {
 							CurrencyIdOf<T>,
 						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
 						if time_unit_ledger_list.len() == 0 {
-							MinTimeUnit::<T>::mutate(KSM, |time_unit| -> Result<(), Error<T>> {
+							MinTimeUnit::<T>::mutate(ksm, |time_unit| -> Result<(), Error<T>> {
 								match time_unit {
 									TimeUnit::Era(era) => {
 										*era = era

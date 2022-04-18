@@ -129,7 +129,7 @@ fn hook() {
 		assert_ok!(VtokenMinting::update_ongoing_time_unit(KSM, TimeUnit::Era(3)));
 		assert_eq!(VtokenMinting::ongoing_time_unit(KSM), Some(TimeUnit::Era(3)));
 		assert_ok!(VtokenMinting::set_unlock_duration(Origin::root(), KSM, TimeUnit::Era(1)));
-		assert_ok!(VtokenMinting::set_hook_iteration_limit(Origin::root(), 1));
+		assert_ok!(VtokenMinting::set_hook_iteration_limit(Origin::signed(ALICE), 1));
 		assert_eq!(VtokenMinting::unlock_duration(KSM), Some(TimeUnit::Era(1)));
 		VtokenMinting::on_initialize(100);
 		VtokenMinting::on_initialize(100);
