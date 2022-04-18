@@ -162,14 +162,10 @@ pub mod pallet {
 		BelowMinimumRedeem,
 		/// Invalid token to rebond.
 		InvalidRebondToken,
-		/// Invalid token.
-		InvalidToken,
 		/// Token type not support.
 		NotSupportTokenType,
 		NotEnoughBalanceToUnlock,
 		TokenToRebondNotZero,
-		MaxUserUnlockingChunksNotSet,
-		MaxEraUnlockingChunksNotSet,
 		OngoingTimeUnitNotSet,
 		TokenUnlockLedgerNotFound,
 		UserUnlockLedgerNotFound,
