@@ -414,6 +414,11 @@ fn bond_works() {
 				claimed_rewards: vec![],
 			})
 		);
+
+		assert!(kusama_runtime::System::events().iter().any(|r| matches!(
+			r.event,
+			kusama_runtime::Event::System(frame_system::Event::Remarked { sender: _, hash: _ })
+		)));
 	});
 }
 

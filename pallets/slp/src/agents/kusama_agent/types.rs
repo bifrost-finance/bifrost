@@ -27,6 +27,8 @@ use crate::{BalanceOf, Config};
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum KusamaCall<T: Config> {
+	#[codec(index = 0)]
+	System(SystemCall),
 	#[codec(index = 4)]
 	Balances(BalancesCall<T>),
 	#[codec(index = 6)]
@@ -35,6 +37,12 @@ pub enum KusamaCall<T: Config> {
 	Utility(Box<UtilityCall<Self>>),
 	#[codec(index = 99)]
 	Xcm(XcmCall),
+}
+
+#[derive(Encode, Decode, RuntimeDebug)]
+pub enum SystemCall {
+	#[codec(index = 8)]
+	RemarkWithEvent(Vec<u8>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]

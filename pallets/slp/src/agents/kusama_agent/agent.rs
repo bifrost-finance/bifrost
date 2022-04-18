@@ -44,7 +44,7 @@ use xcm::{
 };
 
 use crate::{
-	agents::{KusamaCall, RewardDestination, StakingCall, UtilityCall, XcmCall},
+	agents::{KusamaCall, RewardDestination, StakingCall, SystemCall, UtilityCall, XcmCall},
 	pallet::{Error, Event},
 	primitives::{
 		Ledger, SubstrateLedger, SubstrateLedgerUpdateEntry,
@@ -970,7 +970,34 @@ impl<T: Config>
 
 /// Internal functions.
 impl<T: Config> KusamaAgent<T> {
-	fn prepare_send_as_subaccount_call_params(
+	fn prepare_send_as_subaccount_call_params_with_query_id(
+		operation: XcmOperation,
+		call: KusamaCall<T>,
+		who: &MultiLocation,
+		query_id: QueryId,
+	) -> Result<(KusamaCall<T>, BalanceOf<T>, Weight), Error<T>> {
+		// Get the delegator sub-account index.
+		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
+			.ok_or(Error::<T>::DelegatorNotExist)?;
+
+		// Temporary wrapping remark event in Kusama for ease use of backend service.
+		let remark_call = KusamaCall::System(SystemCall::RemarkWithEvent(query_id.encode()));
+
+		let call_batched_with_remark =
+			KusamaCall::Utility(Box::new(UtilityCall::BatchAll(vec![call, remark_call])));
+
+		let call_as_subaccount = KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(
+			sub_account_index,
+			call_batched_with_remark,
+		)));
+
+		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation)
+			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
+
+		Ok((call_as_subaccount, fee, weight))
+	}
+
+	fn prepare_send_as_subaccount_call_params_without_query_id(
 		operation: XcmOperation,
 		call: KusamaCall<T>,
 		who: &MultiLocation,
@@ -993,14 +1020,16 @@ impl<T: Config> KusamaAgent<T> {
 		call: KusamaCall<T>,
 		who: &MultiLocation,
 	) -> Result<(QueryId, BlockNumberFor<T>, Xcm<()>), Error<T>> {
-		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params(operation, call, who)?;
-
 		// prepare the query_id for reporting back transact status
 		let responder = MultiLocation::parent();
 		let now = frame_system::Pallet::<T>::block_number();
 		let timeout = T::BlockNumber::from(TIMEOUT_BLOCKS).saturating_add(now);
 		let query_id = T::SubstrateResponseManager::create_query_record(&responder, timeout);
+
+		let (call_as_subaccount, fee, weight) =
+			Self::prepare_send_as_subaccount_call_params_with_query_id(
+				operation, call, who, query_id,
+			)?;
 
 		let xcm_message =
 			Self::construct_xcm_message_with_query_id(call_as_subaccount, fee, weight, query_id);
@@ -1027,7 +1056,7 @@ impl<T: Config> KusamaAgent<T> {
 		who: &MultiLocation,
 	) -> Result<(), Error<T>> {
 		let (call_as_subaccount, fee, weight) =
-			Self::prepare_send_as_subaccount_call_params(operation, call, who)?;
+			Self::prepare_send_as_subaccount_call_params_without_query_id(operation, call, who)?;
 
 		let xcm_message =
 			Self::construct_xcm_message_without_query_id(call_as_subaccount, fee, weight);
