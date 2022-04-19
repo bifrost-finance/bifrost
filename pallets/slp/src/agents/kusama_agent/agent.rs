@@ -19,12 +19,13 @@
 use core::marker::PhantomData;
 
 use codec::Encode;
+use cumulus_primitives_core::relay_chain::HashT;
 pub use cumulus_primitives_core::ParaId;
 use frame_support::{ensure, traits::Get, weights::Weight};
 use frame_system::pallet_prelude::BlockNumberFor;
 use node_primitives::{CurrencyId, TokenSymbol, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
-use sp_core::{H256, U256};
+use sp_core::U256;
 use sp_runtime::{
 	traits::{
 		CheckedAdd, CheckedSub, Convert, Saturating, StaticLookup, UniqueSaturatedFrom,
@@ -54,7 +55,7 @@ use crate::{
 	traits::{QueryResponseManager, StakingAgent, XcmBuilder},
 	AccountIdOf, BalanceOf, Config, CurrencyDelays, DelegatorLedgerXcmUpdateQueue,
 	DelegatorLedgers, DelegatorNextIndex, DelegatorsIndex2Multilocation,
-	DelegatorsMultilocation2Index, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
+	DelegatorsMultilocation2Index, Hash, LedgerUpdateEntry, MinimumsAndMaximums, Pallet, QueryId,
 	TimeUnit, Validators, ValidatorsByDelegator, ValidatorsByDelegatorXcmUpdateQueue,
 	XcmDestWeightAndFee, TIMEOUT_BLOCKS,
 };
@@ -78,7 +79,7 @@ impl<T: Config>
 		MultiLocation,
 		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		Error<T>,
 	> for KusamaAgent<T>
 {
@@ -380,7 +381,7 @@ impl<T: Config>
 			ValidatorsByDelegator::<T>::get(KSM, who).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
 		// Remove targets from the original set to make a new set.
-		let mut new_set: Vec<(MultiLocation, H256)> = vec![];
+		let mut new_set: Vec<(MultiLocation, Hash<T>)> = vec![];
 		for (acc, acc_hash) in original_set.iter() {
 			if !targets.contains(acc) {
 				new_set.push((acc.clone(), acc_hash.clone()))
@@ -692,7 +693,7 @@ impl<T: Config>
 
 	/// Add a new serving delegator for a particular currency.
 	fn add_validator(&self, who: &MultiLocation) -> DispatchResult {
-		let multi_hash = Pallet::<T>::get_hash(&who);
+		let multi_hash = T::Hashing::hash(&who.encode());
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(KSM);
 		if validators_set.is_none() {
@@ -722,7 +723,7 @@ impl<T: Config>
 		// Check if the validator already exists.
 		let validators_set = Validators::<T>::get(KSM).ok_or(Error::<T>::ValidatorSetNotExist)?;
 
-		let multi_hash = Pallet::<T>::get_hash(&who);
+		let multi_hash = T::Hashing::hash(&who.encode());
 		ensure!(validators_set.contains(&(who.clone(), multi_hash)), Error::<T>::ValidatorNotExist);
 
 		//  Check if ValidatorsByDelegator<T> involves this validator. If yes, return error.
@@ -818,7 +819,7 @@ impl<T: Config>
 	fn check_validators_by_delegator_query_response(
 		&self,
 		query_id: QueryId,
-		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		manual_mode: bool,
 	) -> Result<bool, Error<T>> {
 		let should_update = if manual_mode {
@@ -1205,7 +1206,7 @@ impl<T: Config> KusamaAgent<T> {
 
 	fn update_validators_by_delegator_query_response_storage(
 		query_id: QueryId,
-		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		query_entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 	) -> Result<(), Error<T>> {
 		// update ValidatorsByDelegator<T> storage
 		if let ValidatorsByDelegatorUpdateEntry::Substrate(
@@ -1283,7 +1284,7 @@ impl<T: Config> KusamaAgent<T> {
 
 	fn insert_validators_by_delegator_update_entry(
 		who: &MultiLocation,
-		validator_list: Vec<(MultiLocation, H256)>,
+		validator_list: Vec<(MultiLocation, Hash<T>)>,
 		query_id: QueryId,
 		timeout: BlockNumberFor<T>,
 	) -> Result<(), Error<T>> {

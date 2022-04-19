@@ -19,7 +19,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use agents::KusamaAgent;
-use cumulus_primitives_core::ParaId;
+use cumulus_primitives_core::{relay_chain::HashT, ParaId};
 use frame_support::{pallet_prelude::*, transactional, weights::Weight};
 use frame_system::{
 	pallet_prelude::{BlockNumberFor, OriginFor},
@@ -28,9 +28,7 @@ use frame_system::{
 use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
-use sha3::{Digest, Keccak256};
 use sp_arithmetic::{per_things::Percent, traits::Zero};
-use sp_core::H256;
 use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
@@ -66,6 +64,7 @@ pub type Result<T, E> = core::result::Result<T, E>;
 pub type QueryId = u64;
 pub const TIMEOUT_BLOCKS: u32 = 1000;
 pub const BASE_WEIGHT: Weight = 1000;
+type Hash<T> = <T as frame_system::Config>::Hash;
 type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
 type BalanceOf<T> = <<T as Config>::MultiCurrency as MultiCurrency<AccountIdOf<T>>>::Balance;
 type StakingAgentBoxType<T> = Box<
@@ -78,7 +77,7 @@ type StakingAgentBoxType<T> = Box<
 		MultiLocation,
 		QueryId,
 		LedgerUpdateEntry<BalanceOf<T>, MultiLocation>,
-		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+		ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		pallet::Error<T>,
 	>,
 >;
@@ -205,6 +204,7 @@ pub mod pallet {
 			bonded_amount: BalanceOf<T>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		DelegatorBondExtra {
 			currency_id: CurrencyId,
@@ -213,6 +213,7 @@ pub mod pallet {
 			extra_bonded_amount: BalanceOf<T>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		DelegatorUnbond {
 			currency_id: CurrencyId,
@@ -221,12 +222,14 @@ pub mod pallet {
 			unbond_amount: BalanceOf<T>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		DelegatorUnbondAll {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		DelegatorRebond {
 			currency_id: CurrencyId,
@@ -235,6 +238,7 @@ pub mod pallet {
 			rebond_amount: BalanceOf<T>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		Delegated {
 			currency_id: CurrencyId,
@@ -242,6 +246,7 @@ pub mod pallet {
 			targets: Vec<MultiLocation>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		Undelegated {
 			currency_id: CurrencyId,
@@ -249,6 +254,7 @@ pub mod pallet {
 			targets: Vec<MultiLocation>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		Payout {
 			currency_id: CurrencyId,
@@ -261,12 +267,14 @@ pub mod pallet {
 			time_unit: Option<TimeUnit>,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		Chill {
 			currency_id: CurrencyId,
 			delegator_id: MultiLocation,
 			#[codec(compact)]
 			query_id: QueryId,
+			query_id_hash: Hash<T>,
 		},
 		TransferBack {
 			currency_id: CurrencyId,
@@ -342,7 +350,7 @@ pub mod pallet {
 		},
 		ValidatorsByDelegatorSet {
 			currency_id: CurrencyId,
-			validators_list: Vec<(MultiLocation, H256)>,
+			validators_list: Vec<(MultiLocation, Hash<T>)>,
 		},
 		XcmDestWeightAndFeeSet {
 			currency_id: CurrencyId,
@@ -374,7 +382,7 @@ pub mod pallet {
 		ValidatorsByDelegatorQueryResponseConfirmed {
 			#[codec(compact)]
 			query_id: QueryId,
-			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>,
+			entry: ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
 		},
 		ValidatorsByDelegatorQueryResponseFailSuccessfully {
 			#[codec(compact)]
@@ -468,7 +476,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_validators)]
 	pub type Validators<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, H256)>>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, Vec<(MultiLocation, Hash<T>)>>;
 
 	/// Validators for each delegator. CurrencyId + Delegator => Vec<Validator>
 	#[pallet::storage]
@@ -479,7 +487,7 @@ pub mod pallet {
 		CurrencyId,
 		Blake2_128Concat,
 		MultiLocation,
-		Vec<(MultiLocation, H256)>,
+		Vec<(MultiLocation, Hash<T>)>,
 		OptionQuery,
 	>;
 
@@ -489,7 +497,10 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		QueryId,
-		(ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation>, BlockNumberFor<T>),
+		(
+			ValidatorsByDelegatorUpdateEntry<MultiLocation, MultiLocation, Hash<T>>,
+			BlockNumberFor<T>,
+		),
 	>;
 
 	/// Delegator ledgers. A delegator is identified in MultiLocation format.
@@ -599,6 +610,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.bond(&who, amount)?;
+			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBonded {
@@ -606,6 +618,7 @@ pub mod pallet {
 				delegator_id: who,
 				bonded_amount: amount,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -624,6 +637,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.bond_extra(&who, amount)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorBondExtra {
@@ -631,6 +645,7 @@ pub mod pallet {
 				delegator_id: who,
 				extra_bonded_amount: amount,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -650,6 +665,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.unbond(&who, amount)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbond {
@@ -657,6 +673,7 @@ pub mod pallet {
 				delegator_id: who,
 				unbond_amount: amount,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -674,12 +691,14 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.unbond_all(&who)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorUnbondAll {
 				currency_id,
 				delegator_id: who,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -698,6 +717,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.rebond(&who, amount)?;
+			let query_id_hash = T::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorRebond {
@@ -705,6 +725,7 @@ pub mod pallet {
 				delegator_id: who,
 				rebond_amount: amount,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -723,6 +744,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.delegate(&who, &targets)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -730,6 +752,7 @@ pub mod pallet {
 				delegator_id: who,
 				targets,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -748,6 +771,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.undelegate(&who, &targets)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Undelegated {
@@ -755,6 +779,7 @@ pub mod pallet {
 				delegator_id: who,
 				targets,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -773,6 +798,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.redelegate(&who, &targets)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Delegated {
@@ -780,6 +806,7 @@ pub mod pallet {
 				delegator_id: who,
 				targets,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -819,6 +846,7 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.liquidize(&who, &when)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::Liquidize {
@@ -826,6 +854,7 @@ pub mod pallet {
 				delegator_id: who,
 				time_unit: when,
 				query_id,
+				query_id_hash,
 			});
 			Ok(())
 		}
@@ -843,9 +872,15 @@ pub mod pallet {
 
 			let staking_agent = Self::get_currency_staking_agent(currency_id)?;
 			let query_id = staking_agent.chill(&who)?;
+			let query_id_hash = <T as frame_system::Config>::Hashing::hash(&query_id.encode());
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::Chill { currency_id, delegator_id: who, query_id });
+			Pallet::<T>::deposit_event(Event::Chill {
+				currency_id,
+				delegator_id: who,
+				query_id,
+				query_id_hash,
+			});
 			Ok(())
 		}
 
@@ -1583,13 +1618,13 @@ pub mod pallet {
 		pub fn sort_validators_and_remove_duplicates(
 			currency_id: CurrencyId,
 			validators: &Vec<MultiLocation>,
-		) -> Result<Vec<(MultiLocation, H256)>, Error<T>> {
+		) -> Result<Vec<(MultiLocation, Hash<T>)>, Error<T>> {
 			let validators_set =
 				Validators::<T>::get(currency_id).ok_or(Error::<T>::ValidatorSetNotExist)?;
-			let mut validators_list: Vec<(MultiLocation, H256)> = vec![];
+			let mut validators_list: Vec<(MultiLocation, Hash<T>)> = vec![];
 			for validator in validators.iter() {
 				// Check if the validator is in the validator whitelist
-				let multi_hash = Self::get_hash(&validator);
+				let multi_hash = <T as frame_system::Config>::Hashing::hash(&validator.encode());
 				ensure!(
 					validators_set.contains(&(validator.clone(), multi_hash)),
 					Error::<T>::ValidatorNotExist
@@ -1604,11 +1639,6 @@ pub mod pallet {
 			}
 
 			Ok(validators_list)
-		}
-
-		pub fn get_hash(who: &MultiLocation) -> H256 {
-			let encoded = who.encode();
-			H256::from_slice(Keccak256::digest(&encoded).as_slice())
 		}
 
 		pub fn multilocation_to_account(who: &MultiLocation) -> Result<AccountIdOf<T>, Error<T>> {

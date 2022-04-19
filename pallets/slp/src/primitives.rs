@@ -20,7 +20,6 @@ use codec::{Decode, Encode};
 use frame_support::RuntimeDebug;
 use node_primitives::{CurrencyId, TimeUnit, TokenSymbol};
 use scale_info::TypeInfo;
-use sp_core::H256;
 use sp_std::vec::Vec;
 
 /// Simplify the CurrencyId.
@@ -91,20 +90,20 @@ pub struct SubstrateLedgerUpdateEntry<Balance, DelegatorId> {
 /// A type for accommodating validators by delegator update entries for different kinds of
 /// currencies.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
+pub enum ValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
 	/// A type for substrate validators by delegator updating entires
-	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId>),
+	Substrate(SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT>),
 }
 
 /// A type for substrate validators by delegator updating entires
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, TypeInfo)]
-pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId> {
+pub struct SubstrateValidatorsByDelegatorUpdateEntry<DelegatorId, ValidatorId, HashT> {
 	/// The currency id of the delegator that needs to be update
 	pub currency_id: CurrencyId,
 	/// The delegator id that needs to be update
 	pub delegator_id: DelegatorId,
 	/// Validators vec to be updated
-	pub validators: Vec<(ValidatorId, H256)>,
+	pub validators: Vec<(ValidatorId, HashT)>,
 }
 
 /// Different minimum and maximum requirements for different chain

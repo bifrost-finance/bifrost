@@ -26,6 +26,7 @@ use bifrost_slp::{
 	Delays, Ledger, LedgerUpdateEntry, MinimumsMaximums, SubstrateLedger,
 	ValidatorsByDelegatorUpdateEntry, XcmOperation,
 };
+use cumulus_primitives_core::relay_chain::HashT;
 use frame_support::{assert_ok, BoundedVec};
 use node_primitives::TimeUnit;
 use orml_traits::MultiCurrency;
@@ -221,21 +222,25 @@ fn register_validators() {
 		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0).unwrap();
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
-		let multi_hash_0 = Slp::get_hash(&validator_0_location);
-		valis.push((validator_0_location.clone(), multi_hash_0));
+		let multi_hash_0 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			validator_0_location,
+			validator_0_location.clone(),
 		));
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
-		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		let multi_hash_1 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
+
+		// The storage is reordered by hash. So we need to adjust the push order here.
 		valis.push((validator_1_location.clone(), multi_hash_1));
+		valis.push((validator_0_location.clone(), multi_hash_0));
 
 		// Set delegator ledger
 		assert_ok!(Slp::add_validator(
@@ -664,7 +669,7 @@ fn delegate_works() {
 		assert_eq!(
 			kusama_runtime::Staking::nominators(&subaccount_0),
 			Some(Nominations {
-				targets: BoundedVec::try_from(vec![validator_0, validator_1]).unwrap(),
+				targets: BoundedVec::try_from(vec![validator_1, validator_0]).unwrap(),
 				submitted_in: 0,
 				suppressed: false
 			},)
@@ -749,12 +754,13 @@ fn redelegate_works() {
 		let validator_0_32: [u8; 32] = Slp::account_id_to_account_32(validator_0.clone()).unwrap();
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
-		targets.push(validator_0_location.clone());
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
+
 		targets.push(validator_1_location.clone());
+		targets.push(validator_0_location.clone());
 
 		// Redelegate to a set of validator_0 and validator_1.
 		assert_ok!(Slp::redelegate(
@@ -769,7 +775,7 @@ fn redelegate_works() {
 		assert_eq!(
 			kusama_runtime::Staking::nominators(&subaccount_0),
 			Some(Nominations {
-				targets: BoundedVec::try_from(vec![validator_0, validator_1]).unwrap(),
+				targets: BoundedVec::try_from(vec![validator_1, validator_0]).unwrap(),
 				submitted_in: 0,
 				suppressed: false
 			},)
@@ -1828,15 +1834,18 @@ fn confirm_validators_by_delegator_query_response_with_delegate_works() {
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
 		targets.push(validator_0_location.clone());
-		let multi_hash_0 = Slp::get_hash(&validator_0_location);
-		valis.push((validator_0_location.clone(), multi_hash_0));
+		let multi_hash_0 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
 		targets.push(validator_1_location.clone());
-		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		let multi_hash_1 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
+
 		valis.push((validator_1_location.clone(), multi_hash_1));
+		valis.push((validator_0_location.clone(), multi_hash_0));
 
 		// delegate
 		assert_ok!(Slp::delegate(
@@ -1913,15 +1922,19 @@ fn confirm_validators_by_delegator_query_response_with_undelegate_works() {
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
 		targets.push(validator_0_location.clone());
-		let multi_hash_0 = Slp::get_hash(&validator_0_location);
-		valis_2.push((validator_0_location.clone(), multi_hash_0));
+		let multi_hash_0 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
-		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		let multi_hash_1 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
+
 		valis_1.push((validator_1_location.clone(), multi_hash_1.clone()));
+
 		valis_2.push((validator_1_location.clone(), multi_hash_1));
+		valis_2.push((validator_0_location.clone(), multi_hash_0));
 
 		// Undelegate validator 0. Only validator 1 left.
 		assert_ok!(Slp::undelegate(
@@ -1998,16 +2011,19 @@ fn confirm_validators_by_delegator_query_response_with_redelegate_works() {
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
 		targets.push(validator_0_location.clone());
-		let multi_hash_0 = Slp::get_hash(&validator_0_location);
-		valis_2.push((validator_0_location.clone(), multi_hash_0));
+		let multi_hash_0 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
 		targets.push(validator_1_location.clone());
-		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		let multi_hash_1 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
+
 		valis_1.push((validator_1_location.clone(), multi_hash_1.clone()));
 		valis_2.push((validator_1_location.clone(), multi_hash_1));
+		valis_2.push((validator_0_location.clone(), multi_hash_0));
 
 		// Redelegate to a set of validator_0 and validator_1.
 		assert_ok!(Slp::redelegate(
@@ -2086,15 +2102,18 @@ fn fail_validators_by_delegator_query_response_works() {
 		let validator_0_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_0_32).unwrap();
 		targets.push(validator_0_location.clone());
-		let multi_hash_0 = Slp::get_hash(&validator_0_location);
-		valis.push((validator_0_location.clone(), multi_hash_0));
+		let multi_hash_0 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_0_location.encode());
 
 		let validator_1_32: [u8; 32] = Slp::account_id_to_account_32(validator_1.clone()).unwrap();
 		let validator_1_location: MultiLocation =
 			Slp::account_32_to_parent_location(validator_1_32).unwrap();
 		targets.push(validator_1_location.clone());
-		let multi_hash_1 = Slp::get_hash(&validator_1_location);
+		let multi_hash_1 =
+			<Runtime as frame_system::Config>::Hashing::hash(&validator_1_location.encode());
+
 		valis.push((validator_1_location.clone(), multi_hash_1));
+		valis.push((validator_0_location.clone(), multi_hash_0));
 
 		// delegate
 		assert_ok!(Slp::delegate(

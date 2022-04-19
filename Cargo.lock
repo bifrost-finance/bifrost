@@ -1004,7 +1004,6 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
- "sha3 0.9.1",
  "sp-arithmetic",
  "sp-core",
  "sp-io",
