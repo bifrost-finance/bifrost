@@ -149,6 +149,6 @@ pub enum TimeUnit {
 
 impl Default for TimeUnit {
 	fn default() -> Self {
-		TimeUnit::Era(1u32)
+		TimeUnit::Era(0u32)
 	}
 }
