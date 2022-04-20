@@ -112,7 +112,9 @@ pub mod pallet {
 			fee: BalanceOf<T>,
 		},
 		RedeemSuccess {
+			unlock_id: UnlockId,
 			token_id: CurrencyIdOf<T>,
+			to: AccountIdOf<T>,
 			token_amount: BalanceOf<T>,
 		},
 		Rebonded {
@@ -889,6 +891,46 @@ pub mod pallet {
 		) -> DispatchResult {
 			if entrance_account_balance >= unlock_amount {
 				TokenUnlockLedger::<T>::remove(&token_id, &index);
+
+				TimeUnitUnlockLedger::<T>::mutate_exists(
+					&time_unit,
+					&token_id,
+					|value| -> Result<(), Error<T>> {
+						if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+							if total_locked_origin == &unlock_amount {
+								*value = None;
+								return Ok(());
+							}
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&unlock_amount)
+								.ok_or(Error::<T>::CalculationOverflow)?;
+							ledger_list_origin.retain(|x| x != index);
+						} else {
+							return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				)?;
+
+				UserUnlockLedger::<T>::mutate_exists(
+					&account,
+					&token_id,
+					|value| -> Result<(), Error<T>> {
+						if let Some((total_locked_origin, ledger_list_origin)) = value {
+							if total_locked_origin == &unlock_amount {
+								*value = None;
+								return Ok(());
+							}
+							ledger_list_origin.retain(|x| x != index);
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&unlock_amount)
+								.ok_or(Error::<T>::CalculationOverflow)?;
+						} else {
+							return Err(Error::<T>::UserUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				)?;
 			} else {
 				unlock_amount = entrance_account_balance;
 				TokenUnlockLedger::<T>::mutate_exists(
@@ -909,6 +951,45 @@ pub mod pallet {
 						return Ok(());
 					},
 				)?;
+
+				TimeUnitUnlockLedger::<T>::mutate_exists(
+					&time_unit,
+					&token_id,
+					|value| -> Result<(), Error<T>> {
+						if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+							if total_locked_origin == &unlock_amount {
+								*value = None;
+								return Ok(());
+							}
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&unlock_amount)
+								.ok_or(Error::<T>::CalculationOverflow)?;
+						} else {
+							return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				)?;
+
+				UserUnlockLedger::<T>::mutate_exists(
+					&account,
+					&token_id,
+					|value| -> Result<(), Error<T>> {
+						if let Some((total_locked_origin, ledger_list_origin)) = value {
+							if total_locked_origin == &unlock_amount {
+								*value = None;
+								return Ok(());
+							}
+
+							*total_locked_origin = total_locked_origin
+								.checked_sub(&unlock_amount)
+								.ok_or(Error::<T>::CalculationOverflow)?;
+						} else {
+							return Err(Error::<T>::UserUnlockLedgerNotFound.into());
+						}
+						return Ok(());
+					},
+				)?;
 			}
 
 			entrance_account_balance = entrance_account_balance
@@ -920,46 +1001,6 @@ pub mod pallet {
 				&T::EntranceAccount::get().into_account(),
 				&account,
 				unlock_amount,
-			)?;
-
-			TimeUnitUnlockLedger::<T>::mutate_exists(
-				&time_unit,
-				&token_id,
-				|value| -> Result<(), Error<T>> {
-					if let Some((total_locked_origin, ledger_list_origin, _)) = value {
-						if total_locked_origin == &unlock_amount {
-							*value = None;
-							return Ok(());
-						}
-						*total_locked_origin = total_locked_origin
-							.checked_sub(&unlock_amount)
-							.ok_or(Error::<T>::CalculationOverflow)?;
-						ledger_list_origin.retain(|x| x != index);
-					} else {
-						return Err(Error::<T>::TimeUnitUnlockLedgerNotFound.into());
-					}
-					return Ok(());
-				},
-			)?;
-
-			UserUnlockLedger::<T>::mutate_exists(
-				&account,
-				&token_id,
-				|value| -> Result<(), Error<T>> {
-					if let Some((total_locked_origin, ledger_list_origin)) = value {
-						if total_locked_origin == &unlock_amount {
-							*value = None;
-							return Ok(());
-						}
-						ledger_list_origin.retain(|x| x != index);
-						*total_locked_origin = total_locked_origin
-							.checked_sub(&unlock_amount)
-							.ok_or(Error::<T>::CalculationOverflow)?;
-					} else {
-						return Err(Error::<T>::UserUnlockLedgerNotFound.into());
-					}
-					return Ok(());
-				},
 			)?;
 
 			CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
@@ -977,7 +1018,12 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::RedeemSuccess { token_id, token_amount: unlock_amount });
+			Self::deposit_event(Event::RedeemSuccess {
+				unlock_id: *index,
+				token_id,
+				to: account,
+				token_amount: unlock_amount,
+			});
 			Ok(())
 		}
 
@@ -995,6 +1041,9 @@ pub mod pallet {
 						if let Some((account, unlock_amount, time_unit)) =
 							Self::token_unlock_ledger(token_id, index)
 						{
+							if entrance_account_balance == BalanceOf::<T>::zero() {
+								return;
+							}
 							Self::on_initialize_update_ledger(
 								token_id,
 								account,
