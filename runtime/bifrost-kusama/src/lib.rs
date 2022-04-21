@@ -300,6 +300,8 @@ parameter_types! {
 	pub const VsbondAuctionPalletId: PalletId = PalletId(*b"bf/vsbnd");
 	pub const ParachainStakingPalletId: PalletId = PalletId(*b"bf/stake");
 	pub const BifrostVsbondPalletId: PalletId = PalletId(*b"bf/salpb");
+	pub const SlpEntrancePalletId: PalletId = PalletId(*b"bf/vtkin");
+	pub const SlpExitPalletId: PalletId = PalletId(*b"bf/vtout");
 }
 
 impl frame_system::Config for Runtime {
@@ -1368,7 +1370,8 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 			LiquidityMiningDOTPalletId::get().check_sub_account::<PoolId>(a) ||
 			AccountIdConversion::<AccountId>::into_account(&ParachainStakingPalletId::get())
 				.eq(a) || AccountIdConversion::<AccountId>::into_account(&BifrostVsbondPalletId::get())
-			.eq(a)
+			.eq(a) || AccountIdConversion::<AccountId>::into_account(&SlpEntrancePalletId::get()).eq(a) ||
+			AccountIdConversion::<AccountId>::into_account(&SlpExitPalletId::get()).eq(a)
 	}
 }
 
@@ -1805,8 +1808,6 @@ pub type ZenlinkLocationToAccountId = (
 
 parameter_types! {
 	pub const MaximumUnlockId: u32 = 1_000;
-	pub BifrostEntranceAccount: PalletId = PalletId(*b"bf/vtkin");
-	pub BifrostExitAccount: PalletId = PalletId(*b"bf/vtout");
 	pub BifrostFeeAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
@@ -1815,8 +1816,8 @@ impl bifrost_vtoken_minting::Config for Runtime {
 	type MultiCurrency = Currencies;
 	type ControlOrigin = EnsureOneOf<MoreThanHalfCouncil, EnsureRootOrAllTechnicalCommittee>;
 	type MaximumUnlockId = MaximumUnlockId;
-	type EntranceAccount = BifrostEntranceAccount;
-	type ExitAccount = BifrostExitAccount;
+	type EntranceAccount = SlpEntrancePalletId;
+	type ExitAccount = SlpExitPalletId;
 	type FeeAccount = BifrostFeeAccount;
 	type WeightInfo = ();
 }
