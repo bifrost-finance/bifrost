@@ -985,7 +985,7 @@ impl<T: Config> KusamaAgent<T> {
 		let remark_call = KusamaCall::System(SystemCall::RemarkWithEvent(query_id.encode()));
 
 		let call_batched_with_remark =
-			KusamaCall::Utility(Box::new(UtilityCall::BatchAll(vec![call, remark_call])));
+			KusamaCall::Utility(Box::new(UtilityCall::BatchAll(Box::new(vec![call, remark_call]))));
 
 		let call_as_subaccount = KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(
 			sub_account_index,

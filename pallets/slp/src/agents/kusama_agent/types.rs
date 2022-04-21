@@ -56,7 +56,7 @@ pub enum UtilityCall<KusamaCall> {
 	#[codec(index = 1)]
 	AsDerivative(u16, KusamaCall),
 	#[codec(index = 2)]
-	BatchAll(Vec<KusamaCall>),
+	BatchAll(Box<Vec<KusamaCall>>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
