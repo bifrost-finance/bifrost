@@ -817,8 +817,8 @@ pub mod pallet {
 		pub fn payout(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
-			validator: MultiLocation,
+			who: Box<MultiLocation>,
+			validator: Box<MultiLocation>,
 			when: Option<TimeUnit>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -828,7 +828,11 @@ pub mod pallet {
 			staking_agent.payout(&who, &validator, &when)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::Payout { currency_id, validator, time_unit: when });
+			Pallet::<T>::deposit_event(Event::Payout {
+				currency_id,
+				validator: *validator,
+				time_unit: when,
+			});
 			Ok(())
 		}
 
@@ -889,8 +893,8 @@ pub mod pallet {
 		pub fn transfer_back(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			from: MultiLocation,
-			to: MultiLocation,
+			from: Box<MultiLocation>,
+			to: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -900,7 +904,12 @@ pub mod pallet {
 			staking_agent.transfer_back(&from, &to, amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TransferBack { currency_id, from, to, amount });
+			Pallet::<T>::deposit_event(Event::TransferBack {
+				currency_id,
+				from: *from,
+				to: *to,
+				amount,
+			});
 
 			Ok(())
 		}
@@ -910,8 +919,8 @@ pub mod pallet {
 		pub fn transfer_to(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			from: MultiLocation,
-			to: MultiLocation,
+			from: Box<MultiLocation>,
+			to: Box<MultiLocation>,
 			#[pallet::compact] amount: BalanceOf<T>,
 		) -> DispatchResult {
 			// Ensure origin
@@ -921,7 +930,12 @@ pub mod pallet {
 			staking_agent.transfer_to(&from, &to, amount)?;
 
 			// Deposit event.
-			Pallet::<T>::deposit_event(Event::TransferTo { currency_id, from, to, amount });
+			Pallet::<T>::deposit_event(Event::TransferTo {
+				currency_id,
+				from: *from,
+				to: *to,
+				amount,
+			});
 
 			Ok(())
 		}
@@ -1391,15 +1405,15 @@ pub mod pallet {
 		pub fn set_delegator_ledger(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			who: MultiLocation,
-			ledger: Option<Ledger<MultiLocation, BalanceOf<T>>>,
+			who: Box<MultiLocation>,
+			ledger: Box<Option<Ledger<MultiLocation, BalanceOf<T>>>>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			Self::ensure_authorized(origin, currency_id)?;
 
 			let mins_maxs = MinimumsAndMaximums::<T>::get(KSM).ok_or(Error::<T>::NotExist)?;
 			// Check the new ledger must has at lease minimum active amount.
-			if let Some(ref ldgr) = ledger {
+			if let Some(ref ldgr) = *ledger {
 				if let Ledger::Substrate(lg) = ldgr {
 					ensure!(
 						lg.active >= mins_maxs.delegator_bonded_minimum,
@@ -1409,15 +1423,15 @@ pub mod pallet {
 			}
 
 			// Update the ledger.
-			DelegatorLedgers::<T>::mutate_exists(currency_id, &who, |old_ledger| {
-				*old_ledger = ledger.clone();
+			DelegatorLedgers::<T>::mutate_exists(currency_id, &*who, |old_ledger| {
+				*old_ledger = *ledger.clone();
 			});
 
 			// Deposit event.
 			Pallet::<T>::deposit_event(Event::DelegatorLedgerSet {
 				currency_id,
-				delegator: who,
-				ledger,
+				delegator: *who,
+				ledger: *ledger,
 			});
 
 			Ok(())
