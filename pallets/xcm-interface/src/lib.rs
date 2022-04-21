@@ -67,14 +67,17 @@ pub mod pallet {
 	};
 	use sp_std::{convert::From, prelude::*, vec, vec::Vec};
 	use xcm::{latest::prelude::*, DoubleEncoded, VersionedXcm};
+	use node_primitives::Balance;
 
 	use super::*;
 	use crate::traits::*;
 
-	#[derive(Encode, Decode, Eq, PartialEq, Copy, Clone, RuntimeDebug, TypeInfo)]
+	#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug, TypeInfo)]
 	pub enum XcmInterfaceOperation {
 		UmpContributeTransact,
 		StatemineTransfer,
+		// Parachain fee with location info
+		ParachainFee(Box<MultiLocation>),
 	}
 
 	#[pallet::config]
@@ -176,14 +179,14 @@ pub mod pallet {
 			T::UpdateOrigin::ensure_origin(origin)?;
 
 			for (operation, weight_change, fee_change) in updates {
-				XcmDestWeightAndFee::<T>::mutate_exists(operation, |info| {
+				XcmDestWeightAndFee::<T>::mutate_exists(operation.clone(), |info| {
 					if let Some(new_weight) = weight_change {
 						match info.as_mut() {
 							Some(info) => info.0 = new_weight,
 							None => *info = Some((new_weight, Zero::zero())),
 						}
 						Self::deposit_event(Event::<T>::XcmDestWeightUpdated(
-							operation, new_weight,
+							operation.clone(), new_weight,
 						));
 					}
 					if let Some(new_fee) = fee_change {
@@ -348,6 +351,12 @@ pub mod pallet {
 					.into();
 				contribute_call
 			})
+		}
+
+		/// The fee of parachain transfer.
+		pub fn get_parachain_fee(location: MultiLocation) -> Balance {
+			let xcm_fee = Self::xcm_dest_weight_and_fee(XcmInterfaceOperation::ParachainFee(Box::new(location))).unwrap_or_default().1;
+			TryInto::<u128>::try_into(xcm_fee).unwrap_or_default()
 		}
 	}
 }
