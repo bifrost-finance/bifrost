@@ -100,12 +100,14 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		Minted {
+			address: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
 		},
 		Redeemed {
+			address: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
@@ -118,12 +120,14 @@ pub mod pallet {
 			token_amount: BalanceOf<T>,
 		},
 		Rebonded {
+			address: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
 			fee: BalanceOf<T>,
 		},
 		RebondedByUnlockId {
+			address: AccountIdOf<T>,
 			token_id: CurrencyIdOf<T>,
 			token_amount: BalanceOf<T>,
 			vtoken_amount: BalanceOf<T>,
@@ -306,7 +310,13 @@ pub mod pallet {
 				token_amount_excluding_fee,
 			)?;
 
-			Self::deposit_event(Event::Minted { token_id, token_amount, vtoken_amount, fee });
+			Self::deposit_event(Event::Minted {
+				address: exchanger,
+				token_id,
+				token_amount,
+				vtoken_amount,
+				fee,
+			});
 			Ok(())
 		}
 
@@ -438,6 +448,7 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::Redeemed {
+				address: exchanger,
 				token_id,
 				vtoken_amount,
 				token_amount,
@@ -593,7 +604,13 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Self::deposit_event(Event::Rebonded { token_id, token_amount, vtoken_amount, fee });
+			Self::deposit_event(Event::Rebonded {
+				address: exchanger,
+				token_id,
+				token_amount,
+				vtoken_amount,
+				fee,
+			});
 			Ok(())
 		}
 
@@ -680,6 +697,7 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::RebondedByUnlockId {
+				address: exchanger,
 				token_id,
 				token_amount: unlock_amount,
 				vtoken_amount,
