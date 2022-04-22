@@ -86,21 +86,25 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		VsbondConvertToVsksm {
+			address: AccountIdOf<T>,
 			currency_id: CurrencyIdOf<T>,
 			vsbond_amount: BalanceOf<T>,
 			vsksm_amount: BalanceOf<T>,
 		},
 		VsksmConvertToVsbond {
+			address: AccountIdOf<T>,
 			currency_id: CurrencyIdOf<T>,
 			vsbond_amount: BalanceOf<T>,
 			vsksm_amount: BalanceOf<T>,
 		},
 		VsbondConvertToVsdot {
+			address: AccountIdOf<T>,
 			currency_id: CurrencyIdOf<T>,
 			vsbond_amount: BalanceOf<T>,
 			vsdot_amount: BalanceOf<T>,
 		},
 		VsdotConvertToVsbond {
+			address: AccountIdOf<T>,
 			currency_id: CurrencyIdOf<T>,
 			vsbond_amount: BalanceOf<T>,
 			vsdot_amount: BalanceOf<T>,
@@ -216,6 +220,7 @@ pub mod pallet {
 			)?;
 
 			Self::deposit_event(Event::VsbondConvertToVsksm {
+				address: exchanger,
 				currency_id,
 				vsbond_amount,
 				vsksm_amount: vsksm_balance,
@@ -297,6 +302,7 @@ pub mod pallet {
 			)?;
 
 			Self::deposit_event(Event::VsksmConvertToVsbond {
+				address: exchanger,
 				currency_id,
 				vsbond_amount: vsbond_balance,
 				vsksm_amount: vsksm_balance,
@@ -369,6 +375,7 @@ pub mod pallet {
 			)?;
 
 			Self::deposit_event(Event::VsbondConvertToVsdot {
+				address: exchanger,
 				currency_id,
 				vsbond_amount,
 				vsdot_amount: vsdot_balance,
@@ -447,6 +454,7 @@ pub mod pallet {
 			)?;
 
 			Self::deposit_event(Event::VsdotConvertToVsbond {
+				address: exchanger,
 				currency_id,
 				vsbond_amount: vsbond_balance,
 				vsdot_amount: vsdot_balance,
