@@ -575,12 +575,12 @@ impl<T: Config>
 		let fee_asset_item: u32 = 0;
 
 		// Construct xcm message.
-		let call = KusamaCall::Xcm(XcmCall::ReserveTransferAssets(
+		let call = KusamaCall::Xcm(Box::new(XcmCall::ReserveTransferAssets(
 			dest,
 			beneficiary,
 			assets,
 			fee_asset_item,
-		));
+		)));
 
 		// Wrap the xcm message as it is sent from a subaccount of the parachain account, and
 		// send it out.
@@ -982,14 +982,18 @@ impl<T: Config> KusamaAgent<T> {
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
 		// Temporary wrapping remark event in Kusama for ease use of backend service.
-		let remark_call = KusamaCall::System(SystemCall::RemarkWithEvent(query_id.encode()));
+		let remark_call =
+			KusamaCall::System(SystemCall::RemarkWithEvent(Box::new(query_id.encode())));
 
 		let call_batched_with_remark =
-			KusamaCall::Utility(Box::new(UtilityCall::BatchAll(Box::new(vec![call, remark_call]))));
+			KusamaCall::Utility(Box::new(UtilityCall::BatchAll(Box::new(vec![
+				Box::new(call),
+				Box::new(remark_call),
+			]))));
 
 		let call_as_subaccount = KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(
 			sub_account_index,
-			call_batched_with_remark,
+			Box::new(call_batched_with_remark),
 		)));
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation)
@@ -1007,8 +1011,10 @@ impl<T: Config> KusamaAgent<T> {
 		let sub_account_index = DelegatorsMultilocation2Index::<T>::get(KSM, who)
 			.ok_or(Error::<T>::DelegatorNotExist)?;
 
-		let call_as_subaccount =
-			KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(sub_account_index, call)));
+		let call_as_subaccount = KusamaCall::Utility(Box::new(UtilityCall::AsDerivative(
+			sub_account_index,
+			Box::new(call),
+		)));
 
 		let (weight, fee) = XcmDestWeightAndFee::<T>::get(KSM, operation)
 			.ok_or(Error::<T>::WeightAndFeeNotExists)?;
