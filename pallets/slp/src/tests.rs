@@ -431,7 +431,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 		DelegatorLedgers::<Runtime>::insert(KSM, subaccount_0_location.clone(), ledger);
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
-		let pct = Percent::from_percent(20);
+		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
 			interior: X1(AccountId32 { network: Any, id: treasury_32 }),
@@ -443,7 +443,7 @@ fn charge_host_fee_and_tune_vtoken_exchange_rate_works() {
 			Some((pct, treasury_location))
 		));
 
-		let pct_100 = Percent::from_percent(100);
+		let pct_100 = Permill::from_percent(100);
 		assert_ok!(Slp::set_currency_tune_exchange_rate_limit(
 			Origin::signed(ALICE),
 			KSM,
@@ -484,7 +484,7 @@ fn set_hosting_fees_works() {
 				.into();
 
 		// Set the hosting fee to be 20%, and the beneficiary to be bifrost treasury account.
-		let pct = Percent::from_percent(20);
+		let pct = Permill::from_percent(20);
 		let treasury_location = MultiLocation {
 			parents: 0,
 			interior: X1(AccountId32 { network: Any, id: treasury_32 }),

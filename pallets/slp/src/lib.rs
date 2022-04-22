@@ -28,7 +28,7 @@ use frame_system::{
 use node_primitives::{CurrencyId, CurrencyIdExt, TimeUnit, VtokenMintingOperator};
 use orml_traits::MultiCurrency;
 pub use primitives::Ledger;
-use sp_arithmetic::{per_things::Percent, traits::Zero};
+use sp_arithmetic::{per_things::Permill, traits::Zero};
 use sp_runtime::traits::{CheckedSub, Convert};
 use sp_std::{boxed::Box, vec, vec::Vec};
 pub use weights::WeightInfo;
@@ -398,11 +398,11 @@ pub mod pallet {
 		},
 		HostingFeesSet {
 			currency_id: CurrencyId,
-			fees: Option<(Percent, MultiLocation)>,
+			fees: Option<(Permill, MultiLocation)>,
 		},
 		CurrencyTuneExchangeRateLimitSet {
 			currency_id: CurrencyId,
-			tune_exchange_rate_limit: Option<(u32, Percent)>,
+			tune_exchange_rate_limit: Option<(u32, Permill)>,
 		},
 	}
 
@@ -438,7 +438,7 @@ pub mod pallet {
 	/// Hosting fee percentage and beneficiary account for different chains
 	#[pallet::storage]
 	#[pallet::getter(fn get_hosting_fee)]
-	pub type HostingFees<T> = StorageMap<_, Blake2_128Concat, CurrencyId, (Percent, MultiLocation)>;
+	pub type HostingFees<T> = StorageMap<_, Blake2_128Concat, CurrencyId, (Permill, MultiLocation)>;
 
 	/// Delegators in service. A delegator is identified in MultiLocation format.
 	/// Currency Id + Sub-account index => MultiLocation
@@ -555,7 +555,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_currency_tune_exchange_rate_limit)]
 	pub type CurrencyTuneExchangeRateLimit<T> =
-		StorageMap<_, Blake2_128Concat, CurrencyId, (u32, Percent)>;
+		StorageMap<_, Blake2_128Concat, CurrencyId, (u32, Permill)>;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -1130,12 +1130,12 @@ pub mod pallet {
 			ensure!(value > Zero::zero(), Error::<T>::AmountZero);
 
 			// Ensure the value is valid.
-			let (limit_num, max_percent) = Self::get_currency_tune_exchange_rate_limit(currency_id)
+			let (limit_num, max_permill) = Self::get_currency_tune_exchange_rate_limit(currency_id)
 				.ok_or(Error::<T>::TuneExchangeRateLimitNotSet)?;
 			// Get pool token value
 			let pool_token = T::VtokenMinting::get_token_pool(currency_id);
 			// Calculate max increase allowed.
-			let max_to_increase = max_percent.mul_floor(pool_token);
+			let max_to_increase = max_permill.mul_floor(pool_token);
 			ensure!(value <= max_to_increase, Error::<T>::GreaterThanMaximum);
 
 			// Ensure this tune is within limit.
@@ -1171,9 +1171,9 @@ pub mod pallet {
 			let new_tune_num = tune_num.checked_add(1).ok_or(Error::<T>::OverFlow)?;
 
 			// Get charged fee value
-			let (fee_percent, beneficiary) =
+			let (fee_permill, beneficiary) =
 				Self::get_hosting_fee(currency_id).ok_or(Error::<T>::InvalidHostingFee)?;
-			let fee_to_charge = fee_percent.mul_floor(value);
+			let fee_to_charge = fee_permill.mul_floor(value);
 
 			// Should first charge fee, and then tune exchange rate. Otherwise, the rate will be
 			// wrong.
@@ -1488,7 +1488,7 @@ pub mod pallet {
 		pub fn set_hosting_fees(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			maybe_fee_set: Option<(Percent, MultiLocation)>,
+			maybe_fee_set: Option<(Permill, MultiLocation)>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;
@@ -1507,7 +1507,7 @@ pub mod pallet {
 		pub fn set_currency_tune_exchange_rate_limit(
 			origin: OriginFor<T>,
 			currency_id: CurrencyId,
-			maybe_tune_exchange_rate_limit: Option<(u32, Percent)>,
+			maybe_tune_exchange_rate_limit: Option<(u32, Permill)>,
 		) -> DispatchResult {
 			// Check the validity of origin
 			T::ControlOrigin::ensure_origin(origin)?;

@@ -36,13 +36,13 @@ pub enum KusamaCall<T: Config> {
 	#[codec(index = 24)]
 	Utility(Box<UtilityCall<Self>>),
 	#[codec(index = 99)]
-	Xcm(XcmCall),
+	Xcm(Box<XcmCall>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum SystemCall {
 	#[codec(index = 8)]
-	RemarkWithEvent(Vec<u8>),
+	RemarkWithEvent(Box<Vec<u8>>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]
@@ -54,9 +54,9 @@ pub enum BalancesCall<T: Config> {
 #[derive(Encode, Decode, RuntimeDebug)]
 pub enum UtilityCall<KusamaCall> {
 	#[codec(index = 1)]
-	AsDerivative(u16, KusamaCall),
+	AsDerivative(u16, Box<KusamaCall>),
 	#[codec(index = 2)]
-	BatchAll(Box<Vec<KusamaCall>>),
+	BatchAll(Box<Vec<Box<KusamaCall>>>),
 }
 
 #[derive(Encode, Decode, RuntimeDebug)]

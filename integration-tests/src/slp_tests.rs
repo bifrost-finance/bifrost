@@ -198,8 +198,8 @@ fn register_delegator_ledger() {
 		assert_ok!(Slp::set_delegator_ledger(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			Some(ledger)
+			Box::new(subaccount_0_location.clone()),
+			Box::new(Some(ledger))
 		));
 	});
 }
@@ -369,8 +369,8 @@ fn transfer_to_works() {
 		assert_ok!(Slp::transfer_to(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			entrance_account_location,
-			subaccount_0_location,
+			Box::new(entrance_account_location),
+			Box::new(subaccount_0_location),
 			dollar(RelayCurrencyId::get()),
 		));
 	});
@@ -584,8 +584,8 @@ fn rebond_works() {
 		assert_ok!(Slp::set_delegator_ledger(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			Some(ledger)
+			Box::new(subaccount_0_location.clone()),
+			Box::new(Some(ledger))
 		));
 
 		// rebond 0.5 ksm.
@@ -809,8 +809,8 @@ fn payout_works() {
 		assert_ok!(Slp::payout(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
-			validator_0_location,
+			Box::new(subaccount_0_location),
+			Box::new(validator_0_location),
 			Some(TimeUnit::Era(27))
 		));
 	});
@@ -934,8 +934,8 @@ fn transfer_back_works() {
 		assert_ok!(Slp::transfer_back(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location,
-			exit_account_location,
+			Box::new(subaccount_0_location),
+			Box::new(exit_account_location),
 			500_000_000_000
 		));
 	});
@@ -1471,8 +1471,8 @@ fn confirm_delegator_ledger_query_response_with_rebond_works() {
 		assert_ok!(Slp::set_delegator_ledger(
 			Origin::root(),
 			RelayCurrencyId::get(),
-			subaccount_0_location.clone(),
-			Some(ledger)
+			Box::new(subaccount_0_location.clone()),
+			Box::new(Some(ledger))
 		));
 
 		// rebond 0.5 ksm.
