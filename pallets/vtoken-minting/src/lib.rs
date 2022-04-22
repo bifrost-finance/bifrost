@@ -248,16 +248,6 @@ pub mod pallet {
 	>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn token_to_deduct)]
-	pub type TokenToDeduct<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn token_to_add)]
-	pub type TokenToAdd<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn token_to_rebond)]
 	pub type TokenToRebond<T: Config> = StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>>;
 
@@ -361,12 +351,6 @@ pub mod pallet {
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool
 							.checked_sub(&token_amount)
-							.ok_or(Error::<T>::CalculationOverflow)?;
-						Ok(())
-					})?;
-					TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-						*pool = pool
-							.checked_add(&token_amount)
 							.ok_or(Error::<T>::CalculationOverflow)?;
 						Ok(())
 					})?;
@@ -831,9 +815,8 @@ pub mod pallet {
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::SlashingSpan(slashing_span_a) => match b {
-					TimeUnit::SlashingSpan(slashing_span_b) => {
-						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b)
-					},
+					TimeUnit::SlashingSpan(slashing_span_b) =>
+						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 			};
@@ -868,12 +851,6 @@ pub mod pallet {
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool
-					.checked_add(&token_amount_excluding_fee)
-					.ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
-			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool
 					.checked_add(&token_amount_excluding_fee)
 					.ok_or(Error::<T>::CalculationOverflow)?;
@@ -958,7 +935,7 @@ pub mod pallet {
 					&time_unit,
 					&token_id,
 					|value| -> Result<(), Error<T>> {
-						if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+						if let Some((total_locked_origin, _ledger_list_origin, _)) = value {
 							if total_locked_origin == &unlock_amount {
 								*value = None;
 								return Ok(());
@@ -977,7 +954,7 @@ pub mod pallet {
 					&account,
 					&token_id,
 					|value| -> Result<(), Error<T>> {
-						if let Some((total_locked_origin, ledger_list_origin)) = value {
+						if let Some((total_locked_origin, _ledger_list_origin)) = value {
 							if total_locked_origin == &unlock_amount {
 								*value = None;
 								return Ok(());
@@ -1010,16 +987,6 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
-
-			TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
-
 			Self::deposit_event(Event::RedeemSuccess {
 				unlock_id: *index,
 				token_id,
@@ -1035,7 +1002,7 @@ pub mod pallet {
 			let time_unit = MinTimeUnit::<T>::get(ksm);
 			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
 				|(_total_locked, ledger_list, token_id)| {
-					let mut entrance_account_balance = T::MultiCurrency::free_balance(
+					let entrance_account_balance = T::MultiCurrency::free_balance(
 						token_id,
 						&T::EntranceAccount::get().into_account(),
 					);
@@ -1069,7 +1036,7 @@ pub mod pallet {
 				_ => 0,
 			};
 			match time_unit {
-				TimeUnit::Era(min_era) => {
+				TimeUnit::Era(min_era) =>
 					if ongoing_era + unlock_duration_era > min_era {
 						let time_unit_ledger_list: Vec<(
 							BalanceOf<T>,
@@ -1089,8 +1056,7 @@ pub mod pallet {
 								}
 							})?;
 						}
-					}
-				},
+					},
 				_ => (),
 			}
 			Ok(())

@@ -36,7 +36,6 @@ fn mint() {
 		);
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 1000));
 		assert_eq!(VtokenMinting::token_pool(KSM), 950);
-		assert_eq!(VtokenMinting::token_to_add(KSM), 950);
 		assert_eq!(VtokenMinting::minimum_mint(KSM), 200);
 		assert_eq!(Tokens::total_issuance(vKSM), 1950);
 
@@ -68,7 +67,6 @@ fn redeem() {
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_eq!(VtokenMinting::token_pool(KSM), 1686); // 1000 + 980 - 98 - 196
-		assert_eq!(VtokenMinting::token_to_add(KSM), 980);
 		assert_eq!(VtokenMinting::currency_unlocking_total(), 294); // 98 + 196
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 980);
@@ -119,7 +117,6 @@ fn rebond() {
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), Some((BOB, 100, TimeUnit::Era(1))));
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), None);
 		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
-		assert_eq!(VtokenMinting::token_to_add(KSM), 500);
 		assert_eq!(VtokenMinting::currency_unlocking_total(), 100); // 200 + 100 - 200
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 300);
@@ -146,9 +143,7 @@ fn hook() {
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 100));
-		assert_eq!(VtokenMinting::token_to_add(KSM), 300);
 		assert_eq!(VtokenMinting::currency_unlocking_total(), 300); // 200 + 100
-		assert_eq!(VtokenMinting::token_to_deduct(KSM), 300);
 		assert_noop!(
 			VtokenMinting::rebond(Some(BOB).into(), KSM, 100),
 			Error::<Runtime>::InvalidRebondToken
@@ -171,8 +166,6 @@ fn hook() {
 		VtokenMinting::on_initialize(0);
 		VtokenMinting::on_initialize(1);
 		assert_eq!(VtokenMinting::min_time_unit(KSM), TimeUnit::Era(6));
-		assert_eq!(VtokenMinting::token_to_add(KSM), 0);
-		assert_eq!(VtokenMinting::token_to_deduct(KSM), 0);
 		assert_eq!(VtokenMinting::currency_unlocking_total(), 0);
 		assert_ok!(VtokenMinting::mint(Some(BOB).into(), KSM, 100));
 		assert_ok!(VtokenMinting::redeem(Some(BOB).into(), vKSM, 200));
@@ -221,7 +214,6 @@ fn rebond_by_unlock_id() {
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 0), None);
 		assert_eq!(VtokenMinting::token_unlock_ledger(KSM, 1), Some((BOB, 100, TimeUnit::Era(1))));
 		assert_eq!(VtokenMinting::token_pool(KSM), 1200);
-		assert_eq!(VtokenMinting::token_to_add(KSM), 500);
 		assert_eq!(VtokenMinting::currency_unlocking_total(), 100); // 200 + 100 - 200
 		let (entrance_account, _exit_account) = VtokenMinting::get_entrance_and_exit_accounts();
 		assert_eq!(Tokens::free_balance(KSM, &entrance_account), 300);
