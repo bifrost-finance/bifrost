@@ -36,7 +36,7 @@ use frame_support::{
 		traits::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
 		},
-		DispatchError,
+		DispatchError, Permill,
 	},
 	transactional, BoundedVec, PalletId,
 };
@@ -149,8 +149,8 @@ pub mod pallet {
 		},
 		/// Several fees has been set.
 		FeeSet {
-			mint_fee: BalanceOf<T>,
-			redeem_fee: BalanceOf<T>,
+			mint_fee: Permill,
+			redeem_fee: Permill,
 			// hosting_fee: BalanceOf<T>,
 		},
 		HookIterationLimitSet {
@@ -181,7 +181,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn fees)]
-	pub type Fees<T: Config> = StorageValue<_, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+	pub type Fees<T: Config> = StorageValue<_, (Permill, Permill), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_pool)]
@@ -246,16 +246,6 @@ pub mod pallet {
 		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockId>, CurrencyIdOf<T>),
 		OptionQuery,
 	>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn token_to_deduct)]
-	pub type TokenToDeduct<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn token_to_add)]
-	pub type TokenToAdd<T: Config> =
-		StorageMap<_, Twox64Concat, CurrencyIdOf<T>, BalanceOf<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_to_rebond)]
@@ -333,7 +323,8 @@ pub mod pallet {
 				vtoken_amount >= MinimumRedeem::<T>::get(token_id),
 				Error::<T>::BelowMinimumRedeem
 			);
-			let (_mint_fee, redeem_fee) = Fees::<T>::get();
+			let (_mint_rate, redeem_rate) = Fees::<T>::get();
+			let redeem_fee = redeem_rate * vtoken_amount;
 			vtoken_amount =
 				vtoken_amount.checked_sub(&redeem_fee).ok_or(Error::<T>::CalculationOverflow)?;
 			// Charging fees
@@ -360,12 +351,6 @@ pub mod pallet {
 					TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 						*pool = pool
 							.checked_sub(&token_amount)
-							.ok_or(Error::<T>::CalculationOverflow)?;
-						Ok(())
-					})?;
-					TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-						*pool = pool
-							.checked_add(&token_amount)
 							.ok_or(Error::<T>::CalculationOverflow)?;
 						Ok(())
 					})?;
@@ -797,9 +782,8 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_fees(
 			origin: OriginFor<T>,
-			mint_fee: BalanceOf<T>,
-			redeem_fee: BalanceOf<T>,
-			// hosting_fee: BalanceOf<T>,
+			mint_fee: Permill,
+			redeem_fee: Permill,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -849,7 +833,8 @@ pub mod pallet {
 		) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let (mint_fee, _redeem_fee) = Fees::<T>::get();
+			let (mint_rate, _redeem_rate) = Fees::<T>::get();
+			let mint_fee = mint_rate * token_amount;
 			let token_amount_excluding_fee =
 				token_amount.checked_sub(&mint_fee).ok_or(Error::<T>::CalculationOverflow)?;
 			let mut vtoken_amount = token_amount_excluding_fee;
@@ -866,12 +851,6 @@ pub mod pallet {
 			// Issue the corresponding vtoken to the user's account.
 			T::MultiCurrency::deposit(vtoken_id, &exchanger, vtoken_amount)?;
 			TokenPool::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool
-					.checked_add(&token_amount_excluding_fee)
-					.ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
-			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
 				*pool = pool
 					.checked_add(&token_amount_excluding_fee)
 					.ok_or(Error::<T>::CalculationOverflow)?;
@@ -956,7 +935,7 @@ pub mod pallet {
 					&time_unit,
 					&token_id,
 					|value| -> Result<(), Error<T>> {
-						if let Some((total_locked_origin, ledger_list_origin, _)) = value {
+						if let Some((total_locked_origin, _ledger_list_origin, _)) = value {
 							if total_locked_origin == &unlock_amount {
 								*value = None;
 								return Ok(());
@@ -975,7 +954,7 @@ pub mod pallet {
 					&account,
 					&token_id,
 					|value| -> Result<(), Error<T>> {
-						if let Some((total_locked_origin, ledger_list_origin)) = value {
+						if let Some((total_locked_origin, _ledger_list_origin)) = value {
 							if total_locked_origin == &unlock_amount {
 								*value = None;
 								return Ok(());
@@ -1008,16 +987,6 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			TokenToAdd::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
-
-			TokenToDeduct::<T>::mutate(&token_id, |pool| -> Result<(), Error<T>> {
-				*pool = pool.checked_sub(&unlock_amount).ok_or(Error::<T>::CalculationOverflow)?;
-				Ok(())
-			})?;
-
 			Self::deposit_event(Event::RedeemSuccess {
 				unlock_id: *index,
 				token_id,
@@ -1033,7 +1002,7 @@ pub mod pallet {
 			let time_unit = MinTimeUnit::<T>::get(ksm);
 			TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit.clone()).for_each(
 				|(_total_locked, ledger_list, token_id)| {
-					let mut entrance_account_balance = T::MultiCurrency::free_balance(
+					let entrance_account_balance = T::MultiCurrency::free_balance(
 						token_id,
 						&T::EntranceAccount::get().into_account(),
 					);
