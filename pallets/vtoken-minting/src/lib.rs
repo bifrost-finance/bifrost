@@ -36,7 +36,7 @@ use frame_support::{
 		traits::{
 			AccountIdConversion, CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Saturating, Zero,
 		},
-		DispatchError,
+		DispatchError, Permill,
 	},
 	transactional, BoundedVec, PalletId,
 };
@@ -149,8 +149,8 @@ pub mod pallet {
 		},
 		/// Several fees has been set.
 		FeeSet {
-			mint_fee: BalanceOf<T>,
-			redeem_fee: BalanceOf<T>,
+			mint_fee: Permill,
+			redeem_fee: Permill,
 			// hosting_fee: BalanceOf<T>,
 		},
 		HookIterationLimitSet {
@@ -181,7 +181,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn fees)]
-	pub type Fees<T: Config> = StorageValue<_, (BalanceOf<T>, BalanceOf<T>), ValueQuery>;
+	pub type Fees<T: Config> = StorageValue<_, (Permill, Permill), ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn token_pool)]
@@ -333,7 +333,8 @@ pub mod pallet {
 				vtoken_amount >= MinimumRedeem::<T>::get(token_id),
 				Error::<T>::BelowMinimumRedeem
 			);
-			let (_mint_fee, redeem_fee) = Fees::<T>::get();
+			let (_mint_rate, redeem_rate) = Fees::<T>::get();
+			let redeem_fee = redeem_rate * vtoken_amount;
 			vtoken_amount =
 				vtoken_amount.checked_sub(&redeem_fee).ok_or(Error::<T>::CalculationOverflow)?;
 			// Charging fees
@@ -797,9 +798,8 @@ pub mod pallet {
 		#[pallet::weight(0)]
 		pub fn set_fees(
 			origin: OriginFor<T>,
-			mint_fee: BalanceOf<T>,
-			redeem_fee: BalanceOf<T>,
-			// hosting_fee: BalanceOf<T>,
+			mint_fee: Permill,
+			redeem_fee: Permill,
 		) -> DispatchResult {
 			ensure_root(origin)?;
 
@@ -831,8 +831,9 @@ pub mod pallet {
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 				TimeUnit::SlashingSpan(slashing_span_a) => match b {
-					TimeUnit::SlashingSpan(slashing_span_b) =>
-						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b),
+					TimeUnit::SlashingSpan(slashing_span_b) => {
+						TimeUnit::SlashingSpan(slashing_span_a + slashing_span_b)
+					},
 					_ => return Err(Error::<T>::Unexpected.into()),
 				},
 			};
@@ -849,7 +850,8 @@ pub mod pallet {
 		) -> Result<(BalanceOf<T>, BalanceOf<T>, BalanceOf<T>), DispatchError> {
 			let token_pool_amount = Self::token_pool(token_id);
 			let vtoken_total_issuance = T::MultiCurrency::total_issuance(vtoken_id);
-			let (mint_fee, _redeem_fee) = Fees::<T>::get();
+			let (mint_rate, _redeem_rate) = Fees::<T>::get();
+			let mint_fee = mint_rate * token_amount;
 			let token_amount_excluding_fee =
 				token_amount.checked_sub(&mint_fee).ok_or(Error::<T>::CalculationOverflow)?;
 			let mut vtoken_amount = token_amount_excluding_fee;
@@ -1067,7 +1069,7 @@ pub mod pallet {
 				_ => 0,
 			};
 			match time_unit {
-				TimeUnit::Era(min_era) =>
+				TimeUnit::Era(min_era) => {
 					if ongoing_era + unlock_duration_era > min_era {
 						let time_unit_ledger_list: Vec<(
 							BalanceOf<T>,
@@ -1087,7 +1089,8 @@ pub mod pallet {
 								}
 							})?;
 						}
-					},
+					}
+				},
 				_ => (),
 			}
 			Ok(())
