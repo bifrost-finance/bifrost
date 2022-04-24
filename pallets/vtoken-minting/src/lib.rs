@@ -81,7 +81,10 @@ pub mod pallet {
 
 		/// The amount of mint
 		#[pallet::constant]
-		type MaximumUnlockId: Get<u32>;
+		type MaximumUnlockIdOfUser: Get<u32>;
+
+		#[pallet::constant]
+		type MaximumUnlockIdOfTimeUnit: Get<u32>;
 
 		#[pallet::constant]
 		type EntranceAccount: Get<PalletId>;
@@ -235,7 +238,7 @@ pub mod pallet {
 		AccountIdOf<T>,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
-		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockId>),
+		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockIdOfUser>),
 		OptionQuery,
 	>;
 
@@ -247,7 +250,7 @@ pub mod pallet {
 		TimeUnit,
 		Blake2_128Concat,
 		CurrencyIdOf<T>,
-		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockId>, CurrencyIdOf<T>),
+		(BalanceOf<T>, BoundedVec<UnlockId, T::MaximumUnlockIdOfTimeUnit>, CurrencyIdOf<T>),
 		OptionQuery,
 	>;
 
@@ -330,7 +333,7 @@ pub mod pallet {
 			let exchanger = ensure_signed(origin)?;
 			let token_id = vtoken_id.to_token().map_err(|_| Error::<T>::NotSupportTokenType)?;
 			ensure!(
-				vtoken_amount >= MinimumRedeem::<T>::get(token_id),
+				vtoken_amount >= MinimumRedeem::<T>::get(vtoken_id),
 				Error::<T>::BelowMinimumRedeem
 			);
 			let (_mint_rate, redeem_rate) = Fees::<T>::get();
@@ -396,7 +399,7 @@ pub mod pallet {
 						)?;
 					} else {
 						let mut ledger_list_origin =
-							BoundedVec::<UnlockId, T::MaximumUnlockId>::default();
+							BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::default();
 						ledger_list_origin
 							.try_push(next_id)
 							.map_err(|_| Error::<T>::TooManyRedeems)?;
@@ -427,7 +430,7 @@ pub mod pallet {
 						)?;
 					} else {
 						let mut ledger_list_origin =
-							BoundedVec::<UnlockId, T::MaximumUnlockId>::default();
+							BoundedVec::<UnlockId, T::MaximumUnlockIdOfTimeUnit>::default();
 						ledger_list_origin
 							.try_push(next_id)
 							.map_err(|_| Error::<T>::TooManyRedeems)?;
@@ -475,8 +478,9 @@ pub mod pallet {
 				ensure!(user_unlock_amount >= token_amount, Error::<T>::NotEnoughBalanceToUnlock);
 				let mut tmp_amount = token_amount;
 				let ledger_list_rev: Vec<UnlockId> = ledger_list.into_iter().rev().collect();
-				ledger_list = BoundedVec::<UnlockId, T::MaximumUnlockId>::try_from(ledger_list_rev)
-					.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
+				ledger_list =
+					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_rev)
+						.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
 				ledger_list.retain(|index| {
 					if let Some((_, unlock_amount, time_unit)) =
 						Self::token_unlock_ledger(token_id, index)
@@ -558,8 +562,9 @@ pub mod pallet {
 				});
 				let ledger_list_tmp: Vec<UnlockId> = ledger_list.into_iter().rev().collect();
 
-				ledger_list = BoundedVec::<UnlockId, T::MaximumUnlockId>::try_from(ledger_list_tmp)
-					.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
+				ledger_list =
+					BoundedVec::<UnlockId, T::MaximumUnlockIdOfUser>::try_from(ledger_list_tmp)
+						.map_err(|_| Error::<T>::ExceedMaximumUnlockId)?;
 
 				CurrencyUnlockingTotal::<T>::mutate(|pool| -> Result<(), Error<T>> {
 					*pool =
@@ -1058,7 +1063,7 @@ pub mod pallet {
 					if ongoing_era + unlock_duration_era > min_era {
 						let time_unit_ledger_list: Vec<(
 							BalanceOf<T>,
-							BoundedVec<UnlockId, T::MaximumUnlockId>,
+							BoundedVec<UnlockId, T::MaximumUnlockIdOfTimeUnit>,
 							CurrencyIdOf<T>,
 						)> = TimeUnitUnlockLedger::<T>::iter_prefix_values(time_unit).collect();
 						if time_unit_ledger_list.len() == 0 {
