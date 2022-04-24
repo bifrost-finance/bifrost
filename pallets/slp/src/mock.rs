@@ -218,7 +218,8 @@ impl Get<ParaId> for ParachainId {
 }
 
 parameter_types! {
-	pub const MaxTypeEntryPerBlock: u32 = 50;
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
 }
 
 impl QueryResponseManager<QueryId, MultiLocation, u64> for () {
@@ -245,6 +246,7 @@ impl Config for Runtime {
 	type XcmExecutor = ();
 	type SubstrateResponseManager = ();
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
 }
 
 pub struct ExtBuilder {

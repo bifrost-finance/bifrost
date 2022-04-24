@@ -1691,7 +1691,8 @@ impl xcm_interface::Config for Runtime {
 }
 
 parameter_types! {
-	pub const MaxTypeEntryPerBlock: u32 = 50;
+	pub const MaxTypeEntryPerBlock: u32 = 10;
+	pub const MaxRefundPerBlock: u32 = 10;
 }
 
 pub struct SubstrateResponseManager;
@@ -1733,6 +1734,7 @@ impl bifrost_slp::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type SubstrateResponseManager = SubstrateResponseManager;
 	type MaxTypeEntryPerBlock = MaxTypeEntryPerBlock;
+	type MaxRefundPerBlock = MaxRefundPerBlock;
 }
 
 impl bifrost_vstoken_conversion::Config for Runtime {

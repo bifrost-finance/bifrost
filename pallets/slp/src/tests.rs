@@ -374,12 +374,17 @@ fn refund_currency_due_unbond_works() {
 		assert_eq!(bifrost_vtoken_minting::UserUnlockLedger::<Runtime>::get(EDDIE, KSM,), None);
 
 		// check account balances
-		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
-		assert_eq!(Tokens::free_balance(KSM, &entrance_acc), 17);
+		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 17);
+		assert_eq!(Tokens::free_balance(KSM, &entrance_acc), 0);
 		assert_eq!(Tokens::free_balance(KSM, &BOB), 0);
 		assert_eq!(Tokens::free_balance(KSM, &CHARLIE), 28);
 		assert_eq!(Tokens::free_balance(KSM, &DAVE), 22);
 		assert_eq!(Tokens::free_balance(KSM, &EDDIE), 13);
+		assert_ok!(Slp::refund_currency_due_unbond(Origin::signed(ALICE), KSM));
+
+		// check account balances
+		assert_eq!(Tokens::free_balance(KSM, &exit_acc), 0);
+		assert_eq!(Tokens::free_balance(KSM, &entrance_acc), 17);
 	});
 }
 
