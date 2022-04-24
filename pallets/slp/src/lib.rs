@@ -134,6 +134,9 @@ pub mod pallet {
 		/// on_initialize queue.
 		#[pallet::constant]
 		type MaxTypeEntryPerBlock: Get<u32>;
+
+		#[pallet::constant]
+		type MaxRefundPerBlock: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -1011,6 +1014,10 @@ pub mod pallet {
 			let mut exit_account_balance =
 				T::MultiCurrency::free_balance(currency_id, &exit_account);
 
+			if exit_account_balance.is_zero() {
+				return Ok(());
+			}
+
 			// Get the currency due unlocking records
 			let time_unit = T::VtokenMinting::get_ongoing_time_unit(currency_id)
 				.ok_or(Error::<T>::TimeUnitNotExist)?;
@@ -1018,7 +1025,12 @@ pub mod pallet {
 
 			// Refund due unlocking records one by one.
 			if let Some((_locked_amount, idx_vec)) = rs {
+				let mut counter = 0;
+
 				for idx in idx_vec.iter() {
+					if counter >= T::MaxRefundPerBlock::get() {
+						break;
+					}
 					// get idx record amount
 					let idx_record_amount_op =
 						T::VtokenMinting::get_token_unlock_ledger(currency_id, *idx);
@@ -1048,6 +1060,8 @@ pub mod pallet {
 							amount: deduct_amount,
 						});
 
+						counter = counter.saturating_add(1);
+
 						exit_account_balance = exit_account_balance
 							.checked_sub(&deduct_amount)
 							.ok_or(Error::<T>::UnderFlow)?;
@@ -1056,18 +1070,15 @@ pub mod pallet {
 						}
 					}
 				}
+			} else {
+				// Automatically move the rest amount in exit account to entrance account.
+				T::MultiCurrency::transfer(
+					currency_id,
+					&exit_account,
+					&entrance_account,
+					exit_account_balance,
+				)?;
 			}
-
-			// Automatically move the rest amount in exit account to entrance account.
-			let new_exit_account_balance =
-				T::MultiCurrency::free_balance(currency_id, &exit_account);
-
-			T::MultiCurrency::transfer(
-				currency_id,
-				&exit_account,
-				&entrance_account,
-				new_exit_account_balance,
-			)?;
 
 			Ok(())
 		}
